@@ -6,8 +6,8 @@ import { useAuth } from '../context/AuthContext';
 const Login = () => {
     const navigate = useNavigate();
     const auth = useAuth();
-    const [email, setEmail] = useState('doctor@clinic.com');
-    const [password, setPassword] = useState('Password123!');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -76,7 +76,7 @@ const Login = () => {
                             className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-all duration-200 hover:border-gray-400 text-gray-900 placeholder:text-gray-400"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            placeholder="doctor@clinic.com"
+                            placeholder="Enter your email address"
                         />
                     </div>
 
@@ -102,25 +102,10 @@ const Login = () => {
                     </button>
                 </form>
 
-                <div className="mt-6 p-4 bg-neutral-100 rounded-lg border border-gray-200 text-sm text-gray-700">
-                    <p className="font-semibold mb-3 text-primary-900">Available Users:</p>
-                    <div className="space-y-2">
-                        <div className="flex justify-between items-center p-2 bg-white rounded border border-gray-200">
-                            <span className="font-medium text-gray-700">Doctor:</span>
-                            <span className="font-mono text-xs text-gray-600 bg-neutral-100 px-2 py-1 rounded">doctor@clinic.com</span>
-                        </div>
-                        <div className="flex justify-between items-center p-2 bg-white rounded border border-gray-200">
-                            <span className="font-medium text-gray-700">Nurse:</span>
-                            <span className="font-mono text-xs text-gray-600 bg-neutral-100 px-2 py-1 rounded">nurse@clinic.com</span>
-                        </div>
-                        <div className="flex justify-between items-center p-2 bg-white rounded border border-gray-200">
-                            <span className="font-medium text-gray-700">Admin:</span>
-                            <span className="font-mono text-xs text-gray-600 bg-neutral-100 px-2 py-1 rounded">admin@clinic.com</span>
-                        </div>
-                        <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-600">
-                            Password for all: <span className="font-mono font-semibold text-primary-700">Password123!</span>
-                        </div>
-                    </div>
+                <div className="mt-6 p-4 bg-neutral-50 rounded-lg border border-gray-200 text-sm text-gray-600">
+                    <p className="text-center">
+                        Forgot your password? Contact your system administrator.
+                    </p>
                 </div>
             </div>
         </div>

@@ -99,9 +99,29 @@ app.use('/fhir', fhirRoutes);
 const codesRoutes = require('./routes/codes');
 app.use('/api/codes', codesRoutes);
 
+// E-Prescribing endpoints
+const prescriptionRoutes = require('./routes/prescriptions');
+const pharmacyRoutes = require('./routes/pharmacies');
+const medicationRoutes = require('./routes/medications');
+app.use('/api/prescriptions', prescriptionRoutes);
+app.use('/api/pharmacies', pharmacyRoutes);
+app.use('/api/medications', medicationRoutes);
+
 // Billing endpoints
 const billingRoutes = require('./routes/billing');
 app.use('/api/billing', billingRoutes);
+
+// User management endpoints
+const userRoutes = require('./routes/users');
+app.use('/api/users', userRoutes);
+
+// Role and privilege management endpoints
+const roleRoutes = require('./routes/roles');
+app.use('/api/roles', roleRoutes);
+
+// Settings and configuration endpoints
+const settingsRoutes = require('./routes/settings');
+app.use('/api/settings', settingsRoutes);
 
 // Reports and analytics
 const reportsRoutes = require('./routes/reports');

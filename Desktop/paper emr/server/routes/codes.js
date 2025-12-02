@@ -5,13 +5,49 @@ const { authenticate, requireRole, logAudit } = require('../middleware/auth');
 const router = express.Router();
 router.use(authenticate);
 
-// ICD-10 code lookup
+// ICD-10 code lookup - Enhanced with database support
 router.get('/icd10', async (req, res) => {
   try {
-    const { search } = req.query;
+    const { search, limit = 50 } = req.query;
     
-    // In production, this would query a proper ICD-10 database
-    // For now, return common codes
+    // First, try database if icd10_codes table exists
+    try {
+      const tableCheck = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'icd10_codes'
+        );
+      `);
+
+      if (tableCheck.rows[0].exists && search) {
+        // Use database search with full-text search
+        const result = await pool.query(`
+          SELECT code, description, billable, valid_for_submission
+          FROM icd10_codes
+          WHERE search_vector @@ plainto_tsquery('english', $1)
+             OR code ILIKE $2
+             OR description ILIKE $2
+          ORDER BY ts_rank(search_vector, plainto_tsquery('english', $1)) DESC,
+                   CASE WHEN code ILIKE $2 THEN 1 ELSE 2 END
+          LIMIT $3
+        `, [search, `%${search}%`, parseInt(limit)]);
+
+        if (result.rows.length > 0) {
+          return res.json(result.rows.map(row => ({
+            code: row.code,
+            description: row.description,
+            billable: row.billable,
+            valid: row.valid_for_submission
+          })));
+        }
+      }
+    } catch (dbError) {
+      console.warn('Database search failed, using fallback:', dbError.message);
+      // Fall through to hardcoded codes
+    }
+    
+    // Fallback to hardcoded common codes
     const commonCodes = [
       // Diabetes
       { code: 'E11.9', description: 'Type 2 diabetes mellitus without complications' },
@@ -70,12 +106,50 @@ router.get('/icd10', async (req, res) => {
   }
 });
 
-// CPT code lookup
+// CPT code lookup - Enhanced with database support
 router.get('/cpt', async (req, res) => {
   try {
-    const { search } = req.query;
+    const { search, limit = 50 } = req.query;
     
-    // In production, this would query a proper CPT database
+    // First, try database if cpt_codes table exists
+    try {
+      const tableCheck = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'cpt_codes'
+        );
+      `);
+
+      if (tableCheck.rows[0].exists && search) {
+        // Use database search with full-text search
+        const result = await pool.query(`
+          SELECT code, description, category, medicare_fee, active
+          FROM cpt_codes
+          WHERE search_vector @@ plainto_tsquery('english', $1)
+             OR code ILIKE $2
+             OR description ILIKE $2
+          ORDER BY ts_rank(search_vector, plainto_tsquery('english', $1)) DESC,
+                   CASE WHEN code ILIKE $2 THEN 1 ELSE 2 END
+          LIMIT $3
+        `, [search, `%${search}%`, parseInt(limit)]);
+
+        if (result.rows.length > 0) {
+          return res.json(result.rows.map(row => ({
+            code: row.code,
+            description: row.description,
+            category: row.category,
+            medicareFee: row.medicare_fee,
+            active: row.active
+          })));
+        }
+      }
+    } catch (dbError) {
+      console.warn('Database search failed, using fallback:', dbError.message);
+      // Fall through to hardcoded codes
+    }
+    
+    // Fallback to hardcoded common codes
     const commonCodes = [
       { code: '99213', description: 'Office or other outpatient visit, established patient' },
       { code: '99214', description: 'Office or other outpatient visit, established patient, detailed' },

@@ -13,6 +13,9 @@ import TaskManager from './pages/TaskManager'
 import Analytics from './pages/Analytics'
 import Messages from './pages/Messages'
 import Telehealth from './pages/Telehealth'
+import Billing from './pages/Billing'
+import UserManagement from './pages/UserManagement'
+import AdminSettings from './pages/AdminSettings'
 import Layout from './components/Layout'
 import { PatientProvider } from './context/PatientContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -112,6 +115,21 @@ function App() {
                                 <Route path="/telehealth" element={
                                     <ProtectedRoute>
                                         <Layout><Telehealth /></Layout>
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="/billing" element={
+                                    <ProtectedRoute>
+                                        <Layout><Billing /></Layout>
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="/users" element={
+                                    <ProtectedRoute>
+                                        <Layout><UserManagement /></Layout>
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="/admin-settings" element={
+                                    <ProtectedRoute>
+                                        <Layout><AdminSettings /></Layout>
                                     </ProtectedRoute>
                                 } />
                                 {/* Patient routes - flat structure to avoid nested Routes issues */}

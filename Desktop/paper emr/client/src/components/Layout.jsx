@@ -4,13 +4,13 @@ import {
   Calendar, Users, FileText, Settings, LogOut, Search, X, Activity, 
   Clock, History, User, ClipboardList, BarChart3, 
   MessageSquare, Video, Moon, Sun, Menu, ChevronRight, Bell,
-  Zap, Command
+  Zap, Command, DollarSign, Shield
 } from 'lucide-react';
 import { usePatient } from '../context/PatientContext';
 import { useAuth } from '../context/AuthContext';
 import { usePatientTabs } from '../context/PatientTabsContext';
 import { useTasks } from '../context/TaskContext';
-import { patientsAPI, messagesAPI } from '../services/api';
+import { patientsAPI, messagesAPI, visitsAPI } from '../services/api';
 import PatientTabs from './PatientTabs';
 import MobileMenu from './MobileMenu';
 
@@ -27,6 +27,7 @@ const Layout = ({ children }) => {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const { unreadCount: tasksCount } = useTasks();
     const [messagesCount, setMessagesCount] = useState(0);
+    const [pendingNotesCount, setPendingNotesCount] = useState(0);
 
     const isActive = (path) => {
         return location.pathname.startsWith(path);
@@ -52,11 +53,30 @@ const Layout = ({ children }) => {
             }
         };
 
+        // Fetch pending notes count
+        const fetchPendingNotesCount = async () => {
+            try {
+                const response = await visitsAPI.getPending();
+                if (response && response.data) {
+                    const count = Array.isArray(response.data) ? response.data.length : 0;
+                    setPendingNotesCount(count);
+                } else {
+                    setPendingNotesCount(0);
+                }
+            } catch (error) {
+                console.error('Error fetching pending notes count:', error);
+                setPendingNotesCount(0);
+            }
+        };
+
+        // Initial fetch
         fetchMessagesCount();
+        fetchPendingNotesCount();
         
-        // Refresh messages count periodically (every 30 seconds)
+        // Refresh counts periodically (every 30 seconds)
         const interval = setInterval(() => {
             fetchMessagesCount();
+            fetchPendingNotesCount();
         }, 30000);
 
         return () => clearInterval(interval);
@@ -69,9 +89,15 @@ const Layout = ({ children }) => {
         { path: '/patients', icon: Users, label: 'Patients', badge: null },
         { path: '/tasks', icon: ClipboardList, label: 'In Basket', badge: tasksCount > 0 ? tasksCount : null },
         { path: '/messages', icon: MessageSquare, label: 'Messages', badge: messagesCount > 0 ? messagesCount : null },
-        { path: '/pending-notes', icon: Clock, label: 'Pending Notes', badge: null },
+        { path: '/pending-notes', icon: Clock, label: 'Pending Notes', badge: pendingNotesCount > 0 ? pendingNotesCount : null },
+        { path: '/billing', icon: DollarSign, label: 'Billing', badge: null },
         { path: '/telehealth', icon: Video, label: 'Telehealth', badge: null },
         { path: '/analytics', icon: BarChart3, label: 'Analytics', badge: null },
+        // Admin-only items
+        ...(user?.role === 'Admin' ? [
+            { path: '/admin-settings', icon: Settings, label: 'Administration', badge: null },
+            { path: '/users', icon: Shield, label: 'User Management', badge: null }
+        ] : []),
     ];
 
     useEffect(() => {
@@ -237,7 +263,14 @@ const Layout = ({ children }) => {
                                             : 'text-gray-700 hover:bg-neutral-100 hover:text-primary-900'
                                     }`}
                                 >
-                                    <Icon className={`w-5 h-5 flex-shrink-0 ${active ? 'text-white' : 'text-gray-500 group-hover:text-primary-700'}`} />
+                                    <div className="relative flex-shrink-0">
+                                        <Icon className={`w-5 h-5 ${active ? 'text-white' : 'text-gray-500 group-hover:text-primary-700'}`} />
+                                        {item.badge && sidebarCollapsed && (
+                                            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center px-1 text-[10px] font-semibold rounded-full bg-accent-500 text-white">
+                                                {item.badge > 99 ? '99+' : item.badge}
+                                            </span>
+                                        )}
+                                    </div>
                                     {!sidebarCollapsed && (
                                         <>
                                             <span className={`flex-1 text-sm font-medium ${active ? 'text-white' : ''}`}>
@@ -277,7 +310,14 @@ const Layout = ({ children }) => {
                                             : 'text-gray-700 hover:bg-neutral-100 hover:text-primary-900'
                                     }`}
                                 >
-                                    <Icon className={`w-5 h-5 flex-shrink-0 ${active ? 'text-white' : 'text-gray-500 group-hover:text-primary-700'}`} />
+                                    <div className="relative flex-shrink-0">
+                                        <Icon className={`w-5 h-5 ${active ? 'text-white' : 'text-gray-500 group-hover:text-primary-700'}`} />
+                                        {item.badge && sidebarCollapsed && (
+                                            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center px-1 text-[10px] font-semibold rounded-full bg-accent-500 text-white">
+                                                {item.badge > 99 ? '99+' : item.badge}
+                                            </span>
+                                        )}
+                                    </div>
                                     {!sidebarCollapsed && (
                                         <>
                                             <span className={`flex-1 text-sm font-medium ${active ? 'text-white' : ''}`}>
