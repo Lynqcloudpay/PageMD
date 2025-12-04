@@ -21,31 +21,74 @@ PageMD is a minimal, paper-chart-like electronic medical record system that pres
 - **Database**: PostgreSQL
 - **Authentication**: JWT with role-based access control
 
-## Setup
+## Quick Setup (New Computer)
+
+After cloning the repository, run this single command in Cursor terminal:
+
+```bash
+bash setup.sh
+```
+
+This will:
+- ✅ Install all dependencies (server + client)
+- ✅ Create `.env` file with default settings
+- ✅ Check database setup
+- ✅ Guide you through remaining steps
+
+**Or use the one-liner:**
+```bash
+cd server && npm install && cd ../client && npm install && cd .. && [ ! -f server/.env ] && cat > server/.env << 'EOF'
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=paper_emr
+DB_USER=postgres
+DB_PASSWORD=postgres
+PORT=3000
+NODE_ENV=development
+FRONTEND_URL=http://localhost:5173
+JWT_SECRET=your-secret-key-change-in-production
+EOF
+echo "✅ Setup complete! Edit server/.env, then start servers:"
+echo "   Terminal 1: cd server && npm start"
+echo "   Terminal 2: cd client && npm run dev"
+```
+
+## Manual Setup
 
 1. Install dependencies:
 ```bash
-npm run install-all
+cd server && npm install && cd ../client && npm install && cd ..
 ```
 
 2. Set up environment variables:
 ```bash
-cp server/.env.example server/.env
-# Edit server/.env with your database credentials
+# Create server/.env file with your database credentials
+# See QUICK_SETUP.md for template
 ```
 
-3. Run database migrations:
+3. Create database:
 ```bash
-cd server && npm run migrate
+createdb paper_emr
 ```
 
-4. Start development servers:
+4. Run database migrations:
 ```bash
-npm run dev
+cd server && npm run migrate && cd ..
+```
+
+5. Start development servers:
+```bash
+# Terminal 1:
+cd server && npm start
+
+# Terminal 2:
+cd client && npm run dev
 ```
 
 - Frontend: http://localhost:5173
 - Backend: http://localhost:3000
+
+See `QUICK_SETUP.md` for detailed instructions.
 
 ## User Roles
 
