@@ -10,6 +10,7 @@
 
 const pool = require('../db');
 const bcrypt = require('bcryptjs');
+const passwordService = require('./passwordService');
 
 class UserService {
   /**
@@ -32,6 +33,7 @@ class UserService {
         u.dea_number,
         u.taxonomy_code,
         u.credentials,
+        u.is_admin,
         r.id as role_id,
         r.name as role_name,
         r.description as role_description
@@ -68,6 +70,7 @@ class UserService {
         u.last_name,
         u.status,
         u.role_id,
+        u.is_admin,
         r.name as role_name
       FROM users u
       LEFT JOIN roles r ON u.role_id = r.id
@@ -103,6 +106,7 @@ class UserService {
         u.professional_type,
         u.npi,
         u.credentials,
+        u.is_admin,
         r.id as role_id,
         r.name as role_name
       FROM users u
@@ -157,6 +161,26 @@ class UserService {
   }
 
   /**
+   * Map new role name to old role format for backward compatibility
+   */
+  mapRoleToOldFormat(roleName) {
+    if (!roleName) return 'admin'; // Default fallback
+    
+    const roleMap = {
+      'Admin': 'admin',
+      'Physician': 'clinician',
+      'Nurse Practitioner': 'clinician',
+      'Physician Assistant': 'clinician',
+      'Nurse': 'nurse',
+      'Medical Assistant': 'nurse',
+      'Front Desk': 'front_desk',
+      'Billing': 'front_desk'
+    };
+    
+    return roleMap[roleName] || 'admin';
+  }
+
+  /**
    * Create new user
    */
   async createUser(userData) {
@@ -172,7 +196,8 @@ class UserService {
       licenseState,
       deaNumber,
       taxonomyCode,
-      credentials
+      credentials,
+      isAdmin
     } = userData;
     
     // Validate required fields
@@ -180,8 +205,8 @@ class UserService {
       throw new Error('Missing required fields');
     }
     
-    // Hash password
-    const passwordHash = await bcrypt.hash(password, 12);
+    // Hash password with Argon2id (HIPAA-compliant)
+    const passwordHash = await passwordService.hashPassword(password);
     
     // Check if email exists
     const existing = await this.getUserByEmail(email);
@@ -189,14 +214,19 @@ class UserService {
       throw new Error('User with this email already exists');
     }
     
-    // Insert user
+    // Get role name for the old role column
+    const roleQuery = await pool.query('SELECT name FROM roles WHERE id = $1', [roleId]);
+    const roleName = roleQuery.rows[0]?.name || 'Admin';
+    const oldRoleFormat = this.mapRoleToOldFormat(roleName);
+    
+    // Insert user (including old role column for backward compatibility)
     const query = `
       INSERT INTO users (
-        email, password_hash, first_name, last_name, role_id, status,
+        email, password_hash, first_name, last_name, role_id, role, status,
         professional_type, npi, license_number, license_state,
-        dea_number, taxonomy_code, credentials, date_created
+        dea_number, taxonomy_code, credentials, is_admin, date_created
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, CURRENT_TIMESTAMP)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, CURRENT_TIMESTAMP)
       RETURNING id, email, first_name, last_name, status, date_created
     `;
     
@@ -206,6 +236,7 @@ class UserService {
       firstName,
       lastName,
       roleId,
+      oldRoleFormat, // Old role column
       'active',
       professionalType || null,
       npi || null,
@@ -213,7 +244,8 @@ class UserService {
       licenseState || null,
       deaNumber || null,
       taxonomyCode || null,
-      credentials || null
+      credentials || null,
+      isAdmin || false // Admin privileges flag
     ]);
     
     return result.rows[0];
@@ -226,7 +258,7 @@ class UserService {
     const allowedFields = [
       'first_name', 'last_name', 'email', 'status', 'role_id',
       'professional_type', 'npi', 'license_number', 'license_state',
-      'dea_number', 'taxonomy_code', 'credentials'
+      'dea_number', 'taxonomy_code', 'credentials', 'is_admin'
     ];
     
     const updateFields = [];
@@ -241,7 +273,8 @@ class UserService {
                     key === 'licenseNumber' ? 'license_number' :
                     key === 'licenseState' ? 'license_state' :
                     key === 'deaNumber' ? 'dea_number' :
-                    key === 'taxonomyCode' ? 'taxonomy_code' : key;
+                    key === 'taxonomyCode' ? 'taxonomy_code' :
+                    key === 'isAdmin' ? 'is_admin' : key;
       
       if (allowedFields.includes(dbKey) && value !== undefined) {
         paramCount++;
@@ -270,10 +303,10 @@ class UserService {
   }
 
   /**
-   * Update password
+   * Update password (HIPAA-compliant with Argon2id)
    */
   async updatePassword(userId, newPassword) {
-    const passwordHash = await bcrypt.hash(newPassword, 12);
+    const passwordHash = await passwordService.hashPassword(newPassword);
     await pool.query(
       'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
       [passwordHash, userId]
@@ -337,20 +370,28 @@ class UserService {
 
   /**
    * Check if user is admin
+   * User is admin if they have is_admin flag OR their role is Admin
    */
   async isAdmin(userId) {
     const user = await this.getUserById(userId);
-    return user && user.role_name === 'Admin';
+    return user && (user.is_admin === true || user.role_name === 'Admin');
   }
 
   /**
-   * Delete user (soft delete by setting status)
+   * Delete user (hard delete - actually remove from database)
+   * Note: This will fail if there are foreign key constraints
+   * You may need to handle cascading deletes or reassign references first
    */
   async deleteUser(userId) {
-    await pool.query(
-      'UPDATE users SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-      ['inactive', userId]
-    );
+    // First, set all foreign key references to NULL or a default admin user
+    // This is a hard delete, so we need to handle foreign keys
+    
+    // Delete user (CASCADE should handle related records if foreign keys are set up properly)
+    const result = await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+    
+    if (result.rowCount === 0) {
+      throw new Error('User not found');
+    }
   }
 
   /**

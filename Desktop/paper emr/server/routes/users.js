@@ -94,7 +94,8 @@ router.post('/', requireAdmin, [
       licenseState,
       deaNumber,
       taxonomyCode,
-      credentials
+      credentials,
+      isAdmin
     } = req.body;
 
     // Validate password strength
@@ -133,11 +134,11 @@ router.post('/', requireAdmin, [
       return res.status(400).json({ error: 'Invalid role' });
     }
 
-    // Check if trying to create admin (only existing admins can create admins)
-    if (role.name === 'Admin') {
-      const isAdmin = await userService.isAdmin(req.user.id);
-      if (!isAdmin) {
-        return res.status(403).json({ error: 'Only admins can create admin users' });
+    // Check if trying to grant admin privileges (only existing admins can grant admin privileges)
+    if (isAdmin === true || isAdmin === 'true') {
+      const currentUserIsAdmin = await userService.isAdmin(req.user.id);
+      if (!currentUserIsAdmin) {
+        return res.status(403).json({ error: 'Only admins can grant admin privileges' });
       }
     }
 
@@ -153,7 +154,8 @@ router.post('/', requireAdmin, [
       licenseState,
       deaNumber,
       taxonomyCode,
-      credentials
+      credentials,
+      isAdmin: isAdmin === true || isAdmin === 'true'
     });
 
     await logAudit(req.user.id, 'user_created', 'user', user.id, {
@@ -307,15 +309,49 @@ router.put('/:id/status', requireAdmin, [
 
 /**
  * DELETE /users/:id
- * Delete user (soft delete - admin only)
+ * Delete user permanently (hard delete - admin only)
+ * 
+ * HIPAA Note: Users with associated clinical records cannot be hard-deleted
+ * to preserve audit trails. Use status update (deactivate) instead.
  */
 router.delete('/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
+    const { force } = req.query; // Allow force deletion with reassignment
 
     // Prevent deleting yourself
     if (id === req.user.id) {
       return res.status(400).json({ error: 'Cannot delete your own account' });
+    }
+
+    // Check for associated records that would prevent deletion
+    const pool = require('../db');
+    const associatedRecords = await pool.query(`
+      SELECT 
+        (SELECT COUNT(*) FROM visits WHERE provider_id = $1) as visits_count,
+        (SELECT COUNT(*) FROM visits WHERE note_signed_by = $1) as signed_notes_count,
+        (SELECT COUNT(*) FROM messages WHERE from_user_id = $1 OR to_user_id = $1) as messages_count,
+        (SELECT COUNT(*) FROM audit_logs WHERE user_id = $1) as audit_logs_count
+    `, [id]);
+
+    const counts = associatedRecords.rows[0];
+    const hasAssociatedRecords = 
+      parseInt(counts.visits_count) > 0 ||
+      parseInt(counts.signed_notes_count) > 0 ||
+      parseInt(counts.messages_count) > 0;
+
+    if (hasAssociatedRecords && !force) {
+      return res.status(409).json({ 
+        error: 'Cannot delete user with associated clinical records',
+        details: {
+          visits: parseInt(counts.visits_count),
+          signedNotes: parseInt(counts.signed_notes_count),
+          messages: parseInt(counts.messages_count),
+          auditLogs: parseInt(counts.audit_logs_count)
+        },
+        suggestion: 'For HIPAA compliance, deactivate this user instead of deleting. ' +
+                    'Use PUT /users/:id/status with status="inactive" to preserve audit trails.'
+      });
     }
 
     await userService.deleteUser(id);
@@ -325,6 +361,15 @@ router.delete('/:id', requireAdmin, async (req, res) => {
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
     console.error('Error deleting user:', error);
+    
+    // Check if it's a foreign key constraint error
+    if (error.code === '23503') {
+      return res.status(409).json({ 
+        error: 'Cannot delete user with associated records',
+        suggestion: 'Deactivate this user instead to preserve audit trails.'
+      });
+    }
+    
     res.status(400).json({ error: error.message || 'Failed to delete user' });
   }
 });

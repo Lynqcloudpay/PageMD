@@ -1,10 +1,13 @@
 const express = require('express');
 const pool = require('../db');
-const { authenticate, requireRole, logAudit } = require('../middleware/auth');
+const { authenticate, logAudit, requireRole } = require('../middleware/auth');
+const { requirePrivilege } = require('../middleware/authorization');
 const { v4: uuidv4 } = require('uuid');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const patientEncryptionService = require('../services/patientEncryptionService');
 
 const router = express.Router();
 
@@ -47,8 +50,8 @@ const upload = multer({
 // All routes require authentication
 router.use(authenticate);
 
-// Get all patients (with search)
-router.get('/', async (req, res) => {
+// Get all patients (with search) - requires patient:view permission
+router.get('/', requirePrivilege('patient:view'), async (req, res) => {
   try {
     const { search, limit = 100, offset = 0 } = req.query;
     let query = 'SELECT * FROM patients';
@@ -66,15 +69,50 @@ router.get('/', async (req, res) => {
     }
 
     const result = await pool.query(query, params);
-    res.json(result.rows);
+    
+    // Decrypt PHI fields before sending response
+    const decryptedPatients = await patientEncryptionService.decryptPatientsPHI(result.rows);
+    
+    // Log audit
+    const requestId = req.headers['x-request-id'] || crypto.randomUUID();
+    await logAudit(
+      req.user.id,
+      'patient.list',
+      'patient',
+      null,
+      { search: search ? '[REDACTED]' : null, count: decryptedPatients.length },
+      req.ip,
+      req.get('user-agent'),
+      'success',
+      requestId,
+      req.sessionId
+    );
+    
+    res.json(decryptedPatients);
   } catch (error) {
     console.error('Error fetching patients:', error);
+    
+    // Log failed audit
+    await logAudit(
+      req.user?.id,
+      'patient.list',
+      'patient',
+      null,
+      { error: error.message },
+      req.ip,
+      req.get('user-agent'),
+      'failure',
+      req.requestId,
+      req.sessionId
+    );
+    
     res.status(500).json({ error: 'Failed to fetch patients' });
   }
 });
 
 // Get patient snapshot (front page data) - MUST come before /:id route
-router.get('/:id/snapshot', async (req, res) => {
+// Requires patient:view permission
+router.get('/:id/snapshot', requirePrivilege('patient:view'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -85,6 +123,8 @@ router.get('/:id/snapshot', async (req, res) => {
       if (patient.rows.length === 0) {
       return res.status(404).json({ error: 'Patient not found' });
     }
+      // Decrypt PHI fields
+      patient.rows[0] = await patientEncryptionService.decryptPatientPHI(patient.rows[0]);
   } catch (error) {
     console.error('Error fetching patient:', error);
       throw new Error(`Failed to fetch patient: ${error.message}`);
@@ -176,7 +216,19 @@ router.get('/:id/snapshot', async (req, res) => {
     // Log audit (non-blocking, don't fail if it errors)
     if (req.user && req.user.id) {
       try {
-    await logAudit(req.user.id, 'view_patient_snapshot', 'patient', id, {}, req.ip);
+        const requestId = req.headers['x-request-id'] || crypto.randomUUID();
+        await logAudit(
+          req.user.id,
+          'patient.snapshot.viewed',
+          'patient',
+          id,
+          {},
+          req.ip,
+          req.get('user-agent'),
+          'success',
+          requestId,
+          req.sessionId
+        );
       } catch (auditError) {
         console.warn('Failed to log audit for snapshot view:', auditError);
       }
@@ -210,7 +262,7 @@ router.get('/:id/snapshot', async (req, res) => {
 });
 
 // Get patient by ID - MUST come after /:id/snapshot route
-router.get('/:id', async (req, res) => {
+router.get('/:id', requirePrivilege('patient:view'), async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query('SELECT * FROM patients WHERE id = $1', [id]);
@@ -219,10 +271,42 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Patient not found' });
     }
 
-    res.json(result.rows[0]);
+    // Decrypt PHI fields before sending response
+    const decryptedPatient = await patientEncryptionService.decryptPatientPHI(result.rows[0]);
+
+    // Log audit
+    const requestId = req.headers['x-request-id'] || crypto.randomUUID();
+    await logAudit(
+      req.user.id,
+      'patient.viewed',
+      'patient',
+      id,
+      {},
+      req.ip,
+      req.get('user-agent'),
+      'success',
+      requestId,
+      req.sessionId
+    );
+
+    res.json(decryptedPatient);
   } catch (error) {
     console.error('Error fetching patient:', error);
-    console.error('Error details:', error.message, error.stack);
+    
+    // Log failed audit
+    await logAudit(
+      req.user?.id,
+      'patient.viewed',
+      'patient',
+      req.params.id,
+      { error: error.message },
+      req.ip,
+      req.get('user-agent'),
+      'failure',
+      req.requestId,
+      req.sessionId
+    );
+    
     res.status(500).json({ 
       error: 'Failed to fetch patient',
       details: process.env.NODE_ENV === 'development' ? {
@@ -234,105 +318,291 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Get patient by ID - MUST come after /:id/snapshot route
-router.get('/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const result = await pool.query('SELECT * FROM patients WHERE id = $1', [id]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Patient not found' });
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Error fetching patient:', error);
-    console.error('Error details:', error.message, error.stack);
-    res.status(500).json({ 
-      error: 'Failed to fetch patient',
-      details: process.env.NODE_ENV === 'development' ? {
-        message: error.message,
-        code: error.code,
-        detail: error.detail
-      } : undefined
-    });
-  }
-});
-
-// Create patient
-router.post('/', requireRole('clinician', 'front_desk', 'admin'), async (req, res) => {
+// Create patient - requires patient:create permission
+router.post('/', requirePrivilege('patient:create'), async (req, res) => {
   try {
     const {
+      // Basic info
       mrn,
       firstName,
+      middleName,
       lastName,
+      nameSuffix,
+      preferredName,
       dob,
       sex,
+      gender,
+      race,
+      ethnicity,
+      maritalStatus,
+      
+      // Contact
       phone,
+      phoneSecondary,
+      phoneCell,
+      phoneWork,
+      phonePreferred,
       email,
+      emailSecondary,
+      preferredLanguage,
+      interpreterNeeded,
+      communicationPreference,
+      consentToText,
+      consentToEmail,
+      
+      // Address
       addressLine1,
       addressLine2,
       city,
       state,
       zip,
+      country,
+      addressType,
+      
+      // Employment
+      employmentStatus,
+      occupation,
+      employerName,
+      
+      // Emergency Contact
+      emergencyContactName,
+      emergencyContactPhone,
+      emergencyContactRelationship,
+      emergencyContactAddress,
+      emergencyContact2Name,
+      emergencyContact2Phone,
+      emergencyContact2Relationship,
+      
+      // Insurance
       insuranceProvider,
       insuranceId,
+      insuranceGroupNumber,
+      insurancePlanName,
+      insurancePlanType,
+      insuranceSubscriberName,
+      insuranceSubscriberDob,
+      insuranceSubscriberRelationship,
+      insuranceCopay,
+      insuranceEffectiveDate,
+      insuranceExpiryDate,
+      insuranceNotes,
+      
+      // Pharmacy
+      pharmacyName,
+      pharmacyAddress,
+      pharmacyPhone,
+      pharmacyNpi,
+      pharmacyFax,
+      pharmacyPreferred,
+      
+      // Additional
+      referralSource,
+      smokingStatus,
+      alcoholUse,
+      allergiesKnown,
+      notes,
+      primaryCareProvider,
     } = req.body;
 
     // Generate MRN if not provided - 6 digit number
     const finalMRN = mrn || String(Math.floor(100000 + Math.random() * 900000));
 
+    // Add optional fields dynamically
+    const optionalFields = {
+      middle_name: middleName,
+      name_suffix: nameSuffix,
+      preferred_name: preferredName,
+      sex: sex,
+      gender: gender,
+      race: race,
+      ethnicity: ethnicity,
+      marital_status: maritalStatus,
+      phone: phone,
+      phone_secondary: phoneSecondary,
+      phone_cell: phoneCell,
+      phone_work: phoneWork,
+      phone_preferred: phonePreferred,
+      email: email,
+      email_secondary: emailSecondary,
+      preferred_language: preferredLanguage,
+      interpreter_needed: interpreterNeeded,
+      communication_preference: communicationPreference,
+      consent_to_text: consentToText,
+      consent_to_email: consentToEmail,
+      address_line1: addressLine1,
+      address_line2: addressLine2,
+      city: city,
+      state: state,
+      zip: zip,
+      country: country || 'United States',
+      address_type: addressType || 'Home',
+      employment_status: employmentStatus,
+      occupation: occupation,
+      employer_name: employerName,
+      emergency_contact_name: emergencyContactName,
+      emergency_contact_phone: emergencyContactPhone,
+      emergency_contact_relationship: emergencyContactRelationship,
+      emergency_contact_address: emergencyContactAddress,
+      emergency_contact_2_name: emergencyContact2Name,
+      emergency_contact_2_phone: emergencyContact2Phone,
+      emergency_contact_2_relationship: emergencyContact2Relationship,
+      insurance_provider: insuranceProvider,
+      insurance_id: insuranceId,
+      insurance_group_number: insuranceGroupNumber,
+      insurance_plan_name: insurancePlanName,
+      insurance_plan_type: insurancePlanType,
+      insurance_subscriber_name: insuranceSubscriberName,
+      insurance_subscriber_dob: insuranceSubscriberDob,
+      insurance_subscriber_relationship: insuranceSubscriberRelationship,
+      insurance_copay: insuranceCopay,
+      insurance_effective_date: insuranceEffectiveDate,
+      insurance_expiry_date: insuranceExpiryDate,
+      insurance_notes: insuranceNotes,
+      pharmacy_name: pharmacyName,
+      pharmacy_address: pharmacyAddress,
+      pharmacy_phone: pharmacyPhone,
+      pharmacy_npi: pharmacyNpi,
+      pharmacy_fax: pharmacyFax,
+      pharmacy_preferred: pharmacyPreferred,
+      referral_source: referralSource,
+      smoking_status: smokingStatus,
+      alcohol_use: alcoholUse,
+      allergies_known: allergiesKnown,
+      notes: notes,
+      primary_care_provider: primaryCareProvider,
+    };
+
+    // Build patient object for encryption
+    const patientData = {
+      mrn: finalMRN,
+      first_name: firstName,
+      last_name: lastName,
+      dob: dob,
+      ...optionalFields
+    };
+
+    // Encrypt PHI fields before storing
+    const encryptedPatient = await patientEncryptionService.preparePatientForStorage(patientData);
+
+    // Build INSERT query with encrypted data
+    const fields = ['mrn'];
+    const values = [encryptedPatient.mrn];
+    let paramIndex = 2;
+
+    // Add all fields (encrypted PHI fields will have encrypted values)
+    for (const [dbField, value] of Object.entries(encryptedPatient)) {
+      if (dbField === 'mrn') continue; // Already added
+      if (value !== undefined && value !== null && value !== '') {
+        fields.push(dbField);
+        values.push(value);
+        paramIndex++;
+      }
+    }
+
+    // Add encryption_metadata if present
+    if (encryptedPatient.encryption_metadata) {
+      fields.push('encryption_metadata');
+      values.push(JSON.stringify(encryptedPatient.encryption_metadata));
+    }
+
+    const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+
     const result = await pool.query(
-      `INSERT INTO patients (
-        mrn, first_name, last_name, dob, sex, phone, email,
-        address_line1, address_line2, city, state, zip,
-        insurance_provider, insurance_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-      RETURNING *`,
-      [
-        finalMRN, firstName, lastName, dob, sex, phone, email,
-        addressLine1, addressLine2, city, state, zip,
-        insuranceProvider, insuranceId,
-      ]
+      `INSERT INTO patients (${fields.join(', ')})
+       VALUES (${placeholders})
+       RETURNING *`,
+      values
     );
+
+    // Decrypt for response
+    const decryptedPatient = await patientEncryptionService.decryptPatientPHI(result.rows[0]);
 
     await logAudit(req.user.id, 'create_patient', 'patient', result.rows[0].id, {}, req.ip);
 
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(decryptedPatient);
   } catch (error) {
     console.error('Error creating patient:', error);
     if (error.code === '23505') {
       return res.status(400).json({ error: 'MRN already exists' });
     }
-    res.status(500).json({ error: 'Failed to create patient' });
+    res.status(500).json({ error: 'Failed to create patient', details: error.message });
   }
 });
 
 // Update patient
-router.put('/:id', requireRole('clinician', 'front_desk', 'admin'), async (req, res) => {
+router.put('/:id', requirePrivilege('patient:edit'), async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
 
+    // Get existing patient to merge with updates
+    const existingResult = await pool.query('SELECT * FROM patients WHERE id = $1', [id]);
+    if (existingResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Patient not found' });
+    }
+
+    // Decrypt existing patient data
+    const existingPatient = await patientEncryptionService.decryptPatientPHI(existingResult.rows[0]);
+
+    // Merge updates with existing data (convert camelCase to snake_case)
+    const updatedPatient = { ...existingPatient };
     const allowedFields = [
-      'first_name', 'last_name', 'dob', 'sex', 'phone', 'email',
-      'address_line1', 'address_line2', 'city', 'state', 'zip',
-      'insurance_provider', 'insurance_id', 'primary_care_provider',
-      'pharmacy_name', 'pharmacy_address', 'pharmacy_phone', 'photo_url',
+      // Basic info
+      'first_name', 'middle_name', 'last_name', 'name_suffix', 'preferred_name',
+      'dob', 'sex', 'gender', 'race', 'ethnicity', 'marital_status',
+      // Contact
+      'phone', 'phone_secondary', 'phone_cell', 'phone_work', 'phone_preferred',
+      'email', 'email_secondary', 'preferred_language', 'interpreter_needed',
+      'communication_preference', 'consent_to_text', 'consent_to_email',
+      // Address
+      'address_line1', 'address_line2', 'city', 'state', 'zip', 'country', 'address_type',
+      // Employment
+      'employment_status', 'occupation', 'employer_name',
+      // Emergency Contact
       'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relationship',
+      'emergency_contact_address', 'emergency_contact_2_name', 'emergency_contact_2_phone',
+      'emergency_contact_2_relationship',
+      // Insurance
+      'insurance_provider', 'insurance_id', 'insurance_group_number', 'insurance_plan_name',
+      'insurance_plan_type', 'insurance_subscriber_name', 'insurance_subscriber_dob',
+      'insurance_subscriber_relationship', 'insurance_copay', 'insurance_effective_date',
+      'insurance_expiry_date', 'insurance_notes',
+      // Pharmacy
+      'pharmacy_name', 'pharmacy_address', 'pharmacy_phone', 'pharmacy_npi', 'pharmacy_fax',
+      'pharmacy_preferred',
+      // Additional
+      'primary_care_provider', 'referral_source', 'smoking_status', 'alcohol_use',
+      'allergies_known', 'photo_url', 'notes', 'deceased', 'deceased_date',
     ];
 
+    for (const field of allowedFields) {
+      const camelField = field.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+      if (updates[camelField] !== undefined) {
+        updatedPatient[field] = updates[camelField];
+      }
+    }
+
+    // Encrypt PHI fields before storing
+    const encryptedPatient = await patientEncryptionService.preparePatientForStorage(updatedPatient);
+
+    // Build UPDATE query
     const setClause = [];
     const values = [];
     let paramIndex = 1;
 
     for (const field of allowedFields) {
-      const camelField = field.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
-      if (updates[camelField] !== undefined) {
+      if (encryptedPatient[field] !== undefined && encryptedPatient[field] !== existingPatient[field]) {
         setClause.push(`${field} = $${paramIndex}`);
-        values.push(updates[camelField]);
+        values.push(encryptedPatient[field]);
         paramIndex++;
       }
+    }
+
+    // Update encryption_metadata if PHI fields changed
+    if (encryptedPatient.encryption_metadata) {
+      setClause.push(`encryption_metadata = $${paramIndex}`);
+      values.push(JSON.stringify(encryptedPatient.encryption_metadata));
+      paramIndex++;
     }
 
     if (setClause.length === 0) {
@@ -351,6 +621,9 @@ router.put('/:id', requireRole('clinician', 'front_desk', 'admin'), async (req, 
       return res.status(404).json({ error: 'Patient not found' });
     }
 
+    // Decrypt for response
+    const decryptedPatient = await patientEncryptionService.decryptPatientPHI(result.rows[0]);
+
     // Log audit (non-blocking, don't fail if it errors)
     if (req.user && req.user.id) {
       try {
@@ -360,7 +633,7 @@ router.put('/:id', requireRole('clinician', 'front_desk', 'admin'), async (req, 
       }
     }
 
-    res.json(result.rows[0]);
+    res.json(decryptedPatient);
   } catch (error) {
     console.error('Error updating patient:', error);
     console.error('Error details:', error.message, error.stack);
@@ -525,7 +798,7 @@ router.delete('/problems/:problemId', requireRole('clinician'), async (req, res)
 });
 
 // Get family history
-router.get('/:id/family-history', authenticate, async (req, res) => {
+router.get('/:id/family-history', requirePrivilege('patient:view'), async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
@@ -638,7 +911,7 @@ router.delete('/family-history/:historyId', requireRole('clinician'), async (req
 });
 
 // Get social history
-router.get('/:id/social-history', authenticate, async (req, res) => {
+router.get('/:id/social-history', requirePrivilege('patient:view'), async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
@@ -701,7 +974,7 @@ router.post('/:id/social-history', requireRole('clinician'), async (req, res) =>
 });
 
 // Get all problems for patient
-router.get('/:id/problems', authenticate, async (req, res) => {
+router.get('/:id/problems', requirePrivilege('patient:view'), async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
@@ -716,7 +989,7 @@ router.get('/:id/problems', authenticate, async (req, res) => {
 });
 
 // Get all allergies for patient
-router.get('/:id/allergies', authenticate, async (req, res) => {
+router.get('/:id/allergies', requirePrivilege('patient:view'), async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
@@ -731,7 +1004,7 @@ router.get('/:id/allergies', authenticate, async (req, res) => {
 });
 
 // Get all medications for patient
-router.get('/:id/medications', authenticate, async (req, res) => {
+router.get('/:id/medications', requirePrivilege('patient:view'), async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(

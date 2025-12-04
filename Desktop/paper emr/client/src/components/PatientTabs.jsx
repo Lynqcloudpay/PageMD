@@ -128,7 +128,7 @@ const PatientTabs = () => {
 
     return (
         <div 
-            className="bg-white border-b border-gray-200 flex items-center overflow-hidden relative" 
+            className="bg-white border-b border-deep-gray/10 flex items-center overflow-hidden relative" 
             ref={containerRef}
         >
             {/* Recent Patients Dropdown - Always show if there are any saved tabs */}
@@ -141,11 +141,11 @@ const PatientTabs = () => {
                         }}
                         className={`
                             flex items-center justify-center px-2 py-1 h-full
-                            border-r border-gray-200 cursor-pointer
+                            border-r border-deep-gray/10 cursor-pointer
                             transition-colors duration-200
                             ${showRecentDropdown
-                                ? 'bg-neutral-100 text-primary-700' 
-                                : 'bg-white text-gray-600 hover:bg-neutral-50 hover:text-primary-900'
+                                ? 'bg-soft-gray text-strong-azure' 
+                                : 'bg-white text-deep-gray/70 hover:bg-soft-gray hover:text-strong-azure'
                             }
                         `}
                         title="Recent Patients"
@@ -156,9 +156,9 @@ const PatientTabs = () => {
 
                     {/* Recent Patients Dropdown Menu */}
                     {showRecentDropdown && (
-                        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[220px] max-h-80 overflow-y-auto">
-                            <div className="px-3 py-2 border-b border-gray-200 bg-neutral-50">
-                                <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Recent Patients</h3>
+                        <div className="absolute top-full left-0 mt-1 bg-white border border-deep-gray/10 rounded-lg shadow-lg z-50 min-w-[220px] max-h-80 overflow-y-auto">
+                            <div className="px-3 py-2 border-b border-deep-gray/10 bg-soft-gray">
+                                <h3 className="text-xs font-semibold text-deep-gray uppercase tracking-wider">Recent Patients</h3>
                             </div>
                             {hasRecentPatients ? (
                                 recentPatients.map((patient) => (
@@ -167,16 +167,16 @@ const PatientTabs = () => {
                                         className="
                                             flex items-center justify-between px-3 py-2 cursor-pointer
                                             transition-colors duration-200 group
-                                            hover:bg-neutral-50 text-gray-700
+                                            hover:bg-soft-gray text-deep-gray
                                         "
                                         onClick={() => handleRecentPatientClick(patient)}
                                     >
                                         <div className="flex items-center min-w-0 flex-1">
-                                            <span className="truncate text-xs font-medium text-gray-700">
+                                            <span className="truncate text-xs font-medium text-deep-gray">
                                                 {patient.patientName}
                                             </span>
                                             {patient.mrn && (
-                                                <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded font-medium bg-neutral-100 text-gray-600">
+                                                <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded font-medium bg-soft-gray text-deep-gray/70">
                                                     {patient.mrn}
                                                 </span>
                                             )}
@@ -184,7 +184,7 @@ const PatientTabs = () => {
                                     </div>
                                 ))
                             ) : (
-                                <div className="px-3 py-4 text-center text-xs text-gray-500">
+                                <div className="px-3 py-4 text-center text-xs text-deep-gray/60">
                                     All recent patients are already open
                                 </div>
                             )}
@@ -203,18 +203,23 @@ const PatientTabs = () => {
                         <div
                             key={tab.patientId}
                             className={`
-                                flex items-center px-2 py-1 border-r border-gray-200 cursor-pointer
+                                flex items-center px-2 py-1 border-r border-deep-gray/10 cursor-pointer
                                 min-w-0 group patient-tab-item flex-shrink-0
                                 ${isActive 
-                                    ? 'bg-primary-600 text-white border-b-2 border-b-primary-700 shadow-sm tab-active' 
-                                    : 'bg-white text-gray-700 hover:bg-neutral-50 hover:text-primary-900'
+                                    ? 'text-white border-b-2 shadow-sm tab-active' 
+                                    : 'bg-white text-deep-gray hover:bg-soft-gray hover:text-strong-azure'
                                 }
                                 ${isAnimating && isActive ? 'tab-switch-animation' : ''}
                         `}
+                        style={isActive ? {
+                            background: '#3B82F6',
+                            borderBottomColor: '#3B82F6',
+                            boxShadow: '0 1px 3px 0 rgba(59, 130, 246, 0.3)'
+                        } : {}}
                         onClick={() => switchTab(tab.patientId)}
                     >
                             <span className={`truncate max-w-[80px] text-[11px] font-medium transition-colors duration-300 ${
-                                isActive ? 'text-white' : 'text-gray-700'
+                                isActive ? 'text-white' : 'text-deep-gray'
                         }`}>
                             {tab.patientName}
                         </span>
@@ -222,7 +227,7 @@ const PatientTabs = () => {
                                 <span className={`ml-1 text-[9px] truncate px-1 py-0.5 rounded font-medium transition-all duration-300 ${
                                     isActive 
                                     ? 'bg-white/20 text-white' 
-                                        : 'bg-neutral-100 text-gray-600'
+                                        : 'bg-soft-gray text-deep-gray/70'
                             }`}>
                                     {tab.mrn.split('-').pop() || tab.mrn}
                             </span>
@@ -235,13 +240,13 @@ const PatientTabs = () => {
                                 className={`ml-1 opacity-0 group-hover:opacity-100 rounded p-0.5 transition-all duration-200 ${
                                     isActive 
                                         ? 'hover:bg-white/20' 
-                                        : 'hover:bg-neutral-100'
+                                        : 'hover:bg-soft-gray'
                                 }`}
                         >
                                 <X className={`w-2.5 h-2.5 ${
                                     isActive 
                                         ? 'text-white/70 hover:text-white' 
-                                        : 'text-gray-400 hover:text-gray-600'
+                                        : 'text-deep-gray/50 hover:text-deep-gray'
                             }`} />
                         </button>
                     </div>
@@ -260,11 +265,11 @@ const PatientTabs = () => {
                         }}
                         className={`
                             flex items-center justify-center px-2 py-1 h-full
-                            border-l border-gray-200 cursor-pointer
+                            border-l border-deep-gray/10 cursor-pointer
                             transition-colors duration-200
                             ${showDropdown || hiddenTabs.some(t => t.patientId === activeTab)
-                                ? 'bg-neutral-100 text-primary-700' 
-                                : 'bg-white text-gray-600 hover:bg-neutral-50 hover:text-primary-900'
+                                ? 'bg-soft-gray text-strong-azure' 
+                                : 'bg-white text-deep-gray/70 hover:bg-soft-gray hover:text-strong-azure'
                             }
                         `}
                         title={`${hiddenTabs.length} more tab${hiddenTabs.length > 1 ? 's' : ''}`}
@@ -276,7 +281,7 @@ const PatientTabs = () => {
 
                     {/* Dropdown Menu */}
                     {showDropdown && (
-                        <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[200px] max-h-64 overflow-y-auto">
+                        <div className="absolute top-full right-0 mt-1 bg-white border border-deep-gray/10 rounded-lg shadow-lg z-50 min-w-[200px] max-h-64 overflow-y-auto">
                             {hiddenTabs.map((tab) => {
                                 const isActive = activeTab === tab.patientId;
                                 return (
@@ -286,8 +291,8 @@ const PatientTabs = () => {
                                             flex items-center justify-between px-3 py-2 cursor-pointer
                                             transition-colors duration-200 group
                                             ${isActive 
-                                                ? 'bg-primary-50 text-primary-900 border-l-2 border-l-primary-600' 
-                                                : 'hover:bg-neutral-50 text-gray-700'
+                                                ? 'bg-strong-azure/10 text-strong-azure border-l-2 border-l-strong-azure' 
+                                                : 'hover:bg-soft-gray text-deep-gray'
                                             }
                                         `}
                                         onClick={() => {
@@ -297,15 +302,15 @@ const PatientTabs = () => {
                                     >
                                         <div className="flex items-center min-w-0 flex-1">
                                             <span className={`truncate text-xs font-medium ${
-                                                isActive ? 'text-primary-900' : 'text-gray-700'
+                                                isActive ? 'text-strong-azure' : 'text-deep-gray'
                                             }`}>
                                                 {tab.patientName}
                                             </span>
                                             {tab.mrn && (
                                                 <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded font-medium ${
                                                     isActive 
-                                                        ? 'bg-primary-100 text-primary-700' 
-                                                        : 'bg-neutral-100 text-gray-600'
+                                                        ? 'bg-strong-azure/20 text-strong-azure' 
+                                                        : 'bg-soft-gray text-deep-gray/70'
                                                 }`}>
                                                     {tab.mrn}
                                                 </span>
@@ -316,9 +321,9 @@ const PatientTabs = () => {
                                                 e.stopPropagation();
                                                 removeTab(tab.patientId);
                                             }}
-                                            className="ml-2 opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-neutral-200 transition-all duration-200"
+                                            className="ml-2 opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-soft-gray transition-all duration-200"
                                         >
-                                            <X className="w-3 h-3 text-gray-400 hover:text-gray-600" />
+                                            <X className="w-3 h-3 text-deep-gray/50 hover:text-deep-gray" />
                                         </button>
                                     </div>
                                 );

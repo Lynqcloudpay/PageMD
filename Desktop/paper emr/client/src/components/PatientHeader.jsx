@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { User, FileText, Pill, Stethoscope, Upload, Send, ChevronDown, ChevronUp, Search, Menu, AlertCircle, X, Plus, Save, Camera, FileImage, Phone, Mail, MapPin, CreditCard, Building2, Users, Edit } from 'lucide-react';
 import { PrescriptionModal, OrderModal, ReferralModal, UploadModal } from './ActionModals';
@@ -46,10 +46,10 @@ const PatientHeader = () => {
     const videoRef = useRef(null);
     const fileInputRef = useRef(null);
 
-    const showToast = (message, type = 'success') => {
+    const showToast = useCallback((message, type = 'success') => {
         setToast({ message, type });
         setTimeout(() => setToast(null), 3000);
-    };
+    }, []);
 
     // Format phone number to (xxx) xxx-xxxx
     const formatPhone = (phone) => {
@@ -744,9 +744,9 @@ const PatientHeader = () => {
             </div>
 
             {/* Modals */}
-            <PrescriptionModal isOpen={activeModal === 'rx'} onClose={() => setActiveModal(null)} onSuccess={showToast} />
-            <OrderModal isOpen={activeModal === 'order'} onClose={() => setActiveModal(null)} onSuccess={showToast} />
-            <ReferralModal isOpen={activeModal === 'refer'} onClose={() => setActiveModal(null)} onSuccess={showToast} />
+            <PrescriptionModal isOpen={activeModal === 'rx'} onClose={() => setActiveModal(null)} onSuccess={(diagnosis, text) => showToast('Prescription added', 'success')} />
+            <OrderModal isOpen={activeModal === 'order'} onClose={() => setActiveModal(null)} onSuccess={(diagnosis, text) => showToast('Order added', 'success')} />
+            <ReferralModal isOpen={activeModal === 'refer'} onClose={() => setActiveModal(null)} onSuccess={(diagnosis, text) => showToast('Referral added', 'success')} />
             <UploadModal isOpen={activeModal === 'upload'} onClose={() => setActiveModal(null)} onSuccess={showToast} />
 
             {/* Allergy Modal */}
@@ -819,7 +819,10 @@ const PatientHeader = () => {
                                 <button
                                     onClick={handleAddAllergy}
                                     disabled={!allergyForm.allergen.trim()}
-                                    className="flex-1 px-4 py-2 bg-paper-700 text-white rounded-md hover:bg-paper-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                                    className="flex-1 px-4 py-2 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
+                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                    onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+                                    onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
                                 >
                                     <Save className="w-4 h-4" />
                                     <span>Add Allergy</span>
@@ -918,7 +921,10 @@ const PatientHeader = () => {
                                 <button
                                     onClick={handleAddMedication}
                                     disabled={!medicationForm.medicationName.trim()}
-                                    className="flex-1 px-4 py-2 bg-paper-700 text-white rounded-md hover:bg-paper-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                                    className="flex-1 px-4 py-2 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
+                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                    onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+                                    onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
                                 >
                                     <Save className="w-4 h-4" />
                                     <span>Add Medication</span>
@@ -1017,7 +1023,10 @@ const PatientHeader = () => {
                                         <div className="flex space-x-3">
                                             <button
                                                 onClick={capturePhoto}
-                                                className="flex-1 px-4 py-2 bg-paper-700 text-white rounded-md hover:bg-paper-800 flex items-center justify-center space-x-2"
+                                                className="flex-1 px-4 py-2 text-white rounded-md flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
+                                                style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                                             >
                                                 <Camera className="w-4 h-4" />
                                                 <span>Capture Photo</span>
@@ -1041,7 +1050,10 @@ const PatientHeader = () => {
                                         <div className="flex space-x-3">
                                             <button
                                                 onClick={handleSavePhoto}
-                                                className="flex-1 px-4 py-2 bg-paper-700 text-white rounded-md hover:bg-paper-800 flex items-center justify-center space-x-2"
+                                                className="flex-1 px-4 py-2 text-white rounded-md flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
+                                                style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                                             >
                                                 <Save className="w-4 h-4" />
                                                 <span>Save Photo</span>
@@ -1079,7 +1091,10 @@ const PatientHeader = () => {
                                         <div className="flex space-x-3">
                                             <button
                                                 onClick={handleSavePhoto}
-                                                className="flex-1 px-4 py-2 bg-paper-700 text-white rounded-md hover:bg-paper-800 flex items-center justify-center space-x-2"
+                                                className="flex-1 px-4 py-2 text-white rounded-md flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
+                                                style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                                             >
                                                 <Save className="w-4 h-4" />
                                                 <span>Save Photo</span>
@@ -1115,7 +1130,10 @@ const PatientHeader = () => {
                                                     fileInputRef.current?.click();
                                                 }, 100);
                                             }}
-                                            className="px-4 py-2 bg-paper-700 text-white rounded-md hover:bg-paper-800"
+                                            className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md"
+                                            style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                                         >
                                             Choose File
                                         </button>
@@ -1340,7 +1358,10 @@ const PatientHeader = () => {
                             <div className="flex space-x-3 pt-2">
                                 <button
                                     onClick={handleSaveDemographics}
-                                    className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 flex items-center justify-center space-x-2"
+                                    className="flex-1 px-4 py-2 text-white rounded-md flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
+                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                                 >
                                     <Save className="w-4 h-4" />
                                     <span>Save</span>

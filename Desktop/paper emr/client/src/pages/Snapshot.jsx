@@ -1,14 +1,24 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
     AlertCircle, Activity, Pill, FileText, Clock, Eye, ChevronDown, ChevronUp, ChevronRight, Plus,
     Phone, Mail, MapPin, CreditCard, Building2, Users, Heart, Calendar,
-    Stethoscope, CheckCircle2, Edit, ArrowRight, ExternalLink, UserCircle, Camera, User, X, FileImage, Save
+    Stethoscope, CheckCircle2, Edit, ArrowRight, ExternalLink, UserCircle, Camera, User, X, FileImage, Save, FlaskConical, Database, Trash2, Upload, Layout, RotateCcw
 } from 'lucide-react';
-import { visitsAPI, patientsAPI, ordersAPI, referralsAPI } from '../services/api';
+import { visitsAPI, patientsAPI, ordersAPI, referralsAPI, documentsAPI } from '../services/api';
+import { format } from 'date-fns';
+// GridLayout temporarily disabled to fix 500 error
+// TODO: Re-enable with proper implementation
+// import GridLayout from 'react-grid-layout';
+// import 'react-grid-layout/css/styles.css';
+// import 'react-resizable/css/styles.css';
+import PatientChartPanel from '../components/PatientChartPanel';
 import PatientDataManager from '../components/PatientDataManager';
 import VisitFoldersModal from '../components/VisitFoldersModal';
 import VisitChartView from '../components/VisitChartView';
+import EPrescribeEnhanced from '../components/EPrescribeEnhanced';
+import Modal from '../components/ui/Modal';
+import { usePrivileges } from '../hooks/usePrivileges';
 
 const Snapshot = ({ showNotesOnly = false }) => {
     const { id } = useParams();
@@ -26,9 +36,14 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const [vitals, setVitals] = useState([]);
     const [orders, setOrders] = useState([]);
     const [referrals, setReferrals] = useState([]);
+    const [documents, setDocuments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [expandedNotes, setExpandedNotes] = useState(new Set());
+    const [showPatientChart, setShowPatientChart] = useState(false);
+    const [patientChartTab, setPatientChartTab] = useState('history');
+    const [patientChartDataTab, setPatientChartDataTab] = useState('problems');
     const [showPatientDataManager, setShowPatientDataManager] = useState(false);
+    const [patientDataManagerTab, setPatientDataManagerTab] = useState('problems');
     const [showVisitFoldersModal, setShowVisitFoldersModal] = useState(false);
     const [selectedVisitForView, setSelectedVisitForView] = useState(null);
     const [noteFilter, setNoteFilter] = useState('all');
@@ -57,6 +72,150 @@ const Snapshot = ({ showNotesOnly = false }) => {
         emergency_contact_phone: '',
         emergency_contact_relationship: ''
     });
+    const [showDocumentUploadModal, setShowDocumentUploadModal] = useState(false);
+    const [documentUploadFile, setDocumentUploadFile] = useState(null);
+    const [documentUploadType, setDocumentUploadType] = useState('other');
+    const [showEditPatientModal, setShowEditPatientModal] = useState(false);
+    const [showEPrescribeEnhanced, setShowEPrescribeEnhanced] = useState(false);
+    const { hasPrivilege } = usePrivileges();
+    const [editPatientForm, setEditPatientForm] = useState({
+        first_name: '',
+        last_name: '',
+        dob: '',
+        sex: '',
+        mrn: ''
+    });
+    const documentUploadInputRef = React.useRef(null);
+    
+    // Layout Editor State
+    const [layoutEditMode, setLayoutEditMode] = useState(false);
+    const [moduleLayout, setModuleLayout] = useState([]);
+    
+    // Default layout configuration for modules
+    const getDefaultLayout = () => [
+        { i: 'medications', x: 0, y: 0, w: 2, h: 8, minW: 2, minH: 4 },
+        { i: 'problems', x: 2, y: 0, w: 2, h: 8, minW: 2, minH: 4 },
+        { i: 'allergies', x: 4, y: 0, w: 2, h: 4, minW: 2, minH: 3 },
+        { i: 'vitals', x: 6, y: 0, w: 2, h: 4, minW: 2, minH: 3 },
+        { i: 'familyHistory', x: 4, y: 4, w: 2, h: 4, minW: 2, minH: 3 },
+        { i: 'socialHistory', x: 6, y: 4, w: 2, h: 4, minW: 2, minH: 3 },
+        { i: 'screening', x: 0, y: 8, w: 4, h: 3, minW: 2, minH: 2 }
+    ];
+    
+    // Load layout from localStorage or use default
+    useEffect(() => {
+        if (!id) return;
+        const savedLayout = localStorage.getItem(`patient-chart-layout-${id}`);
+        if (savedLayout) {
+            try {
+                setModuleLayout(JSON.parse(savedLayout));
+            } catch (e) {
+                setModuleLayout(getDefaultLayout());
+            }
+        } else {
+            setModuleLayout(getDefaultLayout());
+        }
+    }, [id]);
+    
+    // Save layout to localStorage
+    const saveLayout = useCallback((layout) => {
+        localStorage.setItem(`patient-chart-layout-${id}`, JSON.stringify(layout));
+        setModuleLayout(layout);
+    }, [id]);
+    
+    // Reset to default layout
+    const resetLayout = useCallback(() => {
+        if (confirm('Reset layout to default? This will discard your custom arrangement.')) {
+            localStorage.removeItem(`patient-chart-layout-${id}`);
+            setModuleLayout(getDefaultLayout());
+        }
+    }, [id]);
+    
+    // Handle layout change
+    const handleLayoutChange = useCallback((layout) => {
+        saveLayout(layout);
+    }, [saveLayout]);
+
+    // Function to refresh all patient data
+    const refreshPatientData = async () => {
+        if (!id) return;
+        
+        setLoading(true);
+        try {
+            // Fetch patient snapshot (includes basic info)
+            const snapshotResponse = await patientsAPI.getSnapshot(id);
+            const snapshot = snapshotResponse.data;
+            setPatient(snapshot.patient);
+            
+            // Also fetch full patient data to ensure we have photo_url
+            try {
+                const fullPatientResponse = await patientsAPI.get(id);
+                if (fullPatientResponse.data) {
+                    setPatient(prev => ({ ...prev, ...fullPatientResponse.data }));
+                }
+            } catch (error) {
+                console.warn('Could not fetch full patient data:', error);
+            }
+            
+            // Set problems
+            if (snapshot.problems && snapshot.problems.length > 0) {
+                setProblems(snapshot.problems.map(p => ({
+                    id: p.id,
+                    name: p.problem_name,
+                    icd: p.icd10_code,
+                    status: p.status,
+                    onset: p.onset_date
+                })));
+            } else {
+                setProblems([]);
+            }
+            
+            // Set medications
+            if (snapshot.medications && snapshot.medications.length > 0) {
+                setMedications(snapshot.medications);
+            } else {
+                try {
+                    const medsResponse = await patientsAPI.getMedications(id);
+                    setMedications(medsResponse?.data || []);
+                } catch (e) {
+                    console.warn('Error fetching medications:', e);
+                    setMedications([]);
+                }
+            }
+            
+            // Set allergies
+            if (snapshot.allergies && snapshot.allergies.length > 0) {
+                setAllergies(snapshot.allergies);
+            } else {
+                try {
+                    const allergiesResponse = await patientsAPI.getAllergies(id);
+                    setAllergies(allergiesResponse?.data || []);
+                } catch (e) {
+                    console.warn('Error fetching allergies:', e);
+                    setAllergies([]);
+                }
+            }
+            
+            // Fetch additional data
+            try {
+                const [familyHistResponse, socialHistResponse] = await Promise.all([
+                    patientsAPI.getFamilyHistory(id).catch(() => ({ data: [] })),
+                    patientsAPI.getSocialHistory(id).catch(() => ({ data: null }))
+                ]);
+                
+                setFamilyHistory(familyHistResponse?.data || []);
+                setSocialHistory(socialHistResponse?.data || null);
+            } catch (error) {
+                console.error('Error fetching additional data:', error);
+                setFamilyHistory([]);
+                setSocialHistory(null);
+            }
+        } catch (error) {
+            console.error('Could not refresh patient data:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Fetch all patient data
     useEffect(() => {
@@ -146,17 +305,19 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 
                 // Fetch additional data
                 try {
-                    const [familyHistResponse, socialHistResponse, ordersResponse, referralsResponse] = await Promise.all([
+                    const [familyHistResponse, socialHistResponse, ordersResponse, referralsResponse, documentsResponse] = await Promise.all([
                         patientsAPI.getFamilyHistory(id).catch(() => ({ data: [] })),
                         patientsAPI.getSocialHistory(id).catch(() => ({ data: null })),
                         ordersAPI.getByPatient(id).catch(() => ({ data: [] })),
-                        referralsAPI.getByPatient(id).catch(() => ({ data: [] }))
+                        referralsAPI.getByPatient(id).catch(() => ({ data: [] })),
+                        documentsAPI.getByPatient(id).catch(() => ({ data: [] }))
                     ]);
                     
                     setFamilyHistory(familyHistResponse?.data || []);
                     setSocialHistory(socialHistResponse?.data || null);
                     setOrders(ordersResponse?.data || []);
                     setReferrals(referralsResponse?.data || []);
+                    setDocuments(documentsResponse?.data || []);
             } catch (error) {
                     console.error('Error fetching additional data:', error);
                     // Set defaults on error
@@ -164,6 +325,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     setSocialHistory(null);
                     setOrders([]);
                     setReferrals([]);
+                    setDocuments([]);
                 }
             } catch (error) {
                 console.error('Could not fetch snapshot from API:', error);
@@ -216,7 +378,18 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             time: timeStr,
                             dateTime: dateTimeStr,
                             type: visit.visit_type || "Office Visit",
-                            provider: visit.provider_first_name ? `${visit.provider_first_name} ${visit.provider_last_name}` : "Provider",
+                            provider: (() => {
+                                const signedByName = visit.signed_by_first_name && visit.signed_by_last_name
+                                    ? `${visit.signed_by_first_name} ${visit.signed_by_last_name}`
+                                    : null;
+                                const providerNameFallback = visit.provider_first_name 
+                                    ? `${visit.provider_first_name} ${visit.provider_last_name}` 
+                                    : "Provider";
+                                // Use signed_by name unless it's "System Administrator", then use provider name
+                                return ((visit.locked || visit.note_signed_by) && signedByName && signedByName !== 'System Administrator')
+                                    ? signedByName
+                                    : providerNameFallback;
+                            })(),
                             summary: hpiMatch ? hpiMatch[1].trim().substring(0, 200) : (noteText.substring(0, 200) || "No note available"),
                             plan: planMatch ? planMatch[1].trim() : extractPlan(noteText),
                             assessment: assessmentMatch ? assessmentMatch[1].trim() : "",
@@ -264,6 +437,64 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const extractPlan = (noteText) => {
         const planMatch = noteText.match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n[A-Z]:|$)/is);
         return planMatch ? planMatch[1].trim() : '';
+    };
+
+    const handleDeleteNote = async (noteId, e) => {
+        if (e) {
+            e.stopPropagation();
+        }
+        
+        if (!window.confirm('Are you sure you want to delete this draft note? This action cannot be undone.')) {
+            return;
+        }
+        
+        try {
+            await visitsAPI.delete(noteId);
+            // Refresh notes
+            const response = await visitsAPI.getByPatient(id);
+            if (response.data && response.data.length > 0) {
+                const notesToShow = response.data.filter(v => v.note_draft && v.note_draft.trim().length > 0);
+                // Format notes using the same logic as in fetchNotes
+                const formattedNotes = notesToShow.map(visit => {
+                    const noteText = visit.note_draft || "";
+                    const ccMatch = noteText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
+                    const chiefComplaint = ccMatch ? ccMatch[1].trim() : null;
+                    const visitDateObj = new Date(visit.visit_date);
+                    const createdDateObj = visit.created_at ? new Date(visit.created_at) : visitDateObj;
+                    const dateStr = visitDateObj.toLocaleDateString();
+                    const hasTime = visitDateObj.getHours() !== 0 || visitDateObj.getMinutes() !== 0 || visitDateObj.getSeconds() !== 0;
+                    const timeSource = hasTime ? visitDateObj : createdDateObj;
+                    const timeStr = timeSource.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const dateTimeStr = `${dateStr} ${timeStr}`;
+                    
+                    return {
+                        id: visit.id,
+                        date: dateStr,
+                        time: timeStr,
+                        dateTime: dateTimeStr,
+                        type: visit.visit_type || "Office Visit",
+                        provider: (() => {
+                            const signedByName = visit.signed_by_first_name && visit.signed_by_last_name
+                                ? `${visit.signed_by_first_name} ${visit.signed_by_last_name}`
+                                : null;
+                            const providerNameFallback = visit.provider_first_name 
+                                ? `${visit.provider_first_name} ${visit.provider_last_name}` 
+                                : "Provider";
+                            // Use signed_by name unless it's "System Administrator", then use provider name
+                            return ((visit.locked || visit.note_signed_by) && signedByName && signedByName !== 'System Administrator')
+                                ? signedByName
+                                : providerNameFallback;
+                        })(),
+                        chiefComplaint: chiefComplaint,
+                        signed: visit.locked || !!visit.note_signed_by,
+                    };
+                });
+                setRecentNotes(formattedNotes);
+            }
+        } catch (error) {
+            console.error('Error deleting note:', error);
+            alert('Failed to delete note. Please try again.');
+        }
     };
 
     const handleViewNote = (noteId, e) => {
@@ -363,6 +594,68 @@ const Snapshot = ({ showNotesOnly = false }) => {
             console.error('Error response:', error.response?.data);
             const errorMessage = error.response?.data?.error || error.message || 'Failed to update patient information';
             alert(errorMessage);
+        }
+    };
+
+    const handleDocumentUpload = async () => {
+        if (!documentUploadFile || !id) return;
+        
+        try {
+            const formData = new FormData();
+            formData.append('file', documentUploadFile);
+            formData.append('patientId', id);
+            formData.append('docType', documentUploadType);
+            
+            await documentsAPI.upload(formData);
+            
+            // Refresh documents
+            const docsResponse = await documentsAPI.getByPatient(id);
+            const docs = docsResponse.data || [];
+            const imageDocs = docs.filter(d => d.doc_type === 'imaging');
+            const otherDocs = docs.filter(d => d.doc_type !== 'imaging');
+            imageDocs.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+            otherDocs.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+            setDocuments(docs);
+            
+            // Close modal and reset
+            setShowDocumentUploadModal(false);
+            setDocumentUploadFile(null);
+            setDocumentUploadType('other');
+            if (documentUploadInputRef.current) {
+                documentUploadInputRef.current.value = '';
+            }
+            
+            alert('Document uploaded successfully!');
+        } catch (error) {
+            console.error('Error uploading document:', error);
+            alert('Failed to upload document. Please try again.');
+        }
+    };
+
+    const handleEditPatient = async () => {
+        if (!id) return;
+        
+        try {
+            const updateData = {
+                firstName: editPatientForm.first_name,
+                lastName: editPatientForm.last_name,
+                dob: editPatientForm.dob || null,
+                sex: editPatientForm.sex || null,
+                mrn: editPatientForm.mrn || null
+            };
+            
+            await patientsAPI.update(id, updateData);
+            
+            // Refresh patient data
+            await refreshPatientData();
+            
+            // Close modal and reset
+            setShowEditPatientModal(false);
+            
+            alert('Patient information updated successfully!');
+        } catch (error) {
+            console.error('Error updating patient:', error);
+            alert('Failed to update patient information. Please try again.');
         }
     };
 
@@ -585,8 +878,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 onClick={() => setNoteFilter('all')}
                                 className={`px-3 py-1 text-xs rounded-md transition-colors ${
                                     noteFilter === 'all'
-                                        ? 'bg-paper-600 text-white font-medium'
-                                        : 'bg-white text-ink-700 hover:bg-paper-50 border border-paper-300'
+                                        ? 'text-white font-medium'
+                                        : 'bg-white text-deep-gray hover:bg-soft-gray border border-deep-gray/20'
                                 }`}
                             >
                                 All ({recentNotes.length})
@@ -755,7 +1048,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 {/* Patient Hub Header Section */}
                 <div className="bg-white border-b border-gray-200 shadow-sm mb-6">
                     {/* Patient Info Header */}
-                    <div className="px-6 py-4 bg-gradient-to-r from-primary-50 to-white border-b border-gray-100">
+                    <div className="px-6 py-4 border-b border-gray-100" style={{ background: 'linear-gradient(to right, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.08), transparent)' }}>
                         <div className="flex items-center justify-between">
                             {/* Left: Photo and Basic Info */}
                             <div className="flex items-center space-x-4">
@@ -796,12 +1089,33 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 
                                 {/* Patient Name and Info */}
                                 <div className="min-w-0">
-                                    <h1 
-                                        onClick={() => navigate(`/patient/${id}/snapshot`)}
-                                        className="text-2xl font-bold text-gray-900 cursor-pointer hover:text-primary-700 transition-colors mb-1"
-                                    >
-                                        {patient ? `${patient.first_name} ${patient.last_name}` : 'Patient Chart'}
-                                    </h1>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <h1 
+                                            onClick={() => navigate(`/patient/${id}/snapshot`)}
+                                            className="text-2xl font-bold text-gray-900 cursor-pointer hover:text-primary-700 transition-colors"
+                                        >
+                                            {patient ? `${patient.first_name} ${patient.last_name}` : 'Patient Chart'}
+                                        </h1>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (patient) {
+                                                    setEditPatientForm({
+                                                        first_name: patient.first_name || '',
+                                                        last_name: patient.last_name || '',
+                                                        dob: patient.dob ? patient.dob.split('T')[0] : '',
+                                                        sex: patient.sex || '',
+                                                        mrn: patient.mrn || ''
+                                                    });
+                                                    setShowEditPatientModal(true);
+                                                }
+                                            }}
+                                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                                            title="Edit Patient Information"
+                                        >
+                                            <Edit className="w-4 h-4 text-gray-600" />
+                                        </button>
+                                    </div>
                                     {patient && (
                                         <div className="flex items-center gap-3 text-sm text-gray-600">
                                             <span>{age !== null && `${age} years old`}</span>
@@ -828,7 +1142,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         alert('Patient ID is missing. Please refresh the page.');
                                     }
                                 }}
-                                className="flex items-center space-x-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all font-medium text-sm flex-shrink-0"
+                                className="flex items-center space-x-2 px-5 py-2.5 text-white rounded-lg shadow-md hover:shadow-lg transition-all font-medium text-sm flex-shrink-0"
+                                style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                             >
                                 <Plus className="w-5 h-5" />
                                 <span>New Visit</span>
@@ -968,6 +1285,157 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     )}
                 </div>
 
+                {/* Quick Navigation Bar */}
+                <div className="px-6 py-2 bg-gray-50 border-b border-gray-200 mb-4">
+                    <div className="flex items-center justify-between gap-1">
+                        <div className="flex items-center gap-1 overflow-x-auto flex-1">
+                            <button
+                                onClick={() => {
+                                    setPatientChartTab('hub');
+                                    setShowPatientChart(true);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
+                            >
+                                <UserCircle className="w-3.5 h-3.5 text-green-600" />
+                                <span>Patient Hub</span>
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setPatientChartTab('data');
+                                    setShowPatientChart(true);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
+                            >
+                                <Database className="w-3.5 h-3.5 text-orange-600" />
+                                <span>Patient Data</span>
+                            </button>
+                            <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                            <button
+                                onClick={() => {
+                                    setPatientChartTab('images');
+                                    setShowPatientChart(true);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
+                            >
+                                <FileImage className="w-3.5 h-3.5 text-purple-600" />
+                                <span>Images</span>
+                                {documents.filter(d => d.doc_type === 'imaging').length > 0 && (
+                                    <span className="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                                        {documents.filter(d => d.doc_type === 'imaging').length}
+                                    </span>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setPatientChartTab('labs');
+                                    setShowPatientChart(true);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
+                            >
+                                <FlaskConical className="w-3.5 h-3.5 text-blue-600" />
+                                <span>Labs</span>
+                                {orders.filter(o => o.order_type === 'lab').length > 0 && (
+                                    <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                                        {orders.filter(o => o.order_type === 'lab').length}
+                                    </span>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setPatientChartTab('documents');
+                                    setShowPatientChart(true);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
+                            >
+                                <FileText className="w-3.5 h-3.5 text-gray-600" />
+                                <span>Documents</span>
+                                {documents.filter(d => d.doc_type !== 'imaging').length > 0 && (
+                                    <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                                        {documents.filter(d => d.doc_type !== 'imaging').length}
+                                    </span>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setShowDocumentUploadModal(true)}
+                                className="flex items-center justify-center p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                                title="Upload Document"
+                            >
+                                <Upload className="w-3 h-3" />
+                            </button>
+                            <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                            {hasPrivilege('e_prescribe') && (
+                                <button
+                                    onClick={() => setShowEPrescribeEnhanced(true)}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-md transition-all duration-200 hover:shadow-md whitespace-nowrap"
+                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
+                                    title="Create New Prescription"
+                                >
+                                    <Pill className="w-3.5 h-3.5" />
+                                    <span>e-Prescribe</span>
+                                </button>
+                            )}
+                            <button
+                                onClick={() => {
+                                    setPatientChartTab('prescriptions');
+                                    setShowPatientChart(true);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
+                            >
+                                <Pill className="w-3.5 h-3.5 text-primary-600" />
+                                <span>Prescription Log</span>
+                                {orders.filter(o => o.order_type === 'rx').length > 0 && (
+                                    <span className="bg-primary-100 text-primary-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                                        {orders.filter(o => o.order_type === 'rx').length}
+                                    </span>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setPatientChartTab('referrals');
+                                    setShowPatientChart(true);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
+                            >
+                                <ExternalLink className="w-3.5 h-3.5 text-primary-600" />
+                                <span>Referral Log</span>
+                                {referrals.length > 0 && (
+                                    <span className="bg-primary-100 text-primary-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                                        {referrals.length}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
+                        <div className="flex-shrink-0 ml-2 flex items-center gap-2">
+                            {layoutEditMode && (
+                                <button
+                                    onClick={resetLayout}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors whitespace-nowrap"
+                                    title="Reset to Default Layout"
+                                >
+                                    <RotateCcw className="w-3.5 h-3.5" />
+                                    <span>Reset</span>
+                                </button>
+                            )}
+                            <button
+                                onClick={() => {
+                                    setPatientChartTab('history');
+                                    setShowPatientChart(true);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-md transition-all duration-200 hover:shadow-md whitespace-nowrap"
+                                style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
+                                title="Open Patient Chart"
+                            >
+                                <Eye className="w-3.5 h-3.5" />
+                                <span>Open Chart</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="px-6">
 
                 {/* Visit History Section */}
@@ -1011,7 +1479,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     {filteredNotes.slice(0, 5).map(note => (
                                         <div 
                                             key={note.id} 
-                                            className="px-2 py-1.5 border border-gray-200 rounded hover:bg-gray-50 cursor-pointer transition-colors relative"
+                                            className="px-2 py-1.5 border border-gray-200 rounded hover:bg-gray-50 cursor-pointer transition-colors relative group"
                                             onClick={() => handleViewNote(note.id)}
                                         >
                                             <div className="flex items-center justify-between">
@@ -1031,7 +1499,18 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         )}
                                                     </div>
                                                 </div>
-                                                <ArrowRight className="w-3 h-3 text-gray-400 flex-shrink-0 absolute right-2 top-1/2 transform -translate-y-1/2" />
+                                                <div className="flex items-center gap-2 absolute right-2 top-1/2 transform -translate-y-1/2">
+                                                    {!note.signed && (
+                                                        <button
+                                                            onClick={(e) => handleDeleteNote(note.id, e)}
+                                                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all"
+                                                            title="Delete draft"
+                                                        >
+                                                            <Trash2 className="w-3 h-3 text-red-600" />
+                                                        </button>
+                                                    )}
+                                                    <ArrowRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
@@ -1054,319 +1533,334 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     )}
                 </div>
 
-                {/* Prescription & Referral Logs */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    {/* Prescription Log */}
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer group" onClick={() => setShowPatientDataManager(true)}>
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center space-x-2">
-                                <Pill className="w-5 h-5 text-primary-600" />
-                                <h3 className="font-semibold text-gray-900">Prescription Log</h3>
+                {/* Modular Grid - With Layout Editor Support */}
+                <div className="mb-6">
+                    {layoutEditMode ? (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                            <div className="flex items-center justify-between">
+                                <p className="text-sm text-blue-800">
+                                    <strong>Layout Editor Mode:</strong> The drag-and-drop layout editor is currently being set up. 
+                                    For now, please exit edit mode to view your modules. Full functionality coming soon!
+                                </p>
+                                <button
+                                    onClick={() => setLayoutEditMode(false)}
+                                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                                >
+                                    Done
+                                </button>
                             </div>
-                            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-primary-600 transition-colors" />
                         </div>
-                        <p className="text-sm text-gray-600 mb-2">{orders.filter(o => o.order_type === 'rx').length} prescriptions</p>
-                        <div className="text-xs text-gray-500">
-                            {orders.filter(o => o.order_type === 'rx').slice(0, 3).map(order => (
-                                <div key={order.id} className="truncate">{order.order_payload?.medication_name || 'Prescription'}</div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Referral Log */}
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer group" onClick={() => setShowPatientDataManager(true)}>
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center space-x-2">
-                                <ExternalLink className="w-5 h-5 text-primary-600" />
-                                <h3 className="font-semibold text-gray-900">Referral Log</h3>
-                            </div>
-                            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-primary-600 transition-colors" />
-                        </div>
-                        <p className="text-sm text-gray-600 mb-2">{referrals.length} referrals</p>
-                        <div className="text-xs text-gray-500">
-                            {referrals.slice(0, 3).map(ref => (
-                                <div key={ref.id} className="truncate">{ref.recipient_name || ref.recipient_specialty || 'Referral'}</div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Modular Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                    {/* Medications Module */}
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                <Pill className="w-5 h-5 text-primary-600" />
-                                <h3 className="font-semibold text-gray-900">Medications</h3>
-                            </div>
-                            <button 
-                                onClick={() => setShowPatientDataManager(true)}
-                                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                            >
-                                Manage
-                            </button>
-                        </div>
-                        <div className="p-4">
-                            {medications.length > 0 ? (
-                                <div className="space-y-3">
-                                    {medications.slice(0, 5).map(med => (
-                                        <div key={med.id} className="pb-3 border-b border-gray-100 last:border-b-0 last:pb-0">
-                                            <p className="font-medium text-sm text-gray-900">{med.medication_name}</p>
-                                            <p className="text-xs text-gray-600 mt-1">
-                                                {med.dosage && `${med.dosage} • `}
-                                                {med.frequency && `${med.frequency}`}
-                                            </p>
-                                        </div>
-                                    ))}
-                                    {medications.length > 5 && (
-                                        <p className="text-xs text-gray-500 text-center pt-2">+{medications.length - 5} more</p>
+                    ) : null}
+                    
+                    {!layoutEditMode ? (
+                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                    {/* Medications and Problem List - Side by side, thinner */}
+                    <div className="lg:col-span-2 grid grid-cols-2 gap-4">
+                        {/* Medications Module - Taller */}
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                            <div className="p-2 border-b border-gray-200 flex items-center justify-between">
+                                <div className="flex items-center space-x-1.5 flex-1 min-w-0">
+                                    <Pill className="w-3.5 h-3.5 text-primary-600 flex-shrink-0" />
+                                    <h3 className="font-semibold text-xs text-gray-900 truncate">Medications</h3>
+                                    {medications.length > 0 && (
+                                        <span className="text-[10px] text-gray-500 flex-shrink-0">({medications.length})</span>
                                     )}
                                 </div>
-                            ) : (
-                                <p className="text-sm text-gray-500 text-center py-4">No medications</p>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Problem List Module */}
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                <AlertCircle className="w-5 h-5 text-orange-600" />
-                                <h3 className="font-semibold text-gray-900">Problem List</h3>
+                                <button 
+                                    onClick={() => {
+                                        setPatientDataManagerTab('medications');
+                                        setShowPatientDataManager(true);
+                                    }}
+                                    className="text-[10px] text-primary-600 hover:text-primary-700 font-medium flex-shrink-0 ml-1"
+                                >
+                                    Manage
+                                </button>
                             </div>
-                            <button 
-                                onClick={() => setShowPatientDataManager(true)}
-                                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                            >
-                                Manage
-                            </button>
-                        </div>
-                        <div className="p-4">
-                            {problems.length > 0 ? (
-                                <div className="space-y-3">
-                                    {problems.slice(0, 5).map(prob => (
-                                        <div key={prob.id} className="pb-3 border-b border-gray-100 last:border-b-0 last:pb-0">
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex-1">
-                                                    <p className="font-medium text-sm text-gray-900">{prob.name}</p>
-                                                    {prob.icd && (
-                                                        <p className="text-xs text-gray-500 font-mono mt-1">{prob.icd}</p>
-                                                    )}
-                                                </div>
-                                                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${
-                                                    prob.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                                                }`}>
-                                                    {prob.status}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {problems.length > 5 && (
-                                        <p className="text-xs text-gray-500 text-center pt-2">+{problems.length - 5} more</p>
-                                    )}
-                                </div>
-                            ) : (
-                                <p className="text-sm text-gray-500 text-center py-4">No active problems</p>
-                                    )}
-                        </div>
-                    </div>
-
-                    {/* Allergies Module */}
-                    <div className="bg-white rounded-lg shadow-sm border border-red-200 hover:shadow-md transition-shadow">
-                        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                <AlertCircle className="w-5 h-5 text-red-600" />
-                                <h3 className="font-semibold text-gray-900">Allergies</h3>
-                            </div>
-                            <button 
-                                onClick={() => setShowPatientDataManager(true)}
-                                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                            >
-                                Manage
-                            </button>
-                        </div>
-                        <div className="p-4">
-                            {allergies.length > 0 ? (
-                                <div className="space-y-2">
-                                    {allergies.map(allergy => (
-                                        <div key={allergy.id} className="pb-2 border-b border-gray-100 last:border-b-0 last:pb-0">
-                                            <p className="font-medium text-sm text-red-900">{allergy.allergen}</p>
-                                            {allergy.reaction && (
-                                                <p className="text-xs text-gray-600 mt-1">Reaction: {allergy.reaction}</p>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="text-sm text-gray-500 text-center py-4">No known allergies</p>
-                                    )}
-                        </div>
-                    </div>
-
-                    {/* Family History Module */}
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                <Heart className="w-5 h-5 text-primary-600" />
-                                <h3 className="font-semibold text-gray-900">Family History</h3>
-                            </div>
-                            <button 
-                                onClick={() => setShowPatientDataManager(true)}
-                                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                            >
-                                Manage
-                            </button>
-                        </div>
-                        <div className="p-4">
-                            {familyHistory.length > 0 ? (
-                                <div className="space-y-2">
-                                    {familyHistory.slice(0, 5).map(hist => (
-                                        <div key={hist.id} className="pb-2 border-b border-gray-100 last:border-b-0 last:pb-0">
-                                            <p className="font-medium text-sm text-gray-900">{hist.condition}</p>
-                                            <p className="text-xs text-gray-600 mt-1">{hist.relationship}</p>
-                                        </div>
-                                    ))}
-                                    {familyHistory.length > 5 && (
-                                        <p className="text-xs text-gray-500 text-center pt-2">+{familyHistory.length - 5} more</p>
-                                    )}
-                                </div>
-                            ) : (
-                                <p className="text-sm text-gray-500 text-center py-4">No family history recorded</p>
-                            )}
-                        </div>
-                </div>
-
-                    {/* Social History Module */}
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                <UserCircle className="w-5 h-5 text-primary-600" />
-                                <h3 className="font-semibold text-gray-900">Social History</h3>
-                    </div>
-                            <button 
-                                onClick={() => setShowPatientDataManager(true)}
-                                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                            >
-                                Manage
-                            </button>
-                        </div>
-                        <div className="p-4">
-                            {socialHistory ? (
-                                <div className="space-y-2 text-sm">
-                                    {socialHistory.smoking_status && (
-                                        <div>
-                                            <span className="font-medium text-gray-700">Smoking: </span>
-                                            <span className="text-gray-600">{socialHistory.smoking_status}</span>
-                                        </div>
-                                    )}
-                                    {socialHistory.alcohol_use && (
-                                        <div>
-                                            <span className="font-medium text-gray-700">Alcohol: </span>
-                                            <span className="text-gray-600">{socialHistory.alcohol_use}</span>
-                                        </div>
-                                    )}
-                                    {socialHistory.exercise_frequency && (
-                                        <div>
-                                            <span className="font-medium text-gray-700">Exercise: </span>
-                                            <span className="text-gray-600">{socialHistory.exercise_frequency}</span>
-                                        </div>
-                                    )}
-                                    {socialHistory.occupation && (
-                                        <div>
-                                            <span className="font-medium text-gray-700">Occupation: </span>
-                                            <span className="text-gray-600">{socialHistory.occupation}</span>
-                                        </div>
-                                    )}
-                                </div>
-                            ) : (
-                                <p className="text-sm text-gray-500 text-center py-4">No social history recorded</p>
-                            )}
-                </div>
-            </div>
-
-                    {/* Recent Vitals Module */}
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                <Activity className="w-5 h-5 text-primary-600" />
-                                <h3 className="font-semibold text-gray-900">Recent Vitals</h3>
-                            </div>
-                        </div>
-                        <div className="p-4">
-                            {vitals.length > 0 ? (
-                                <div className="space-y-3">
-                                    {vitals.slice(0, 3).map((vital, idx) => (
-                                        <div key={idx} className="pb-3 border-b border-gray-100 last:border-b-0 last:pb-0">
-                                            <p className="text-xs text-gray-500 mb-1">{vital.date}</p>
-                                            <div className="grid grid-cols-2 gap-2 text-xs">
-                                                <div>
-                                                    <span className="text-gray-500">BP: </span>
-                                                    <span className="font-medium text-gray-900">{vital.bp}</span>
-                                                </div>
-                                                <div>
-                                                    <span className="text-gray-500">HR: </span>
-                                                    <span className="font-medium text-gray-900">{vital.hr}</span>
-                                                </div>
-                                                <div>
-                                                    <span className="text-gray-500">Temp: </span>
-                                                    <span className="font-medium text-gray-900">{vital.temp}</span>
-                                                </div>
-                                                <div>
-                                                    <span className="text-gray-500">SpO2: </span>
-                                                    <span className="font-medium text-gray-900">{vital.spo2}</span>
+                            <div className="p-1.5 max-h-[400px] overflow-y-auto">
+                                {medications.length > 0 ? (
+                                    <div className="space-y-0.5">
+                                        {medications.map(med => (
+                                            <div key={med.id} className="py-0.5 border-b border-gray-100 last:border-b-0">
+                                                <div className="flex items-start justify-between gap-1">
+                                                    <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap">
+                                                        <p className="font-medium text-[11px] text-gray-900 leading-tight truncate">{med.medication_name}</p>
+                                                        {(med.dosage || med.frequency) && (
+                                                            <p className="text-[10px] text-gray-600 leading-tight flex-shrink-0">
+                                                                {med.dosage && `${med.dosage}`}
+                                                                {med.dosage && med.frequency && ' • '}
+                                                                {med.frequency && `${med.frequency}`}
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-[11px] text-gray-500 text-center py-4">No medications</p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Problem List Module - Taller */}
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                            <div className="p-2 border-b border-gray-200 flex items-center justify-between">
+                                <div className="flex items-center space-x-1.5 flex-1 min-w-0">
+                                    <AlertCircle className="w-3.5 h-3.5 text-orange-600 flex-shrink-0" />
+                                    <h3 className="font-semibold text-xs text-gray-900 truncate">Problem List</h3>
+                                    {problems.length > 0 && (
+                                        <span className="text-[10px] text-gray-500 flex-shrink-0">({problems.length})</span>
+                                    )}
                                 </div>
-                            ) : (
-                                <p className="text-sm text-gray-500 text-center py-4">No vitals recorded</p>
-                            )}
+                                <button 
+                                    onClick={() => {
+                                        setPatientDataManagerTab('problems');
+                                        setShowPatientDataManager(true);
+                                    }}
+                                    className="text-[10px] text-primary-600 hover:text-primary-700 font-medium flex-shrink-0 ml-1"
+                                >
+                                    Manage
+                                </button>
+                            </div>
+                            <div className="p-1.5 max-h-[400px] overflow-y-auto">
+                                {problems.length > 0 ? (
+                                    <div className="space-y-0.5">
+                                        {problems.map(prob => (
+                                            <div key={prob.id} className="py-0.5 border-b border-gray-100 last:border-b-0">
+                                                <div className="flex items-start justify-between gap-1">
+                                                    <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                                                        <p className="font-medium text-[11px] text-gray-900 leading-tight truncate">{prob.name || prob.problem_name}</p>
+                                                        <span className={`inline-block text-[9px] px-1 py-0.5 rounded-full font-medium flex-shrink-0 ${
+                                                            prob.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                                        }`}>
+                                                            {prob.status}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-[11px] text-gray-500 text-center py-4">No active problems</p>
+                                )}
+                            </div>
                         </div>
                     </div>
 
-                    {/* Screening Modalities Module */}
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                <Stethoscope className="w-5 h-5 text-primary-600" />
-                                <h3 className="font-semibold text-gray-900">Screening Modalities</h3>
+                    {/* Right Column - Other modules arranged in 2 columns */}
+                    <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Allergies Module */}
+                        <div className="bg-white rounded-lg shadow-sm border border-red-200 hover:shadow-md transition-shadow">
+                            <div className="p-2 border-b border-gray-200 flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                    <AlertCircle className="w-4 h-4 text-red-600" />
+                                    <h3 className="font-semibold text-sm text-gray-900">Allergies</h3>
+                                </div>
+                                <button 
+                                    onClick={() => {
+                                        setPatientDataManagerTab('allergies');
+                                        setShowPatientDataManager(true);
+                                    }}
+                                    className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                                >
+                                    Manage
+                                </button>
                             </div>
-                            <button 
-                                onClick={() => setShowPatientDataManager(true)}
-                                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                            >
-                                Manage
-                            </button>
+                            <div className="p-2">
+                                {allergies.length > 0 ? (
+                                    <div className="space-y-1.5">
+                                        {allergies.slice(0, 3).map(allergy => (
+                                            <div key={allergy.id} className="pb-1.5 border-b border-gray-100 last:border-b-0 last:pb-0">
+                                                <p className="font-medium text-xs text-red-900">{allergy.allergen}</p>
+                                                {allergy.reaction && (
+                                                    <p className="text-xs text-gray-600">Reaction: {allergy.reaction}</p>
+                                                )}
+                                            </div>
+                                        ))}
+                                        {allergies.length > 3 && (
+                                            <p className="text-xs text-gray-500 text-center pt-1">+{allergies.length - 3} more</p>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-gray-500 text-center py-2">No known allergies</p>
+                                )}
+                            </div>
                         </div>
-                        <div className="p-4">
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
-                                    <div className="flex items-center space-x-2">
-                                        <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                        <span className="text-sm text-gray-900">Mammogram</span>
-                                    </div>
-                                    <span className="text-xs text-gray-500">Due: 12/2025</span>
+
+                        {/* Recent Vitals Module */}
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                            <div className="p-2 border-b border-gray-200 flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                    <Activity className="w-4 h-4 text-primary-600" />
+                                    <h3 className="font-semibold text-sm text-gray-900">Recent Vitals</h3>
                                 </div>
-                                <div className="flex items-center justify-between p-2 bg-yellow-50 rounded-lg">
-                                    <div className="flex items-center space-x-2">
-                                        <Calendar className="w-4 h-4 text-yellow-600" />
-                                        <span className="text-sm text-gray-900">Colonoscopy</span>
+                                <button 
+                                    onClick={() => {
+                                        setPatientChartTab('history');
+                                        setShowPatientChart(true);
+                                    }}
+                                    className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                                >
+                                    View All
+                                </button>
+                            </div>
+                            <div className="p-2">
+                                {vitals.length > 0 ? (
+                                    <div className="space-y-1.5">
+                                        {vitals.slice(0, 3).map((vital, idx) => (
+                                            <div key={idx} className="pb-1.5 border-b border-gray-100 last:border-b-0 last:pb-0">
+                                                <p className="text-xs text-gray-500 mb-0.5">{vital.date}</p>
+                                                <div className="grid grid-cols-2 gap-1 text-xs">
+                                                    <div>
+                                                        <span className="text-gray-500">BP: </span>
+                                                        <span className="font-medium text-gray-900">{vital.bp || 'N/A'}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-gray-500">HR: </span>
+                                                        <span className="font-medium text-gray-900">{vital.hr || 'N/A'}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-gray-500">Temp: </span>
+                                                        <span className="font-medium text-gray-900">{vital.temp || 'N/A'}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-gray-500">SpO2: </span>
+                                                        <span className="font-medium text-gray-900">{vital.spo2 || 'N/A'}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                    <span className="text-xs text-gray-500">Overdue</span>
+                                ) : (
+                                    <p className="text-xs text-gray-500 text-center py-2">No vitals recorded</p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Family History Module */}
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                            <div className="p-2 border-b border-gray-200 flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                    <Heart className="w-4 h-4 text-primary-600" />
+                                    <h3 className="font-semibold text-sm text-gray-900">Family History</h3>
                                 </div>
-                                <div className="flex items-center justify-between p-2 bg-green-50 rounded-lg">
-                                    <div className="flex items-center space-x-2">
-                                        <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                        <span className="text-sm text-gray-900">Flu Shot</span>
+                                <button 
+                                    onClick={() => {
+                                        setPatientDataManagerTab('family');
+                                        setShowPatientDataManager(true);
+                                    }}
+                                    className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                                >
+                                    Manage
+                                </button>
+                            </div>
+                            <div className="p-2">
+                                {familyHistory.length > 0 ? (
+                                    <div className="space-y-1.5">
+                                        {familyHistory.slice(0, 3).map(hist => (
+                                            <div key={hist.id} className="pb-1.5 border-b border-gray-100 last:border-b-0 last:pb-0">
+                                                <p className="font-medium text-xs text-gray-900">{hist.condition}</p>
+                                                <p className="text-xs text-gray-600">{hist.relationship}</p>
+                                            </div>
+                                        ))}
+                                        {familyHistory.length > 3 && (
+                                            <p className="text-xs text-gray-500 text-center pt-1">+{familyHistory.length - 3} more</p>
+                                        )}
                                     </div>
-                                    <span className="text-xs text-gray-500">Current</span>
+                                ) : (
+                                    <p className="text-xs text-gray-500 text-center py-2">No family history</p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Social History Module */}
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                            <div className="p-2 border-b border-gray-200 flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                    <UserCircle className="w-4 h-4 text-primary-600" />
+                                    <h3 className="font-semibold text-sm text-gray-900">Social History</h3>
+                                </div>
+                                <button 
+                                    onClick={() => {
+                                        setPatientDataManagerTab('social');
+                                        setShowPatientDataManager(true);
+                                    }}
+                                    className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                                >
+                                    Manage
+                                </button>
+                            </div>
+                            <div className="p-2">
+                                {socialHistory ? (
+                                    <div className="space-y-1 text-xs">
+                                        {socialHistory.smoking_status && (
+                                            <div>
+                                                <span className="font-medium text-gray-700">Smoking: </span>
+                                                <span className="text-gray-600">{socialHistory.smoking_status}</span>
+                                            </div>
+                                        )}
+                                        {socialHistory.alcohol_use && (
+                                            <div>
+                                                <span className="font-medium text-gray-700">Alcohol: </span>
+                                                <span className="text-gray-600">{socialHistory.alcohol_use}</span>
+                                            </div>
+                                        )}
+                                        {socialHistory.exercise_frequency && (
+                                            <div>
+                                                <span className="font-medium text-gray-700">Exercise: </span>
+                                                <span className="text-gray-600">{socialHistory.exercise_frequency}</span>
+                                            </div>
+                                        )}
+                                        {socialHistory.occupation && (
+                                            <div>
+                                                <span className="font-medium text-gray-700">Occupation: </span>
+                                                <span className="text-gray-600">{socialHistory.occupation}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-gray-500 text-center py-2">No social history</p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Screening Modalities Module */}
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow md:col-span-2">
+                            <div className="p-2 border-b border-gray-200 flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                    <Stethoscope className="w-4 h-4 text-primary-600" />
+                                    <h3 className="font-semibold text-sm text-gray-900">Screening Modalities</h3>
+                                </div>
+                            </div>
+                            <div className="p-2">
+                                <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between p-1.5 bg-blue-50 rounded-lg">
+                                        <div className="flex items-center space-x-2">
+                                            <CheckCircle2 className="w-3 h-3 text-green-600" />
+                                            <span className="text-xs text-gray-900">Mammogram</span>
+                                        </div>
+                                        <span className="text-xs text-gray-500">Due: 12/2025</span>
+                                    </div>
+                                    <div className="flex items-center justify-between p-1.5 bg-yellow-50 rounded-lg">
+                                        <div className="flex items-center space-x-2">
+                                            <Calendar className="w-3 h-3 text-yellow-600" />
+                                            <span className="text-xs text-gray-900">Colonoscopy</span>
+                                        </div>
+                                        <span className="text-xs text-gray-500">Overdue</span>
+                                    </div>
+                                    <div className="flex items-center justify-between p-1.5 bg-green-50 rounded-lg">
+                                        <div className="flex items-center space-x-2">
+                                            <CheckCircle2 className="w-3 h-3 text-green-600" />
+                                            <span className="text-xs text-gray-900">Flu Shot</span>
+                                        </div>
+                                        <span className="text-xs text-gray-500">Current</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+                        </div>
+                    ) : null}
                 </div>
 
             </div>
@@ -1580,7 +2074,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             <div className="flex space-x-3 pt-2">
                                 <button
                                     onClick={handleSaveDemographics}
-                                    className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 flex items-center justify-center space-x-2"
+                                    className="flex-1 px-4 py-2 text-white rounded-md flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
+                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                                 >
                                     <Save className="w-4 h-4" />
                                     <span>Save</span>
@@ -1637,11 +2134,33 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 </div>
             )}
 
-            {/* Patient Data Manager Modal */}
+            {/* Unified Patient Chart Panel */}
+            <PatientChartPanel
+                patientId={id}
+                isOpen={showPatientChart}
+                onClose={() => setShowPatientChart(false)}
+                initialTab={patientChartTab}
+                initialDataTab={patientChartDataTab}
+                onOpenDataManager={(tab) => {
+                    setShowPatientChart(false);
+                    setPatientDataManagerTab(tab);
+                    setShowPatientDataManager(true);
+                }}
+            />
+
+            {/* Patient Data Manager - Opens separately, not stacked */}
             <PatientDataManager
                 patientId={id}
                 isOpen={showPatientDataManager}
+                initialTab={patientDataManagerTab}
                 onClose={() => setShowPatientDataManager(false)}
+                onUpdate={refreshPatientData}
+                onBack={() => {
+                    setShowPatientDataManager(false);
+                    setShowPatientChart(true);
+                    setPatientChartTab('data');
+                    setPatientChartDataTab(patientDataManagerTab);
+                }}
             />
 
             {/* Visit Folders Modal */}
@@ -1652,16 +2171,26 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     id: note.id,
                     type: note.type,
                     date: note.date,
-                    visitDate: note.visitDate || note.date,
+                    time: note.time,
+                    dateTime: note.dateTime,
+                    visitDate: note.visitDate,
+                    createdAt: note.createdAt,
                     provider: note.provider,
                     summary: note.summary,
                     assessment: note.assessment,
                     plan: note.plan,
+                    chiefComplaint: note.chiefComplaint,
+                    fullNote: note.fullNote,
                     signed: note.signed
                 }))}
                 onViewVisit={(visitId) => {
                     setShowVisitFoldersModal(false);
                     handleViewNote(visitId);
+                }}
+                onDeleteVisit={async (visitId) => {
+                    await handleDeleteNote(visitId);
+                    refreshPatientData();
+                    setShowVisitFoldersModal(false);
                 }}
             />
 
@@ -1753,7 +2282,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         <div className="flex space-x-3">
                                             <button
                                                 onClick={capturePhoto}
-                                                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 flex items-center justify-center space-x-2"
+                                                className="flex-1 px-4 py-2 text-white rounded-md flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
+                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                                             >
                                                 <Camera className="w-4 h-4" />
                                                 <span>Capture Photo</span>
@@ -1777,7 +2309,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         <div className="flex space-x-3">
                                             <button
                                                 onClick={handleSavePhoto}
-                                                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 flex items-center justify-center space-x-2"
+                                                className="flex-1 px-4 py-2 text-white rounded-md flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
+                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                                             >
                                                 <CheckCircle2 className="w-4 h-4" />
                                                 <span>Save Photo</span>
@@ -1815,7 +2350,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         <div className="flex space-x-3">
                                             <button
                                                 onClick={handleSavePhoto}
-                                                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 flex items-center justify-center space-x-2"
+                                                className="flex-1 px-4 py-2 text-white rounded-md flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
+                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                                             >
                                                 <CheckCircle2 className="w-4 h-4" />
                                                 <span>Save Photo</span>
@@ -1850,7 +2388,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     fileInputRef.current?.click();
                                                 }, 100);
                                             }}
-                                            className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+                                            className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md"
+                                            style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                                         >
                                             Choose File
                                         </button>
@@ -1860,6 +2401,171 @@ const Snapshot = ({ showNotesOnly = false }) => {
                         )}
                     </div>
                 </div>
+            )}
+
+            {/* Document Upload Modal */}
+            <Modal
+                isOpen={showDocumentUploadModal}
+                onClose={() => {
+                    setShowDocumentUploadModal(false);
+                    setDocumentUploadFile(null);
+                    setDocumentUploadType('other');
+                    if (documentUploadInputRef.current) {
+                        documentUploadInputRef.current.value = '';
+                    }
+                }}
+                title="Upload Document"
+            >
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Document Type</label>
+                        <select
+                            value={documentUploadType}
+                            onChange={(e) => setDocumentUploadType(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        >
+                            <option value="other">Other</option>
+                            <option value="imaging">Imaging</option>
+                            <option value="lab">Lab Result</option>
+                            <option value="consult">Consult Note</option>
+                            <option value="letter">Letter</option>
+                            <option value="form">Form</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Select File</label>
+                        <input
+                            ref={documentUploadInputRef}
+                            type="file"
+                            onChange={(e) => setDocumentUploadFile(e.target.files?.[0] || null)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">PDF, images, or documents (max 50MB)</p>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-4">
+                        <button
+                            onClick={() => {
+                                setShowDocumentUploadModal(false);
+                                setDocumentUploadFile(null);
+                                setDocumentUploadType('other');
+                                if (documentUploadInputRef.current) {
+                                    documentUploadInputRef.current.value = '';
+                                }
+                            }}
+                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleDocumentUpload}
+                            disabled={!documentUploadFile}
+                            className="px-4 py-2 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-md"
+                            style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                            onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+                            onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
+                        >
+                            Upload
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Edit Patient Modal */}
+            <Modal
+                isOpen={showEditPatientModal}
+                onClose={() => setShowEditPatientModal(false)}
+                title="Edit Patient Information"
+            >
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                            <input
+                                type="text"
+                                value={editPatientForm.first_name}
+                                onChange={(e) => setEditPatientForm({ ...editPatientForm, first_name: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                placeholder="First Name"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                            <input
+                                type="text"
+                                value={editPatientForm.last_name}
+                                onChange={(e) => setEditPatientForm({ ...editPatientForm, last_name: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                placeholder="Last Name"
+                            />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                            <input
+                                type="date"
+                                value={editPatientForm.dob}
+                                onChange={(e) => setEditPatientForm({ ...editPatientForm, dob: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Sex</label>
+                            <select
+                                value={editPatientForm.sex}
+                                onChange={(e) => setEditPatientForm({ ...editPatientForm, sex: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            >
+                                <option value="">Select</option>
+                                <option value="M">Male</option>
+                                <option value="F">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">MRN</label>
+                        <input
+                            type="text"
+                            value={editPatientForm.mrn}
+                            onChange={(e) => setEditPatientForm({ ...editPatientForm, mrn: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            placeholder="Medical Record Number"
+                        />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-4">
+                        <button
+                            onClick={() => setShowEditPatientModal(false)}
+                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleEditPatient}
+                            className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md"
+                            style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
+                        >
+                            Save Changes
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Enhanced E-Prescribe Modal */}
+            {hasPrivilege('e_prescribe') && (
+                <EPrescribeEnhanced
+                    isOpen={showEPrescribeEnhanced}
+                    onClose={() => setShowEPrescribeEnhanced(false)}
+                    onSuccess={() => {
+                        // Refresh patient data to show new prescription
+                        refreshPatientData();
+                        setShowEPrescribeEnhanced(false);
+                    }}
+                    patientId={id}
+                />
             )}
             </div>
         </div>

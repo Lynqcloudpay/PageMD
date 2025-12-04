@@ -139,8 +139,8 @@ const EPrescribe = ({ isOpen, onClose, onSuccess, patientId, patientName, curren
             <div key={label} className="flex items-center">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                 step > idx + 1 ? 'bg-green-500 text-white' :
-                step === idx + 1 ? 'bg-paper-700 text-white' :
-                'bg-paper-200 text-ink-500'
+                step === idx + 1 ? 'text-white' :
+                'bg-gray-200 text-gray-500'
               }`}>
                 {step > idx + 1 ? <Check className="w-4 h-4" /> : idx + 1}
               </div>
@@ -423,7 +423,10 @@ const EPrescribe = ({ isOpen, onClose, onSuccess, patientId, patientName, curren
             <button
               onClick={() => setStep(3)}
               disabled={!prescription.sig || !prescription.strength}
-              className="px-4 py-2 bg-paper-700 text-white rounded-md hover:bg-paper-800 disabled:opacity-50"
+              className="px-4 py-2 text-white rounded-md disabled:opacity-50 transition-all duration-200 hover:shadow-md"
+              style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+              onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+              onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
             >
               Continue to Pharmacy
             </button>

@@ -174,31 +174,36 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
 
     return (
         <>
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" onClick={onClose} />
+            <div className="fixed inset-0 bg-deep-gray/30 backdrop-blur-md z-40" onClick={onClose} />
             <div className="fixed right-0 top-0 h-full w-full max-w-4xl bg-white shadow-2xl z-50 flex flex-col">
-                {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
-                    <h2 className="text-xl font-semibold text-gray-900">Patient Chart</h2>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 transition-colors">
+                {/* Header - Modern Design */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-deep-gray/10 bg-white">
+                    <h2 className="text-2xl font-bold text-deep-gray">Patient Chart</h2>
+                    <button onClick={onClose} className="p-2 hover:bg-soft-gray rounded-lg text-deep-gray/60 hover:text-deep-gray transition-colors">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex border-b border-gray-200 bg-white overflow-x-auto">
+                {/* Tabs - Modern Futuristic Design */}
+                <div className="flex border-b border-deep-gray/10 bg-white overflow-x-auto">
                     {tabs.map(tab => {
                         const Icon = tab.icon;
+                        const isActive = activeTab === tab.id;
                         return (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center space-x-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                                    activeTab === tab.id
-                                        ? 'border-primary-600 text-primary-700 bg-primary-50'
-                                        : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                className={`flex items-center space-x-2 px-5 py-3.5 text-sm font-semibold whitespace-nowrap border-b-2 transition-all duration-200 ${
+                                    isActive
+                                        ? 'border-strong-azure text-strong-azure'
+                                        : 'border-transparent text-deep-gray/60 hover:text-deep-gray hover:bg-soft-gray'
                                 }`}
+                                style={isActive ? { 
+                                    background: 'linear-gradient(to bottom, rgba(59, 130, 246, 0.08), transparent)',
+                                    borderBottomColor: '#3B82F6'
+                                } : {}}
                             >
-                                <Icon className="w-4 h-4" />
+                                <Icon className={`w-4 h-4 ${isActive ? 'text-strong-azure' : ''}`} />
                                 <span>{tab.label}</span>
                             </button>
                         );
@@ -208,9 +213,9 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-6">
                     {loading ? (
-                        <div className="text-center py-12">
-                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-                            <p className="mt-4 text-gray-600">Loading...</p>
+                        <div className="text-center py-16">
+                            <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-strong-azure"></div>
+                            <p className="mt-4 text-deep-gray/70 font-medium">Loading...</p>
                         </div>
                     ) : (
                         <>
@@ -218,7 +223,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                             {activeTab === 'history' && (
                                 <div className="space-y-1">
                                     {notes.length === 0 ? (
-                                        <p className="text-gray-500 text-sm text-center py-8">No visit notes found</p>
+                                        <p className="text-deep-gray/60 text-sm text-center py-8">No visit notes found</p>
                                     ) : (
                                         notes.map((note) => {
                                             const noteText = note.note_draft || '';
@@ -239,11 +244,21 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                             const dateTimeStr = `${dateStr} ${timeStr}`;
                                             
                                             const visitType = note.visit_type || "Office Visit";
-                                            const providerName = note.provider_first_name && note.provider_last_name
+                                            const isSigned = note.locked || !!note.note_signed_by;
+                                            
+                                            // Use signed_by name if note is signed, but fallback to provider if signed_by is "System Administrator"
+                                            const signedByName = note.signed_by_first_name && note.signed_by_last_name
+                                                ? `${note.signed_by_first_name} ${note.signed_by_last_name}`
+                                                : null;
+                                            
+                                            const providerNameFallback = (note.provider_first_name && note.provider_last_name)
                                                 ? `${note.provider_first_name} ${note.provider_last_name}`
                                                 : note.provider_first_name || note.provider_last_name || "Provider";
                                             
-                                            const isSigned = note.locked || !!note.note_signed_by;
+                                            // Use signed_by name unless it's "System Administrator", then use provider name
+                                            const providerName = (isSigned && signedByName && signedByName !== 'System Administrator')
+                                                ? signedByName
+                                                : providerNameFallback;
                                             const isExpanded = expandedNotes[note.id];
 
                                             const handleDeleteNote = async (e) => {
@@ -266,19 +281,19 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                             return (
                                                 <div 
                                                     key={note.id} 
-                                                    className="relative p-3 border border-gray-200 rounded hover:bg-gray-50 transition-colors cursor-pointer group"
+                                                    className="relative p-4 border border-deep-gray/10 rounded-xl hover:bg-strong-azure/5 transition-all duration-200 cursor-pointer group"
                                                     onClick={() => toggleNote(note.id)}
                                                 >
                                                     <div className="flex items-center space-x-2 flex-wrap">
-                                                        <span className="text-xs font-medium text-gray-900">{visitType}</span>
+                                                        <span className="text-xs font-semibold text-deep-gray">{visitType}</span>
                                                         {isSigned ? (
                                                             <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded flex-shrink-0">Signed</span>
                                                         ) : (
                                                             <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded flex-shrink-0">Draft</span>
                                                         )}
-                                                        <span className="text-xs text-gray-500 flex-shrink-0">{dateTimeStr} • {providerName}</span>
+                                                        <span className="text-xs text-deep-gray/60 flex-shrink-0">{dateTimeStr} • {providerName}</span>
                                                         {chiefComplaint && (
-                                                            <span className="text-xs text-gray-700 italic">
+                                                            <span className="text-xs text-deep-gray/80 italic">
                                                                 • "{chiefComplaint.substring(0, 60)}{chiefComplaint.length > 60 ? '...' : ''}"
                                                             </span>
                                                         )}
@@ -293,8 +308,8 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                                         </button>
                                                     )}
                                                     {isExpanded && noteText && (
-                                                        <div className="mt-3 pt-3 border-t border-gray-200">
-                                                            <div className="text-xs text-gray-700 whitespace-pre-wrap">
+                                                        <div className="mt-3 pt-3 border-t border-deep-gray/10">
+                                                            <div className="text-xs text-deep-gray/80 whitespace-pre-wrap">
                                                                 {noteText}
                                                             </div>
                                                         </div>
@@ -311,7 +326,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                 <div className="space-y-6">
                                     {/* Insurance */}
                                     <div>
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-3">Insurance Information</h3>
+                                        <h3 className="text-lg font-bold text-deep-gray mb-3">Insurance Information</h3>
                                         <div className="space-y-2">
                                             <div><span className="font-medium">Provider:</span> {formData.insuranceProvider || 'Not set'}</div>
                                             <div><span className="font-medium">ID:</span> {formData.insuranceId || 'Not set'}</div>
@@ -320,7 +335,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
 
                                     {/* Pharmacy */}
                                     <div>
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-3">Pharmacy</h3>
+                                        <h3 className="text-lg font-bold text-deep-gray mb-3">Pharmacy</h3>
                                         <div className="space-y-2">
                                             <div><span className="font-medium">Name:</span> {formData.pharmacyName || 'Not set'}</div>
                                             <div><span className="font-medium">Address:</span> {formData.pharmacyAddress || 'Not set'}</div>
@@ -334,8 +349,8 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                             {activeTab === 'data' && (
                                 <div className="space-y-4">
                                     <div className="mb-4">
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Patient Data Management</h3>
-                                        <p className="text-gray-600 text-sm mb-4">Manage problems, medications, allergies, family history, and social history.</p>
+                                        <h3 className="text-lg font-bold text-deep-gray mb-2">Patient Data Management</h3>
+                                        <p className="text-deep-gray/70 text-sm mb-4">Manage problems, medications, allergies, family history, and social history.</p>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
                                         <button
@@ -345,10 +360,10 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                                     onOpenDataManager('problems');
                                                 }
                                             }}
-                                            className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 text-left transition-colors"
+                                            className="p-4 border-2 border-deep-gray/10 rounded-xl hover:border-strong-azure/40 hover:bg-strong-azure/5 text-left transition-all duration-200"
                                         >
-                                            <div className="font-semibold text-gray-900 mb-1">Problems</div>
-                                            <div className="text-xs text-gray-500">Manage active problems</div>
+                                            <div className="font-semibold text-deep-gray mb-1">Problems</div>
+                                            <div className="text-xs text-deep-gray/60">Manage active problems</div>
                                         </button>
                                         <button
                                             onClick={() => {
@@ -357,10 +372,10 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                                     onOpenDataManager('medications');
                                                 }
                                             }}
-                                            className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 text-left transition-colors"
+                                            className="p-4 border-2 border-deep-gray/10 rounded-xl hover:border-strong-azure/40 hover:bg-strong-azure/5 text-left transition-all duration-200"
                                         >
-                                            <div className="font-semibold text-gray-900 mb-1">Medications</div>
-                                            <div className="text-xs text-gray-500">Manage medications</div>
+                                            <div className="font-semibold text-deep-gray mb-1">Medications</div>
+                                            <div className="text-xs text-deep-gray/60">Manage medications</div>
                                         </button>
                                         <button
                                             onClick={() => {
@@ -369,10 +384,10 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                                     onOpenDataManager('allergies');
                                                 }
                                             }}
-                                            className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 text-left transition-colors"
+                                            className="p-4 border-2 border-deep-gray/10 rounded-xl hover:border-strong-azure/40 hover:bg-strong-azure/5 text-left transition-all duration-200"
                                         >
-                                            <div className="font-semibold text-gray-900 mb-1">Allergies</div>
-                                            <div className="text-xs text-gray-500">Manage allergies</div>
+                                            <div className="font-semibold text-deep-gray mb-1">Allergies</div>
+                                            <div className="text-xs text-deep-gray/60">Manage allergies</div>
                                         </button>
                                         <button
                                             onClick={() => {
@@ -381,10 +396,10 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                                     onOpenDataManager('family');
                                                 }
                                             }}
-                                            className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 text-left transition-colors"
+                                            className="p-4 border-2 border-deep-gray/10 rounded-xl hover:border-strong-azure/40 hover:bg-strong-azure/5 text-left transition-all duration-200"
                                         >
-                                            <div className="font-semibold text-gray-900 mb-1">Family History</div>
-                                            <div className="text-xs text-gray-500">Manage family history</div>
+                                            <div className="font-semibold text-deep-gray mb-1">Family History</div>
+                                            <div className="text-xs text-deep-gray/60">Manage family history</div>
                                         </button>
                                         <button
                                             onClick={() => {
@@ -393,10 +408,10 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                                     onOpenDataManager('social');
                                                 }
                                             }}
-                                            className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 text-left transition-colors"
+                                            className="p-4 border-2 border-deep-gray/10 rounded-xl hover:border-strong-azure/40 hover:bg-strong-azure/5 text-left transition-all duration-200"
                                         >
-                                            <div className="font-semibold text-gray-900 mb-1">Social History</div>
-                                            <div className="text-xs text-gray-500">Manage social history</div>
+                                            <div className="font-semibold text-deep-gray mb-1">Social History</div>
+                                            <div className="text-xs text-deep-gray/60">Manage social history</div>
                                         </button>
                                     </div>
                                 </div>
@@ -405,12 +420,12 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                             {/* Prescriptions Tab */}
                             {activeTab === 'prescriptions' && (
                                 <div className="space-y-4">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Prescription Log ({prescriptions.length})</h3>
+                                    <h3 className="text-lg font-bold text-deep-gray mb-3">Prescription Log ({prescriptions.length})</h3>
                                     {prescriptions.length === 0 ? (
                                         <div className="text-center py-12">
-                                            <Pill className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                                            <h4 className="text-lg font-semibold text-gray-900 mb-2">No Prescriptions</h4>
-                                            <p className="text-gray-600">No prescriptions have been recorded for this patient.</p>
+                                            <Pill className="w-16 h-16 text-deep-gray/20 mx-auto mb-4" />
+                                            <h4 className="text-lg font-bold text-deep-gray mb-2">No Prescriptions</h4>
+                                            <p className="text-deep-gray/70">No prescriptions have been recorded for this patient.</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-4">
@@ -423,31 +438,31 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                                 const date = prescription.created_at ? format(new Date(prescription.created_at), 'MMM d, yyyy') : '';
 
                                                 return (
-                                                    <div key={prescription.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                                                    <div key={prescription.id} className="bg-white border border-deep-gray/10 rounded-xl p-4 hover:shadow-lg hover:border-strong-azure/30 transition-all duration-200">
                                                         <div className="flex items-start justify-between mb-3">
                                                             <div className="flex-1">
                                                                 <div className="flex items-center space-x-3 mb-2">
-                                                                    <h4 className="text-lg font-semibold text-gray-900">{medicationName}</h4>
+                                                                    <h4 className="text-lg font-bold text-deep-gray">{medicationName}</h4>
                                                                     {getStatusBadge(prescription.status)}
                                                                 </div>
                                                                 {sig && (
-                                                                    <p className="text-sm text-gray-700 mb-1">
+                                                                    <p className="text-sm text-deep-gray/80 mb-1">
                                                                         <span className="font-medium">Sig:</span> {sig}
                                                                     </p>
                                                                 )}
                                                                 {dispense && (
-                                                                    <p className="text-sm text-gray-700 mb-1">
+                                                                    <p className="text-sm text-deep-gray/80 mb-1">
                                                                         <span className="font-medium">Dispense:</span> {dispense}
                                                                     </p>
                                                                 )}
                                                                 {diagnosis && (
-                                                                    <p className="text-sm text-gray-600 mt-2">
+                                                                    <p className="text-sm text-deep-gray/70 mt-2">
                                                                         <span className="font-medium">Diagnosis:</span> {diagnosis}
                                                                     </p>
                                                                 )}
                                                             </div>
                                                             {date && (
-                                                                <div className="flex items-center space-x-1 text-xs text-gray-500 ml-4">
+                                                                <div className="flex items-center space-x-1 text-xs text-deep-gray/60 ml-4">
                                                                     <Calendar className="w-4 h-4" />
                                                                     <span>{date}</span>
                                                                 </div>
@@ -464,12 +479,12 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                             {/* Referrals Tab */}
                             {activeTab === 'referrals' && (
                                 <div className="space-y-4">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Referral Log ({referrals.length})</h3>
+                                    <h3 className="text-lg font-bold text-deep-gray mb-3">Referral Log ({referrals.length})</h3>
                                     {referrals.length === 0 ? (
                                         <div className="text-center py-12">
-                                            <ExternalLink className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                                            <h4 className="text-lg font-semibold text-gray-900 mb-2">No Referrals</h4>
-                                            <p className="text-gray-600">No referrals have been recorded for this patient.</p>
+                                            <ExternalLink className="w-16 h-16 text-deep-gray/20 mx-auto mb-4" />
+                                            <h4 className="text-lg font-bold text-deep-gray mb-2">No Referrals</h4>
+                                            <p className="text-deep-gray/70">No referrals have been recorded for this patient.</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-4">
@@ -484,11 +499,11 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                                         <div className="flex items-start justify-between mb-3">
                                                             <div className="flex-1">
                                                                 <div className="flex items-center space-x-3 mb-2">
-                                                                    <h4 className="text-lg font-semibold text-gray-900">{recipientName}</h4>
+                                                                    <h4 className="text-lg font-semibold text-deep-gray">{recipientName}</h4>
                                                                     {getStatusBadge(referral.status)}
                                                                 </div>
                                                                 {specialty && (
-                                                                    <p className="text-sm text-gray-700 mb-1">
+                                                                    <p className="text-sm text-deep-gray/80 mb-1">
                                                                         <span className="font-medium">Specialty:</span> {specialty}
                                                                     </p>
                                                                 )}
@@ -498,13 +513,13 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                                                     </p>
                                                                 )}
                                                                 {referral.recipient_address && (
-                                                                    <p className="text-sm text-gray-600 mt-2">
+                                                                    <p className="text-sm text-deep-gray/70 mt-2">
                                                                         <span className="font-medium">Address:</span> {referral.recipient_address}
                                                                     </p>
                                                                 )}
                                                             </div>
                                                             {date && (
-                                                                <div className="flex items-center space-x-1 text-xs text-gray-500 ml-4">
+                                                                <div className="flex items-center space-x-1 text-xs text-deep-gray/60 ml-4">
                                                                     <Calendar className="w-4 h-4" />
                                                                     <span>{date}</span>
                                                                 </div>
@@ -521,12 +536,12 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                             {/* Labs Tab */}
                             {activeTab === 'labs' && (
                                 <div className="space-y-4">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Lab Orders ({labs.length})</h3>
+                                    <h3 className="text-lg font-semibold text-deep-gray mb-3">Lab Orders ({labs.length})</h3>
                                     {labs.length === 0 ? (
                                         <div className="text-center py-12">
                                             <FlaskConical className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                                            <h4 className="text-lg font-semibold text-gray-900 mb-2">No Lab Orders</h4>
-                                            <p className="text-gray-600">No lab orders have been recorded for this patient.</p>
+                                            <h4 className="text-lg font-semibold text-deep-gray mb-2">No Lab Orders</h4>
+                                            <p className="text-deep-gray/70">No lab orders have been recorded for this patient.</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-4">
@@ -541,7 +556,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                                             <div className="flex-1">
                                                                 <div className="flex items-center space-x-3 mb-2">
                                                                     <FlaskConical className="w-5 h-5 text-blue-600" />
-                                                                    <h4 className="text-lg font-semibold text-gray-900">{labName}</h4>
+                                                                    <h4 className="text-lg font-semibold text-deep-gray">{labName}</h4>
                                                                     {getStatusBadge(lab.status)}
                                                                 </div>
                                                                 {payload.results && (
@@ -552,7 +567,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                                                 )}
                                                             </div>
                                                             {date && (
-                                                                <div className="flex items-center space-x-1 text-xs text-gray-500 ml-4">
+                                                                <div className="flex items-center space-x-1 text-xs text-deep-gray/60 ml-4">
                                                                     <Calendar className="w-4 h-4" />
                                                                     <span>{date}</span>
                                                                 </div>
@@ -569,12 +584,12 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                             {/* Images Tab */}
                             {activeTab === 'images' && (
                                 <div className="space-y-4">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Imaging Studies ({images.length})</h3>
+                                    <h3 className="text-lg font-semibold text-deep-gray mb-3">Imaging Studies ({images.length})</h3>
                                     {images.length === 0 ? (
                                         <div className="text-center py-12">
                                             <Image className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                                            <h4 className="text-lg font-semibold text-gray-900 mb-2">No Imaging Studies</h4>
-                                            <p className="text-gray-600">No imaging studies have been recorded for this patient.</p>
+                                            <h4 className="text-lg font-semibold text-deep-gray mb-2">No Imaging Studies</h4>
+                                            <p className="text-deep-gray/70">No imaging studies have been recorded for this patient.</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-4">
@@ -588,7 +603,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                                             <div className="flex-1">
                                                                 <div className="flex items-center space-x-3 mb-2">
                                                                     <Image className="w-5 h-5 text-purple-600" />
-                                                                    <h4 className="text-lg font-semibold text-gray-900">{image.filename || 'Imaging Study'}</h4>
+                                                                    <h4 className="text-lg font-semibold text-deep-gray">{image.filename || 'Imaging Study'}</h4>
                                                                 </div>
                                                                 <div className="text-sm text-gray-700 space-y-1">
                                                                     <div><span className="font-medium">Type:</span> {image.doc_type || 'Imaging'}</div>
@@ -601,7 +616,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                                                 </div>
                                                             </div>
                                                             {date && (
-                                                                <div className="flex items-center space-x-1 text-xs text-gray-500 ml-4">
+                                                                <div className="flex items-center space-x-1 text-xs text-deep-gray/60 ml-4">
                                                                     <Calendar className="w-4 h-4" />
                                                                     <span>{date}</span>
                                                                 </div>
@@ -618,12 +633,12 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                             {/* Documents Tab */}
                             {activeTab === 'documents' && (
                                 <div className="space-y-4">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Documents ({documents.length})</h3>
+                                    <h3 className="text-lg font-semibold text-deep-gray mb-3">Documents ({documents.length})</h3>
                                     {documents.length === 0 ? (
                                         <div className="text-center py-12">
                                             <FileImage className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                                            <h4 className="text-lg font-semibold text-gray-900 mb-2">No Documents</h4>
-                                            <p className="text-gray-600">No documents have been uploaded for this patient.</p>
+                                            <h4 className="text-lg font-semibold text-deep-gray mb-2">No Documents</h4>
+                                            <p className="text-deep-gray/70">No documents have been uploaded for this patient.</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-4">
@@ -635,8 +650,8 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                                         <div className="flex items-start justify-between mb-2">
                                                             <div className="flex-1">
                                                                 <div className="flex items-center space-x-3 mb-2">
-                                                                    <FileImage className="w-5 h-5 text-gray-600" />
-                                                                    <h4 className="text-lg font-semibold text-gray-900">{doc.filename || 'Document'}</h4>
+                                                                    <FileImage className="w-5 h-5 text-deep-gray/70" />
+                                                                    <h4 className="text-lg font-semibold text-deep-gray">{doc.filename || 'Document'}</h4>
                                                                 </div>
                                                                 <div className="text-sm text-gray-700 space-y-1">
                                                                     <div><span className="font-medium">Type:</span> {doc.doc_type || 'Document'}</div>
@@ -652,7 +667,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                                                 </div>
                                                             </div>
                                                             {date && (
-                                                                <div className="flex items-center space-x-1 text-xs text-gray-500 ml-4">
+                                                                <div className="flex items-center space-x-1 text-xs text-deep-gray/60 ml-4">
                                                                     <Calendar className="w-4 h-4" />
                                                                     <span>{date}</span>
                                                                 </div>

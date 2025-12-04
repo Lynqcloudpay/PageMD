@@ -413,7 +413,10 @@ const TaskManager = () => {
                 <button
                   type="button"
                   onClick={(e) => handleTaskAction(selectedTask.id, 'read', e)}
-                  className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 active:bg-blue-800 flex items-center justify-center space-x-1 text-sm transition-colors cursor-pointer"
+                  className="px-3 py-2 text-white rounded-md flex items-center justify-center space-x-1 text-sm transition-all duration-200 hover:shadow-md cursor-pointer"
+                  style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                 >
                   <CheckCircle className="w-4 h-4" />
                   <span>Mark Read</span>

@@ -112,3 +112,9 @@ OpenEMR is GPL-licensed. This implementation is inspired by OpenEMR patterns but
 
 
 
+
+
+
+
+
+

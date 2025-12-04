@@ -16,6 +16,7 @@ import Telehealth from './pages/Telehealth'
 import Billing from './pages/Billing'
 import UserManagement from './pages/UserManagement'
 import AdminSettings from './pages/AdminSettings'
+import Cancellations from './pages/Cancellations'
 import Layout from './components/Layout'
 import { PatientProvider } from './context/PatientContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -37,7 +38,7 @@ const ProtectedRoute = ({ children }) => {
     if (!auth) {
         return (
             <div className="min-h-screen bg-white flex items-center justify-center">
-                <div className="text-gray-500">Loading...</div>
+                <div className="text-deep-gray/70">Loading...</div>
             </div>
         );
     }
@@ -47,7 +48,7 @@ const ProtectedRoute = ({ children }) => {
     if (loading) {
         return (
             <div className="min-h-screen bg-white flex items-center justify-center">
-                <div className="text-gray-500">Loading...</div>
+                <div className="text-deep-gray/70">Loading...</div>
             </div>
         );
     }
@@ -120,6 +121,11 @@ function App() {
                                 <Route path="/billing" element={
                                     <ProtectedRoute>
                                         <Layout><Billing /></Layout>
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="/cancellations" element={
+                                    <ProtectedRoute>
+                                        <Layout><Cancellations /></Layout>
                                     </ProtectedRoute>
                                 } />
                                 <Route path="/users" element={

@@ -102,7 +102,10 @@ const Messages = () => {
             </h2>
             <button 
               onClick={() => setShowCompose(true)}
-              className="p-2 bg-paper-700 text-white rounded-md hover:bg-paper-800"
+              className="p-2 text-white rounded-md transition-all duration-200 hover:shadow-md"
+              style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -135,8 +138,8 @@ const Messages = () => {
               onClick={() => setFilter(f.id)}
               className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
                 filter === f.id 
-                  ? 'bg-paper-700 text-white' 
-                  : 'bg-paper-100 text-ink-600 hover:bg-paper-200'
+                  ? 'text-white' 
+                  : 'bg-soft-gray text-deep-gray hover:bg-gray-200'
               }`}
             >
               {f.label}
@@ -247,8 +250,8 @@ const Messages = () => {
                 >
                   <div className={`max-w-lg rounded-lg p-3 ${
                     msg.from === 'provider' 
-                      ? 'bg-paper-700 text-white' 
-                      : 'bg-white border border-paper-200'
+                      ? 'text-white' 
+                      : 'bg-white border border-deep-gray/20'
                   }`}>
                     <p className={`text-sm ${msg.from === 'provider' ? 'text-white' : 'text-ink-700'}`}>
                       {msg.text}
@@ -287,7 +290,10 @@ const Messages = () => {
                   <button
                     onClick={handleSendMessage}
                     disabled={!newMessage.trim()}
-                    className="p-2 bg-paper-700 text-white rounded-md hover:bg-paper-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-md"
+                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                    onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+                    onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
                   >
                     <Send className="w-5 h-5" />
                   </button>
@@ -351,7 +357,7 @@ const Messages = () => {
               >
                 Cancel
               </button>
-              <button className="px-4 py-2 bg-paper-700 text-white rounded-md hover:bg-paper-800">
+              <button className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'} onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}>
                 Send Message
               </button>
             </div>

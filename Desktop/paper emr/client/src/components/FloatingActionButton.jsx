@@ -54,9 +54,12 @@ const FloatingActionButton = ({ context }) => {
         {/* Main FAB */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`w-14 h-14 rounded-full bg-primary-600 hover:bg-primary-700 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center active-scale ${
+          className={`w-14 h-14 rounded-full text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center active-scale ${
             isOpen ? 'rotate-45' : 'rotate-0'
           }`}
+          style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
           aria-label="Quick actions"
           style={{ 
             boxShadow: '0 10px 25px -5px rgba(37, 99, 235, 0.4), 0 8px 10px -6px rgba(37, 99, 235, 0.4)'

@@ -3,8 +3,10 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../db');
 const { authenticate, logAudit } = require('../middleware/auth');
+const { requireAdmin } = require('../middleware/authorization');
 const { validatePassword } = require('../middleware/security');
 const { body, validationResult } = require('express-validator');
+const passwordService = require('../services/passwordService');
 
 const router = express.Router();
 
@@ -15,7 +17,7 @@ router.post('/register', [
   body('firstName').notEmpty(),
   body('lastName').notEmpty(),
   body('role').isIn(['clinician', 'nurse', 'front_desk', 'admin']),
-], async (req, res) => {
+], process.env.NODE_ENV === 'production' ? requireAdmin : (req, res, next) => next(), async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -55,20 +57,33 @@ router.post('/register', [
   }
 });
 
-// Get providers (clinicians)
+// Get providers (clinicians who can see patients) - only active physicians/NP/PA
 router.get('/providers', authenticate, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, first_name, last_name, email, role 
-       FROM users 
-       WHERE role IN ('clinician', 'admin') AND active = true 
-       ORDER BY last_name, first_name`
+      `SELECT u.id, u.first_name, u.last_name, u.email, 
+              COALESCE(r.name, u.role) as role_name
+       FROM users u
+       LEFT JOIN roles r ON u.role_id = r.id
+       WHERE (u.status IS NULL OR u.status = 'active')
+         AND (u.status IS DISTINCT FROM 'suspended')
+         AND (u.active IS NULL OR u.active = true)
+         AND COALESCE(r.name, u.role) IN (
+           'Physician', 
+           'Nurse Practitioner', 
+           'NP', 
+           'Physician Assistant', 
+           'PA', 
+           'Clinician',
+           'Doctor'
+         )
+       ORDER BY u.last_name, u.first_name`
     );
     res.json(result.rows.map(u => ({
       id: u.id,
       name: `${u.first_name} ${u.last_name}`,
       email: u.email,
-      role: u.role
+      role: u.role_name
     })));
   } catch (error) {
     console.error('Error fetching providers:', error);
@@ -89,11 +104,17 @@ router.post('/login', [
 
     const { email, password } = req.body;
 
-    // Development mode: Allow login without database
-    const DEV_MODE = process.env.DEV_MODE === 'true';
+    // Development mode: Allow login without database (DISABLED FOR PRODUCTION)
+    // Set DEV_MODE=true in .env ONLY for local development
+    // Explicitly prevent DEV_MODE in production
+    if (process.env.NODE_ENV === 'production' && process.env.DEV_MODE === 'true') {
+      throw new Error('DEV_MODE is not allowed in production. This is a security violation.');
+    }
+    
+    const DEV_MODE = process.env.DEV_MODE === 'true' && process.env.NODE_ENV !== 'production';
     
     if (DEV_MODE && (email === 'doctor@clinic.com' || email === 'test@test.com')) {
-      // Mock login for development
+      // Mock login for development (only in non-production environments)
       const mockUser = {
         id: 1,
         email: email,
@@ -114,10 +135,15 @@ router.post('/login', [
 
     let result;
     try {
-      result = await pool.query(
-        'SELECT id, email, password_hash, first_name, last_name, role, active FROM users WHERE email = $1',
-        [email]
-      );
+      result = await pool.query(`
+        SELECT 
+          u.id, u.email, u.password_hash, u.first_name, u.last_name, 
+          u.status, u.role_id,
+          r.name as role_name
+        FROM users u
+        LEFT JOIN roles r ON u.role_id = r.id
+        WHERE u.email = $1
+      `, [email]);
     } catch (dbError) {
       console.error('Database query error:', dbError);
       
@@ -141,14 +167,30 @@ router.post('/login', [
     }
 
     const user = result.rows[0];
-    if (!user.active) {
-      return res.status(401).json({ error: 'Account is inactive' });
+    if (user.status !== 'active') {
+      return res.status(401).json({ error: `Account is ${user.status}` });
     }
 
-    const valid = await bcrypt.compare(password, user.password_hash);
+    // Support both Argon2 (new users) and bcrypt (legacy/admin users) password hashes
+    let valid = false;
+    if (user.password_hash.startsWith('$argon2')) {
+      // Argon2 hash (users created via User Management)
+      valid = await passwordService.verifyPassword(user.password_hash, password);
+    } else {
+      // bcrypt hash (legacy users or admin accounts)
+      valid = await bcrypt.compare(password, user.password_hash);
+    }
+    
     if (!valid) {
       console.error('Login failed: Password mismatch for', email);
       return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Update last login
+    try {
+      await pool.query('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
+    } catch (updateError) {
+      console.warn('Failed to update last login:', updateError.message);
     }
 
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '24h' });
@@ -165,7 +207,8 @@ router.post('/login', [
         email: user.email,
         firstName: user.first_name,
         lastName: user.last_name,
-        role: user.role,
+        role: user.role_name,
+        roleId: user.role_id,
       },
       token,
     });
@@ -181,13 +224,28 @@ router.post('/login', [
 
 // Get current user
 router.get('/me', authenticate, async (req, res) => {
-  res.json({
-    id: req.user.id,
-    email: req.user.email,
-    firstName: req.user.first_name,
-    lastName: req.user.last_name,
-    role: req.user.role,
-  });
+  try {
+    const userService = require('../services/userService');
+    const user = await userService.getUserById(req.user.id, true);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({
+      id: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      role: user.role_name,
+      roleId: user.role_id,
+      status: user.status,
+      privileges: user.privileges || [],
+    });
+  } catch (error) {
+    console.error('Error fetching current user:', error);
+    res.status(500).json({ error: 'Failed to fetch user information' });
+  }
 });
 
 module.exports = router;

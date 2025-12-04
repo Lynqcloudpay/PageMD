@@ -40,15 +40,28 @@ const AdminSettings = () => {
 
   // Check if user is admin
   useEffect(() => {
-    if (user && user.role !== 'Admin') {
-      navigate('/dashboard');
+    if (user) {
+      const userRole = user.role || user.role_name || '';
+      const isAdmin = userRole === 'Admin' || userRole === 'admin' || userRole?.toLowerCase() === 'admin';
+      
+      if (!isAdmin) {
+        console.log('AdminSettings: User is not admin. Role:', userRole, 'User object:', user);
+        navigate('/dashboard');
+      } else {
+        console.log('AdminSettings: User is admin. Loading settings...');
+      }
     }
   }, [user, navigate]);
 
   // Load all settings
   useEffect(() => {
-    if (user && user.role === 'Admin') {
-      loadAllSettings();
+    if (user) {
+      const userRole = user.role || user.role_name || '';
+      const isAdmin = userRole === 'Admin' || userRole === 'admin' || userRole?.toLowerCase() === 'admin';
+      
+      if (isAdmin) {
+        loadAllSettings();
+      }
     }
   }, [user]);
 
@@ -463,7 +476,10 @@ const PracticeSettingsTab = ({ settings, setSettings, onSave, saving }) => {
         <button
           onClick={onSave}
           disabled={saving}
-          className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center space-x-2 disabled:opacity-50"
+          className="px-6 py-2 text-white rounded-lg flex items-center space-x-2 disabled:opacity-50 transition-all duration-200 hover:shadow-md"
+          style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+          onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+          onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
         >
           {saving ? (
             <>
@@ -663,7 +679,10 @@ const SecuritySettingsTab = ({ settings, setSettings, onSave, saving }) => {
         <button
           onClick={onSave}
           disabled={saving}
-          className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center space-x-2 disabled:opacity-50"
+          className="px-6 py-2 text-white rounded-lg flex items-center space-x-2 disabled:opacity-50 transition-all duration-200 hover:shadow-md"
+          style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+          onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+          onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
         >
           {saving ? (
             <>
@@ -815,7 +834,10 @@ const ClinicalSettingsTab = ({ settings, setSettings, onSave, saving }) => {
         <button
           onClick={onSave}
           disabled={saving}
-          className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center space-x-2 disabled:opacity-50"
+          className="px-6 py-2 text-white rounded-lg flex items-center space-x-2 disabled:opacity-50 transition-all duration-200 hover:shadow-md"
+          style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+          onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+          onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
         >
           {saving ? (
             <>
@@ -981,7 +1003,10 @@ const EmailSettingsTab = ({ settings, setSettings, onSave, saving }) => {
         <button
           onClick={onSave}
           disabled={saving}
-          className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center space-x-2 disabled:opacity-50"
+          className="px-6 py-2 text-white rounded-lg flex items-center space-x-2 disabled:opacity-50 transition-all duration-200 hover:shadow-md"
+          style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+          onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+          onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
         >
           {saving ? (
             <>
@@ -1087,4 +1112,5 @@ const BillingSettingsTab = () => {
 };
 
 export default AdminSettings;
+
 

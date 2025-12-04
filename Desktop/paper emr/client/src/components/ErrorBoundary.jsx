@@ -26,7 +26,10 @@ class ErrorBoundary extends React.Component {
                                 this.setState({ hasError: false, error: null });
                                 window.location.reload();
                             }}
-                            className="px-4 py-2 bg-paper-700 text-white rounded-md hover:bg-paper-800"
+                            className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md"
+                            style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                         >
                             Reload Page
                         </button>
@@ -46,6 +49,8 @@ class ErrorBoundary extends React.Component {
 }
 
 export default ErrorBoundary;
+
+
 
 
 

@@ -158,7 +158,7 @@ const Telehealth = () => {
                   </div>
                 ) : (
                   <div className="text-center">
-                    <div className="w-32 h-32 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <div className="w-32 h-32 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#3B82F6' }}>
                       <User className="w-16 h-16 text-white" />
                     </div>
                     <p className="text-white text-lg">{selectedPatient?.name}</p>
@@ -213,13 +213,15 @@ const Telehealth = () => {
                 </button>
                 <button
                   onClick={() => setIsScreenSharing(!isScreenSharing)}
-                  className={`p-4 rounded-full ${isScreenSharing ? 'bg-blue-600' : 'bg-gray-600'} hover:bg-opacity-80 transition-colors`}
+                  className={`p-4 rounded-full ${isScreenSharing ? '' : 'bg-gray-600'} hover:bg-opacity-80 transition-colors`}
+                  style={isScreenSharing ? { background: '#3B82F6' } : {}}
                 >
                   <Monitor className="w-6 h-6 text-white" />
                 </button>
                 <button
                   onClick={() => setShowChat(!showChat)}
-                  className={`p-4 rounded-full ${showChat ? 'bg-blue-600' : 'bg-gray-600'} hover:bg-opacity-80 transition-colors`}
+                  className={`p-4 rounded-full ${showChat ? '' : 'bg-gray-600'} hover:bg-opacity-80 transition-colors`}
+                  style={showChat ? { background: '#3B82F6' } : {}}
                 >
                   <MessageSquare className="w-6 h-6 text-white" />
                 </button>
@@ -243,7 +245,7 @@ const Telehealth = () => {
               <h2 className="text-xl font-bold text-primary-900 mb-2">Ready for Telehealth</h2>
               <p className="text-gray-600 mb-6">Select a patient from the waiting room to start a video visit</p>
               <div className="flex items-center justify-center space-x-4">
-                <button className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center transition-colors">
+                <button className="px-4 py-2 text-white rounded-lg flex items-center transition-all duration-200 hover:shadow-md" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'} onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}>
                   <Settings className="w-4 h-4 mr-2" />
                   Test Audio/Video
                 </button>
@@ -290,7 +292,10 @@ const Telehealth = () => {
                 />
                 <button
                   onClick={sendMessage}
-                  className="px-3 py-2 bg-paper-700 text-white rounded-lg hover:bg-paper-800"
+                  className="px-3 py-2 text-white rounded-lg transition-all duration-200 hover:shadow-md"
+                  style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                 >
                   Send
                 </button>

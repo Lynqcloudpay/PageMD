@@ -58,3 +58,8 @@ From there you can:
 
 **Note:** All mock accounts (doctor@clinic.com, nurse@clinic.com) have been removed from the database. Only the production admin account exists.
 
+
+
+
+
+

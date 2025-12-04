@@ -26,7 +26,10 @@ const EmptyState = ({
       {action && actionLabel && (
         <button
           onClick={action}
-          className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          className="px-4 py-2 text-white rounded-lg transition-all duration-200 hover:shadow-md"
+          style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
         >
           {actionLabel}
         </button>
@@ -36,6 +39,8 @@ const EmptyState = ({
 };
 
 export default EmptyState;
+
+
 
 
 

@@ -170,6 +170,7 @@ async function migrate() {
         note_draft TEXT,
         note_signed_by UUID REFERENCES users(id),
         note_signed_at TIMESTAMP,
+        addendums JSONB,
         locked BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

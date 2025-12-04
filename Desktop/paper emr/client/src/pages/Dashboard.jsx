@@ -68,8 +68,8 @@ const Dashboard = () => {
         return (
             <div className="p-8 flex items-center justify-center min-h-screen">
                 <div className="text-center">
-                    <div className="inline-block spinner text-primary-600 w-8 h-8"></div>
-                    <p className="mt-4 text-neutral-500 dark:text-neutral-400">Loading dashboard...</p>
+                    <div className="inline-block spinner text-strong-azure w-8 h-8"></div>
+                    <p className="mt-4 text-deep-gray/70">Loading dashboard...</p>
                 </div>
             </div>
         );
@@ -122,10 +122,10 @@ const Dashboard = () => {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-2">
+                    <h1 className="text-3xl font-bold text-deep-gray mb-2">
                         Welcome back, {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.firstName || user?.lastName || 'Doctor'}!
                     </h1>
-                    <p className="text-neutral-500 dark:text-neutral-400">
+                    <p className="text-deep-gray/70">
                         {format(new Date(), 'EEEE, MMMM d, yyyy')}
                     </p>
                 </div>
@@ -144,10 +144,10 @@ const Dashboard = () => {
                 {statCards.map((stat, idx) => {
                     const Icon = stat.icon;
                     const colorClasses = {
-                        primary: 'bg-primary-100 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400',
-                        success: 'bg-success-100 dark:bg-success-900/20 text-success-600 dark:text-success-400',
-                        warning: 'bg-warning-100 dark:bg-warning-900/20 text-warning-600 dark:text-warning-400',
-                        error: 'bg-error-100 dark:bg-error-900/20 text-error-600 dark:text-error-400',
+                        primary: 'bg-strong-azure/10 text-strong-azure',
+                        success: 'bg-fresh-green/10 text-fresh-green',
+                        warning: 'bg-yellow-100 text-yellow-700',
+                        error: 'bg-red-100 text-red-700',
                     };
                     
                     return (
@@ -159,14 +159,14 @@ const Dashboard = () => {
                         >
                             <div className="flex items-start justify-between">
                                 <div className="flex-1">
-                                    <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mb-1">
+                                    <p className="text-sm font-medium text-deep-gray/70 mb-1">
                                         {stat.title}
                                     </p>
-                                    <p className="text-3xl font-bold text-neutral-900 dark:text-white mb-2">
+                                    <p className="text-3xl font-bold text-deep-gray mb-2">
                                         {stat.value}
                                     </p>
                                     {stat.trend && (
-                                        <div className="flex items-center space-x-1 text-xs text-neutral-500 dark:text-neutral-400">
+                                        <div className="flex items-center space-x-1 text-xs text-deep-gray/70">
                                             <TrendingUp className="w-3 h-3" />
                                             <span>{stat.trend}</span>
                                         </div>
@@ -176,7 +176,7 @@ const Dashboard = () => {
                                     <Icon className="w-6 h-6" />
                                 </div>
                             </div>
-                            <div className="mt-4 pt-4 border-t border-neutral-200 dark:border-neutral-700 flex items-center text-xs text-primary-600 dark:text-primary-400 group-hover:text-primary-700 dark:group-hover:text-primary-300">
+                            <div className="mt-4 pt-4 border-t border-deep-gray/10 flex items-center text-xs text-strong-azure group-hover:text-strong-azure/80">
                                 <span>View details</span>
                                 <ArrowRight className="w-3 h-3 ml-1 group-hover:translate-x-1 transition-transform" />
                             </div>
@@ -206,8 +206,8 @@ const Dashboard = () => {
                         <CardContent>
                             {loadingAppointments ? (
                                 <div className="text-center py-12">
-                                    <div className="inline-block spinner text-primary-600"></div>
-                                    <p className="mt-4 text-sm text-neutral-500 dark:text-neutral-400">Loading appointments...</p>
+                                    <div className="inline-block spinner text-strong-azure"></div>
+                                    <p className="mt-4 text-sm text-deep-gray/70">Loading appointments...</p>
                                 </div>
                             ) : todayAppointments.length > 0 ? (
                                 <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -217,17 +217,17 @@ const Dashboard = () => {
                                             <div
                                                 key={appt.id}
                                                 onClick={() => navigate(`/patient/${appt.patientId}/snapshot`)}
-                                                className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-800/50 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg cursor-pointer transition-all border border-neutral-200 dark:border-neutral-700 hover:border-primary-300 dark:hover:border-primary-700 hover-lift group"
+                                                className="flex items-center justify-between p-4 bg-soft-gray hover:bg-white rounded-lg cursor-pointer transition-all border border-deep-gray/10 hover:border-strong-azure/30 hover-lift group"
                                             >
                                                 <div className="flex items-center space-x-4 flex-1 min-w-0">
-                                                    <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-primary-100 dark:bg-primary-900/20 flex items-center justify-center">
-                                                        <Clock className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                                                    <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-strong-azure/10 flex items-center justify-center">
+                                                        <Clock className="w-5 h-5 text-strong-azure" />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <div className="font-semibold text-neutral-900 dark:text-white truncate group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                                                        <div className="font-semibold text-deep-gray truncate group-hover:text-strong-azure transition-colors">
                                                             {appt.patientName}
                                                         </div>
-                                                        <div className="flex items-center space-x-3 text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                                                        <div className="flex items-center space-x-3 text-xs text-deep-gray/70 mt-1">
                                                             <span className="flex items-center">
                                                                 <Clock className="w-3 h-3 mr-1" />
                                                                 {appt.time}
@@ -242,14 +242,14 @@ const Dashboard = () => {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <ArrowRight className="w-5 h-5 text-neutral-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors" />
+                                                <ArrowRight className="w-5 h-5 text-deep-gray/40 group-hover:text-strong-azure transition-colors" />
                                             </div>
                                         ))}
                                 </div>
                             ) : (
                                 <div className="text-center py-12">
-                                    <Calendar className="w-12 h-12 mx-auto mb-4 text-neutral-300 dark:text-neutral-600" />
-                                    <p className="text-neutral-500 dark:text-neutral-400 mb-2">No appointments scheduled for today</p>
+                                    <Calendar className="w-12 h-12 mx-auto mb-4 text-deep-gray/30" />
+                                    <p className="text-deep-gray/70 mb-2">No appointments scheduled for today</p>
                                     <Button variant="outline" size="sm" onClick={() => navigate('/schedule')}>
                                         View Schedule
                                     </Button>

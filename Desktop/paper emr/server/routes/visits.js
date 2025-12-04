@@ -2,12 +2,14 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const { authenticate, requireRole, logAudit } = require('../middleware/auth');
+const { requirePrivilege } = require('../middleware/authorization');
+const { safeLogger } = require('../middleware/phiRedaction');
 
 // All routes require authentication
 router.use(authenticate);
 
 // Get all visits (with filters)
-router.get('/', async (req, res) => {
+router.get('/', requirePrivilege('visit:view'), async (req, res) => {
   try {
     const { patientId, limit = 50, offset = 0 } = req.query;
     let query = `
@@ -15,10 +17,13 @@ router.get('/', async (req, res) => {
         u.first_name as provider_first_name, 
         u.last_name as provider_last_name,
         p.first_name as patient_first_name,
-        p.last_name as patient_last_name
+        p.last_name as patient_last_name,
+        signed_by_user.first_name as signed_by_first_name,
+        signed_by_user.last_name as signed_by_last_name
       FROM visits v
       LEFT JOIN users u ON v.provider_id = u.id
       LEFT JOIN patients p ON v.patient_id = p.id
+      LEFT JOIN users signed_by_user ON v.note_signed_by = signed_by_user.id
       WHERE 1=1
     `;
     const params = [];
@@ -68,7 +73,7 @@ router.get('/', async (req, res) => {
 });
 
 // Get pending notes (unsigned/incomplete visits) - MUST come before /:id
-router.get('/pending', async (req, res) => {
+router.get('/pending', requirePrivilege('visit:view'), async (req, res) => {
   try {
     const { providerId } = req.query;
     const currentUserId = req.user?.id;
@@ -84,11 +89,15 @@ router.get('/pending', async (req, res) => {
         u.last_name as provider_last_name,
         p.first_name as patient_first_name,
         p.last_name as patient_last_name,
-        p.mrn as patient_mrn
+        p.mrn as patient_mrn,
+        signed_by_user.first_name as signed_by_first_name,
+        signed_by_user.last_name as signed_by_last_name
       FROM visits v
       LEFT JOIN users u ON v.provider_id = u.id
       INNER JOIN patients p ON v.patient_id = p.id
-      WHERE (v.note_signed_at IS NULL OR v.note_draft IS NULL OR v.note_draft = '')
+      LEFT JOIN users signed_by_user ON v.note_signed_by = signed_by_user.id
+      WHERE v.note_signed_at IS NULL 
+        AND (v.note_draft IS NOT NULL AND v.note_draft != '')
     `;
     const params = [];
     let paramIndex = 1;
@@ -185,16 +194,16 @@ router.post('/find-or-create', requireRole('clinician'), async (req, res) => {
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('========== ERROR FINDING OR CREATING VISIT ==========');
-    console.error('Error message:', error.message);
-    console.error('Error code:', error.code);
-    console.error('Error detail:', error.detail);
-    console.error('Error constraint:', error.constraint);
-    console.error('Error table:', error.table);
-    console.error('Request body:', req.body);
-    console.error('User:', req.user);
-    console.error('Stack:', error.stack);
-    console.error('===================================================');
+    safeLogger.error('Error finding or creating visit', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      constraint: error.constraint,
+      table: error.table,
+      requestBody: req.bodyForLogging || req.body,
+      userId: req.user?.id,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
     res.status(500).json({ 
       error: 'Failed to find or create visit',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -307,12 +316,13 @@ router.post('/:id/sign', requireRole('clinician'), async (req, res) => {
 
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Error signing visit:', error);
-    console.error('Error message:', error.message);
-    console.error('Error code:', error.code);
-    console.error('Error stack:', error.stack);
-    console.error('Request body:', req.body);
-    console.error('Visit ID:', id);
+    safeLogger.error('Error signing visit', {
+      message: error.message,
+      code: error.code,
+      visitId: id,
+      requestBody: req.bodyForLogging || req.body,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
     res.status(500).json({ error: 'Failed to sign visit', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
@@ -430,7 +440,7 @@ function extractKeyFindings(hpi, pe) {
 }
 
 // Get visit by ID - MUST come after all specific routes
-router.get('/:id', async (req, res) => {
+router.get('/:id', requirePrivilege('visit:view'), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -440,9 +450,12 @@ router.get('/:id', async (req, res) => {
       result = await pool.query(
         `SELECT v.*, 
           u.first_name as provider_first_name, 
-          u.last_name as provider_last_name
+          u.last_name as provider_last_name,
+          signed_by_user.first_name as signed_by_first_name,
+          signed_by_user.last_name as signed_by_last_name
         FROM visits v
         LEFT JOIN users u ON v.provider_id = u.id
+        LEFT JOIN users signed_by_user ON v.note_signed_by = signed_by_user.id
         WHERE v.id = $1`,
         [id]
       );
@@ -452,9 +465,12 @@ router.get('/:id', async (req, res) => {
         result = await pool.query(
           `SELECT v.*, 
             u.first_name as provider_first_name, 
-            u.last_name as provider_last_name
+            u.last_name as provider_last_name,
+            signed_by_user.first_name as signed_by_first_name,
+            signed_by_user.last_name as signed_by_last_name
           FROM visits v
           LEFT JOIN users u ON v.provider_id = u.id
+          LEFT JOIN users signed_by_user ON v.note_signed_by = signed_by_user.id
           WHERE v.id::text = $1 OR CAST(v.id AS TEXT) = $1`,
           [id]
         );
@@ -528,7 +544,7 @@ router.put('/:id', requireRole('clinician'), async (req, res) => {
       }
     } else {
       if (process.env.NODE_ENV === 'development') {
-        console.log('NoteDraft not in request body. Available keys:', Object.keys(req.body));
+        safeLogger.debug('NoteDraft not in request body', { availableKeys: Object.keys(req.bodyForLogging || req.body) });
       }
     }
     if (note_signed_at !== undefined) {
@@ -579,12 +595,66 @@ router.put('/:id', requireRole('clinician'), async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error updating visit:', error);
-    console.error('Error message:', error.message);
-    console.error('Error code:', error.code);
-    console.error('Error stack:', error.stack);
-    console.error('Request body:', req.body);
-    console.error('Visit ID:', req.params.id);
+    safeLogger.error('Error updating visit', {
+      message: error.message,
+      code: error.code,
+      visitId: req.params.id,
+      requestBody: req.bodyForLogging || req.body,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
     res.status(500).json({ error: 'Failed to update visit', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
+  }
+});
+
+// Add addendum to signed visit
+router.post('/:id/addendum', requireRole('clinician'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { addendumText } = req.body;
+    
+    if (!addendumText || !addendumText.trim()) {
+      return res.status(400).json({ error: 'Addendum text is required' });
+    }
+
+    // Check if visit exists and is signed
+    const visitResult = await pool.query('SELECT * FROM visits WHERE id = $1', [id]);
+    if (visitResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Visit not found' });
+    }
+
+    const visit = visitResult.rows[0];
+    if (!visit.note_signed_at && !visit.locked) {
+      return res.status(400).json({ error: 'Can only add addendums to signed notes' });
+    }
+
+    // Get existing addendums or initialize
+    const existingAddendums = visit.addendums ? (Array.isArray(visit.addendums) ? visit.addendums : JSON.parse(visit.addendums)) : [];
+    
+    // Add new addendum with timestamp and user
+    const newAddendum = {
+      text: addendumText.trim(),
+      addedBy: req.user.id,
+      addedByName: `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || 'Provider',
+      addedAt: new Date().toISOString()
+    };
+    
+    existingAddendums.push(newAddendum);
+
+    // Update visit with addendums
+    const result = await pool.query(
+      `UPDATE visits 
+       SET addendums = $1, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2 
+       RETURNING *`,
+      [JSON.stringify(existingAddendums), id]
+    );
+
+    await logAudit(req.user.id, 'add_addendum', 'visit', id, { addendumCount: existingAddendums.length }, req.ip);
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error adding addendum:', error);
+    res.status(500).json({ error: 'Failed to add addendum' });
   }
 });
 

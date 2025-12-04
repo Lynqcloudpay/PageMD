@@ -4,6 +4,8 @@ const path = require('path');
 require('dotenv').config();
 
 const { apiLimiter, authLimiter, sanitizeInput, helmet } = require('./middleware/security');
+const { enforceHTTPS, setHSTS, securityHeaders } = require('./middleware/https');
+const { sessionTimeout } = require('./middleware/sessionTimeout');
 const authRoutes = require('./routes/auth');
 const patientRoutes = require('./routes/patients');
 const visitRoutes = require('./routes/visits');
@@ -17,7 +19,33 @@ const fhirRoutes = require('./routes/fhir');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Security middleware - OpenEMR style
+// CORS must come FIRST - before any redirects or security middleware
+// This allows preflight OPTIONS requests to work properly
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range']
+}));
+
+// HIPAA Security Middleware
+// Enforce HTTPS in production (but skip OPTIONS/preflight requests)
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    // Skip HTTPS redirect for OPTIONS requests (CORS preflight)
+    if (req.method === 'OPTIONS') {
+      return next();
+    }
+    return enforceHTTPS(req, res, next);
+  });
+}
+
+// Security headers (HSTS, CSP, etc.)
+app.use(setHSTS);
+app.use(securityHeaders);
+
+// Helmet for additional security
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   crossOriginEmbedderPolicy: false,
@@ -27,30 +55,37 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "http://localhost:3000", "http://localhost:5173", "blob:"],
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
+      connectSrc: ["'self'", "http://localhost:3000", "http://localhost:5173"],
     },
   },
-}));
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(sanitizeInput);
 
+// PHI Redaction middleware (must come before routes)
+const { redactRequestForLogging, validateURLParams } = require('./middleware/phiRedaction');
+app.use(redactRequestForLogging);
+app.use(validateURLParams);
+
+// Session timeout middleware (for authenticated routes)
+app.use('/api', sessionTimeout);
+
 // Rate limiting - exclude certain endpoints from general rate limiting
-app.use('/api', (req, res, next) => {
-  // Skip rate limiting for /auth/me and other common endpoints in development
-  if (process.env.NODE_ENV !== 'production') {
-    const skipPaths = ['/auth/me', '/patients', '/inbox'];
-    if (skipPaths.some(path => req.path.includes(path))) {
+// Apply rate limiting only in production (and not in localhost/development)
+const isProduction = process.env.NODE_ENV === 'production' && process.env.DB_HOST !== 'localhost' && !process.env.DISABLE_RATE_LIMIT;
+if (isProduction) {
+  app.use('/api', (req, res, next) => {
+    // Skip rate limiting for /auth/me in production
+    if (req.path === '/auth/me') {
       return next();
     }
-  } else if (req.path === '/auth/me') {
-    return next(); // Skip rate limiting for /auth/me in production too
-  }
-  return apiLimiter(req, res, next);
-});
+    return apiLimiter(req, res, next);
+  });
+} else {
+  // Skip rate limiting entirely in development/localhost
+  console.log('⚠️  Rate limiting disabled (development/localhost mode)');
+}
 
 // Create uploads directory if it doesn't exist
 const fs = require('fs');
@@ -77,13 +112,18 @@ app.use('/uploads', (req, res, next) => {
 }));
 
 // Routes
-// Apply rate limiting only to login/register, not to /me endpoint
-app.use('/api/auth', (req, res, next) => {
-  if (req.path === '/me') {
-    return next(); // Skip rate limiting for /me endpoint
-  }
-  return authLimiter(req, res, next);
-}, authRoutes);
+// Apply rate limiting only to login/register in production (and not in localhost/development)
+if (isProduction) {
+  app.use('/api/auth', (req, res, next) => {
+    if (req.path === '/me') {
+      return next(); // Skip rate limiting for /me endpoint
+    }
+    return authLimiter(req, res, next);
+  }, authRoutes);
+} else {
+  // Skip rate limiting for auth routes in development/localhost
+  app.use('/api/auth', authRoutes);
+}
 app.use('/api/patients', patientRoutes);
 app.use('/api/visits', visitRoutes);
 app.use('/api/orders', orderRoutes);
@@ -145,7 +185,11 @@ app.use('/api/inbox', inboxRoutes);
 
 // Appointments
 const appointmentRoutes = require('./routes/appointments');
+
+// Cancellation Follow-ups
+const followupsRoutes = require('./routes/followups');
 app.use('/api/appointments', appointmentRoutes);
+app.use('/api/followups', followupsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -170,7 +214,14 @@ app.get('/', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
+  // Use safe logger to prevent PHI leakage
+  const { safeLogger } = require('./middleware/phiRedaction');
+  safeLogger.error('Unhandled error', {
+    message: err.message,
+    status: err.status,
+    path: req.urlForLogging || req.url,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
   res.status(err.status || 500).json({
     error: err.message || 'Internal server error',
   });

@@ -218,7 +218,10 @@ const PatientHub = ({ patientId, isOpen, onClose }) => {
                                                 <button
                                                     onClick={handleSave}
                                                     disabled={saving}
-                                                    className="flex items-center space-x-2 px-4 py-2 bg-paper-700 text-white rounded-md hover:bg-paper-800 disabled:opacity-50"
+                                                    className="flex items-center space-x-2 px-4 py-2 text-white rounded-md disabled:opacity-50 transition-all duration-200 hover:shadow-md"
+                                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                                    onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+                                                    onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
                                                 >
                                                     <Save className="w-4 h-4" />
                                                     <span>{saving ? 'Saving...' : 'Save'}</span>
@@ -318,7 +321,10 @@ const PatientHub = ({ patientId, isOpen, onClose }) => {
                                                 <button
                                                     onClick={handleSave}
                                                     disabled={saving}
-                                                    className="flex items-center space-x-2 px-4 py-2 bg-paper-700 text-white rounded-md hover:bg-paper-800 disabled:opacity-50"
+                                                    className="flex items-center space-x-2 px-4 py-2 text-white rounded-md disabled:opacity-50 transition-all duration-200 hover:shadow-md"
+                                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                                    onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+                                                    onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
                                                 >
                                                     <Save className="w-4 h-4" />
                                                     <span>{saving ? 'Saving...' : 'Save'}</span>
@@ -547,6 +553,8 @@ const PatientHub = ({ patientId, isOpen, onClose }) => {
 };
 
 export default PatientHub;
+
+
 
 
 

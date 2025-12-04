@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { X, FileText, Clock, Edit, Eye } from 'lucide-react';
+import { X, FileText, Clock, Edit, Eye, Trash2 } from 'lucide-react';
 import { format, parse, compareDesc } from 'date-fns';
+import { visitsAPI } from '../services/api';
 
-const VisitFoldersModal = ({ isOpen, onClose, visits, onViewVisit }) => {
+const VisitFoldersModal = ({ isOpen, onClose, visits, onViewVisit, onDeleteVisit }) => {
     const [filter, setFilter] = useState('all'); // 'all', 'draft', 'signed'
 
     // Filter visits - must be called before early return
@@ -105,61 +106,91 @@ const VisitFoldersModal = ({ isOpen, onClose, visits, onViewVisit }) => {
                             <p>No visits found</p>
                         </div>
                     ) : (
-                        <div className="divide-y divide-neutral-200">
-                            {filteredVisits.map((visit) => (
-                                <div
-                                    key={visit.id}
-                                    onClick={() => onViewVisit(visit.id)}
-                                    className="p-4 hover:bg-neutral-50 cursor-pointer transition-colors group"
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-start space-x-3 flex-1 min-w-0">
-                                            <div className={`p-2 rounded-lg flex-shrink-0 ${
-                                                visit.signed 
-                                                    ? 'bg-green-100 text-green-700' 
-                                                    : 'bg-orange-100 text-orange-700'
-                                            }`}>
-                                                <FileText className="w-4 h-4" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center space-x-2 mb-1">
-                                                    <h3 className="font-semibold text-neutral-900 group-hover:text-primary-700">
-                                                        {visit.type}
-                                                    </h3>
+                        <div className="p-4 space-y-1">
+                            {filteredVisits.map((visit) => {
+                                // Format date and time like Snapshot
+                                let dateTimeStr = visit.date || '';
+                                if (visit.dateTime) {
+                                    dateTimeStr = visit.dateTime;
+                                } else if (visit.visitDate) {
+                                    const visitDateObj = new Date(visit.visitDate);
+                                    const createdDateObj = visit.createdAt ? new Date(visit.createdAt) : visitDateObj;
+                                    const dateStr = visitDateObj.toLocaleDateString();
+                                    
+                                    // Check if visit_date has time component
+                                    const hasTime = visitDateObj.getHours() !== 0 || visitDateObj.getMinutes() !== 0 || visitDateObj.getSeconds() !== 0;
+                                    const timeSource = hasTime ? visitDateObj : createdDateObj;
+                                    const timeStr = timeSource.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                    dateTimeStr = `${dateStr} ${timeStr}`;
+                                } else if (visit.date && visit.time) {
+                                    dateTimeStr = `${visit.date} ${visit.time}`;
+                                }
+
+                                // Get chief complaint if available
+                                let chiefComplaint = visit.chiefComplaint || null;
+                                
+                                // If not directly available, try to parse from fullNote or summary
+                                if (!chiefComplaint && visit.fullNote) {
+                                    const ccMatch = visit.fullNote.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
+                                    chiefComplaint = ccMatch ? ccMatch[1].trim() : null;
+                                }
+
+                                const handleDelete = async (e) => {
+                                    e.stopPropagation();
+                                    if (!window.confirm('Are you sure you want to delete this draft note? This action cannot be undone.')) {
+                                        return;
+                                    }
+                                    
+                                    try {
+                                        await visitsAPI.delete(visit.id);
+                                        if (onDeleteVisit) {
+                                            onDeleteVisit(visit.id);
+                                        } else {
+                                            // Refresh by calling onClose and reopening - parent should handle refresh
+                                            window.location.reload();
+                                        }
+                                    } catch (error) {
+                                        console.error('Error deleting visit:', error);
+                                        alert('Failed to delete draft note.');
+                                    }
+                                };
+
+                                return (
+                                    <div
+                                        key={visit.id}
+                                        onClick={() => onViewVisit(visit.id)}
+                                        className="px-2 py-1.5 border border-gray-200 rounded hover:bg-gray-50 cursor-pointer transition-colors relative group"
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex-1 min-w-0 pr-6">
+                                                <div className="flex items-center space-x-2 flex-wrap">
+                                                    <span className="text-xs font-medium text-gray-900">{visit.type || "Office Visit"}</span>
                                                     {visit.signed ? (
-                                                        <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs font-medium rounded">
-                                                            Signed
-                                                        </span>
+                                                        <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded flex-shrink-0">Signed</span>
                                                     ) : (
-                                                        <span className="px-2 py-0.5 bg-orange-100 text-orange-800 text-xs font-medium rounded">
-                                                            Draft
+                                                        <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded flex-shrink-0">Draft</span>
+                                                    )}
+                                                    <span className="text-xs text-gray-500 flex-shrink-0">{dateTimeStr} • {visit.provider || "Provider"}</span>
+                                                    {chiefComplaint && (
+                                                        <span className="text-xs text-gray-700 italic">
+                                                            • "{chiefComplaint.substring(0, 60)}{chiefComplaint.length > 60 ? '...' : ''}"
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="flex items-center space-x-4 text-sm text-neutral-600">
-                                                    <span className="flex items-center">
-                                                        <Clock className="w-3 h-3 mr-1" />
-                                                        {visit.date}
-                                                    </span>
-                                                    <span>{visit.provider}</span>
-                                                </div>
-                                                {visit.summary && (
-                                                    <p className="text-sm text-neutral-600 mt-2 line-clamp-2">
-                                                        {visit.summary}
-                                                    </p>
-                                                )}
                                             </div>
-                                        </div>
-                                        <div className="ml-4 flex-shrink-0">
-                                            {visit.signed ? (
-                                                <Eye className="w-5 h-5 text-neutral-400 group-hover:text-primary-600 transition-colors" />
-                                            ) : (
-                                                <Edit className="w-5 h-5 text-neutral-400 group-hover:text-orange-600 transition-colors" />
+                                            {!visit.signed && (
+                                                <button
+                                                    onClick={handleDelete}
+                                                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all absolute right-2"
+                                                    title="Delete draft"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                                                </button>
                                             )}
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>

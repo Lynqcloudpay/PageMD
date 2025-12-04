@@ -2,15 +2,18 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
     Save, Lock, FileText, ChevronDown, ChevronUp, Plus, ClipboardList, 
-    Sparkles, ArrowLeft, Zap, Search, X, Printer, History, UserCircle,
-    Activity, CheckSquare, Square
+    Sparkles, ArrowLeft, Zap, Search, X, Printer, History,
+    Activity, CheckSquare, Square, Trash2
 } from 'lucide-react';
 import Toast from '../components/ui/Toast';
 import { OrderModal, PrescriptionModal, ReferralModal } from '../components/ActionModals';
+import EPrescribeEnhanced from '../components/EPrescribeEnhanced';
+import CodeSearchModal from '../components/CodeSearchModal';
 import VisitPrint from '../components/VisitPrint';
-import PatientHistoryPanel from '../components/PatientHistoryPanel';
-import PatientHub from '../components/PatientHub';
+import PatientChartPanel from '../components/PatientChartPanel';
 import { visitsAPI, codesAPI, patientsAPI } from '../services/api';
+import { usePrivileges } from '../hooks/usePrivileges';
+import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
 import { hpiDotPhrases } from '../data/hpiDotPhrases';
 
@@ -83,11 +86,20 @@ const VisitNote = () => {
     const [toast, setToast] = useState(null);
     const [showOrderModal, setShowOrderModal] = useState(false);
     const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
+    const [showEPrescribeEnhanced, setShowEPrescribeEnhanced] = useState(false);
+    const [showICD10Modal, setShowICD10Modal] = useState(false);
     const [showReferralModal, setShowReferralModal] = useState(false);
+    const { hasPrivilege } = usePrivileges();
+    const { user } = useAuth();
     const [showPrintModal, setShowPrintModal] = useState(false);
-    const [showHistoryPanel, setShowHistoryPanel] = useState(false);
-    const [showPatientHub, setShowPatientHub] = useState(false);
+    const [showPatientChart, setShowPatientChart] = useState(false);
+    const [patientChartTab, setPatientChartTab] = useState('history');
     const [patientData, setPatientData] = useState(null);
+    
+    // Auto-save tracking
+    const autoSaveTimeoutRef = useRef(null);
+    const hasInitialSaveRef = useRef(false);
+    const isAutoSavingRef = useRef(false);
     
     // Note sections
     const [noteData, setNoteData] = useState({
@@ -276,6 +288,61 @@ const VisitNote = () => {
         return result;
     };
 
+    // Parse plan text back into structured format
+    const parsePlanText = (planText) => {
+        if (!planText || !planText.trim()) return [];
+        const structured = [];
+        const lines = planText.split('\n');
+        let currentDiagnosis = null;
+        let currentOrders = [];
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            // Check if line is a diagnosis (starts with number and period)
+            const diagnosisMatch = line.match(/^(\d+)\.\s*(.+)$/);
+            if (diagnosisMatch) {
+                // Save previous diagnosis if exists
+                if (currentDiagnosis) {
+                    structured.push({
+                        diagnosis: currentDiagnosis,
+                        orders: [...currentOrders]
+                    });
+                }
+                // Start new diagnosis
+                currentDiagnosis = diagnosisMatch[2].trim();
+                currentOrders = [];
+            } else if (line.startsWith('•') || line.startsWith('-')) {
+                // This is an order line
+                const orderText = line.replace(/^[•\-]\s*/, '').trim();
+                if (orderText && currentDiagnosis) {
+                    currentOrders.push(orderText);
+                }
+            } else if (line && currentDiagnosis) {
+                // Continuation of previous order or new order without bullet
+                currentOrders.push(line);
+            }
+        }
+        
+        // Don't forget the last diagnosis
+        if (currentDiagnosis) {
+            structured.push({
+                diagnosis: currentDiagnosis,
+                orders: currentOrders
+            });
+        }
+        
+        return structured;
+    };
+
+    const formatPlanText = (structuredPlan) => {
+        if (!structuredPlan || structuredPlan.length === 0) return '';
+        return structuredPlan.map((item, index) => {
+            const diagnosisLine = `${index + 1}. ${item.diagnosis}`;
+            const ordersLines = item.orders.map(order => `  • ${order}`).join('\n');
+            return `${diagnosisLine}\n${ordersLines}`;
+        }).join('\n\n');
+    };
+
     const combineNoteSections = () => {
         const sections = [];
         if (noteData.chiefComplaint) sections.push(`Chief Complaint: ${noteData.chiefComplaint}`);
@@ -333,6 +400,7 @@ const VisitNote = () => {
                     setCurrentVisitId(visit.id);
                     setVisitData(visit);
                     setIsSigned(visit.locked || !!visit.note_signed_by || !!visit.note_signed_at);
+                    hasInitialSaveRef.current = true; // Mark that we've created the visit
                     // Use navigate to properly update the route - this will trigger the useEffect to reload with new visitId
                     console.log('Navigating to visit:', `/patient/${id}/visit/${visit.id}`);
                     navigate(`/patient/${id}/visit/${visit.id}`, { replace: true });
@@ -414,6 +482,9 @@ const VisitNote = () => {
                         console.log('No note_draft found in visit');
                     }
                     setLoading(false);
+                    
+                    // Mark that initial save should happen after autoSave is defined
+                    hasInitialSaveRef.current = false; // Reset to trigger save on mount
                 })
                 .catch(error => {
                     console.error('Error loading visit:', error);
@@ -429,30 +500,33 @@ const VisitNote = () => {
         }
     }, [urlVisitId, id, navigate]);
 
-    const handleSave = async () => {
-        if (isSigned || isSaving) return;
-        setIsSaving(true);
+    // Auto-save function (can be called with or without user action)
+    const autoSave = useCallback(async (showToastMessage = false) => {
+        if (isSigned || isSaving || isAutoSavingRef.current) return;
+        if (!id) return; // Need patient ID
+        
+        isAutoSavingRef.current = true;
+        
         try {
             const noteDraft = combineNoteSections();
             let visitId = currentVisitId || urlVisitId;
+            
+            // Create visit if it doesn't exist
             if (!visitId || visitId === 'new') {
-                if (!id) {
-                    showToast('Patient ID is missing', 'error');
-                    setIsSaving(false);
-                    return;
-                }
                 try {
                     const response = await visitsAPI.findOrCreate(id, 'Office Visit');
                     visitId = response.data.id;
                     setCurrentVisitId(visitId);
                     setVisitData(response.data);
                     window.history.replaceState({}, '', `/patient/${id}/visit/${visitId}`);
+                    hasInitialSaveRef.current = true;
                 } catch (error) {
-                    showToast('Failed to create visit: ' + (error.response?.data?.error || error.message), 'error');
-                    setIsSaving(false);
+                    console.error('Failed to create visit for auto-save:', error);
+                    isAutoSavingRef.current = false;
                     return;
                 }
             }
+            
             if (visitId) {
                 const vitalsToSave = {
                     systolic: vitals.systolic || null,
@@ -468,9 +542,13 @@ const VisitNote = () => {
                     weightUnit: vitals.weightUnit || 'lbs',
                     heightUnit: vitals.heightUnit || 'in'
                 };
+                
+                // Save even if note is empty
                 await visitsAPI.update(visitId, { noteDraft: noteDraft || '', vitals: vitalsToSave });
+                
                 const reloadResponse = await visitsAPI.get(visitId);
                 setVisitData(reloadResponse.data);
+                
                 // Reload parsed data to ensure planStructured is reconstructed from saved plan
                 if (reloadResponse.data.note_draft) {
                     const parsed = parseNoteText(reloadResponse.data.note_draft);
@@ -481,15 +559,98 @@ const VisitNote = () => {
                         planStructured: planStructured.length > 0 ? planStructured : prev.planStructured
                     }));
                 }
+                
                 setLastSaved(new Date());
-                showToast('Draft saved successfully', 'success');
-            } else {
-                showToast('Visit ID is missing', 'error');
+                hasInitialSaveRef.current = true;
+                
+                if (showToastMessage) {
+                    showToast('Draft saved successfully', 'success');
+                }
             }
         } catch (error) {
-            showToast('Failed to save: ' + (error.response?.data?.error || error.message || 'Unknown error'), 'error');
+            console.error('Auto-save failed:', error);
+            if (showToastMessage) {
+                showToast('Failed to save: ' + (error.response?.data?.error || error.message || 'Unknown error'), 'error');
+            }
         } finally {
-            setIsSaving(false);
+            isAutoSavingRef.current = false;
+        }
+    }, [id, currentVisitId, urlVisitId, isSigned, isSaving, noteData, vitals, combineNoteSections, parseNoteText, parsePlanText, showToast]);
+    
+    // Debounced auto-save function
+    const scheduleAutoSave = useCallback((showToastMessage = false) => {
+        // Clear any pending auto-save
+        if (autoSaveTimeoutRef.current) {
+            clearTimeout(autoSaveTimeoutRef.current);
+        }
+        
+        // Schedule auto-save after 2 seconds of inactivity
+        autoSaveTimeoutRef.current = setTimeout(() => {
+            autoSave(showToastMessage);
+        }, 2000);
+    }, [autoSave]);
+    
+    // Manual save (shows toast)
+    const handleSave = async () => {
+        // Cancel any pending auto-save and save immediately
+        if (autoSaveTimeoutRef.current) {
+            clearTimeout(autoSaveTimeoutRef.current);
+            autoSaveTimeoutRef.current = null;
+        }
+        await autoSave(true);
+    };
+    
+    // Auto-save immediately when note is loaded/opened (even if empty)
+    useEffect(() => {
+        if (!loading && !isSigned && visitData && visitData.id && !hasInitialSaveRef.current) {
+            // Auto-save immediately when note is opened to ensure visit exists with draft
+            // This prevents data loss and ensures the draft is always saved
+            const timer = setTimeout(() => {
+                autoSave(false); // Silent save, no toast
+                hasInitialSaveRef.current = true;
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [loading, isSigned, visitData, autoSave]);
+    
+    // Auto-save on note data changes (debounced)
+    useEffect(() => {
+        if (hasInitialSaveRef.current && !isSigned && !loading) {
+            scheduleAutoSave(false);
+        }
+        
+        // Cleanup timeout on unmount
+        return () => {
+            if (autoSaveTimeoutRef.current) {
+                clearTimeout(autoSaveTimeoutRef.current);
+            }
+        };
+    }, [noteData, vitals, scheduleAutoSave, isSigned, loading]);
+
+    const handleDelete = async () => {
+        if (isSigned) {
+            showToast('Cannot delete signed notes', 'error');
+            return;
+        }
+        
+        if (!window.confirm('Are you sure you want to delete this draft note? This action cannot be undone.')) {
+            return;
+        }
+        
+        const visitId = currentVisitId || urlVisitId;
+        if (!visitId || visitId === 'new') {
+            // If it's a new visit that hasn't been saved, just navigate back
+            navigate(`/patient/${id}/snapshot`);
+            return;
+        }
+        
+        try {
+            await visitsAPI.delete(visitId);
+            showToast('Draft note deleted successfully', 'success');
+            setTimeout(() => navigate(`/patient/${id}/snapshot`), 1000);
+        } catch (error) {
+            console.error('Error deleting draft note:', error);
+            showToast('Failed to delete draft note', 'error');
         }
     };
 
@@ -698,22 +859,40 @@ const VisitNote = () => {
         }
     };
 
-    // ICD-10 search
+    // ICD-10 search - show popular codes when empty, search when 2+ characters
     useEffect(() => {
-        if (icd10Search.trim().length >= 2) {
-            const timeout = setTimeout(async () => {
-                try {
-                    const response = await codesAPI.searchICD10(icd10Search);
-                    setIcd10Results(response.data || []);
-                } catch (error) {
-                    setIcd10Results([]);
+        const timeout = setTimeout(async () => {
+            try {
+                // If search is empty or less than 2 chars, show popular codes (first 50)
+                // Otherwise, perform search
+                const query = icd10Search.trim().length >= 2 ? icd10Search : '';
+                const response = await codesAPI.searchICD10(query);
+                setIcd10Results(response.data || []);
+                // Auto-show results if we have codes and search box is focused or has content
+                if (response.data && response.data.length > 0) {
+                    setShowIcd10Search(true);
                 }
-            }, 300);
-            return () => clearTimeout(timeout);
-        } else {
-            setIcd10Results([]);
-        }
+            } catch (error) {
+                setIcd10Results([]);
+            }
+        }, 300);
+        return () => clearTimeout(timeout);
     }, [icd10Search]);
+    
+    // Load popular codes on mount
+    useEffect(() => {
+        const loadPopularCodes = async () => {
+            try {
+                const response = await codesAPI.searchICD10('');
+                if (response.data && response.data.length > 0) {
+                    setIcd10Results(response.data);
+                }
+            } catch (error) {
+                console.error('Error loading popular ICD-10 codes:', error);
+            }
+        };
+        loadPopularCodes();
+    }, []);
 
     const handleAddICD10 = async (code, addToProblem = false) => {
         if (addToProblem) {
@@ -733,72 +912,15 @@ const VisitNote = () => {
         setIcd10Search('');
     };
 
-    // Parse assessment to extract diagnoses
-    const parseDiagnoses = () => {
+    // Parse assessment to extract diagnoses - memoized to prevent infinite re-renders
+    const diagnoses = useMemo(() => {
         if (!noteData.assessment) return [];
         const lines = noteData.assessment.split('\n').filter(line => line.trim());
         return lines.map(line => line.trim());
-    };
-
-    // Format plan text from structured data
-    const formatPlanText = (structuredPlan) => {
-        if (!structuredPlan || structuredPlan.length === 0) return '';
-        return structuredPlan.map((item, index) => {
-            const diagnosisLine = `${index + 1}. ${item.diagnosis}`;
-            const ordersLines = item.orders.map(order => `  • ${order}`).join('\n');
-            return `${diagnosisLine}\n${ordersLines}`;
-        }).join('\n\n');
-    };
-
-    // Parse plan text back into structured format
-    const parsePlanText = (planText) => {
-        if (!planText || !planText.trim()) return [];
-        const structured = [];
-        const lines = planText.split('\n');
-        let currentDiagnosis = null;
-        let currentOrders = [];
-
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            // Check if line is a diagnosis (starts with number and period)
-            const diagnosisMatch = line.match(/^(\d+)\.\s*(.+)$/);
-            if (diagnosisMatch) {
-                // Save previous diagnosis if exists
-                if (currentDiagnosis) {
-                    structured.push({
-                        diagnosis: currentDiagnosis,
-                        orders: [...currentOrders]
-                    });
-                }
-                // Start new diagnosis
-                currentDiagnosis = diagnosisMatch[2].trim();
-                currentOrders = [];
-            } else if (line.startsWith('•') || line.startsWith('-')) {
-                // This is an order line
-                const orderText = line.replace(/^[•\-]\s*/, '').trim();
-                if (orderText && currentDiagnosis) {
-                    currentOrders.push(orderText);
-                }
-            } else if (line && currentDiagnosis) {
-                // Continuation of previous order or new order without bullet
-                currentOrders.push(line);
-            }
-        }
-        
-        // Don't forget the last diagnosis
-        if (currentDiagnosis) {
-            structured.push({
-                diagnosis: currentDiagnosis,
-                orders: currentOrders
-            });
-        }
-        
-        return structured;
-    };
+    }, [noteData.assessment]);
 
     // Add order to plan
     const addOrderToPlan = (diagnosis, orderText) => {
-        const diagnoses = parseDiagnoses();
         let diagnosisToUse = diagnosis;
         
         // If diagnosis is new, add it to assessment
@@ -972,9 +1094,39 @@ const VisitNote = () => {
     // Ensure visitData exists, use empty object if not
     const currentVisitData = visitData || {};
     const visitDate = currentVisitData.visit_date ? format(new Date(currentVisitData.visit_date), 'MMM d, yyyy') : format(new Date(), 'MMM d, yyyy');
-    const providerName = currentVisitData.provider_first_name && currentVisitData.provider_last_name
+    
+    // Get current logged-in user name
+    const currentUserName = user 
+        ? `${user.firstName || user.first_name || ''} ${user.lastName || user.last_name || ''}`.trim()
+        : null;
+    
+    // Use signed_by name if note is signed and it's not "System Administrator"
+    const signedByName = currentVisitData.signed_by_first_name && currentVisitData.signed_by_last_name
+        ? `${currentVisitData.signed_by_first_name} ${currentVisitData.signed_by_last_name}`
+        : null;
+    
+    // Get provider name from visit data
+    const providerNameFromVisit = currentVisitData.provider_first_name && currentVisitData.provider_last_name
         ? `${currentVisitData.provider_first_name} ${currentVisitData.provider_last_name}`
-        : 'Provider';
+        : null;
+    
+    // Determine display name priority:
+    // 1. If signed and signed_by is valid (not "System Administrator"), use signed_by
+    // 2. If not signed or signed_by is "System Administrator", use current logged-in user
+    // 3. Fallback to provider from visit if current user not available
+    // 4. Final fallback to "Provider"
+    let displayName = 'Provider';
+    
+    if (isSigned && signedByName && signedByName !== 'System Administrator') {
+        displayName = signedByName;
+    } else if (currentUserName && currentUserName !== 'System Administrator') {
+        // Use current logged-in user for unsigned notes or when signed_by is "System Administrator"
+        displayName = currentUserName;
+    } else if (providerNameFromVisit && providerNameFromVisit !== 'System Administrator') {
+        displayName = providerNameFromVisit;
+    }
+    
+    const providerName = displayName;
 
     // Signed notes now use the same template as editable notes, just with disabled inputs
 
@@ -997,11 +1149,8 @@ const VisitNote = () => {
                             <p className="text-xs text-neutral-600">{visitDate} • {providerName}</p>
                         </div>
                         <div className="flex items-center space-x-1.5">
-                            <button onClick={() => setShowHistoryPanel(!showHistoryPanel)} className={`p-1.5 rounded-md transition-colors ${showHistoryPanel ? 'bg-primary-200 text-primary-700' : 'text-neutral-600 hover:bg-primary-100'}`} title="Patient History">
+                            <button onClick={() => { setPatientChartTab('history'); setShowPatientChart(!showPatientChart); }} className={`p-1.5 rounded-md transition-colors ${showPatientChart && patientChartTab === 'history' ? 'bg-primary-200 text-primary-700' : 'text-neutral-600 hover:bg-primary-100'}`} title="Patient Chart">
                                 <History className="w-3.5 h-3.5" />
-                            </button>
-                            <button onClick={() => setShowPatientHub(!showPatientHub)} className={`p-1.5 rounded-md transition-colors ${showPatientHub ? 'bg-primary-200 text-primary-700' : 'text-neutral-600 hover:bg-primary-100'}`} title="Patient Hub">
-                                <UserCircle className="w-3.5 h-3.5" />
                             </button>
                             {isSigned && (
                                 <div className="flex items-center space-x-2 text-green-700 text-xs font-medium">
@@ -1017,11 +1166,11 @@ const VisitNote = () => {
                             {!isSigned && (
                                 <>
                                     {lastSaved && <span className="text-xs text-neutral-500 italic px-1.5">Saved {lastSaved.toLocaleTimeString()}</span>}
-                                    <button onClick={handleSave} disabled={isSaving} className="px-2.5 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-md shadow-sm flex items-center space-x-1.5 disabled:opacity-50 transition-colors text-xs font-medium">
+                                    <button onClick={handleSave} disabled={isSaving} className="px-2.5 py-1.5 text-white rounded-md shadow-sm flex items-center space-x-1.5 disabled:opacity-50 transition-all duration-200 hover:shadow-md text-xs font-medium" style={{ background: isSaving ? '#9CA3AF' : 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => !isSaving && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')} onMouseLeave={(e) => !isSaving && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}>
                                         <Save className="w-3.5 h-3.5" />
                                         <span>{isSaving ? 'Saving...' : 'Save'}</span>
                                     </button>
-                                    <button onClick={handleSign} className="px-2.5 py-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-colors text-xs font-medium">
+                                    <button onClick={handleSign} className="px-2.5 py-1.5 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-all duration-200 hover:shadow-md text-xs font-medium" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'} onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}>
                                         <Lock className="w-3.5 h-3.5" />
                                         <span>Sign</span>
                                     </button>
@@ -1126,7 +1275,7 @@ const VisitNote = () => {
                                             } else {
                                                 setVitals({...vitals, weightUnit: newUnit});
                                             }
-                                        }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.weightUnit === 'lbs' ? 'bg-primary-600 text-white' : 'bg-white text-neutral-700 hover:bg-primary-50'} disabled:bg-white disabled:text-neutral-700`}>lbs</button>
+                                        }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.weightUnit === 'lbs' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.weightUnit === 'lbs' ? { background: '#3B82F6' } : {}}>lbs</button>
                                         <button type="button" onClick={() => {
                                             const newUnit = 'kg';
                                             if (vitals.weight && vitals.weightUnit !== newUnit) {
@@ -1137,7 +1286,7 @@ const VisitNote = () => {
                                             } else {
                                                 setVitals({...vitals, weightUnit: newUnit});
                                             }
-                                        }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.weightUnit === 'kg' ? 'bg-primary-600 text-white' : 'bg-white text-neutral-700 hover:bg-primary-50'} disabled:bg-white disabled:text-neutral-700`}>kg</button>
+                                        }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.weightUnit === 'kg' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.weightUnit === 'kg' ? { background: '#3B82F6' } : {}}>kg</button>
                                     </div>
                                 </div>
                             </div>
@@ -1170,7 +1319,7 @@ const VisitNote = () => {
                                             } else {
                                                 setVitals({...vitals, heightUnit: newUnit});
                                             }
-                                        }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.heightUnit === 'in' ? 'bg-primary-600 text-white' : 'bg-white text-neutral-700 hover:bg-primary-50'} disabled:bg-white disabled:text-neutral-700`}>in</button>
+                                        }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.heightUnit === 'in' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.heightUnit === 'in' ? { background: '#3B82F6' } : {}}>in</button>
                                         <button type="button" onClick={() => {
                                             const newUnit = 'cm';
                                             if (vitals.height && vitals.heightUnit !== newUnit) {
@@ -1181,7 +1330,7 @@ const VisitNote = () => {
                                             } else {
                                                 setVitals({...vitals, heightUnit: newUnit});
                                             }
-                                        }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.heightUnit === 'cm' ? 'bg-primary-600 text-white' : 'bg-white text-neutral-700 hover:bg-primary-50'} disabled:bg-white disabled:text-neutral-700`}>cm</button>
+                                        }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.heightUnit === 'cm' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.heightUnit === 'cm' ? { background: '#3B82F6' } : {}}>cm</button>
                                     </div>
                                 </div>
                             </div>
@@ -1374,35 +1523,67 @@ const VisitNote = () => {
 
                     {/* Assessment */}
                     <Section title="Assessment" defaultOpen={true}>
-                        <div className="mb-2">
-                            <div className="relative">
-                                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
-                                <input type="text" placeholder="Search ICD-10 codes..." value={icd10Search}
-                                    onChange={(e) => {
-                                        setIcd10Search(e.target.value);
-                                        setShowIcd10Search(e.target.value.trim().length > 0);
-                                    }}
-                                    className="w-full pl-8 pr-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors"
-                                />
-                            </div>
-                        </div>
-                        {showIcd10Search && icd10Results.length > 0 && (
-                            <div className="mb-2 border border-neutral-200 rounded-md bg-white shadow-lg max-h-40 overflow-y-auto">
-                                {icd10Results.map((code) => (
-                                    <div key={code.code} className="flex items-center justify-between p-2 border-b border-neutral-100 hover:bg-primary-50 transition-colors">
-                                        <button onClick={() => handleAddICD10(code, false)} className="flex-1 text-left">
-                                            <div className="font-medium text-neutral-900 text-xs">{code.code}</div>
-                                            <div className="text-xs text-neutral-600">{code.description}</div>
-                                        </button>
-                                        <button 
-                                            onClick={() => handleAddICD10(code, true)} 
-                                            className="ml-2 px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md transition-colors"
-                                            title="Add to Problem List"
-                                        >
-                                            + Problem
-                                        </button>
+                        {hasPrivilege('search_icd10') && (
+                            <div className="mb-2">
+                                <button
+                                    onClick={() => setShowICD10Modal(true)}
+                                    className="w-full px-3 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors flex items-center justify-center space-x-1"
+                                >
+                                    <Search className="w-3.5 h-3.5" />
+                                    <span>Search ICD-10 Codes</span>
+                                </button>
+                                {/* Keep inline search as fallback */}
+                                <div className="relative mt-2">
+                                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+                                    <input type="text" placeholder="Type to search ICD-10 codes or browse popular codes..." value={icd10Search}
+                                        onChange={(e) => {
+                                            setIcd10Search(e.target.value);
+                                            setShowIcd10Search(true);
+                                        }}
+                                        onFocus={() => {
+                                            // Show results when focused, even if empty
+                                            setShowIcd10Search(true);
+                                            // If no results yet and search is empty, load popular codes
+                                            if (icd10Results.length === 0 && icd10Search.trim().length === 0) {
+                                                codesAPI.searchICD10('').then(response => {
+                                                    if (response.data && response.data.length > 0) {
+                                                        setIcd10Results(response.data);
+                                                    }
+                                                }).catch(() => {});
+                                            }
+                                        }}
+                                        className="w-full pl-8 pr-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                                    />
+                                </div>
+                                {icd10Results.length > 0 && (
+                                    <div className="mb-2 border border-neutral-200 rounded-md bg-white shadow-lg max-h-40 overflow-y-auto">
+                                        {icd10Search.trim().length === 0 && (
+                                            <div className="p-2 bg-blue-50 border-b border-blue-200">
+                                                <p className="text-xs text-blue-800 font-medium">Popular Cardiology ICD-10 Codes ({icd10Results.length} codes)</p>
+                                            </div>
+                                        )}
+                                        {icd10Results.map((code) => (
+                                            <div key={code.code} className="flex items-center justify-between p-2 border-b border-neutral-100 hover:bg-primary-50 transition-colors">
+                                                <button onClick={() => handleAddICD10(code, false)} className="flex-1 text-left">
+                                                    <div className="font-medium text-neutral-900 text-xs">{code.code}</div>
+                                                    <div className="text-xs text-neutral-600">{code.description}</div>
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleAddICD10(code, true)} 
+                                                    className="ml-2 px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md transition-colors"
+                                                    title="Add to Problem List"
+                                                >
+                                                    + Problem
+                                                </button>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
+                                )}
+                                {showIcd10Search && icd10Results.length === 0 && icd10Search.trim().length >= 2 && (
+                                    <div className="mb-2 border border-neutral-200 rounded-md bg-white p-3 text-center">
+                                        <p className="text-xs text-neutral-500">No codes found matching "{icd10Search}"</p>
+                                    </div>
+                                )}
                             </div>
                         )}
                         <div className="relative">
@@ -1553,9 +1734,24 @@ const VisitNote = () => {
                         </div>
                         {!isSigned && (
                             <div className="mt-2 flex space-x-1.5">
-                                <button onClick={() => setShowOrderModal(true)} className="px-2.5 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors">Add Order</button>
-                                <button onClick={() => setShowPrescriptionModal(true)} className="px-2.5 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors">e-Prescribe</button>
-                                <button onClick={() => setShowReferralModal(true)} className="px-2.5 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors">Send Referral</button>
+                                {hasPrivilege('order_labs') && (
+                                    <button onClick={() => setShowOrderModal(true)} className="px-2.5 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors">Add Order</button>
+                                )}
+                                {hasPrivilege('e_prescribe') && (
+                                    <button 
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            setShowEPrescribeEnhanced(true);
+                                        }} 
+                                        className="px-2.5 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors"
+                                    >
+                                        e-Prescribe
+                                    </button>
+                                )}
+                                {hasPrivilege('create_referrals') && (
+                                    <button onClick={() => setShowReferralModal(true)} className="px-2.5 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors">Send Referral</button>
+                                )}
                             </div>
                         )}
                     </Section>
@@ -1565,13 +1761,17 @@ const VisitNote = () => {
                         <div className="mt-6 pt-4 border-t border-neutral-200 flex items-center justify-between">
                             <div className="flex items-center space-x-1.5">
                                 {lastSaved && <span className="text-xs text-neutral-500 italic px-1.5">Saved {lastSaved.toLocaleTimeString()}</span>}
-                                <button onClick={handleSave} disabled={isSaving} className="px-2.5 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-md shadow-sm flex items-center space-x-1.5 disabled:opacity-50 transition-colors text-xs font-medium">
+                                <button onClick={handleSave} disabled={isSaving} className="px-2.5 py-1.5 text-white rounded-md shadow-sm flex items-center space-x-1.5 disabled:opacity-50 transition-all duration-200 hover:shadow-md text-xs font-medium" style={{ background: isSaving ? '#9CA3AF' : 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => !isSaving && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')} onMouseLeave={(e) => !isSaving && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}>
                                     <Save className="w-3.5 h-3.5" />
                                     <span>{isSaving ? 'Saving...' : 'Save'}</span>
                                 </button>
-                                <button onClick={handleSign} className="px-2.5 py-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-colors text-xs font-medium">
+                                <button onClick={handleSign} className="px-2.5 py-1.5 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-all duration-200 hover:shadow-md text-xs font-medium" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'} onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}>
                                     <Lock className="w-3.5 h-3.5" />
                                     <span>Sign</span>
+                                </button>
+                                <button onClick={handleDelete} className="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-colors text-xs font-medium">
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <span>Delete</span>
                                 </button>
                             </div>
                             <button onClick={() => setShowPrintModal(true)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors" title="Print">
@@ -1593,7 +1793,7 @@ const VisitNote = () => {
             <OrderModal 
                 isOpen={showOrderModal} 
                 onClose={() => setShowOrderModal(false)} 
-                diagnoses={parseDiagnoses()}
+                diagnoses={diagnoses}
                 onSuccess={(diagnosis, orderText) => {
                     addOrderToPlan(diagnosis, orderText);
                     showToast('Order added to plan', 'success');
@@ -1602,7 +1802,7 @@ const VisitNote = () => {
             <PrescriptionModal 
                 isOpen={showPrescriptionModal} 
                 onClose={() => setShowPrescriptionModal(false)} 
-                diagnoses={parseDiagnoses()}
+                diagnoses={diagnoses}
                 onSuccess={(diagnosis, prescriptionText) => {
                     addOrderToPlan(diagnosis, prescriptionText);
                     showToast('Prescription added to plan', 'success');
@@ -1611,15 +1811,33 @@ const VisitNote = () => {
             <ReferralModal 
                 isOpen={showReferralModal} 
                 onClose={() => setShowReferralModal(false)} 
-                diagnoses={parseDiagnoses()}
+                diagnoses={diagnoses}
                 onSuccess={(diagnosis, referralText) => {
                     addOrderToPlan(diagnosis, referralText);
                     showToast('Referral added to plan', 'success');
                 }} 
             />
+            <EPrescribeEnhanced
+                isOpen={showEPrescribeEnhanced}
+                onClose={() => setShowEPrescribeEnhanced(false)}
+                onSuccess={(diagnosis, prescriptionText) => {
+                    addOrderToPlan(diagnosis, prescriptionText);
+                    showToast('Prescription added to plan', 'success');
+                }}
+                patientId={id}
+                patientName={patientData ? `${patientData.first_name || ''} ${patientData.last_name || ''}`.trim() : ''}
+                visitId={currentVisitId || urlVisitId}
+            />
             {showPrintModal && <VisitPrint visitId={currentVisitId || urlVisitId} patientId={id} onClose={() => setShowPrintModal(false)} />}
-            <PatientHistoryPanel patientId={id} isOpen={showHistoryPanel} onClose={() => setShowHistoryPanel(false)} />
-            <PatientHub patientId={id} isOpen={showPatientHub} onClose={() => setShowPatientHub(false)} />
+            
+            {/* Unified Patient Chart Panel */}
+            <PatientChartPanel
+                patientId={id}
+                isOpen={showPatientChart}
+                onClose={() => setShowPatientChart(false)}
+                initialTab={patientChartTab}
+            />
+            
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
             {/* Dot Phrase Modal */}

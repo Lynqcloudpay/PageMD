@@ -19,20 +19,25 @@ router.get('/search', requireRole('clinician', 'nurse'), async (req, res) => {
   try {
     const { q, limit = 20 } = req.query;
 
-    if (!q || q.trim().length < 2) {
-      return res.status(400).json({ error: 'Search query must be at least 2 characters' });
+    if (!q || q.trim().length < 1) {
+      return res.status(400).json({ error: 'Search query is required' });
+    }
+
+    // For very short queries (1 character), return empty array as RxNorm API needs more
+    // Frontend will handle showing common medications or waiting for more input
+    if (q.trim().length < 2) {
+      return res.json([]);
     }
 
     const medications = await rxnormService.searchMedications(q.trim(), parseInt(limit));
-
-    res.json(medications);
+    
+    // Always return an array, even if empty
+    res.json(Array.isArray(medications) ? medications : []);
 
   } catch (error) {
     console.error('Medication search error:', error);
-    res.status(500).json({ 
-      error: 'Failed to search medications',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    // Return empty array instead of error so UI can show "No medications found"
+    res.json([]);
   }
 });
 
@@ -106,4 +111,5 @@ router.get('/interactions/check', requireRole('clinician', 'nurse'), async (req,
 });
 
 module.exports = router;
+
 

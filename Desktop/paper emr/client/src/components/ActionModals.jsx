@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Modal from './ui/Modal';
 import { Pill, Stethoscope, Upload, Send, Search, X } from 'lucide-react';
 import { searchLabTests, searchImaging } from '../data/labCodes';
@@ -14,6 +14,9 @@ export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [] }
     const [icd10Search, setIcd10Search] = useState('');
     const [icd10Results, setIcd10Results] = useState([]);
 
+    // Memoize diagnoses string to prevent infinite re-renders from array reference changes
+    const diagnosesString = useMemo(() => JSON.stringify(diagnoses), [diagnoses]);
+
     useEffect(() => {
         if (isOpen) {
             setMed('');
@@ -25,23 +28,23 @@ export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [] }
             setIcd10Search('');
             setIcd10Results([]);
         }
-    }, [isOpen, diagnoses]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen, diagnosesString]);
 
-    // ICD-10 search
+    // ICD-10 search - show popular codes when empty, search when 2+ characters
     useEffect(() => {
-        if (icd10Search.trim().length >= 2) {
-            const timeout = setTimeout(async () => {
-                try {
-                    const response = await codesAPI.searchICD10(icd10Search);
-                    setIcd10Results(response.data || []);
-                } catch (error) {
-                    setIcd10Results([]);
-                }
-            }, 300);
-            return () => clearTimeout(timeout);
-        } else {
-            setIcd10Results([]);
-        }
+        const timeout = setTimeout(async () => {
+            try {
+                // If search is empty or less than 2 chars, show popular codes (first 50)
+                // Otherwise, perform search
+                const query = icd10Search.trim().length >= 2 ? icd10Search : '';
+                const response = await codesAPI.searchICD10(query);
+                setIcd10Results(response.data || []);
+            } catch (error) {
+                setIcd10Results([]);
+            }
+        }, 300);
+        return () => clearTimeout(timeout);
     }, [icd10Search]);
 
     const handleSubmit = (e) => {
@@ -199,8 +202,8 @@ export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [] }
                     </div>
                 </div>
                 <div className="flex justify-end space-x-2 pt-2">
-                    <button type="button" onClick={onClose} className="px-4 py-2 border border-paper-300 rounded-md hover:bg-paper-50">Cancel</button>
-                    <button type="submit" className="px-4 py-2 bg-paper-700 text-white rounded-md hover:bg-paper-800">Sign & Send</button>
+                    <button type="button" onClick={onClose} className="px-4 py-2 border border-deep-gray/20 rounded-md hover:bg-soft-gray text-deep-gray">Cancel</button>
+                    <button type="submit" className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'} onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}>Sign & Send</button>
                 </div>
             </form>
         </Modal>
@@ -220,11 +223,15 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', diag
     const [icd10Search, setIcd10Search] = useState('');
     const [icd10Results, setIcd10Results] = useState([]);
 
+    // Use diagnoses directly in render, but only update selectedDiagnosis when modal opens
+    // This prevents infinite loops from diagnoses array reference changes
+    const diagnosesArray = diagnoses || [];
+
     useEffect(() => {
         if (isOpen) {
             setSelectedType(orderType);
             setOrder('');
-            setSelectedDiagnosis(diagnoses.length > 0 ? diagnoses[0] : '');
+            setSelectedDiagnosis(diagnosesArray.length > 0 ? diagnosesArray[0] : '');
             setSearchQuery('');
             setSearchResults([]);
             setSelectedTest(null);
@@ -234,23 +241,23 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', diag
             setIcd10Search('');
             setIcd10Results([]);
         }
-    }, [isOpen, orderType, diagnoses]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen, orderType]);
 
-    // ICD-10 search
+    // ICD-10 search - show popular codes when empty, search when 2+ characters
     useEffect(() => {
-        if (icd10Search.trim().length >= 2) {
-            const timeout = setTimeout(async () => {
-                try {
-                    const response = await codesAPI.searchICD10(icd10Search);
-                    setIcd10Results(response.data || []);
-                } catch (error) {
-                    setIcd10Results([]);
-                }
-            }, 300);
-            return () => clearTimeout(timeout);
-        } else {
-            setIcd10Results([]);
-        }
+        const timeout = setTimeout(async () => {
+            try {
+                // If search is empty or less than 2 chars, show popular codes (first 50)
+                // Otherwise, perform search
+                const query = icd10Search.trim().length >= 2 ? icd10Search : '';
+                const response = await codesAPI.searchICD10(query);
+                setIcd10Results(response.data || []);
+            } catch (error) {
+                setIcd10Results([]);
+            }
+        }, 300);
+        return () => clearTimeout(timeout);
     }, [icd10Search]);
 
     useEffect(() => {
@@ -489,7 +496,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', diag
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-ink-700 mb-1">Link to Diagnosis</label>
-                    {diagnoses.length > 0 ? (
+                    {diagnosesArray.length > 0 ? (
                         <>
                             <div className="mb-2">
                                 <label className="flex items-center space-x-2 mb-2">
@@ -497,7 +504,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', diag
                                         type="radio" 
                                         checked={!selectedDiagnosis.startsWith('NEW:')} 
                                         onChange={() => {
-                                            setSelectedDiagnosis(diagnoses[0] || '');
+                                            setSelectedDiagnosis(diagnosesArray[0] || '');
                                         }}
                                         className="rounded"
                                     />
@@ -510,7 +517,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', diag
                                         className="w-full p-2 border border-paper-300 rounded-md focus:ring-2 focus:ring-paper-400"
                                     >
                                         <option value="">-- Select Diagnosis --</option>
-                                        {diagnoses.map((dx, idx) => (
+                                        {diagnosesArray.map((dx, idx) => (
                                             <option key={idx} value={dx}>{dx}</option>
                                         ))}
                                     </select>
@@ -615,7 +622,10 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', diag
                     <button 
                         type="submit" 
                         disabled={(selectedType === 'lab' && selectedLabs.length === 0) || (selectedType !== 'lab' && !order)}
-                        className="px-4 py-2 bg-paper-700 text-white rounded-md hover:bg-paper-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-4 py-2 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-md"
+                        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                        onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+                        onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
                     >
                         {selectedType === 'lab' ? `Place Order (${selectedLabs.length} lab${selectedLabs.length !== 1 ? 's' : ''})` : 'Place Order'}
                     </button>
@@ -634,6 +644,9 @@ export const ReferralModal = ({ isOpen, onClose, onSuccess, diagnoses = [] }) =>
     const [icd10Search, setIcd10Search] = useState('');
     const [icd10Results, setIcd10Results] = useState([]);
 
+    // Memoize diagnoses to prevent infinite re-renders
+    const diagnosesString = useMemo(() => JSON.stringify(diagnoses), [diagnoses]);
+    
     useEffect(() => {
         if (isOpen) {
             setSpecialty('');
@@ -644,23 +657,23 @@ export const ReferralModal = ({ isOpen, onClose, onSuccess, diagnoses = [] }) =>
             setIcd10Search('');
             setIcd10Results([]);
         }
-    }, [isOpen, diagnoses]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen, diagnosesString]);
 
-    // ICD-10 search
+    // ICD-10 search - show popular codes when empty, search when 2+ characters
     useEffect(() => {
-        if (icd10Search.trim().length >= 2) {
-            const timeout = setTimeout(async () => {
-                try {
-                    const response = await codesAPI.searchICD10(icd10Search);
-                    setIcd10Results(response.data || []);
-                } catch (error) {
-                    setIcd10Results([]);
-                }
-            }, 300);
-            return () => clearTimeout(timeout);
-        } else {
-            setIcd10Results([]);
-        }
+        const timeout = setTimeout(async () => {
+            try {
+                // If search is empty or less than 2 chars, show popular codes (first 50)
+                // Otherwise, perform search
+                const query = icd10Search.trim().length >= 2 ? icd10Search : '';
+                const response = await codesAPI.searchICD10(query);
+                setIcd10Results(response.data || []);
+            } catch (error) {
+                setIcd10Results([]);
+            }
+        }, 300);
+        return () => clearTimeout(timeout);
     }, [icd10Search]);
 
     const handleSubmit = (e) => {
@@ -803,7 +816,7 @@ export const ReferralModal = ({ isOpen, onClose, onSuccess, diagnoses = [] }) =>
                 </div>
                 <div className="flex justify-end space-x-2 pt-2">
                     <button type="button" onClick={onClose} className="px-4 py-2 border border-paper-300 rounded-md hover:bg-paper-50">Cancel</button>
-                    <button type="submit" className="px-4 py-2 bg-paper-700 text-white rounded-md hover:bg-paper-800">Send Referral</button>
+                    <button type="submit" className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'} onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}>Send Referral</button>
                 </div>
             </form>
         </Modal>
@@ -836,7 +849,7 @@ export const UploadModal = ({ isOpen, onClose, onSuccess }) => {
                 </div>
                 <div className="flex justify-end space-x-2 pt-2">
                     <button type="button" onClick={onClose} className="px-4 py-2 border border-paper-300 rounded-md hover:bg-paper-50">Cancel</button>
-                    <button type="submit" className="px-4 py-2 bg-paper-700 text-white rounded-md hover:bg-paper-800">Upload</button>
+                    <button type="submit" className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'} onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}>Upload</button>
                 </div>
             </form>
         </Modal>

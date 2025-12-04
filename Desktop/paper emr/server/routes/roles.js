@@ -13,13 +13,11 @@ const roleService = require('../services/roleService');
 
 const router = express.Router();
 
-// All routes require admin
+// Authentication required for all routes
 router.use(authenticate);
-router.use(requireAdmin);
-
 /**
  * GET /roles
- * Get all roles
+ * Get all roles (accessible to any authenticated user)
  */
 router.get('/', async (req, res) => {
   try {
@@ -30,6 +28,9 @@ router.get('/', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch roles' });
   }
 });
+
+// Admin-only routes below
+router.use(requireAdmin);
 
 /**
  * GET /roles/:id
@@ -256,4 +257,9 @@ router.get('/privileges/all', async (req, res) => {
 });
 
 module.exports = router;
+
+
+
+
+
 

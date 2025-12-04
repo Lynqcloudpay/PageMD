@@ -74,7 +74,10 @@ const Superbill = ({ visitId, patientId, visitDate, providerName, diagnoses, onP
                 {onPrint && (
                     <button
                         onClick={() => onPrint({ cptCodes, orders, diagnoses, visitDate, providerName })}
-                        className="flex items-center space-x-2 px-4 py-2 bg-paper-700 text-white rounded-md hover:bg-paper-800"
+                        className="flex items-center space-x-2 px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md"
+                        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                     >
                         <Printer className="w-4 h-4" />
                         <span>Print</span>
@@ -195,6 +198,8 @@ const Superbill = ({ visitId, patientId, visitDate, providerName, diagnoses, onP
 };
 
 export default Superbill;
+
+
 
 
 

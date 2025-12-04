@@ -65,7 +65,7 @@ const AIAssistant = ({ context, onInsert, onClose }) => {
         {/* Header */}
         <div className="p-4 border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-lg bg-primary-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: '#3B82F6' }}>
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -93,7 +93,7 @@ const AIAssistant = ({ context, onInsert, onClose }) => {
               <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
                 msg.role === 'user' 
                   ? 'bg-primary-100 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
-                  : 'bg-primary-600 text-white'
+                  : 'text-white'
               }`}>
                 {msg.role === 'user' ? (
                   <User className="w-4 h-4" />
@@ -122,7 +122,7 @@ const AIAssistant = ({ context, onInsert, onClose }) => {
           ))}
           {loading && (
             <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center" style={{ background: '#3B82F6' }}>
                 <Bot className="w-4 h-4 text-white" />
               </div>
               <div className="flex-1 rounded-lg p-3 bg-neutral-50 dark:bg-neutral-800/50">

@@ -21,3 +21,9 @@ async function clearAllVisits() {
 clearAllVisits();
 
 
+
+
+
+
+
+

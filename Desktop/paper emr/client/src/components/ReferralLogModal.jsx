@@ -130,3 +130,8 @@ const ReferralLogModal = ({ isOpen, onClose, patientId }) => {
 
 export default ReferralLogModal;
 
+
+
+
+
+

@@ -149,7 +149,10 @@ const Billing = () => {
                 <div className="flex items-center space-x-2">
                     <button
                         onClick={() => setShowSuperbillModal(true)}
-                        className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center space-x-2"
+                        className="px-4 py-2 text-white rounded-lg flex items-center space-x-2 transition-all duration-200 hover:shadow-md"
+                        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                     >
                         <Plus className="w-4 h-4" />
                         <span>Create Superbill</span>
@@ -268,7 +271,10 @@ const Billing = () => {
                         <p className="text-gray-600">No claims found</p>
                         <button
                             onClick={() => setShowSuperbillModal(true)}
-                            className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                            className="mt-4 px-4 py-2 text-white rounded-lg transition-all duration-200 hover:shadow-md"
+                            style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                         >
                             Create First Superbill
                         </button>
@@ -674,14 +680,14 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
                 {/* Step Indicator */}
                 <div className="flex items-center justify-center space-x-4 mb-6">
                     <div className={`flex items-center ${step >= 1 ? 'text-primary-600' : 'text-gray-400'}`}>
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-primary-600 text-white' : 'bg-gray-200'}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'text-white' : 'bg-gray-200'}`} style={step >= 1 ? { background: '#3B82F6' } : {}}>
                             1
                         </div>
                         <span className="ml-2 text-sm font-medium">Patient & Visit</span>
                     </div>
-                    <div className={`w-12 h-0.5 ${step >= 2 ? 'bg-primary-600' : 'bg-gray-200'}`}></div>
-                    <div className={`flex items-center ${step >= 2 ? 'text-primary-600' : 'text-gray-400'}`}>
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-primary-600 text-white' : 'bg-gray-200'}`}>
+                    <div className="w-12 h-0.5" style={step >= 2 ? { background: '#3B82F6' } : { background: '#E5E7EB' }}></div>
+                    <div className={`flex items-center ${step >= 2 ? 'text-strong-azure' : 'text-gray-400'}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? 'text-white' : 'bg-gray-200'}`} style={step >= 2 ? { background: '#3B82F6' } : {}}>
                             2
                         </div>
                         <span className="ml-2 text-sm font-medium">Codes & Charges</span>
@@ -811,7 +817,10 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
                             <button
                                 onClick={() => setStep(2)}
                                 disabled={!selectedVisit}
-                                className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="px-4 py-2 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-md"
+                                style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+                                onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
                             >
                                 Next
                             </button>
@@ -1064,7 +1073,10 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
                             <button
                                 onClick={handleCreateSuperbill}
                                 disabled={loading || diagnosisCodes.length === 0 || procedureCodes.length === 0}
-                                className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="px-4 py-2 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-md"
+                                style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+                                onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
                             >
                                 {loading ? 'Creating...' : 'Create Superbill'}
                             </button>

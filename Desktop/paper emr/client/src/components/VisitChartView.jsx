@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Printer, Calendar, User, Phone, Mail, MapPin, Stethoscope, CheckCircle2, CreditCard, Building2, Users } from 'lucide-react';
-import { visitsAPI, patientsAPI } from '../services/api';
+import { X, Printer, Calendar, User, Phone, Mail, MapPin, Stethoscope, CheckCircle2, CreditCard, Building2, Users, FilePlus, Receipt, DollarSign } from 'lucide-react';
+import { visitsAPI, patientsAPI, billingAPI, codesAPI } from '../services/api';
 import { format } from 'date-fns';
 import html2pdf from 'html2pdf.js';
 
@@ -17,6 +17,19 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     const [noteData, setNoteData] = useState({
         chiefComplaint: '', hpi: '', rosNotes: '', peNotes: '', assessment: '', plan: '', planStructured: []
     });
+    const [addendums, setAddendums] = useState([]);
+    const [showAddendumModal, setShowAddendumModal] = useState(false);
+    const [addendumText, setAddendumText] = useState('');
+    const [showSuperbillModal, setShowSuperbillModal] = useState(false);
+    const [showBillingModal, setShowBillingModal] = useState(false);
+    const [superbillData, setSuperbillData] = useState({
+        diagnosisCodes: [],
+        procedureCodes: [],
+        totalAmount: 0
+    });
+    const [feeSchedule, setFeeSchedule] = useState([]);
+    const [selectedDiagnosisCodes, setSelectedDiagnosisCodes] = useState([]);
+    const [selectedProcedureCodes, setSelectedProcedureCodes] = useState([]);
 
     useEffect(() => {
         if (visitId && patientId) {
@@ -65,19 +78,61 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     const parseNoteText = (text) => {
         if (!text || !text.trim()) return { chiefComplaint: '', hpi: '', assessment: '', plan: '', rosNotes: '', peNotes: '' };
         const decodedText = decodeHtmlEntities(text);
+        
+        // Parse Chief Complaint
         const chiefComplaintMatch = decodedText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):)/is);
+        const chiefComplaint = chiefComplaintMatch ? decodeHtmlEntities(chiefComplaintMatch[1].trim()) : '';
+        
+        // Parse HPI
         const hpiMatch = decodedText.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment|Plan):)/is);
+        const hpi = hpiMatch ? decodeHtmlEntities(hpiMatch[1].trim()) : '';
+        
+        // Parse ROS
         const rosMatch = decodedText.match(/(?:ROS|Review of Systems):\s*(.+?)(?:\n\n|\n(?:PE|Physical|Assessment|Plan):)/is);
+        const rosNotes = rosMatch ? decodeHtmlEntities(rosMatch[1].trim()) : '';
+        
+        // Parse Physical Exam
         const peMatch = decodedText.match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):)/is);
-        const assessmentMatch = decodedText.match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):)/is);
-        const planMatch = decodedText.match(/(?:Plan|P):\s*(.+?)(?:\n\n|$)/is);
+        const peNotes = peMatch ? decodeHtmlEntities(peMatch[1].trim()) : '';
+        
+        // Parse Assessment - capture ALL content from Assessment: until Plan: or end
+        // Use [\s\S] to match everything including newlines, and make it non-greedy but stop at Plan:
+        let assessment = '';
+        const assessmentIndex = decodedText.search(/(?:Assessment|A):\s*/i);
+        if (assessmentIndex !== -1) {
+            const afterAssessment = decodedText.substring(assessmentIndex);
+            // Find where Plan: starts (case insensitive)
+            const planStart = afterAssessment.search(/\n\n(?:Plan|P):|\n(?:Plan|P):/i);
+            if (planStart !== -1) {
+                // Extract everything between Assessment: and Plan:
+                const assessmentWithHeader = afterAssessment.substring(0, planStart);
+                const assessmentContent = assessmentWithHeader.replace(/(?:Assessment|A):\s*/i, '').trim();
+                assessment = assessmentContent;
+            } else {
+                // No Plan: found, take everything until end
+                const assessmentWithHeader = afterAssessment;
+                const assessmentContent = assessmentWithHeader.replace(/(?:Assessment|A):\s*/i, '').trim();
+                assessment = assessmentContent;
+            }
+        }
+        
+        // Parse Plan - capture ALL content from Plan: until end
+        let plan = '';
+        const planIndex = decodedText.search(/(?:Plan|P):\s*/i);
+        if (planIndex !== -1) {
+            const afterPlan = decodedText.substring(planIndex);
+            // Remove the "Plan:" or "P:" header and take everything until end
+            const planContent = afterPlan.replace(/(?:Plan|P):\s*/i, '').trim();
+            plan = planContent;
+        }
+        
         return {
-            chiefComplaint: chiefComplaintMatch ? decodeHtmlEntities(chiefComplaintMatch[1].trim()) : '',
-            hpi: hpiMatch ? decodeHtmlEntities(hpiMatch[1].trim()) : '',
-            rosNotes: rosMatch ? decodeHtmlEntities(rosMatch[1].trim()) : '',
-            peNotes: peMatch ? decodeHtmlEntities(peMatch[1].trim()) : '',
-            assessment: assessmentMatch ? decodeHtmlEntities(assessmentMatch[1].trim()) : '',
-            plan: planMatch ? decodeHtmlEntities(planMatch[1].trim()) : ''
+            chiefComplaint: chiefComplaint,
+            hpi: hpi,
+            rosNotes: rosNotes,
+            peNotes: peNotes,
+            assessment: decodeHtmlEntities(assessment),
+            plan: decodeHtmlEntities(plan)
         };
     };
 
@@ -180,6 +235,24 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
             setProblems(problemsData);
             setFamilyHistory(familyHistoryData);
             setSocialHistory(socialHistoryData);
+            
+            // Load addendums
+            if (visitRes.data.addendums) {
+                const addendumsData = Array.isArray(visitRes.data.addendums) 
+                    ? visitRes.data.addendums 
+                    : JSON.parse(visitRes.data.addendums || '[]');
+                setAddendums(addendumsData);
+            } else {
+                setAddendums([]);
+            }
+            
+            // Load fee schedule for superbill
+            try {
+                const feeScheduleRes = await billingAPI.getFeeSchedule();
+                setFeeSchedule(feeScheduleRes.data || []);
+            } catch (error) {
+                console.error('Error fetching fee schedule:', error);
+            }
             
             // Parse vitals - handle both JSONB (object) and string formats
             console.log('Raw vitals from visit:', visitRes.data.vitals);
@@ -324,6 +397,72 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
         }
     };
 
+    const handleAddAddendum = async () => {
+        if (!addendumText.trim()) {
+            alert('Please enter addendum text');
+            return;
+        }
+        
+        try {
+            await visitsAPI.addAddendum(visitId, addendumText);
+            // Refresh visit data
+            const visitRes = await visitsAPI.get(visitId);
+            const visitData = visitRes.data;
+            if (visitData.addendums) {
+                const addendumsData = Array.isArray(visitData.addendums) 
+                    ? visitData.addendums 
+                    : JSON.parse(visitData.addendums || '[]');
+                setAddendums(addendumsData);
+            }
+            setAddendumText('');
+            setShowAddendumModal(false);
+            alert('Addendum added successfully');
+        } catch (error) {
+            console.error('Error adding addendum:', error);
+            alert('Failed to add addendum');
+        }
+    };
+
+    const handleCreateSuperbill = async () => {
+        if (selectedDiagnosisCodes.length === 0) {
+            alert('Please select at least one diagnosis code');
+            return;
+        }
+        if (selectedProcedureCodes.length === 0) {
+            alert('Please select at least one procedure code');
+            return;
+        }
+        
+        try {
+            // Calculate total amount
+            let total = 0;
+            selectedProcedureCodes.forEach(code => {
+                const feeItem = feeSchedule.find(f => f.code === code.code && f.code_type === 'CPT');
+                if (feeItem && feeItem.fee_amount) {
+                    total += parseFloat(feeItem.fee_amount);
+                }
+            });
+            
+            // Create claim
+            await billingAPI.createClaim({
+                visitId: visitId,
+                diagnosisCodes: selectedDiagnosisCodes,
+                procedureCodes: selectedProcedureCodes,
+                totalAmount: total
+            });
+            
+            setShowSuperbillModal(false);
+            setSelectedDiagnosisCodes([]);
+            setSelectedProcedureCodes([]);
+            alert('Superbill created successfully!');
+        } catch (error) {
+            console.error('Error creating superbill:', error);
+            alert('Failed to create superbill');
+        }
+    };
+
+    const isSigned = visit?.note_signed_at || visit?.locked;
+
     if (loading) {
         return (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -337,7 +476,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                 <div className="bg-white rounded-lg p-6">
                     <p>Visit not found</p>
-                    <button onClick={onClose} className="mt-4 px-4 py-2 bg-primary-600 text-white rounded">Close</button>
+                    <button onClick={onClose} className="mt-4 px-4 py-2 text-white rounded transition-all duration-200 hover:shadow-md" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'} onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}>Close</button>
                 </div>
             </div>
         );
@@ -495,13 +634,44 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                 <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col print:shadow-none print:rounded-none print:max-w-none print:max-h-none print:w-full print:overflow-visible">
                     <div className="p-4 border-b border-gray-200 flex items-center justify-between print-hidden bg-white">
                         <h2 className="text-xl font-bold text-gray-800">Visit Chart View</h2>
-                        <div className="flex items-center space-x-2">
-                            <button onClick={handlePrint} className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 flex items-center space-x-2 shadow transition-all">
+                        <div className="flex items-center space-x-1">
+                            {isSigned && (
+                                <>
+                                    <button 
+                                        onClick={() => setShowAddendumModal(true)} 
+                                        className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                                        title="Add Addendum"
+                                    >
+                                        <FilePlus className="w-4 h-4" />
+                                    </button>
+                                    <button 
+                                        onClick={() => {
+                                            // Pre-populate diagnosis codes from problems
+                                            const diagnosisCodes = problems
+                                                .filter(p => p.icd10_code)
+                                                .map(p => ({ code: p.icd10_code, description: p.problem_name }));
+                                            setSelectedDiagnosisCodes(diagnosisCodes);
+                                            setShowSuperbillModal(true);
+                                        }} 
+                                        className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                                        title="Create Superbill"
+                                    >
+                                        <Receipt className="w-4 h-4" />
+                                    </button>
+                                </>
+                            )}
+                            <button 
+                                onClick={() => setShowBillingModal(true)} 
+                                className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                                title="View Billing"
+                            >
+                                <DollarSign className="w-4 h-4" />
+                            </button>
+                            <button onClick={handlePrint} className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors" title="Print">
                                 <Printer className="w-4 h-4" />
-                                <span>Print</span>
                             </button>
                             <button onClick={onClose} className="p-2 text-gray-600 hover:text-gray-800 rounded-lg hover:bg-gray-100 transition-colors">
-                                <X className="w-6 h-6" />
+                                <X className="w-5 h-5" />
                             </button>
                         </div>
                     </div>
@@ -820,6 +990,23 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                             )}
                         </div>
 
+                        {/* Addendums */}
+                        {addendums.length > 0 && (
+                            <div className="mt-6 pt-4 border-t-2 border-gray-300">
+                                <h3 className="text-sm font-bold text-gray-900 mb-3">Addendums</h3>
+                                <div className="space-y-3">
+                                    {addendums.map((addendum, idx) => (
+                                        <div key={idx} className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
+                                            <div className="text-xs text-gray-600 mb-1">
+                                                Added by {addendum.addedByName} on {format(new Date(addendum.addedAt), 'MM/dd/yyyy h:mm a')}
+                                            </div>
+                                            <div className="text-xs text-gray-900 whitespace-pre-wrap">{addendum.text}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Signature and Footer */}
                         <div className="mt-6 pt-4 border-t-2 border-gray-300">
                             {signedDate && (
@@ -836,7 +1023,255 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                     </div>
                 </div>
             </div>
+
+            {/* Addendum Modal */}
+            {showAddendumModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowAddendumModal(false)}>
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-gray-900">Add Addendum</h3>
+                            <button onClick={() => setShowAddendumModal(false)} className="p-1 hover:bg-gray-100 rounded">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Addendum Text</label>
+                                <textarea
+                                    value={addendumText}
+                                    onChange={(e) => setAddendumText(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent h-32"
+                                    placeholder="Enter addendum text..."
+                                />
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <button
+                                    onClick={() => {
+                                        setShowAddendumModal(false);
+                                        setAddendumText('');
+                                    }}
+                                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleAddAddendum}
+                                    className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md"
+                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
+                                >
+                                    Add Addendum
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Superbill Modal */}
+            {showSuperbillModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto p-4" onClick={() => setShowSuperbillModal(false)}>
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl p-6 my-8" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-gray-900">Create Superbill</h3>
+                            <button onClick={() => setShowSuperbillModal(false)} className="p-1 hover:bg-gray-100 rounded">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="space-y-6">
+                            {/* Diagnosis Codes */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Diagnosis Codes (ICD-10)</label>
+                                <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded p-2">
+                                    {problems.filter(p => p.icd10_code).map((problem, idx) => {
+                                        const isSelected = selectedDiagnosisCodes.some(d => d.code === problem.icd10_code);
+                                        return (
+                                            <label key={idx} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedDiagnosisCodes([...selectedDiagnosisCodes, {
+                                                                code: problem.icd10_code,
+                                                                description: problem.problem_name
+                                                            }]);
+                                                        } else {
+                                                            setSelectedDiagnosisCodes(selectedDiagnosisCodes.filter(d => d.code !== problem.icd10_code));
+                                                        }
+                                                    }}
+                                                />
+                                                <span className="text-sm">{problem.icd10_code} - {problem.problem_name}</span>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Procedure Codes */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Procedure Codes (CPT)</label>
+                                <div className="space-y-2 max-h-60 overflow-y-auto border border-gray-200 rounded p-2">
+                                    {feeSchedule.filter(f => f.code_type === 'CPT').slice(0, 50).map((fee, idx) => {
+                                        const isSelected = selectedProcedureCodes.some(p => p.code === fee.code);
+                                        return (
+                                            <label key={idx} className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                                <div className="flex items-center space-x-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setSelectedProcedureCodes([...selectedProcedureCodes, {
+                                                                    code: fee.code,
+                                                                    description: fee.description,
+                                                                    amount: fee.fee_amount
+                                                                }]);
+                                                            } else {
+                                                                setSelectedProcedureCodes(selectedProcedureCodes.filter(p => p.code !== fee.code));
+                                                            }
+                                                        }}
+                                                    />
+                                                    <span className="text-sm">{fee.code} - {fee.description}</span>
+                                                </div>
+                                                {fee.fee_amount && (
+                                                    <span className="text-sm font-semibold text-gray-700">${parseFloat(fee.fee_amount).toFixed(2)}</span>
+                                                )}
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Total */}
+                            <div className="border-t pt-4">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-lg font-semibold text-gray-900">Total Amount:</span>
+                                    <span className="text-xl font-bold text-primary-600">
+                                        ${selectedProcedureCodes.reduce((sum, code) => {
+                                            const feeItem = feeSchedule.find(f => f.code === code.code && f.code_type === 'CPT');
+                                            return sum + (feeItem?.fee_amount ? parseFloat(feeItem.fee_amount) : 0);
+                                        }, 0).toFixed(2)}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end gap-2">
+                                <button
+                                    onClick={() => {
+                                        setShowSuperbillModal(false);
+                                        setSelectedDiagnosisCodes([]);
+                                        setSelectedProcedureCodes([]);
+                                    }}
+                                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleCreateSuperbill}
+                                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                                >
+                                    Create Superbill
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Billing Modal */}
+            {showBillingModal && (
+                <BillingModal
+                    patientId={patientId}
+                    visitId={visitId}
+                    isOpen={showBillingModal}
+                    onClose={() => setShowBillingModal(false)}
+                />
+            )}
         </>
+    );
+};
+
+// Billing Modal Component
+const BillingModal = ({ patientId, visitId, isOpen, onClose }) => {
+    const [claims, setClaims] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (isOpen && patientId) {
+            fetchClaims();
+        }
+    }, [isOpen, patientId]);
+
+    const fetchClaims = async () => {
+        try {
+            const response = await billingAPI.getClaimsByPatient(patientId);
+            setClaims(response.data || []);
+        } catch (error) {
+            console.error('Error fetching claims:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto p-4" onClick={onClose}>
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl p-6 my-8" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Billing & Claims</h3>
+                    <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+                {loading ? (
+                    <div className="text-center py-8">Loading...</div>
+                ) : claims.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">No claims found</div>
+                ) : (
+                    <div className="space-y-4">
+                        {claims.map((claim) => (
+                            <div key={claim.id} className="border border-gray-200 rounded-lg p-4">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div>
+                                        <div className="font-semibold text-gray-900">
+                                            {claim.visit_type || 'Visit'} - {claim.visit_date ? format(new Date(claim.visit_date), 'MM/dd/yyyy') : ''}
+                                        </div>
+                                        <div className="text-sm text-gray-600">
+                                            Status: <span className={`font-medium ${
+                                                claim.status === 'paid' ? 'text-green-600' :
+                                                claim.status === 'denied' ? 'text-red-600' :
+                                                claim.status === 'submitted' ? 'text-blue-600' :
+                                                'text-gray-600'
+                                            }`}>{claim.status}</span>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-lg font-bold text-gray-900">${parseFloat(claim.total_amount || 0).toFixed(2)}</div>
+                                    </div>
+                                </div>
+                                {claim.diagnosis_codes && (
+                                    <div className="text-xs text-gray-600 mt-2">
+                                        <span className="font-medium">Diagnosis:</span> {Array.isArray(claim.diagnosis_codes) 
+                                            ? claim.diagnosis_codes.map(d => d.code).join(', ')
+                                            : JSON.parse(claim.diagnosis_codes || '[]').map(d => d.code).join(', ')}
+                                    </div>
+                                )}
+                                {claim.procedure_codes && (
+                                    <div className="text-xs text-gray-600 mt-1">
+                                        <span className="font-medium">Procedures:</span> {Array.isArray(claim.procedure_codes)
+                                            ? claim.procedure_codes.map(p => p.code).join(', ')
+                                            : JSON.parse(claim.procedure_codes || '[]').map(p => p.code).join(', ')}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
     );
 };
 

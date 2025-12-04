@@ -181,7 +181,7 @@ const Analytics = () => {
             <option value="quarter">This Quarter</option>
             <option value="year">This Year</option>
           </select>
-          <button className="px-4 py-2 bg-paper-700 text-white rounded-md hover:bg-paper-800 text-sm">
+          <button className="px-4 py-2 text-white rounded-md text-sm transition-all duration-200 hover:shadow-md" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'} onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}>
             Export Report
           </button>
         </div>
@@ -436,6 +436,8 @@ const Analytics = () => {
 };
 
 export default Analytics;
+
+
 
 
 

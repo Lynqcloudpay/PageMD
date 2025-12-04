@@ -163,3 +163,8 @@ router.get('/npi/lookup/:npi', requireRole('admin'), async (req, res) => {
 
 module.exports = router;
 
+
+
+
+
+

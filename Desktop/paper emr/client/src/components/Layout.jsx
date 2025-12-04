@@ -4,13 +4,13 @@ import {
   Calendar, Users, FileText, Settings, LogOut, Search, X, Activity, 
   Clock, History, User, ClipboardList, BarChart3, 
   MessageSquare, Video, Moon, Sun, Menu, ChevronRight, Bell,
-  Zap, Command, DollarSign, Shield
+  Zap, Command, DollarSign, Shield, AlertCircle
 } from 'lucide-react';
 import { usePatient } from '../context/PatientContext';
 import { useAuth } from '../context/AuthContext';
 import { usePatientTabs } from '../context/PatientTabsContext';
 import { useTasks } from '../context/TaskContext';
-import { patientsAPI, messagesAPI, visitsAPI } from '../services/api';
+import { patientsAPI, messagesAPI, visitsAPI, followupsAPI } from '../services/api';
 import PatientTabs from './PatientTabs';
 import MobileMenu from './MobileMenu';
 
@@ -28,6 +28,7 @@ const Layout = ({ children }) => {
     const { unreadCount: tasksCount } = useTasks();
     const [messagesCount, setMessagesCount] = useState(0);
     const [pendingNotesCount, setPendingNotesCount] = useState(0);
+    const [pendingCancellationsCount, setPendingCancellationsCount] = useState(0);
 
     const isActive = (path) => {
         return location.pathname.startsWith(path);
@@ -69,33 +70,65 @@ const Layout = ({ children }) => {
             }
         };
 
+        // Fetch pending cancellations count
+        const fetchPendingCancellationsCount = async () => {
+            try {
+                const response = await followupsAPI.getStats();
+                const stats = response.data || response;
+                const count = stats.pending_count || 0;
+                setPendingCancellationsCount(count);
+            } catch (error) {
+                console.error('Error fetching pending cancellations count:', error);
+                setPendingCancellationsCount(0);
+            }
+        };
+
         // Initial fetch
         fetchMessagesCount();
         fetchPendingNotesCount();
+        fetchPendingCancellationsCount();
         
         // Refresh counts periodically (every 30 seconds)
         const interval = setInterval(() => {
             fetchMessagesCount();
             fetchPendingNotesCount();
+            fetchPendingCancellationsCount();
         }, 30000);
 
         return () => clearInterval(interval);
     }, []);
 
+    // Check if user is a physician/NP/PA for "My Schedule" routing
+    const roleName = user?.role_name || user?.role || '';
+    const roleNameLower = roleName.toLowerCase();
+    const isPhysicianRole = (
+        roleNameLower === 'physician' ||
+        roleNameLower === 'nurse practitioner' ||
+        roleNameLower === 'np' ||
+        roleNameLower === 'physician assistant' ||
+        roleNameLower === 'pa' ||
+        roleNameLower === 'clinician' ||
+        user?.role === 'clinician'
+    );
+
     // Navigation items with icons and badges
     const navItems = [
+        // Schedule is always visible
         { path: '/schedule', icon: Calendar, label: 'Schedule', badge: null },
-        { path: '/my-schedule', icon: User, label: 'My Schedule', badge: null },
+        // For physicians, also show "My Schedule"
+        ...(isPhysicianRole ? [
+            { path: '/my-schedule', icon: User, label: 'My Schedule', badge: null }
+        ] : []),
+        { path: '/cancellations', icon: AlertCircle, label: 'Cancellations', badge: pendingCancellationsCount > 0 ? pendingCancellationsCount : null },
         { path: '/patients', icon: Users, label: 'Patients', badge: null },
         { path: '/tasks', icon: ClipboardList, label: 'In Basket', badge: tasksCount > 0 ? tasksCount : null },
         { path: '/messages', icon: MessageSquare, label: 'Messages', badge: messagesCount > 0 ? messagesCount : null },
         { path: '/pending-notes', icon: Clock, label: 'Pending Notes', badge: pendingNotesCount > 0 ? pendingNotesCount : null },
         { path: '/billing', icon: DollarSign, label: 'Billing', badge: null },
         { path: '/telehealth', icon: Video, label: 'Telehealth', badge: null },
-        { path: '/analytics', icon: BarChart3, label: 'Analytics', badge: null },
         // Admin-only items
-        ...(user?.role === 'Admin' ? [
-            { path: '/admin-settings', icon: Settings, label: 'Administration', badge: null },
+        ...(user?.role === 'Admin' || user?.role_name === 'Admin' || user?.is_admin ? [
+            { path: '/analytics', icon: BarChart3, label: 'Analytics', badge: null },
             { path: '/users', icon: Shield, label: 'User Management', badge: null }
         ] : []),
     ];
@@ -185,15 +218,16 @@ const Layout = ({ children }) => {
 
     return (
         <div className="flex min-h-screen bg-white transition-colors">
-            {/* Patient Tabs - Minimalistic Monochrome Design */}
-            <div className="fixed top-0 left-72 right-0 z-20 bg-white border-b border-gray-200 shadow-sm">
+
+            {/* Patient Tabs */}
+            <div className="fixed top-0 left-72 right-0 z-20 bg-white border-b border-deep-gray/10 shadow-sm" style={{ height: '48px' }}>
                 <PatientTabs />
             </div>
 
-            {/* Minimalistic Sidebar */}
-            <aside className={`${sidebarCollapsed ? 'w-20' : 'w-72'} fixed left-0 top-0 bottom-0 z-30 bg-white border-r border-gray-200 flex flex-col transition-all duration-300 shadow-sm`}>
-                {/* Logo/Brand - Minimalistic */}
-                <div className="h-20 px-6 flex items-center justify-between border-b border-gray-200 bg-white">
+            {/* Sidebar */}
+            <aside className={`${sidebarCollapsed ? 'w-20' : 'w-72'} fixed left-0 top-0 bottom-0 z-30 bg-white border-r-4 border-strong-azure flex flex-col transition-all duration-300 shadow-xl`}>
+                {/* Logo/Brand */}
+                <div className="h-20 px-6 flex items-center justify-between border-b-2 border-strong-azure/20 bg-white">
                     {!sidebarCollapsed && (
                         <Link to="/dashboard" className="flex items-center space-x-3 group">
                             <img 
@@ -220,169 +254,210 @@ const Layout = ({ children }) => {
                     )}
                     <button
                         onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                        className="p-2 rounded-lg hover:bg-neutral-100 transition-colors text-gray-600 hover:text-primary-900"
+                        className="p-2 rounded-lg hover:bg-soft-gray transition-all text-deep-gray hover:text-strong-azure"
                         title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                     >
                         <Menu className="w-4 h-4" />
                     </button>
                 </div>
 
-                {/* Quick Search - Minimalistic */}
+                {/* Quick Search - Futuristic Design */}
                 {!sidebarCollapsed && (
-                    <div className="p-4 border-b border-gray-200 bg-neutral-50">
+                    <div className="px-4 py-3 border-b-2 border-strong-azure/20 bg-white">
                         <button
                             onClick={() => setShowSearch(true)}
-                            className="w-full flex items-center space-x-3 px-4 py-2.5 bg-white border border-gray-300 rounded-lg hover:border-gray-400 hover:bg-neutral-50 transition-all duration-200 group"
+                            className="w-full flex items-center gap-2.5 px-3.5 py-2 bg-white border-2 border-strong-azure/30 rounded-lg hover:border-strong-azure hover:bg-strong-azure/5 hover:shadow-md transition-all duration-200 group"
                         >
-                            <Search className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
-                            <span className="text-sm text-gray-600 flex-1 text-left">Search patients...</span>
-                            <kbd className="hidden sm:inline-flex items-center px-2 py-0.5 text-xs font-medium text-gray-500 bg-neutral-100 border border-gray-300 rounded">
-                                <Command className="w-3 h-3 mr-1" />K
+                            <Search className="w-4 h-4 text-strong-azure/70 group-hover:text-strong-azure transition-colors" />
+                            <span className="text-[13px] text-deep-gray/70 flex-1 text-left group-hover:text-strong-azure font-medium">Search patients...</span>
+                            <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold text-strong-azure bg-strong-azure/10 border border-strong-azure/30 rounded">
+                                <Command className="w-3 h-3 mr-0.5" />K
                             </kbd>
                         </button>
                     </div>
                 )}
 
-                {/* Navigation - Premium Dark */}
-                <nav className="flex-1 overflow-y-auto p-3 space-y-1 hide-scrollbar">
+                {/* Navigation - Futuristic Compact Design */}
+                <nav className="flex-1 overflow-hidden px-3 py-3 flex flex-col">
                     {/* Primary Navigation */}
-                    <div className="mb-4">
-                        <div className="px-3 py-2 mb-2">
-                            <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Navigation</div>
+                    <div className="mb-3 flex-shrink-0">
+                        <div className="px-2.5 mb-2">
+                            <div className="text-[9px] font-bold text-deep-gray/40 uppercase tracking-widest">
+                                Navigation
+                            </div>
                         </div>
-                        {navItems.slice(0, 4).map((item) => {
-                            const Icon = item.icon;
-                            const active = isActive(item.path);
-                            return (
-                                <Link
-                                    key={item.path}
-                                    to={item.path}
-                                    className={`group flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
-                                        active
-                                            ? 'bg-primary-600 text-white shadow-sm'
-                                            : 'text-gray-700 hover:bg-neutral-100 hover:text-primary-900'
-                                    }`}
-                                >
-                                    <div className="relative flex-shrink-0">
-                                        <Icon className={`w-5 h-5 ${active ? 'text-white' : 'text-gray-500 group-hover:text-primary-700'}`} />
-                                        {item.badge && sidebarCollapsed && (
-                                            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center px-1 text-[10px] font-semibold rounded-full bg-accent-500 text-white">
-                                                {item.badge > 99 ? '99+' : item.badge}
-                                            </span>
-                                        )}
-                                    </div>
-                                    {!sidebarCollapsed && (
-                                        <>
-                                            <span className={`flex-1 text-sm font-medium ${active ? 'text-white' : ''}`}>
-                                                {item.label}
-                                            </span>
-                                            {item.badge && (
-                                                <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
-                                                    active 
-                                                        ? 'bg-white/20 text-white' 
-                                                        : 'bg-accent-500/10 text-accent-600'
-                                                }`}>
-                                                    {item.badge}
+                        <div className="space-y-0.5">
+                            {navItems.slice(0, 4).map((item) => {
+                                const Icon = item.icon;
+                                const active = isActive(item.path);
+                                return (
+                                    <Link
+                                        key={item.path}
+                                        to={item.path}
+                                        className={`group relative flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 ${
+                                            active
+                                                ? 'text-white shadow-lg'
+                                                : 'text-deep-gray hover:bg-soft-gray hover:text-strong-azure hover:border-l-2 hover:border-strong-azure/30'
+                                        }`}
+                                        style={active ? {
+                                            background: 'linear-gradient(to right, #3B82F6, #2563EB)',
+                                            boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.3), 0 4px 6px -2px rgba(59, 130, 246, 0.2)'
+                                        } : {}}
+                                    >
+                                        {/* Futuristic active indicator - Azure accent bar */}
+                                        
+                                        <div className="relative flex-shrink-0 z-10">
+                                            <Icon className={`w-4 h-4 transition-all duration-200 ${active ? 'text-white' : 'text-deep-gray/50 group-hover:text-strong-azure'}`} />
+                                            {item.badge && sidebarCollapsed && (
+                                                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 flex items-center justify-center px-1 text-[9px] font-bold rounded-full bg-fresh-green text-white shadow-sm">
+                                                    {item.badge > 99 ? '99+' : item.badge}
                                                 </span>
                                             )}
-                                        </>
-                                    )}
-                                </Link>
-                            );
-                        })}
+                                        </div>
+                                        
+                                        {!sidebarCollapsed && (
+                                            <>
+                                                <span className={`flex-1 text-[13px] font-semibold ${active ? 'text-white' : 'text-deep-gray'} z-10 relative`}>
+                                                    {item.label}
+                                                </span>
+                                                {item.badge && (
+                                                    <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md transition-all z-10 relative ${
+                                                        active 
+                                                            ? 'bg-white/20 text-white' 
+                                                            : 'bg-fresh-green/10 text-fresh-green'
+                                                    }`}>
+                                                        {item.badge}
+                                                    </span>
+                                                )}
+                                            </>
+                                        )}
+                                    </Link>
+                                );
+                            })}
+                        </div>
                     </div>
 
                     {/* Secondary Navigation */}
-                    <div className="mb-4">
-                        <div className="px-3 py-2 mb-2">
-                            <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Workflow</div>
+                    <div className="flex-1 overflow-y-auto hide-scrollbar">
+                        <div className="px-2.5 mb-2 mt-1">
+                            <div className="text-[9px] font-bold text-deep-gray/40 uppercase tracking-widest">
+                                Workflow
+                            </div>
                         </div>
-                        {navItems.slice(4).map((item) => {
-                            const Icon = item.icon;
-                            const active = isActive(item.path);
-                            return (
-                                <Link
-                                    key={item.path}
-                                    to={item.path}
-                                    className={`group flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
-                                        active
-                                            ? 'bg-primary-600 text-white shadow-sm'
-                                            : 'text-gray-700 hover:bg-neutral-100 hover:text-primary-900'
-                                    }`}
-                                >
-                                    <div className="relative flex-shrink-0">
-                                        <Icon className={`w-5 h-5 ${active ? 'text-white' : 'text-gray-500 group-hover:text-primary-700'}`} />
-                                        {item.badge && sidebarCollapsed && (
-                                            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center px-1 text-[10px] font-semibold rounded-full bg-accent-500 text-white">
-                                                {item.badge > 99 ? '99+' : item.badge}
-                                            </span>
-                                        )}
-                                    </div>
-                                    {!sidebarCollapsed && (
-                                        <>
-                                            <span className={`flex-1 text-sm font-medium ${active ? 'text-white' : ''}`}>
-                                                {item.label}
-                                            </span>
-                                            {item.badge && (
-                                                <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
-                                                    active 
-                                                        ? 'bg-white/20 text-white' 
-                                                        : 'bg-accent-500/10 text-accent-600'
-                                                }`}>
-                                                    {item.badge}
+                        <div className="space-y-0.5">
+                            {navItems.slice(4).map((item) => {
+                                const Icon = item.icon;
+                                const active = isActive(item.path);
+                                return (
+                                    <Link
+                                        key={item.path}
+                                        to={item.path}
+                                        className={`group relative flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 ${
+                                            active
+                                                ? 'text-white shadow-lg'
+                                                : 'text-deep-gray hover:bg-soft-gray hover:text-strong-azure hover:border-l-2 hover:border-strong-azure/30'
+                                        }`}
+                                        style={active ? {
+                                            background: 'linear-gradient(to right, #3B82F6, #2563EB)',
+                                            boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.3), 0 4px 6px -2px rgba(59, 130, 246, 0.2)'
+                                        } : {}}
+                                    >
+                                        {/* Futuristic active indicator - Azure accent bar */}
+                                        
+                                        <div className="relative flex-shrink-0 z-10">
+                                            <Icon className={`w-4 h-4 transition-all duration-200 ${active ? 'text-white' : 'text-deep-gray/50 group-hover:text-strong-azure'}`} />
+                                            {item.badge && sidebarCollapsed && (
+                                                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 flex items-center justify-center px-1 text-[9px] font-bold rounded-full bg-fresh-green text-white shadow-sm">
+                                                    {item.badge > 99 ? '99+' : item.badge}
                                                 </span>
                                             )}
-                                        </>
-                                    )}
-                                </Link>
-                            );
-                        })}
+                                        </div>
+                                        
+                                        {!sidebarCollapsed && (
+                                            <>
+                                                <span className={`flex-1 text-[13px] font-semibold ${active ? 'text-white' : 'text-deep-gray'} z-10 relative`}>
+                                                    {item.label}
+                                                </span>
+                                                {item.badge && (
+                                                    <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md transition-all z-10 relative ${
+                                                        active 
+                                                            ? 'bg-white/20 text-white' 
+                                                            : 'bg-fresh-green/10 text-fresh-green'
+                                                    }`}>
+                                                        {item.badge}
+                                                    </span>
+                                                )}
+                                            </>
+                                        )}
+                                    </Link>
+                                );
+                            })}
+                        </div>
                     </div>
-
                 </nav>
 
-                {/* Bottom Section - Minimalistic */}
-                <div className="p-4 border-t border-gray-200 bg-neutral-50">
-                    {!sidebarCollapsed && user && (
-                        <div className="px-3 py-2 mb-3 bg-white rounded-lg border border-gray-200">
-                            <div className="text-sm font-semibold text-primary-900">
-                                {user.firstName} {user.lastName}
-                            </div>
-                            <div className="text-xs text-gray-500 capitalize mt-0.5">
-                                {user.role === 'clinician' ? 'Doctor' : user.role === 'front_desk' ? 'Front Desk' : user.role}
-                            </div>
+                {/* Bottom Section - Futuristic User Panel */}
+                <div className="mt-auto px-3 py-2.5 border-t border-deep-gray/10 bg-gradient-to-b from-white to-soft-gray/20">
+                    {user && (
+                        <div className="flex items-center gap-2">
+                            {/* User Button */}
+                            <button
+                                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all flex-1 ${sidebarCollapsed ? 'justify-center' : ''} ${
+                                    sidebarCollapsed 
+                                        ? 'hover:bg-soft-gray/80' 
+                                        : 'bg-white/60 backdrop-blur-sm hover:bg-white border border-deep-gray/5 hover:border-deep-gray/20 hover:shadow-sm'
+                                }`}
+                                title={`${user.firstName} ${user.lastName} - ${user.role === 'clinician' ? 'Doctor' : user.role === 'front_desk' ? 'Front Desk' : user.role || user.role_name || 'User'}`}
+                            >
+                                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-strong-azure to-strong-azure/80 flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 shadow-sm">
+                                    {(user.firstName?.[0] || 'U') + (user.lastName?.[0] || '')}
+                                </div>
+                                {!sidebarCollapsed && (
+                                    <div className="text-left flex-1 min-w-0">
+                                        <div className="text-[12px] font-semibold text-deep-gray leading-tight truncate">{user.firstName} {user.lastName}</div>
+                                        <div className="text-[10px] text-deep-gray/50 capitalize leading-tight truncate font-medium">
+                                            {user.role === 'clinician' ? 'Doctor' : user.role === 'front_desk' ? 'Front Desk' : user.role || user.role_name || 'User'}
+                                        </div>
+                                    </div>
+                                )}
+                            </button>
+                            {/* Sign Out Button */}
+                            <button
+                                onClick={() => {
+                                    if (window.confirm('Are you sure you want to sign out?')) {
+                                        logout();
+                                        navigate('/login');
+                                    }
+                                }}
+                                className={`flex items-center justify-center px-2 py-1.5 rounded-lg transition-all hover:bg-red-50/80 hover:border-red-300 ${sidebarCollapsed ? 'w-7 h-7' : 'px-2.5'} border border-red-200/50 text-red-600 hover:text-red-700 hover:shadow-sm`}
+                                title="Sign Out"
+                            >
+                                <LogOut className="w-3.5 h-3.5" />
+                                {!sidebarCollapsed && (
+                                    <span className="ml-1 text-[11px] font-semibold">Out</span>
+                                )}
+                            </button>
                         </div>
                     )}
-                    
-                    <button
-                        onClick={() => {
-                            logout();
-                            navigate('/login');
-                        }}
-                        className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-neutral-100 hover:text-red-600 transition-colors border border-gray-200 hover:border-red-300"
-                    >
-                        <LogOut className="w-4 h-4" />
-                        {!sidebarCollapsed && <span className="text-sm font-medium">Sign Out</span>}
-                    </button>
                 </div>
             </aside>
 
-            {/* Patient Search Modal - Minimalistic Design */}
+            {/* Patient Search Modal */}
             {showSearch && (
                 <div 
-                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center pt-20 animate-fade-in"
+                    className="fixed inset-0 bg-deep-gray/60 backdrop-blur-sm z-50 flex items-start justify-center pt-20 animate-fade-in"
                     onClick={() => setShowSearch(false)}
                 >
                     <div 
-                        className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 animate-scale-in border border-gray-200"
+                        className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 animate-scale-in border border-deep-gray/10"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="p-4 border-b border-gray-200 flex items-center space-x-3 bg-white">
-                            <Search className="w-5 h-5 text-gray-400" />
+                        <div className="p-4 border-b border-deep-gray/10 flex items-center space-x-3 bg-white">
+                            <Search className="w-5 h-5 text-strong-azure" />
                             <input
                                 type="text"
                                 placeholder="Search by name or MRN... (Press Cmd/Ctrl+K to open)"
-                                className="flex-1 outline-none bg-transparent text-primary-900 placeholder:text-gray-400 text-base font-medium"
+                                className="flex-1 outline-none bg-transparent text-deep-gray placeholder:text-soft-gray/60 text-base font-medium"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 autoFocus
@@ -398,30 +473,30 @@ const Layout = ({ children }) => {
                                     setSearchQuery('');
                                     setSearchResults([]);
                                 }}
-                                className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
+                                className="p-2 hover:bg-soft-gray rounded-lg transition-colors"
                             >
-                                <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
+                                <X className="w-5 h-5 text-deep-gray/60 hover:text-deep-gray" />
                             </button>
                         </div>
                         <div className="max-h-96 overflow-y-auto">
                             {loading ? (
                                 <div className="p-12 text-center">
-                                    <div className="inline-block spinner text-accent-500"></div>
-                                    <p className="mt-4 text-sm text-gray-600">Searching...</p>
+                                    <div className="inline-block spinner text-strong-azure"></div>
+                                    <p className="mt-4 text-sm text-deep-gray">Searching...</p>
                                 </div>
                             ) : searchResults.length > 0 ? (
-                                <div className="divide-y divide-gray-200">
+                                <div className="divide-y divide-deep-gray/10">
                                     {searchResults.map((patient) => (
                                         <button
                                             key={patient.id}
                                             onClick={() => handleSearchSelect(patient)}
-                                            className="w-full p-4 text-left hover:bg-neutral-50 transition-colors focus:outline-none group"
+                                            className="w-full p-4 text-left hover:bg-soft-gray transition-all focus:outline-none group"
                                         >
-                                            <div className="font-semibold text-primary-900 group-hover:text-accent-600">
+                                            <div className="font-semibold text-deep-gray group-hover:text-strong-azure">
                                                 {patient.name || 'Unknown'}
                                             </div>
-                                            <div className="text-sm text-gray-600 mt-1 flex items-center space-x-2">
-                                                <span className="px-2 py-0.5 bg-neutral-100 rounded text-xs font-medium text-gray-700">{patient.mrn || 'N/A'}</span>
+                                            <div className="text-sm text-deep-gray/70 mt-1 flex items-center space-x-2">
+                                                <span className="px-2 py-0.5 bg-soft-gray rounded text-xs font-medium text-deep-gray">{patient.mrn || 'N/A'}</span>
                                                 <span>•</span>
                                                 <span>{patient.dob ? new Date(patient.dob).toLocaleDateString() : 'N/A'}</span>
                                                 <span>•</span>
@@ -432,14 +507,14 @@ const Layout = ({ children }) => {
                                 </div>
                             ) : searchQuery.trim() ? (
                                 <div className="p-12 text-center">
-                                    <p className="text-gray-700">No patients found for "{searchQuery}"</p>
-                                    <p className="text-xs text-gray-500 mt-2">Try searching by name or MRN</p>
+                                    <p className="text-deep-gray">No patients found for "{searchQuery}"</p>
+                                    <p className="text-xs text-deep-gray/60 mt-2">Try searching by name or MRN</p>
                                 </div>
                             ) : (
                                 <div className="p-12 text-center">
-                                    <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                                    <p className="text-gray-700">Start typing to search...</p>
-                                    <p className="text-xs text-gray-500 mt-2">Press Cmd/Ctrl+K to open this search</p>
+                                    <Search className="w-12 h-12 text-soft-gray/60 mx-auto mb-4" />
+                                    <p className="text-deep-gray">Start typing to search...</p>
+                                    <p className="text-xs text-deep-gray/60 mt-2">Press Cmd/Ctrl+K to open this search</p>
                                 </div>
                             )}
                         </div>
@@ -447,7 +522,7 @@ const Layout = ({ children }) => {
                 </div>
             )}
 
-            {/* Main Content - Minimalistic */}
+            {/* Main Content */}
             <main className={`flex-1 ${sidebarCollapsed ? 'ml-20' : 'ml-72'} transition-all duration-300 relative`} style={{ marginTop: '48px' }}>
                 <div className="h-full bg-white">
                     {children}

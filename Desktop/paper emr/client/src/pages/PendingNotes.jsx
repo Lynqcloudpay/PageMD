@@ -155,7 +155,10 @@ const PendingNotes = () => {
                     </div>
                     <button
                         onClick={fetchPendingNotes}
-                        className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center space-x-2"
+                        className="px-4 py-2 text-white rounded-lg transition-all duration-200 hover:shadow-md flex items-center space-x-2"
+                        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                     >
                         <Sparkles className="w-4 h-4" />
                         <span>Refresh</span>
@@ -186,7 +189,7 @@ const PendingNotes = () => {
                                 onClick={() => setFilterStatus('all')}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                                     filterStatus === 'all'
-                                        ? 'bg-primary-600 text-white shadow-sm'
+                                        ? 'text-white shadow-sm'
                                         : 'bg-neutral-100 text-gray-700 hover:bg-neutral-200'
                                 }`}
                             >

@@ -118,6 +118,16 @@ export const appointmentsAPI = {
   delete: (id) => api.delete(`/appointments/${id}`),
 };
 
+// Cancellation Follow-ups
+export const followupsAPI = {
+  getAll: (params) => api.get('/followups', { params }),
+  getStats: () => api.get('/followups/stats'),
+  ensure: (data) => api.post('/followups/ensure', data),
+  addNote: (id, data) => api.post(`/followups/${id}/notes`, data),
+  address: (id, data) => api.put(`/followups/${id}/address`, data),
+  dismiss: (id, data) => api.put(`/followups/${id}/dismiss`, data),
+};
+
 // Billing
 export const billingAPI = {
   // Fee Schedule

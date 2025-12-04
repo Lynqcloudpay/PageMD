@@ -95,7 +95,10 @@ const Login = () => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
+                        className="w-full py-3 text-white rounded-lg font-medium flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
+                        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                        onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+                        onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
                     >
                         <LogIn className="w-5 h-5" />
                         <span>{loading ? 'Signing in...' : 'Sign In'}</span>

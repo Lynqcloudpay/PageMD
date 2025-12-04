@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Edit2, Trash2, AlertCircle, Pill, ClipboardList, Users, Heart, Save } from 'lucide-react';
+import { X, Plus, Edit2, Trash2, AlertCircle, Pill, ClipboardList, Users, Heart, Save, ArrowLeft } from 'lucide-react';
 import { patientsAPI } from '../services/api';
 import Toast from './ui/Toast';
 import { format } from 'date-fns';
 
-const PatientDataManager = ({ patientId, isOpen, onClose }) => {
-    const [activeTab, setActiveTab] = useState('problems');
+const PatientDataManager = ({ patientId, isOpen, onClose, initialTab = 'problems', onUpdate, onBack }) => {
+    const [activeTab, setActiveTab] = useState(initialTab);
     const [problems, setProblems] = useState([]);
     const [medications, setMedications] = useState([]);
     const [allergies, setAllergies] = useState([]);
@@ -27,9 +27,10 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
 
     useEffect(() => {
         if (isOpen && patientId) {
+            setActiveTab(initialTab); // Set tab when opening
             fetchAllData();
         }
-    }, [isOpen, patientId]);
+    }, [isOpen, patientId, initialTab]);
 
     const fetchAllData = async () => {
         setLoading(true);
@@ -75,6 +76,12 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
         setTimeout(() => setToast(null), 3000);
     };
 
+    const triggerUpdate = () => {
+        if (onUpdate) {
+            onUpdate();
+        }
+    };
+
     // Problems
     const handleAddProblem = async () => {
         try {
@@ -86,6 +93,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
             setProblems([response.data, ...problems]);
             setProblemForm({ problemName: '', icd10Code: '', onsetDate: '', status: 'active' });
             showToast('Problem added successfully');
+            triggerUpdate();
         } catch (error) {
             showToast('Failed to add problem', 'error');
         }
@@ -98,6 +106,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
             setEditing(null);
             setProblemForm({ problemName: '', icd10Code: '', onsetDate: '', status: 'active' });
             showToast('Problem updated successfully');
+            triggerUpdate();
         } catch (error) {
             showToast('Failed to update problem', 'error');
         }
@@ -109,6 +118,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
             await patientsAPI.deleteProblem(id);
             setProblems(problems.filter(p => p.id !== id));
             showToast('Problem deleted successfully');
+            triggerUpdate();
         } catch (error) {
             showToast('Failed to delete problem', 'error');
         }
@@ -127,6 +137,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
             setMedications([response.data, ...medications]);
             setMedicationForm({ medicationName: '', dosage: '', frequency: '', route: '', startDate: '', active: true });
             showToast('Medication added successfully');
+            triggerUpdate();
         } catch (error) {
             showToast('Failed to add medication', 'error');
         }
@@ -139,6 +150,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
             setEditing(null);
             setMedicationForm({ medicationName: '', dosage: '', frequency: '', route: '', startDate: '', active: true });
             showToast('Medication updated successfully');
+            triggerUpdate();
         } catch (error) {
             showToast('Failed to update medication', 'error');
         }
@@ -150,6 +162,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
             await patientsAPI.deleteMedication(id);
             setMedications(medications.filter(m => m.id !== id));
             showToast('Medication deleted successfully');
+            triggerUpdate();
         } catch (error) {
             showToast('Failed to delete medication', 'error');
         }
@@ -167,6 +180,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
             setAllergies([response.data, ...allergies]);
             setAllergyForm({ allergen: '', reaction: '', severity: '', onsetDate: '', active: true });
             showToast('Allergy added successfully');
+            triggerUpdate();
         } catch (error) {
             showToast('Failed to add allergy', 'error');
         }
@@ -179,6 +193,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
             setEditing(null);
             setAllergyForm({ allergen: '', reaction: '', severity: '', onsetDate: '', active: true });
             showToast('Allergy updated successfully');
+            triggerUpdate();
         } catch (error) {
             showToast('Failed to update allergy', 'error');
         }
@@ -190,6 +205,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
             await patientsAPI.deleteAllergy(id);
             setAllergies(allergies.filter(a => a.id !== id));
             showToast('Allergy deleted successfully');
+            triggerUpdate();
         } catch (error) {
             showToast('Failed to delete allergy', 'error');
         }
@@ -208,6 +224,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
             setFamilyHistory([response.data, ...familyHistory]);
             setFamilyHistoryForm({ condition: '', relationship: '', ageAtDiagnosis: '', ageAtDeath: '', notes: '' });
             showToast('Family history added successfully');
+            triggerUpdate();
         } catch (error) {
             showToast('Failed to add family history', 'error');
         }
@@ -220,6 +237,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
             setEditing(null);
             setFamilyHistoryForm({ condition: '', relationship: '', ageAtDiagnosis: '', ageAtDeath: '', notes: '' });
             showToast('Family history updated successfully');
+            triggerUpdate();
         } catch (error) {
             showToast('Failed to update family history', 'error');
         }
@@ -231,6 +249,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
             await patientsAPI.deleteFamilyHistory(id);
             setFamilyHistory(familyHistory.filter(fh => fh.id !== id));
             showToast('Family history deleted successfully');
+            triggerUpdate();
         } catch (error) {
             showToast('Failed to delete family history', 'error');
         }
@@ -242,6 +261,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
             await patientsAPI.saveSocialHistory(patientId, socialHistoryForm);
             await fetchAllData();
             showToast('Social history saved successfully');
+            triggerUpdate();
         } catch (error) {
             showToast('Failed to save social history', 'error');
         }
@@ -259,18 +279,29 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
 
     return (
         <>
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={onClose} />
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" onClick={onClose} />
             <div className="fixed right-0 top-0 h-full w-full max-w-3xl bg-white shadow-2xl z-50 flex flex-col">
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-paper-200 bg-paper-50">
-                    <h2 className="text-xl font-serif font-bold text-ink-900">Patient Data Manager</h2>
-                    <button onClick={onClose} className="p-2 hover:bg-paper-200 rounded-md text-ink-600">
+                <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white">
+                    <div className="flex items-center space-x-3">
+                        {onBack && (
+                            <button 
+                                onClick={onBack} 
+                                className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 transition-colors"
+                                title="Back to Patient Chart"
+                            >
+                                <ArrowLeft className="w-5 h-5" />
+                            </button>
+                        )}
+                        <h2 className="text-xl font-semibold text-gray-900">Patient Data Manager</h2>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 transition-colors">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-paper-200 bg-white overflow-x-auto">
+                <div className="flex border-b border-gray-200 bg-white overflow-x-auto">
                     {tabs.map(tab => {
                         const Icon = tab.icon;
                         return (
@@ -279,8 +310,8 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`flex items-center space-x-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                                     activeTab === tab.id
-                                        ? 'border-paper-700 text-paper-700 bg-paper-50'
-                                        : 'border-transparent text-ink-600 hover:text-ink-900 hover:bg-paper-50'
+                                        ? 'border-primary-600 text-primary-700 bg-primary-50'
+                                        : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                                 }`}
                             >
                                 <Icon className="w-4 h-4" />
@@ -293,20 +324,23 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-6">
                     {loading ? (
-                        <div className="text-center py-12 text-ink-500">Loading...</div>
+                        <div className="text-center py-12 text-gray-500">Loading...</div>
                     ) : (
                         <>
                             {/* Problems Tab */}
                             {activeTab === 'problems' && (
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-lg font-semibold text-ink-900">Problems List</h3>
+                                        <h3 className="text-lg font-semibold text-gray-900">Problems List</h3>
                                         <button
                                             onClick={() => {
                                                 setEditing('new-problem');
                                                 setProblemForm({ problemName: '', icd10Code: '', onsetDate: '', status: 'active' });
                                             }}
-                                            className="flex items-center space-x-2 px-3 py-1.5 text-sm bg-paper-700 text-white rounded-md hover:bg-paper-800"
+                                            className="flex items-center space-x-2 px-3 py-1.5 text-sm text-white rounded-md transition-all duration-200 hover:shadow-md"
+                                            style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                                         >
                                             <Plus className="w-4 h-4" />
                                             <span>Add Problem</span>
@@ -314,47 +348,47 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                                     </div>
 
                                     {(editing === 'new-problem' || editing?.startsWith('problem-')) && (
-                                        <div className="bg-paper-50 p-4 rounded-lg border border-paper-200">
-                                            <h4 className="font-medium text-ink-900 mb-3">
+                                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                            <h4 className="font-medium text-gray-900 mb-3">
                                                 {editing === 'new-problem' ? 'Add New Problem' : 'Edit Problem'}
                                             </h4>
                                             <div className="space-y-3">
                                                 <div>
-                                                    <label className="block text-sm font-medium text-ink-700 mb-1">Problem Name *</label>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Problem Name *</label>
                                                     <input
                                                         type="text"
                                                         value={problemForm.problemName}
                                                         onChange={(e) => setProblemForm({ ...problemForm, problemName: e.target.value })}
-                                                        className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                         placeholder="e.g., Type 2 Diabetes"
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-ink-700 mb-1">ICD-10 Code</label>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">ICD-10 Code</label>
                                                     <input
                                                         type="text"
                                                         value={problemForm.icd10Code}
                                                         onChange={(e) => setProblemForm({ ...problemForm, icd10Code: e.target.value })}
-                                                        className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                         placeholder="e.g., E11.9"
                                                     />
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <div>
-                                                        <label className="block text-sm font-medium text-ink-700 mb-1">Onset Date</label>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Onset Date</label>
                                                         <input
                                                             type="date"
                                                             value={problemForm.onsetDate}
                                                             onChange={(e) => setProblemForm({ ...problemForm, onsetDate: e.target.value })}
-                                                            className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="block text-sm font-medium text-ink-700 mb-1">Status</label>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                                                         <select
                                                             value={problemForm.status}
                                                             onChange={(e) => setProblemForm({ ...problemForm, status: e.target.value })}
-                                                            className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                         >
                                                             <option value="active">Active</option>
                                                             <option value="resolved">Resolved</option>
@@ -372,7 +406,10 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                                                             }
                                                         }}
                                                         disabled={!problemForm.problemName}
-                                                        className="px-4 py-2 bg-paper-700 text-white rounded-md hover:bg-paper-800 disabled:opacity-50"
+                                                        className="px-4 py-2 text-white rounded-md disabled:opacity-50 transition-all duration-200 hover:shadow-md"
+                                                        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                                        onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+                                                        onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
                                                     >
                                                         <Save className="w-4 h-4 inline mr-1" />
                                                         Save
@@ -382,7 +419,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                                                             setEditing(null);
                                                             setProblemForm({ problemName: '', icd10Code: '', onsetDate: '', status: 'active' });
                                                         }}
-                                                        className="px-4 py-2 bg-paper-100 text-ink-700 rounded-md hover:bg-paper-200"
+                                                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
                                                     >
                                                         Cancel
                                                     </button>
@@ -393,18 +430,18 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
 
                                     <div className="space-y-2">
                                         {problems.length === 0 ? (
-                                            <div className="text-center py-8 text-ink-500 bg-paper-50 rounded-lg border border-paper-200">
+                                            <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
                                                 No problems recorded
                                             </div>
                                         ) : (
                                             problems.map((problem) => (
-                                                <div key={problem.id} className="bg-paper-50 p-4 rounded-lg border border-paper-200 flex items-start justify-between">
+                                                <div key={problem.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex items-start justify-between">
                                                     <div className="flex-1">
-                                                        <div className="font-semibold text-ink-900">{problem.problem_name}</div>
+                                                        <div className="font-semibold text-gray-900">{problem.problem_name}</div>
                                                         {problem.icd10_code && (
-                                                            <div className="text-sm text-ink-600">ICD-10: {problem.icd10_code}</div>
+                                                            <div className="text-sm text-gray-600">ICD-10: {problem.icd10_code}</div>
                                                         )}
-                                                        <div className="text-xs text-ink-500 mt-1">
+                                                        <div className="text-xs text-gray-500 mt-1">
                                                             Status: <span className={`font-medium ${
                                                                 problem.status === 'active' ? 'text-red-600' :
                                                                 problem.status === 'resolved' ? 'text-green-600' : 'text-gray-600'
@@ -423,7 +460,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                                                                     status: problem.status
                                                                 });
                                                             }}
-                                                            className="p-1.5 text-ink-600 hover:bg-paper-200 rounded"
+                                                            className="p-1.5 text-gray-600 hover:bg-gray-200 rounded"
                                                         >
                                                             <Edit2 className="w-4 h-4" />
                                                         </button>
@@ -445,13 +482,16 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                             {activeTab === 'medications' && (
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-lg font-semibold text-ink-900">Medications</h3>
+                                        <h3 className="text-lg font-semibold text-gray-900">Medications</h3>
                                         <button
                                             onClick={() => {
                                                 setEditing('new-medication');
                                                 setMedicationForm({ medicationName: '', dosage: '', frequency: '', route: '', startDate: '', active: true });
                                             }}
-                                            className="flex items-center space-x-2 px-3 py-1.5 text-sm bg-paper-700 text-white rounded-md hover:bg-paper-800"
+                                            className="flex items-center space-x-2 px-3 py-1.5 text-sm text-white rounded-md transition-all duration-200 hover:shadow-md"
+                                            style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                                         >
                                             <Plus className="w-4 h-4" />
                                             <span>Add Medication</span>
@@ -459,60 +499,60 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                                     </div>
 
                                     {(editing === 'new-medication' || editing?.startsWith('medication-')) && (
-                                        <div className="bg-paper-50 p-4 rounded-lg border border-paper-200">
-                                            <h4 className="font-medium text-ink-900 mb-3">
+                                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                            <h4 className="font-medium text-gray-900 mb-3">
                                                 {editing === 'new-medication' ? 'Add New Medication' : 'Edit Medication'}
                                             </h4>
                                             <div className="space-y-3">
                                                 <div>
-                                                    <label className="block text-sm font-medium text-ink-700 mb-1">Medication Name *</label>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Medication Name *</label>
                                                     <input
                                                         type="text"
                                                         value={medicationForm.medicationName}
                                                         onChange={(e) => setMedicationForm({ ...medicationForm, medicationName: e.target.value })}
-                                                        className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                     />
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <div>
-                                                        <label className="block text-sm font-medium text-ink-700 mb-1">Dosage</label>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Dosage</label>
                                                         <input
                                                             type="text"
                                                             value={medicationForm.dosage}
                                                             onChange={(e) => setMedicationForm({ ...medicationForm, dosage: e.target.value })}
-                                                            className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                             placeholder="e.g., 10mg"
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="block text-sm font-medium text-ink-700 mb-1">Frequency</label>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
                                                         <input
                                                             type="text"
                                                             value={medicationForm.frequency}
                                                             onChange={(e) => setMedicationForm({ ...medicationForm, frequency: e.target.value })}
-                                                            className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                             placeholder="e.g., Once daily"
                                                         />
                                                     </div>
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <div>
-                                                        <label className="block text-sm font-medium text-ink-700 mb-1">Route</label>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Route</label>
                                                         <input
                                                             type="text"
                                                             value={medicationForm.route}
                                                             onChange={(e) => setMedicationForm({ ...medicationForm, route: e.target.value })}
-                                                            className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                             placeholder="e.g., PO"
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="block text-sm font-medium text-ink-700 mb-1">Start Date</label>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
                                                         <input
                                                             type="date"
                                                             value={medicationForm.startDate}
                                                             onChange={(e) => setMedicationForm({ ...medicationForm, startDate: e.target.value })}
-                                                            className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                         />
                                                     </div>
                                                 </div>
@@ -526,7 +566,10 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                                                             }
                                                         }}
                                                         disabled={!medicationForm.medicationName}
-                                                        className="px-4 py-2 bg-paper-700 text-white rounded-md hover:bg-paper-800 disabled:opacity-50"
+                                                        className="px-4 py-2 text-white rounded-md disabled:opacity-50 transition-all duration-200 hover:shadow-md"
+                                                        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                                        onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+                                                        onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
                                                     >
                                                         <Save className="w-4 h-4 inline mr-1" />
                                                         Save
@@ -536,7 +579,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                                                             setEditing(null);
                                                             setMedicationForm({ medicationName: '', dosage: '', frequency: '', route: '', startDate: '', active: true });
                                                         }}
-                                                        className="px-4 py-2 bg-paper-100 text-ink-700 rounded-md hover:bg-paper-200"
+                                                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
                                                     >
                                                         Cancel
                                                     </button>
@@ -547,20 +590,20 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
 
                                     <div className="space-y-2">
                                         {medications.length === 0 ? (
-                                            <div className="text-center py-8 text-ink-500 bg-paper-50 rounded-lg border border-paper-200">
+                                            <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
                                                 No medications recorded
                                             </div>
                                         ) : (
                                             medications.map((med) => (
-                                                <div key={med.id} className="bg-paper-50 p-4 rounded-lg border border-paper-200 flex items-start justify-between">
+                                                <div key={med.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex items-start justify-between">
                                                     <div className="flex-1">
-                                                        <div className="font-semibold text-ink-900">{med.medication_name}</div>
-                                                        <div className="text-sm text-ink-600">
+                                                        <div className="font-semibold text-gray-900">{med.medication_name}</div>
+                                                        <div className="text-sm text-gray-600">
                                                             {med.dosage && `${med.dosage} `}
                                                             {med.frequency && `${med.frequency} `}
                                                             {med.route && `(${med.route})`}
                                                         </div>
-                                                        <div className="text-xs text-ink-500 mt-1">
+                                                        <div className="text-xs text-gray-500 mt-1">
                                                             {med.active ? <span className="text-green-600">Active</span> : <span className="text-gray-600">Inactive</span>}
                                                             {med.start_date && ` • Started: ${format(new Date(med.start_date), 'MMM d, yyyy')}`}
                                                         </div>
@@ -578,7 +621,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                                                                     active: med.active
                                                                 });
                                                             }}
-                                                            className="p-1.5 text-ink-600 hover:bg-paper-200 rounded"
+                                                            className="p-1.5 text-gray-600 hover:bg-gray-200 rounded"
                                                         >
                                                             <Edit2 className="w-4 h-4" />
                                                         </button>
@@ -600,13 +643,16 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                             {activeTab === 'allergies' && (
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-lg font-semibold text-ink-900">Allergies</h3>
+                                        <h3 className="text-lg font-semibold text-gray-900">Allergies</h3>
                                         <button
                                             onClick={() => {
                                                 setEditing('new-allergy');
                                                 setAllergyForm({ allergen: '', reaction: '', severity: '', onsetDate: '', active: true });
                                             }}
-                                            className="flex items-center space-x-2 px-3 py-1.5 text-sm bg-paper-700 text-white rounded-md hover:bg-paper-800"
+                                            className="flex items-center space-x-2 px-3 py-1.5 text-sm text-white rounded-md transition-all duration-200 hover:shadow-md"
+                                            style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                                         >
                                             <Plus className="w-4 h-4" />
                                             <span>Add Allergy</span>
@@ -614,36 +660,36 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                                     </div>
 
                                     {(editing === 'new-allergy' || editing?.startsWith('allergy-')) && (
-                                        <div className="bg-paper-50 p-4 rounded-lg border border-paper-200">
-                                            <h4 className="font-medium text-ink-900 mb-3">
+                                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                            <h4 className="font-medium text-gray-900 mb-3">
                                                 {editing === 'new-allergy' ? 'Add New Allergy' : 'Edit Allergy'}
                                             </h4>
                                             <div className="space-y-3">
                                                 <div>
-                                                    <label className="block text-sm font-medium text-ink-700 mb-1">Allergen *</label>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Allergen *</label>
                                                     <input
                                                         type="text"
                                                         value={allergyForm.allergen}
                                                         onChange={(e) => setAllergyForm({ ...allergyForm, allergen: e.target.value })}
-                                                        className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                     />
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <div>
-                                                        <label className="block text-sm font-medium text-ink-700 mb-1">Reaction</label>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Reaction</label>
                                                         <input
                                                             type="text"
                                                             value={allergyForm.reaction}
                                                             onChange={(e) => setAllergyForm({ ...allergyForm, reaction: e.target.value })}
-                                                            className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="block text-sm font-medium text-ink-700 mb-1">Severity</label>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Severity</label>
                                                         <select
                                                             value={allergyForm.severity}
                                                             onChange={(e) => setAllergyForm({ ...allergyForm, severity: e.target.value })}
-                                                            className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                         >
                                                             <option value="">Select...</option>
                                                             <option value="mild">Mild</option>
@@ -653,12 +699,12 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-ink-700 mb-1">Onset Date</label>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Onset Date</label>
                                                     <input
                                                         type="date"
                                                         value={allergyForm.onsetDate}
                                                         onChange={(e) => setAllergyForm({ ...allergyForm, onsetDate: e.target.value })}
-                                                        className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                     />
                                                 </div>
                                                 <div className="flex space-x-2">
@@ -671,7 +717,10 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                                                             }
                                                         }}
                                                         disabled={!allergyForm.allergen}
-                                                        className="px-4 py-2 bg-paper-700 text-white rounded-md hover:bg-paper-800 disabled:opacity-50"
+                                                        className="px-4 py-2 text-white rounded-md disabled:opacity-50 transition-all duration-200 hover:shadow-md"
+                                                        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                                        onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+                                                        onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
                                                     >
                                                         <Save className="w-4 h-4 inline mr-1" />
                                                         Save
@@ -681,7 +730,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                                                             setEditing(null);
                                                             setAllergyForm({ allergen: '', reaction: '', severity: '', onsetDate: '', active: true });
                                                         }}
-                                                        className="px-4 py-2 bg-paper-100 text-ink-700 rounded-md hover:bg-paper-200"
+                                                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
                                                     >
                                                         Cancel
                                                     </button>
@@ -692,18 +741,18 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
 
                                     <div className="space-y-2">
                                         {allergies.length === 0 ? (
-                                            <div className="text-center py-8 text-ink-500 bg-paper-50 rounded-lg border border-paper-200">
+                                            <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
                                                 No allergies recorded
                                             </div>
                                         ) : (
                                             allergies.map((allergy) => (
-                                                <div key={allergy.id} className="bg-paper-50 p-4 rounded-lg border border-paper-200 flex items-start justify-between">
+                                                <div key={allergy.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex items-start justify-between">
                                                     <div className="flex-1">
-                                                        <div className="font-semibold text-ink-900">{allergy.allergen}</div>
+                                                        <div className="font-semibold text-gray-900">{allergy.allergen}</div>
                                                         {allergy.reaction && (
-                                                            <div className="text-sm text-ink-600">Reaction: {allergy.reaction}</div>
+                                                            <div className="text-sm text-gray-600">Reaction: {allergy.reaction}</div>
                                                         )}
-                                                        <div className="text-xs text-ink-500 mt-1">
+                                                        <div className="text-xs text-gray-500 mt-1">
                                                             {allergy.severity && `Severity: ${allergy.severity} • `}
                                                             {allergy.active ? <span className="text-red-600">Active</span> : <span className="text-gray-600">Inactive</span>}
                                                         </div>
@@ -720,7 +769,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                                                                     active: allergy.active
                                                                 });
                                                             }}
-                                                            className="p-1.5 text-ink-600 hover:bg-paper-200 rounded"
+                                                            className="p-1.5 text-gray-600 hover:bg-gray-200 rounded"
                                                         >
                                                             <Edit2 className="w-4 h-4" />
                                                         </button>
@@ -742,13 +791,16 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                             {activeTab === 'family' && (
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-lg font-semibold text-ink-900">Family History</h3>
+                                        <h3 className="text-lg font-semibold text-gray-900">Family History</h3>
                                         <button
                                             onClick={() => {
                                                 setEditing('new-family');
                                                 setFamilyHistoryForm({ condition: '', relationship: '', ageAtDiagnosis: '', ageAtDeath: '', notes: '' });
                                             }}
-                                            className="flex items-center space-x-2 px-3 py-1.5 text-sm bg-paper-700 text-white rounded-md hover:bg-paper-800"
+                                            className="flex items-center space-x-2 px-3 py-1.5 text-sm text-white rounded-md transition-all duration-200 hover:shadow-md"
+                                            style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                                         >
                                             <Plus className="w-4 h-4" />
                                             <span>Add Family History</span>
@@ -756,58 +808,58 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                                     </div>
 
                                     {(editing === 'new-family' || editing?.startsWith('family-')) && (
-                                        <div className="bg-paper-50 p-4 rounded-lg border border-paper-200">
-                                            <h4 className="font-medium text-ink-900 mb-3">
+                                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                            <h4 className="font-medium text-gray-900 mb-3">
                                                 {editing === 'new-family' ? 'Add Family History' : 'Edit Family History'}
                                             </h4>
                                             <div className="space-y-3">
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <div>
-                                                        <label className="block text-sm font-medium text-ink-700 mb-1">Condition *</label>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Condition *</label>
                                                         <input
                                                             type="text"
                                                             value={familyHistoryForm.condition}
                                                             onChange={(e) => setFamilyHistoryForm({ ...familyHistoryForm, condition: e.target.value })}
-                                                            className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="block text-sm font-medium text-ink-700 mb-1">Relationship *</label>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Relationship *</label>
                                                         <input
                                                             type="text"
                                                             value={familyHistoryForm.relationship}
                                                             onChange={(e) => setFamilyHistoryForm({ ...familyHistoryForm, relationship: e.target.value })}
-                                                            className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                             placeholder="e.g., Mother, Father"
                                                         />
                                                     </div>
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <div>
-                                                        <label className="block text-sm font-medium text-ink-700 mb-1">Age at Diagnosis</label>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Age at Diagnosis</label>
                                                         <input
                                                             type="number"
                                                             value={familyHistoryForm.ageAtDiagnosis}
                                                             onChange={(e) => setFamilyHistoryForm({ ...familyHistoryForm, ageAtDiagnosis: e.target.value })}
-                                                            className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="block text-sm font-medium text-ink-700 mb-1">Age at Death</label>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Age at Death</label>
                                                         <input
                                                             type="number"
                                                             value={familyHistoryForm.ageAtDeath}
                                                             onChange={(e) => setFamilyHistoryForm({ ...familyHistoryForm, ageAtDeath: e.target.value })}
-                                                            className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                         />
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-ink-700 mb-1">Notes</label>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                                                     <textarea
                                                         value={familyHistoryForm.notes}
                                                         onChange={(e) => setFamilyHistoryForm({ ...familyHistoryForm, notes: e.target.value })}
-                                                        className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                         rows="2"
                                                     />
                                                 </div>
@@ -821,7 +873,10 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                                                             }
                                                         }}
                                                         disabled={!familyHistoryForm.condition || !familyHistoryForm.relationship}
-                                                        className="px-4 py-2 bg-paper-700 text-white rounded-md hover:bg-paper-800 disabled:opacity-50"
+                                                        className="px-4 py-2 text-white rounded-md disabled:opacity-50 transition-all duration-200 hover:shadow-md"
+                                                        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                                        onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+                                                        onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
                                                     >
                                                         <Save className="w-4 h-4 inline mr-1" />
                                                         Save
@@ -831,7 +886,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                                                             setEditing(null);
                                                             setFamilyHistoryForm({ condition: '', relationship: '', ageAtDiagnosis: '', ageAtDeath: '', notes: '' });
                                                         }}
-                                                        className="px-4 py-2 bg-paper-100 text-ink-700 rounded-md hover:bg-paper-200"
+                                                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
                                                     >
                                                         Cancel
                                                     </button>
@@ -842,21 +897,21 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
 
                                     <div className="space-y-2">
                                         {familyHistory.length === 0 ? (
-                                            <div className="text-center py-8 text-ink-500 bg-paper-50 rounded-lg border border-paper-200">
+                                            <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
                                                 No family history recorded
                                             </div>
                                         ) : (
                                             familyHistory.map((fh) => (
-                                                <div key={fh.id} className="bg-paper-50 p-4 rounded-lg border border-paper-200 flex items-start justify-between">
+                                                <div key={fh.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex items-start justify-between">
                                                     <div className="flex-1">
-                                                        <div className="font-semibold text-ink-900">{fh.condition}</div>
-                                                        <div className="text-sm text-ink-600">Relationship: {fh.relationship}</div>
-                                                        <div className="text-xs text-ink-500 mt-1">
+                                                        <div className="font-semibold text-gray-900">{fh.condition}</div>
+                                                        <div className="text-sm text-gray-600">Relationship: {fh.relationship}</div>
+                                                        <div className="text-xs text-gray-500 mt-1">
                                                             {fh.age_at_diagnosis && `Diagnosed at age ${fh.age_at_diagnosis} • `}
                                                             {fh.age_at_death && `Died at age ${fh.age_at_death}`}
                                                         </div>
                                                         {fh.notes && (
-                                                            <div className="text-sm text-ink-600 mt-1">{fh.notes}</div>
+                                                            <div className="text-sm text-gray-600 mt-1">{fh.notes}</div>
                                                         )}
                                                     </div>
                                                     <div className="flex space-x-2">
@@ -871,7 +926,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                                                                     notes: fh.notes || ''
                                                                 });
                                                             }}
-                                                            className="p-1.5 text-ink-600 hover:bg-paper-200 rounded"
+                                                            className="p-1.5 text-gray-600 hover:bg-gray-200 rounded"
                                                         >
                                                             <Edit2 className="w-4 h-4" />
                                                         </button>
@@ -892,15 +947,15 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                             {/* Social History Tab */}
                             {activeTab === 'social' && (
                                 <div className="space-y-4">
-                                    <h3 className="text-lg font-semibold text-ink-900">Social History</h3>
-                                    <div className="bg-paper-50 p-4 rounded-lg border border-paper-200 space-y-4">
+                                    <h3 className="text-lg font-semibold text-gray-900">Social History</h3>
+                                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-4">
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="block text-sm font-medium text-ink-700 mb-1">Smoking Status</label>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Smoking Status</label>
                                                 <select
                                                     value={socialHistoryForm.smokingStatus}
                                                     onChange={(e) => setSocialHistoryForm({ ...socialHistoryForm, smokingStatus: e.target.value })}
-                                                    className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                 >
                                                     <option value="">Select...</option>
                                                     <option value="never">Never</option>
@@ -909,23 +964,23 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                                                 </select>
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-medium text-ink-700 mb-1">Pack Years</label>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Pack Years</label>
                                                 <input
                                                     type="number"
                                                     step="0.1"
                                                     value={socialHistoryForm.smokingPackYears}
                                                     onChange={(e) => setSocialHistoryForm({ ...socialHistoryForm, smokingPackYears: e.target.value })}
-                                                    className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                 />
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="block text-sm font-medium text-ink-700 mb-1">Alcohol Use</label>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Alcohol Use</label>
                                                 <select
                                                     value={socialHistoryForm.alcoholUse}
                                                     onChange={(e) => setSocialHistoryForm({ ...socialHistoryForm, alcoholUse: e.target.value })}
-                                                    className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                 >
                                                     <option value="">Select...</option>
                                                     <option value="none">None</option>
@@ -935,23 +990,23 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                                                 </select>
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-medium text-ink-700 mb-1">Alcohol Quantity</label>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Alcohol Quantity</label>
                                                 <input
                                                     type="text"
                                                     value={socialHistoryForm.alcoholQuantity}
                                                     onChange={(e) => setSocialHistoryForm({ ...socialHistoryForm, alcoholQuantity: e.target.value })}
-                                                    className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                     placeholder="e.g., 1-2 drinks/week"
                                                 />
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="block text-sm font-medium text-ink-700 mb-1">Drug Use</label>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Drug Use</label>
                                                 <select
                                                     value={socialHistoryForm.drugUse}
                                                     onChange={(e) => setSocialHistoryForm({ ...socialHistoryForm, drugUse: e.target.value })}
-                                                    className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                 >
                                                     <option value="">Select...</option>
                                                     <option value="none">None</option>
@@ -960,59 +1015,62 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
                                                 </select>
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-medium text-ink-700 mb-1">Exercise Frequency</label>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Exercise Frequency</label>
                                                 <input
                                                     type="text"
                                                     value={socialHistoryForm.exerciseFrequency}
                                                     onChange={(e) => setSocialHistoryForm({ ...socialHistoryForm, exerciseFrequency: e.target.value })}
-                                                    className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                     placeholder="e.g., 3x/week"
                                                 />
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="block text-sm font-medium text-ink-700 mb-1">Diet</label>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Diet</label>
                                                 <input
                                                     type="text"
                                                     value={socialHistoryForm.diet}
                                                     onChange={(e) => setSocialHistoryForm({ ...socialHistoryForm, diet: e.target.value })}
-                                                    className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                     placeholder="e.g., Balanced, Vegetarian"
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-medium text-ink-700 mb-1">Occupation</label>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Occupation</label>
                                                 <input
                                                     type="text"
                                                     value={socialHistoryForm.occupation}
                                                     onChange={(e) => setSocialHistoryForm({ ...socialHistoryForm, occupation: e.target.value })}
-                                                    className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                 />
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-ink-700 mb-1">Living Situation</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Living Situation</label>
                                             <input
                                                 type="text"
                                                 value={socialHistoryForm.livingSituation}
                                                 onChange={(e) => setSocialHistoryForm({ ...socialHistoryForm, livingSituation: e.target.value })}
-                                                className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                 placeholder="e.g., Lives alone, With family"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-ink-700 mb-1">Notes</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                                             <textarea
                                                 value={socialHistoryForm.notes}
                                                 onChange={(e) => setSocialHistoryForm({ ...socialHistoryForm, notes: e.target.value })}
-                                                className="w-full px-3 py-2 border border-paper-300 rounded-md"
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                 rows="3"
                                             />
                                         </div>
                                         <button
                                             onClick={handleSaveSocialHistory}
-                                            className="w-full px-4 py-2 bg-paper-700 text-white rounded-md hover:bg-paper-800"
+                                            className="w-full px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md"
+                                            style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                                         >
                                             <Save className="w-4 h-4 inline mr-1" />
                                             Save Social History
@@ -1030,6 +1088,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose }) => {
 };
 
 export default PatientDataManager;
+
 
 
 

@@ -74,25 +74,58 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
     'As needed', 'At bedtime', 'With meals', 'Before meals'
   ];
 
-  // Debounced medication search
+  // Common medications for quick access
+  const commonMedications = [
+    { name: 'Lisinopril', rxcui: '29046', strength: '10 mg tablet' },
+    { name: 'Metformin', rxcui: '6809', strength: '500 mg tablet' },
+    { name: 'Atorvastatin', rxcui: '83367', strength: '20 mg tablet' },
+    { name: 'Amlodipine', rxcui: '17767', strength: '5 mg tablet' },
+    { name: 'Omeprazole', rxcui: '7646', strength: '20 mg capsule' },
+    { name: 'Albuterol', rxcui: '435', strength: '90 mcg/actuation inhaler' },
+    { name: 'Gabapentin', rxcui: '441467', strength: '300 mg capsule' },
+    { name: 'Sertraline', rxcui: '36437', strength: '50 mg tablet' },
+    { name: 'Levothyroxine', rxcui: '10224', strength: '75 mcg tablet' },
+    { name: 'Losartan', rxcui: '82122', strength: '50 mg tablet' },
+  ];
+
+  // Debounced medication search - more responsive
   useEffect(() => {
-    if (medicationSearch.length < 2) {
+    // Show common medications if search is empty and input is focused
+    if (medicationSearch.length === 0) {
       setMedicationResults([]);
       return;
     }
 
+    // Search immediately for single character, with shorter debounce for longer searches
+    const debounceTime = medicationSearch.length === 1 ? 100 : 200;
+
     const searchTimer = setTimeout(async () => {
       setSearching(true);
+      setError(null); // Clear previous errors
       try {
+        // For 1-character searches, don't call API (RxNorm requires 2+)
+        if (medicationSearch.length < 2) {
+          setMedicationResults([]);
+          setSearching(false);
+          return;
+        }
+
         const response = await medicationsAPI.search(medicationSearch);
-        setMedicationResults(response.data || []);
+        // Handle both response.data and direct array responses
+        const results = Array.isArray(response.data) ? response.data : (Array.isArray(response) ? response : []);
+        setMedicationResults(results);
       } catch (err) {
         console.error('Medication search error:', err);
-        setError('Failed to search medications. Please try again.');
+        // Only show error for actual API failures (not 200 responses with empty data)
+        if (err.response && err.response.status !== 200 && err.response.status !== 400) {
+          setError('Failed to search medications. Please check your connection and try again.');
+        }
+        // Always set empty results on error so UI can handle it gracefully
+        setMedicationResults([]);
       } finally {
         setSearching(false);
       }
-    }, 300);
+    }, debounceTime);
 
     return () => clearTimeout(searchTimer);
   }, [medicationSearch]);
@@ -363,9 +396,11 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
               <div className={`flex flex-col items-center ${step >= stepNum ? 'text-primary-600' : 'text-gray-400'}`}>
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
                   step >= stepNum 
-                    ? 'bg-primary-600 border-primary-600 text-white' 
+                    ? 'border-strong-azure text-white' 
                     : 'border-gray-300 bg-white'
-                }`}>
+                }`}
+                style={step >= stepNum ? { background: '#3B82F6' } : {}}
+                >
                   {step > stepNum ? <Check className="w-5 h-5" /> : stepNum}
                 </div>
                 <span className="text-xs mt-1 font-medium">
@@ -373,7 +408,7 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
                 </span>
               </div>
               {stepNum < 4 && (
-                <div className={`flex-1 h-0.5 mx-2 ${step > stepNum ? 'bg-primary-600' : 'bg-gray-300'}`} />
+                <div className={`flex-1 h-0.5 mx-2`} style={step > stepNum ? { background: '#3B82F6' } : { background: '#D1D5DB' }} />
               )}
             </React.Fragment>
           ))}
@@ -400,57 +435,87 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
         {/* Step 1: Medication Search */}
         {step === 1 && (
           <div className="space-y-4">
-            <div>
+            <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Search Medications
               </label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
                 <input
                   type="text"
                   value={medicationSearch}
                   onChange={(e) => setMedicationSearch(e.target.value)}
-                  placeholder="Search by medication name (e.g., lisinopril, aspirin)..."
+                  placeholder="Type medication name (e.g., lisinopril, aspirin)..."
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   autoFocus
+                  autoComplete="off"
                 />
                 {searching && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 z-10">
                     <Loader className="w-5 h-5 text-primary-600 animate-spin" />
                   </div>
                 )}
               </div>
+              
+              {/* Medication Results Dropdown - Shows immediately as you type */}
+              {(medicationResults.length > 0 || (medicationSearch.length === 0 && commonMedications.length > 0)) && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-64 overflow-y-auto">
+                  {medicationSearch.length === 0 ? (
+                    // Show common medications when search is empty
+                    <>
+                      <div className="px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50 border-b border-gray-200 sticky top-0">
+                        Common Medications
+                      </div>
+                      {commonMedications.map((med, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleSelectMedication(med)}
+                          className="w-full p-3 hover:bg-primary-50 border-b border-gray-100 last:border-b-0 flex items-center justify-between text-left transition-colors"
+                        >
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900">{med.name}</p>
+                            {med.strength && (
+                              <p className="text-xs text-gray-500 mt-1">{med.strength}</p>
+                            )}
+                          </div>
+                          <ChevronRight className="w-5 h-5 text-gray-400" />
+                        </button>
+                      ))}
+                    </>
+                  ) : (
+                    // Show search results
+                    medicationResults.map((med, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleSelectMedication(med)}
+                        className="w-full p-3 hover:bg-primary-50 border-b border-gray-100 last:border-b-0 flex items-center justify-between text-left transition-colors"
+                      >
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900">{med.name}</p>
+                          {med.synonym && med.synonym !== med.name && (
+                            <p className="text-sm text-gray-500">{med.synonym}</p>
+                          )}
+                          {med.strength && (
+                            <p className="text-xs text-gray-500 mt-1">{med.strength}</p>
+                          )}
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-gray-400" />
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {medicationSearch.length > 0 && !searching && medicationResults.length === 0 && (
+                <div className="mt-2">
+                  <p className="text-sm text-gray-500 text-center py-4">
+                    No medications found. Try a different search term.
+                  </p>
+                </div>
+              )}
             </div>
-
-            {/* Medication Results */}
-            {medicationResults.length > 0 && (
-              <div className="border border-gray-200 rounded-lg max-h-64 overflow-y-auto">
-                {medicationResults.map((med, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleSelectMedication(med)}
-                    className="w-full p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 flex items-center justify-between text-left"
-                  >
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">{med.name}</p>
-                      {med.synonym && med.synonym !== med.name && (
-                        <p className="text-sm text-gray-500">{med.synonym}</p>
-                      )}
-                      {med.strength && (
-                        <p className="text-xs text-gray-500 mt-1">{med.strength}</p>
-                      )}
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-gray-400" />
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {medicationSearch.length >= 2 && !searching && medicationResults.length === 0 && (
-              <p className="text-sm text-gray-500 text-center py-4">
-                No medications found. Try a different search term.
-              </p>
-            )}
           </div>
         )}
 
@@ -678,7 +743,7 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
                   onClick={() => setUseLocation(!useLocation)}
                   className={`px-4 py-2 rounded-lg border transition-colors ${
                     useLocation
-                      ? 'bg-primary-600 text-white border-primary-600'
+                      ? 'text-white border-strong-azure'
                       : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                   }`}
                   title="Use current location"
@@ -824,7 +889,10 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
                 (step === 2 && (!sigStructured.dose || !sigStructured.frequency || !sigStructured.route)) ||
                 loading
               }
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
+              className="px-4 py-2 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-md flex items-center space-x-2"
+              style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+              onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+              onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
             >
               <span>Next</span>
               <ChevronRight className="w-4 h-4" />
@@ -833,7 +901,10 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
             <button
               onClick={handleSubmit}
               disabled={loading}
-              className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
+              className="px-6 py-2 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-md flex items-center space-x-2"
+              style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+              onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+              onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
             >
               {loading ? (
                 <>
@@ -855,4 +926,5 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
 };
 
 export default EPrescribeEnhanced;
+
 

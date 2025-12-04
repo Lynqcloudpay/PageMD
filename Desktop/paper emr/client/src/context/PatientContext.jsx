@@ -31,9 +31,16 @@ export const PatientProvider = ({ children }) => {
             }
         };
 
-    // Fetch patients from API on mount
+    // Fetch patients from API on mount and auto-refresh
     useEffect(() => {
         fetchPatients();
+        
+        // Auto-refresh every 15 seconds
+        const interval = setInterval(() => {
+            fetchPatients();
+        }, 15000);
+        
+        return () => clearInterval(interval);
     }, []);
 
     // Keep appointments in localStorage for now (can be migrated to API later)

@@ -6,16 +6,25 @@ const validator = require('validator');
 const isDevelopment = process.env.NODE_ENV !== 'production';
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: isDevelopment ? 10000 : 100, // Very high limit in development to prevent blocking
+  max: isDevelopment ? 100000 : 100, // Very high limit in development to prevent blocking
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
   // Skip rate limiting for certain endpoints in development
   skip: (req) => {
     if (isDevelopment) {
-      // Skip rate limiting for common endpoints in development
-      const skipPaths = ['/auth/me', '/patients', '/inbox', '/visits'];
-      return skipPaths.some(path => req.path.includes(path));
+      // Skip rate limiting for all API endpoints in development
+      const skipPaths = [
+        '/api/auth/me',
+        '/api/patients',
+        '/api/appointments',
+        '/api/visits',
+        '/api/messages',
+        '/api/auth/providers',
+        '/api/users',
+        '/api/roles'
+      ];
+      return skipPaths.some(path => req.path.startsWith(path));
     }
     return false;
   },
@@ -65,12 +74,13 @@ const sanitizeInput = (req, res, next) => {
   next();
 };
 
-// Password policy validation - OpenEMR style
+// HIPAA-compliant password policy validation
+// Minimum 12 characters, uppercase, lowercase, digit, symbol
 const validatePassword = (password) => {
   const errors = [];
   
-  if (password.length < 8) {
-    errors.push('Password must be at least 8 characters long');
+  if (!password || password.length < 12) {
+    errors.push('Password must be at least 12 characters long');
   }
   if (!/[A-Z]/.test(password)) {
     errors.push('Password must contain at least one uppercase letter');
@@ -81,8 +91,14 @@ const validatePassword = (password) => {
   if (!/[0-9]/.test(password)) {
     errors.push('Password must contain at least one number');
   }
-  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+  if (!/[!@#$%^&*(),.?":{}|<>_+\-=\[\]\\;',./]/.test(password)) {
     errors.push('Password must contain at least one special character');
+  }
+  
+  // Check for common weak passwords
+  const commonPasswords = ['password', 'password123', 'admin', '12345678', 'qwerty'];
+  if (commonPasswords.some(weak => password.toLowerCase().includes(weak))) {
+    errors.push('Password is too common or weak');
   }
   
   return errors;
