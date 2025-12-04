@@ -26,8 +26,10 @@ PageMD is a minimal, paper-chart-like electronic medical record system that pres
 After cloning the repository, run this single command in Cursor terminal:
 
 ```bash
-bash setup.sh
+npm run setup
 ```
+
+**Or use:** `npm run init` or `bash setup.sh`
 
 This will:
 - ✅ Install all dependencies (server + client)

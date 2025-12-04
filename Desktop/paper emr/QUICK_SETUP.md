@@ -1,11 +1,25 @@
 # Quick Setup Guide
 
-## For macOS/Linux (Cursor Terminal)
+## 🚀 Quick Setup (Recommended)
 
-After cloning the repository, run this single command:
+After cloning the repository, run this single command in Cursor terminal:
 
 ```bash
+npm run setup
+```
+
+**That's it!** This is the easiest way to set up everything.
+
+## Alternative Methods
+
+### Option 1: Direct Script
+```bash
 bash setup.sh
+```
+
+### Option 2: npm init
+```bash
+npm run init
 ```
 
 Or if you prefer a one-liner that does everything:
