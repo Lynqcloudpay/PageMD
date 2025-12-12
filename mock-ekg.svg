@@ -1,0 +1,62 @@
+<svg width="800" height="400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="800" height="400" fill="#1a1a1a"/>
+  
+  <!-- Grid lines -->
+  <defs>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#2a2a2a" stroke-width="0.5"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="400" fill="url(#grid)"/>
+  
+  <!-- EKG Waveform -->
+  <path d="M 50 200 
+           L 100 200 
+           L 120 150 
+           L 140 200 
+           L 160 200 
+           L 180 250 
+           L 200 200 
+           L 220 200 
+           L 240 150 
+           L 260 200 
+           L 280 200 
+           L 300 250 
+           L 320 200 
+           L 340 200 
+           L 360 150 
+           L 380 200 
+           L 400 200 
+           L 420 250 
+           L 440 200 
+           L 460 200 
+           L 480 150 
+           L 500 200 
+           L 520 200 
+           L 540 250 
+           L 560 200 
+           L 580 200 
+           L 600 150 
+           L 620 200 
+           L 640 200 
+           L 660 250 
+           L 680 200 
+           L 700 200 
+           L 720 150 
+           L 740 200" 
+        fill="none" 
+        stroke="#00ff00" 
+        stroke-width="3" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
+  
+  <!-- Labels -->
+  <text x="400" y="30" fill="#00ff00" font-family="Arial, sans-serif" font-size="20" font-weight="bold" text-anchor="middle">12-Lead EKG</text>
+  <text x="400" y="380" fill="#888" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">Mock EKG - Test File</text>
+  
+  <!-- Lead markers -->
+  <text x="50" y="50" fill="#00ff00" font-family="Arial, sans-serif" font-size="14">Lead I</text>
+  <text x="50" y="100" fill="#00ff00" font-family="Arial, sans-serif" font-size="14">Lead II</text>
+  <text x="50" y="150" fill="#00ff00" font-family="Arial, sans-serif" font-size="14">Lead III</text>
+</svg>

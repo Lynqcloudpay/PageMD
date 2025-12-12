@@ -1,0 +1,246 @@
+name: HIPAA Security Audit
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run weekly on Mondays at 2 AM UTC
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+
+jobs:
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 50  # For gitleaks history scanning
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: server/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: server
+        run: npm ci
+      
+      - name: Run npm audit
+        working-directory: server
+        run: |
+          npm audit --audit-level=moderate --json > npm-audit.json || true
+          npm audit --audit-level=moderate
+        continue-on-error: true
+      
+      - name: Install gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: 'detect --source . --report-format json --report-path gitleaks-report.json --no-banner'
+        continue-on-error: true
+      
+      - name: Check for secrets
+        run: |
+          if [ -f gitleaks-report.json ]; then
+            CRITICAL_COUNT=$(jq '[.[] | select(.Match == ".*")] | length' gitleaks-report.json || echo "0")
+            if [ "$CRITICAL_COUNT" -gt 0 ]; then
+              echo "❌ Found $CRITICAL_COUNT potential secrets in repository"
+              jq '.[] | select(.Match != null)' gitleaks-report.json
+              exit 1
+            fi
+          fi
+      
+      - name: Install semgrep
+        run: |
+          pip install semgrep
+      
+      - name: Run semgrep security scan
+        run: |
+          semgrep --config=auto --json --output=semgrep-results.json server/ || true
+          semgrep --config=auto server/
+        continue-on-error: true
+      
+      - name: Check semgrep results
+        run: |
+          if [ -f semgrep-results.json ]; then
+            CRITICAL_COUNT=$(jq '[.results[] | select(.extra.severity == "ERROR")] | length' semgrep-results.json || echo "0")
+            HIGH_COUNT=$(jq '[.results[] | select(.extra.severity == "WARNING")] | length' semgrep-results.json || echo "0")
+            if [ "$CRITICAL_COUNT" -gt 0 ] || [ "$HIGH_COUNT" -gt 10 ]; then
+              echo "❌ Found $CRITICAL_COUNT critical and $HIGH_COUNT high severity issues"
+              exit 1
+            fi
+          fi
+      
+      - name: Check for PHI in logs
+        run: |
+          # Search for console.log with req.body or patient data
+          if grep -r "console\.\(log\|error\|warn\|info\|debug\)(.*req\.body" server/routes/ server/middleware/ 2>/dev/null; then
+            echo "❌ Found console.log statements that may log PHI"
+            exit 1
+          fi
+          if grep -r "console\.\(log\|error\|warn\|info\|debug\)(.*patient" server/routes/ server/middleware/ 2>/dev/null; then
+            echo "❌ Found console.log statements that may log patient data"
+            exit 1
+          fi
+          echo "✅ No PHI in console.log statements found"
+      
+      - name: Check for missing RBAC
+        run: |
+          # Check that PHI routes have requirePrivilege or requireRole
+          MISSING_RBAC=$(grep -l "router\.\(get\|post\|put\|delete\)('/.*patient\|'/.*visit\|'/.*document" server/routes/*.js 2>/dev/null | xargs grep -L "requirePrivilege\|requireRole\|requireAdmin" || true)
+          if [ -n "$MISSING_RBAC" ]; then
+            echo "⚠️  Routes that may be missing RBAC:"
+            echo "$MISSING_RBAC"
+            # Don't fail, just warn
+          fi
+      
+      - name: Upload scan results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-scan-results
+          path: |
+            server/npm-audit.json
+            gitleaks-report.json
+            semgrep-results.json
+          retention-days: 30
+      
+      - name: Summary
+        run: |
+          echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f server/npm-audit.json ]; then
+            VULN_COUNT=$(jq '.metadata.vulnerabilities.total' server/npm-audit.json || echo "0")
+            echo "- **npm audit**: $VULN_COUNT vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -f gitleaks-report.json ]; then
+            SECRET_COUNT=$(jq 'length' gitleaks-report.json || echo "0")
+            echo "- **gitleaks**: $SECRET_COUNT potential secrets found" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -f semgrep-results.json ]; then
+            ISSUE_COUNT=$(jq '.results | length' semgrep-results.json || echo "0")
+            echo "- **semgrep**: $ISSUE_COUNT security issues found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  lint:
+    name: Code Linting
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: server/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: server
+        run: npm ci
+      
+      - name: Run ESLint
+        working-directory: server
+        run: |
+          npx eslint . --ext .js --max-warnings 0 || true
+        continue-on-error: true
+
+  integration-tests:
+    name: HIPAA Integration Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: paper_emr_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: server/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: server
+        run: npm ci
+      
+      - name: Run database migrations
+        working-directory: server
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: paper_emr_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          JWT_SECRET: test-secret-key
+        run: |
+          npm run migrate
+          npm run migrate-hipaa
+      
+      - name: Run HIPAA integration tests
+        working-directory: server
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: paper_emr_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          JWT_SECRET: test-secret-key
+          NODE_ENV: test
+        run: |
+          # Create test file if it doesn't exist
+          if [ ! -f tests/hipaa-integration.test.js ]; then
+            echo "⚠️  Integration tests not found, skipping"
+            exit 0
+          fi
+          npm test -- tests/hipaa-integration.test.js
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,14 @@
+id,severity,file,start_line,end_line,snippet,control,remediation,pr_or_issue_link
+1,Low,server/routes/visits.js,41,42,"console.log('Visits query:', query); console.log('Query params:', params);",No PHI in logs,These debug logs are wrapped in NODE_ENV check but should use safeLogger for consistency,PR-001
+2,Low,server/routes/visits.js,48,50,"console.log('Visits query result count:', result.rows.length);",No PHI in logs,Debug logs wrapped in NODE_ENV check but should use safeLogger,PR-001
+3,Low,server/routes/visits.js,81,81,"console.log('Pending visits request - user:', req.user?.id, 'providerId:', providerId);",No PHI in logs,Debug log wrapped in NODE_ENV check but should use safeLogger,PR-001
+4,Low,server/routes/visits.js,166,166,"console.log('Creating visit with:', { patientId, visitType, providerId });",No PHI in logs,Debug log wrapped in NODE_ENV check but should use safeLogger,PR-001
+5,Low,server/routes/visits.js,242,242,"console.log('Signing visit:', {",No PHI in logs,Debug log wrapped in NODE_ENV check but should use safeLogger,PR-001
+6,Low,server/routes/visits.js,540,540,"console.log('Saving note_draft, length:', (noteDraftValue || '').length, 'characters');",No PHI in logs,Debug log wrapped in NODE_ENV check but should use safeLogger,PR-001
+7,Low,server/routes/visits.js,567,569,"console.log('Update visit query:', ...); console.log('Update values count:', ...);",No PHI in logs,Debug logs wrapped in NODE_ENV check but should use safeLogger,PR-001
+8,Low,server/routes/visits.js,582,582,"console.log('Visit updated successfully. Saved note_draft length:', ...);",No PHI in logs,Debug log wrapped in NODE_ENV check but should use safeLogger,PR-001
+9,Low,server/routes/appointments.js,378,379,"console.log('Update query:', updateQuery); console.log('Update params:', ...);",No PHI in logs,Debug logs wrapped in NODE_ENV check but should use safeLogger,PR-001
+10,Low,server/routes/patients.js,1183,1183,"console.log('Photo saved to:', filepath);",No PHI in logs,Debug log wrapped in NODE_ENV check but should use safeLogger,PR-001
+11,Medium,server/package.json,35,35,multer@1.4.5-lts.2,Dependency vulnerability,Multer 1.x has known vulnerabilities. Upgrade to multer@^2.0.0,ISSUE-003
+12,Info,server/routes/visits.js,41,52,Development-only console.log statements,No PHI in logs,All wrapped in NODE_ENV === 'development' checks. Non-blocking but should use safeLogger for consistency,PR-001
+

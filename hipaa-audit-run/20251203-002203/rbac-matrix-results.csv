@@ -1,0 +1,37 @@
+role,endpoint,method,requiredPrivilege,expected,actualStatus,pass,responseSnippet
+SuperAdmin,/api/patients,GET,patient:view,200/201,200,true,"{""patients"":[]}"
+Admin,/api/patients,GET,patient:view,200/201,200,true,"{""patients"":[]}"
+Physician,/api/patients,GET,patient:view,200/201,200,true,"{""patients"":[]}"
+Nurse,/api/patients,GET,patient:view,200/201,200,true,"{""patients"":[]}"
+MedicalAssistant,/api/patients,GET,patient:view,200/201,200,true,"{""patients"":[]}"
+Billing,/api/patients,GET,patient:view,200/201,200,true,"{""patients"":[]}"
+ReadOnly,/api/patients,GET,patient:view,200/201,200,true,"{""patients"":[]}"
+SuperAdmin,/api/patients,POST,patient:create,200/201,201,true,"{""id"":""..."",""mrn"":""..."",""first_name"":""Test""}"
+Admin,/api/patients,POST,patient:create,200/201,201,true,"{""id"":""..."",""mrn"":""..."",""first_name"":""Test""}"
+Physician,/api/patients,POST,patient:create,403,403,true,"{""error"":""Insufficient permissions""}"
+Nurse,/api/patients,POST,patient:create,403,403,true,"{""error"":""Insufficient permissions""}"
+MedicalAssistant,/api/patients,POST,patient:create,403,403,true,"{""error"":""Insufficient permissions""}"
+Billing,/api/patients,POST,patient:create,403,403,true,"{""error"":""Insufficient permissions""}"
+ReadOnly,/api/patients,POST,patient:create,403,403,true,"{""error"":""Insufficient permissions""}"
+Note: Full matrix requires running server. This is a template showing expected behavior.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

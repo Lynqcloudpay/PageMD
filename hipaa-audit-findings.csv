@@ -1,0 +1,52 @@
+id,file,start_line,end_line,snippet,severity,hipaa_control,remediation,pr_link_or_issue_link
+1,server/routes/visits.js,201,201,"console.error('Request body:', req.body);",Critical,No PHI in logs,Replace with redacted logger that sanitizes PHI fields,PR-001
+2,server/routes/visits.js,321,321,"console.error('Request body:', req.body);",Critical,No PHI in logs,Replace with redacted logger that sanitizes PHI fields,PR-001
+3,server/routes/visits.js,544,544,"console.log('NoteDraft not in request body. Available keys:', Object.keys(req.body));",Critical,No PHI in logs,Replace with redacted logger that sanitizes PHI fields,PR-001
+4,server/routes/visits.js,598,599,"console.error('Request body:', req.body);\nconsole.error('Visit ID:', req.params.id);",Critical,No PHI in logs,Replace with redacted logger that sanitizes PHI fields,PR-001
+5,server/routes/visits.js,10,71,"router.get('/', async (req, res) => { ... });",High,RBAC enforcement,Add requirePrivilege('visit:view') middleware,PR-002
+6,server/routes/visits.js,74,122,"router.get('/pending', async (req, res) => { ... });",High,RBAC enforcement,Add requirePrivilege('visit:view') middleware,PR-002
+7,server/routes/visits.js,440,489,"router.get('/:id', async (req, res) => { ... });",High,RBAC enforcement,Add requirePrivilege('visit:view') middleware,PR-002
+8,server/routes/documents.js,32,51,"router.get('/patient/:patientId', async (req, res) => { ... });",High,RBAC enforcement,Add requirePrivilege('document:view') middleware,PR-002
+9,server/routes/documents.js,89,110,"router.get('/:id/file', async (req, res) => { ... });",High,RBAC enforcement,Add requirePrivilege('document:view') middleware,PR-002
+10,server/scripts/migrate.js,34,58,"CREATE TABLE IF NOT EXISTS patients ( ... first_name VARCHAR(100) NOT NULL, last_name VARCHAR(100) NOT NULL, dob DATE NOT NULL, phone VARCHAR(20), email VARCHAR(255), address_line1 VARCHAR(255) ... )",Critical,Field-level encryption,PHI columns stored in plaintext. Need to implement encryption service usage or migrate to encrypted columns,ISSUE-001
+11,server/routes/patients.js,313,497,"router.post('/', requirePrivilege('patient:create'), async (req, res) => { ... INSERT INTO patients ... });",Critical,Field-level encryption,Patient creation does not encrypt PHI fields (SSN, DOB, address, phone, email),ISSUE-001
+12,server/routes/patients.js,501,578,"router.put('/:id', requirePrivilege('patient:edit'), async (req, res) => { ... UPDATE patients ... });",Critical,Field-level encryption,Patient updates do not encrypt PHI fields,ISSUE-001
+13,server/middleware/https.js,11,25,"const enforceHTTPS = (req, res, next) => { if (process.env.NODE_ENV !== 'production') { return next(); } ... }",High,HTTPS/TLS enforcement,HTTPS enforcement only active in production. Should also enforce in staging/test environments,PR-003
+14,server/scripts/backup-database.js,24,26,"const BACKUP_ENCRYPTION_KEY = process.env.BACKUP_ENCRYPTION_KEY || crypto.scryptSync(process.env.JWT_SECRET || 'dev-secret', 'backup-salt', 32);",Medium,Backup encryption,Backup script uses fallback encryption key if env var not set. Should fail if BACKUP_ENCRYPTION_KEY not provided in production,PR-004
+15,server/index.js,194,198,"app.use((err, req, res, next) => { console.error('Error:', err); ... });",High,No PHI in logs,Error handler logs full error object which may contain PHI in stack traces or error messages,PR-001
+16,server/routes/patients.js,738,750,"router.get('/:id/family-history', authenticate, async (req, res) => { ... });",High,RBAC enforcement,Route only has authenticate, missing requirePrivilege('patient:view'),PR-002
+17,server/routes/patients.js,851,863,"router.get('/:id/social-history', authenticate, async (req, res) => { ... });",High,RBAC enforcement,Route only has authenticate, missing requirePrivilege('patient:view'),PR-002
+18,server/routes/patients.js,914,926,"router.get('/:id/problems', authenticate, async (req, res) => { ... });",High,RBAC enforcement,Route only has authenticate, missing requirePrivilege('patient:view'),PR-002
+19,server/routes/patients.js,929,941,"router.get('/:id/allergies', authenticate, async (req, res) => { ... });",High,RBAC enforcement,Route only has authenticate, missing requirePrivilege('patient:view'),PR-002
+20,server/routes/patients.js,944,956,"router.get('/:id/medications', authenticate, async (req, res) => { ... });",High,RBAC enforcement,Route only has authenticate, missing requirePrivilege('patient:view'),PR-002
+21,server/middleware/auth.js,49,60,"const requireRole = (...roles) => { return (req, res, next) => { ... // TODO: Implement proper role-based access control later ... } };",High,RBAC enforcement,requireRole middleware is commented out and allows all authenticated users. Should enforce role checks,ISSUE-002
+22,.github/workflows,NA,NA,"No CI/CD pipeline found",High,CI/CD security scanning,No GitHub Actions workflow for automated security scanning (gitleaks, npm audit, semgrep),PR-005
+23,server/scripts/migrate-hipaa-security.js,270,289,"CREATE TRIGGER audit_log_protection ... EXECUTE FUNCTION prevent_audit_log_modification();",Medium,Audit log integrity,Append-only trigger exists but needs integration test to verify it prevents updates/deletes,PR-006
+24,server/middleware/sessionTimeout.js,17,53,"const sessionTimeout = async (req, res, next) => { ... }",Medium,Session management,Session timeout middleware exists but needs integration test to verify inactivity timeout works,PR-006
+25,server/services/encryptionService.js,108,133,"// Local/Development: Use app secret (NOT for production)",High,Key management,Local KMS uses JWT_SECRET as fallback. Should fail if KMS_PROVIDER=local in production,PR-007
+26,server/routes/auth.js,92,114,"if (DEV_MODE && (email === 'doctor@clinic.com' || email === 'test@test.com')) { ... }",High,Authentication,DEV_MODE allows mock login. Should be completely disabled in production with explicit check,PR-008
+27,server/middleware/security.js,6,22,"const apiLimiter = rateLimit({ ... max: isDevelopment ? 10000 : 100, ... skip: (req) => { if (isDevelopment) { ... return skipPaths.some(path => req.path.includes(path)); } } });",Medium,Rate limiting,Rate limiting is effectively disabled in development. Should have reasonable limits even in dev,PR-009
+28,server/middleware/security.js,25,34,"const authLimiter = rateLimit({ ... max: isDevelopment ? 10000 : 5, ... });",Medium,Rate limiting,Auth rate limiting allows 10000 attempts in development. Should have stricter limits,PR-009
+29,server/routes/auth.js,12,56,"router.post('/register', [ ... ], async (req, res) => { ... });",High,Access control,Registration endpoint not restricted to admin in production. Should require requireAdmin middleware,PR-010
+30,server/middleware/auth.js,104,108,"console.warn('Failed to log audit:', error.message);\nconsole.error('Failed to log audit:', error);",Low,Audit logging,Audit logging failures are logged to console. Should use proper logging service,PR-001
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

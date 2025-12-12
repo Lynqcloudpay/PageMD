@@ -1,0 +1,77 @@
+{
+    # Global options
+    email admin@yourdomain.com
+    auto_https off
+}
+
+# Force HTTPS redirect for all HTTP traffic
+# Replace yourdomain.com with your actual domain
+http://yourdomain.com {
+    redir https://yourdomain.com{uri} permanent
+}
+
+http://www.yourdomain.com {
+    redir https://yourdomain.com{uri} permanent
+}
+
+# Main HTTPS site
+https://yourdomain.com {
+    # Security headers
+    header {
+        # HSTS - Force HTTPS for 1 year
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        
+        # Prevent MIME type sniffing
+        X-Content-Type-Options "nosniff"
+        
+        # XSS protection
+        X-XSS-Protection "1; mode=block"
+        
+        # Prevent clickjacking
+        X-Frame-Options "DENY"
+        
+        # Content Security Policy
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://yourdomain.com; frame-ancestors 'none';"
+        
+        # Referrer policy
+        Referrer-Policy "strict-origin-when-cross-origin"
+        
+        # Permissions policy
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+        
+        # Remove server header
+        -Server
+    }
+
+    # API reverse proxy
+    handle /api/* {
+        reverse_proxy api:3000 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            header_up Host {host}
+            health_uri /api/health
+            health_interval 30s
+            health_timeout 5s
+        }
+    }
+
+    # Serve static frontend (SPA)
+    handle {
+        root * /usr/share/caddy
+        try_files {path} /index.html
+        file_server
+    }
+
+    # Logging
+    log {
+        output file /var/log/caddy/access.log
+        format json
+    }
+}
+
+# Health check endpoint (bypass security headers for monitoring)
+https://yourdomain.com/health {
+    respond 200
+}
+

@@ -1,0 +1,36 @@
+🔍 Verifying Patient Encryption Implementation...
+
+1. Checking database schema...
+   ✅ encryption_metadata column exists
+
+2. Checking encryption_keys table...
+   ✅ Found 1 active encryption key(s)
+
+3. Testing encryption service...
+Error getting DEK: Error: Invalid ciphertext format
+    at Object.decrypt (/Users/mjrodriguez/Desktop/paper emr/server/services/encryptionService.js:138:17)
+    at getDEK (/Users/mjrodriguez/Desktop/paper emr/server/services/encryptionService.js:177:38)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async EncryptionService.encryptField (/Users/mjrodriguez/Desktop/paper emr/server/services/encryptionService.js:232:19)
+    at async EncryptionService.encryptFieldToBase64 (/Users/mjrodriguez/Desktop/paper emr/server/services/encryptionService.js:307:23)
+    at async Object.encryptPatientPHI (/Users/mjrodriguez/Desktop/paper emr/server/services/patientEncryptionService.js:50:31)
+    at async verifyEncryption (/Users/mjrodriguez/Desktop/paper emr/server/scripts/verify-encryption.js:66:23)
+Field encryption error: Error: Failed to get encryption key
+    at getDEK (/Users/mjrodriguez/Desktop/paper emr/server/services/encryptionService.js:218:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async EncryptionService.encryptField (/Users/mjrodriguez/Desktop/paper emr/server/services/encryptionService.js:232:19)
+    at async EncryptionService.encryptFieldToBase64 (/Users/mjrodriguez/Desktop/paper emr/server/services/encryptionService.js:307:23)
+    at async Object.encryptPatientPHI (/Users/mjrodriguez/Desktop/paper emr/server/services/patientEncryptionService.js:50:31)
+    at async verifyEncryption (/Users/mjrodriguez/Desktop/paper emr/server/scripts/verify-encryption.js:66:23)
+Error encrypting field first_name: Error: Failed to encrypt field
+    at EncryptionService.encryptField (/Users/mjrodriguez/Desktop/paper emr/server/services/encryptionService.js:249:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async EncryptionService.encryptFieldToBase64 (/Users/mjrodriguez/Desktop/paper emr/server/services/encryptionService.js:307:23)
+    at async Object.encryptPatientPHI (/Users/mjrodriguez/Desktop/paper emr/server/services/patientEncryptionService.js:50:31)
+    at async verifyEncryption (/Users/mjrodriguez/Desktop/paper emr/server/scripts/verify-encryption.js:66:23)
+
+❌ Verification failed: Failed to encrypt PHI field: first_name
+Error: Failed to encrypt PHI field: first_name
+    at Object.encryptPatientPHI (/Users/mjrodriguez/Desktop/paper emr/server/services/patientEncryptionService.js:57:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async verifyEncryption (/Users/mjrodriguez/Desktop/paper emr/server/scripts/verify-encryption.js:66:23)
