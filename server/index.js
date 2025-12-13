@@ -103,10 +103,10 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "http://localhost:3000", "http://localhost:5173", "blob:"],
+      imgSrc: ["'self'", "data:", "http://localhost:3000", "http://localhost:5173", "blob:", process.env.FRONTEND_URL].filter(Boolean),
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      connectSrc: ["'self'", "http://localhost:3000", "http://localhost:5173"],
+      connectSrc: ["'self'", "http://localhost:3000", "http://localhost:5173", process.env.FRONTEND_URL].filter(Boolean),
     },
   },
 }));

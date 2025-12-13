@@ -503,7 +503,9 @@ const PatientHeader = () => {
         if (!patient?.photo_url) return null;
         const baseUrl = patient.photo_url.startsWith('http') 
             ? patient.photo_url 
-            : `http://localhost:3000${patient.photo_url}`;
+            : patient.photo_url.startsWith('/') 
+                ? patient.photo_url 
+                : `/api${patient.photo_url}`;
         return `${baseUrl}?v=${photoVersion}`;
     }, [patient?.photo_url, photoVersion]);
 

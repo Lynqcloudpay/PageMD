@@ -1,21 +1,20 @@
 {
     # Global options
-    email admin@yourdomain.com
+    email admin@bemypcp.com
     auto_https off
 }
 
 # Force HTTPS redirect for all HTTP traffic
-# Replace yourdomain.com with your actual domain
-http://yourdomain.com {
-    redir https://yourdomain.com{uri} permanent
+http://bemypcp.com {
+    redir https://bemypcp.com{uri} permanent
 }
 
-http://www.yourdomain.com {
-    redir https://yourdomain.com{uri} permanent
+http://www.bemypcp.com {
+    redir https://bemypcp.com{uri} permanent
 }
 
 # Main HTTPS site
-https://yourdomain.com {
+https://bemypcp.com {
     # Security headers
     header {
         # HSTS - Force HTTPS for 1 year
@@ -31,7 +30,7 @@ https://yourdomain.com {
         X-Frame-Options "DENY"
         
         # Content Security Policy
-        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://yourdomain.com; frame-ancestors 'none';"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://bemypcp.com; frame-ancestors 'none';"
         
         # Referrer policy
         Referrer-Policy "strict-origin-when-cross-origin"
@@ -71,7 +70,7 @@ https://yourdomain.com {
 }
 
 # Health check endpoint (bypass security headers for monitoring)
-https://yourdomain.com/health {
+https://bemypcp.com/health {
     respond 200
 }
 

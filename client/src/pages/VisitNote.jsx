@@ -1658,11 +1658,6 @@ const VisitNote = () => {
                 
                 // Then sign the note (vitals should already be saved, but include them as backup)
                 console.log('Signing note with vitals:', vitalsToSave);
-                // Log the exact URL being called
-                const apiBaseURL = window.location.origin.includes('localhost:5173') 
-                    ? 'http://localhost:3000' 
-                    : (process.env.REACT_APP_API_URL || 'http://localhost:3000');
-                console.log('SIGN URL:', `${apiBaseURL}/api/visits/${visitId}/sign`);
                 await visitsAPI.sign(visitId, noteDraft, vitalsToSave);
                 showToast('Note signed successfully', 'success');
                 // Reload visit data to get signed status

@@ -1123,7 +1123,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
         if (!patient?.photo_url) return null;
         const baseUrl = patient.photo_url.startsWith('http') 
             ? patient.photo_url 
-            : `http://localhost:3000${patient.photo_url}`;
+            : patient.photo_url.startsWith('/') 
+                ? patient.photo_url 
+                : `/api${patient.photo_url}`;
         return `${baseUrl}?v=${photoVersion}`;
     }, [patient?.photo_url, photoVersion]);
 
@@ -2884,9 +2886,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 {selectedEKG.id ? (
                                     <div className="space-y-3">
                                         {(() => {
-                                            const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
                                             const token = localStorage.getItem('token');
-                                            const fileUrl = `${API_BASE_URL}/documents/${selectedEKG.id}/file${token ? `?token=${token}` : ''}`;
+                                            const fileUrl = `/api/documents/${selectedEKG.id}/file${token ? `?token=${token}` : ''}`;
                                             const filename = selectedEKG.filename || 'EKG';
                                             const isImage = filename.match(/\.(jpg|jpeg|png|gif|webp)$/i) || selectedEKG.mime_type?.startsWith('image/');
                                             
@@ -2928,9 +2929,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     type="button"
                                     onClick={() => {
                                         if (selectedEKG.id) {
-                                            const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
                                             const token = localStorage.getItem('token');
-                                            const fileUrl = `${API_BASE_URL}/documents/${selectedEKG.id}/file${token ? `?token=${token}` : ''}`;
+                                            const fileUrl = `/api/documents/${selectedEKG.id}/file${token ? `?token=${token}` : ''}`;
                                             window.open(fileUrl, '_blank');
                                         } else {
                                             alert('EKG file not available');
@@ -3033,9 +3033,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 {selectedECHO.id ? (
                                     <div className="space-y-3">
                                         {(() => {
-                                            const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
                                             const token = localStorage.getItem('token');
-                                            const fileUrl = `${API_BASE_URL}/documents/${selectedECHO.id}/file${token ? `?token=${token}` : ''}`;
+                                            const fileUrl = `/api/documents/${selectedECHO.id}/file${token ? `?token=${token}` : ''}`;
                                             const filename = selectedECHO.filename || 'ECHO';
                                             const isImage = filename.match(/\.(jpg|jpeg|png|gif|webp)$/i) || selectedECHO.mime_type?.startsWith('image/');
                                             
@@ -3077,9 +3076,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     type="button"
                                     onClick={() => {
                                         if (selectedECHO.id) {
-                                            const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
                                             const token = localStorage.getItem('token');
-                                            const fileUrl = `${API_BASE_URL}/documents/${selectedECHO.id}/file${token ? `?token=${token}` : ''}`;
+                                            const fileUrl = `/api/documents/${selectedECHO.id}/file${token ? `?token=${token}` : ''}`;
                                             window.open(fileUrl, '_blank');
                                         } else {
                                             alert('ECHO file not available');
