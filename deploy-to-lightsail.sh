@@ -4,7 +4,8 @@
 
 HOST="bemypcp.com"
 USER="ubuntu"
-DIR="/home/ubuntu/app"
+# Default to emr directory, but allow override
+DIR="${DEPLOY_DIR:-/home/ubuntu/emr}"
 KEY_PATH="$1"
 
 SSH_CMD="ssh"
