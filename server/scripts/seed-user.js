@@ -5,6 +5,13 @@ async function seedUsers() {
   try {
     const users = [
       {
+        email: 'superadmin@clinic.com',
+        password: 'SuperAdmin2025!',
+        firstName: 'Super',
+        lastName: 'Admin',
+        role: 'SuperAdmin'
+      },
+      {
         email: 'doctor@clinic.com',
         password: 'Password123!',
         firstName: 'Dr.',
@@ -32,7 +39,7 @@ async function seedUsers() {
     for (const user of users) {
       // Check if user already exists
       const existing = await pool.query('SELECT id FROM users WHERE email = $1', [user.email]);
-      
+
       if (existing.rows.length > 0) {
         console.log(`ℹ️  User ${user.email} already exists, skipping...`);
         continue;
@@ -57,7 +64,7 @@ async function seedUsers() {
     console.log('   Doctor:  doctor@clinic.com / Password123!');
     console.log('   Nurse:   nurse@clinic.com / Password123!');
     console.log('   Admin:   admin@clinic.com / Password123!');
-    
+
     process.exit(0);
   } catch (error) {
     console.error('❌ Error seeding users:', error);
