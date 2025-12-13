@@ -5,7 +5,7 @@ const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader?.split(' ')[1];
-    
+
     if (!token) {
       console.log('[AUTH] No token provided. Auth header:', authHeader ? 'present' : 'missing');
       return res.status(401).json({ error: 'No token provided' });
@@ -13,7 +13,7 @@ const authenticate = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     console.log('[AUTH] Token verified successfully for user:', decoded.userId);
-    
+
     // Get user with role information and admin privileges
     const result = await pool.query(`
       SELECT 
@@ -23,17 +23,18 @@ const authenticate = async (req, res, next) => {
         u.last_name,
         u.status,
         u.role_id,
+        u.is_admin as user_is_admin,
         r.name as role_name,
         r.description as role_description,
         CASE 
-          WHEN r.name = 'Admin' OR r.name = 'admin' OR r.name = 'SuperAdmin' THEN true 
+          WHEN u.is_admin = true OR r.name = 'Admin' OR r.name = 'admin' OR r.name = 'SuperAdmin' THEN true 
           ELSE false 
         END as is_admin
       FROM users u
       LEFT JOIN roles r ON u.role_id = r.id
       WHERE u.id = $1
     `, [decoded.userId]);
-    
+
     // Check if user has admin privileges through their role (even if role is not Admin)
     if (result.rows.length > 0 && !result.rows[0].is_admin && result.rows[0].role_id) {
       try {
@@ -77,16 +78,16 @@ const requireRole = (...roles) => {
     if (!req.user) {
       return res.status(401).json({ error: 'Authentication required' });
     }
-    
+
     // Check if user has one of the required roles (case-insensitive)
     const userRole = (req.user.role_name || req.user.role || '').toLowerCase();
     const normalizedRoles = roles.map(r => r.toLowerCase());
-    
+
     // Admin users always have access
     if (req.user.is_admin === true || userRole === 'admin') {
       return next();
     }
-    
+
     if (!normalizedRoles.includes(userRole)) {
       // Log unauthorized access attempt
       logAudit(
@@ -94,7 +95,7 @@ const requireRole = (...roles) => {
         'role_access.denied',
         'authorization',
         null,
-        { 
+        {
           attempted_roles: roles,
           user_role: req.user.role_name || req.user.role,
           path: req.path,
@@ -104,8 +105,8 @@ const requireRole = (...roles) => {
         req.get('user-agent'),
         'failure'
       );
-      
-      return res.status(403).json({ 
+
+      return res.status(403).json({
         error: 'Insufficient permissions',
         required: roles,
         current: req.user.role_name || req.user.role
@@ -121,12 +122,12 @@ const requireRole = (...roles) => {
  * Details are sanitized to remove PHI values
  */
 const logAudit = async (
-  userId, 
-  action, 
-  targetType, 
-  targetId, 
-  details = {}, 
-  ipAddress = null, 
+  userId,
+  action,
+  targetType,
+  targetId,
+  details = {},
+  ipAddress = null,
   userAgent = null,
   outcome = 'success',
   requestId = null,
@@ -135,7 +136,7 @@ const logAudit = async (
   try {
     // Sanitize details to remove PHI (keep only metadata)
     const sanitizedDetails = sanitizeAuditDetails(details);
-    
+
     await pool.query(
       `INSERT INTO audit_logs (
         actor_user_id, action, target_type, target_id, 
@@ -143,12 +144,12 @@ const logAudit = async (
       )
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
-        userId, 
-        action, 
-        targetType, 
-        targetId, 
-        ipAddress, 
-        JSON.stringify(sanitizedDetails), 
+        userId,
+        action,
+        targetType,
+        targetId,
+        ipAddress,
+        JSON.stringify(sanitizedDetails),
         userAgent,
         outcome,
         requestId,
@@ -171,9 +172,9 @@ const sanitizeAuditDetails = (details) => {
   if (!details || typeof details !== 'object') {
     return {};
   }
-  
+
   const sanitized = { ...details };
-  
+
   // Remove known PHI fields
   const phiFields = [
     'ssn', 'mrn', 'dob', 'dateOfBirth', 'birthDate',
@@ -185,25 +186,25 @@ const sanitizeAuditDetails = (details) => {
     'diagnosis', 'assessment', 'plan',
     'medication', 'allergy', 'problem'
   ];
-  
+
   for (const field of phiFields) {
     if (sanitized[field] !== undefined) {
       // Replace with indicator that field was present
       sanitized[field] = '[REDACTED]';
     }
   }
-  
+
   // Recursively sanitize nested objects
   for (const key in sanitized) {
     if (sanitized[key] && typeof sanitized[key] === 'object' && !Array.isArray(sanitized[key])) {
       sanitized[key] = sanitizeAuditDetails(sanitized[key]);
     } else if (Array.isArray(sanitized[key])) {
-      sanitized[key] = sanitized[key].map(item => 
+      sanitized[key] = sanitized[key].map(item =>
         typeof item === 'object' ? sanitizeAuditDetails(item) : item
       );
     }
   }
-  
+
   return sanitized;
 };
 
@@ -216,29 +217,29 @@ const auditLog = (action, targetType) => {
     // Generate request ID for correlation
     const requestId = req.headers['x-request-id'] || require('crypto').randomUUID();
     req.requestId = requestId;
-    
+
     // Get session ID if available
     const sessionId = req.session?.id || req.user?.sessionId || null;
-    
+
     const originalSend = res.send;
-    res.send = function(data) {
+    res.send = function (data) {
       // Determine outcome
       const outcome = res.statusCode < 400 ? 'success' : 'failure';
-      
+
       // Log after response
       const targetId = req.params.id || req.body.id || null;
-      
+
       // Only log PHI-relevant endpoints
       const isPHIEndpoint = isPHIRelevantEndpoint(req.path, req.method);
-      
+
       if (isPHIEndpoint) {
         logAudit(
           req.user?.id || null,
           action || `${req.method.toLowerCase()}.${targetType}`,
           targetType,
           targetId,
-          { 
-            method: req.method, 
+          {
+            method: req.method,
             path: req.path,
             statusCode: res.statusCode
             // Note: body is NOT included here - it may contain PHI
@@ -251,7 +252,7 @@ const auditLog = (action, targetType) => {
           sessionId
         );
       }
-      
+
       return originalSend.call(this, data);
     };
     next();
@@ -267,15 +268,15 @@ const isPHIRelevantEndpoint = (path, method) => {
     '/documents', '/medications', '/allergies', '/problems',
     '/orders', '/prescriptions', '/labs', '/billing'
   ];
-  
-  return phiPaths.some(phiPath => path.includes(phiPath)) && 
-         ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase());
+
+  return phiPaths.some(phiPath => path.includes(phiPath)) &&
+    ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase());
 };
 
-module.exports = { 
-  authenticate, 
-  requireRole, 
-  logAudit, 
+module.exports = {
+  authenticate,
+  requireRole,
+  logAudit,
   auditLog,
   sanitizeAuditDetails,
   isPHIRelevantEndpoint
