@@ -16,32 +16,33 @@ docker run --rm -v emr_postgres_data:/var/lib/postgresql/data \
     ls -la /var/lib/postgresql/data/server.*
     
     echo 'Key file existence check:'
-    # Force remove existing certs to ensure fresh generation and correct path
-    rm -f /var/lib/postgresql/data/server.crt 
-    rm -f /var/lib/postgresql/data/server.key
-    rm -f /var/lib/postgresql/data/ca.crt
+    # Create directory for certs
+    mkdir -p /var/lib/postgresql/data/certs
+    
+    # Remove old files if they exist to be safe
+    rm -f /var/lib/postgresql/data/certs/server.crt
+    rm -f /var/lib/postgresql/data/certs/server.key
+    rm -f /var/lib/postgresql/data/certs/ca.crt
 
-    if [ ! -f /var/lib/postgresql/data/server.key ]; then
-        echo '❌ server.key missing! Generating new certificates...'
+    if [ ! -f /var/lib/postgresql/data/certs/server.key ]; then
+        echo '❌ server.key missing! Generating new certificates in certs/ dir...'
         apk add --no-cache openssl
         openssl req -new -x509 -days 365 -nodes \
-            -text -out /var/lib/postgresql/data/server.crt \
-            -keyout /var/lib/postgresql/data/server.key \
+            -text -out /var/lib/postgresql/data/certs/server.crt \
+            -keyout /var/lib/postgresql/data/certs/server.key \
             -subj '/CN=postgres'
-        cp /var/lib/postgresql/data/server.crt /var/lib/postgresql/data/ca.crt
+        cp /var/lib/postgresql/data/certs/server.crt /var/lib/postgresql/data/certs/ca.crt
     fi
 
     echo 'Correcting ownership to postgres user...'
     # Ensure postgres user owns the certs
-    chown postgres:postgres /var/lib/postgresql/data/server.key
-    chown postgres:postgres /var/lib/postgresql/data/server.crt
-    chown postgres:postgres /var/lib/postgresql/data/ca.crt
+    chown -R postgres:postgres /var/lib/postgresql/data/certs
     
     echo 'Setting strict mode 0600 on key...'
-    chmod 600 /var/lib/postgresql/data/server.key
+    chmod 600 /var/lib/postgresql/data/certs/server.key
     
     echo 'Verification:'
-    ls -la /var/lib/postgresql/data/server.key
+    ls -la /var/lib/postgresql/data/certs/server.key
   "
 
 echo "🚀 Starting database..."
