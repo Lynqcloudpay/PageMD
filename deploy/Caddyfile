@@ -1,6 +1,6 @@
 {
     # Global options
-    email {$EMAIL:admin@bemypcp.com}
+    email admin@bemypcp.com
 }
 
 # Force HTTPS redirect for all HTTP traffic
