@@ -16,6 +16,11 @@ docker run --rm -v emr_postgres_data:/var/lib/postgresql/data \
     ls -la /var/lib/postgresql/data/server.*
     
     echo 'Key file existence check:'
+    # Force remove existing certs to ensure fresh generation and correct path
+    rm -f /var/lib/postgresql/data/server.crt 
+    rm -f /var/lib/postgresql/data/server.key
+    rm -f /var/lib/postgresql/data/ca.crt
+
     if [ ! -f /var/lib/postgresql/data/server.key ]; then
         echo '❌ server.key missing! Generating new certificates...'
         apk add --no-cache openssl
