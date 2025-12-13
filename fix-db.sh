@@ -9,8 +9,9 @@ docker compose -f docker-compose.prod.yml down
 echo "🔧 Fixing PostgreSQL permissions using the postgres image..."
 # Use the exact same image to ensure UIDs match perfectly
 # Use the updated volume mapping to fix certs independently of data
+# NOTE: The volume name matches the project name (deploy) + volume name (postgres_certs)
 docker run --rm \
-  -v emr_postgres_certs:/var/lib/postgresql/certs \
+  -v deploy_postgres_certs:/var/lib/postgresql/certs \
   --entrypoint sh \
   postgres:15-alpine \
   -c "
