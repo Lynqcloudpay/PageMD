@@ -38,7 +38,24 @@ $SSH_CMD $USER@$HOST << EOF
     cp env.prod.example .env.prod
   fi
   
-  echo "🔄 Restarting services..."
+  echo "� Ensuring DB SSL certificates exist..."
+  # Fix for existing databases where init-db.sh won't run
+  # We use a temporary alpine container to generate certs in the volume if they are missing
+  docker run --rm -v emr_postgres_data:/var/lib/postgresql/data alpine sh -c "
+    if [ ! -f /var/lib/postgresql/data/server.key ]; then 
+      echo 'Generating missing SSL certs...'; 
+      apk add --no-cache openssl; 
+      openssl req -new -x509 -days 365 -nodes -text -out /var/lib/postgresql/data/server.crt -keyout /var/lib/postgresql/data/server.key -subj '/CN=postgres'; 
+      chmod 600 /var/lib/postgresql/data/server.key; 
+      chmod 644 /var/lib/postgresql/data/server.crt; 
+      cp /var/lib/postgresql/data/server.crt /var/lib/postgresql/data/ca.crt; 
+      chown 70:70 /var/lib/postgresql/data/server.*; 
+      echo 'Certs generated successfully'; 
+    else 
+      echo 'Certs already exist'; 
+    fi"
+
+  echo "�🔄 Restarting services..."
   # Rebuild api and web containers
   docker compose -f docker-compose.prod.yml up -d --build --force-recreate
   
