@@ -8,41 +8,43 @@ docker compose -f docker-compose.prod.yml down
 
 echo "🔧 Fixing PostgreSQL permissions using the postgres image..."
 # Use the exact same image to ensure UIDs match perfectly
-docker run --rm -v emr_postgres_data:/var/lib/postgresql/data \
+# Use the updated volume mapping to fix certs independently of data
+docker run --rm \
+  -v emr_postgres_certs:/var/lib/postgresql/certs \
   --entrypoint sh \
   postgres:15-alpine \
   -c "
-    echo 'Files in data dir:'
-    ls -la /var/lib/postgresql/data/server.*
+    echo 'Files in certs dir:'
+    ls -la /var/lib/postgresql/certs/server.*
     
     echo 'Key file existence check:'
-    # Create directory for certs
-    mkdir -p /var/lib/postgresql/data/certs
-    
-    # Remove old files if they exist to be safe
-    rm -f /var/lib/postgresql/data/certs/server.crt
-    rm -f /var/lib/postgresql/data/certs/server.key
-    rm -f /var/lib/postgresql/data/certs/ca.crt
+    # Create directory for certs if it doesn't exist (it should be the volume root)
+    mkdir -p /var/lib/postgresql/certs
 
-    if [ ! -f /var/lib/postgresql/data/certs/server.key ]; then
-        echo '❌ server.key missing! Generating new certificates in certs/ dir...'
+    # Remove old files if they exist to be safe
+    rm -f /var/lib/postgresql/certs/server.crt
+    rm -f /var/lib/postgresql/certs/server.key
+    rm -f /var/lib/postgresql/certs/ca.crt
+
+    if [ ! -f /var/lib/postgresql/certs/server.key ]; then
+        echo '❌ server.key missing! Generating new certificates in certs volume...'
         apk add --no-cache openssl
         openssl req -new -x509 -days 365 -nodes \
-            -text -out /var/lib/postgresql/data/certs/server.crt \
-            -keyout /var/lib/postgresql/data/certs/server.key \
+            -text -out /var/lib/postgresql/certs/server.crt \
+            -keyout /var/lib/postgresql/certs/server.key \
             -subj '/CN=postgres'
-        cp /var/lib/postgresql/data/certs/server.crt /var/lib/postgresql/data/certs/ca.crt
+        cp /var/lib/postgresql/certs/server.crt /var/lib/postgresql/certs/ca.crt
     fi
 
     echo 'Correcting ownership to postgres user...'
     # Ensure postgres user owns the certs
-    chown -R postgres:postgres /var/lib/postgresql/data/certs
+    chown -R postgres:postgres /var/lib/postgresql/certs
     
     echo 'Setting strict mode 0600 on key...'
-    chmod 600 /var/lib/postgresql/data/certs/server.key
+    chmod 600 /var/lib/postgresql/certs/server.key
     
     echo 'Verification:'
-    ls -la /var/lib/postgresql/data/certs/server.key
+    ls -la /var/lib/postgresql/certs/server.key
   "
 
 echo "🚀 Starting database..."
