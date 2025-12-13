@@ -15,6 +15,11 @@ const enforceHTTPS = (req, res, next) => {
     return next();
   }
 
+  // Skip HTTPS enforcement for health check endpoint (internal monitoring)
+  if (req.path === '/api/health' || req.path === '/health') {
+    return next();
+  }
+
   // Skip HTTPS enforcement for localhost in development
   const isLocalhost = req.hostname === 'localhost' || req.hostname === '127.0.0.1' || req.hostname === '::1';
   if (isLocalhost && process.env.NODE_ENV !== 'production') {
