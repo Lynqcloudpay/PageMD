@@ -757,7 +757,7 @@ export const ReferralModal = ({ isOpen, onClose, onSuccess, diagnoses = [], pati
 
 export const UploadModal = ({ isOpen, onClose, onSuccess, patientId, visitId }) => {
     const [file, setFile] = useState(null);
-    const [docType, setDocType] = useState('Lab Result');
+    const [docType, setDocType] = useState('lab');
     const [tags, setTags] = useState('');
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState(null);
@@ -766,7 +766,7 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, patientId, visitId }) 
     useEffect(() => {
         if (isOpen) {
             setFile(null);
-            setDocType('Lab Result');
+            setDocType('lab');
             setTags('');
             setError(null);
             setUploading(false);
@@ -873,12 +873,12 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, patientId, visitId }) 
                         onChange={(e) => setDocType(e.target.value)}
                         className="w-full p-2 border border-paper-300 rounded-md"
                     >
-                        <option>Lab Result</option>
-                        <option>Imaging Report</option>
-                        <option>Consult Note</option>
-                        <option>EKG</option>
-                        <option>ECHO</option>
-                        <option>Other</option>
+                        <option value="lab">Lab Result</option>
+                        <option value="imaging">Imaging Report</option>
+                        <option value="consult">Consult Note</option>
+                        <option value="ekg">EKG</option>
+                        <option value="echo">ECHO</option>
+                        <option value="other">Other</option>
                     </select>
                 </div>
 
