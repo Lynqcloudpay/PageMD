@@ -44,15 +44,15 @@ class UserService {
       LEFT JOIN roles r ON u.role_id = r.id
       WHERE u.id = $1
     `;
-    
+
     const result = await pool.query(query, [userId]);
-    
+
     if (result.rows.length === 0) {
       return null;
     }
-    
+
     const user = result.rows[0];
-    
+
     // Check if user has admin privileges (even if role is not Admin)
     if (!user.is_admin && user.role_id) {
       try {
@@ -72,11 +72,11 @@ class UserService {
         console.warn('Error checking admin privileges for user:', userId, error.message);
       }
     }
-    
+
     if (includePrivileges && user.role_id) {
       user.privileges = await this.getUserPrivileges(userId);
     }
-    
+
     return user;
   }
 
@@ -102,10 +102,10 @@ class UserService {
       LEFT JOIN roles r ON u.role_id = r.id
       WHERE u.email = $1
     `;
-    
+
     const result = await pool.query(query, [email]);
     const user = result.rows[0] || null;
-    
+
     // Check if user has admin privileges (even if role is not Admin)
     if (user && !user.is_admin && user.role_id) {
       try {
@@ -125,7 +125,7 @@ class UserService {
         console.warn('Error checking admin privileges for user:', email, error.message);
       }
     }
-    
+
     return user;
   }
 
@@ -140,7 +140,7 @@ class UserService {
       roleId,
       search
     } = options;
-    
+
     const offset = (page - 1) * limit;
     let query = `
       SELECT 
@@ -164,22 +164,22 @@ class UserService {
       LEFT JOIN roles r ON u.role_id = r.id
       WHERE 1=1
     `;
-    
+
     const params = [];
     let paramCount = 0;
-    
+
     if (status) {
       paramCount++;
       query += ` AND u.status = $${paramCount}`;
       params.push(status);
     }
-    
+
     if (roleId) {
       paramCount++;
       query += ` AND u.role_id = $${paramCount}`;
       params.push(roleId);
     }
-    
+
     if (search) {
       paramCount++;
       query += ` AND (
@@ -189,12 +189,12 @@ class UserService {
       )`;
       params.push(`%${search}%`);
     }
-    
+
     query += ` ORDER BY u.last_name, u.first_name LIMIT $${++paramCount} OFFSET $${++paramCount}`;
     params.push(limit, offset);
-    
+
     const result = await pool.query(query, params);
-    
+
     // Get total count (build count query separately)
     let countQuery = `
       SELECT COUNT(*) as total
@@ -204,19 +204,19 @@ class UserService {
     `;
     const countParams = [];
     let countParamCount = 0;
-    
+
     if (status) {
       countParamCount++;
       countQuery += ` AND u.status = $${countParamCount}`;
       countParams.push(status);
     }
-    
+
     if (roleId) {
       countParamCount++;
       countQuery += ` AND u.role_id = $${countParamCount}`;
       countParams.push(roleId);
     }
-    
+
     if (search) {
       countParamCount++;
       countQuery += ` AND (
@@ -226,10 +226,10 @@ class UserService {
       )`;
       countParams.push(`%${search}%`);
     }
-    
+
     const countResult = await pool.query(countQuery, countParams);
     const total = parseInt(countResult.rows[0]?.total || 0);
-    
+
     return {
       users: result.rows,
       pagination: {
@@ -246,7 +246,7 @@ class UserService {
    */
   mapRoleToOldFormat(roleName) {
     if (!roleName) return 'admin'; // Default fallback
-    
+
     const roleMap = {
       'Admin': 'admin',
       'Physician': 'clinician',
@@ -257,7 +257,7 @@ class UserService {
       'Front Desk': 'front_desk',
       'Billing': 'front_desk'
     };
-    
+
     return roleMap[roleName] || 'admin';
   }
 
@@ -280,26 +280,26 @@ class UserService {
       credentials,
       isAdmin
     } = userData;
-    
+
     // Validate required fields
     if (!email || !password || !firstName || !lastName || !roleId) {
       throw new Error('Missing required fields');
     }
-    
+
     // Hash password with Argon2id (HIPAA-compliant)
     const passwordHash = await passwordService.hashPassword(password);
-    
+
     // Check if email exists
     const existing = await this.getUserByEmail(email);
     if (existing) {
       throw new Error('User with this email already exists');
     }
-    
+
     // Get role name for the old role column
     const roleQuery = await pool.query('SELECT name FROM roles WHERE id = $1', [roleId]);
     const roleName = roleQuery.rows[0]?.name || 'Admin';
     const oldRoleFormat = this.mapRoleToOldFormat(roleName);
-    
+
     // Insert user (including old role column for backward compatibility)
     // Note: is_admin is computed from role, not stored as a column
     const query = `
@@ -311,7 +311,7 @@ class UserService {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, CURRENT_TIMESTAMP)
       RETURNING id, email, first_name, last_name, status, date_created
     `;
-    
+
     const result = await pool.query(query, [
       email,
       passwordHash,
@@ -329,7 +329,7 @@ class UserService {
       credentials || null
       // isAdmin is not stored - it's computed from the role
     ]);
-    
+
     return result.rows[0];
   }
 
@@ -340,62 +340,58 @@ class UserService {
     const allowedFields = [
       'first_name', 'last_name', 'email', 'status', 'role_id',
       'professional_type', 'npi', 'license_number', 'license_state',
-      'dea_number', 'taxonomy_code', 'credentials'
-      // Note: is_admin is not a column - it's computed from role_id
+      'dea_number', 'taxonomy_code', 'credentials', 'is_admin'
     ];
-    
-    // Handle isAdmin flag by setting role_id to Admin role
+
+    // Handle isAdmin flag by setting the is_admin column (NOT changing role_id)
     if (updates.isAdmin !== undefined) {
-      const adminRoleResult = await pool.query(
-        "SELECT id FROM roles WHERE name = 'Admin' OR name = 'admin' LIMIT 1"
-      );
-      if (adminRoleResult.rows.length > 0) {
-        if (updates.isAdmin === true || updates.isAdmin === 'true') {
-          updates.roleId = adminRoleResult.rows[0].id;
-        }
-        // If isAdmin is false, we don't change the role (user keeps current role)
+      // Add is_admin to allowed fields for this update
+      if (updates.isAdmin === true || updates.isAdmin === 'true') {
+        updates.is_admin = true;
+      } else {
+        updates.is_admin = false;
       }
-      // Remove isAdmin from updates since it's not a column
+      // Remove isAdmin from updates (use is_admin column instead)
       delete updates.isAdmin;
     }
-    
+
     const updateFields = [];
     const params = [];
     let paramCount = 0;
-    
+
     for (const [key, value] of Object.entries(updates)) {
       const dbKey = key === 'firstName' ? 'first_name' :
-                    key === 'lastName' ? 'last_name' :
-                    key === 'roleId' ? 'role_id' :
-                    key === 'professionalType' ? 'professional_type' :
-                    key === 'licenseNumber' ? 'license_number' :
-                    key === 'licenseState' ? 'license_state' :
-                    key === 'deaNumber' ? 'dea_number' :
+        key === 'lastName' ? 'last_name' :
+          key === 'roleId' ? 'role_id' :
+            key === 'professionalType' ? 'professional_type' :
+              key === 'licenseNumber' ? 'license_number' :
+                key === 'licenseState' ? 'license_state' :
+                  key === 'deaNumber' ? 'dea_number' :
                     key === 'taxonomyCode' ? 'taxonomy_code' :
-                    key;
-      
+                      key;
+
       if (allowedFields.includes(dbKey) && value !== undefined) {
         paramCount++;
         updateFields.push(`${dbKey} = $${paramCount}`);
         params.push(value);
       }
     }
-    
+
     if (updateFields.length === 0) {
       throw new Error('No valid fields to update');
     }
-    
+
     updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
     paramCount++;
     params.push(userId);
-    
+
     const query = `
       UPDATE users
       SET ${updateFields.join(', ')}
       WHERE id = $${paramCount}
       RETURNING id, email, first_name, last_name, status, role_id
     `;
-    
+
     const result = await pool.query(query, params);
     return result.rows[0];
   }
@@ -434,7 +430,7 @@ class UserService {
         WHERE u.id = $1
         ORDER BY p.category, p.name
       `;
-      
+
       const result = await pool.query(query, [userId]);
       return result.rows || [];
     } catch (error) {
@@ -454,7 +450,7 @@ class UserService {
       if (user && (user.role_name === 'Admin' || user.role_name === 'SuperAdmin' || user.is_admin === true)) {
         return true;
       }
-      
+
       // Check if privileges table exists
       const tableCheck = await pool.query(`
         SELECT EXISTS (
@@ -463,7 +459,7 @@ class UserService {
           AND table_name = 'privileges'
         )
       `);
-      
+
       if (!tableCheck.rows[0].exists) {
         // Privileges table doesn't exist - fallback to role-based check
         // Allow clinicians, nurses, and admins to have basic privileges
@@ -474,7 +470,7 @@ class UserService {
         }
         return false;
       }
-      
+
       const query = `
         SELECT COUNT(*) as count
         FROM privileges p
@@ -482,7 +478,7 @@ class UserService {
         INNER JOIN users u ON rp.role_id = u.role_id
         WHERE u.id = $1 AND p.name = $2
       `;
-      
+
       const result = await pool.query(query, [userId, privilegeName]);
       return parseInt(result.rows[0].count) > 0;
     } catch (error) {
@@ -502,12 +498,12 @@ class UserService {
   async isAdmin(userId) {
     const user = await this.getUserById(userId);
     if (!user) return false;
-    
+
     // Check if role is Admin
     if (user.role_name === 'Admin' || user.role_name === 'SuperAdmin' || user.is_admin === true) {
       return true;
     }
-    
+
     // Check if user has admin privileges through their role
     try {
       const adminPrivileges = ['manage_users', 'manage_roles', 'system_settings', 'view_audit_logs', 'promote_to_admin'];
@@ -532,10 +528,10 @@ class UserService {
   async deleteUser(userId) {
     // First, set all foreign key references to NULL or a default admin user
     // This is a hard delete, so we need to handle foreign keys
-    
+
     // Delete user (CASCADE should handle related records if foreign keys are set up properly)
     const result = await pool.query('DELETE FROM users WHERE id = $1', [userId]);
-    
+
     if (result.rowCount === 0) {
       throw new Error('User not found');
     }
@@ -573,8 +569,8 @@ class UserService {
     // Basic validation - can be enhanced with state-specific rules
     return {
       valid: licenseNumber.length >= 3 && licenseNumber.length <= 20,
-      error: licenseNumber.length < 3 || licenseNumber.length > 20 
-        ? 'License number must be between 3 and 20 characters' 
+      error: licenseNumber.length < 3 || licenseNumber.length > 20
+        ? 'License number must be between 3 and 20 characters'
         : null
     };
   }
