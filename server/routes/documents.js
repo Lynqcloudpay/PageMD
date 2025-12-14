@@ -60,6 +60,29 @@ router.post('/', requireRole('clinician', 'front_desk', 'nurse'), upload.single(
 
     const { patientId, visitId, docType, tags } = req.body;
 
+    // Normalize docType to lowercase and handle common variations from older clients
+    let normalizedDocType = (docType || 'other').toLowerCase();
+
+    const docTypeMap = {
+      'lab result': 'lab',
+      'imaging report': 'imaging',
+      'consult note': 'consult',
+      'ekg': 'ekg',
+      'echo': 'echo',
+      'other': 'other'
+    };
+
+    // If it's one of the known mapped types, use the valid DB value
+    if (docTypeMap[normalizedDocType]) {
+      normalizedDocType = docTypeMap[normalizedDocType];
+    }
+
+    // Ensure it is one of the valid enum allowed values, otherwise default to 'other'
+    const validTypes = ['lab', 'imaging', 'consult', 'ekg', 'echo', 'other'];
+    if (!validTypes.includes(normalizedDocType)) {
+      normalizedDocType = 'other';
+    }
+
     const result = await pool.query(
       `INSERT INTO documents (
         patient_id, visit_id, uploader_id, doc_type, filename, file_path, mime_type, file_size, tags
@@ -68,7 +91,7 @@ router.post('/', requireRole('clinician', 'front_desk', 'nurse'), upload.single(
         patientId,
         visitId || null,
         req.user.id,
-        docType || 'other',
+        normalizedDocType,
         req.file.originalname,
         req.file.path,
         req.file.mimetype,
@@ -124,7 +147,7 @@ router.put('/:id', requireRole('clinician', 'nurse'), async (req, res) => {
       updates.push(`reviewed = $${paramIndex}`);
       values.push(reviewed);
       paramIndex++;
-      
+
       if (reviewed) {
         updates.push(`reviewed_at = CURRENT_TIMESTAMP`);
         updates.push(`reviewed_by = $${paramIndex}`);
@@ -138,7 +161,7 @@ router.put('/:id', requireRole('clinician', 'nurse'), async (req, res) => {
       // IMPORTANT: Always preserve all previous comments for legal record keeping
       const currentDoc = await pool.query('SELECT comments FROM documents WHERE id = $1', [id]);
       let existingComments = currentDoc.rows[0]?.comments || [];
-      
+
       // Parse existing comments if they're stored as a string
       if (typeof existingComments === 'string') {
         try {
@@ -148,26 +171,26 @@ router.put('/:id', requireRole('clinician', 'nurse'), async (req, res) => {
           existingComments = [];
         }
       }
-      
+
       // Ensure existingComments is an array
       if (!Array.isArray(existingComments)) {
         existingComments = [];
       }
-      
+
       const newComment = {
         comment: comment.trim(),
         timestamp: new Date().toISOString(),
         userId: req.user.id,
         userName: `${req.user.first_name} ${req.user.last_name}` || 'Unknown'
       };
-      
+
       // Append new comment to existing comments (never delete previous comments)
       const updatedComments = [...existingComments, newComment];
-      
+
       updates.push(`comments = $${paramIndex}`);
       values.push(JSON.stringify(updatedComments));
       paramIndex++;
-      
+
       // Also update the legacy comment field for backward compatibility (keep most recent)
       updates.push(`comment = $${paramIndex}`);
       values.push(comment.trim());
