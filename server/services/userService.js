@@ -34,7 +34,7 @@ class UserService {
         u.taxonomy_code,
         u.credentials,
         CASE 
-          WHEN r.name = 'Admin' OR r.name = 'admin' OR r.name = 'SuperAdmin' THEN true 
+          WHEN u.is_admin = true OR r.name = 'Admin' OR r.name = 'admin' OR r.name = 'SuperAdmin' THEN true 
           ELSE false 
         END as is_admin,
         r.id as role_id,
@@ -94,7 +94,7 @@ class UserService {
         u.status,
         u.role_id,
         CASE 
-          WHEN r.name = 'Admin' OR r.name = 'admin' OR r.name = 'SuperAdmin' THEN true 
+          WHEN u.is_admin = true OR r.name = 'Admin' OR r.name = 'admin' OR r.name = 'SuperAdmin' THEN true 
           ELSE false 
         END as is_admin,
         r.name as role_name
@@ -155,7 +155,7 @@ class UserService {
         u.npi,
         u.credentials,
         CASE 
-          WHEN r.name = 'Admin' OR r.name = 'admin' OR r.name = 'SuperAdmin' THEN true 
+          WHEN u.is_admin = true OR r.name = 'Admin' OR r.name = 'admin' OR r.name = 'SuperAdmin' THEN true 
           ELSE false 
         END as is_admin,
         r.id as role_id,
