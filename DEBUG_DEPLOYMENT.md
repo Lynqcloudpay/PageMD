@@ -13,12 +13,32 @@ If your GitHub Actions deployment is failing, follow these steps to diagnose and
 
 ### ❌ SSH Connection Failed
 
-**Error:** `Permission denied (publickey)` or `SSH connection test failed`
+**Error:** `Connection timed out` or `Permission denied (publickey)` or `SSH connection test failed`
 
 **Causes:**
+- **Connection timed out**: Lightsail firewall blocking SSH from GitHub Actions
 - SSH key not matching the server
 - Key format issues
 - Wrong host or user
+
+#### Fix Connection Timeout (Most Common!)
+
+**Error:** `connect to host *** port 22: Connection timed out`
+
+This means your Lightsail firewall is blocking GitHub Actions.
+
+**Quick Fix:**
+1. Go to AWS Lightsail Console → Your Instance → Networking → Firewall
+2. Edit SSH (22) rule to allow from `0.0.0.0/0`
+3. Save
+4. Wait 1-2 minutes, then retry deployment
+
+**Detailed instructions:** See `FIX_FIREWALL.md`
+
+**Why this is safe:**
+- SSH key authentication is still required
+- Only your GitHub Actions can authenticate with the stored key
+- This is standard practice for automated deployments
 
 **Solutions:**
 
