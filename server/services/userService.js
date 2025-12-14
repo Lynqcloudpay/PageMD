@@ -462,8 +462,8 @@ class UserService {
 
       if (!tableCheck.rows[0].exists) {
         // Privileges table doesn't exist - fallback to role-based check
-        // Allow clinicians, nurses, and admins to have basic privileges
-        const allowedRoles = ['clinician', 'nurse', 'admin', 'front_desk'];
+        // Allow clinicians, physicians, nurses, and admins to have basic privileges
+        const allowedRoles = ['clinician', 'physician', 'nurse', 'admin', 'front_desk', 'nurse practitioner', 'physician assistant', 'medical assistant'];
         const userRole = user?.role_name?.toLowerCase() || user?.role?.toLowerCase();
         if (allowedRoles.includes(userRole)) {
           return true;
