@@ -227,19 +227,3 @@ The EMR system now has:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

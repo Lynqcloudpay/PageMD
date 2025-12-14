@@ -85,19 +85,3 @@ Your EMR is now fully functional with data persistence. Everything you create wi
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

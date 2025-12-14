@@ -46,19 +46,3 @@ After running the setup:
 - **Start Frontend**: `npm run client` or `cd client && npm run dev`
 - **Start Both**: `npm run dev`
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

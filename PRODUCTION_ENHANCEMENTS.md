@@ -178,19 +178,3 @@ Based on OpenEMR Analysis - Keeping Current UI/Design
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

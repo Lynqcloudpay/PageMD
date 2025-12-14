@@ -56,7 +56,7 @@ router.get('/', requirePrivilege('patient:view'), async (req, res) => {
     const { search, limit = 100, offset = 0 } = req.query;
     let query = 'SELECT * FROM patients';
     const params = [];
-
+    
     // Handle search parameter - check if search is provided and not empty
     if (search && search.trim()) {
       query += ` WHERE first_name ILIKE $1 OR last_name ILIKE $1 OR mrn ILIKE $1`;
@@ -69,64 +69,44 @@ router.get('/', requirePrivilege('patient:view'), async (req, res) => {
     }
 
     const result = await pool.query(query, params);
-
+    
     // Decrypt PHI fields before sending response
-    let decryptedPatients;
-    try {
-      decryptedPatients = await patientEncryptionService.decryptPatientsPHI(result.rows);
-    } catch (decryptionError) {
-      console.error('Error decrypting patients (returning encrypted data):', decryptionError);
-      // If decryption fails, return encrypted data rather than failing completely
-      decryptedPatients = result.rows;
-    }
-
-    // Log audit (don't fail if audit logging fails)
-    try {
-      const requestId = req.headers['x-request-id'] || crypto.randomUUID();
-      await logAudit(
-        req.user.id,
-        'patient.list',
-        'patient',
-        null,
-        { search: search ? '[REDACTED]' : null, count: decryptedPatients.length },
-        req.ip,
-        req.get('user-agent'),
-        'success',
-        requestId,
-        req.sessionId
-      );
-    } catch (auditError) {
-      console.warn('Failed to log audit for patient list:', auditError.message);
-    }
-
+    const decryptedPatients = await patientEncryptionService.decryptPatientsPHI(result.rows);
+    
+    // Log audit
+    const requestId = req.headers['x-request-id'] || crypto.randomUUID();
+    await logAudit(
+      req.user.id,
+      'patient.list',
+      'patient',
+      null,
+      { search: search ? '[REDACTED]' : null, count: decryptedPatients.length },
+      req.ip,
+      req.get('user-agent'),
+      'success',
+      requestId,
+      req.sessionId
+    );
+    
     res.json(decryptedPatients);
   } catch (error) {
     console.error('Error fetching patients:', error);
-    console.error('Error stack:', error.stack);
-    console.error('Error code:', error.code);
-
-    // Log failed audit (don't fail if this also fails)
-    try {
-      await logAudit(
-        req.user?.id,
-        'patient.list',
-        'patient',
-        null,
-        { error: error.message },
-        req.ip,
-        req.get('user-agent'),
-        'failure',
-        req.requestId,
-        req.sessionId
-      );
-    } catch (auditError) {
-      console.warn('Failed to log audit for patient list error:', auditError.message);
-    }
-
-    res.status(500).json({
-      error: 'Failed to fetch patients',
-      message: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    
+    // Log failed audit
+    await logAudit(
+      req.user?.id,
+      'patient.list',
+      'patient',
+      null,
+      { error: error.message },
+      req.ip,
+      req.get('user-agent'),
+      'failure',
+      req.requestId,
+      req.sessionId
+    );
+    
+    res.status(500).json({ error: 'Failed to fetch patients' });
   }
 });
 
@@ -141,12 +121,12 @@ router.get('/:id/snapshot', requirePrivilege('patient:view'), async (req, res) =
     try {
       patient = await pool.query('SELECT * FROM patients WHERE id = $1', [id]);
       if (patient.rows.length === 0) {
-        return res.status(404).json({ error: 'Patient not found' });
-      }
+      return res.status(404).json({ error: 'Patient not found' });
+    }
       // Decrypt PHI fields
       patient.rows[0] = await patientEncryptionService.decryptPatientPHI(patient.rows[0]);
-    } catch (error) {
-      console.error('Error fetching patient:', error);
+  } catch (error) {
+    console.error('Error fetching patient:', error);
       throw new Error(`Failed to fetch patient: ${error.message}`);
     }
 
@@ -154,9 +134,9 @@ router.get('/:id/snapshot', requirePrivilege('patient:view'), async (req, res) =
     let allergies = { rows: [] };
     try {
       allergies = await pool.query(
-        'SELECT * FROM allergies WHERE patient_id = $1 AND active = true ORDER BY created_at DESC',
-        [id]
-      );
+      'SELECT * FROM allergies WHERE patient_id = $1 AND active = true ORDER BY created_at DESC',
+      [id]
+    );
     } catch (error) {
       console.warn('Error fetching allergies (continuing):', error.message);
     }
@@ -165,9 +145,9 @@ router.get('/:id/snapshot', requirePrivilege('patient:view'), async (req, res) =
     let medications = { rows: [] };
     try {
       medications = await pool.query(
-        'SELECT * FROM medications WHERE patient_id = $1 AND active = true ORDER BY created_at DESC',
-        [id]
-      );
+      'SELECT * FROM medications WHERE patient_id = $1 AND active = true ORDER BY created_at DESC',
+      [id]
+    );
     } catch (error) {
       console.warn('Error fetching medications (continuing):', error.message);
     }
@@ -176,9 +156,9 @@ router.get('/:id/snapshot', requirePrivilege('patient:view'), async (req, res) =
     let problems = { rows: [] };
     try {
       problems = await pool.query(
-        'SELECT * FROM problems WHERE patient_id = $1 AND status = $2 ORDER BY created_at DESC',
-        [id, 'active']
-      );
+      'SELECT * FROM problems WHERE patient_id = $1 AND status = $2 ORDER BY created_at DESC',
+      [id, 'active']
+    );
     } catch (error) {
       console.warn('Error fetching problems (continuing):', error.message);
     }
@@ -187,7 +167,7 @@ router.get('/:id/snapshot', requirePrivilege('patient:view'), async (req, res) =
     let visits = { rows: [] };
     try {
       visits = await pool.query(
-        `SELECT v.*, 
+      `SELECT v.*, 
               COALESCE(u.first_name, 'Unknown') as provider_first_name, 
               COALESCE(u.last_name, 'Provider') as provider_last_name
        FROM visits v
@@ -195,8 +175,8 @@ router.get('/:id/snapshot', requirePrivilege('patient:view'), async (req, res) =
        WHERE v.patient_id = $1
        ORDER BY v.visit_date DESC
        LIMIT 3`,
-        [id]
-      );
+      [id]
+    );
     } catch (error) {
       console.warn('Error fetching visits (continuing):', error.message);
     }
@@ -206,10 +186,10 @@ router.get('/:id/snapshot', requirePrivilege('patient:view'), async (req, res) =
     setTimeout(async () => {
       try {
         // Try to load clinical rules if it exists
-        try {
-          const { autoCreateAlerts } = require('../middleware/clinical-rules');
+      try {
+        const { autoCreateAlerts } = require('../middleware/clinical-rules');
           if (autoCreateAlerts && typeof autoCreateAlerts === 'function') {
-            await autoCreateAlerts(id);
+        await autoCreateAlerts(id);
           }
         } catch (requireError) {
           // Module doesn't exist or function not available - that's OK
@@ -225,10 +205,10 @@ router.get('/:id/snapshot', requirePrivilege('patient:view'), async (req, res) =
     let lastVisit = { rows: [] };
     try {
       lastVisit = await pool.query(
-        `SELECT vitals FROM visits WHERE patient_id = $1 AND vitals IS NOT NULL
+      `SELECT vitals FROM visits WHERE patient_id = $1 AND vitals IS NOT NULL
        ORDER BY visit_date DESC LIMIT 1`,
-        [id]
-      );
+      [id]
+    );
     } catch (error) {
       console.warn('Error fetching last vitals (continuing):', error.message);
     }
@@ -268,7 +248,7 @@ router.get('/:id/snapshot', requirePrivilege('patient:view'), async (req, res) =
     console.error('Error code:', error.code);
     console.error('Error detail:', error.detail);
     console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
-    res.status(500).json({
+    res.status(500).json({ 
       error: 'Failed to fetch snapshot',
       message: error.message,
       details: process.env.NODE_ENV === 'development' ? {
@@ -286,7 +266,7 @@ router.get('/:id', requirePrivilege('patient:view'), async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query('SELECT * FROM patients WHERE id = $1', [id]);
-
+    
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Patient not found' });
     }
@@ -312,7 +292,7 @@ router.get('/:id', requirePrivilege('patient:view'), async (req, res) => {
     res.json(decryptedPatient);
   } catch (error) {
     console.error('Error fetching patient:', error);
-
+    
     // Log failed audit
     await logAudit(
       req.user?.id,
@@ -326,8 +306,8 @@ router.get('/:id', requirePrivilege('patient:view'), async (req, res) => {
       req.requestId,
       req.sessionId
     );
-
-    res.status(500).json({
+    
+    res.status(500).json({ 
       error: 'Failed to fetch patient',
       details: process.env.NODE_ENV === 'development' ? {
         message: error.message,
@@ -355,7 +335,7 @@ router.post('/', requirePrivilege('patient:create'), async (req, res) => {
       race,
       ethnicity,
       maritalStatus,
-
+      
       // Contact
       phone,
       phoneSecondary,
@@ -369,7 +349,7 @@ router.post('/', requirePrivilege('patient:create'), async (req, res) => {
       communicationPreference,
       consentToText,
       consentToEmail,
-
+      
       // Address
       addressLine1,
       addressLine2,
@@ -378,12 +358,12 @@ router.post('/', requirePrivilege('patient:create'), async (req, res) => {
       zip,
       country,
       addressType,
-
+      
       // Employment
       employmentStatus,
       occupation,
       employerName,
-
+      
       // Emergency Contact
       emergencyContactName,
       emergencyContactPhone,
@@ -392,7 +372,7 @@ router.post('/', requirePrivilege('patient:create'), async (req, res) => {
       emergencyContact2Name,
       emergencyContact2Phone,
       emergencyContact2Relationship,
-
+      
       // Insurance
       insuranceProvider,
       insuranceId,
@@ -406,7 +386,7 @@ router.post('/', requirePrivilege('patient:create'), async (req, res) => {
       insuranceEffectiveDate,
       insuranceExpiryDate,
       insuranceNotes,
-
+      
       // Pharmacy
       pharmacyName,
       pharmacyAddress,
@@ -414,7 +394,7 @@ router.post('/', requirePrivilege('patient:create'), async (req, res) => {
       pharmacyNpi,
       pharmacyFax,
       pharmacyPreferred,
-
+      
       // Additional
       referralSource,
       smokingStatus,
@@ -423,18 +403,6 @@ router.post('/', requirePrivilege('patient:create'), async (req, res) => {
       notes,
       primaryCareProvider,
     } = req.body;
-
-    // Validate required fields FIRST - ensure they're not empty strings or whitespace
-    const trimmedFirstName = firstName?.trim();
-    const trimmedLastName = lastName?.trim();
-    const trimmedDob = dob?.trim();
-
-    if (!trimmedFirstName || !trimmedLastName || !trimmedDob) {
-      return res.status(400).json({
-        error: 'Missing required fields',
-        details: 'First name, last name, and date of birth are required'
-      });
-    }
 
     // Generate MRN if not provided - 6 digit number
     const finalMRN = mrn || String(Math.floor(100000 + Math.random() * 900000));
@@ -504,56 +472,26 @@ router.post('/', requirePrivilege('patient:create'), async (req, res) => {
       primary_care_provider: primaryCareProvider,
     };
 
-    // Build patient object for encryption - use validated trimmed values
+    // Build patient object for encryption
     const patientData = {
       mrn: finalMRN,
-      first_name: trimmedFirstName,
-      last_name: trimmedLastName,
-      dob: trimmedDob,
+      first_name: firstName,
+      last_name: lastName,
+      dob: dob,
       ...optionalFields
     };
 
     // Encrypt PHI fields before storing
-    let encryptedPatient;
-    try {
-      encryptedPatient = await patientEncryptionService.preparePatientForStorage(patientData);
-    } catch (encryptionError) {
-      console.error('Encryption error (falling back to plaintext):', encryptionError);
-      console.error('Encryption error details:', encryptionError.message, encryptionError.stack);
-      // Fall back to plaintext if encryption fails (for development or if encryption keys are missing)
-      // This allows the system to work even if encryption isn't fully configured
-      if (process.env.NODE_ENV !== 'production' || !process.env.ENCRYPTION_KEY) {
-        console.warn('⚠️  Encryption failed, using plaintext storage (development mode or missing encryption key)');
-        encryptedPatient = patientData;
-      } else {
-        // In production with encryption key set, this is a real error
-        throw new Error('Failed to encrypt patient data: ' + encryptionError.message);
-      }
-    }
-
-    // Ensure encryptedPatient is not null/undefined
-    if (!encryptedPatient || typeof encryptedPatient !== 'object') {
-      console.warn('Encryption service returned invalid data, using original patient data');
-      encryptedPatient = patientData;
-    }
+    const encryptedPatient = await patientEncryptionService.preparePatientForStorage(patientData);
 
     // Build INSERT query with encrypted data
-    // Required fields must always be included - use encrypted values if available and valid, otherwise use original validated values
-    const fields = ['mrn', 'first_name', 'last_name', 'dob'];
-    const values = [
-      encryptedPatient.mrn || finalMRN,
-      (encryptedPatient.first_name && String(encryptedPatient.first_name).trim()) || trimmedFirstName,
-      (encryptedPatient.last_name && String(encryptedPatient.last_name).trim()) || trimmedLastName,
-      (encryptedPatient.dob && String(encryptedPatient.dob).trim()) || trimmedDob
-    ];
-    let paramIndex = 5;
+    const fields = ['mrn'];
+    const values = [encryptedPatient.mrn];
+    let paramIndex = 2;
 
-    // Add all other fields (encrypted PHI fields will have encrypted values)
+    // Add all fields (encrypted PHI fields will have encrypted values)
     for (const [dbField, value] of Object.entries(encryptedPatient)) {
-      // Skip fields we've already added
-      if (['mrn', 'first_name', 'last_name', 'dob', 'encryption_metadata'].includes(dbField)) {
-        continue;
-      }
+      if (dbField === 'mrn') continue; // Already added
       if (value !== undefined && value !== null && value !== '') {
         fields.push(dbField);
         values.push(value);
@@ -567,211 +505,27 @@ router.post('/', requirePrivilege('patient:create'), async (req, res) => {
       values.push(JSON.stringify(encryptedPatient.encryption_metadata));
     }
 
-    // Verify that all fields exist in the database before inserting
-    // This prevents errors when trying to insert into non-existent columns
-    let validFields = [];
-    let validValues = [];
-
-    try {
-      // Get list of actual columns in the patients table
-      const columnCheck = await pool.query(`
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_name = 'patients' 
-        AND table_schema = 'public'
-      `);
-      const existingColumns = new Set(columnCheck.rows.map(row => row.column_name));
-
-      // Only include fields that exist in the database
-      for (let i = 0; i < fields.length; i++) {
-        const field = fields[i];
-        const value = values[i];
-
-        // Always include required fields (mrn, first_name, last_name, dob)
-        if (['mrn', 'first_name', 'last_name', 'dob'].includes(field)) {
-          validFields.push(field);
-          validValues.push(value);
-        } else if (existingColumns.has(field)) {
-          // Only add if column exists
-          validFields.push(field);
-          validValues.push(value);
-        } else {
-          // Log skipped fields in development
-          if (process.env.NODE_ENV === 'development') {
-            console.log(`Skipping field ${field} - column does not exist in patients table`);
-          }
-        }
-      }
-    } catch (columnCheckError) {
-      console.error('Error checking database columns, using all fields:', columnCheckError);
-      // If we can't check columns, use all fields (might fail, but at least we tried)
-      validFields = fields;
-      validValues = values;
-    }
-
-    const placeholders = validValues.map((_, i) => `$${i + 1}`).join(', ');
+    const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
 
     const result = await pool.query(
-      `INSERT INTO patients (${validFields.join(', ')})
+      `INSERT INTO patients (${fields.join(', ')})
        VALUES (${placeholders})
        RETURNING *`,
-      validValues
+      values
     );
 
     // Decrypt for response
-    let decryptedPatient;
-    try {
-      decryptedPatient = await patientEncryptionService.decryptPatientPHI(result.rows[0]);
-    } catch (decryptionError) {
-      console.error('Decryption error (using encrypted data):', decryptionError);
-      // If decryption fails, return the encrypted data (better than failing completely)
-      decryptedPatient = result.rows[0];
-    }
+    const decryptedPatient = await patientEncryptionService.decryptPatientPHI(result.rows[0]);
 
-    // Log audit (don't fail if audit logging fails)
-    try {
-      await logAudit(req.user.id, 'create_patient', 'patient', result.rows[0].id, {}, req.ip);
-    } catch (auditError) {
-      console.warn('Failed to log audit for patient creation:', auditError.message);
-    }
+    await logAudit(req.user.id, 'create_patient', 'patient', result.rows[0].id, {}, req.ip);
 
     res.status(201).json(decryptedPatient);
   } catch (error) {
     console.error('Error creating patient:', error);
-    console.error('Error stack:', error.stack);
-    console.error('Error code:', error.code);
-    console.error('Error detail:', error.detail);
-    console.error('Error constraint:', error.constraint);
-    console.error('Error table:', error.table);
-    console.error('Error column:', error.column);
-    console.error('Request body:', JSON.stringify(req.body, null, 2));
-
-    // Handle specific database errors
     if (error.code === '23505') {
       return res.status(400).json({ error: 'MRN already exists' });
     }
-
-    if (error.code === '42703') {
-      // Column does not exist
-      return res.status(500).json({
-        error: 'Database schema mismatch',
-        message: `Column '${error.column}' does not exist in the patients table. Please run database migrations.`,
-        details: process.env.NODE_ENV === 'development' ? {
-          column: error.column,
-          table: error.table,
-          hint: error.hint
-        } : undefined
-      });
-    }
-
-    if (error.code === '23502') {
-      // Not null constraint violation
-      return res.status(400).json({
-        error: 'Missing required field',
-        message: `Required field '${error.column}' is missing`,
-        details: process.env.NODE_ENV === 'development' ? {
-          column: error.column,
-          table: error.table
-        } : undefined
-      });
-    }
-
-    // Provide more detailed error information in development
-    const errorResponse = {
-      error: 'Failed to create patient',
-      message: error.message
-    };
-
-    // Show details in development OR if not in production
-    const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
-    if (isDevelopment) {
-      errorResponse.details = {
-        code: error.code,
-        detail: error.detail,
-        constraint: error.constraint,
-        table: error.table,
-        column: error.column,
-        hint: error.hint,
-        stack: error.stack
-      };
-    }
-
-    res.status(500).json(errorResponse);
-  }
-});
-
-// Delete patient
-router.delete('/:id', requirePrivilege('patient:delete'), async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Check if patient exists
-    const existingResult = await pool.query('SELECT id, mrn, first_name, last_name FROM patients WHERE id = $1', [id]);
-    if (existingResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Patient not found' });
-    }
-
-    const patient = existingResult.rows[0];
-
-    // Delete patient (cascade will handle related records)
-    await pool.query('DELETE FROM patients WHERE id = $1', [id]);
-
-    // Log audit
-    try {
-      await logAudit(
-        req.user.id,
-        'delete_patient',
-        'patient',
-        id,
-        {
-          mrn: patient.mrn,
-          name: `${patient.first_name} ${patient.last_name}`.trim()
-        },
-        req.ip,
-        req.get('user-agent'),
-        'success',
-        req.requestId,
-        req.sessionId
-      );
-    } catch (auditError) {
-      console.warn('Failed to log audit for patient deletion:', auditError.message);
-    }
-
-    res.json({
-      message: 'Patient deleted successfully',
-      deletedPatient: {
-        id: patient.id,
-        mrn: patient.mrn,
-        name: `${patient.first_name} ${patient.last_name}`.trim()
-      }
-    });
-  } catch (error) {
-    console.error('Error deleting patient:', error);
-    console.error('Error stack:', error.stack);
-    console.error('Error code:', error.code);
-
-    // Log failed audit
-    try {
-      await logAudit(
-        req.user?.id,
-        'delete_patient',
-        'patient',
-        req.params.id,
-        { error: error.message },
-        req.ip,
-        req.get('user-agent'),
-        'failure',
-        req.requestId,
-        req.sessionId
-      );
-    } catch (auditError) {
-      console.warn('Failed to log audit for patient deletion error:', auditError.message);
-    }
-
-    res.status(500).json({
-      error: 'Failed to delete patient',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    res.status(500).json({ error: 'Failed to create patient', details: error.message });
   }
 });
 
@@ -873,7 +627,7 @@ router.put('/:id', requirePrivilege('patient:edit'), async (req, res) => {
     // Log audit (non-blocking, don't fail if it errors)
     if (req.user && req.user.id) {
       try {
-        await logAudit(req.user.id, 'update_patient', 'patient', id, { fields: Object.keys(updates) }, req.ip);
+    await logAudit(req.user.id, 'update_patient', 'patient', id, { fields: Object.keys(updates) }, req.ip);
       } catch (auditError) {
         console.warn('Failed to log audit for patient update:', auditError);
       }
@@ -933,7 +687,7 @@ router.post('/:id/medications', requireRole('clinician'), async (req, res) => {
       [id, medicationName, dosage, frequency, route, startDate, req.user.id]
     );
 
-    await logAudit(req.user.id, 'add_medication', 'medication', result.rows[0].id, {
+    await logAudit(req.user.id, 'add_medication', 'medication', result.rows[0].id, { 
       medication: medicationName,
       warnings: warnings.length > 0 ? warnings : null
     }, req.ip);
@@ -1090,31 +844,27 @@ router.put('/family-history/:historyId', requireRole('clinician'), async (req, r
 
     if (condition !== undefined) {
       updates.push(`condition = $${paramIndex}`);
-      values.push(condition || null);
+      values.push(condition);
       paramIndex++;
     }
     if (relationship !== undefined) {
       updates.push(`relationship = $${paramIndex}`);
-      values.push(relationship || null);
+      values.push(relationship);
       paramIndex++;
     }
     if (ageAtDiagnosis !== undefined) {
       updates.push(`age_at_diagnosis = $${paramIndex}`);
-      // Convert to integer if it's a string, or null if empty
-      const ageDiag = ageAtDiagnosis === '' || ageAtDiagnosis === null ? null : parseInt(ageAtDiagnosis);
-      values.push(ageDiag);
+      values.push(ageAtDiagnosis);
       paramIndex++;
     }
     if (ageAtDeath !== undefined) {
       updates.push(`age_at_death = $${paramIndex}`);
-      // Convert to integer if it's a string, or null if empty
-      const ageDeath = ageAtDeath === '' || ageAtDeath === null ? null : parseInt(ageAtDeath);
-      values.push(ageDeath);
+      values.push(ageAtDeath);
       paramIndex++;
     }
     if (notes !== undefined) {
       updates.push(`notes = $${paramIndex}`);
-      values.push(notes || null);
+      values.push(notes);
       paramIndex++;
     }
 
@@ -1138,11 +888,7 @@ router.put('/family-history/:historyId', requireRole('clinician'), async (req, r
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error updating family history:', error);
-    console.error('Error stack:', error.stack);
-    res.status(500).json({
-      error: 'Failed to update family history',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    res.status(500).json({ error: 'Failed to update family history' });
   }
 });
 
@@ -1188,17 +934,6 @@ router.post('/:id/social-history', requireRole('clinician'), async (req, res) =>
       drugUse, exerciseFrequency, diet, occupation, livingSituation, notes
     } = req.body;
 
-    // Validate patient exists
-    const patientCheck = await pool.query('SELECT id FROM patients WHERE id = $1', [id]);
-    if (patientCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Patient not found' });
-    }
-
-    // Normalize values - convert empty strings to null, handle numeric types
-    const normalizedPackYears = smokingPackYears === '' || smokingPackYears === null || smokingPackYears === undefined
-      ? null
-      : (typeof smokingPackYears === 'string' ? parseFloat(smokingPackYears) : smokingPackYears);
-
     // Check if social history exists
     const existing = await pool.query(
       'SELECT id FROM social_history WHERE patient_id = $1',
@@ -1214,19 +949,8 @@ router.post('/:id/social-history', requireRole('clinician'), async (req, res) =>
           drug_use = $5, exercise_frequency = $6, diet = $7, occupation = $8,
           living_situation = $9, notes = $10, updated_at = CURRENT_TIMESTAMP
          WHERE patient_id = $11 RETURNING *`,
-        [
-          smokingStatus || null,
-          normalizedPackYears,
-          alcoholUse || null,
-          alcoholQuantity || null,
-          drugUse || null,
-          exerciseFrequency || null,
-          diet || null,
-          occupation || null,
-          livingSituation || null,
-          notes || null,
-          id
-        ]
+        [smokingStatus, smokingPackYears, alcoholUse, alcoholQuantity, drugUse,
+         exerciseFrequency, diet, occupation, livingSituation, notes, id]
       );
       await logAudit(req.user.id, 'update_social_history', 'social_history', existing.rows[0].id, {}, req.ip);
     } else {
@@ -1236,19 +960,8 @@ router.post('/:id/social-history', requireRole('clinician'), async (req, res) =>
           patient_id, smoking_status, smoking_pack_years, alcohol_use, alcohol_quantity,
           drug_use, exercise_frequency, diet, occupation, living_situation, notes
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-        [
-          id,
-          smokingStatus || null,
-          normalizedPackYears,
-          alcoholUse || null,
-          alcoholQuantity || null,
-          drugUse || null,
-          exerciseFrequency || null,
-          diet || null,
-          occupation || null,
-          livingSituation || null,
-          notes || null
-        ]
+        [id, smokingStatus, smokingPackYears, alcoholUse, alcoholQuantity, drugUse,
+         exerciseFrequency, diet, occupation, livingSituation, notes]
       );
       await logAudit(req.user.id, 'add_social_history', 'social_history', result.rows[0].id, {}, req.ip);
     }
@@ -1256,17 +969,7 @@ router.post('/:id/social-history', requireRole('clinician'), async (req, res) =>
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Error saving social history:', error);
-    console.error('Error details:', {
-      message: error.message,
-      code: error.code,
-      detail: error.detail,
-      constraint: error.constraint,
-      stack: error.stack
-    });
-    res.status(500).json({
-      error: 'Failed to save social history',
-      message: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    res.status(500).json({ error: 'Failed to save social history' });
   }
 });
 
@@ -1484,7 +1187,7 @@ router.delete('/medications/:medicationId', requireRole('clinician'), async (req
 router.post('/:id/photo', requireRole('clinician', 'front_desk', 'admin'), upload.single('photo'), async (req, res) => {
   try {
     const { id } = req.params;
-
+    
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
@@ -1522,25 +1225,13 @@ router.post('/:id/photo/base64', requireRole('clinician', 'front_desk', 'admin')
     }
 
     // Convert base64 to buffer
-    // Robustly strip the data:image/...;base64, prefix
-    const base64Data = photoData.includes(',') ? photoData.split(',')[1] : photoData;
+    const base64Data = photoData.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
-
-    // Detect file extension from buffer magic bytes
-    let extension = 'jpg'; // Default
-    if (buffer.length > 4) {
-      if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
-        extension = 'jpg';
-      } else if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
-        extension = 'png';
-      } else if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x38) {
-        extension = 'gif';
-      } else if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
-        buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) {
-        extension = 'webp';
-      }
-    }
-
+    
+    // Determine file extension from data URL
+    const match = photoData.match(/^data:image\/(\w+);base64,/);
+    const extension = match ? match[1] : 'jpg';
+    
     // Generate filename
     const filename = `patient-${id}-${Date.now()}-${Math.round(Math.random() * 1E9)}.${extension}`;
     // Ensure uploadDir exists and is correct
@@ -1549,11 +1240,11 @@ router.post('/:id/photo/base64', requireRole('clinician', 'front_desk', 'admin')
       fs.mkdirSync(patientPhotosDir, { recursive: true });
     }
     const filepath = path.join(patientPhotosDir, filename);
-
+    
     // Save file
     fs.writeFileSync(filepath, buffer);
     console.log('Photo saved to:', filepath);
-
+    
     // Construct photo URL
     const photoUrl = `/uploads/patient-photos/${filename}`;
 

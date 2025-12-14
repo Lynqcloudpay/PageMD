@@ -4,16 +4,15 @@ import {
   Calendar, Users, FileText, Settings, LogOut, Search, X, Activity, 
   Clock, History, User, ClipboardList, BarChart3, 
   MessageSquare, Video, Moon, Sun, Menu, ChevronRight, Bell,
-  Zap, Command, DollarSign, Shield, AlertCircle, KeyRound, Eye, EyeOff
+  Zap, Command, DollarSign, Shield, AlertCircle
 } from 'lucide-react';
 import { usePatient } from '../context/PatientContext';
 import { useAuth } from '../context/AuthContext';
 import { usePatientTabs } from '../context/PatientTabsContext';
 import { useTasks } from '../context/TaskContext';
-import { patientsAPI, messagesAPI, visitsAPI, followupsAPI, usersAPI } from '../services/api';
+import { patientsAPI, messagesAPI, visitsAPI, followupsAPI } from '../services/api';
 import PatientTabs from './PatientTabs';
 import MobileMenu from './MobileMenu';
-import Modal from './ui/Modal';
 
 const Layout = ({ children }) => {
     const location = useLocation();
@@ -30,8 +29,6 @@ const Layout = ({ children }) => {
     const [messagesCount, setMessagesCount] = useState(0);
     const [pendingNotesCount, setPendingNotesCount] = useState(0);
     const [pendingCancellationsCount, setPendingCancellationsCount] = useState(0);
-    const [showUserMenu, setShowUserMenu] = useState(false);
-    const [showPasswordModal, setShowPasswordModal] = useState(false);
 
     const isActive = (path) => {
         return location.pathname.startsWith(path);
@@ -219,19 +216,6 @@ const Layout = ({ children }) => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    // Close user menu when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (showUserMenu && !event.target.closest('.user-menu-container')) {
-                setShowUserMenu(false);
-            }
-        };
-        if (showUserMenu) {
-            document.addEventListener('click', handleClickOutside);
-            return () => document.removeEventListener('click', handleClickOutside);
-        }
-    }, [showUserMenu]);
-
     return (
         <div className="flex min-h-screen bg-white transition-colors">
 
@@ -415,10 +399,9 @@ const Layout = ({ children }) => {
                 {/* Bottom Section - Futuristic User Panel */}
                 <div className="mt-auto px-3 py-2.5 border-t border-deep-gray/10 bg-gradient-to-b from-white to-soft-gray/20">
                     {user && (
-                        <div className="flex items-center gap-2 relative user-menu-container">
+                        <div className="flex items-center gap-2">
                             {/* User Button */}
                             <button
-                                onClick={() => setShowUserMenu(!showUserMenu)}
                                 className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all flex-1 ${sidebarCollapsed ? 'justify-center' : ''} ${
                                     sidebarCollapsed 
                                         ? 'hover:bg-soft-gray/80' 
@@ -438,24 +421,6 @@ const Layout = ({ children }) => {
                                     </div>
                                 )}
                             </button>
-                            
-                            {/* User Menu Dropdown */}
-                            {showUserMenu && !sidebarCollapsed && (
-                                <div className="absolute bottom-full left-0 mb-2 w-56 bg-white rounded-lg shadow-xl border border-deep-gray/10 z-50">
-                                    <div className="py-1">
-                                        <button
-                                            onClick={() => {
-                                                setShowPasswordModal(true);
-                                                setShowUserMenu(false);
-                                            }}
-                                            className="w-full px-4 py-2 text-left text-sm text-deep-gray hover:bg-soft-gray flex items-center gap-2"
-                                        >
-                                            <KeyRound className="w-4 h-4" />
-                                            <span>Change Password</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
                             {/* Sign Out Button */}
                             <button
                                 onClick={() => {
@@ -566,191 +531,7 @@ const Layout = ({ children }) => {
 
             {/* Mobile Menu */}
             <MobileMenu />
-
-            {/* Change Password Modal */}
-            {showPasswordModal && user && (
-                <ChangePasswordModal
-                    isOpen={showPasswordModal}
-                    onClose={() => setShowPasswordModal(false)}
-                    userId={user.id}
-                    userName={`${user.firstName} ${user.lastName}`}
-                />
-            )}
         </div>
-    );
-};
-
-// Change Password Modal Component
-const ChangePasswordModal = ({ isOpen, onClose, userId, userName }) => {
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [errors, setErrors] = useState({});
-    const [loading, setLoading] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setErrors({});
-
-        // Validation
-        if (!password) {
-            setErrors({ password: 'Password is required' });
-            return;
-        }
-
-        if (password.length < 12) {
-            setErrors({ password: 'Password must be at least 12 characters' });
-            return;
-        }
-
-        if (password !== confirmPassword) {
-            setErrors({ confirmPassword: 'Passwords do not match' });
-            return;
-        }
-
-        // Check password strength
-        const hasUpperCase = /[A-Z]/.test(password);
-        const hasLowerCase = /[a-z]/.test(password);
-        const hasNumber = /[0-9]/.test(password);
-        const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-
-        if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
-            setErrors({ 
-                password: 'Password must contain uppercase, lowercase, number, and special character' 
-            });
-            return;
-        }
-
-        setLoading(true);
-
-        try {
-            await usersAPI.updatePassword(userId, password);
-            alert('Password changed successfully');
-            setPassword('');
-            setConfirmPassword('');
-            onClose();
-        } catch (error) {
-            console.error('Error changing password:', error);
-            const errorData = error.response?.data;
-            if (errorData?.error === 'Password validation failed' && errorData?.details) {
-                setErrors({ password: errorData.details.join('. ') });
-            } else {
-                setErrors({ general: errorData?.error || 'Failed to change password' });
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleClose = () => {
-        if (password || confirmPassword) {
-            if (!confirm('You have unsaved changes. Are you sure you want to close?')) {
-                return;
-            }
-        }
-        setPassword('');
-        setConfirmPassword('');
-        setErrors({});
-        onClose();
-    };
-
-    return (
-        <Modal 
-            isOpen={isOpen} 
-            onClose={handleClose} 
-            preventOutsideClick={!!(password || confirmPassword)}
-            title={`Change Password - ${userName}`}
-            size="md"
-        >
-            <form onSubmit={handleSubmit} className="space-y-4">
-                {errors.general && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800">
-                        <strong>Error:</strong> {errors.general}
-                    </div>
-                )}
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p className="text-xs text-blue-800">
-                        <strong>Password Requirements:</strong> Minimum 12 characters, must include uppercase, lowercase, number, and special character.
-                    </p>
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                        New Password <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                        <input
-                            type={showPassword ? 'text' : 'password'}
-                            required
-                            minLength={12}
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-primary-500 ${
-                                errors.password ? 'border-red-300' : 'border-gray-300'
-                            }`}
-                            placeholder="Enter new password"
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                        >
-                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                    </div>
-                    {errors.password && <p className="text-xs text-red-600 mt-1">{errors.password}</p>}
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Confirm Password <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                        <input
-                            type={showConfirmPassword ? 'text' : 'password'}
-                            required
-                            minLength={12}
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-primary-500 ${
-                                errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
-                            }`}
-                            placeholder="Confirm new password"
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                        >
-                            {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                    </div>
-                    {errors.confirmPassword && <p className="text-xs text-red-600 mt-1">{errors.confirmPassword}</p>}
-                </div>
-
-                <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
-                    <button
-                        type="button"
-                        onClick={handleClose}
-                        className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg border border-gray-300"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="px-4 py-2 text-white rounded-lg disabled:opacity-50 transition-all duration-200 hover:shadow-md"
-                        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                        onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
-                        onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
-                    >
-                        {loading ? 'Changing Password...' : 'Change Password'}
-                    </button>
-                </div>
-            </form>
-        </Modal>
     );
 };
 

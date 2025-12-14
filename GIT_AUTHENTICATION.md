@@ -87,19 +87,3 @@ If you get authentication prompt, use your Personal Access Token.
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

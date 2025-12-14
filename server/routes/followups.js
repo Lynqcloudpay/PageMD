@@ -9,8 +9,7 @@ router.use(authenticate);
 router.get('/', async (req, res) => {
   try {
     const { status, startDate, endDate } = req.query;
-
-    // Use only columns that exist in the production database
+    
     let query = `
       SELECT 
         cf.*,
@@ -22,6 +21,9 @@ router.get('/', async (req, res) => {
         p.first_name as patient_first_name,
         p.last_name as patient_last_name,
         p.phone as patient_phone,
+        p.phone_cell as patient_phone_cell,
+        p.emergency_contact_phone,
+        p.emergency_contact_name,
         u_provider.first_name as provider_first_name,
         u_provider.last_name as provider_last_name,
         u_addressed.first_name as addressed_by_first_name,
@@ -36,94 +38,55 @@ router.get('/', async (req, res) => {
       LEFT JOIN users u_dismissed ON cf.dismissed_by = u_dismissed.id
       WHERE 1=1
     `;
-
+    
     const params = [];
     let paramCount = 0;
-
+    
     if (status) {
       paramCount++;
       query += ` AND cf.status = $${paramCount}`;
       params.push(status);
     }
-
-    // Filter by appointment date if provided
-    // Note: We filter by appointment_date, not follow-up creation date
-    // This means if an appointment was cancelled months ago but the follow-up was just created,
-    // it will only show if the appointment_date is within the range
+    
     if (startDate) {
       paramCount++;
       query += ` AND a.appointment_date >= $${paramCount}`;
       params.push(startDate);
     }
-
+    
     if (endDate) {
       paramCount++;
       query += ` AND a.appointment_date <= $${paramCount}`;
       params.push(endDate);
     }
-
-    console.log('Follow-ups query filter:', { startDate, endDate, status, paramCount: params.length });
-
+    
     query += ` ORDER BY cf.created_at DESC`;
-
-    console.log('Executing follow-ups query with params:', { status, startDate, endDate });
-
+    
     const result = await pool.query(query, params);
-    console.log('Query returned', result.rows.length, 'follow-ups');
-
-    if (result.rows.length === 0 && (startDate || endDate)) {
-      // Debug: Check if there are any follow-ups without date filter
-      const debugQuery = query.replace(/AND a\.appointment_date >= \$\d+/g, '').replace(/AND a\.appointment_date <= \$\d+/g, '');
-      const debugParams = params.filter((p, i) => {
-        const paramIndex = i + 1;
-        return !query.includes(`a.appointment_date >= $${paramIndex}`) && !query.includes(`a.appointment_date <= $${paramIndex}`);
-      });
-      const debugResult = await pool.query(debugQuery, debugParams);
-      console.log('Debug: Found', debugResult.rows.length, 'follow-ups without date filter');
-    }
-
+    
     // Get notes for each follow-up
     const followupsWithNotes = await Promise.all(
       result.rows.map(async (followup) => {
-        try {
-          const notesResult = await pool.query(
-            `SELECT * FROM cancellation_followup_notes 
-             WHERE followup_id = $1 
-             ORDER BY created_at DESC`,
-            [followup.id]
-          );
-          return {
-            ...followup,
-            patientName: `${followup.patient_first_name || ''} ${followup.patient_last_name || ''}`.trim(),
-            providerName: followup.provider_first_name ? `${followup.provider_first_name} ${followup.provider_last_name}` : null,
-            patientPhone: followup.patient_phone || null,
-            notes: notesResult.rows
-          };
-        } catch (noteError) {
-          console.error('Error fetching notes for followup:', followup.id, noteError);
-          return {
-            ...followup,
-            patientName: `${followup.patient_first_name || ''} ${followup.patient_last_name || ''}`.trim(),
-            providerName: followup.provider_first_name ? `${followup.provider_first_name} ${followup.provider_last_name}` : null,
-            patientPhone: followup.patient_phone || null,
-            notes: []
-          };
-        }
+        const notesResult = await pool.query(
+          `SELECT * FROM cancellation_followup_notes 
+           WHERE followup_id = $1 
+           ORDER BY created_at DESC`,
+          [followup.id]
+        );
+        return {
+          ...followup,
+          patientName: `${followup.patient_first_name} ${followup.patient_last_name}`,
+          providerName: followup.provider_first_name ? `${followup.provider_first_name} ${followup.provider_last_name}` : null,
+          patientPhone: followup.patient_phone || followup.patient_phone_cell,
+          notes: notesResult.rows
+        };
       })
     );
-
+    
     res.json(followupsWithNotes);
   } catch (error) {
     console.error('Error fetching follow-ups:', error);
-    console.error('Error message:', error.message);
-    console.error('Error code:', error.code);
-    console.error('Error stack:', error.stack);
-    res.status(500).json({
-      error: 'Failed to fetch follow-ups',
-      message: error.message,
-      code: error.code,
-      details: error.stack
-    });
+    res.status(500).json({ error: 'Failed to fetch follow-ups' });
   }
 });
 
@@ -131,17 +94,17 @@ router.get('/', async (req, res) => {
 router.post('/ensure', async (req, res) => {
   try {
     const { appointmentId, patientId } = req.body;
-
+    
     if (!appointmentId || !patientId) {
       return res.status(400).json({ error: 'appointmentId and patientId are required' });
     }
-
+    
     // Check if follow-up already exists
     const existing = await pool.query(
       'SELECT * FROM cancellation_followups WHERE appointment_id = $1',
       [appointmentId]
     );
-
+    
     if (existing.rows.length > 0) {
       // Get notes
       const notesResult = await pool.query(
@@ -150,7 +113,7 @@ router.post('/ensure', async (req, res) => {
       );
       return res.json({ ...existing.rows[0], notes: notesResult.rows });
     }
-
+    
     // Create new follow-up
     const result = await pool.query(
       `INSERT INTO cancellation_followups (appointment_id, patient_id, status)
@@ -158,10 +121,10 @@ router.post('/ensure', async (req, res) => {
        RETURNING *`,
       [appointmentId, patientId]
     );
-
-    await logAudit(req.user.id, 'followup_created', 'cancellation_followup', result.rows[0].id,
+    
+    await logAudit(req.user.id, 'followup_created', 'cancellation_followup', result.rows[0].id, 
       { appointmentId, patientId }, req.ip);
-
+    
     res.status(201).json({ ...result.rows[0], notes: [] });
   } catch (error) {
     console.error('Error creating follow-up:', error);
@@ -174,29 +137,29 @@ router.post('/:id/notes', async (req, res) => {
   try {
     const { id } = req.params;
     const { note, noteType } = req.body;
-
+    
     if (!note) {
       return res.status(400).json({ error: 'Note is required' });
     }
-
+    
     const userName = `${req.user.firstName || req.user.first_name || ''} ${req.user.lastName || req.user.last_name || ''}`.trim();
-
+    
     const result = await pool.query(
       `INSERT INTO cancellation_followup_notes (followup_id, note, note_type, created_by, created_by_name)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
       [id, note, noteType || 'general', req.user.id, userName]
     );
-
+    
     // Update the follow-up's updated_at timestamp
     await pool.query(
       'UPDATE cancellation_followups SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
       [id]
     );
-
-    await logAudit(req.user.id, 'followup_note_added', 'cancellation_followup_note', result.rows[0].id,
+    
+    await logAudit(req.user.id, 'followup_note_added', 'cancellation_followup_note', result.rows[0].id, 
       { followupId: id, noteType }, req.ip);
-
+    
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Error adding note:', error);
@@ -209,9 +172,9 @@ router.put('/:id/address', async (req, res) => {
   try {
     const { id } = req.params;
     const { note } = req.body;
-
+    
     const userName = `${req.user.firstName || req.user.first_name || ''} ${req.user.lastName || req.user.last_name || ''}`.trim();
-
+    
     // Update follow-up status
     const result = await pool.query(
       `UPDATE cancellation_followups 
@@ -223,11 +186,11 @@ router.put('/:id/address', async (req, res) => {
        RETURNING *`,
       [req.user.id, id]
     );
-
+    
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Follow-up not found' });
     }
-
+    
     // Add a note if provided
     if (note) {
       await pool.query(
@@ -236,9 +199,9 @@ router.put('/:id/address', async (req, res) => {
         [id, note, req.user.id, userName]
       );
     }
-
+    
     await logAudit(req.user.id, 'followup_addressed', 'cancellation_followup', id, { note }, req.ip);
-
+    
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error addressing follow-up:', error);
@@ -251,13 +214,13 @@ router.put('/:id/dismiss', async (req, res) => {
   try {
     const { id } = req.params;
     const { reason, note } = req.body;
-
+    
     if (!reason) {
       return res.status(400).json({ error: 'Dismiss reason is required' });
     }
-
+    
     const userName = `${req.user.firstName || req.user.first_name || ''} ${req.user.lastName || req.user.last_name || ''}`.trim();
-
+    
     // Update follow-up status
     const result = await pool.query(
       `UPDATE cancellation_followups 
@@ -270,11 +233,11 @@ router.put('/:id/dismiss', async (req, res) => {
        RETURNING *`,
       [req.user.id, reason, id]
     );
-
+    
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Follow-up not found' });
     }
-
+    
     // Add a note
     const noteText = note || `Dismissed: ${reason}`;
     await pool.query(
@@ -282,9 +245,9 @@ router.put('/:id/dismiss', async (req, res) => {
        VALUES ($1, $2, 'dismissed', $3, $4)`,
       [id, noteText, req.user.id, userName]
     );
-
+    
     await logAudit(req.user.id, 'followup_dismissed', 'cancellation_followup', id, { reason, note }, req.ip);
-
+    
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error dismissing follow-up:', error);
@@ -295,44 +258,15 @@ router.put('/:id/dismiss', async (req, res) => {
 // Get stats for dashboard
 router.get('/stats', async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
-
-    console.log('Stats query params:', { startDate, endDate });
-
-    let query = `
+    const result = await pool.query(`
       SELECT 
-        COUNT(*) FILTER (WHERE cf.status = 'pending') as pending_count,
-        COUNT(*) FILTER (WHERE cf.status = 'addressed') as addressed_count,
-        COUNT(*) FILTER (WHERE cf.status = 'dismissed') as dismissed_count,
+        COUNT(*) FILTER (WHERE status = 'pending') as pending_count,
+        COUNT(*) FILTER (WHERE status = 'addressed') as addressed_count,
+        COUNT(*) FILTER (WHERE status = 'dismissed') as dismissed_count,
         COUNT(*) as total_count
-      FROM cancellation_followups cf
-      JOIN appointments a ON cf.appointment_id = a.id
-      WHERE 1=1
-    `;
-
-    const params = [];
-    let paramCount = 0;
-
-    // Apply same date filter as getAll endpoint for consistency
-    if (startDate) {
-      paramCount++;
-      query += ` AND a.appointment_date >= $${paramCount}`;
-      params.push(startDate);
-    }
-
-    if (endDate) {
-      paramCount++;
-      query += ` AND a.appointment_date <= $${paramCount}`;
-      params.push(endDate);
-    }
-
-    console.log('Stats query:', query);
-    console.log('Stats params:', params);
-
-    const result = await pool.query(query, params);
-
-    console.log('Stats result:', result.rows[0]);
-
+      FROM cancellation_followups
+    `);
+    
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error fetching stats:', error);
@@ -341,22 +275,6 @@ router.get('/stats', async (req, res) => {
 });
 
 module.exports = router;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -182,8 +182,11 @@ function validatePrescriptionSig(sig) {
 
   const errors = [];
 
-  // Note: dose is no longer required as it comes from the medication strength
   // Check required fields
+  if (!sig.dose || !sig.dose.trim()) {
+    errors.push('Dose is required');
+  }
+
   if (!sig.frequency || !sig.frequency.trim()) {
     errors.push('Frequency is required');
   }
@@ -192,16 +195,9 @@ function validatePrescriptionSig(sig) {
     errors.push('Route is required');
   }
 
-  // Note: Dose validation removed - dose comes from medication strength
-  // Duration validation (if provided)
-  if (sig.durationValue && sig.durationUnit) {
-    const durationValue = parseFloat(sig.durationValue);
-    if (isNaN(durationValue) || durationValue <= 0) {
-      errors.push('Duration value must be a positive number');
-    }
-    if (!['days', 'weeks', 'months'].includes(sig.durationUnit)) {
-      errors.push('Duration unit must be days, weeks, or months');
-    }
+  // Validate dose format (number + unit)
+  if (sig.dose && !/^\d+(\.\d+)?\s*(MG|MCG|G|ML|IU|MEQ|TAB|CAP|PUFF|DROP|SPRAY|UNIT)\b/i.test(sig.dose)) {
+    errors.push('Dose format is invalid. Use format like "10 MG" or "1 TAB"');
   }
 
   if (errors.length > 0) {
@@ -318,9 +314,6 @@ module.exports = {
   formatNPI,
   formatDEA
 };
-
-
-
 
 
 

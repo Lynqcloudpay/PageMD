@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
     DollarSign, Search, Filter, Download, Upload, Plus, FileText, 
     CheckCircle2, XCircle, Clock, AlertCircle, Edit, Trash2, Eye,
@@ -12,50 +12,9 @@ import CodeSearchModal from '../components/CodeSearchModal';
 import { usePrivileges } from '../hooks/usePrivileges';
 // Automatic code extraction removed - codes must be added manually
 
-// Helper functions
-const safeJson = (value, fallback = []) => {
-    if (!value) return fallback;
-    if (Array.isArray(value)) return value;
-    try {
-        const parsed = JSON.parse(value);
-        return Array.isArray(parsed) ? parsed : fallback;
-    } catch {
-        return fallback;
-    }
-};
-
-const toCents = (v) => Math.round((Number(v) || 0) * 100);
-const fromCents = (c) => (Number(c) || 0) / 100;
-const fmtMoney = (cents) => `$${fromCents(cents).toFixed(2)}`;
-
-const getStartDate = (range) => {
-    if (range === 'all') return null;
-
-    const now = new Date();
-
-    if (range === 'today') {
-        const d = new Date(now);
-        d.setHours(0, 0, 0, 0);
-        return d;
-    }
-
-    if (range === 'week') {
-        const d = new Date(now);
-        d.setDate(d.getDate() - 7);
-        return d;
-    }
-
-    if (range === 'month') {
-        const d = new Date(now);
-        d.setDate(d.getDate() - 30);
-        return d;
-    }
-
-    return null;
-};
-
 const Billing = () => {
     const [claims, setClaims] = useState([]);
+    const [filteredClaims, setFilteredClaims] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedClaim, setSelectedClaim] = useState(null);
     const [showClaimModal, setShowClaimModal] = useState(false);
@@ -66,11 +25,23 @@ const Billing = () => {
         dateRange: 'all',
         search: ''
     });
-    const { hasPrivilege } = usePrivileges();
+    const [statistics, setStatistics] = useState({
+        total: 0,
+        pending: 0,
+        submitted: 0,
+        paid: 0,
+        denied: 0,
+        totalAmount: 0,
+        paidAmount: 0
+    });
 
     useEffect(() => {
         fetchAllClaims();
     }, []);
+
+    useEffect(() => {
+        applyFilters();
+    }, [claims, filters]);
 
     const fetchAllClaims = async () => {
         setLoading(true);
@@ -85,26 +56,41 @@ const Billing = () => {
         }
     };
 
-    // Compute filtered claims using useMemo (deterministic, no state races)
-    const filteredClaims = useMemo(() => {
+    const applyFilters = () => {
         let filtered = [...claims];
 
         // Status filter
         if (filters.status !== 'all') {
-            filtered = filtered.filter(c => (c.status || 'pending') === filters.status);
+            filtered = filtered.filter(c => c.status === filters.status);
         }
 
-        // Date range filter (fixed: no mutation of now)
-        const startDate = getStartDate(filters.dateRange);
-        if (startDate) {
-            filtered = filtered.filter(c => {
-                const claimDate = new Date(c.created_at || c.visit_date);
-                return !Number.isNaN(claimDate.getTime()) && claimDate >= startDate;
-            });
+        // Date range filter
+        if (filters.dateRange !== 'all') {
+            const now = new Date();
+            let startDate;
+            switch (filters.dateRange) {
+                case 'today':
+                    startDate = new Date(now.setHours(0, 0, 0, 0));
+                    break;
+                case 'week':
+                    startDate = new Date(now.setDate(now.getDate() - 7));
+                    break;
+                case 'month':
+                    startDate = new Date(now.setMonth(now.getMonth() - 1));
+                    break;
+                default:
+                    startDate = null;
+            }
+            if (startDate) {
+                filtered = filtered.filter(c => {
+                    const claimDate = new Date(c.created_at || c.visit_date);
+                    return claimDate >= startDate;
+                });
+            }
         }
 
         // Search filter
-        if (filters.search?.trim()) {
+        if (filters.search) {
             const searchLower = filters.search.toLowerCase();
             filtered = filtered.filter(c => {
                 const patientName = `${c.patient_first_name || ''} ${c.patient_last_name || ''}`.toLowerCase();
@@ -113,44 +99,20 @@ const Billing = () => {
             });
         }
 
-        return filtered;
-    }, [claims, filters]);
-
-    // Compute statistics for ALL claims
-    const statisticsAll = useMemo(() => {
-        const totalCents = claims.reduce((sum, c) => sum + toCents(c.total_amount || 0), 0);
-        const paidCents = claims
-            .filter(c => c.status === 'paid')
-            .reduce((sum, c) => sum + toCents(c.total_amount || 0), 0);
-
-        return {
+        // Update statistics
+        const stats = {
             total: claims.length,
-            pending: claims.filter(c => (c.status || 'pending') === 'pending').length,
+            pending: claims.filter(c => c.status === 'pending').length,
             submitted: claims.filter(c => c.status === 'submitted').length,
             paid: claims.filter(c => c.status === 'paid').length,
             denied: claims.filter(c => c.status === 'denied').length,
-            totalCents,
-            paidCents
+            totalAmount: claims.reduce((sum, c) => sum + parseFloat(c.total_amount || 0), 0),
+            paidAmount: claims.filter(c => c.status === 'paid').reduce((sum, c) => sum + parseFloat(c.total_amount || 0), 0)
         };
-    }, [claims]);
+        setStatistics(stats);
 
-    // Compute statistics for FILTERED claims
-    const statisticsFiltered = useMemo(() => {
-        const totalCents = filteredClaims.reduce((sum, c) => sum + toCents(c.total_amount || 0), 0);
-        const paidCents = filteredClaims
-            .filter(c => c.status === 'paid')
-            .reduce((sum, c) => sum + toCents(c.total_amount || 0), 0);
-
-        return {
-            total: filteredClaims.length,
-            pending: filteredClaims.filter(c => (c.status || 'pending') === 'pending').length,
-            submitted: filteredClaims.filter(c => c.status === 'submitted').length,
-            paid: filteredClaims.filter(c => c.status === 'paid').length,
-            denied: filteredClaims.filter(c => c.status === 'denied').length,
-            totalCents,
-            paidCents
-        };
-    }, [filteredClaims]);
+        setFilteredClaims(filtered);
+    };
 
     const getStatusBadge = (status) => {
         const styles = {
@@ -185,24 +147,20 @@ const Billing = () => {
                     <p className="text-sm text-gray-600 mt-1">Manage claims, superbills, and billing operations</p>
                 </div>
                 <div className="flex items-center space-x-2">
-                    {hasPrivilege('billing_create_claim') && (
-                        <button
-                            onClick={() => setShowSuperbillModal(true)}
-                            className="px-4 py-2 text-white rounded-lg flex items-center space-x-2 transition-all duration-200 hover:shadow-md"
-                            style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                            onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                            onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                        >
-                            <Plus className="w-4 h-4" />
-                            <span>Create Superbill</span>
-                        </button>
-                    )}
-                    {hasPrivilege('billing_export') && (
-                        <button className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center space-x-2">
-                            <Download className="w-4 h-4" />
-                            <span>Export</span>
-                        </button>
-                    )}
+                    <button
+                        onClick={() => setShowSuperbillModal(true)}
+                        className="px-4 py-2 text-white rounded-lg flex items-center space-x-2 transition-all duration-200 hover:shadow-md"
+                        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
+                    >
+                        <Plus className="w-4 h-4" />
+                        <span>Create Superbill</span>
+                    </button>
+                    <button className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center space-x-2">
+                        <Download className="w-4 h-4" />
+                        <span>Export</span>
+                    </button>
                 </div>
             </div>
 
@@ -212,10 +170,7 @@ const Billing = () => {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-gray-600">Total Claims</p>
-                            <p className="text-2xl font-bold text-gray-900 mt-1">{statisticsFiltered.total}</p>
-                            {filters.status !== 'all' || filters.dateRange !== 'all' || filters.search ? (
-                                <p className="text-xs text-gray-500 mt-1">(filtered)</p>
-                            ) : null}
+                            <p className="text-2xl font-bold text-gray-900 mt-1">{statistics.total}</p>
                         </div>
                         <Receipt className="w-8 h-8 text-primary-600" />
                     </div>
@@ -224,7 +179,7 @@ const Billing = () => {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-gray-600">Pending</p>
-                            <p className="text-2xl font-bold text-yellow-600 mt-1">{statisticsFiltered.pending}</p>
+                            <p className="text-2xl font-bold text-yellow-600 mt-1">{statistics.pending}</p>
                         </div>
                         <Clock className="w-8 h-8 text-yellow-600" />
                     </div>
@@ -233,7 +188,7 @@ const Billing = () => {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-gray-600">Paid</p>
-                            <p className="text-2xl font-bold text-green-600 mt-1">{statisticsFiltered.paid}</p>
+                            <p className="text-2xl font-bold text-green-600 mt-1">{statistics.paid}</p>
                         </div>
                         <CheckCircle2 className="w-8 h-8 text-green-600" />
                     </div>
@@ -242,7 +197,7 @@ const Billing = () => {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-gray-600">Total Amount</p>
-                            <p className="text-2xl font-bold text-gray-900 mt-1">{fmtMoney(statisticsFiltered.totalCents)}</p>
+                            <p className="text-2xl font-bold text-gray-900 mt-1">${statistics.totalAmount.toFixed(2)}</p>
                         </div>
                         <TrendingUp className="w-8 h-8 text-primary-600" />
                     </div>
@@ -353,7 +308,7 @@ const Billing = () => {
                                             {claim.visit_date ? format(new Date(claim.visit_date), 'MM/dd/yyyy') : 'N/A'}
                                         </td>
                                         <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">
-                                            {fmtMoney(toCents(claim.total_amount || 0))}
+                                            ${parseFloat(claim.total_amount || 0).toFixed(2)}
                                         </td>
                                         <td className="px-4 py-3 whitespace-nowrap">
                                             <span className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(claim.status)}`}>
@@ -376,18 +331,16 @@ const Billing = () => {
                                                 >
                                                     <Eye className="w-4 h-4" />
                                                 </button>
-                                                {hasPrivilege('billing_edit_claim') && (
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedClaim(claim);
-                                                            setShowEditClaimModal(true);
-                                                        }}
-                                                        className="text-gray-600 hover:text-gray-700"
-                                                        title="Edit"
-                                                    >
-                                                        <Edit className="w-4 h-4" />
-                                                    </button>
-                                                )}
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedClaim(claim);
+                                                        setShowEditClaimModal(true);
+                                                    }}
+                                                    className="text-gray-600 hover:text-gray-700"
+                                                    title="Edit"
+                                                >
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -429,8 +382,13 @@ const Billing = () => {
 const ClaimDetailModal = ({ claim, isOpen, onClose }) => {
     if (!isOpen) return null;
 
-    const diagnosisCodes = safeJson(claim.diagnosis_codes, []);
-    const procedureCodes = safeJson(claim.procedure_codes, []);
+    const diagnosisCodes = Array.isArray(claim.diagnosis_codes) 
+        ? claim.diagnosis_codes 
+        : (claim.diagnosis_codes ? JSON.parse(claim.diagnosis_codes) : []);
+    
+    const procedureCodes = Array.isArray(claim.procedure_codes)
+        ? claim.procedure_codes
+        : (claim.procedure_codes ? JSON.parse(claim.procedure_codes) : []);
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Claim Details" size="lg">
@@ -453,7 +411,7 @@ const ClaimDetailModal = ({ claim, isOpen, onClose }) => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Total Amount</label>
                         <p className="mt-1 text-sm font-semibold text-gray-900">
-                            {fmtMoney(toCents(claim.total_amount || 0))}
+                            ${parseFloat(claim.total_amount || 0).toFixed(2)}
                         </p>
                     </div>
                 </div>
@@ -481,13 +439,7 @@ const ClaimDetailModal = ({ claim, isOpen, onClose }) => {
                                 <div key={idx} className="text-sm text-gray-900">
                                     <span className="font-medium">{proc.code}</span> - {proc.description}
                                     {proc.amount && (
-                                        <span className="ml-2 text-gray-600">({fmtMoney(toCents(proc.amount))})</span>
-                                    )}
-                                    {proc.units && proc.units > 1 && (
-                                        <span className="ml-2 text-gray-500 text-xs">({proc.units} units)</span>
-                                    )}
-                                    {proc.modifiers && proc.modifiers.length > 0 && (
-                                        <span className="ml-2 text-gray-500 text-xs">[Modifiers: {proc.modifiers.join(', ')}]</span>
+                                        <span className="ml-2 text-gray-600">(${parseFloat(proc.amount).toFixed(2)})</span>
                                     )}
                                 </div>
                             ))
@@ -506,6 +458,7 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
     const [step, setStep] = useState(1);
     const [selectedPatient, setSelectedPatient] = useState(null);
     const [selectedVisit, setSelectedVisit] = useState(null);
+    const [patients, setPatients] = useState([]);
     const [searchResults, setSearchResults] = useState([]);
     const [visits, setVisits] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
@@ -531,6 +484,7 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
     useEffect(() => {
         if (isOpen) {
             fetchFeeSchedule();
+            fetchAvailableDiagnosisCodes();
         } else {
             // Reset state when modal closes
             setStep(1);
@@ -552,7 +506,6 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
     useEffect(() => {
         if (selectedPatient && step === 1) {
             fetchPatientVisits();
-            fetchAvailableDiagnosisCodes();
         }
     }, [selectedPatient, step]);
 
@@ -663,11 +616,10 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
     };
 
     const calculateTotal = () => {
-        const totalCents = procedureCodes.reduce((sum, proc) => {
-            const units = Number(proc.units || 1);
-            return sum + toCents(proc.amount || 0) * units;
+        const total = procedureCodes.reduce((sum, proc) => {
+            return sum + parseFloat(proc.amount || 0);
         }, 0);
-        setTotalAmount(fromCents(totalCents)); // Store as dollars for backward compatibility
+        setTotalAmount(total);
     };
 
     const handleCreateSuperbill = async () => {
@@ -678,32 +630,26 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
 
         setLoading(true);
         try {
-            // Normalize data format for claim creation (commercial v1 format)
-            const normalizedDiagnosisCodes = diagnosisCodes.map((dx) => ({
+            // Normalize data format for claim creation
+            const normalizedDiagnosisCodes = diagnosisCodes.map(dx => ({
                 code: typeof dx === 'string' ? dx : (dx.code || dx),
                 description: typeof dx === 'string' ? '' : (dx.description || '')
             }));
-
-            const normalizedLineItems = procedureCodes.map((p) => ({
-                cpt: p.code,
-                description: p.description || '',
-                units: Number(p.units || 1),
-                charge: Number(p.amount || 0),
-                modifiers: Array.isArray(p.modifiers) ? p.modifiers : [],
-                dxPointers: Array.isArray(p.dxPointers) ? p.dxPointers : []
+            
+            const normalizedProcedureCodes = procedureCodes.map(proc => ({
+                code: proc.code,
+                description: proc.description || '',
+                amount: parseFloat(proc.amount || 0),
+                units: parseFloat(proc.units || 1)
             }));
-
-            // Calculate total from line items (server will also validate)
-            const calculatedTotal = normalizedLineItems.reduce((sum, li) => sum + (toCents(li.charge) * li.units), 0) / 100;
             
             await billingAPI.createClaim({
                 visitId: selectedVisit.id,
                 diagnosisCodes: normalizedDiagnosisCodes,
-                lineItems: normalizedLineItems,
-                totalAmount: calculatedTotal,
+                procedureCodes: normalizedProcedureCodes,
+                totalAmount: totalAmount,
                 serviceDateStart: selectedVisit.visit_date,
-                insuranceProvider: selectedPatient.insurance_provider,
-                payerMemberId: selectedPatient.insurance_id || null
+                insuranceProvider: selectedPatient.insurance_provider
             });
             alert('Superbill created successfully!');
             onSuccess();
@@ -1021,10 +967,7 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
                                                             setProcedureCodes([...procedureCodes, {
                                                                 code: code.code,
                                                                 description: code.description || '',
-                                                                amount: code.fee_amount || 0,
-                                                                units: 1,
-                                                                modifiers: [],
-                                                                dxPointers: diagnosisCodes.length ? [1] : []
+                                                                amount: code.fee_amount || 0
                                                             }]);
                                                         }
                                                         setProcedureSearch('');
@@ -1035,7 +978,7 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
                                                     <span>{code.code} - {code.description}</span>
                                                     {code.fee_amount && (
                                                         <span className="text-xs font-semibold text-gray-600">
-                                                            {fmtMoney(toCents(code.fee_amount))}
+                                                            ${parseFloat(code.fee_amount).toFixed(2)}
                                                         </span>
                                                     )}
                                                 </button>
@@ -1043,69 +986,21 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
                                     </div>
                                 </div>
                             )}
-                            <div className="border border-gray-300 rounded-md p-3 max-h-96 overflow-y-auto bg-gray-50">
+                            <div className="border border-gray-300 rounded-md p-3 max-h-60 overflow-y-auto bg-gray-50">
                                 {procedureCodes.length === 0 ? (
                                     <p className="text-sm text-gray-500 text-center py-2">No procedure codes added</p>
                                 ) : (
                                     procedureCodes.map((proc, idx) => (
-                                        <div key={idx} className="border border-gray-200 rounded p-2 mb-2 bg-white">
-                                            <div className="flex items-start justify-between mb-2">
-                                                <div className="flex-1">
-                                                    <span className="text-sm font-medium">{proc.code} - {proc.description}</span>
-                                                </div>
-                                                <div className="flex items-center space-x-2">
-                                                    <span className="text-sm font-semibold">{fmtMoney(toCents(proc.amount || 0))}</span>
-                                                    <button
-                                                        onClick={() => setProcedureCodes(procedureCodes.filter((_, i) => i !== idx))}
-                                                        className="text-red-600 hover:text-red-700"
-                                                    >
-                                                        <XCircle className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div className="grid grid-cols-3 gap-2 mt-2">
-                                                <div>
-                                                    <label className="block text-xs text-gray-600 mb-1">Units</label>
-                                                    <input
-                                                        type="number"
-                                                        min={1}
-                                                        value={proc.units || 1}
-                                                        onChange={(e) => {
-                                                            const units = Math.max(1, Number(e.target.value || 1));
-                                                            setProcedureCodes(prev => prev.map((p, i) => i === idx ? { ...p, units } : p));
-                                                        }}
-                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs text-gray-600 mb-1">Modifiers</label>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="e.g. 25,59"
-                                                        value={(proc.modifiers || []).join(',')}
-                                                        onChange={(e) => {
-                                                            const modifiers = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
-                                                            setProcedureCodes(prev => prev.map((p, i) => i === idx ? { ...p, modifiers } : p));
-                                                        }}
-                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs text-gray-600 mb-1">DX Pointers</label>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="e.g. 1,2"
-                                                        value={(proc.dxPointers || []).join(',')}
-                                                        onChange={(e) => {
-                                                            const dxPointers = e.target.value
-                                                                .split(',')
-                                                                .map(s => Number(s.trim()))
-                                                                .filter(n => Number.isFinite(n) && n >= 1 && n <= diagnosisCodes.length);
-                                                            setProcedureCodes(prev => prev.map((p, i) => i === idx ? { ...p, dxPointers } : p));
-                                                        }}
-                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                                                    />
-                                                </div>
+                                        <div key={idx} className="flex items-center justify-between py-1 px-2 hover:bg-white rounded">
+                                            <span className="text-sm">{proc.code} - {proc.description}</span>
+                                            <div className="flex items-center space-x-2">
+                                                <span className="text-sm font-semibold">${parseFloat(proc.amount || 0).toFixed(2)}</span>
+                                                <button
+                                                    onClick={() => setProcedureCodes(procedureCodes.filter((_, i) => i !== idx))}
+                                                    className="text-red-600 hover:text-red-700"
+                                                >
+                                                    <XCircle className="w-4 h-4" />
+                                                </button>
                                             </div>
                                         </div>
                                     ))

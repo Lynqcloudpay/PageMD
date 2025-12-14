@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, CreditCard, Pill, Send, FileText, Edit2, Save, Plus, Trash2, Calendar, Building2, MapPin, Phone, Upload } from 'lucide-react';
+import { X, CreditCard, Pill, Send, FileText, Edit2, Save, Plus, Trash2, Calendar, Building2, MapPin, Phone } from 'lucide-react';
 import { patientsAPI, referralsAPI, ordersAPI, documentsAPI } from '../services/api';
 import { format } from 'date-fns';
 import Toast from './ui/Toast';
-import { UploadModal } from './ActionModals';
 
 const PatientHub = ({ patientId, isOpen, onClose }) => {
     const [activeTab, setActiveTab] = useState('insurance');
@@ -15,8 +14,7 @@ const PatientHub = ({ patientId, isOpen, onClose }) => {
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState(null);
-    const [activeModal, setActiveModal] = useState(null);
-
+    
     // Form state for insurance/pharmacy
     const [formData, setFormData] = useState({
         insuranceProvider: '',
@@ -39,7 +37,7 @@ const PatientHub = ({ patientId, isOpen, onClose }) => {
             const patientResponse = await patientsAPI.get(patientId);
             const patientData = patientResponse.data || patientResponse;
             setPatient(patientData);
-
+            
             // Set form data from patient
             setFormData({
                 insuranceProvider: patientData.insurance_provider || '',
@@ -52,8 +50,8 @@ const PatientHub = ({ patientId, isOpen, onClose }) => {
             // Fetch referrals
             try {
                 const referralsResponse = await referralsAPI.getByPatient(patientId);
-                const referralsData = Array.isArray(referralsResponse)
-                    ? referralsResponse
+                const referralsData = Array.isArray(referralsResponse) 
+                    ? referralsResponse 
                     : (referralsResponse?.data || []);
                 setReferrals(referralsData);
             } catch (err) {
@@ -155,10 +153,11 @@ const PatientHub = ({ patientId, isOpen, onClose }) => {
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center space-x-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${activeTab === tab.id
-                                    ? 'border-paper-700 text-paper-700 bg-paper-50'
-                                    : 'border-transparent text-ink-600 hover:text-ink-900 hover:bg-paper-50'
-                                    }`}
+                                className={`flex items-center space-x-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                                    activeTab === tab.id
+                                        ? 'border-paper-700 text-paper-700 bg-paper-50'
+                                        : 'border-transparent text-ink-600 hover:text-ink-900 hover:bg-paper-50'
+                                }`}
                             >
                                 <Icon className="w-4 h-4" />
                                 <span>{tab.label}</span>
@@ -397,10 +396,11 @@ const PatientHub = ({ patientId, isOpen, onClose }) => {
                                                                 {referral.recipient_specialty}
                                                             </div>
                                                         </div>
-                                                        <span className={`text-xs px-2 py-1 rounded ${referral.status === 'sent' ? 'bg-green-100 text-green-700' :
+                                                        <span className={`text-xs px-2 py-1 rounded ${
+                                                            referral.status === 'sent' ? 'bg-green-100 text-green-700' :
                                                             referral.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                                                                'bg-gray-100 text-gray-700'
-                                                            }`}>
+                                                            'bg-gray-100 text-gray-700'
+                                                        }`}>
                                                             {referral.status}
                                                         </span>
                                                     </div>
@@ -448,7 +448,7 @@ const PatientHub = ({ patientId, isOpen, onClose }) => {
                                     ) : (
                                         <div className="space-y-3">
                                             {prescriptions.map((rx) => {
-                                                const payload = typeof rx.order_payload === 'string'
+                                                const payload = typeof rx.order_payload === 'string' 
                                                     ? JSON.parse(rx.order_payload || '{}')
                                                     : (rx.order_payload || {});
                                                 return (
@@ -469,11 +469,12 @@ const PatientHub = ({ patientId, isOpen, onClose }) => {
                                                                     </div>
                                                                 )}
                                                             </div>
-                                                            <span className={`text-xs px-2 py-1 rounded ${rx.status === 'sent' ? 'bg-green-100 text-green-700' :
+                                                            <span className={`text-xs px-2 py-1 rounded ${
+                                                                rx.status === 'sent' ? 'bg-green-100 text-green-700' :
                                                                 rx.status === 'completed' ? 'bg-blue-100 text-blue-700' :
-                                                                    rx.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                                                                        'bg-gray-100 text-gray-700'
-                                                                }`}>
+                                                                rx.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                                                'bg-gray-100 text-gray-700'
+                                                            }`}>
                                                                 {rx.status}
                                                             </span>
                                                         </div>
@@ -505,16 +506,7 @@ const PatientHub = ({ patientId, isOpen, onClose }) => {
                             {activeTab === 'documents' && (
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between mb-4">
-                                        <div className="flex items-center space-x-4">
-                                            <h3 className="text-lg font-semibold text-ink-900">Documents</h3>
-                                            <button
-                                                onClick={() => setActiveModal('upload')}
-                                                className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 transition-colors"
-                                            >
-                                                <Upload className="w-4 h-4" />
-                                                <span>Upload</span>
-                                            </button>
-                                        </div>
+                                        <h3 className="text-lg font-semibold text-ink-900">Documents</h3>
                                         <span className="text-sm text-ink-500">{documents.length} total</span>
                                     </div>
 
@@ -525,54 +517,25 @@ const PatientHub = ({ patientId, isOpen, onClose }) => {
                                     ) : (
                                         <div className="space-y-3">
                                             {documents.map((doc) => (
-                                                <div key={doc.id} className="bg-paper-50 p-4 rounded-lg border border-paper-200 hover:shadow-sm transition-shadow">
+                                                <div key={doc.id} className="bg-paper-50 p-4 rounded-lg border border-paper-200">
                                                     <div className="flex items-start justify-between mb-2">
                                                         <div className="flex-1">
                                                             <div className="font-semibold text-ink-900 flex items-center">
-                                                                <FileText className="w-4 h-4 mr-2 text-ink-500" />
-                                                                <a
-                                                                    href=""
-                                                                    onClick={(e) => {
-                                                                        e.preventDefault();
-                                                                        // View document logic
-                                                                        window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/documents/${doc.id}/file`, '_blank');
-                                                                    }}
-                                                                    className="hover:text-blue-600 hover:underline"
-                                                                >
-                                                                    {doc.filename}
-                                                                </a>
+                                                                <FileText className="w-4 h-4 mr-2" />
+                                                                {doc.filename}
                                                             </div>
                                                             {doc.doc_type && (
-                                                                <div className="text-sm text-ink-600 mt-1 flex items-center">
-                                                                    <span className="bg-paper-200 px-2 py-0.5 rounded text-xs mr-2">{doc.doc_type}</span>
-                                                                    {doc.tags && doc.tags.length > 0 && doc.tags.map((tag, idx) => (
-                                                                        <span key={idx} className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-xs mr-1">
-                                                                            {tag}
-                                                                        </span>
-                                                                    ))}
+                                                                <div className="text-sm text-ink-600 mt-1">
+                                                                    Type: {doc.doc_type}
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        <a
-                                                            href={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/documents/${doc.id}/file`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="p-1 text-ink-400 hover:text-blue-600 transition-colors"
-                                                            title="Download"
-                                                        >
-                                                            <Upload className="w-4 h-4 rotate-180" />
-                                                        </a>
                                                     </div>
                                                     <div className="text-xs text-ink-500 mt-2 flex items-center space-x-4">
                                                         <span className="flex items-center">
                                                             <Calendar className="w-3 h-3 mr-1" />
                                                             {format(new Date(doc.created_at), 'MMM d, yyyy')}
                                                         </span>
-                                                        {doc.uploader_last_name && (
-                                                            <span>
-                                                                By {doc.uploader_first_name} {doc.uploader_last_name}
-                                                            </span>
-                                                        )}
                                                     </div>
                                                 </div>
                                             ))}
@@ -584,18 +547,6 @@ const PatientHub = ({ patientId, isOpen, onClose }) => {
                     )}
                 </div>
             </div>
-
-            {/* Upload Modal */}
-            <UploadModal
-                isOpen={activeModal === 'upload'}
-                onClose={() => setActiveModal(null)}
-                patientId={patientId}
-                onSuccess={(msg) => {
-                    showToast(msg);
-                    fetchAllData(); // Refresh list
-                }}
-            />
-
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         </>
     );

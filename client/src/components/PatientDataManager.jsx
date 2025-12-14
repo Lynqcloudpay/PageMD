@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Plus, Edit2, Trash2, AlertCircle, Pill, ClipboardList, Users, Heart, Save, ArrowLeft } from 'lucide-react';
 import { patientsAPI } from '../services/api';
 import Toast from './ui/Toast';
@@ -14,7 +14,6 @@ const PatientDataManager = ({ patientId, isOpen, onClose, initialTab = 'problems
     const [loading, setLoading] = useState(false);
     const [editing, setEditing] = useState(null);
     const [toast, setToast] = useState(null);
-    const prevIsOpenRef = useRef(false);
     
     // Form states
     const [problemForm, setProblemForm] = useState({ problemName: '', icd10Code: '', onsetDate: '', status: 'active' });
@@ -28,16 +27,10 @@ const PatientDataManager = ({ patientId, isOpen, onClose, initialTab = 'problems
 
     useEffect(() => {
         if (isOpen && patientId) {
-            // Only set initial tab when modal first opens (transitions from closed to open)
-            if (!prevIsOpenRef.current) {
-                setActiveTab(initialTab);
-            }
-            prevIsOpenRef.current = true;
+            setActiveTab(initialTab); // Set tab when opening
             fetchAllData();
-        } else {
-            prevIsOpenRef.current = false;
         }
-    }, [isOpen, patientId]);
+    }, [isOpen, patientId, initialTab]);
 
     const fetchAllData = async () => {
         setLoading(true);

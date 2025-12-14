@@ -16,14 +16,13 @@ const { logAudit } = require('./auth');
  */
 const sessionTimeout = async (req, res, next) => {
   // Skip if no session
-  // Skip if no session (Auth is handled by JWT for APIs)
   if (!req.sessionId && !req.headers['x-session-id']) {
     return next();
   }
-
+  
   const sessionId = req.sessionId || req.headers['x-session-id'];
   const session = await sessionService.getSession(sessionId);
-
+  
   if (!session) {
     // Session expired or invalid
     await logAudit(
@@ -36,20 +35,20 @@ const sessionTimeout = async (req, res, next) => {
       req.get('user-agent'),
       'failure'
     );
-
+    
     return res.status(401).json({
       error: 'Session expired',
       message: 'Your session has expired due to inactivity. Please log in again.'
     });
   }
-
+  
   // Update activity timestamp
   await sessionService.updateActivity(sessionId);
-
+  
   // Attach session to request
   req.session = session;
   req.sessionId = sessionId;
-
+  
   next();
 };
 
@@ -60,14 +59,14 @@ const requireMFA = async (req, res, next) => {
   if (!req.session || !req.sessionId) {
     return res.status(401).json({ error: 'Session required' });
   }
-
+  
   if (!req.session.mfaVerified) {
     return res.status(403).json({
       error: 'MFA required',
       message: 'Multi-factor authentication is required for this operation'
     });
   }
-
+  
   next();
 };
 
@@ -75,22 +74,6 @@ module.exports = {
   sessionTimeout,
   requireMFA
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

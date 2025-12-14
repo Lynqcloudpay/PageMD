@@ -6,7 +6,7 @@ const validator = require('validator');
 const isDevelopment = process.env.NODE_ENV !== 'production';
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: isDevelopment ? 100000 : 2000, // Higher limit for production to prevent blocking legitimate users
+  max: isDevelopment ? 100000 : 100, // Very high limit in development to prevent blocking
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -33,7 +33,7 @@ const apiLimiter = rateLimit({
 // More lenient rate limiting for development
 const authLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute window
-  max: isDevelopment ? 10000 : 50, // Higher limit for production
+  max: isDevelopment ? 10000 : 5, // Very high limit in development to prevent blocking
   message: 'Too many login attempts, please try again later.',
   skipSuccessfulRequests: true,
   standardHeaders: true,
@@ -78,7 +78,7 @@ const sanitizeInput = (req, res, next) => {
 // Minimum 12 characters, uppercase, lowercase, digit, symbol
 const validatePassword = (password) => {
   const errors = [];
-
+  
   if (!password || password.length < 12) {
     errors.push('Password must be at least 12 characters long');
   }
@@ -94,13 +94,13 @@ const validatePassword = (password) => {
   if (!/[!@#$%^&*(),.?":{}|<>_+\-=\[\]\\;',./]/.test(password)) {
     errors.push('Password must contain at least one special character');
   }
-
+  
   // Check for common weak passwords
   const commonPasswords = ['password', 'password123', 'admin', '12345678', 'qwerty'];
   if (commonPasswords.some(weak => password.toLowerCase().includes(weak))) {
     errors.push('Password is too common or weak');
   }
-
+  
   return errors;
 };
 
@@ -110,7 +110,7 @@ const sessionTimeout = (maxAge = 30 * 60 * 1000) => { // 30 minutes default
     if (req.user && req.user.lastActivity) {
       const now = Date.now();
       const lastActivity = new Date(req.user.lastActivity).getTime();
-
+      
       if (now - lastActivity > maxAge) {
         return res.status(401).json({ error: 'Session expired. Please log in again.' });
       }

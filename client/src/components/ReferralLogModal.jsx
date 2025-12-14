@@ -135,19 +135,3 @@ export default ReferralLogModal;
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

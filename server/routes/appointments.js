@@ -147,7 +147,7 @@ router.post('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) =>
     // Check for existing appointments at the same time slot (max 2 per slot)
     // Exception: If BOTH appointments are cancelled/no-show, treat slot as empty (0/2)
     const existingAppts = await pool.query(
-      `SELECT status
+      `SELECT patient_status
        FROM appointments
        WHERE provider_id = $1
          AND appointment_date = $2
@@ -157,7 +157,7 @@ router.post('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) =>
     
     const allCancelled = existingAppts.rows.length === 2 && 
                          existingAppts.rows.every(row => 
-                           row.status === 'cancelled' || row.status === 'no-show'
+                           row.patient_status === 'cancelled' || row.patient_status === 'no_show'
                          );
     
     // If both are cancelled, treat as empty (allow booking)
@@ -204,12 +204,12 @@ router.post('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) =>
       status: row.status,
       notes: row.notes,
       createdAt: row.created_at,
-      // Patient status tracking fields (using status column)
-      patient_status: row.status || 'scheduled',
+      // Patient status tracking fields
+      patient_status: row.patient_status || 'scheduled',
       status_history: row.status_history || [],
-      arrival_time: row.arrival_time || null,
-      current_room: row.current_room || null,
-      checkout_time: row.checkout_time || null
+      arrival_time: row.arrival_time,
+      current_room: row.current_room,
+      checkout_time: row.checkout_time
     };
     
     res.status(201).json(appointment);

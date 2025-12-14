@@ -14,16 +14,15 @@ class PasswordService {
    */
   async hashPassword(password) {
     try {
-      // Argon2id with balanced parameters for performance and security
-      // Reduced memoryCost for faster verification while maintaining security
-      // memoryCost: 16384 (16 MB) - balanced for performance
-      // timeCost: 2 - number of iterations (reduced for speed)
-      // parallelism: 2 - number of threads (reduced for speed)
+      // Argon2id with recommended parameters for HIPAA compliance
+      // memoryCost: 65536 (64 MB) - higher than default for better security
+      // timeCost: 3 - number of iterations
+      // parallelism: 4 - number of threads
       return await argon2.hash(password, {
         type: argon2.argon2id,
-        memoryCost: 16384, // 16 MB (reduced from 64 MB for better performance)
-        timeCost: 2, // Reduced from 3 for faster verification
-        parallelism: 2, // Reduced from 4 for faster verification
+        memoryCost: 65536, // 64 MB
+        timeCost: 3,
+        parallelism: 4,
         hashLength: 32
       });
     } catch (error) {
@@ -60,19 +59,6 @@ class PasswordService {
 }
 
 module.exports = new PasswordService();
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -124,19 +124,3 @@ module.exports = { HL7Parser, HL7Generator };
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

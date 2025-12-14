@@ -65,19 +65,3 @@ export default Card;
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

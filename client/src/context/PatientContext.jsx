@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { patientsAPI } from '../services/api';
-import { useAuth } from './AuthContext';
 
 const PatientContext = createContext();
 
@@ -10,63 +9,39 @@ export const PatientProvider = ({ children }) => {
     const [patients, setPatients] = useState([]);
     const [appointments, setAppointments] = useState([]);
     const [loading, setLoading] = useState(true);
-    const auth = useAuth();
 
     // Fetch patients from API
-    const fetchPatients = async () => {
-        // Don't fetch if not authenticated
-        if (!auth?.user || auth?.loading) {
-            setLoading(false);
-            return;
-        }
-
-        try {
-            setLoading(true);
-            const response = await patientsAPI.search(''); // Empty search to get all patients
-            const fetchedPatients = response.data.map(p => ({
-                ...p,
+        const fetchPatients = async () => {
+            try {
+                setLoading(true);
+                const response = await patientsAPI.search(''); // Empty search to get all patients
+                const fetchedPatients = response.data.map(p => ({
+                    ...p,
                 name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Unknown Patient',
-                // Calculate age from dob if needed
-                age: p.dob ? Math.floor((new Date() - new Date(p.dob)) / (365.25 * 24 * 60 * 60 * 1000)) : null
-            }));
-            setPatients(fetchedPatients);
-        } catch (error) {
-            // Only log non-timeout and non-auth errors to reduce console noise
-            if (error.code !== 'ECONNABORTED' &&
-                !error.message?.includes('timeout') &&
-                error.response?.status !== 401) {
+                    // Calculate age from dob if needed
+                    age: p.dob ? Math.floor((new Date() - new Date(p.dob)) / (365.25 * 24 * 60 * 60 * 1000)) : null
+                }));
+                setPatients(fetchedPatients);
+            } catch (error) {
                 console.error('Error fetching patients:', error);
+                // Fallback to empty array if API fails
+                setPatients([]);
+            } finally {
+                setLoading(false);
             }
-            // Fallback to empty array if API fails
-            setPatients([]);
-        } finally {
-            setLoading(false);
-        }
-    };
+        };
 
-    // Fetch patients from API on mount and auto-refresh (only when authenticated)
+    // Fetch patients from API on mount and auto-refresh
     useEffect(() => {
-        // Wait for auth to finish loading
-        if (auth?.loading) {
-            return;
-        }
-
-        // Only fetch if user is authenticated
-        if (auth?.user) {
+        fetchPatients();
+        
+        // Auto-refresh every 15 seconds
+        const interval = setInterval(() => {
             fetchPatients();
-
-            // Auto-refresh every 15 seconds
-            const interval = setInterval(() => {
-                fetchPatients();
-            }, 15000);
-
-            return () => clearInterval(interval);
-        } else {
-            // Not authenticated, set loading to false
-            setLoading(false);
-            setPatients([]);
-        }
-    }, [auth?.user, auth?.loading]);
+        }, 15000);
+        
+        return () => clearInterval(interval);
+    }, []);
 
     // Keep appointments in localStorage for now (can be migrated to API later)
     useEffect(() => {
@@ -124,7 +99,7 @@ export const PatientProvider = ({ children }) => {
 
     const searchPatients = (query) => {
         if (!query) return [];
-        return patients.filter(p => (p.name || '').toLowerCase().includes(query.toLowerCase()) || (p.mrn || '').toLowerCase().includes(query.toLowerCase()));
+        return patients.filter(p => p.name.toLowerCase().includes(query.toLowerCase()) || p.mrn.toLowerCase().includes(query.toLowerCase()));
     };
 
     const getPatient = (id) => {

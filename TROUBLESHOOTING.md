@@ -228,19 +228,3 @@ node -e "const {Pool}=require('pg');require('dotenv').config();const p=new Pool(
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

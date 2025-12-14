@@ -338,19 +338,3 @@ export default { vaccineDatabase, getRecommendedVaccines, createVaccineRecord, s
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

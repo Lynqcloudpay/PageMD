@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Printer, Calendar, User, Phone, Mail, MapPin, Stethoscope, CheckCircle2, CreditCard, Building2, Users, FilePlus, Receipt, DollarSign, AlertCircle } from 'lucide-react';
+import { X, Printer, Calendar, User, Phone, Mail, MapPin, Stethoscope, CheckCircle2, CreditCard, Building2, Users, FilePlus, Receipt, DollarSign } from 'lucide-react';
 import { visitsAPI, patientsAPI, billingAPI, codesAPI } from '../services/api';
 import { format } from 'date-fns';
 import html2pdf from 'html2pdf.js';
-import PrintableOrders from './PrintableOrders';
 
 const VisitChartView = ({ visitId, patientId, onClose }) => {
     const [patient, setPatient] = useState(null);
@@ -21,12 +20,8 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     const [addendums, setAddendums] = useState([]);
     const [showAddendumModal, setShowAddendumModal] = useState(false);
     const [addendumText, setAddendumText] = useState('');
-    const [showSignAddendumModal, setShowSignAddendumModal] = useState(false);
-    const [addendumToSignIndex, setAddendumToSignIndex] = useState(null);
     const [showSuperbillModal, setShowSuperbillModal] = useState(false);
-    const [showPrintPreview, setShowPrintPreview] = useState(false);
     const [showBillingModal, setShowBillingModal] = useState(false);
-    const [showPrintableOrders, setShowPrintableOrders] = useState(false);
     const [superbillData, setSuperbillData] = useState({
         diagnosisCodes: [],
         procedureCodes: [],
@@ -202,77 +197,39 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            // First fetch visit to check if it's signed
-            const visitRes = await visitsAPI.get(visitId);
-            const visit = visitRes.data;
-            const isSigned = visit.note_signed_at || visit.locked;
+            const [patientRes, visitRes, allergiesRes, medicationsRes, problemsRes, familyHistoryRes, socialHistoryRes] = await Promise.all([
+                patientsAPI.get(patientId),
+                visitsAPI.get(visitId),
+                patientsAPI.getAllergies(patientId).catch((err) => {
+                    console.error('Error fetching allergies:', err);
+                    return { data: [] };
+                }),
+                patientsAPI.getMedications(patientId).catch((err) => {
+                    console.error('Error fetching medications:', err);
+                    return { data: [] };
+                }),
+                patientsAPI.getProblems(patientId).catch((err) => {
+                    console.error('Error fetching problems:', err);
+                    return { data: [] };
+                }),
+                patientsAPI.getFamilyHistory(patientId).catch((err) => {
+                    console.error('Error fetching family history:', err);
+                    return { data: [] };
+                }),
+                patientsAPI.getSocialHistory(patientId).catch((err) => {
+                    console.error('Error fetching social history:', err);
+                    return { data: null };
+                })
+            ]);
             
-            // If signed, try to use snapshot data from visit
-            let allergiesData = [];
-            let medicationsData = [];
-            let problemsData = [];
-            let familyHistoryData = [];
-            let socialHistoryData = null;
+            setPatient(patientRes.data);
+            setVisit(visitRes.data);
+            const allergiesData = allergiesRes.data || [];
+            const medicationsData = medicationsRes.data || [];
+            const problemsData = problemsRes.data || [];
+            const familyHistoryData = familyHistoryRes.data || [];
+            const socialHistoryData = socialHistoryRes.data;
             
-            if (isSigned && visit.patient_snapshot) {
-                // Use snapshot data for signed notes (immutable)
-                try {
-                    const snapshot = typeof visit.patient_snapshot === 'string' 
-                        ? JSON.parse(visit.patient_snapshot) 
-                        : visit.patient_snapshot;
-                    allergiesData = snapshot.allergies || [];
-                    medicationsData = snapshot.medications || [];
-                    problemsData = snapshot.problems || [];
-                    familyHistoryData = snapshot.familyHistory || [];
-                    socialHistoryData = snapshot.socialHistory || null;
-                    console.log('Using snapshot data for signed note');
-                } catch (snapshotError) {
-                    console.error('Error parsing snapshot, falling back to current data:', snapshotError);
-                    // Fall back to current data if snapshot is invalid
-                    // Clear snapshot so we fetch current data
-                    visit.patient_snapshot = null;
-                }
-            }
-            
-            // If not signed or snapshot unavailable, fetch current data
-            if (!isSigned || !visit.patient_snapshot) {
-                const [patientRes, allergiesRes, medicationsRes, problemsRes, familyHistoryRes, socialHistoryRes] = await Promise.all([
-                    patientsAPI.get(patientId),
-                    patientsAPI.getAllergies(patientId).catch((err) => {
-                        console.error('Error fetching allergies:', err);
-                        return { data: [] };
-                    }),
-                    patientsAPI.getMedications(patientId).catch((err) => {
-                        console.error('Error fetching medications:', err);
-                        return { data: [] };
-                    }),
-                    patientsAPI.getProblems(patientId).catch((err) => {
-                        console.error('Error fetching problems:', err);
-                        return { data: [] };
-                    }),
-                    patientsAPI.getFamilyHistory(patientId).catch((err) => {
-                        console.error('Error fetching family history:', err);
-                        return { data: [] };
-                    }),
-                    patientsAPI.getSocialHistory(patientId).catch((err) => {
-                        console.error('Error fetching social history:', err);
-                        return { data: null };
-                    })
-                ]);
-                
-                setPatient(patientRes.data);
-                allergiesData = allergiesRes.data || [];
-                medicationsData = medicationsRes.data || [];
-                problemsData = problemsRes.data || [];
-                familyHistoryData = familyHistoryRes.data || [];
-                socialHistoryData = socialHistoryRes.data;
-            } else {
-                // For signed notes, still fetch patient basic info
-                const patientRes = await patientsAPI.get(patientId);
-                setPatient(patientRes.data);
-            }
-            
-            setVisit(visit);
             setAllergies(allergiesData);
             setMedications(medicationsData);
             setProblems(problemsData);
@@ -383,39 +340,64 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
         }
     };
 
-    const handlePrint = () => {
-        setShowPrintPreview(false);
-
-        const source = document.getElementById('visit-chart-view');
-        if (!source) return console.error('visit-chart-view not found');
-
-        document.getElementById('print-chart-clone')?.remove();
-
-        const clone = source.cloneNode(true);
-        clone.id = 'print-chart-clone';
-
-        // ✅ don't push offscreen; let CSS control visibility
-        clone.style.display = 'block';
-        clone.style.background = 'white';
-
-        document.body.appendChild(clone);
-        document.body.classList.add('printing-chart');
-
-        const cleanup = () => {
-            document.body.classList.remove('printing-chart');
-            document.getElementById('print-chart-clone')?.remove();
-            window.removeEventListener('afterprint', cleanup);
-        };
-
-        window.addEventListener('afterprint', cleanup);
-        requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
+    const handlePrint = async () => {
+        const visitChartView = document.getElementById('visit-chart-view');
+        if (!visitChartView) {
+            alert('Error: Could not find content to print');
+            return;
+        }
+        
+        // Temporarily hide buttons in the original
+        const buttons = visitChartView.querySelectorAll('button');
+        const originalDisplay = [];
+        buttons.forEach((btn, index) => {
+            originalDisplay[index] = btn.style.display;
+            btn.style.display = 'none';
+        });
+        
+        try {
+            // Get visit date for filename
+            const visitDateStr = visit?.visit_date 
+                ? format(new Date(visit.visit_date), 'MMMM_d_yyyy') 
+                : format(new Date(), 'MMMM_d_yyyy');
+            
+            // Simple, reliable PDF configuration
+            const opt = {
+                margin: 0.75, // Slightly larger margin for better appearance
+                filename: `Visit_Note_${patient?.first_name || 'Patient'}_${patient?.last_name || ''}_${visitDateStr}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 1.5, // Fixed scale that works well
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff',
+                    letterRendering: false, // Disable letter rendering to avoid weird text breaks
+                    allowTaint: false
+                },
+                jsPDF: { 
+                    unit: 'in', 
+                    format: 'letter', 
+                    orientation: 'portrait',
+                    compress: false // Disable compression for better quality
+                },
+                pagebreak: { mode: ['avoid-all', 'css'] }
+            };
+            
+            // Generate PDF directly from the visible element
+            await html2pdf().set(opt).from(visitChartView).save();
+            
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            alert('Error generating PDF: ' + error.message);
+        } finally {
+            // Restore button visibility
+            buttons.forEach((btn, index) => {
+                btn.style.display = originalDisplay[index] || '';
+            });
+        }
     };
 
-    const handlePrintPreview = () => {
-        setShowPrintPreview(true);
-    };
-
-    const handleAddAddendum = async (signImmediately = false) => {
+    const handleAddAddendum = async () => {
         if (!addendumText.trim()) {
             alert('Please enter addendum text');
             return;
@@ -426,71 +408,18 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
             // Refresh visit data
             const visitRes = await visitsAPI.get(visitId);
             const visitData = visitRes.data;
-            let addendumsData = [];
-            if (visitData.addendums) {
-                addendumsData = Array.isArray(visitData.addendums) 
-                    ? visitData.addendums 
-                    : JSON.parse(visitData.addendums || '[]');
-                setAddendums(addendumsData);
-            }
-            setAddendumText('');
-            setShowAddendumModal(false);
-            
-            // Find the newly added addendum (last one, unsigned)
-            const newAddendumIndex = addendumsData.length - 1;
-            if (newAddendumIndex >= 0 && !addendumsData[newAddendumIndex].signed) {
-                if (signImmediately) {
-                    // Sign immediately
-                    try {
-                        await visitsAPI.signAddendum(visitId, newAddendumIndex);
-                        // Refresh again to get signed addendum
-                        const refreshRes = await visitsAPI.get(visitId);
-                        const refreshData = refreshRes.data;
-                        if (refreshData.addendums) {
-                            const refreshedAddendums = Array.isArray(refreshData.addendums) 
-                                ? refreshData.addendums 
-                                : JSON.parse(refreshData.addendums || '[]');
-                            setAddendums(refreshedAddendums);
-                        }
-                        alert('Addendum added and signed successfully.');
-                    } catch (signError) {
-                        console.error('Error signing addendum:', signError);
-                        alert('Addendum added but failed to sign. You can sign it later.');
-                    }
-                } else {
-                    // Prompt to sign the addendum
-                    setAddendumToSignIndex(newAddendumIndex);
-                    setShowSignAddendumModal(true);
-                }
-            } else {
-                alert('Addendum added successfully.');
-            }
-        } catch (error) {
-            console.error('Error adding addendum:', error);
-            alert('Failed to add addendum');
-        }
-    };
-
-    const handleSignAddendum = async () => {
-        if (addendumToSignIndex === null) return;
-        
-        try {
-            await visitsAPI.signAddendum(visitId, addendumToSignIndex);
-            // Refresh visit data
-            const visitRes = await visitsAPI.get(visitId);
-            const visitData = visitRes.data;
             if (visitData.addendums) {
                 const addendumsData = Array.isArray(visitData.addendums) 
                     ? visitData.addendums 
                     : JSON.parse(visitData.addendums || '[]');
                 setAddendums(addendumsData);
             }
-            setShowSignAddendumModal(false);
-            setAddendumToSignIndex(null);
-            alert('Addendum signed successfully. It is now immutable.');
+            setAddendumText('');
+            setShowAddendumModal(false);
+            alert('Addendum added successfully');
         } catch (error) {
-            console.error('Error signing addendum:', error);
-            alert('Failed to sign addendum');
+            console.error('Error adding addendum:', error);
+            alert('Failed to add addendum');
         }
     };
 
@@ -554,9 +483,8 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     }
 
     const visitDate = visit.visit_date ? format(new Date(visit.visit_date), 'MMMM d, yyyy') : format(new Date(), 'MMMM d, yyyy');
-    const providerTitle = visit.provider_title || visit.provider_credentials || '';
     const providerName = visit.provider_first_name && visit.provider_last_name
-        ? `${visit.provider_first_name} ${visit.provider_last_name}${providerTitle ? ', ' + providerTitle : ''}`
+        ? `${visit.provider_first_name} ${visit.provider_last_name}`
         : 'Provider';
     const patientAge = calculateAge(patient.dob);
     const patientDOB = patient.dob ? format(new Date(patient.dob), 'MM/dd/yyyy') : '';
@@ -571,106 +499,150 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
                 }
                 
-                /* Hide print-only content on screen */
-                @media screen {
-                    .print-only {
-                        display: none !important;
-                    }
-                }
-
-                /* hide clone in normal UI */
-                #print-chart-clone {
-                    display: none !important;
-                }
-                
-                /* When printing, hide everything except the visit chart view */
-                /* ✅ Use clone-based printing to avoid blank first page */
+                /* When printing, hide everything except the visit note */
                 @media print {
+                    /* Page setup */
                     @page {
-                        size: letter;
-                        margin: 0;
+                        size: letter portrait;
+                        margin: 0.5in;
                     }
-
-                    /* Hide the whole React app during print */
-                    body.printing-chart #root {
+                    
+                    /* Hide EVERYTHING by default - all common elements */
+                    body > *:not(#modal-overlay),
+                    header,
+                    nav,
+                    aside,
+                    main:not(#modal-overlay),
+                    footer,
+                    .sidebar,
+                    [class*="sidebar"],
+                    [class*="nav"],
+                    [class*="header"] {
                         display: none !important;
+                        visibility: hidden !important;
                     }
-
-                    /* Show the cloned print content */
-                    body.printing-chart #print-chart-clone {
+                    
+                    /* Hide root children except modal */
+                    #root > *:not(#modal-overlay) {
+                        display: none !important;
+                        visibility: hidden !important;
+                    }
+                    
+                    /* Show only the modal overlay */
+                    #modal-overlay {
                         display: block !important;
-                    }
-
-                    /* ✅ IMPORTANT: bring clone onto the printable page */
-                    body.printing-chart #print-chart-clone {
-                        position: static !important;
-                        left: auto !important;
-                        top: auto !important;
-                        width: auto !important;
-                        min-height: auto !important;
+                        visibility: visible !important;
+                        position: fixed !important;
+                        left: 0 !important;
+                        top: 0 !important;
+                        right: 0 !important;
+                        bottom: 0 !important;
+                        background: white !important;
                         padding: 0 !important;
                         margin: 0 !important;
+                        width: 100vw !important;
+                        height: 100vh !important;
+                        overflow: visible !important;
+                        box-shadow: none !important;
+                        border: none !important;
+                        z-index: 999999 !important;
                     }
-
-                    body.printing-chart #print-chart-clone,
-                    body.printing-chart #print-chart-clone * {
+                    
+                    /* Modal container */
+                    #modal-overlay > div {
+                        position: static !important;
+                        display: block !important;
                         visibility: visible !important;
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
+                        background: white !important;
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        height: auto !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        overflow: visible !important;
+                        box-shadow: none !important;
+                        border: none !important;
+                        border-radius: 0 !important;
                     }
-
-                    /* Header: keep side-by-side layout, don't wrap */
-                    body.printing-chart .visit-print-toprow {
-                        flex-wrap: nowrap !important;
-                        gap: 16px !important;
-                        align-items: flex-start !important;
-                    }
-
-                    /* Right-side visit info: keep on right, maintain border */
-                    body.printing-chart .visit-print-toprow > div:last-child {
-                        border-left: 1px solid #d1d5db !important;
-                        padding-left: 16px !important;
-                        text-align: right !important;
-                        flex-shrink: 0 !important;
-                        width: auto !important;
-                    }
-
-                    /* Logo slightly smaller for print so header fits */
-                    body.printing-chart #print-chart-clone img {
-                        width: 110px !important;
-                        height: 110px !important;
-                    }
-
-                    /* Demographics grid: keep it to 3 columns in print (6 columns gets too tight) */
-                    body.printing-chart .visit-print-demographics {
-                        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-                    }
-
-                    /* Hide buttons and controls */
-                    body.printing-chart button {
+                    
+                    /* Hide modal header with buttons */
+                    #modal-overlay > div > .p-4 {
                         display: none !important;
+                    }
+                    
+                    /* Visit chart view - make it visible and properly sized */
+                    #visit-chart-view {
+                        display: block !important;
+                        visibility: visible !important;
+                        position: relative !important;
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        height: auto !important;
+                        padding: 24px 32px !important;
+                        margin: 0 !important;
+                        background: white !important;
+                        overflow: visible !important;
+                        box-shadow: none !important;
+                        border: none !important;
+                        border-radius: 0 !important;
+                    }
+                    
+                    /* Remove max-width constraints */
+                    #visit-chart-view.max-w-4xl,
+                    #visit-chart-view[class*="max-w"] {
+                        max-width: 100% !important;
+                        width: 100% !important;
+                    }
+                    
+                    /* Hide all buttons */
+                    button {
+                        display: none !important;
+                        visibility: hidden !important;
+                    }
+                    
+                    /* Preserve colors */
+                    #visit-chart-view * {
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                        color-adjust: exact !important;
+                    }
+                    
+                    /* Keep all layouts */
+                    #visit-chart-view .flex {
+                        display: flex !important;
+                    }
+                    #visit-chart-view .grid {
+                        display: grid !important;
+                    }
+                    
+                    /* Ensure all text is visible */
+                    #visit-chart-view * {
+                        color: inherit !important;
+                        visibility: visible !important;
+                    }
+                    
+                    /* Images */
+                    #visit-chart-view img {
+                        max-width: 100% !important;
+                        height: auto !important;
+                        display: block !important;
                     }
                 }
             `}</style>
 
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" id="modal-overlay">
+            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 print:hidden" id="modal-overlay">
                 <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col print:shadow-none print:rounded-none print:max-w-none print:max-h-none print:w-full print:overflow-visible">
-                    <div className="p-3 border-b border-gray-200 flex items-center justify-between print-hidden bg-white gap-1.5">
-                        <div className="flex-1">
-                            <h2 className="text-lg font-bold text-gray-800">Visit Chart</h2>
-                        </div>
-                        <div className="flex items-center space-x-1.5">
+                    <div className="p-4 border-b border-gray-200 flex items-center justify-between print-hidden bg-white">
+                        <h2 className="text-xl font-bold text-gray-800">Visit Chart View</h2>
+                        <div className="flex items-center space-x-1">
                             {isSigned && (
                                 <>
                                     <button 
                                         onClick={() => setShowAddendumModal(true)} 
-                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
+                                        className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                                        title="Add Addendum"
                                     >
-                                        <FilePlus className="w-3.5 h-3.5" />
-                                        <span>Add Addendum</span>
+                                        <FilePlus className="w-4 h-4" />
                                     </button>
                                     <button 
                                         onClick={() => {
@@ -681,71 +653,35 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                             setSelectedDiagnosisCodes(diagnosisCodes);
                                             setShowSuperbillModal(true);
                                         }} 
-                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                        style={{ background: 'linear-gradient(to right, #10B981, #059669)' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #059669, #047857)'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #10B981, #059669)'}
+                                        className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                                        title="Create Superbill"
                                     >
-                                        <Receipt className="w-3.5 h-3.5" />
-                                        <span>Create Superbill</span>
-                                    </button>
-                                    <button
-                                        onClick={() => setShowPrintableOrders(true)}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                        style={{ background: 'linear-gradient(to right, #16A34A, #15803D)' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #15803D, #166534)'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #16A34A, #15803D)'}
-                                        title="Print Orders"
-                                    >
-                                        <Printer className="w-3.5 h-3.5" />
-                                        <span>Print Orders</span>
+                                        <Receipt className="w-4 h-4" />
                                     </button>
                                 </>
                             )}
                             <button 
                                 onClick={() => setShowBillingModal(true)} 
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                style={{ background: 'linear-gradient(to right, #8B5CF6, #7C3AED)' }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #7C3AED, #6D28D9)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #8B5CF6, #7C3AED)'}
+                                className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                                title="View Billing"
                             >
-                                <DollarSign className="w-3.5 h-3.5" />
-                                <span>View Billing</span>
+                                <DollarSign className="w-4 h-4" />
                             </button>
-                            <button 
-                                onClick={handlePrint} 
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                style={{ background: 'linear-gradient(to right, #6B7280, #4B5563)' }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #4B5563, #374151)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #6B7280, #4B5563)'}
-                            >
-                                <Printer className="w-3.5 h-3.5" />
-                                <span>Print</span>
+                            <button onClick={handlePrint} className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors" title="Print">
+                                <Printer className="w-4 h-4" />
                             </button>
-                            <button 
-                                onClick={onClose} 
-                                className="p-2 text-gray-600 hover:text-gray-800 rounded-lg hover:bg-gray-100 transition-colors"
-                                title="Close"
-                            >
+                            <button onClick={onClose} className="p-2 text-gray-600 hover:text-gray-800 rounded-lg hover:bg-gray-100 transition-colors">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
                     </div>
 
-                    {/* Alert if addendums exist - Full width banner */}
-                    {addendums.length > 0 && (
-                        <div className="w-full flex items-center justify-center gap-2 py-2 text-sm font-semibold text-red-800 print-hidden">
-                            <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-600" />
-                            <span>⚠️ This note has {addendums.length} addendum{addendums.length > 1 ? 's' : ''}. <a href="#addendums-section" className="underline font-bold hover:text-red-900">Scroll down to view</a>.</span>
-                        </div>
-                    )}
-
-                    <div id="visit-chart-view" className="flex-1 overflow-y-auto bg-white py-6 px-8 max-w-4xl mx-auto rounded-2xl">
+                    <div id="visit-chart-view" className="flex-1 overflow-y-auto bg-white py-6 px-8 max-w-4xl mx-auto rounded-2xl print:!max-w-none print:!mx-0 print:!p-0 print:!rounded-none print:!w-full">
                         {/* Compact Combined Header: Clinic + Patient Info + Visit Info */}
                         <div className="mb-4 bg-blue-50/90 border-b-2 border-gray-300 rounded-t-lg shadow-sm">
                             <div className="px-5 py-3">
                                 {/* Top Row: Clinic Logo + Clinic Info + Visit Info */}
-                                <div className="visit-print-toprow flex items-center justify-between gap-4 mb-3 pb-3 border-b border-gray-300">
+                                <div className="flex items-center justify-between gap-4 mb-3 pb-3 border-b border-gray-300">
                                     {/* Logo + Clinic Info */}
                                     <div className="flex items-center gap-1 flex-1">
                                         {/* Bigger Logo without container */}
@@ -755,16 +691,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                                 alt="myPCP Clinic Logo" 
                                                 className="w-36 h-36 object-contain"
                                                 onError={(e) => {
-                                                    console.error('Failed to load clinic logo:', '/clinic-logo.png');
-                                                    // Try alternative logo if main one fails
-                                                    if (e.target.src !== '/logo.png') {
-                                                        e.target.src = '/logo.png';
-                                                    } else {
-                                                        e.target.style.display = 'none';
-                                                    }
-                                                }}
-                                                onLoad={() => {
-                                                    console.log('Clinic logo loaded successfully');
+                                                    e.target.style.display = 'none';
                                                 }}
                                             />
                                         </div>
@@ -821,7 +748,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                     </div>
                                     
                                     {/* Patient Demographics Grid - Bigger */}
-                                    <div className="visit-print-demographics flex-1 grid grid-cols-3 md:grid-cols-6 gap-x-4 gap-y-2">
+                                    <div className="flex-1 grid grid-cols-3 md:grid-cols-6 gap-x-4 gap-y-2">
                                         {/* Phone */}
                                         <div>
                                             <div className="flex items-center gap-1.5 mb-1">
@@ -1001,7 +928,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                             {/* Vital Signs - After Patient Background, Before Physical Exam */}
                             {renderSection('vitals', true, 'Vital Signs',
                                 vitals && Object.keys(vitals).length > 0 ? (
-                                    <div className="grid grid-cols-4 gap-1.5 text-xs text-gray-700">
+                                    <div className="grid grid-cols-4 gap-2 text-xs text-gray-700">
                                         {vitals?.bp && <div><span className="font-semibold">BP:</span> {decodeHtmlEntities(String(vitals.bp))} mmHg</div>}
                                         {vitals?.pulse && <div><span className="font-semibold">HR:</span> {decodeHtmlEntities(String(vitals.pulse))} bpm</div>}
                                         {vitals?.temp && <div><span className="font-semibold">Temp:</span> {decodeHtmlEntities(String(vitals.temp))}°F</div>}
@@ -1065,45 +992,15 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
 
                         {/* Addendums */}
                         {addendums.length > 0 && (
-                            <div className="mt-6 pt-4 border-t-2 border-gray-300" id="addendums-section">
+                            <div className="mt-6 pt-4 border-t-2 border-gray-300">
                                 <h3 className="text-sm font-bold text-gray-900 mb-3">Addendums</h3>
                                 <div className="space-y-3">
                                     {addendums.map((addendum, idx) => (
-                                        <div key={idx} className={`border-l-4 p-3 rounded ${
-                                            addendum.signed 
-                                                ? 'bg-green-50 border-green-400' 
-                                                : 'bg-yellow-50 border-yellow-400'
-                                        }`}>
-                                            <div className="flex items-center justify-between mb-1">
-                                                <div className="text-xs text-gray-600">
-                                                    {addendum.signed ? (
-                                                        <>
-                                                            <span className="font-semibold text-green-700">✓ Signed</span> by {addendum.signedByName} on {format(new Date(addendum.signedAt), 'MM/dd/yyyy h:mm a')}
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            Added by {addendum.addedByName} on {format(new Date(addendum.addedAt), 'MM/dd/yyyy h:mm a')}
-                                                            <span className="ml-2 text-orange-600 font-semibold">(Unsigned - Must be signed)</span>
-                                                        </>
-                                                    )}
-                                                </div>
-                                                {!addendum.signed && isSigned && (
-                                                    <button
-                                                        onClick={() => {
-                                                            setAddendumToSignIndex(idx);
-                                                            setShowSignAddendumModal(true);
-                                                        }}
-                                                        className="px-2 py-0.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors"
-                                                    >
-                                                        Sign Addendum
-                                                    </button>
-                                                )}
+                                        <div key={idx} className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
+                                            <div className="text-xs text-gray-600 mb-1">
+                                                Added by {addendum.addedByName} on {format(new Date(addendum.addedAt), 'MM/dd/yyyy h:mm a')}
                                             </div>
-                                            <div className={`text-xs whitespace-pre-wrap ${
-                                                addendum.signed ? 'text-gray-900' : 'text-gray-800'
-                                            }`}>
-                                                {addendum.text}
-                                            </div>
+                                            <div className="text-xs text-gray-900 whitespace-pre-wrap">{addendum.text}</div>
                                         </div>
                                     ))}
                                 </div>
@@ -1118,7 +1015,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                 </div>
                             )}
                             {/* PageMD Stamp */}
-                            <div className="flex items-center justify-end gap-1.5 text-[10px] text-gray-400 opacity-60">
+                            <div className="flex items-center justify-end gap-2 text-[10px] text-gray-400 opacity-60">
                                 <span>Generated by</span>
                                 <span className="font-semibold text-gray-500">PageMD</span>
                             </div>
@@ -1147,7 +1044,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                     placeholder="Enter addendum text..."
                                 />
                             </div>
-                            <div className="flex justify-end gap-1.5">
+                            <div className="flex justify-end gap-2">
                                 <button
                                     onClick={() => {
                                         setShowAddendumModal(false);
@@ -1158,74 +1055,13 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                     Cancel
                                 </button>
                                 <button
-                                    onClick={() => handleAddAddendum(false)}
+                                    onClick={handleAddAddendum}
                                     className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md"
-                                    style={{ background: 'linear-gradient(to right, #6B7280, #4B5563)' }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #4B5563, #374151)'}
-                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #6B7280, #4B5563)'}
+                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                                 >
-                                    Add & Sign Later
-                                </button>
-                                <button
-                                    onClick={() => handleAddAddendum(true)}
-                                    className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md"
-                                    style={{ background: 'linear-gradient(to right, #10B981, #059669)' }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #059669, #047857)'}
-                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #10B981, #059669)'}
-                                >
-                                    Add & Sign Now
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Sign Addendum Modal */}
-            {showSignAddendumModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => {
-                    setShowSignAddendumModal(false);
-                    setAddendumToSignIndex(null);
-                }}>
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-gray-900">Sign Addendum</h3>
-                            <button onClick={() => {
-                                setShowSignAddendumModal(false);
-                                setAddendumToSignIndex(null);
-                            }} className="p-1 hover:bg-gray-100 rounded">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-                        <div className="space-y-4">
-                            <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
-                                <p className="text-sm text-yellow-800">
-                                    <strong>Warning:</strong> Once signed, this addendum cannot be edited or deleted. 
-                                    This action is permanent and legally binding.
-                                </p>
-                            </div>
-                            {addendumToSignIndex !== null && addendums[addendumToSignIndex] && (
-                                <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                                    <p className="text-xs text-gray-600 mb-1">Addendum Text:</p>
-                                    <p className="text-sm text-gray-900 whitespace-pre-wrap">{addendums[addendumToSignIndex].text}</p>
-                                </div>
-                            )}
-                            <div className="flex justify-end gap-1.5">
-                                <button
-                                    onClick={() => {
-                                        setShowSignAddendumModal(false);
-                                        setAddendumToSignIndex(null);
-                                    }}
-                                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleSignAddendum}
-                                    className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md"
-                                    style={{ background: 'linear-gradient(to right, #10B981, #059669)' }}
-                                >
-                                    Sign Addendum
+                                    Add Addendum
                                 </button>
                             </div>
                         </div>
@@ -1251,7 +1087,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                     {problems.filter(p => p.icd10_code).map((problem, idx) => {
                                         const isSelected = selectedDiagnosisCodes.some(d => d.code === problem.icd10_code);
                                         return (
-                                            <label key={idx} className="flex items-center space-x-1.5 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                            <label key={idx} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
                                                 <input
                                                     type="checkbox"
                                                     checked={isSelected}
@@ -1281,7 +1117,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                         const isSelected = selectedProcedureCodes.some(p => p.code === fee.code);
                                         return (
                                             <label key={idx} className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-1 rounded">
-                                                <div className="flex items-center space-x-1.5">
+                                                <div className="flex items-center space-x-2">
                                                     <input
                                                         type="checkbox"
                                                         checked={isSelected}
@@ -1321,7 +1157,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                 </div>
                             </div>
 
-                            <div className="flex justify-end gap-1.5">
+                            <div className="flex justify-end gap-2">
                                 <button
                                     onClick={() => {
                                         setShowSuperbillModal(false);
@@ -1353,140 +1189,6 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                     onClose={() => setShowBillingModal(false)}
                 />
             )}
-
-            {/* Printable Orders Modal */}
-            {showPrintableOrders && visit && patient && (
-                <PrintableOrders
-                    visitId={visitId}
-                    patientId={patientId}
-                    patientName={patient ? `${patient.first_name || ''} ${patient.last_name || ''}`.trim() : 'N/A'}
-                    visitDate={visit.visit_date || visit.created_at || new Date().toISOString()}
-                    planStructured={noteData.planStructured || []}
-                    onClose={() => setShowPrintableOrders(false)}
-                />
-            )}
-
-            {/* Print Preview Modal */}
-            {showPrintPreview && (
-                <div className="fixed inset-0 bg-black bg-opacity-75 z-[60] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col">
-                        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-white">
-                            <h3 className="text-lg font-semibold text-gray-900">Print Preview</h3>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={handlePrint}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
-                                >
-                                    <Printer className="w-4 h-4" />
-                                    <span>Print</span>
-                                </button>
-                                <button
-                                    onClick={() => setShowPrintPreview(false)}
-                                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                                >
-                                    Close
-                                </button>
-                            </div>
-                        </div>
-                        <div className="flex-1 overflow-auto bg-gray-100 p-4">
-                            <div className="bg-white shadow-lg mx-auto" style={{ width: '8.5in', minHeight: '11in', padding: '0.5in' }}>
-                                {/* Show actual visit chart view content for preview */}
-                                <div id="print-preview-content" className="print-preview">
-                                    {/* Render the same content structure but read-only */}
-                                    {visit && patient && (
-                                        <div className="space-y-4">
-                                            {/* Header */}
-                                            <div className="mb-4 bg-blue-50/90 border-b-2 border-gray-300 rounded-t-lg shadow-sm">
-                                                <div className="px-5 py-3">
-                                                    <div className="text-xs text-gray-600 mb-1">123 Medical Center Drive, Suite 100</div>
-                                                    <div className="text-xs text-gray-600 mb-1">City, State 12345</div>
-                                                    <div className="text-xs text-gray-600">(555) 123-4567 | Fax: (555) 123-4568</div>
-                                                </div>
-                                            </div>
-                                            
-                                            {/* Patient Info */}
-                                            <div className="mb-4">
-                                                <div className="text-sm font-semibold text-gray-900 mb-1">
-                                                    {patient.first_name} {patient.last_name}
-                                                </div>
-                                                <div className="text-xs text-gray-600">
-                                                    DOB: {patient.dob ? format(new Date(patient.dob), 'MM/dd/yyyy') : 'N/A'} | 
-                                                    MRN: {patient.mrn || 'N/A'}
-                                                </div>
-                                            </div>
-                                            
-                                            {/* Visit Info */}
-                                            <div className="mb-4 text-xs text-gray-600">
-                                                <div>Visit Date: {visit.visit_date ? format(new Date(visit.visit_date), 'MM/dd/yyyy') : 'N/A'}</div>
-                                                <div>Provider: {visit.provider_name || 'N/A'}</div>
-                                            </div>
-                                            
-                                            {/* Note Content */}
-                                            {noteData.hpi && (
-                                                <div className="mb-4">
-                                                    <div className="font-semibold text-sm text-gray-900 mb-2">History of Present Illness:</div>
-                                                    <div className="text-xs text-gray-800 whitespace-pre-wrap">{noteData.hpi}</div>
-                                                </div>
-                                            )}
-                                            
-                                            {noteData.peNotes && (
-                                                <div className="mb-4">
-                                                    <div className="font-semibold text-sm text-gray-900 mb-2">Physical Examination:</div>
-                                                    <div className="text-xs text-gray-800 whitespace-pre-wrap">{noteData.peNotes}</div>
-                                                </div>
-                                            )}
-                                            
-                                            {noteData.assessment && (
-                                                <div className="mb-4">
-                                                    <div className="font-semibold text-sm text-gray-900 mb-2">Assessment:</div>
-                                                    <div className="text-xs text-gray-800 whitespace-pre-wrap">{noteData.assessment}</div>
-                                                </div>
-                                            )}
-                                            
-                                            {noteData.plan && (
-                                                <div className="mb-4">
-                                                    <div className="font-semibold text-sm text-gray-900 mb-2">Plan:</div>
-                                                    <div className="text-xs text-gray-800 whitespace-pre-wrap">{noteData.plan}</div>
-                                                </div>
-                                            )}
-                                            
-                                            {/* Addendums */}
-                                            {addendums.length > 0 && (
-                                                <div className="mt-6 pt-4 border-t-2 border-gray-300">
-                                                    <h3 className="text-sm font-bold text-gray-900 mb-3">Addendums</h3>
-                                                    <div className="space-y-3">
-                                                        {addendums.map((addendum, idx) => (
-                                                            <div key={idx} className={`border-l-4 p-3 rounded ${
-                                                                addendum.signed
-                                                                    ? 'bg-green-50 border-green-400'
-                                                                    : 'bg-yellow-50 border-yellow-400'
-                                                            }`}>
-                                                                <div className="text-xs text-gray-600 mb-1">
-                                                                    {addendum.signed ? (
-                                                                        <>
-                                                                            <span className="font-semibold text-green-700">✓ Signed</span> by {addendum.signedByName} on {format(new Date(addendum.signedAt), 'MM/dd/yyyy h:mm a')}
-                                                                        </>
-                                                                    ) : (
-                                                                        <>
-                                                                            Added by {addendum.addedByName} on {format(new Date(addendum.addedAt), 'MM/dd/yyyy h:mm a')}
-                                                                        </>
-                                                                    )}
-                                                                </div>
-                                                                <div className="text-xs text-gray-800 whitespace-pre-wrap">{addendum.text}</div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
         </>
     );
 };

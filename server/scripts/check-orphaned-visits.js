@@ -65,19 +65,3 @@ checkOrphanedVisits();
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -7,44 +7,28 @@
 
 /**
  * Enforce HTTPS - redirect HTTP to HTTPS
- * Works behind reverse proxy (Caddy/Nginx) using X-Forwarded-Proto header
  */
 const enforceHTTPS = (req, res, next) => {
-  // Skip HTTPS enforcement if FORCE_HTTPS is not enabled
-  if (process.env.FORCE_HTTPS !== 'true') {
-    return next();
-  }
-
-  // Skip HTTPS enforcement for health check endpoint (internal monitoring)
-  if (req.path === '/api/health' || req.path === '/health') {
-    return next();
-  }
-
   // Skip HTTPS enforcement for localhost in development
   const isLocalhost = req.hostname === 'localhost' || req.hostname === '127.0.0.1' || req.hostname === '::1';
-  if (isLocalhost && process.env.NODE_ENV !== 'production') {
+  if (isLocalhost) {
     return next(); // Always allow localhost (development)
   }
-
+  
   // Skip OPTIONS requests (CORS preflight) - let CORS handle them
   if (req.method === 'OPTIONS') {
     return next();
   }
-
+  
+  // Enforce HTTPS in all non-localhost environments (staging, test, production)
+  
   // Check if request is already HTTPS
-  // Works behind reverse proxy: check x-forwarded-proto header
-  const isSecure = req.secure ||
-    req.headers['x-forwarded-proto'] === 'https' ||
-    req.headers['x-forwarded-proto'] === 'https,'; // Some proxies add comma
-
-  if (isSecure) {
+  if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
     return next();
   }
-
-  // In production, redirect to HTTPS
-  // Use X-Forwarded-Host if available (from reverse proxy), otherwise use Host
-  const host = req.headers['x-forwarded-host'] || req.headers.host;
-  const httpsUrl = `https://${host}${req.originalUrl || req.url}`;
+  
+  // Redirect to HTTPS
+  const httpsUrl = `https://${req.headers.host}${req.url}`;
   return res.redirect(301, httpsUrl);
 };
 
@@ -69,32 +53,29 @@ const setHSTS = (req, res, next) => {
  */
 const securityHeaders = (req, res, next) => {
   // Content Security Policy
-  const connectSrc = ["'self'", process.env.FRONTEND_URL].filter(Boolean).join(' ');
-  const imgSrc = ["'self'", "data:", "blob:", process.env.FRONTEND_URL].filter(Boolean).join(' ');
-
   res.setHeader(
     'Content-Security-Policy',
-    `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src ${imgSrc}; font-src 'self' data:; connect-src ${connectSrc};`
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self';"
   );
-
+  
   // X-Frame-Options (prevent clickjacking)
   res.setHeader('X-Frame-Options', 'DENY');
-
+  
   // X-Content-Type-Options (prevent MIME sniffing)
   res.setHeader('X-Content-Type-Options', 'nosniff');
-
+  
   // X-XSS-Protection
   res.setHeader('X-XSS-Protection', '1; mode=block');
-
+  
   // Referrer Policy
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-
+  
   // Permissions Policy
   res.setHeader(
     'Permissions-Policy',
     'geolocation=(), microphone=(), camera=()'
   );
-
+  
   next();
 };
 

@@ -234,19 +234,3 @@ All settings endpoints require admin privileges:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,85 +1,14 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { X, FileText, Clock, Edit, Eye, Trash2 } from 'lucide-react';
 import { format, parse, compareDesc } from 'date-fns';
 import { visitsAPI } from '../services/api';
 
-const VisitFoldersModal = ({ isOpen, onClose, visits: visitsProp, patientId, onViewVisit, onDeleteVisit }) => {
+const VisitFoldersModal = ({ isOpen, onClose, visits, onViewVisit, onDeleteVisit }) => {
     const [filter, setFilter] = useState('all'); // 'all', 'draft', 'signed'
-    const [visits, setVisits] = useState([]);
-    const [loading, setLoading] = useState(false);
-
-    // Fetch visits if patientId is provided and visits prop is not
-    useEffect(() => {
-        if (isOpen && patientId && !visitsProp) {
-            const fetchVisits = async () => {
-                setLoading(true);
-                try {
-                    const response = await visitsAPI.getByPatient(patientId);
-                    if (response.data && response.data.length > 0) {
-                        // Show all visits, not just those with note_draft content
-                        const notesToShow = response.data;
-                        const formattedNotes = notesToShow.map(visit => {
-                            const noteText = visit.note_draft || "";
-                            const ccMatch = noteText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
-                            const chiefComplaint = ccMatch ? ccMatch[1].trim() : null;
-                            const visitDateObj = new Date(visit.visit_date);
-                            const createdDateObj = visit.created_at ? new Date(visit.created_at) : visitDateObj;
-                            const dateStr = visitDateObj.toLocaleDateString();
-                            const hasTime = visitDateObj.getHours() !== 0 || visitDateObj.getMinutes() !== 0 || visitDateObj.getSeconds() !== 0;
-                            const timeSource = hasTime ? visitDateObj : createdDateObj;
-                            const timeStr = timeSource.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                            const dateTimeStr = `${dateStr} ${timeStr}`;
-                            
-                            return {
-                                id: visit.id,
-                                date: dateStr,
-                                time: timeStr,
-                                dateTime: dateTimeStr,
-                                type: visit.visit_type || "Office Visit",
-                                provider: (() => {
-                                    const signedByName = visit.signed_by_first_name && visit.signed_by_last_name
-                                        ? `${visit.signed_by_first_name} ${visit.signed_by_last_name}`
-                                        : null;
-                                    const providerNameFallback = visit.provider_first_name 
-                                        ? `${visit.provider_first_name} ${visit.provider_last_name}` 
-                                        : "Provider";
-                                    return ((visit.locked || visit.note_signed_by) && signedByName && signedByName !== 'System Administrator')
-                                        ? signedByName
-                                        : providerNameFallback;
-                                })(),
-                                chiefComplaint: chiefComplaint,
-                                signed: visit.locked || !!visit.note_signed_by,
-                                visitDate: visit.visit_date,
-                                createdAt: visit.created_at || visit.visit_date,
-                                fullNote: noteText
-                            };
-                        });
-                        setVisits(formattedNotes);
-                    } else {
-                        setVisits([]);
-                    }
-                } catch (error) {
-                    console.error('Error fetching visits:', error);
-                    setVisits([]);
-                } finally {
-                    setLoading(false);
-                }
-            };
-            fetchVisits();
-        } else if (visitsProp) {
-            setVisits(visitsProp);
-        }
-    }, [isOpen, patientId, visitsProp]);
-
-    // Use visitsProp if provided, otherwise use state
-    const visitsToUse = visitsProp || visits;
 
     // Filter visits - must be called before early return
     const filteredVisits = useMemo(() => {
-        if (!visitsToUse || !Array.isArray(visitsToUse)) {
-            return [];
-        }
-        let filtered = visitsToUse.filter(visit => {
+        let filtered = visits.filter(visit => {
             if (filter === 'all') return true;
             if (filter === 'draft') return !visit.signed;
             if (filter === 'signed') return visit.signed;
@@ -106,7 +35,7 @@ const VisitFoldersModal = ({ isOpen, onClose, visits: visitsProp, patientId, onV
         });
 
         return filtered;
-    }, [visitsToUse, filter]);
+    }, [visits, filter]);
 
     if (!isOpen) return null;
 
@@ -123,7 +52,7 @@ const VisitFoldersModal = ({ isOpen, onClose, visits: visitsProp, patientId, onV
                 <div className="flex items-center justify-between p-6 border-b border-neutral-200">
                     <div>
                         <h2 className="text-2xl font-bold text-neutral-900">Visit History</h2>
-                        <p className="text-sm text-neutral-600 mt-1">{visitsToUse?.length || 0} total visits</p>
+                        <p className="text-sm text-neutral-600 mt-1">{visits.length} total visits</p>
                     </div>
                     <button
                         onClick={onClose}
@@ -144,7 +73,7 @@ const VisitFoldersModal = ({ isOpen, onClose, visits: visitsProp, patientId, onV
                                     : 'text-neutral-600 hover:text-neutral-900'
                             }`}
                         >
-                            All ({visitsToUse?.length || 0})
+                            All ({visits.length})
                         </button>
                         <button
                             onClick={() => setFilter('draft')}
@@ -154,7 +83,7 @@ const VisitFoldersModal = ({ isOpen, onClose, visits: visitsProp, patientId, onV
                                     : 'text-neutral-600 hover:text-neutral-900'
                             }`}
                         >
-                            Draft ({visitsToUse?.filter(v => !v.signed).length || 0})
+                            Draft ({visits.filter(v => !v.signed).length})
                         </button>
                         <button
                             onClick={() => setFilter('signed')}
@@ -164,18 +93,14 @@ const VisitFoldersModal = ({ isOpen, onClose, visits: visitsProp, patientId, onV
                                     : 'text-neutral-600 hover:text-neutral-900'
                             }`}
                         >
-                            Signed ({visitsToUse?.filter(v => v.signed).length || 0})
+                            Signed ({visits.filter(v => v.signed).length})
                         </button>
                     </div>
                 </div>
 
                 {/* Visits List */}
                 <div className="flex-1 overflow-y-auto">
-                    {loading ? (
-                        <div className="text-center py-12 text-neutral-500">
-                            <p>Loading visits...</p>
-                        </div>
-                    ) : filteredVisits.length === 0 ? (
+                    {filteredVisits.length === 0 ? (
                         <div className="text-center py-12 text-neutral-500">
                             <FileText className="w-12 h-12 mx-auto mb-3 text-neutral-300" />
                             <p>No visits found</p>

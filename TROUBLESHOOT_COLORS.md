@@ -81,19 +81,3 @@ getComputedStyle(document.body).backgroundColor
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

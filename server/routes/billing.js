@@ -139,11 +139,9 @@ router.post('/claims', requireRole('admin', 'front_desk', 'clinician'), async (r
       visitId,
       diagnosisCodes,
       procedureCodes,
-      lineItems, // Commercial v1: accept lineItems as alternative to procedureCodes
       insuranceProvider,
       insurancePayerId,
       insuranceMemberId,
-      payerMemberId, // Also accept payerMemberId (alias)
       insuranceGroupNumber,
       placeOfServiceCode = '11', // Default to Office
       serviceDateStart,
@@ -158,82 +156,17 @@ router.post('/claims', requireRole('admin', 'front_desk', 'clinician'), async (r
     // Validation
     if (!visitId) {
       await client.query('ROLLBACK');
-      client.release();
       return res.status(400).json({ error: 'Visit ID is required' });
     }
     
     if (!diagnosisCodes || !Array.isArray(diagnosisCodes) || diagnosisCodes.length === 0) {
       await client.query('ROLLBACK');
-      client.release();
       return res.status(400).json({ error: 'At least one diagnosis code is required' });
     }
     
-    // Accept either lineItems (commercial v1) or procedureCodes (legacy)
-    const hasLineItems = lineItems && Array.isArray(lineItems) && lineItems.length > 0;
-    const hasProcedureCodes = procedureCodes && Array.isArray(procedureCodes) && procedureCodes.length > 0;
-    
-    if (!hasLineItems && !hasProcedureCodes) {
+    if (!procedureCodes || !Array.isArray(procedureCodes) || procedureCodes.length === 0) {
       await client.query('ROLLBACK');
-      client.release();
-      return res.status(400).json({ error: 'At least one procedure code or line item is required' });
-    }
-    
-    // Normalize: convert lineItems to procedureCodes format for processing, or use procedureCodes directly
-    let normalizedProcedureCodes = [];
-    if (hasLineItems) {
-      // Convert lineItems to procedureCodes format
-      normalizedProcedureCodes = lineItems.map(li => ({
-        code: li.cpt || li.code,
-        description: li.description || '',
-        amount: Number(li.charge || li.amount || 0),
-        units: Number(li.units || 1),
-        modifiers: Array.isArray(li.modifiers) ? li.modifiers : (li.modifier ? [li.modifier] : []),
-        dxPointers: Array.isArray(li.dxPointers) ? li.dxPointers : (li.diagnosisPointers || [1])
-      }));
-    } else {
-      // Use procedureCodes, normalize field names
-      normalizedProcedureCodes = procedureCodes.map(proc => ({
-        code: proc.code || proc,
-        description: proc.description || '',
-        amount: Number(proc.amount || 0),
-        units: Number(proc.units || 1),
-        modifiers: Array.isArray(proc.modifiers) ? proc.modifiers : (proc.modifier ? [proc.modifier] : []),
-        dxPointers: Array.isArray(proc.dxPointers) ? proc.dxPointers : (proc.diagnosisPointers || [1])
-      }));
-    }
-    
-    // Validate line items
-    for (const proc of normalizedProcedureCodes) {
-      if (!proc.code) {
-        await client.query('ROLLBACK');
-        client.release();
-        return res.status(400).json({ error: 'Each line item must have a CPT code' });
-      }
-      if (proc.units < 1) {
-        await client.query('ROLLBACK');
-        client.release();
-        return res.status(400).json({ error: 'Units must be at least 1' });
-      }
-      // Validate modifiers (should be strings, max 2 chars each)
-      if (proc.modifiers && Array.isArray(proc.modifiers)) {
-        for (const mod of proc.modifiers) {
-          if (typeof mod !== 'string' || mod.length > 2) {
-            await client.query('ROLLBACK');
-            client.release();
-            return res.status(400).json({ error: 'Modifiers must be strings of max 2 characters' });
-          }
-        }
-      }
-      // Validate dxPointers (should be valid indices into diagnosisCodes)
-      if (proc.dxPointers && Array.isArray(proc.dxPointers)) {
-        for (const ptr of proc.dxPointers) {
-          if (!Number.isFinite(ptr) || ptr < 1 || ptr > diagnosisCodes.length) {
-            await client.query('ROLLBACK');
-            client.release();
-            return res.status(400).json({ error: `Diagnosis pointer ${ptr} is invalid. Must be between 1 and ${diagnosisCodes.length}` });
-          }
-        }
-      }
+      return res.status(400).json({ error: 'At least one procedure code is required' });
     }
     
     // Get visit and patient information
@@ -249,7 +182,6 @@ router.post('/claims', requireRole('admin', 'front_desk', 'clinician'), async (r
     
     if (visitResult.rows.length === 0) {
       await client.query('ROLLBACK');
-      client.release();
       return res.status(404).json({ error: 'Visit not found' });
     }
     
@@ -274,22 +206,21 @@ router.post('/claims', requireRole('admin', 'front_desk', 'clinician'), async (r
     // Get principal diagnosis (first diagnosis code)
     const principalDiagnosis = normalizedDiagnosisCodes[0].code;
     
-    // Calculate totals from normalized procedure codes
+    // Normalize procedure codes and calculate totals
     let totalCharges = 0;
-    const finalProcedureCodes = normalizedProcedureCodes.map(proc => {
-      const amount = Number(proc.amount || 0);
-      const units = Number(proc.units || 1);
+    const normalizedProcedureCodes = procedureCodes.map(proc => {
+      const amount = parseFloat(proc.amount || 0);
+      const units = parseFloat(proc.units || 1);
       const lineTotal = amount * units;
       totalCharges += lineTotal;
       
       return {
-        code: proc.code,
+        code: proc.code || proc,
         description: proc.description || '',
         amount: amount,
         units: units,
-        modifier: (proc.modifiers && proc.modifiers.length > 0) ? proc.modifiers[0] : null, // Use first modifier for legacy compatibility
-        modifiers: proc.modifiers || [],
-        diagnosisPointers: proc.dxPointers || [1]
+        modifier: proc.modifier || null,
+        diagnosisPointers: proc.diagnosisPointers || [1]
       };
     });
     
@@ -297,23 +228,7 @@ router.post('/claims', requireRole('admin', 'front_desk', 'clinician'), async (r
     const claimNumber = generateClaimNumber();
     
     // Check which columns exist in the claims table
-    // Check for ALL required enhanced columns, not just one
-    const serviceDateStartExists = await columnExists('claims', 'service_date_start');
-    const renderingProviderExists = await columnExists('claims', 'rendering_provider_id');
-    const billingProviderExists = await columnExists('claims', 'billing_provider_id');
-    const claimTypeExists = await columnExists('claims', 'claim_type');
-    const totalChargesExists = await columnExists('claims', 'total_charges');
-    const principalDiagnosisExists = await columnExists('claims', 'principal_diagnosis_code');
-    const placeOfServiceExists = await columnExists('claims', 'place_of_service_code');
-    
-    // Only use enhanced schema if ALL required columns exist
-    const hasEnhancedSchema = serviceDateStartExists && 
-                               renderingProviderExists && 
-                               billingProviderExists && 
-                               claimTypeExists && 
-                               totalChargesExists && 
-                               principalDiagnosisExists &&
-                               placeOfServiceExists;
+    const hasEnhancedSchema = await columnExists('claims', 'service_date_start');
     
     // Determine the correct status based on schema
     const initialStatus = hasEnhancedSchema ? 'draft' : 'pending';
@@ -321,22 +236,10 @@ router.post('/claims', requireRole('admin', 'front_desk', 'clinician'), async (r
     // Log schema detection for debugging
     if (process.env.NODE_ENV === 'development') {
       console.log('Schema detection - hasEnhancedSchema:', hasEnhancedSchema);
-      console.log('Column checks:', {
-        service_date_start: serviceDateStartExists,
-        rendering_provider_id: renderingProviderExists,
-        billing_provider_id: billingProviderExists,
-        claim_type: claimTypeExists,
-        total_charges: totalChargesExists,
-        principal_diagnosis_code: principalDiagnosisExists,
-        place_of_service_code: placeOfServiceExists
-      });
-    }
-    
-    // Validate req.user exists (required for created_by)
-    if (!req.user || !req.user.id) {
-      await client.query('ROLLBACK');
-      client.release();
-      return res.status(401).json({ error: 'Authentication required. User not found in request.' });
+      const serviceDateExists = await columnExists('claims', 'service_date_start');
+      const claimNumberExists = await columnExists('claims', 'claim_number');
+      const totalChargesExists = await columnExists('claims', 'total_charges');
+      console.log('Column checks - service_date_start:', serviceDateExists, 'claim_number:', claimNumberExists, 'total_charges:', totalChargesExists);
     }
     
     // Build INSERT query based on available columns
@@ -363,11 +266,11 @@ router.post('/claims', requireRole('admin', 'front_desk', 'clinician'), async (r
         claimNumber,
         visitId,
         patientId,
-        renderingProviderId || (req.user ? req.user.id : null),
-        billingProviderId || (req.user ? req.user.id : null),
+        renderingProviderId || req.user.id,
+        billingProviderId || req.user.id,
         insuranceProvider || visit.patient_insurance,
         insurancePayerId || null,
-        insuranceMemberId || payerMemberId || visit.patient_insurance_id,
+        insuranceMemberId || visit.patient_insurance_id,
         insuranceGroupNumber || null,
         serviceDate,
         serviceDateEnd || serviceDate,
@@ -375,7 +278,7 @@ router.post('/claims', requireRole('admin', 'front_desk', 'clinician'), async (r
         'professional',
         JSON.stringify(normalizedDiagnosisCodes),
         principalDiagnosis,
-        JSON.stringify(finalProcedureCodes),
+        JSON.stringify(normalizedProcedureCodes),
         totalCharges,
         initialStatus, // Use the correct status based on schema
         req.user.id,
@@ -394,10 +297,10 @@ router.post('/claims', requireRole('admin', 'front_desk', 'clinician'), async (r
         visitId,
         patientId,
         JSON.stringify(normalizedDiagnosisCodes),
-        JSON.stringify(finalProcedureCodes),
+        JSON.stringify(normalizedProcedureCodes),
         totalCharges,
         initialStatus, // Use the correct status based on schema (pending for basic)
-        req.user.id // Already validated above
+        req.user.id
       ];
     }
     
@@ -464,7 +367,7 @@ router.post('/claims', requireRole('admin', 'front_desk', 'clinician'), async (r
         await client.query(
           `INSERT INTO claim_workflow_history (claim_id, from_status, to_status, action, performed_by)
            VALUES ($1, NULL, $2, 'Claim created', $3)`,
-          [claim.id, initialStatus, req.user ? req.user.id : null]
+          [claim.id, initialStatus, req.user.id]
         );
       } catch (workflowError) {
         console.log('Error creating workflow history (non-critical):', workflowError.message);
@@ -472,18 +375,15 @@ router.post('/claims', requireRole('admin', 'front_desk', 'clinician'), async (r
     }
     
     await client.query('COMMIT');
-    client.release();
     
     // Log audit after commit (non-critical, don't fail request if it fails)
     try {
-      if (req.user && req.user.id) {
-        await logAudit(req.user.id, 'create_claim', 'claim', claim.id, { 
-          claimNumber: claim.claim_number || claimNumber,
-          patientId,
-          visitId,
-          totalCharges
-        }, req.ip);
-      }
+      await logAudit(req.user.id, 'create_claim', 'claim', claim.id, { 
+        claimNumber: claim.claim_number || claimNumber,
+        patientId,
+        visitId,
+        totalCharges
+      }, req.ip);
     } catch (auditError) {
       console.warn('Failed to log audit (non-critical):', auditError.message);
     }
@@ -496,13 +396,7 @@ router.post('/claims', requireRole('admin', 'front_desk', 'clinician'), async (r
     });
     
   } catch (error) {
-    try {
-      await client.query('ROLLBACK');
-    } catch (rollbackError) {
-      console.error('Error during rollback:', rollbackError);
-    } finally {
-      client.release();
-    }
+    await client.query('ROLLBACK').catch(() => {}); // Ignore rollback errors
     console.error('Error creating claim:', error);
     console.error('Error details:', {
       message: error.message,

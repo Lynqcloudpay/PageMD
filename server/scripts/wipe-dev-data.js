@@ -91,11 +91,10 @@ async function wipeDevData() {
     // Step 2: Delete all non-admin users and their related data
     console.log('\n👥 Step 2: Deleting non-admin users...');
     
-    // Get admin user ID(s) to preserve (check by role, not is_admin column)
+    // Get admin user ID(s) to preserve
     const adminResult = await client.query(`
-      SELECT u.id, u.email FROM users u
-      LEFT JOIN roles r ON u.role_id = r.id
-      WHERE (r.name = 'Admin' OR r.name = 'admin') OR u.email = $1
+      SELECT id, email FROM users 
+      WHERE is_admin = true OR email = $1
     `, [process.env.ADMIN_EMAIL || 'admin@clinic.com']);
     
     const adminIds = adminResult.rows.map(row => row.id);
@@ -226,6 +225,7 @@ async function wipeDevData() {
              last_name = $3, 
              role_id = $4, 
              status = 'active', 
+             is_admin = true,
              updated_at = CURRENT_TIMESTAMP
          WHERE email = $5`,
         [passwordHash, adminFirstName, adminLastName, adminRoleId, adminEmail]
@@ -236,8 +236,8 @@ async function wipeDevData() {
       const bcrypt = require('bcryptjs');
       const passwordHash = await bcrypt.hash(adminPassword, 12);
       await client.query(
-        `INSERT INTO users (email, password_hash, first_name, last_name, role_id, status, date_created)
-         VALUES ($1, $2, $3, $4, $5, 'active', CURRENT_TIMESTAMP)`,
+        `INSERT INTO users (email, password_hash, first_name, last_name, role_id, status, is_admin, date_created)
+         VALUES ($1, $2, $3, $4, $5, 'active', true, CURRENT_TIMESTAMP)`,
         [adminEmail, passwordHash, adminFirstName, adminLastName, adminRoleId]
       );
       console.log(`   ✓ Created admin user: ${adminEmail}`);

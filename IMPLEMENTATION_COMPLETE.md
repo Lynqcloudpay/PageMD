@@ -198,19 +198,3 @@ All critical HIPAA compliance requirements have been implemented. The system is 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

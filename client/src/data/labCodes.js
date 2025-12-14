@@ -249,94 +249,6 @@ export const labTests = [
         labcorpCode: '001453, 303756, 322000',
         cpt: '83036, 80061, 80053',
         description: 'Hemoglobin A1c, Lipid Panel, and Comprehensive Metabolic Panel'
-    },
-    // Troponin I (High Sensitivity)
-    {
-        name: 'Troponin I, High Sensitivity',
-        questCode: '34499',
-        labcorpCode: '004510',
-        cpt: '84484',
-        description: 'High Sensitivity Troponin I for MI detection'
-    },
-    // Troponin T
-    {
-        name: 'Troponin T',
-        questCode: '34499',
-        labcorpCode: '004510',
-        cpt: '84484',
-        description: 'Troponin T for cardiac injury'
-    },
-    // BNP (Brain Natriuretic Peptide)
-    {
-        name: 'BNP (Brain Natriuretic Peptide)',
-        questCode: '91797',
-        labcorpCode: '004510',
-        cpt: '83880',
-        description: 'BNP for heart failure evaluation'
-    },
-    // NT-proBNP
-    {
-        name: 'NT-proBNP',
-        questCode: '91797',
-        labcorpCode: '004510',
-        cpt: '83880',
-        description: 'N-terminal pro-BNP for heart failure'
-    },
-    // D-Dimer
-    {
-        name: 'D-Dimer',
-        questCode: '34499',
-        labcorpCode: '004510',
-        cpt: '85379',
-        description: 'D-Dimer for thrombosis/PE evaluation'
-    },
-    // Prothrombin Time (PT/INR)
-    {
-        name: 'Prothrombin Time (PT/INR)',
-        questCode: '590',
-        labcorpCode: '003009',
-        cpt: '85610',
-        description: 'PT/INR for anticoagulation monitoring'
-    },
-    // PTT (Partial Thromboplastin Time)
-    {
-        name: 'PTT (Partial Thromboplastin Time)',
-        questCode: '16401',
-        labcorpCode: '004510',
-        cpt: '85730',
-        description: 'PTT for coagulation assessment'
-    },
-    // Comprehensive Metabolic Panel + Troponin
-    {
-        name: 'CMP + Troponin',
-        questCode: '10231, 34499',
-        labcorpCode: '322000, 004510',
-        cpt: '80053, 84484',
-        description: 'CMP with Troponin for cardiac workup'
-    },
-    // BNP + Troponin
-    {
-        name: 'BNP + Troponin',
-        questCode: '91797, 34499',
-        labcorpCode: '004510, 004510',
-        cpt: '83880, 84484',
-        description: 'BNP and Troponin for cardiac evaluation'
-    },
-    // Lipid Panel + CRP
-    {
-        name: 'Lipid Panel + CRP',
-        questCode: '37848, 4420',
-        labcorpCode: '303756, 006025',
-        cpt: '80061, 86140',
-        description: 'Lipid Panel with C-Reactive Protein'
-    },
-    // Comprehensive Metabolic Panel + BNP
-    {
-        name: 'CMP + BNP',
-        questCode: '10231, 91797',
-        labcorpCode: '322000, 004510',
-        cpt: '80053, 83880',
-        description: 'CMP with BNP for heart failure workup'
     }
 ];
 
@@ -461,22 +373,6 @@ export const searchImaging = (query) => {
         study.description.toLowerCase().includes(lowerQuery)
     );
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

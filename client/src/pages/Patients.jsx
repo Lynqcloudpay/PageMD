@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, User, Clock, Calendar, Plus, ChevronRight, Trash2 } from 'lucide-react';
+import { Search, User, Clock, Calendar, Plus, ChevronRight } from 'lucide-react';
 import { patientsAPI } from '../services/api';
 import { usePatient } from '../context/PatientContext';
 import AddPatientModal from '../components/AddPatientModal';
@@ -8,7 +8,7 @@ import { format, parseISO } from 'date-fns';
 
 const Patients = () => {
     const navigate = useNavigate();
-    const { patients, appointments, addPatient, fetchPatients } = usePatient();
+    const { patients, appointments, addPatient } = usePatient();
     const [searchQuery, setSearchQuery] = useState('');
     const [filteredPatients, setFilteredPatients] = useState([]);
     const [pendingPatients, setPendingPatients] = useState([]);
@@ -61,48 +61,6 @@ const Patients = () => {
     const handleAddSuccess = (message) => {
         alert(message);
         setShowAddModal(false);
-    };
-
-    const handleDeletePatient = async (e, patientId, patientName) => {
-        e.stopPropagation(); // Prevent navigation when clicking delete
-        
-        const confirmed = window.confirm(
-            `Are you sure you want to delete patient "${patientName}"?\n\n` +
-            `This will permanently delete:\n` +
-            `- Patient record\n` +
-            `- All visits and notes\n` +
-            `- All orders and prescriptions\n` +
-            `- All documents\n` +
-            `- All allergies, medications, and problems\n\n` +
-            `This action cannot be undone.`
-        );
-
-        if (!confirmed) {
-            return;
-        }
-
-        try {
-            await patientsAPI.delete(patientId);
-            
-            // Refresh patient list using context
-            if (fetchPatients) {
-                await fetchPatients();
-            }
-            
-            // Refresh search results if searching
-            if (searchQuery.trim()) {
-                const response = await patientsAPI.search(searchQuery);
-                setFilteredPatients(response.data);
-            } else {
-                setFilteredPatients([]);
-            }
-            
-            alert(`Patient "${patientName}" has been deleted successfully.`);
-        } catch (error) {
-            console.error('Error deleting patient:', error);
-            const errorMessage = error.response?.data?.error || error.message || 'Failed to delete patient';
-            alert(`Error: ${errorMessage}\n\nPlease refresh the page and try again.`);
-        }
     };
 
     // Format date helper
@@ -243,14 +201,7 @@ const Patients = () => {
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="flex-shrink-0 ml-3 flex items-center gap-2">
-                                            <button
-                                                onClick={(e) => handleDeletePatient(e, patient.id, patient.name || `${patient.first_name} ${patient.last_name}`)}
-                                                className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center transition-all group/delete"
-                                                title="Delete patient"
-                                            >
-                                                <Trash2 className="w-4 h-4 text-red-600 group-hover/delete:text-red-700 transition-colors" />
-                                            </button>
+                                        <div className="flex-shrink-0 ml-3">
                                             <div className="w-8 h-8 rounded-lg bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center transition-all">
                                                 <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
                                             </div>
@@ -308,14 +259,7 @@ const Patients = () => {
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="flex-shrink-0 ml-3 flex items-center gap-2">
-                                            <button
-                                                onClick={(e) => handleDeletePatient(e, patient.id, patient.name || `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || 'Unknown Patient')}
-                                                className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center transition-all group/delete"
-                                                title="Delete patient"
-                                            >
-                                                <Trash2 className="w-4 h-4 text-red-600 group-hover/delete:text-red-700 transition-colors" />
-                                            </button>
+                                        <div className="flex-shrink-0 ml-3">
                                             <div className="w-8 h-8 rounded-lg bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center transition-all">
                                                 <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
                                             </div>

@@ -86,7 +86,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md', className = '', 
             </div>
         )}
         <div 
-            className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-fade-in"
+            className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
             onClick={preventOutsideClick ? undefined : handleClose}
         >
             <div

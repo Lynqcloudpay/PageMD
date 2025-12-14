@@ -1,63 +1,167 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Modal from './ui/Modal';
-import DiagnosisSelector from './DiagnosisSelector';
 import { Pill, Stethoscope, Upload, Send, Search, X } from 'lucide-react';
 import { searchLabTests, searchImaging } from '../data/labCodes';
-import { codesAPI, ordersAPI, documentsAPI } from '../services/api';
+import { codesAPI } from '../services/api';
 
-export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [], patientId, assessmentDiagnoses = [], onAddToAssessment = null }) => {
+export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [] }) => {
     const [med, setMed] = useState('');
     const [sig, setSig] = useState('');
     const [dispense, setDispense] = useState('');
-    const [selectedDiagnoses, setSelectedDiagnoses] = useState([]);
+    const [selectedDiagnosis, setSelectedDiagnosis] = useState('');
+    const [newDiagnosis, setNewDiagnosis] = useState('');
+    const [useNewDiagnosis, setUseNewDiagnosis] = useState(false);
+    const [icd10Search, setIcd10Search] = useState('');
+    const [icd10Results, setIcd10Results] = useState([]);
+
+    // Memoize diagnoses string to prevent infinite re-renders from array reference changes
+    const diagnosesString = useMemo(() => JSON.stringify(diagnoses), [diagnoses]);
 
     useEffect(() => {
         if (isOpen) {
             setMed('');
             setSig('');
             setDispense('');
-            setSelectedDiagnoses([]);
+            setSelectedDiagnosis(diagnoses.length > 0 ? diagnoses[0] : '');
+            setNewDiagnosis('');
+            setUseNewDiagnosis(false);
+            setIcd10Search('');
+            setIcd10Results([]);
         }
-    }, [isOpen]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen, diagnosesString]);
+
+    // ICD-10 search - show popular codes when empty, search when 2+ characters
+    useEffect(() => {
+        const timeout = setTimeout(async () => {
+            try {
+                // If search is empty or less than 2 chars, show popular codes (first 50)
+                // Otherwise, perform search
+                const query = icd10Search.trim().length >= 2 ? icd10Search : '';
+                const response = await codesAPI.searchICD10(query);
+                setIcd10Results(response.data || []);
+            } catch (error) {
+                setIcd10Results([]);
+            }
+        }, 300);
+        return () => clearTimeout(timeout);
+    }, [icd10Search]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (selectedDiagnoses.length === 0) {
-            alert('Please select at least one diagnosis');
+        const diagnosis = useNewDiagnosis ? newDiagnosis : selectedDiagnosis;
+        if (!diagnosis) {
+            alert('Please select or enter a diagnosis');
             return;
         }
-        // Extract diagnosis text from selected diagnoses
-        const diagnosisTexts = selectedDiagnoses.map(d => {
-            const code = d.icd10_code || d.icd10Code || '';
-            const name = d.problem_name || d.name || '';
-            return code ? `${code} - ${name}` : name;
-        });
         const prescriptionText = `Prescription: ${med} - ${sig}, Dispense: ${dispense}`;
-        onSuccess(diagnosisTexts.join(', '), prescriptionText);
+        onSuccess(diagnosis, prescriptionText);
         setMed('');
         setSig('');
         setDispense('');
-        setSelectedDiagnoses([]);
+        setSelectedDiagnosis('');
+        setNewDiagnosis('');
+        setUseNewDiagnosis(false);
         onClose();
     };
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="New e-Prescription">
             <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Diagnosis Selection */}
-                {patientId && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5">
-                        <DiagnosisSelector
-                            patientId={patientId}
-                            selectedDiagnoses={selectedDiagnoses}
-                            onDiagnosesChange={setSelectedDiagnoses}
-                            required={true}
-                            allowMultiple={true}
-                            assessmentDiagnoses={assessmentDiagnoses || []}
-                            onAddToAssessment={onAddToAssessment}
-                        />
-                    </div>
-                )}
+                <div>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">Link to Diagnosis</label>
+                    {diagnoses.length > 0 ? (
+                        <>
+                            <div className="mb-2">
+                                <label className="flex items-center space-x-2 mb-2">
+                                    <input 
+                                        type="radio" 
+                                        checked={!useNewDiagnosis} 
+                                        onChange={() => setUseNewDiagnosis(false)}
+                                        className="rounded"
+                                    />
+                                    <span className="text-sm">Select from Assessment</span>
+                                </label>
+                                {!useNewDiagnosis && (
+                                    <select
+                                        value={selectedDiagnosis}
+                                        onChange={(e) => setSelectedDiagnosis(e.target.value)}
+                                        className="w-full p-2 border border-paper-300 rounded-md focus:ring-2 focus:ring-paper-400"
+                                    >
+                                        <option value="">-- Select Diagnosis --</option>
+                                        {diagnoses.map((dx, idx) => (
+                                            <option key={idx} value={dx}>{dx}</option>
+                                        ))}
+                                    </select>
+                                )}
+                            </div>
+                            <div>
+                                <label className="flex items-center space-x-2 mb-2">
+                                    <input 
+                                        type="radio" 
+                                        checked={useNewDiagnosis} 
+                                        onChange={() => setUseNewDiagnosis(true)}
+                                        className="rounded"
+                                    />
+                                    <span className="text-sm">Add New Diagnosis</span>
+                                </label>
+                                {useNewDiagnosis && (
+                                    <div>
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-ink-400 w-4 h-4" />
+                                            <input
+                                                type="text"
+                                                placeholder="Search ICD-10 codes..."
+                                                className="w-full pl-9 pr-2 p-2 border border-paper-300 rounded-md focus:ring-2 focus:ring-paper-400"
+                                                value={icd10Search}
+                                                onChange={(e) => setIcd10Search(e.target.value)}
+                                            />
+                                        </div>
+                                        {icd10Results.length > 0 && (
+                                            <div className="mt-1 border border-paper-300 rounded-md bg-white shadow-lg max-h-40 overflow-y-auto">
+                                                {icd10Results.map((code) => (
+                                                    <button
+                                                        key={code.code}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setNewDiagnosis(`${code.code} - ${code.description}`);
+                                                            setIcd10Search('');
+                                                            setIcd10Results([]);
+                                                        }}
+                                                        className="w-full text-left p-2 border-b border-paper-100 hover:bg-paper-50 transition-colors"
+                                                    >
+                                                        <div className="font-medium text-ink-900 text-sm">{code.code}</div>
+                                                        <div className="text-xs text-ink-600">{code.description}</div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {newDiagnosis && (
+                                            <div className="mt-2 p-2 bg-paper-50 border border-paper-200 rounded text-sm">
+                                                <div className="font-medium text-ink-900">Selected: {newDiagnosis}</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    ) : (
+                        <div>
+                            <input
+                                type="text"
+                                placeholder="Enter diagnosis..."
+                                className="w-full p-2 border border-paper-300 rounded-md mb-2"
+                                value={useNewDiagnosis ? newDiagnosis : ''}
+                                onChange={(e) => {
+                                    setNewDiagnosis(e.target.value);
+                                    setUseNewDiagnosis(true);
+                                }}
+                                required
+                            />
+                            <p className="text-xs text-yellow-700 bg-yellow-50 p-2 rounded">No diagnoses in Assessment. New diagnosis will be added to Assessment.</p>
+                        </div>
+                    )}
+                </div>
                 <div>
                     <label className="block text-sm font-medium text-ink-700 mb-1">Medication</label>
                     <div className="relative">
@@ -76,24 +180,24 @@ export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [], 
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-ink-700 mb-1">Sig</label>
-                        <input
-                            type="text"
-                            placeholder="e.g. 1 tab PO daily"
+                        <input 
+                            type="text" 
+                            placeholder="e.g. 1 tab PO daily" 
                             className="w-full p-2 border border-paper-300 rounded-md"
                             value={sig}
                             onChange={(e) => setSig(e.target.value)}
-                            required
+                            required 
                         />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-ink-700 mb-1">Dispense</label>
-                        <input
-                            type="text"
-                            placeholder="e.g. 30"
+                        <input 
+                            type="text" 
+                            placeholder="e.g. 30" 
                             className="w-full p-2 border border-paper-300 rounded-md"
                             value={dispense}
                             onChange={(e) => setDispense(e.target.value)}
-                            required
+                            required 
                         />
                     </div>
                 </div>
@@ -106,19 +210,18 @@ export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [], 
     );
 };
 
-export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', patientId, visitId, diagnoses = [], preSelectedDiagnoses = [], assessmentDiagnoses = [], onAddToAssessment = null, returnTemplateOnly = false }) => {
+export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', diagnoses = [] }) => {
     const [order, setOrder] = useState('');
     const [selectedType, setSelectedType] = useState(orderType);
-    const [selectedDiagnoses, setSelectedDiagnoses] = useState([]); // Array of diagnosis objects
+    const [selectedDiagnosis, setSelectedDiagnosis] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [selectedTest, setSelectedTest] = useState(null);
     const [selectedLabs, setSelectedLabs] = useState([]); // Array of selected labs
     const [labCompany, setLabCompany] = useState('quest'); // 'quest' or 'labcorp'
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [selectedIndex, setSelectedIndex] = useState(-1); // For keyboard navigation
-    const searchInputRef = useRef(null);
+    const [newDiagnosis, setNewDiagnosis] = useState('');
+    const [icd10Search, setIcd10Search] = useState('');
+    const [icd10Results, setIcd10Results] = useState([]);
 
     // Use diagnoses directly in render, but only update selectedDiagnosis when modal opens
     // This prevents infinite loops from diagnoses array reference changes
@@ -128,22 +231,34 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
         if (isOpen) {
             setSelectedType(orderType);
             setOrder('');
-            setSelectedDiagnoses(preSelectedDiagnoses.length > 0 ? preSelectedDiagnoses : []);
+            setSelectedDiagnosis(diagnosesArray.length > 0 ? diagnosesArray[0] : '');
             setSearchQuery('');
             setSearchResults([]);
             setSelectedTest(null);
             setSelectedLabs([]);
             setLabCompany('quest');
-            setError(null);
-            setSelectedIndex(-1);
-            // Focus search input when modal opens
-            setTimeout(() => {
-                if (searchInputRef.current) {
-                    searchInputRef.current.focus();
-                }
-            }, 100);
+            setNewDiagnosis('');
+            setIcd10Search('');
+            setIcd10Results([]);
         }
-    }, [isOpen, orderType, preSelectedDiagnoses]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen, orderType]);
+
+    // ICD-10 search - show popular codes when empty, search when 2+ characters
+    useEffect(() => {
+        const timeout = setTimeout(async () => {
+            try {
+                // If search is empty or less than 2 chars, show popular codes (first 50)
+                // Otherwise, perform search
+                const query = icd10Search.trim().length >= 2 ? icd10Search : '';
+                const response = await codesAPI.searchICD10(query);
+                setIcd10Results(response.data || []);
+            } catch (error) {
+                setIcd10Results([]);
+            }
+        }, 300);
+        return () => clearTimeout(timeout);
+    }, [icd10Search]);
 
     useEffect(() => {
         if (searchQuery.length >= 2) {
@@ -159,8 +274,6 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
         } else {
             setSearchResults([]);
         }
-        // Reset selected index when search changes
-        setSelectedIndex(-1);
     }, [searchQuery, selectedType]);
 
     const handleTestSelect = (test) => {
@@ -171,239 +284,63 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
                 setSelectedLabs([...selectedLabs, test]);
             }
             setSelectedTest(null);
-            // Clear search and refocus input for continuous ordering
-            setSearchQuery('');
-            setSearchResults([]);
-            setSelectedIndex(-1);
-            // Auto-focus search bar after adding lab
-            setTimeout(() => {
-                if (searchInputRef.current) {
-                    searchInputRef.current.focus();
-                }
-            }, 50);
         } else {
             setSelectedTest(test);
             setOrder(test.name);
-            setSearchQuery('');
-            setSearchResults([]);
-            setSelectedIndex(-1);
         }
-    };
-
-    const handleKeyDown = (e) => {
-        if (searchResults.length === 0) return;
-
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            setSelectedIndex(prev =>
-                prev < searchResults.length - 1 ? prev + 1 : prev
-            );
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            setSelectedIndex(prev => prev > 0 ? prev - 1 : -1);
-        } else if (e.key === 'Enter' && selectedIndex >= 0 && selectedIndex < searchResults.length) {
-            e.preventDefault();
-            handleTestSelect(searchResults[selectedIndex]);
-        }
+        setSearchQuery('');
+        setSearchResults([]);
     };
 
     const removeLab = (labName) => {
         setSelectedLabs(selectedLabs.filter(l => l.name !== labName));
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
-
-        // Validate diagnosis requirement
-        if (!selectedDiagnoses || selectedDiagnoses.length === 0) {
-            setError('Please select at least one diagnosis for this order');
-            return;
-        }
-
+        
         // For labs, require at least one lab selected
         if (selectedType === 'lab' && selectedLabs.length === 0) {
-            setError('Please select at least one lab test');
             return;
         }
-
+        
         // For imaging/procedures, require order text
         if (selectedType !== 'lab' && !order) {
-            setError('Please enter the order details');
+            return;
+        }
+        
+        // Require diagnosis selection
+        const finalDiagnosis = selectedDiagnosis.startsWith('NEW:') ? selectedDiagnosis.replace('NEW:', '') : selectedDiagnosis;
+        if (!finalDiagnosis) {
+            alert('Please select or enter a diagnosis');
             return;
         }
 
-        setLoading(true);
-        setError(null);
-
-        try {
-            // Get all diagnosis IDs (including assessment diagnoses)
-            // We'll send both IDs and objects so backend can create problems for assessment diagnoses
-            const diagnosisIds = selectedDiagnoses
-                .map(d => d.id)
-                .filter(id => id && id.toString() !== 'undefined' && id.toString() !== 'null');
-
-            if (diagnosisIds.length === 0) {
-                setError('Please select at least one diagnosis.');
-                setLoading(false);
-                return;
-            }
-
-            const orderTypeMap = {
-                'lab': 'lab',
-                'imaging': 'imaging',
-                'procedure': 'procedure'
-            };
-
-            // Send diagnosis objects along with IDs for assessment diagnoses
-            const diagnosisObjects = selectedDiagnoses.map(d => ({
-                id: d.id,
-                problem_name: d.problem_name || d.name,
-                name: d.problem_name || d.name,
-                icd10_code: d.icd10_code || d.icd10Code,
-                icd10Code: d.icd10_code || d.icd10Code
-            }));
-
-            console.log('OrderModal: Sending diagnosis data:', {
-                diagnosisIds: diagnosisIds,
-                diagnosisObjects: diagnosisObjects,
-                selectedDiagnoses: selectedDiagnoses
+        const typeLabel = selectedType === 'lab' ? 'Lab' : selectedType === 'imaging' ? 'Imaging' : 'Procedure';
+        let orderText = '';
+        
+        if (selectedType === 'lab') {
+            // Build order text - each lab as separate order (will be split by semicolon for display)
+            selectedLabs.forEach(lab => {
+                const code = labCompany === 'quest' ? lab.questCode : lab.labcorpCode;
+                const companyName = labCompany === 'quest' ? 'Quest' : 'LabCorp';
+                const labText = `${lab.name} [${companyName}: ${code}${lab.cpt ? `, CPT: ${lab.cpt}` : ''}]`;
+                orderText += (orderText ? '; ' : '') + `${typeLabel}: ${labText}`;
             });
-            console.log('OrderModal: Full diagnosis IDs:', JSON.stringify(diagnosisIds, null, 2));
-            console.log('OrderModal: Full diagnosis objects:', JSON.stringify(diagnosisObjects, null, 2));
-            console.log('OrderModal: Full selected diagnoses:', JSON.stringify(selectedDiagnoses, null, 2));
-
-            // Build order templates for ordersets
-            let orderTemplates = [];
-
-            if (returnTemplateOnly) {
-                // Return templates instead of creating orders
-                if (selectedType === 'lab') {
-                    selectedLabs.forEach(lab => {
-                        const code = labCompany === 'quest' ? lab.questCode : lab.labcorpCode;
-                        const companyName = labCompany === 'quest' ? 'Quest' : 'LabCorp';
-                        orderTemplates.push({
-                            type: 'lab',
-                            payload: {
-                                test_name: lab.name,
-                                testName: lab.name,
-                                name: lab.name,
-                                company: companyName,
-                                code: code,
-                                cpt: lab.cpt || null
-                            }
-                        });
-                    });
-                } else {
-                    const orderPayload = {
-                        name: order,
-                        description: order,
-                        studyName: selectedType === 'imaging' ? order : undefined,
-                        procedureName: selectedType === 'procedure' ? order : undefined,
-                        cpt: selectedTest?.cpt || null
-                    };
-                    orderTemplates.push({
-                        type: orderTypeMap[selectedType],
-                        payload: orderPayload
-                    });
-                }
-            } else {
-                // Create actual orders
-                if (selectedType === 'lab') {
-                    // Create separate order for each lab
-                    const orderPromises = selectedLabs.map(async (lab) => {
-                        const code = labCompany === 'quest' ? lab.questCode : lab.labcorpCode;
-                        const companyName = labCompany === 'quest' ? 'Quest' : 'LabCorp';
-                        const orderPayload = {
-                            test_name: lab.name,
-                            testName: lab.name,
-                            name: lab.name,
-                            company: companyName,
-                            code: code,
-                            cpt: lab.cpt || null
-                        };
-
-                        return ordersAPI.create({
-                            patientId,
-                            visitId,
-                            orderType: orderTypeMap[selectedType],
-                            orderPayload,
-                            diagnosisIds,
-                            diagnosisObjects
-                        });
-                    });
-
-                    await Promise.all(orderPromises);
-                } else {
-                    // Single order for imaging/procedures
-                    const orderPayload = {
-                        name: order,
-                        description: order,
-                        cpt: selectedTest?.cpt || null
-                    };
-
-                    await ordersAPI.create({
-                        patientId,
-                        visitId,
-                        orderType: orderTypeMap[selectedType],
-                        orderPayload,
-                        diagnosisIds,
-                        diagnosisObjects
-                    });
-                }
+        } else {
+            // Single order for imaging/procedures
+            orderText = `${typeLabel}: ${order}`;
+            if (selectedTest && selectedType === 'imaging' && selectedTest.cpt) {
+                orderText += ` [CPT: ${selectedTest.cpt}]`;
             }
-
-            // Call onSuccess with diagnosis objects for backward compatibility
-            // Format diagnosis text with ICD-10 code if available (matches assessment format)
-            const diagnosisText = selectedDiagnoses.map(d => {
-                const code = d.icd10_code || d.icd10Code || '';
-                const name = d.problem_name || d.name || '';
-                return code ? `${code} - ${name}` : name;
-            }).join(', ');
-            const typeLabel = selectedType === 'lab' ? 'Lab' : selectedType === 'imaging' ? 'Imaging' : 'Procedure';
-            let orderText = '';
-
-            if (selectedType === 'lab') {
-                selectedLabs.forEach(lab => {
-                    const code = labCompany === 'quest' ? lab.questCode : lab.labcorpCode;
-                    const companyName = labCompany === 'quest' ? 'Quest' : 'LabCorp';
-                    const labText = `${lab.name} [${companyName}: ${code}${lab.cpt ? `, CPT: ${lab.cpt}` : ''}]`;
-                    orderText += (orderText ? '; ' : '') + `${typeLabel}: ${labText}`;
-                });
-            } else {
-                orderText = `${typeLabel}: ${order}`;
-                if (selectedTest && selectedType === 'imaging' && selectedTest.cpt) {
-                    orderText += ` [CPT: ${selectedTest.cpt}]`;
-                }
-            }
-
-            if (onSuccess) {
-                if (returnTemplateOnly) {
-                    // Pass order templates as third parameter
-                    onSuccess(diagnosisText, orderText, orderTemplates.length === 1 ? orderTemplates[0] : orderTemplates);
-                } else {
-                    onSuccess(diagnosisText, orderText, selectedDiagnoses);
-                }
-            }
-
-            setOrder('');
-            setSelectedDiagnoses([]);
-            setSelectedTest(null);
-            setSelectedLabs([]);
-            setError(null);
-            onClose();
-        } catch (err) {
-            console.error('Error creating order:', err);
-            const errorMessage = err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to create order. Please try again.';
-            const errorDetails = err.response?.data?.details;
-            if (errorDetails) {
-                console.error('Error details:', errorDetails);
-                setError(`${errorMessage}${errorDetails.detail ? `: ${errorDetails.detail}` : ''}${errorDetails.constraint ? ` (Constraint: ${errorDetails.constraint})` : ''}`);
-            } else {
-                setError(errorMessage);
-            }
-        } finally {
-            setLoading(false);
         }
+        
+        onSuccess(finalDiagnosis, orderText);
+        setOrder('');
+        setSelectedDiagnosis('');
+        setSelectedTest(null);
+        setSelectedLabs([]);
+        onClose();
     };
 
     const getPlaceholder = () => {
@@ -417,7 +354,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium text-ink-700 mb-1">Order Type</label>
-                    <select
+                    <select 
                         value={selectedType}
                         onChange={(e) => {
                             setSelectedType(e.target.value);
@@ -432,12 +369,12 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
                         <option value="procedure">Procedure</option>
                     </select>
                 </div>
-
+                
                 {/* Lab Company Selection (only for labs) */}
                 {selectedType === 'lab' && (
                     <div>
                         <label className="block text-sm font-medium text-ink-700 mb-1">Lab Company</label>
-                        <select
+                        <select 
                             value={labCompany}
                             onChange={(e) => setLabCompany(e.target.value)}
                             className="w-full p-2 border border-paper-300 rounded-md"
@@ -454,7 +391,6 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-ink-400 w-4 h-4 z-10" />
                         <input
-                            ref={searchInputRef}
                             type="text"
                             placeholder={getPlaceholder()}
                             className="w-full pl-9 pr-8 p-2 border border-paper-300 rounded-md focus:ring-2 focus:ring-paper-400 focus:border-transparent"
@@ -466,7 +402,6 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
                                     setSelectedTest(null);
                                 }
                             }}
-                            onKeyDown={handleKeyDown}
                             autoFocus
                             required={selectedType !== 'lab'}
                         />
@@ -487,19 +422,15 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
                         <div className="mt-1 border border-paper-300 rounded-md bg-white shadow-lg max-h-60 overflow-y-auto z-20 relative">
                             {searchResults.map((test, idx) => {
                                 const isSelected = selectedType === 'lab' && selectedLabs.find(l => l.name === test.name);
-                                const isHighlighted = idx === selectedIndex;
                                 return (
                                     <button
                                         key={idx}
                                         type="button"
                                         onClick={() => handleTestSelect(test)}
                                         disabled={isSelected}
-                                        className={`w-full text-left px-3 py-2 border-b border-paper-100 last:border-b-0 ${isSelected
-                                            ? 'bg-green-50 opacity-75 cursor-not-allowed'
-                                            : isHighlighted
-                                                ? 'bg-blue-50 hover:bg-blue-100'
-                                                : 'hover:bg-paper-50'
-                                            }`}
+                                        className={`w-full text-left px-3 py-2 hover:bg-paper-50 border-b border-paper-100 last:border-b-0 ${
+                                            isSelected ? 'bg-green-50 opacity-75 cursor-not-allowed' : ''
+                                        }`}
                                     >
                                         <div className="font-medium text-ink-900 flex items-center justify-between">
                                             <span>{test.name}</span>
@@ -552,7 +483,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
                             })}
                         </div>
                     )}
-
+                    
                     {/* Selected Test (for imaging/procedures) */}
                     {selectedType !== 'lab' && selectedTest && (
                         <div className="mt-2 p-2 bg-paper-50 border border-paper-200 rounded text-sm">
@@ -563,46 +494,140 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
                         </div>
                     )}
                 </div>
-
-                {/* Diagnosis Selection */}
-                {patientId && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5">
-                        <DiagnosisSelector
-                            patientId={patientId}
-                            selectedDiagnoses={selectedDiagnoses}
-                            onDiagnosesChange={setSelectedDiagnoses}
-                            required={true}
-                            allowMultiple={true}
-                            assessmentDiagnoses={assessmentDiagnoses || []}
-                            onAddToAssessment={onAddToAssessment}
-                        />
-                    </div>
-                )}
-
-                {/* Error Message */}
-                {error && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
-                        {error}
-                    </div>
-                )}
+                <div>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">Link to Diagnosis</label>
+                    {diagnosesArray.length > 0 ? (
+                        <>
+                            <div className="mb-2">
+                                <label className="flex items-center space-x-2 mb-2">
+                                    <input 
+                                        type="radio" 
+                                        checked={!selectedDiagnosis.startsWith('NEW:')} 
+                                        onChange={() => {
+                                            setSelectedDiagnosis(diagnosesArray[0] || '');
+                                        }}
+                                        className="rounded"
+                                    />
+                                    <span className="text-sm">Select from Assessment</span>
+                                </label>
+                                {!selectedDiagnosis.startsWith('NEW:') && (
+                                    <select
+                                        value={selectedDiagnosis}
+                                        onChange={(e) => setSelectedDiagnosis(e.target.value)}
+                                        className="w-full p-2 border border-paper-300 rounded-md focus:ring-2 focus:ring-paper-400"
+                                    >
+                                        <option value="">-- Select Diagnosis --</option>
+                                        {diagnosesArray.map((dx, idx) => (
+                                            <option key={idx} value={dx}>{dx}</option>
+                                        ))}
+                                    </select>
+                                )}
+                            </div>
+                            <div>
+                                <label className="flex items-center space-x-2 mb-2">
+                                    <input 
+                                        type="radio" 
+                                        checked={selectedDiagnosis.startsWith('NEW:')} 
+                                        onChange={() => setSelectedDiagnosis('NEW:')}
+                                        className="rounded"
+                                    />
+                                    <span className="text-sm">Add New Diagnosis</span>
+                                </label>
+                                {selectedDiagnosis.startsWith('NEW:') && (
+                                    <div>
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-ink-400 w-4 h-4" />
+                                            <input
+                                                type="text"
+                                                placeholder="Search ICD-10 codes..."
+                                                className="w-full pl-9 pr-2 p-2 border border-paper-300 rounded-md focus:ring-2 focus:ring-paper-400"
+                                                value={icd10Search}
+                                                onChange={(e) => setIcd10Search(e.target.value)}
+                                            />
+                                        </div>
+                                        {icd10Results.length > 0 && (
+                                            <div className="mt-1 border border-paper-300 rounded-md bg-white shadow-lg max-h-40 overflow-y-auto">
+                                                {icd10Results.map((code) => (
+                                                    <button
+                                                        key={code.code}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const diagnosisText = `${code.code} - ${code.description}`;
+                                                            setSelectedDiagnosis('NEW:' + diagnosisText);
+                                                            setNewDiagnosis(diagnosisText);
+                                                            setIcd10Search('');
+                                                            setIcd10Results([]);
+                                                        }}
+                                                        className="w-full text-left p-2 border-b border-paper-100 hover:bg-paper-50 transition-colors"
+                                                    >
+                                                        <div className="font-medium text-ink-900 text-sm">{code.code}</div>
+                                                        <div className="text-xs text-ink-600">{code.description}</div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {newDiagnosis && (
+                                            <div className="mt-2 p-2 bg-paper-50 border border-paper-200 rounded text-sm">
+                                                <div className="font-medium text-ink-900">Selected: {newDiagnosis}</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    ) : (
+                        <div>
+                            <div className="relative mb-2">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-ink-400 w-4 h-4" />
+                                <input
+                                    type="text"
+                                    placeholder="Search ICD-10 codes..."
+                                    className="w-full pl-9 pr-2 p-2 border border-paper-300 rounded-md focus:ring-2 focus:ring-paper-400"
+                                    value={icd10Search}
+                                    onChange={(e) => setIcd10Search(e.target.value)}
+                                />
+                            </div>
+                            {icd10Results.length > 0 && (
+                                <div className="mb-2 border border-paper-300 rounded-md bg-white shadow-lg max-h-40 overflow-y-auto">
+                                    {icd10Results.map((code) => (
+                                        <button
+                                            key={code.code}
+                                            type="button"
+                                            onClick={() => {
+                                                const diagnosisText = `${code.code} - ${code.description}`;
+                                                setSelectedDiagnosis('NEW:' + diagnosisText);
+                                                setNewDiagnosis(diagnosisText);
+                                                setIcd10Search('');
+                                                setIcd10Results([]);
+                                            }}
+                                            className="w-full text-left p-2 border-b border-paper-100 hover:bg-paper-50 transition-colors"
+                                        >
+                                            <div className="font-medium text-ink-900 text-sm">{code.code}</div>
+                                            <div className="text-xs text-ink-600">{code.description}</div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            {newDiagnosis && (
+                                <div className="mb-2 p-2 bg-paper-50 border border-paper-200 rounded text-sm">
+                                    <div className="font-medium text-ink-900">Selected: {newDiagnosis}</div>
+                                </div>
+                            )}
+                            <p className="text-xs text-yellow-700 bg-yellow-50 p-2 rounded">No diagnoses in Assessment. New diagnosis will be added to Assessment.</p>
+                        </div>
+                    )}
+                </div>
                 <div className="flex justify-end space-x-2 pt-2">
                     <button type="button" onClick={onClose} className="px-4 py-2 border border-paper-300 rounded-md hover:bg-paper-50">Cancel</button>
-                    <button
-                        type="submit"
-                        disabled={loading || selectedDiagnoses.length === 0 || ((selectedType === 'lab' && selectedLabs.length === 0) || (selectedType !== 'lab' && !order))}
-                        className="px-4 py-2 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-md flex items-center justify-center gap-2"
+                    <button 
+                        type="submit" 
+                        disabled={(selectedType === 'lab' && selectedLabs.length === 0) || (selectedType !== 'lab' && !order)}
+                        className="px-4 py-2 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-md"
                         style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
                         onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
                         onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
                     >
-                        {loading ? (
-                            <>
-                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                <span>Creating Order...</span>
-                            </>
-                        ) : (
-                            selectedType === 'lab' ? `Place Order (${selectedLabs.length} lab${selectedLabs.length !== 1 ? 's' : ''})` : 'Place Order'
-                        )}
+                        {selectedType === 'lab' ? `Place Order (${selectedLabs.length} lab${selectedLabs.length !== 1 ? 's' : ''})` : 'Place Order'}
                     </button>
                 </div>
             </form>
@@ -610,114 +635,161 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
     );
 };
 
-export const ReferralModal = ({ isOpen, onClose, onSuccess, diagnoses = [], patientId, visitId, assessmentDiagnoses = [], onAddToAssessment = null, returnTemplateOnly = false }) => {
+export const ReferralModal = ({ isOpen, onClose, onSuccess, diagnoses = [] }) => {
     const [specialty, setSpecialty] = useState('');
     const [reason, setReason] = useState('');
-    const [selectedDiagnoses, setSelectedDiagnoses] = useState([]);
-    const [creating, setCreating] = useState(false);
+    const [selectedDiagnosis, setSelectedDiagnosis] = useState('');
+    const [newDiagnosis, setNewDiagnosis] = useState('');
+    const [useNewDiagnosis, setUseNewDiagnosis] = useState(false);
+    const [icd10Search, setIcd10Search] = useState('');
+    const [icd10Results, setIcd10Results] = useState([]);
 
+    // Memoize diagnoses to prevent infinite re-renders
+    const diagnosesString = useMemo(() => JSON.stringify(diagnoses), [diagnoses]);
+    
     useEffect(() => {
         if (isOpen) {
             setSpecialty('');
             setReason('');
-            setSelectedDiagnoses([]);
+            setSelectedDiagnosis(diagnoses.length > 0 ? diagnoses[0] : '');
+            setNewDiagnosis('');
+            setUseNewDiagnosis(false);
+            setIcd10Search('');
+            setIcd10Results([]);
         }
-    }, [isOpen]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen, diagnosesString]);
 
-    const handleSubmit = async (e) => {
+    // ICD-10 search - show popular codes when empty, search when 2+ characters
+    useEffect(() => {
+        const timeout = setTimeout(async () => {
+            try {
+                // If search is empty or less than 2 chars, show popular codes (first 50)
+                // Otherwise, perform search
+                const query = icd10Search.trim().length >= 2 ? icd10Search : '';
+                const response = await codesAPI.searchICD10(query);
+                setIcd10Results(response.data || []);
+            } catch (error) {
+                setIcd10Results([]);
+            }
+        }, 300);
+        return () => clearTimeout(timeout);
+    }, [icd10Search]);
+
+    const handleSubmit = (e) => {
         e.preventDefault();
-        if (selectedDiagnoses.length === 0) {
-            alert('Please select at least one diagnosis');
+        const diagnosis = useNewDiagnosis ? newDiagnosis : selectedDiagnosis;
+        if (!diagnosis) {
+            alert('Please select or enter a diagnosis');
             return;
         }
-
         const referralText = `Referral: ${specialty}${reason ? ` - ${reason}` : ''}`;
-        // Extract diagnosis text from selected diagnoses
-        const diagnosisTexts = selectedDiagnoses.map(d => {
-            const code = d.icd10_code || d.icd10Code || '';
-            const name = d.problem_name || d.name || '';
-            return code ? `${code} - ${name}` : name;
-        });
-
-        if (returnTemplateOnly) {
-            // Return referral template for orderset
-            const referralTemplate = {
-                type: 'referral',
-                payload: {
-                    specialist: specialty,
-                    reason: reason || null
-                }
-            };
-            onSuccess(diagnosisTexts.join(', '), referralText, referralTemplate);
-            setSpecialty('');
-            setReason('');
-            setSelectedDiagnoses([]);
-            onClose();
-        } else {
-            // Create actual referral record
-            try {
-                setCreating(true);
-                const { referralsAPI } = await import('../services/api');
-                const diagnosisIds = selectedDiagnoses.map(d => d.id).filter(id => id);
-
-                // Send diagnosis objects along with IDs for assessment diagnoses
-                const diagnosisObjects = selectedDiagnoses.map(d => ({
-                    id: d.id,
-                    problem_name: d.problem_name || d.name,
-                    name: d.problem_name || d.name,
-                    icd10_code: d.icd10_code || d.icd10Code,
-                    icd10Code: d.icd10_code || d.icd10Code
-                }));
-
-                await referralsAPI.create({
-                    patientId,
-                    visitId: visitId || null,
-                    recipientName: specialty,
-                    recipientSpecialty: specialty,
-                    reason: reason || '',
-                    diagnosisIds: diagnosisIds,
-                    diagnosisObjects: diagnosisObjects
-                });
-
-                onSuccess(diagnosisTexts.join(', '), referralText);
-                setSpecialty('');
-                setReason('');
-                setSelectedDiagnoses([]);
-                onClose();
-            } catch (error) {
-                console.error('Error creating referral:', error);
-                console.log('Referral error response:', error?.response?.data);
-                const errorMessage = error?.response?.data?.error || error?.response?.data?.message || error.message || 'Failed to create referral. Please try again.';
-                const errorDetails = error?.response?.data?.details;
-                if (errorDetails) {
-                    console.error('Error details:', errorDetails);
-                    alert(`${errorMessage}\n\nDetails: ${JSON.stringify(errorDetails, null, 2)}`);
-                } else {
-                    alert(errorMessage);
-                }
-            } finally {
-                setCreating(false);
-            }
-        }
+        onSuccess(diagnosis, referralText);
+        setSpecialty('');
+        setReason('');
+        setSelectedDiagnosis('');
+        setNewDiagnosis('');
+        setUseNewDiagnosis(false);
+        onClose();
     };
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="New Referral">
             <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Diagnosis Selection */}
-                {patientId && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5">
-                        <DiagnosisSelector
-                            patientId={patientId}
-                            selectedDiagnoses={selectedDiagnoses}
-                            onDiagnosesChange={setSelectedDiagnoses}
-                            required={true}
-                            allowMultiple={true}
-                            assessmentDiagnoses={assessmentDiagnoses || []}
-                            onAddToAssessment={onAddToAssessment}
-                        />
-                    </div>
-                )}
+                <div>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">Link to Diagnosis</label>
+                    {diagnoses.length > 0 ? (
+                        <>
+                            <div className="mb-2">
+                                <label className="flex items-center space-x-2 mb-2">
+                                    <input 
+                                        type="radio" 
+                                        checked={!useNewDiagnosis} 
+                                        onChange={() => setUseNewDiagnosis(false)}
+                                        className="rounded"
+                                    />
+                                    <span className="text-sm">Select from Assessment</span>
+                                </label>
+                                {!useNewDiagnosis && (
+                                    <select
+                                        value={selectedDiagnosis}
+                                        onChange={(e) => setSelectedDiagnosis(e.target.value)}
+                                        className="w-full p-2 border border-paper-300 rounded-md focus:ring-2 focus:ring-paper-400"
+                                    >
+                                        <option value="">-- Select Diagnosis --</option>
+                                        {diagnoses.map((dx, idx) => (
+                                            <option key={idx} value={dx}>{dx}</option>
+                                        ))}
+                                    </select>
+                                )}
+                            </div>
+                            <div>
+                                <label className="flex items-center space-x-2 mb-2">
+                                    <input 
+                                        type="radio" 
+                                        checked={useNewDiagnosis} 
+                                        onChange={() => setUseNewDiagnosis(true)}
+                                        className="rounded"
+                                    />
+                                    <span className="text-sm">Add New Diagnosis</span>
+                                </label>
+                                {useNewDiagnosis && (
+                                    <div>
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-ink-400 w-4 h-4" />
+                                            <input
+                                                type="text"
+                                                placeholder="Search ICD-10 codes..."
+                                                className="w-full pl-9 pr-2 p-2 border border-paper-300 rounded-md focus:ring-2 focus:ring-paper-400"
+                                                value={icd10Search}
+                                                onChange={(e) => setIcd10Search(e.target.value)}
+                                            />
+                                        </div>
+                                        {icd10Results.length > 0 && (
+                                            <div className="mt-1 border border-paper-300 rounded-md bg-white shadow-lg max-h-40 overflow-y-auto">
+                                                {icd10Results.map((code) => (
+                                                    <button
+                                                        key={code.code}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setNewDiagnosis(`${code.code} - ${code.description}`);
+                                                            setIcd10Search('');
+                                                            setIcd10Results([]);
+                                                        }}
+                                                        className="w-full text-left p-2 border-b border-paper-100 hover:bg-paper-50 transition-colors"
+                                                    >
+                                                        <div className="font-medium text-ink-900 text-sm">{code.code}</div>
+                                                        <div className="text-xs text-ink-600">{code.description}</div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {newDiagnosis && (
+                                            <div className="mt-2 p-2 bg-paper-50 border border-paper-200 rounded text-sm">
+                                                <div className="font-medium text-ink-900">Selected: {newDiagnosis}</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    ) : (
+                        <div>
+                            <input
+                                type="text"
+                                placeholder="Enter diagnosis..."
+                                className="w-full p-2 border border-paper-300 rounded-md mb-2"
+                                value={useNewDiagnosis ? newDiagnosis : ''}
+                                onChange={(e) => {
+                                    setNewDiagnosis(e.target.value);
+                                    setUseNewDiagnosis(true);
+                                }}
+                                required
+                            />
+                            <p className="text-xs text-yellow-700 bg-yellow-50 p-2 rounded">No diagnoses in Assessment. New diagnosis will be added to Assessment.</p>
+                        </div>
+                    )}
+                </div>
                 <div>
                     <label className="block text-sm font-medium text-ink-700 mb-1">Specialty / Provider</label>
                     <div className="relative">
@@ -735,7 +807,7 @@ export const ReferralModal = ({ isOpen, onClose, onSuccess, diagnoses = [], pati
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-ink-700 mb-1">Reason for Referral</label>
-                    <textarea
+                    <textarea 
                         className="w-full p-2 border border-paper-300 rounded-md h-24"
                         value={reason}
                         onChange={(e) => setReason(e.target.value)}
@@ -743,175 +815,41 @@ export const ReferralModal = ({ isOpen, onClose, onSuccess, diagnoses = [], pati
                     ></textarea>
                 </div>
                 <div className="flex justify-end space-x-2 pt-2">
-                    <button type="button" onClick={onClose} disabled={creating} className="px-4 py-2 border border-paper-300 rounded-md hover:bg-paper-50 disabled:opacity-50">Cancel</button>
-                    <button type="submit" disabled={creating} className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md disabled:opacity-50" style={{ background: creating ? '#9CA3AF' : 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => !creating && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')} onMouseLeave={(e) => !creating && (e.currentTarget.style.background = creating ? '#9CA3AF' : 'linear-gradient(to right, #3B82F6, #2563EB)')}>
-                        {creating ? 'Creating...' : 'Send Referral'}
-                    </button>
+                    <button type="button" onClick={onClose} className="px-4 py-2 border border-paper-300 rounded-md hover:bg-paper-50">Cancel</button>
+                    <button type="submit" className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'} onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}>Send Referral</button>
                 </div>
             </form>
         </Modal>
     );
 };
 
-
-
-export const UploadModal = ({ isOpen, onClose, onSuccess, patientId, visitId }) => {
-    const [file, setFile] = useState(null);
-    const [docType, setDocType] = useState('lab');
-    const [tags, setTags] = useState('');
-    const [uploading, setUploading] = useState(false);
-    const [error, setError] = useState(null);
-    const fileInputRef = useRef(null);
-
-    useEffect(() => {
-        if (isOpen) {
-            setFile(null);
-            setDocType('lab');
-            setTags('');
-            setError(null);
-            setUploading(false);
-        }
-    }, [isOpen]);
-
-    const handleFileChange = (e) => {
-        const selectedFile = e.target.files[0];
-        if (selectedFile) {
-            if (selectedFile.size > 10 * 1024 * 1024) {
-                setError('File size must be less than 10MB');
-                return;
-            }
-            setFile(selectedFile);
-            setError(null);
-        }
-    };
-
-    const handleDrop = (e) => {
+export const UploadModal = ({ isOpen, onClose, onSuccess }) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
-        const selectedFile = e.dataTransfer.files[0];
-        if (selectedFile) {
-            if (selectedFile.size > 10 * 1024 * 1024) {
-                setError('File size must be less than 10MB');
-                return;
-            }
-            setFile(selectedFile);
-            setError(null);
-        }
-    };
-
-    const handleDragOver = (e) => {
-        e.preventDefault();
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!file) {
-            setError('Please select a file');
-            return;
-        }
-
-        setUploading(true);
-        setError(null);
-
-        try {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('patientId', patientId);
-            if (visitId) formData.append('visitId', visitId);
-            formData.append('docType', docType);
-            formData.append('tags', tags);
-
-            await documentsAPI.upload(formData);
-            onSuccess("Document uploaded successfully");
-            onClose();
-        } catch (err) {
-            console.error('Error uploading document:', err);
-            setError(err.response?.data?.error || 'Failed to upload document');
-        } finally {
-            setUploading(false);
-        }
-    };
-
-    const triggerFileInput = () => {
-        fileInputRef.current.click();
+        onSuccess("Document uploaded successfully");
+        onClose();
     };
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Upload Document">
             <form onSubmit={handleSubmit} className="space-y-4">
-                <div
-                    onClick={triggerFileInput}
-                    onDrop={handleDrop}
-                    onDragOver={handleDragOver}
-                    className={`border-2 border-dashed ${file ? 'border-green-500 bg-green-50' : 'border-paper-300 hover:bg-paper-50'} rounded-lg p-8 text-center transition-colors cursor-pointer`}
-                >
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        className="hidden"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                    />
-                    <Upload className={`w-12 h-12 mx-auto mb-2 ${file ? 'text-green-500' : 'text-paper-400'}`} />
-                    <p className={`font-medium ${file ? 'text-green-700' : 'text-ink-600'}`}>
-                        {file ? file.name : 'Click to upload or drag and drop'}
-                    </p>
-                    <p className="text-ink-400 text-sm mt-1">
-                        {file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'PDF, JPG, PNG (max 10MB)'}
-                    </p>
+                <div className="border-2 border-dashed border-paper-300 rounded-lg p-8 text-center hover:bg-paper-50 transition-colors cursor-pointer">
+                    <Upload className="w-12 h-12 text-paper-400 mx-auto mb-2" />
+                    <p className="text-ink-600 font-medium">Click to upload or drag and drop</p>
+                    <p className="text-ink-400 text-sm">PDF, JPG, PNG (max 10MB)</p>
                 </div>
-
-                {error && (
-                    <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm">
-                        {error}
-                    </div>
-                )}
-
                 <div>
                     <label className="block text-sm font-medium text-ink-700 mb-1">Document Type</label>
-                    <select
-                        value={docType}
-                        onChange={(e) => setDocType(e.target.value)}
-                        className="w-full p-2 border border-paper-300 rounded-md"
-                    >
-                        <option value="lab">Lab Result</option>
-                        <option value="imaging">Imaging Report</option>
-                        <option value="consult">Consult Note</option>
-                        <option value="ekg">EKG</option>
-                        <option value="echo">ECHO</option>
-                        <option value="other">Other</option>
+                    <select className="w-full p-2 border border-paper-300 rounded-md">
+                        <option>Lab Result</option>
+                        <option>Imaging Report</option>
+                        <option>Consult Note</option>
+                        <option>Other</option>
                     </select>
                 </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-ink-700 mb-1">Tags (optional)</label>
-                    <input
-                        type="text"
-                        value={tags}
-                        onChange={(e) => setTags(e.target.value)}
-                        placeholder="e.g. cardiac, urgent, follow-up"
-                        className="w-full p-2 border border-paper-300 rounded-md"
-                    />
-                </div>
-
                 <div className="flex justify-end space-x-2 pt-2">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        disabled={uploading}
-                        className="px-4 py-2 border border-paper-300 rounded-md hover:bg-paper-50 disabled:opacity-50"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        type="submit"
-                        disabled={uploading || !file}
-                        className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                        style={{ background: uploading ? '#9CA3AF' : 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                        onMouseEnter={(e) => !uploading && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
-                        onMouseLeave={(e) => !uploading && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
-                    >
-                        {uploading ? 'Uploading...' : 'Upload'}
-                    </button>
+                    <button type="button" onClick={onClose} className="px-4 py-2 border border-paper-300 rounded-md hover:bg-paper-50">Cancel</button>
+                    <button type="submit" className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'} onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}>Upload</button>
                 </div>
             </form>
         </Modal>

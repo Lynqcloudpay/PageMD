@@ -58,19 +58,3 @@ The Tailwind config is correct. The issue is likely browser caching. Try:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

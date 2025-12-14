@@ -8,7 +8,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Users, UserPlus, Edit, Trash2, Shield, Lock, Unlock, 
   Search, Filter, ChevronDown, CheckCircle2, XCircle, AlertCircle,
-  Eye, EyeOff, Save, X, ChevronRight, ChevronLeft
+  Eye, EyeOff, Save, X, ChevronRight, ChevronLeft, KeyRound
 } from 'lucide-react';
 import { usersAPI, rolesAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -26,6 +26,7 @@ const UserManagement = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showRoleModal, setShowRoleModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedRole, setSelectedRole] = useState(null);
 
@@ -272,6 +273,16 @@ const UserManagement = () => {
                         <button
                           onClick={() => {
                             setSelectedUser(user);
+                            setShowPasswordModal(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-900"
+                          title="Change password"
+                        >
+                          <KeyRound className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedUser(user);
                             setShowEditModal(true);
                           }}
                           className="text-primary-600 hover:text-primary-900"
@@ -377,6 +388,18 @@ const UserManagement = () => {
           }}
           user={selectedUser}
           roles={roles}
+        />
+      )}
+
+      {/* Change Password Modal */}
+      {showPasswordModal && selectedUser && (
+        <ChangePasswordModal
+          isOpen={showPasswordModal}
+          onClose={() => {
+            setShowPasswordModal(false);
+            setSelectedUser(null);
+          }}
+          user={selectedUser}
         />
       )}
     </div>
@@ -1719,6 +1742,180 @@ const EditUserModal = ({ isOpen, onClose, user, roles }) => {
             onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
           >
             {loading ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+};
+
+// Change Password Modal Component
+const ChangePasswordModal = ({ isOpen, onClose, user }) => {
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrors({});
+
+    // Validation
+    if (!password) {
+      setErrors({ password: 'Password is required' });
+      return;
+    }
+
+    if (password.length < 12) {
+      setErrors({ password: 'Password must be at least 12 characters' });
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setErrors({ confirmPassword: 'Passwords do not match' });
+      return;
+    }
+
+    // Check password strength
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+    if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
+      setErrors({ 
+        password: 'Password must contain uppercase, lowercase, number, and special character' 
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await usersAPI.updatePassword(user.id, password);
+      alert('Password changed successfully');
+      setPassword('');
+      setConfirmPassword('');
+      onClose();
+    } catch (error) {
+      console.error('Error changing password:', error);
+      const errorData = error.response?.data;
+      if (errorData?.error === 'Password validation failed' && errorData?.details) {
+        setErrors({ password: errorData.details.join('. ') });
+      } else {
+        setErrors({ general: errorData?.error || 'Failed to change password' });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClose = () => {
+    if (password || confirmPassword) {
+      if (!confirm('You have unsaved changes. Are you sure you want to close?')) {
+        return;
+      }
+    }
+    setPassword('');
+    setConfirmPassword('');
+    setErrors({});
+    onClose();
+  };
+
+  return (
+    <Modal 
+      isOpen={isOpen} 
+      onClose={handleClose} 
+      preventOutsideClick={!!(password || confirmPassword)}
+      title={`Change Password - ${user.first_name} ${user.last_name}`}
+      size="md"
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {errors.general && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800">
+            <strong>Error:</strong> {errors.general}
+          </div>
+        )}
+
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p className="text-xs text-blue-800">
+            <strong>Password Requirements:</strong> Minimum 12 characters, must include uppercase, lowercase, number, and special character.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            New Password <span className="text-red-500">*</span>
+          </label>
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              required
+              minLength={12}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-primary-500 ${
+                errors.password ? 'border-red-300' : 'border-gray-300'
+              }`}
+              placeholder="Enter new password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          {errors.password && <p className="text-xs text-red-600 mt-1">{errors.password}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Confirm Password <span className="text-red-500">*</span>
+          </label>
+          <div className="relative">
+            <input
+              type={showConfirmPassword ? 'text' : 'password'}
+              required
+              minLength={12}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-primary-500 ${
+                errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
+              }`}
+              placeholder="Confirm new password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          {errors.confirmPassword && <p className="text-xs text-red-600 mt-1">{errors.confirmPassword}</p>}
+        </div>
+
+        <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+          <button
+            type="button"
+            onClick={handleClose}
+            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg border border-gray-300"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-4 py-2 text-white rounded-lg disabled:opacity-50 transition-all duration-200 hover:shadow-md"
+            style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+            onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+            onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
+          >
+            {loading ? 'Changing Password...' : 'Change Password'}
           </button>
         </div>
       </form>

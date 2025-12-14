@@ -49,8 +49,7 @@ router.post('/create', requireRole('clinician'), async (req, res) => {
       patientInstructions,
       startDate,
       isControlled = false,
-      schedule,
-      diagnosisIds = [] // Array of problem/diagnosis IDs
+      schedule
     } = req.body;
 
     // Validation
@@ -67,14 +66,6 @@ router.post('/create', requireRole('clinician'), async (req, res) => {
     if (!sig && !sigStructured) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Prescription instructions (sig) are required' });
-    }
-
-    // Validate diagnosis requirement
-    // Filter out temporary IDs for validation
-    const validDiagnosisIds = diagnosisIds.filter(id => id && !id.toString().startsWith('temp-'));
-    if (!diagnosisIds || !Array.isArray(diagnosisIds) || validDiagnosisIds.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({ error: 'At least one valid diagnosis is required for all prescriptions' });
     }
 
     if (!quantity || quantity <= 0) {
@@ -145,9 +136,7 @@ router.post('/create', requireRole('clinician'), async (req, res) => {
     // Generate sig text from structured sig if needed
     let sigText = sig;
     if (!sigText && sigStructured) {
-      // Use dose from sigStructured if provided, otherwise use strength parameter
-      const doseToUse = sigStructured.dose || strength;
-      sigText = buildSigText(sigStructured, doseToUse);
+      sigText = buildSigText(sigStructured);
     }
 
     // Calculate dates
@@ -207,32 +196,6 @@ router.post('/create', requireRole('clinician'), async (req, res) => {
     ]);
 
     const prescription = result.rows[0];
-
-    // Link prescription to diagnoses
-    if (diagnosisIds && diagnosisIds.length > 0) {
-      for (const problemId of diagnosisIds) {
-        // Skip temporary IDs (those starting with 'temp-')
-        if (problemId && problemId.toString().startsWith('temp-')) {
-          // For temporary IDs, we'll skip linking to order_diagnoses
-          // The diagnosis requirement is already validated
-          continue;
-        }
-        
-        // Verify the problem exists and belongs to the patient
-        const problemCheck = await client.query(
-          'SELECT id FROM problems WHERE id = $1 AND patient_id = $2',
-          [problemId, patientId]
-        );
-        
-        if (problemCheck.rows.length > 0) {
-          await client.query(`
-            INSERT INTO order_diagnoses (order_id, problem_id, order_type)
-            VALUES ($1, $2, 'prescription')
-            ON CONFLICT (order_id, problem_id, order_type) DO NOTHING
-          `, [prescription.id, problemId]);
-        }
-      }
-    }
 
     // Check for drug interactions if medication RxCUI is available
     if (medicationRxcui) {
@@ -298,26 +261,11 @@ router.post('/create', requireRole('clinician'), async (req, res) => {
     });
 
   } catch (error) {
-    await client.query('ROLLBACK').catch(() => {}); // Ignore rollback errors
+    await client.query('ROLLBACK');
     console.error('Error creating prescription:', error);
-    console.error('Error stack:', error.stack);
-    console.error('Request body:', JSON.stringify(req.body, null, 2));
-    console.error('Error details:', {
-      message: error.message,
-      code: error.code,
-      detail: error.detail,
-      constraint: error.constraint
-    });
     res.status(500).json({ 
       error: 'Failed to create prescription',
-      message: error.message,
-      details: process.env.NODE_ENV === 'development' ? {
-        message: error.message,
-        code: error.code,
-        detail: error.detail,
-        constraint: error.constraint,
-        stack: error.stack
-      } : undefined
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   } finally {
     client.release();
@@ -504,24 +452,9 @@ router.get('/patient/:patientId', requireRole('clinician', 'nurse', 'front_desk'
 
     const result = await pool.query(query, params);
 
-    // Get diagnoses for each prescription
-    const prescriptions = await Promise.all(result.rows.map(async (p) => {
-      const diagnosesResult = await pool.query(`
-        SELECT pr.id, pr.problem_name, pr.name, pr.icd10_code, pr.icd10Code
-        FROM order_diagnoses od
-        JOIN problems pr ON od.problem_id = pr.id
-        WHERE od.order_id = $1 AND od.order_type = 'prescription'
-      `, [p.id]);
-
-      return {
-        ...p,
-        sigStructured: p.sig_structured ? JSON.parse(p.sig_structured) : null,
-        diagnoses: diagnosesResult.rows.map(d => ({
-          id: d.id,
-          name: d.problem_name || d.name,
-          icd10Code: d.icd10_code || d.icd10Code
-        }))
-      };
+    const prescriptions = result.rows.map(p => ({
+      ...p,
+      sigStructured: p.sig_structured ? JSON.parse(p.sig_structured) : null
     }));
 
     res.json(prescriptions);
@@ -562,23 +495,10 @@ router.get('/:id', requireRole('clinician', 'nurse', 'front_desk'), async (req, 
       WHERE prescription_id = $1
     `, [id]);
 
-    // Get diagnoses
-    const diagnosesResult = await pool.query(`
-      SELECT pr.id, pr.problem_name, pr.name, pr.icd10_code, pr.icd10Code
-      FROM order_diagnoses od
-      JOIN problems pr ON od.problem_id = pr.id
-      WHERE od.order_id = $1 AND od.order_type = 'prescription'
-    `, [id]);
-
     res.json({
       ...prescription,
       sigStructured: prescription.sig_structured ? JSON.parse(prescription.sig_structured) : null,
-      interactions: interactionsResult.rows,
-      diagnoses: diagnosesResult.rows.map(d => ({
-        id: d.id,
-        name: d.problem_name || d.name,
-        icd10Code: d.icd10_code || d.icd10Code
-      }))
+      interactions: interactionsResult.rows
     });
 
   } catch (error) {
@@ -590,13 +510,11 @@ router.get('/:id', requireRole('clinician', 'nurse', 'front_desk'), async (req, 
 /**
  * Helper function to build sig text from structured sig
  */
-function buildSigText(sigStructured, medicationStrength = null) {
+function buildSigText(sigStructured) {
   const parts = [];
   
-  // Use dose from sigStructured if provided, otherwise use medicationStrength parameter
-  const dose = sigStructured.dose || medicationStrength;
-  if (dose) {
-    parts.push(dose);
+  if (sigStructured.dose) {
+    parts.push(sigStructured.dose);
   }
   
   if (sigStructured.route) {
@@ -607,11 +525,7 @@ function buildSigText(sigStructured, medicationStrength = null) {
     parts.push(sigStructured.frequency.toLowerCase());
   }
   
-  // Handle new duration structure (durationValue + durationUnit)
-  if (sigStructured.durationValue && sigStructured.durationUnit) {
-    parts.push(`for ${sigStructured.durationValue} ${sigStructured.durationUnit}`);
-  } else if (sigStructured.duration) {
-    // Backward compatibility with old duration format
+  if (sigStructured.duration) {
     parts.push(`for ${sigStructured.duration}`);
   }
   
@@ -627,9 +541,6 @@ function buildSigText(sigStructured, medicationStrength = null) {
 }
 
 module.exports = router;
-
-
-
 
 
 

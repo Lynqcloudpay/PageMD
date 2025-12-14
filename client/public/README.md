@@ -21,19 +21,3 @@ After placing the logo file, restart the development server if it's running.
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

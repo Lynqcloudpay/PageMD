@@ -100,19 +100,3 @@ If you don't see the Authorization header, the token isn't being sent.
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

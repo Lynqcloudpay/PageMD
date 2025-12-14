@@ -1,33 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FileText, LogIn, Clock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { FileText, LogIn } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-
-const REMEMBERED_USERNAME_KEY = 'pageMD_remembered_username';
 
 const Login = () => {
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
     const auth = useAuth();
-    // Load remembered username from localStorage
-    const [email, setEmail] = useState(() => {
-        const remembered = localStorage.getItem(REMEMBERED_USERNAME_KEY);
-        return remembered || '';
-    });
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const [inactivityMessage, setInactivityMessage] = useState('');
-
-    // Check for inactivity reason in URL
-    useEffect(() => {
-        const reason = searchParams.get('reason');
-        if (reason === 'inactivity') {
-            setInactivityMessage('Your session has expired due to 15 minutes of inactivity. Please log in again.');
-            // Clear the URL parameter after showing message
-            window.history.replaceState({}, '', '/login');
-        }
-    }, [searchParams]);
 
     // Safety check
     if (!auth) {
@@ -52,48 +34,11 @@ const Login = () => {
         setError('');
         setLoading(true);
 
-        // Debug: Log form values
-        console.log('Form submit - email:', email, 'password length:', password?.length || 0);
-
         try {
-            // Login with extended timeout (Argon2 password verification can take time)
             await login(email, password);
-
-            // Save username to localStorage on successful login
-            if (email) {
-                localStorage.setItem(REMEMBERED_USERNAME_KEY, email);
-            }
             navigate('/dashboard', { replace: true });
         } catch (error) {
-            let errorMessage = 'Login failed. Please check your credentials.';
-
-            // Log full error details for debugging
-            const errorDetails = {
-                status: error.response?.status,
-                statusText: error.response?.statusText,
-                data: error.response?.data,
-                message: error.message,
-                requestData: { email, password: password ? '***' : 'empty' }
-            };
-            console.error('Login error details:', JSON.stringify(errorDetails, null, 2));
-            if (error.response?.data) {
-                console.error('Server response data:', JSON.stringify(error.response.data, null, 2));
-            }
-
-            if (error.message?.includes('timeout')) {
-                errorMessage = 'Login request timed out. The server may be slow or unreachable. Please try again.';
-            } else if (error.response?.data?.error) {
-                errorMessage = error.response.data.error;
-            } else if (error.response?.data?.errors) {
-                // Handle validation errors
-                const validationErrors = error.response.data.errors;
-                errorMessage = validationErrors.map(e => e.msg || e.message).join(', ');
-            } else if (error.message) {
-                errorMessage = error.message;
-            }
-
-            setError(errorMessage);
-            console.error('Login error:', error);
+            setError(error.response?.data?.error || 'Login failed. Please check your credentials.');
         } finally {
             setLoading(false);
         }
@@ -103,9 +48,9 @@ const Login = () => {
         <div className="min-h-screen bg-white flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 w-full max-w-md p-8">
                 <div className="flex items-center justify-center mb-8">
-                    <img
-                        src="/logo.png"
-                        alt="PageMD Logo"
+                    <img 
+                        src="/logo.png" 
+                        alt="PageMD Logo" 
                         className="h-16 w-auto object-contain max-w-[200px]"
                         onError={(e) => {
                             // Hide broken image
@@ -115,13 +60,6 @@ const Login = () => {
                 </div>
 
                 <h2 className="text-xl font-semibold text-primary-900 mb-6 text-center">Sign In</h2>
-
-                {inactivityMessage && (
-                    <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm flex items-center gap-3">
-                        <Clock className="w-5 h-5 flex-shrink-0" />
-                        <span>{inactivityMessage}</span>
-                    </div>
-                )}
 
                 {error && (
                     <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">

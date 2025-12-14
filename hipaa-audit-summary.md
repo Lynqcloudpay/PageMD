@@ -282,19 +282,3 @@ The codebase demonstrates good HIPAA awareness with:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

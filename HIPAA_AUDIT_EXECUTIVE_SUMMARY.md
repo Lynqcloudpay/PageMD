@@ -208,19 +208,3 @@ The EMR system has a **strong security foundation** but requires **critical fixe
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

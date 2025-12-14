@@ -174,19 +174,3 @@ The EMR system is now HIPAA-compliant and ready for production deployment! 🎉
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -467,19 +467,3 @@ export default educationHandouts;
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

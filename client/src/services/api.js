@@ -1,41 +1,22 @@
 import axios from 'axios';
-import tokenManager from './tokenManager';
 
-// Use relative path for production (same-origin), Vite proxy handles dev
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+
 const api = axios.create({
-  baseURL: '/api',
-  withCredentials: true,
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 second timeout for all requests (increased for slower connections)
 });
 
-// Add auth token to requests (from memory-only token manager)
+// Add auth token to requests
 api.interceptors.request.use((config) => {
-  const token = tokenManager.getToken();
+  const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
-
-// Handle 401 errors - clear token and redirect to login
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Clear invalid token
-      tokenManager.clearToken();
-      // Only redirect if we're not already on the login page
-      if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
-        // Dispatch a custom event that AuthContext can listen to
-        window.dispatchEvent(new CustomEvent('auth:unauthorized'));
-      }
-    }
-    return Promise.reject(error);
-  }
-);
 
 // Patients
 export const patientsAPI = {
@@ -44,7 +25,6 @@ export const patientsAPI = {
   getSnapshot: (id) => api.get(`/patients/${id}/snapshot`),
   create: (data) => api.post('/patients', data),
   update: (id, data) => api.put(`/patients/${id}`, data),
-  delete: (id) => api.delete(`/patients/${id}`),
   addAllergy: (patientId, data) => api.post(`/patients/${patientId}/allergies`, data),
   updateAllergy: (allergyId, data) => api.put(`/patients/allergies/${allergyId}`, data),
   deleteAllergy: (allergyId) => api.delete(`/patients/allergies/${allergyId}`),
@@ -75,38 +55,19 @@ export const visitsAPI = {
   create: (data) => api.post('/visits', data),
   update: (id, data) => api.put(`/visits/${id}`, data),
   delete: (id) => api.delete(`/visits/${id}`),
-  sign: (id, noteDraft, vitals) => api.post(`/visits/${id}/sign`, { noteDraft, vitals }, { timeout: 30000 }),
+  sign: (id, noteDraft, vitals) => api.post(`/visits/${id}/sign`, { noteDraft, vitals }),
   addAddendum: (id, addendumText) => api.post(`/visits/${id}/addendum`, { addendumText }),
-  signAddendum: (id, addendumIndex) => api.post(`/visits/${id}/addendum/${addendumIndex}/sign`),
   getByPatient: (patientId) => api.get('/visits', { params: { patientId } }),
   getPending: (providerId) => api.get('/visits/pending', { params: { providerId } }),
-  findOrCreate: (patientId, visitType, forceNew = false) => api.post('/visits/find-or-create', { patientId, visitType, forceNew }),
+  findOrCreate: (patientId, visitType) => api.post('/visits/find-or-create', { patientId, visitType }),
   generateSummary: (id) => api.post(`/visits/${id}/summary`),
 };
 
 // Orders
 export const ordersAPI = {
   getByPatient: (patientId) => api.get(`/orders/patient/${patientId}`),
-  getByVisit: (visitId) => api.get(`/orders/visit/${visitId}`),
   create: (data) => api.post('/orders', data),
   update: (id, data) => api.put(`/orders/${id}`, data),
-  delete: (id) => api.delete(`/orders/${id}`),
-  toggleFavorite: (id) => api.post(`/orders/${id}/favorite`),
-};
-
-// Ordersets
-export const ordersetsAPI = {
-  getAll: (params) => api.get('/ordersets', { params }),
-  get: (id) => api.get(`/ordersets/${id}`),
-  create: (data) => api.post('/ordersets', data),
-  apply: (id, data) => api.post(`/ordersets/${id}/apply`, data),
-  toggleFavorite: (id) => api.post(`/ordersets/${id}/favorite`),
-};
-
-// ICD-10 Hierarchy
-export const icd10HierarchyAPI = {
-  getParents: () => api.get('/icd10-hierarchy'),
-  getQuestions: (code) => api.get(`/icd10-hierarchy/${code}`),
 };
 
 // Documents (update endpoint)
@@ -126,10 +87,8 @@ export const documentsAPI = {
 // Referrals
 export const referralsAPI = {
   getByPatient: (patientId) => api.get(`/referrals/patient/${patientId}`),
-  getByVisit: (visitId) => api.get(`/referrals/visit/${visitId}`),
   create: (data) => api.post('/referrals', data),
   update: (id, data) => api.put(`/referrals/${id}`, data),
-  delete: (id) => api.delete(`/referrals/${id}`),
 };
 
 // Messages
@@ -162,7 +121,7 @@ export const appointmentsAPI = {
 // Cancellation Follow-ups
 export const followupsAPI = {
   getAll: (params) => api.get('/followups', { params }),
-  getStats: (params) => api.get('/followups/stats', { params }),
+  getStats: () => api.get('/followups/stats'),
   ensure: (data) => api.post('/followups/ensure', data),
   addNote: (id, data) => api.post(`/followups/${id}/notes`, data),
   address: (id, data) => api.put(`/followups/${id}/address`, data),
@@ -173,12 +132,12 @@ export const followupsAPI = {
 export const billingAPI = {
   // Fee Schedule
   getFeeSchedule: (params) => api.get('/billing/fee-schedule', { params }),
-
+  
   // Insurance
   getInsurance: () => api.get('/billing/insurance'),
   verifyEligibility: (data) => api.post('/billing/eligibility/verify', data),
   getEligibility: (patientId) => api.get(`/billing/eligibility/patient/${patientId}`),
-
+  
   // Claims
   createClaim: (data) => api.post('/billing/claims', data),
   getClaim: (id) => api.get(`/billing/claims/${id}`),
@@ -187,20 +146,20 @@ export const billingAPI = {
   updateClaim: (id, data) => api.put(`/billing/claims/${id}`, data),
   submitClaim: (id, data) => api.post(`/billing/claims/${id}/submit`, data),
   deleteClaim: (id) => api.delete(`/billing/claims/${id}`),
-
+  
   // Payments
   postPayment: (data) => api.post('/billing/payments', data),
   getPaymentsByClaim: (claimId) => api.get(`/billing/payments/claim/${claimId}`),
-
+  
   // Denials
   createDenial: (data) => api.post('/billing/denials', data),
   getDenialsByClaim: (claimId) => api.get(`/billing/denials/claim/${claimId}`),
   appealDenial: (id, data) => api.post(`/billing/denials/${id}/appeal`, data),
-
+  
   // Prior Authorizations
   createPriorAuth: (data) => api.post('/billing/prior-authorizations', data),
   getPriorAuthsByPatient: (patientId) => api.get(`/billing/prior-authorizations/patient/${patientId}`),
-
+  
   // Statistics
   getStatistics: (params) => api.get('/billing/statistics', { params }),
 };
@@ -242,8 +201,8 @@ export const codesAPI = {
 export const medicationsAPI = {
   search: (query) => api.get('/medications/search', { params: { q: query } }),
   getDetails: (rxcui) => api.get(`/medications/${rxcui}`),
-  checkInteractions: (rxcuis) => api.get('/medications/interactions/check', {
-    params: { rxcuis: Array.isArray(rxcuis) ? rxcuis.join(',') : rxcuis }
+  checkInteractions: (rxcuis) => api.get('/medications/interactions/check', { 
+    params: { rxcuis: Array.isArray(rxcuis) ? rxcuis.join(',') : rxcuis } 
   }),
 };
 
@@ -265,7 +224,7 @@ export const pharmaciesAPI = {
 
 // Auth
 export const authAPI = {
-  login: (email, password) => api.post('/auth/login', { email, password }, { timeout: 20000 }), // 20 second timeout for login (Argon2 can be slow)
+  login: (email, password) => api.post('/auth/login', { email, password }),
   register: (data) => api.post('/auth/register', {
     email: data.email,
     password: data.password,
@@ -307,23 +266,23 @@ export const rolesAPI = {
 export const settingsAPI = {
   // Get all settings
   getAll: () => api.get('/settings/all'),
-
+  
   // Practice settings
   getPractice: () => api.get('/settings/practice'),
   updatePractice: (data) => api.put('/settings/practice', data),
-
+  
   // Security settings
   getSecurity: () => api.get('/settings/security'),
   updateSecurity: (data) => api.put('/settings/security', data),
-
+  
   // Clinical settings
   getClinical: () => api.get('/settings/clinical'),
   updateClinical: (data) => api.put('/settings/clinical', data),
-
+  
   // Email settings
   getEmail: () => api.get('/settings/email'),
   updateEmail: (data) => api.put('/settings/email', data),
-
+  
   // Feature flags
   getFeatures: () => api.get('/settings/features'),
   updateFeature: (key, data) => api.put(`/settings/features/${key}`, data),
