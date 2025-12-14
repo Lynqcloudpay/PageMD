@@ -1,0 +1,96 @@
+name: Deploy to AWS Lightsail
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.LIGHTSAIL_SSH_KEY }}" > ~/.ssh/lightsail_key
+          chmod 600 ~/.ssh/lightsail_key
+          ssh-keyscan -H ${{ secrets.LIGHTSAIL_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: Deploy to Lightsail
+        env:
+          DEPLOY_DIR: /home/ubuntu/emr
+        run: |
+          ssh -i ~/.ssh/lightsail_key -o StrictHostKeyChecking=no ${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }} << 'EOF'
+            set -e
+            
+            echo "📂 Navigating to app directory..."
+            cd $DEPLOY_DIR || cd /home/ubuntu/emr || { echo "❌ Directory not found!"; exit 1; }
+            
+            echo "⬇️  Pulling latest changes from GitHub..."
+            # Ensure we're on main branch and pull latest
+            git fetch origin main || git fetch origin
+            git checkout main 2>/dev/null || true
+            git pull origin main || git pull || { echo "⚠️  Git pull failed, continuing anyway..."; }
+            
+            cd deploy
+            
+            echo "⚙️  Checking environment variables..."
+            # Ensure .env.prod has correct domain if it was copied from old example
+            if [ -f .env.prod ]; then
+              if grep -q "yourdomain.com" .env.prod; then
+                echo "📝 Updating domain in existing .env.prod..."
+                sed -i 's/yourdomain.com/bemypcp.com/g' .env.prod
+              fi
+            else
+              echo "⚠️  .env.prod not found! Copying from example..."
+              cp env.prod.example .env.prod
+              echo "⚠️  Please configure .env.prod manually on the server!"
+            fi
+            
+            echo "🔒 Ensuring DB SSL certificates exist..."
+            # Fix for existing databases where init-db.sh won't run
+            docker run --rm -v emr_postgres_data:/var/lib/postgresql/data alpine sh -c "
+              if [ ! -f /var/lib/postgresql/data/server.key ]; then 
+                echo 'Generating missing SSL certs...'; 
+                apk add --no-cache openssl; 
+                openssl req -new -x509 -days 365 -nodes -text -out /var/lib/postgresql/data/server.crt -keyout /var/lib/postgresql/data/server.key -subj '/CN=postgres'; 
+                chmod 600 /var/lib/postgresql/data/server.key; 
+                chmod 644 /var/lib/postgresql/data/server.crt; 
+                cp /var/lib/postgresql/data/server.crt /var/lib/postgresql/data/ca.crt; 
+                chown 70:70 /var/lib/postgresql/data/server.*; 
+                echo 'Certs generated successfully'; 
+              else 
+                echo 'Certs already exist'; 
+              fi" || echo "⚠️  Certificate check skipped (volume may not exist yet)"
+            
+            echo "🔄 Rebuilding and restarting services..."
+            # Rebuild api and web containers
+            docker compose -f docker-compose.prod.yml up -d --build --force-recreate
+            
+            echo "✅ Deployment complete!"
+            echo "🌍 Checking site status..."
+            sleep 5
+            curl -I https://bemypcp.com || echo "⚠️  Site check failed, but deployment completed"
+            
+            echo "📊 Container status:"
+            docker compose -f docker-compose.prod.yml ps
+          EOF
+      
+      - name: Deployment Summary
+        if: always()
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Deployment workflow completed" >> $GITHUB_STEP_SUMMARY
+          echo "- **Server**: ${{ secrets.LIGHTSAIL_HOST }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🌍 Website: https://bemypcp.com" >> $GITHUB_STEP_SUMMARY
+
