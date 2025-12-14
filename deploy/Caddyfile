@@ -12,6 +12,11 @@ http://www.bemypcp.com {
     redir https://bemypcp.com{uri} permanent
 }
 
+# Redirect www HTTPS to non-www
+https://www.bemypcp.com {
+    redir https://bemypcp.com{uri} permanent
+}
+
 # Main HTTPS site
 https://bemypcp.com {
     # Security headers
