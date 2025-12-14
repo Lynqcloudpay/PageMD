@@ -855,14 +855,14 @@ const Snapshot = ({ showNotesOnly = false }) => {
     // Filter EKG documents from all documents
     const ekgDocuments = useMemo(() => {
         return documents
-            .filter(doc => doc.doc_type === 'ekg' || doc.doc_type === 'EKG' || (doc.filename && doc.filename.toLowerCase().includes('ekg')))
+            .filter(doc => doc.doc_type === 'ekg' || doc.doc_type === 'EKG' || (doc.filename && String(doc.filename).toLowerCase().includes('ekg')))
             .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
     }, [documents]);
 
     // Filter ECHO documents from all documents
     const echoDocuments = useMemo(() => {
         return documents
-            .filter(doc => doc.doc_type === 'echo' || doc.doc_type === 'ECHO' || (doc.filename && doc.filename.toLowerCase().includes('echo')))
+            .filter(doc => doc.doc_type === 'echo' || doc.doc_type === 'ECHO' || (doc.filename && String(doc.filename).toLowerCase().includes('echo')))
             .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
     }, [documents]);
 
