@@ -125,7 +125,9 @@ router.get('/:id/file', requirePrivilege('document:view'), async (req, res) => {
     }
 
     res.setHeader('Content-Type', doc.mime_type || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `inline; filename="${doc.filename}"`);
+    // If download=true query param, force download; otherwise display inline
+    const disposition = req.query.download === 'true' ? 'attachment' : 'inline';
+    res.setHeader('Content-Disposition', `${disposition}; filename="${doc.filename}"`);
     res.sendFile(path.resolve(doc.file_path));
   } catch (error) {
     console.error('Error fetching document file:', error);

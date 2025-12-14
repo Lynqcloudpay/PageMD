@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, FileText, Image, FlaskConical, Pill, ExternalLink, Database, CreditCard, Calendar, Clock, CheckCircle2, XCircle, UserCircle, FileImage, Trash2, Activity, Heart, Upload } from 'lucide-react';
+import { X, FileText, Image, FlaskConical, Pill, ExternalLink, Database, CreditCard, Calendar, Clock, CheckCircle2, XCircle, UserCircle, FileImage, Trash2, Activity, Heart, Upload, Eye, Download } from 'lucide-react';
 import { UploadModal } from './ActionModals';
 import { visitsAPI, documentsAPI, ordersAPI, referralsAPI, patientsAPI } from '../services/api';
 import { format } from 'date-fns';
@@ -777,6 +777,32 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                                                     <span>{date}</span>
                                                                 </div>
                                                             )}
+                                                        </div>
+                                                        {/* Action buttons */}
+                                                        <div className="flex items-center space-x-2 mt-2 pt-2 border-t border-gray-100">
+                                                            <button
+                                                                onClick={() => {
+                                                                    // Build the document URL
+                                                                    const docUrl = doc.file_path
+                                                                        ? (doc.file_path.startsWith('http')
+                                                                            ? doc.file_path
+                                                                            : `${window.location.origin}/api/documents/${doc.id}/file`)
+                                                                        : `${window.location.origin}/api/documents/${doc.id}/file`;
+                                                                    window.open(docUrl, '_blank');
+                                                                }}
+                                                                className="flex items-center space-x-1 px-3 py-1.5 text-xs font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-md transition-colors"
+                                                            >
+                                                                <Eye className="w-3.5 h-3.5" />
+                                                                <span>View</span>
+                                                            </button>
+                                                            <a
+                                                                href={`${window.location.origin}/api/documents/${doc.id}/file?download=true`}
+                                                                download={doc.filename || 'document'}
+                                                                className="flex items-center space-x-1 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                                                            >
+                                                                <Download className="w-3.5 h-3.5" />
+                                                                <span>Download</span>
+                                                            </a>
                                                         </div>
                                                     </div>
                                                 );
