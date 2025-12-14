@@ -19,6 +19,8 @@ const ordersetRoutes = require('./routes/ordersets');
 const icd10HierarchyRoutes = require('./routes/icd10-hierarchy');
 
 const app = express();
+// Enable trust proxy for Caddy (reverse proxy) to pass correct IP steps
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
 // CORS must come FIRST - before any redirects or security middleware
@@ -202,7 +204,7 @@ app.get('/api/health', (req, res) => {
 
 // Root endpoint - redirect to frontend or show API info
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'PageMD API Server',
     version: '1.0.0',
     endpoints: {
