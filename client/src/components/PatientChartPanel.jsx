@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { X, FileText, Image, FlaskConical, Pill, ExternalLink, Database, CreditCard, Calendar, Clock, CheckCircle2, XCircle, UserCircle, FileImage, Trash2, Activity, Heart } from 'lucide-react';
+import { X, FileText, Image, FlaskConical, Pill, ExternalLink, Database, CreditCard, Calendar, Clock, CheckCircle2, XCircle, UserCircle, FileImage, Trash2, Activity, Heart, Upload } from 'lucide-react';
+import { UploadModal } from './ActionModals';
 import { visitsAPI, documentsAPI, ordersAPI, referralsAPI, patientsAPI } from '../services/api';
 import { format } from 'date-fns';
 
 const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history', initialDataTab = 'problems', onOpenDataManager }) => {
     const [activeTab, setActiveTab] = useState(initialTab);
     const [loading, setLoading] = useState(false);
-    
+
     // History Panel State
     const [notes, setNotes] = useState([]);
     const [labs, setLabs] = useState([]);
     const [images, setImages] = useState([]);
     const [documents, setDocuments] = useState([]);
     const [expandedNotes, setExpandedNotes] = useState({});
-    
+
     // Patient Hub State
     const [patient, setPatient] = useState(null);
     const [referrals, setReferrals] = useState([]);
@@ -29,7 +30,10 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
         pharmacyAddress: '',
         pharmacyPhone: ''
     });
-    
+
+    // Upload Modal State
+    const [showUploadModal, setShowUploadModal] = useState(false);
+
 
     useEffect(() => {
         if (isOpen && patientId) {
@@ -45,7 +49,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
             const patientResponse = await patientsAPI.get(patientId);
             const patientData = patientResponse.data || patientResponse;
             setPatient(patientData);
-            
+
             if (patientData) {
                 setFormData({
                     insuranceProvider: patientData.insurance_provider || '',
@@ -94,11 +98,11 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
             try {
                 const ordersResponse = await ordersAPI.getByPatient(patientId);
                 const orders = ordersResponse.data || [];
-                
+
                 // Filter prescriptions
                 const rxOrders = orders.filter(order => order.order_type === 'rx');
                 setPrescriptions(rxOrders);
-                
+
                 // Filter labs
                 const labOrders = orders.filter(order => order.order_type === 'lab');
                 setLabs(labOrders);
@@ -121,15 +125,15 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
             try {
                 const docsResponse = await documentsAPI.getByPatient(patientId);
                 const docs = docsResponse.data || [];
-                
+
                 // Separate images from other documents
                 const imageDocs = docs.filter(d => d.doc_type === 'imaging');
                 const otherDocs = docs.filter(d => d.doc_type !== 'imaging');
-                
+
                 // Sort by date, most recent first
                 imageDocs.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
                 otherDocs.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-                
+
                 setImages(imageDocs);
                 setDocuments(otherDocs);
                 setHubDocuments(docs);
@@ -144,6 +148,11 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleUploadSuccess = () => {
+        fetchAllData();
+        setShowUploadModal(false);
     };
 
     const tabs = [
@@ -201,8 +210,8 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                             <h2 className="text-xl font-bold">Patient Chart</h2>
                             <p className="text-primary-100 text-xs mt-0.5">Visit history and patient information</p>
                         </div>
-                        <button 
-                            onClick={onClose} 
+                        <button
+                            onClick={onClose}
                             className="p-2 hover:bg-white/20 rounded-lg transition-colors"
                         >
                             <X className="w-5 h-5" />
@@ -221,11 +230,10 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                     key={tab.id}
                                     type="button"
                                     onClick={() => setActiveTab(tab.id)}
-                                    className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold whitespace-nowrap border-b-3 transition-all flex-shrink-0 ${
-                                        isActive
+                                    className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold whitespace-nowrap border-b-3 transition-all flex-shrink-0 ${isActive
                                             ? 'text-primary-700 bg-primary-50'
                                             : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                                    }`}
+                                        }`}
                                     style={isActive ? { borderBottomWidth: '3px', borderBottomColor: '#3B82F6' } : { borderBottomWidth: '3px', borderBottomColor: 'transparent' }}
                                 >
                                     <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-primary-600' : 'text-gray-500'}`} />
@@ -253,34 +261,34 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                     ) : (
                                         notes.map((note) => {
                                             const noteText = note.note_draft || '';
-                                            
+
                                             // Parse chief complaint
                                             const ccMatch = noteText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
                                             const chiefComplaint = ccMatch ? ccMatch[1].trim() : null;
-                                            
+
                                             // Format date and time
                                             const visitDateObj = note.visit_date ? new Date(note.visit_date) : (note.created_at ? new Date(note.created_at) : new Date());
                                             const createdDateObj = note.created_at ? new Date(note.created_at) : visitDateObj;
                                             const dateStr = visitDateObj.toLocaleDateString();
-                                            
+
                                             // Check if visit_date has time component
                                             const hasTime = visitDateObj.getHours() !== 0 || visitDateObj.getMinutes() !== 0 || visitDateObj.getSeconds() !== 0;
                                             const timeSource = hasTime ? visitDateObj : createdDateObj;
                                             const timeStr = timeSource.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                                             const dateTimeStr = `${dateStr} ${timeStr}`;
-                                            
+
                                             const visitType = note.visit_type || "Office Visit";
                                             const isSigned = note.locked || !!note.note_signed_by;
-                                            
+
                                             // Use signed_by name if note is signed, but fallback to provider if signed_by is "System Administrator"
                                             const signedByName = note.signed_by_first_name && note.signed_by_last_name
                                                 ? `${note.signed_by_first_name} ${note.signed_by_last_name}`
                                                 : null;
-                                            
+
                                             const providerNameFallback = (note.provider_first_name && note.provider_last_name)
                                                 ? `${note.provider_first_name} ${note.provider_last_name}`
                                                 : note.provider_first_name || note.provider_last_name || "Provider";
-                                            
+
                                             // Use signed_by name unless it's "System Administrator", then use provider name
                                             const providerName = (isSigned && signedByName && signedByName !== 'System Administrator')
                                                 ? signedByName
@@ -292,7 +300,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                                 if (!window.confirm('Are you sure you want to delete this draft note? This action cannot be undone.')) {
                                                     return;
                                                 }
-                                                
+
                                                 try {
                                                     await visitsAPI.delete(note.id);
                                                     // Refresh notes
@@ -305,8 +313,8 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                             };
 
                                             return (
-                                                <div 
-                                                    key={note.id} 
+                                                <div
+                                                    key={note.id}
                                                     className="relative p-3 border-2 border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md hover:bg-primary-50 transition-all duration-200 cursor-pointer group"
                                                     onClick={() => toggleNote(note.id)}
                                                 >
@@ -721,7 +729,16 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                             {/* Documents Tab */}
                             {activeTab === 'documents' && (
                                 <div className="space-y-3">
-                                    <h3 className="text-base font-bold text-gray-900 mb-2">Documents ({documents.length})</h3>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <h3 className="text-base font-bold text-gray-900">Documents ({documents.length})</h3>
+                                        <button
+                                            onClick={() => setShowUploadModal(true)}
+                                            className="flex items-center space-x-1 text-sm font-medium text-primary-600 hover:text-primary-700 bg-white border border-primary-200 rounded-lg px-3 py-1.5 hover:bg-primary-50 transition-colors"
+                                        >
+                                            <Upload className="w-4 h-4" />
+                                            <span>Upload</span>
+                                        </button>
+                                    </div>
                                     {documents.length === 0 ? (
                                         <div className="text-center py-8">
                                             <FileImage className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -904,6 +921,14 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                     )}
                 </div>
             </div>
+
+            {/* Upload Modal */}
+            <UploadModal
+                isOpen={showUploadModal}
+                onClose={() => setShowUploadModal(false)}
+                patientId={patientId}
+                onUploadSuccess={handleUploadSuccess}
+            />
 
         </>
     );
