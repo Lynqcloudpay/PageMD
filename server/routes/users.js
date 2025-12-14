@@ -216,22 +216,16 @@ router.put('/:id', [
       }
     }
 
-    // Handle isAdmin flag - convert to roleId if needed
+    // Handle isAdmin flag - set is_admin column WITHOUT changing role
     if (updates.isAdmin !== undefined) {
       if (!isAdmin) {
         return res.status(403).json({ error: 'Only admins can grant admin privileges' });
       }
-      // Get Admin role ID
-      const adminRole = await roleService.getRoleByName('Admin');
-      if (adminRole) {
-        if (updates.isAdmin === true || updates.isAdmin === 'true') {
-          updates.roleId = adminRole.id;
-        }
-        // If isAdmin is false, we don't change the role (user keeps current role)
-        // To revoke admin, you'd need to set roleId to a different role
-      }
-      // Remove isAdmin from updates since it's handled
+      // Convert isAdmin to is_admin column value (keep role unchanged)
+      updates.is_admin = (updates.isAdmin === true || updates.isAdmin === 'true');
+      // Remove isAdmin from updates since we're using is_admin
       delete updates.isAdmin;
+      // IMPORTANT: Do NOT change roleId - user keeps their current role
     }
 
     // Check if trying to promote to admin via roleId
