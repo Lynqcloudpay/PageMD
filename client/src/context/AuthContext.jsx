@@ -27,6 +27,43 @@ export const AuthProvider = ({ children }) => {
     const lastActivityRef = useRef(Date.now());
     const inactivityTimerRef = useRef(null);
 
+    // Clear session when tab/browser is closed
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            // Set a flag indicating the page is unloading
+            sessionStorage.setItem('sessionClosing', 'true');
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                // Page is visible again - check if session was marked as closing
+                const wasClosing = sessionStorage.getItem('sessionClosing');
+                if (wasClosing) {
+                    // Clear the closing flag - this was just a tab switch, not a close
+                    sessionStorage.removeItem('sessionClosing');
+                }
+            }
+        };
+
+        // On page load, check if this is a fresh browser session
+        const sessionClosing = sessionStorage.getItem('sessionClosing');
+        if (sessionClosing) {
+            // Browser was closed and reopened with session restore - clear auth
+            console.log('Previous session was not properly closed - clearing auth');
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('lastActivity');
+            sessionStorage.removeItem('sessionClosing');
+        }
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, []);
+
     // Reset inactivity timer on user activity
     const resetInactivityTimer = useCallback(() => {
         lastActivityRef.current = Date.now();
