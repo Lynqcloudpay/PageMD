@@ -39,6 +39,11 @@ $SSH_CMD $USER@$HOST << EOF
   fi
   
   echo "🔑 Ensuring DB SSL certificates exist..."
+  
+  echo "📝 Setting up frontend environment variables..."
+  # Create .env.production for the frontend build
+  # This ensures VITE_API_URL is baked into the static files
+  echo "VITE_API_URL=https://bemypcp.com/api" > ../client/.env.production
   # Fix for existing databases where init-db.sh won't run
   # We use a temporary alpine container to generate certs in the volume if they are missing
   # Note: Must match the volume name and path in docker-compose.prod.yml
