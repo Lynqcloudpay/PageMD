@@ -1165,59 +1165,53 @@ router.delete('/:id', requireRole('clinician'), async (req, res) => {
     }
 
     // Delete associated records first (they're just draft records for unsigned visits)
-    // IMPORTANT: Delete in the correct order to respect foreign key constraints
-    // We delete ALL records regardless of count to ensure nothing is left behind
+    // IMPORTANT: Check if tables exist before deleting to avoid transaction abort
 
-    // 1. Delete order_diagnoses for orders first (delete all, don't check count)
-    // Note: order_diagnoses table may not exist in all environments
-    try {
+    // Helper function to check if a table exists
+    const tableExists = async (tableName) => {
+      const result = await client.query(
+        `SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = $1)`,
+        [tableName]
+      );
+      return result.rows[0].exists;
+    };
+
+    let orderCount = 0;
+    let referralCount = 0;
+    let documentCount = 0;
+
+    // 1. Delete order_diagnoses for orders first (if table exists)
+    if (await tableExists('order_diagnoses') && await tableExists('orders')) {
       await client.query(`
         DELETE FROM order_diagnoses 
         WHERE order_id IN (SELECT id FROM orders WHERE visit_id = $1)
-          AND (order_type != 'referral' OR order_type IS NULL)
       `, [id]);
-    } catch (err) {
-      // Table might not exist - that's OK, continue
-      if (err.code !== '42P01') throw err; // Re-throw if not "relation does not exist"
     }
 
-    // 2. Delete order_diagnoses for referrals
-    try {
+    // 2. Delete order_diagnoses for referrals (if tables exist)
+    if (await tableExists('order_diagnoses') && await tableExists('referrals')) {
       await client.query(`
         DELETE FROM order_diagnoses 
         WHERE order_id IN (SELECT id FROM referrals WHERE visit_id = $1)
-          AND order_type = 'referral'
       `, [id]);
-    } catch (err) {
-      // Table might not exist - that's OK, continue
-      if (err.code !== '42P01') throw err;
     }
 
-    // 3. Now delete orders (order_diagnoses already deleted) - delete ALL orders for this visit
-    let orderCount = 0;
-    try {
+    // 3. Delete orders (if table exists)
+    if (await tableExists('orders')) {
       const ordersDeleteResult = await client.query('DELETE FROM orders WHERE visit_id = $1 RETURNING id', [id]);
       orderCount = ordersDeleteResult.rowCount || 0;
-    } catch (err) {
-      if (err.code !== '42P01') throw err; // Re-throw if not "relation does not exist"
     }
 
-    // 4. Delete referrals (order_diagnoses already deleted) - delete ALL referrals for this visit
-    let referralCount = 0;
-    try {
+    // 4. Delete referrals (if table exists)
+    if (await tableExists('referrals')) {
       const referralsDeleteResult = await client.query('DELETE FROM referrals WHERE visit_id = $1 RETURNING id', [id]);
       referralCount = referralsDeleteResult.rowCount || 0;
-    } catch (err) {
-      if (err.code !== '42P01') throw err;
     }
 
-    // 5. Delete documents - delete ALL documents for this visit
-    let documentCount = 0;
-    try {
+    // 5. Delete documents (if table exists)
+    if (await tableExists('documents')) {
       const documentsDeleteResult = await client.query('DELETE FROM documents WHERE visit_id = $1 RETURNING id', [id]);
       documentCount = documentsDeleteResult.rowCount || 0;
-    } catch (err) {
-      if (err.code !== '42P01') throw err;
     }
 
     // Now delete the visit
