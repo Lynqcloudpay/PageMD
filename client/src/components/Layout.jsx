@@ -100,7 +100,7 @@ const Layout = ({ children }) => {
 
     // Check if user is a physician/NP/PA for "My Schedule" routing
     const roleName = user?.role_name || user?.role || '';
-    const roleNameLower = String(roleName).toLowerCase();
+    const roleNameLower = String(roleName || '').toLowerCase();
     const isPhysicianRole = (
         roleNameLower === 'physician' ||
         roleNameLower === 'nurse practitioner' ||
@@ -295,8 +295,8 @@ const Layout = ({ children }) => {
                                         key={item.path}
                                         to={item.path}
                                         className={`group relative flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 ${active
-                                                ? 'text-white shadow-lg'
-                                                : 'text-deep-gray hover:bg-soft-gray hover:text-strong-azure hover:border-l-2 hover:border-strong-azure/30'
+                                            ? 'text-white shadow-lg'
+                                            : 'text-deep-gray hover:bg-soft-gray hover:text-strong-azure hover:border-l-2 hover:border-strong-azure/30'
                                             }`}
                                         style={active ? {
                                             background: 'linear-gradient(to right, #3B82F6, #2563EB)',
@@ -321,8 +321,8 @@ const Layout = ({ children }) => {
                                                 </span>
                                                 {item.badge && (
                                                     <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md transition-all z-10 relative ${active
-                                                            ? 'bg-white/20 text-white'
-                                                            : 'bg-fresh-green/10 text-fresh-green'
+                                                        ? 'bg-white/20 text-white'
+                                                        : 'bg-fresh-green/10 text-fresh-green'
                                                         }`}>
                                                         {item.badge}
                                                     </span>
@@ -351,8 +351,8 @@ const Layout = ({ children }) => {
                                         key={item.path}
                                         to={item.path}
                                         className={`group relative flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 ${active
-                                                ? 'text-white shadow-lg'
-                                                : 'text-deep-gray hover:bg-soft-gray hover:text-strong-azure hover:border-l-2 hover:border-strong-azure/30'
+                                            ? 'text-white shadow-lg'
+                                            : 'text-deep-gray hover:bg-soft-gray hover:text-strong-azure hover:border-l-2 hover:border-strong-azure/30'
                                             }`}
                                         style={active ? {
                                             background: 'linear-gradient(to right, #3B82F6, #2563EB)',
@@ -377,8 +377,8 @@ const Layout = ({ children }) => {
                                                 </span>
                                                 {item.badge && (
                                                     <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md transition-all z-10 relative ${active
-                                                            ? 'bg-white/20 text-white'
-                                                            : 'bg-fresh-green/10 text-fresh-green'
+                                                        ? 'bg-white/20 text-white'
+                                                        : 'bg-fresh-green/10 text-fresh-green'
                                                         }`}>
                                                         {item.badge}
                                                     </span>
@@ -399,8 +399,8 @@ const Layout = ({ children }) => {
                             {/* User Button */}
                             <button
                                 className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all flex-1 ${sidebarCollapsed ? 'justify-center' : ''} ${sidebarCollapsed
-                                        ? 'hover:bg-soft-gray/80'
-                                        : 'bg-white/60 backdrop-blur-sm hover:bg-white border border-deep-gray/5 hover:border-deep-gray/20 hover:shadow-sm'
+                                    ? 'hover:bg-soft-gray/80'
+                                    : 'bg-white/60 backdrop-blur-sm hover:bg-white border border-deep-gray/5 hover:border-deep-gray/20 hover:shadow-sm'
                                     }`}
                                 title={`${user.firstName} ${user.lastName} - ${user.role === 'clinician' ? 'Doctor' : user.role === 'front_desk' ? 'Front Desk' : user.role || user.role_name || 'User'}`}
                             >

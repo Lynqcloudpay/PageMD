@@ -99,7 +99,12 @@ export const PatientProvider = ({ children }) => {
 
     const searchPatients = (query) => {
         if (!query) return [];
-        return patients.filter(p => (p.name && p.name.toLowerCase().includes(query.toLowerCase())) || (p.mrn && p.mrn.toLowerCase().includes(query.toLowerCase())));
+        return patients.filter(p => {
+            const name = p.name ? p.name.toLowerCase() : '';
+            const mrn = p.mrn ? p.mrn.toLowerCase() : '';
+            const q = query.toLowerCase();
+            return name.includes(q) || mrn.includes(q);
+        });
     };
 
     const getPatient = (id) => {
