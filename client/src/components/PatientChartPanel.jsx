@@ -231,8 +231,8 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                     type="button"
                                     onClick={() => setActiveTab(tab.id)}
                                     className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold whitespace-nowrap border-b-3 transition-all flex-shrink-0 ${isActive
-                                            ? 'text-primary-700 bg-primary-50'
-                                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                        ? 'text-primary-700 bg-primary-50'
+                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                                         }`}
                                     style={isActive ? { borderBottomWidth: '3px', borderBottomColor: '#3B82F6' } : { borderBottomWidth: '3px', borderBottomColor: 'transparent' }}
                                 >
@@ -927,7 +927,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                 isOpen={showUploadModal}
                 onClose={() => setShowUploadModal(false)}
                 patientId={patientId}
-                onUploadSuccess={handleUploadSuccess}
+                onSuccess={handleUploadSuccess}
             />
 
         </>
