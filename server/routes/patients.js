@@ -1526,9 +1526,20 @@ router.post('/:id/photo/base64', requireRole('clinician', 'front_desk', 'admin')
     const base64Data = photoData.includes(',') ? photoData.split(',')[1] : photoData;
     const buffer = Buffer.from(base64Data, 'base64');
 
-    // Determine file extension from data URL
-    const match = photoData.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,/);
-    const extension = match ? match[1] : 'jpg';
+    // Detect file extension from buffer magic bytes
+    let extension = 'jpg'; // Default
+    if (buffer.length > 4) {
+      if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
+        extension = 'jpg';
+      } else if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+        extension = 'png';
+      } else if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x38) {
+        extension = 'gif';
+      } else if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+        buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) {
+        extension = 'webp';
+      }
+    }
 
     // Generate filename
     const filename = `patient-${id}-${Date.now()}-${Math.round(Math.random() * 1E9)}.${extension}`;
