@@ -51,10 +51,12 @@ const requirePrivilege = (privilegeName) => {
         const allowedRoles = ['clinician', 'nurse', 'admin', 'front_desk'];
         
         // Map privilege names to roles that should have access
+        // Note: role names are normalized to lowercase for comparison
         const privilegeRoleMap = {
-          'patient:view': ['clinician', 'nurse', 'admin', 'front_desk'],
-          'patient:create': ['clinician', 'admin', 'front_desk'],
-          'patient:edit': ['clinician', 'admin', 'front_desk'],
+          'patient:view': ['clinician', 'physician', 'nurse', 'admin', 'front_desk', 'nurse practitioner', 'physician assistant', 'medical assistant', 'billing'],
+          'patient:create': ['clinician', 'physician', 'admin', 'front_desk'],
+          'patient:edit': ['clinician', 'physician', 'admin'],
+          'patient:delete': ['admin'],
         };
         
         const rolesForPrivilege = privilegeRoleMap[privilegeName] || allowedRoles;
