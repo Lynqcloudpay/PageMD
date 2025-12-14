@@ -65,6 +65,19 @@ https://bemypcp.com {
     # Serve static frontend (SPA)
     handle {
         root * /usr/share/caddy
+        
+        # Disable cache for index.html to ensure updates are seen immediately
+        @html {
+            path /index.html
+        }
+        header @html Cache-Control "no-cache, no-store, must-revalidate"
+
+        # Cache static assets (hashed files) for a long time
+        @static {
+            path /assets/*
+        }
+        header @static Cache-Control "max-age=31536000, immutable"
+
         try_files {path} /index.html
         file_server
     }
