@@ -9,15 +9,25 @@
  */
 
 const { Pool } = require('pg');
-require('dotenv').config({ path: '../.env' });
+require('dotenv').config();
 
-const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'paper_emr',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
-});
+// Use DATABASE_URL if available (production/Docker), otherwise use individual env vars
+const pool = process.env.DATABASE_URL
+  ? new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.DATABASE_URL.includes('localhost') || process.env.DATABASE_URL.includes('127.0.0.1')
+        ? false
+        : {
+            rejectUnauthorized: false // Allow self-signed certificates
+          },
+    })
+  : new Pool({
+      host: process.env.DB_HOST || 'localhost',
+      port: process.env.DB_PORT || 5432,
+      database: process.env.DB_NAME || 'paper_emr',
+      user: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || 'postgres',
+    });
 
 async function grantAdminToPhysician(email) {
   const client = await pool.connect();
