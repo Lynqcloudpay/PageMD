@@ -1,4 +1,5 @@
 import axios from 'axios';
+import tokenManager from './tokenManager';
 
 // Use relative path for production (same-origin), Vite proxy handles dev
 const api = axios.create({
@@ -10,9 +11,9 @@ const api = axios.create({
   timeout: 10000, // 10 second timeout for all requests (increased for slower connections)
 });
 
-// Add auth token to requests
+// Add auth token to requests (from memory-only token manager)
 api.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem('token');
+  const token = tokenManager.getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -25,8 +26,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Clear invalid token
-      sessionStorage.removeItem('token');
-      sessionStorage.removeItem('lastActivity');
+      tokenManager.clearToken();
       // Only redirect if we're not already on the login page
       if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
         // Dispatch a custom event that AuthContext can listen to

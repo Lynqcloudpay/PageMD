@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { authAPI } from '../services/api';
+import tokenManager from '../services/tokenManager';
 
 // HIPAA Security: 15-minute inactivity timeout (in milliseconds)
 const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes
@@ -27,46 +28,10 @@ export const AuthProvider = ({ children }) => {
     const lastActivityRef = useRef(Date.now());
     const inactivityTimerRef = useRef(null);
 
-    // Clear session when tab/browser is closed
-    useEffect(() => {
-        const handleBeforeUnload = () => {
-            // Set a flag indicating the page is unloading
-            sessionStorage.setItem('sessionClosing', 'true');
-        };
-
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
-                // Page is visible again - check if session was marked as closing
-                const wasClosing = sessionStorage.getItem('sessionClosing');
-                if (wasClosing) {
-                    // Clear the closing flag - this was just a tab switch, not a close
-                    sessionStorage.removeItem('sessionClosing');
-                }
-            }
-        };
-
-        // On page load, check if this is a fresh browser session
-        const sessionClosing = sessionStorage.getItem('sessionClosing');
-        if (sessionClosing) {
-            // Browser was closed and reopened with session restore - clear auth
-            console.log('Previous session was not properly closed - clearing auth');
-            sessionStorage.removeItem('token');
-            sessionStorage.removeItem('lastActivity');
-            sessionStorage.removeItem('sessionClosing');
-        }
-
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-
-        return () => {
-            window.removeEventListener('beforeunload', handleBeforeUnload);
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-        };
-    }, []);
-
     // Reset inactivity timer on user activity
     const resetInactivityTimer = useCallback(() => {
         lastActivityRef.current = Date.now();
+        tokenManager.updateActivity();
     }, []);
 
     // Check for inactivity and logout if needed
@@ -77,8 +42,7 @@ export const AuthProvider = ({ children }) => {
         if (timeSinceLastActivity >= INACTIVITY_TIMEOUT && user) {
             console.log('Session expired due to inactivity');
             // Clear session and redirect to login
-            sessionStorage.removeItem('token');
-            sessionStorage.removeItem('lastActivity');
+            tokenManager.clearToken();
             setUser(null);
             window.location.href = '/login?reason=inactivity';
         }
@@ -100,8 +64,6 @@ export const AuthProvider = ({ children }) => {
 
         const handleActivity = () => {
             resetInactivityTimer();
-            // Store last activity time for cross-tab awareness
-            sessionStorage.setItem('lastActivity', Date.now().toString());
         };
 
         // Add event listeners
@@ -128,10 +90,13 @@ export const AuthProvider = ({ children }) => {
         let cancelled = false;
 
         const initAuth = async () => {
-            // SECURITY: Use sessionStorage instead of localStorage
-            // Token is cleared when browser is closed
-            const token = sessionStorage.getItem('token');
+            // HIPAA SECURITY: Token is stored in memory only
+            // Closing the browser tab = token is gone = must log in again
+            // This is the most secure approach for PHI protection
+            const token = tokenManager.getToken();
+
             if (!token) {
+                // No token in memory - user must log in
                 if (mounted && !cancelled) {
                     setUser(null);
                     setLoading(false);
@@ -139,15 +104,14 @@ export const AuthProvider = ({ children }) => {
                 return;
             }
 
-            // Check for stored last activity time
-            const storedLastActivity = sessionStorage.getItem('lastActivity');
-            if (storedLastActivity) {
-                const timeSinceLastActivity = Date.now() - parseInt(storedLastActivity, 10);
+            // Check for inactivity timeout
+            const lastActivity = tokenManager.getLastActivity();
+            if (lastActivity) {
+                const timeSinceLastActivity = Date.now() - lastActivity;
                 if (timeSinceLastActivity >= INACTIVITY_TIMEOUT) {
                     // Session expired due to inactivity
                     console.log('Session expired - was inactive for too long');
-                    sessionStorage.removeItem('token');
-                    sessionStorage.removeItem('lastActivity');
+                    tokenManager.clearToken();
                     if (mounted && !cancelled) {
                         setUser(null);
                         setLoading(false);
@@ -164,29 +128,24 @@ export const AuthProvider = ({ children }) => {
                     resetInactivityTimer();
                 } else if (mounted && !cancelled) {
                     // No valid user data, clear token
-                    sessionStorage.removeItem('token');
-                    sessionStorage.removeItem('lastActivity');
+                    tokenManager.clearToken();
                     setUser(null);
                 }
             } catch (error) {
                 // Token invalid or error, clear it
                 if (mounted && !cancelled) {
-                    // Handle timeout errors
                     if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
                         console.warn('Auth check request timed out');
-                        sessionStorage.removeItem('token');
-                        sessionStorage.removeItem('lastActivity');
+                        tokenManager.clearToken();
                         setUser(null);
                     } else if (error.response?.status === 401 || error.response?.status === 403) {
                         // Invalid token
-                        sessionStorage.removeItem('token');
-                        sessionStorage.removeItem('lastActivity');
+                        tokenManager.clearToken();
                         setUser(null);
                     } else if (error.response?.status !== 429) {
                         // Other errors (but not rate limit)
                         console.warn('Auth check failed:', error.message || 'Network error');
-                        sessionStorage.removeItem('token');
-                        sessionStorage.removeItem('lastActivity');
+                        tokenManager.clearToken();
                         setUser(null);
                     } else {
                         // Rate limit - don't clear token
@@ -203,8 +162,7 @@ export const AuthProvider = ({ children }) => {
         // Handle unauthorized events from API interceptor
         const handleUnauthorized = () => {
             if (mounted && !cancelled) {
-                sessionStorage.removeItem('token');
-                sessionStorage.removeItem('lastActivity');
+                tokenManager.clearToken();
                 setUser(null);
                 setLoading(false);
                 // Redirect to login if not already there
@@ -231,9 +189,10 @@ export const AuthProvider = ({ children }) => {
         try {
             const response = await authAPI.login(email, password);
             if (response.data.token) {
-                // SECURITY: Use sessionStorage - clears when browser closes
-                sessionStorage.setItem('token', response.data.token);
-                sessionStorage.setItem('lastActivity', Date.now().toString());
+                // HIPAA SECURITY: Token stored in memory ONLY
+                // Closing tab = token gone = must log in again
+                tokenManager.setToken(response.data.token);
+                tokenManager.setRememberedUsername(email);
                 setUser(response.data.user);
                 resetInactivityTimer();
                 return response.data;
@@ -244,8 +203,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = () => {
-        sessionStorage.removeItem('token');
-        sessionStorage.removeItem('lastActivity');
+        tokenManager.clearToken();
         setUser(null);
     };
 
