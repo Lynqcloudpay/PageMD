@@ -10,6 +10,8 @@ router.get('/', async (req, res) => {
   try {
     const { status, startDate, endDate } = req.query;
     
+    // Check if phone_cell column exists, if not use phone_secondary or phone
+    // Use a query that won't fail if column doesn't exist
     let query = `
       SELECT 
         cf.*,
@@ -21,7 +23,6 @@ router.get('/', async (req, res) => {
         p.first_name as patient_first_name,
         p.last_name as patient_last_name,
         p.phone as patient_phone,
-        p.phone_cell as patient_phone_cell,
         p.emergency_contact_phone,
         p.emergency_contact_name,
         u_provider.first_name as provider_first_name,
@@ -48,6 +49,10 @@ router.get('/', async (req, res) => {
       params.push(status);
     }
     
+    // Filter by appointment date if provided
+    // Note: We filter by appointment_date, not follow-up creation date
+    // This means if an appointment was cancelled months ago but the follow-up was just created,
+    // it will only show if the appointment_date is within the range
     if (startDate) {
       paramCount++;
       query += ` AND a.appointment_date >= $${paramCount}`;
@@ -60,9 +65,25 @@ router.get('/', async (req, res) => {
       params.push(endDate);
     }
     
+    console.log('Follow-ups query filter:', { startDate, endDate, status, paramCount: params.length });
+    
     query += ` ORDER BY cf.created_at DESC`;
     
+    console.log('Executing follow-ups query with params:', { status, startDate, endDate });
+    
     const result = await pool.query(query, params);
+    console.log('Query returned', result.rows.length, 'follow-ups');
+    
+    if (result.rows.length === 0 && (startDate || endDate)) {
+      // Debug: Check if there are any follow-ups without date filter
+      const debugQuery = query.replace(/AND a\.appointment_date >= \$\d+/g, '').replace(/AND a\.appointment_date <= \$\d+/g, '');
+      const debugParams = params.filter((p, i) => {
+        const paramIndex = i + 1;
+        return !query.includes(`a.appointment_date >= $${paramIndex}`) && !query.includes(`a.appointment_date <= $${paramIndex}`);
+      });
+      const debugResult = await pool.query(debugQuery, debugParams);
+      console.log('Debug: Found', debugResult.rows.length, 'follow-ups without date filter');
+    }
     
     // Get notes for each follow-up
     const followupsWithNotes = await Promise.all(
@@ -78,7 +99,7 @@ router.get('/', async (req, res) => {
             ...followup,
             patientName: `${followup.patient_first_name || ''} ${followup.patient_last_name || ''}`.trim(),
             providerName: followup.provider_first_name ? `${followup.provider_first_name} ${followup.provider_last_name}` : null,
-            patientPhone: followup.patient_phone || followup.patient_phone_cell || null,
+            patientPhone: followup.patient_phone || null,
             notes: notesResult.rows
           };
         } catch (noteError) {
@@ -87,7 +108,7 @@ router.get('/', async (req, res) => {
             ...followup,
             patientName: `${followup.patient_first_name || ''} ${followup.patient_last_name || ''}`.trim(),
             providerName: followup.provider_first_name ? `${followup.provider_first_name} ${followup.provider_last_name}` : null,
-            patientPhone: followup.patient_phone || followup.patient_phone_cell || null,
+            patientPhone: followup.patient_phone || null,
             notes: []
           };
         }
@@ -97,10 +118,14 @@ router.get('/', async (req, res) => {
     res.json(followupsWithNotes);
   } catch (error) {
     console.error('Error fetching follow-ups:', error);
+    console.error('Error message:', error.message);
+    console.error('Error code:', error.code);
     console.error('Error stack:', error.stack);
     res.status(500).json({ 
       error: 'Failed to fetch follow-ups',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: error.message,
+      code: error.code,
+      details: error.stack
     });
   }
 });
@@ -273,14 +298,43 @@ router.put('/:id/dismiss', async (req, res) => {
 // Get stats for dashboard
 router.get('/stats', async (req, res) => {
   try {
-    const result = await pool.query(`
+    const { startDate, endDate } = req.query;
+    
+    console.log('Stats query params:', { startDate, endDate });
+    
+    let query = `
       SELECT 
-        COUNT(*) FILTER (WHERE status = 'pending') as pending_count,
-        COUNT(*) FILTER (WHERE status = 'addressed') as addressed_count,
-        COUNT(*) FILTER (WHERE status = 'dismissed') as dismissed_count,
+        COUNT(*) FILTER (WHERE cf.status = 'pending') as pending_count,
+        COUNT(*) FILTER (WHERE cf.status = 'addressed') as addressed_count,
+        COUNT(*) FILTER (WHERE cf.status = 'dismissed') as dismissed_count,
         COUNT(*) as total_count
-      FROM cancellation_followups
-    `);
+      FROM cancellation_followups cf
+      JOIN appointments a ON cf.appointment_id = a.id
+      WHERE 1=1
+    `;
+    
+    const params = [];
+    let paramCount = 0;
+    
+    // Apply same date filter as getAll endpoint for consistency
+    if (startDate) {
+      paramCount++;
+      query += ` AND a.appointment_date >= $${paramCount}`;
+      params.push(startDate);
+    }
+    
+    if (endDate) {
+      paramCount++;
+      query += ` AND a.appointment_date <= $${paramCount}`;
+      params.push(endDate);
+    }
+    
+    console.log('Stats query:', query);
+    console.log('Stats params:', params);
+    
+    const result = await pool.query(query, params);
+    
+    console.log('Stats result:', result.rows[0]);
     
     res.json(result.rows[0]);
   } catch (error) {
