@@ -20,17 +20,17 @@ You need to allow SSH (port 22) from all IP addresses so GitHub Actions can conn
 3. Scroll down to **"Firewall"** section
 4. Find the SSH (22) rule
 
-### Step 3: Allow SSH from All IPs
+### Step 3: Edit the SSH Rule
 
-**Option A: Allow SSH from all IPs (Recommended for GitHub Actions)**
+**You'll see the SSH rule is currently restricted to a specific IP (like `73.56.192.125`)**
 
-1. Click **"Add rule"** or edit the existing SSH rule
-2. Set:
-   - **Application**: Custom
-   - **Protocol**: TCP
-   - **Port**: 22
-   - **Source**: `0.0.0.0/0` (This means "allow from all IP addresses")
-3. Click **"Create"** or **"Save"**
+1. Click the **Edit icon** (pencil) next to the SSH rule in the table
+2. **Uncheck the "Restrict to IP address" checkbox**
+   - This will automatically set it to "Any IPv4 address" (same as your HTTP/HTTPS rules)
+   - Do NOT try to enter `0.0.0.0/0` manually - Lightsail doesn't accept that format
+3. Click **"Save"** or **"Save rule"**
+
+**Note:** Your HTTP (80) and HTTPS (443) rules already allow "Any IPv4 address" - SSH should match this setting by unchecking the restriction.
 
 **Option B: Keep restricted but add GitHub IP ranges** (More secure but requires maintenance)
 
