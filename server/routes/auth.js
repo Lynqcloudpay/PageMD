@@ -230,6 +230,8 @@ router.post('/login', [
         lastName: user.last_name,
         role: user.role_name,
         roleId: user.role_id,
+        role_name: user.role_name, // Also include role_name for compatibility
+        is_admin: user.is_admin || false, // Include is_admin flag for admin privileges
       },
       token,
     });
@@ -260,7 +262,9 @@ router.get('/me', authenticate, async (req, res) => {
       lastName: user.last_name,
       role: user.role_name,
       roleId: user.role_id,
+      role_name: user.role_name, // Also include role_name for compatibility
       status: user.status,
+      is_admin: user.is_admin || false, // Include is_admin flag for admin privileges
       privileges: user.privileges || [],
     });
   } catch (error) {
