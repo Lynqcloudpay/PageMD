@@ -14,10 +14,10 @@ export const useMedicalAccess = () => {
     // Check if user is a physician/NP/PA (medical staff)
     const isMedicalStaff = () => {
         if (!user) return false;
-        
+
         const roleName = user.role_name || user.role || '';
-        const roleNameLower = roleName.toLowerCase();
-        
+        const roleNameLower = String(roleName).toLowerCase();
+
         return (
             roleNameLower === 'physician' ||
             roleNameLower === 'nurse practitioner' ||
@@ -33,10 +33,10 @@ export const useMedicalAccess = () => {
     // Check if user is support staff (Nurse, MA)
     const isSupportStaff = () => {
         if (!user) return false;
-        
+
         const roleName = user.role_name || user.role || '';
-        const roleNameLower = roleName.toLowerCase();
-        
+        const roleNameLower = String(roleName).toLowerCase();
+
         return (
             roleNameLower === 'nurse' ||
             roleNameLower === 'medical assistant' ||
@@ -49,10 +49,10 @@ export const useMedicalAccess = () => {
     // Check if user is a physician specifically
     const isPhysician = () => {
         if (!user) return false;
-        
+
         const roleName = user.role_name || user.role || '';
-        const roleNameLower = roleName.toLowerCase();
-        
+        const roleNameLower = String(roleName).toLowerCase();
+
         return (
             roleNameLower === 'physician' ||
             roleNameLower === 'doctor' ||

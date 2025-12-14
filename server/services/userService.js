@@ -34,6 +34,7 @@ class UserService {
         u.taxonomy_code,
         u.taxonomy_code,
         u.credentials,
+        u.role,
         r.id as role_id,
         r.name as role_name,
         r.description as role_description
@@ -49,6 +50,11 @@ class UserService {
     }
 
     const user = result.rows[0];
+
+    // Fallback for legacy roles
+    if (!user.role_name && user.role) {
+      user.role_name = user.role;
+    }
 
     if (includePrivileges && user.role_id) {
       user.privileges = await this.getUserPrivileges(userId);

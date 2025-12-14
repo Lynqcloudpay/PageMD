@@ -27,7 +27,7 @@ const Patients = () => {
                 return patient ? { ...patient, appointment: apt } : null;
             })
             .filter(Boolean);
-        
+
         setPendingPatients(pending);
     }, [appointments, patients, currentProvider]);
 
@@ -42,9 +42,9 @@ const Patients = () => {
                 })
                 .catch(() => {
                     // Fallback to local search
-                    const results = patients.filter(p => 
-                        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        p.mrn.toLowerCase().includes(searchQuery.toLowerCase())
+                    const results = patients.filter(p =>
+                        (p.name && p.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                        (p.mrn && p.mrn.toLowerCase().includes(searchQuery.toLowerCase()))
                     );
                     setFilteredPatients(results);
                     setLoading(false);
@@ -67,8 +67,8 @@ const Patients = () => {
     const formatDate = (dateString) => {
         if (!dateString) return '';
         try {
-            const date = typeof dateString === 'string' && dateString.includes('T') 
-                ? parseISO(dateString) 
+            const date = typeof dateString === 'string' && dateString.includes('T')
+                ? parseISO(dateString)
                 : new Date(dateString);
             return format(date, 'MMM d, yyyy');
         } catch {
@@ -191,11 +191,10 @@ const Patients = () => {
                                                         <Calendar className="w-3 h-3 text-blue-600" />
                                                         <span className="font-medium">{formatDate(patient.dob || patient.date_of_birth)}</span>
                                                     </span>
-                                                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                                                        patient.sex === 'M' ? 'bg-blue-100 text-blue-700' : 
-                                                        patient.sex === 'F' ? 'bg-pink-100 text-pink-700' : 
-                                                        'bg-gray-100 text-gray-700'
-                                                    }`}>
+                                                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${patient.sex === 'M' ? 'bg-blue-100 text-blue-700' :
+                                                            patient.sex === 'F' ? 'bg-pink-100 text-pink-700' :
+                                                                'bg-gray-100 text-gray-700'
+                                                        }`}>
                                                         {patient.sex === 'M' ? 'Male' : patient.sex === 'F' ? 'Female' : patient.sex}
                                                     </span>
                                                 </div>
@@ -249,11 +248,10 @@ const Patients = () => {
                                                         <Calendar className="w-3 h-3 text-blue-600" />
                                                         <span className="font-medium">{formatDate(patient.dob || patient.date_of_birth)}</span>
                                                     </span>
-                                                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                                                        patient.sex === 'M' ? 'bg-blue-100 text-blue-700' : 
-                                                        patient.sex === 'F' ? 'bg-pink-100 text-pink-700' : 
-                                                        'bg-gray-100 text-gray-700'
-                                                    }`}>
+                                                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${patient.sex === 'M' ? 'bg-blue-100 text-blue-700' :
+                                                            patient.sex === 'F' ? 'bg-pink-100 text-pink-700' :
+                                                                'bg-gray-100 text-gray-700'
+                                                        }`}>
                                                         {patient.sex === 'M' ? 'Male' : patient.sex === 'F' ? 'Female' : patient.sex}
                                                     </span>
                                                 </div>

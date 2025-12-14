@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  Calendar, Users, FileText, Settings, LogOut, Search, X, Activity, 
-  Clock, History, User, ClipboardList, BarChart3, 
-  MessageSquare, Video, Moon, Sun, Menu, ChevronRight, Bell,
-  Zap, Command, DollarSign, Shield, AlertCircle
+import {
+    Calendar, Users, FileText, Settings, LogOut, Search, X, Activity,
+    Clock, History, User, ClipboardList, BarChart3,
+    MessageSquare, Video, Moon, Sun, Menu, ChevronRight, Bell,
+    Zap, Command, DollarSign, Shield, AlertCircle
 } from 'lucide-react';
 import { usePatient } from '../context/PatientContext';
 import { useAuth } from '../context/AuthContext';
@@ -41,8 +41,8 @@ const Layout = ({ children }) => {
             try {
                 const response = await messagesAPI.get({ unread: true });
                 if (response && response.data) {
-                    const unreadCount = Array.isArray(response.data) 
-                        ? response.data.filter(m => !m.read_at).length 
+                    const unreadCount = Array.isArray(response.data)
+                        ? response.data.filter(m => !m.read_at).length
                         : 0;
                     setMessagesCount(unreadCount);
                 } else {
@@ -87,7 +87,7 @@ const Layout = ({ children }) => {
         fetchMessagesCount();
         fetchPendingNotesCount();
         fetchPendingCancellationsCount();
-        
+
         // Refresh counts periodically (every 30 seconds)
         const interval = setInterval(() => {
             fetchMessagesCount();
@@ -100,7 +100,7 @@ const Layout = ({ children }) => {
 
     // Check if user is a physician/NP/PA for "My Schedule" routing
     const roleName = user?.role_name || user?.role || '';
-    const roleNameLower = roleName.toLowerCase();
+    const roleNameLower = String(roleName).toLowerCase();
     const isPhysicianRole = (
         roleNameLower === 'physician' ||
         roleNameLower === 'nurse practitioner' ||
@@ -230,9 +230,9 @@ const Layout = ({ children }) => {
                 <div className="h-20 px-6 flex items-center justify-between border-b-2 border-strong-azure/20 bg-white">
                     {!sidebarCollapsed && (
                         <Link to="/dashboard" className="flex items-center space-x-3 group">
-                            <img 
-                                src="/logo.png" 
-                                alt="PageMD Logo" 
+                            <img
+                                src="/logo.png"
+                                alt="PageMD Logo"
                                 className="h-10 w-auto object-contain max-w-[180px]"
                                 onError={(e) => {
                                     // Hide broken image, show fallback text
@@ -242,9 +242,9 @@ const Layout = ({ children }) => {
                         </Link>
                     )}
                     {sidebarCollapsed && (
-                        <img 
-                            src="/logo.png" 
-                            alt="PageMD" 
+                        <img
+                            src="/logo.png"
+                            alt="PageMD"
                             className="h-10 w-auto object-contain mx-auto"
                             onError={(e) => {
                                 // Hide broken image
@@ -294,18 +294,17 @@ const Layout = ({ children }) => {
                                     <Link
                                         key={item.path}
                                         to={item.path}
-                                        className={`group relative flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 ${
-                                            active
+                                        className={`group relative flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 ${active
                                                 ? 'text-white shadow-lg'
                                                 : 'text-deep-gray hover:bg-soft-gray hover:text-strong-azure hover:border-l-2 hover:border-strong-azure/30'
-                                        }`}
+                                            }`}
                                         style={active ? {
                                             background: 'linear-gradient(to right, #3B82F6, #2563EB)',
                                             boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.3), 0 4px 6px -2px rgba(59, 130, 246, 0.2)'
                                         } : {}}
                                     >
                                         {/* Futuristic active indicator - Azure accent bar */}
-                                        
+
                                         <div className="relative flex-shrink-0 z-10">
                                             <Icon className={`w-4 h-4 transition-all duration-200 ${active ? 'text-white' : 'text-deep-gray/50 group-hover:text-strong-azure'}`} />
                                             {item.badge && sidebarCollapsed && (
@@ -314,18 +313,17 @@ const Layout = ({ children }) => {
                                                 </span>
                                             )}
                                         </div>
-                                        
+
                                         {!sidebarCollapsed && (
                                             <>
                                                 <span className={`flex-1 text-[13px] font-semibold ${active ? 'text-white' : 'text-deep-gray'} z-10 relative`}>
                                                     {item.label}
                                                 </span>
                                                 {item.badge && (
-                                                    <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md transition-all z-10 relative ${
-                                                        active 
-                                                            ? 'bg-white/20 text-white' 
+                                                    <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md transition-all z-10 relative ${active
+                                                            ? 'bg-white/20 text-white'
                                                             : 'bg-fresh-green/10 text-fresh-green'
-                                                    }`}>
+                                                        }`}>
                                                         {item.badge}
                                                     </span>
                                                 )}
@@ -352,18 +350,17 @@ const Layout = ({ children }) => {
                                     <Link
                                         key={item.path}
                                         to={item.path}
-                                        className={`group relative flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 ${
-                                            active
+                                        className={`group relative flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 ${active
                                                 ? 'text-white shadow-lg'
                                                 : 'text-deep-gray hover:bg-soft-gray hover:text-strong-azure hover:border-l-2 hover:border-strong-azure/30'
-                                        }`}
+                                            }`}
                                         style={active ? {
                                             background: 'linear-gradient(to right, #3B82F6, #2563EB)',
                                             boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.3), 0 4px 6px -2px rgba(59, 130, 246, 0.2)'
                                         } : {}}
                                     >
                                         {/* Futuristic active indicator - Azure accent bar */}
-                                        
+
                                         <div className="relative flex-shrink-0 z-10">
                                             <Icon className={`w-4 h-4 transition-all duration-200 ${active ? 'text-white' : 'text-deep-gray/50 group-hover:text-strong-azure'}`} />
                                             {item.badge && sidebarCollapsed && (
@@ -372,18 +369,17 @@ const Layout = ({ children }) => {
                                                 </span>
                                             )}
                                         </div>
-                                        
+
                                         {!sidebarCollapsed && (
                                             <>
                                                 <span className={`flex-1 text-[13px] font-semibold ${active ? 'text-white' : 'text-deep-gray'} z-10 relative`}>
                                                     {item.label}
                                                 </span>
                                                 {item.badge && (
-                                                    <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md transition-all z-10 relative ${
-                                                        active 
-                                                            ? 'bg-white/20 text-white' 
+                                                    <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md transition-all z-10 relative ${active
+                                                            ? 'bg-white/20 text-white'
                                                             : 'bg-fresh-green/10 text-fresh-green'
-                                                    }`}>
+                                                        }`}>
                                                         {item.badge}
                                                     </span>
                                                 )}
@@ -402,11 +398,10 @@ const Layout = ({ children }) => {
                         <div className="flex items-center gap-2">
                             {/* User Button */}
                             <button
-                                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all flex-1 ${sidebarCollapsed ? 'justify-center' : ''} ${
-                                    sidebarCollapsed 
-                                        ? 'hover:bg-soft-gray/80' 
+                                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all flex-1 ${sidebarCollapsed ? 'justify-center' : ''} ${sidebarCollapsed
+                                        ? 'hover:bg-soft-gray/80'
                                         : 'bg-white/60 backdrop-blur-sm hover:bg-white border border-deep-gray/5 hover:border-deep-gray/20 hover:shadow-sm'
-                                }`}
+                                    }`}
                                 title={`${user.firstName} ${user.lastName} - ${user.role === 'clinician' ? 'Doctor' : user.role === 'front_desk' ? 'Front Desk' : user.role || user.role_name || 'User'}`}
                             >
                                 <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-strong-azure to-strong-azure/80 flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 shadow-sm">
@@ -444,11 +439,11 @@ const Layout = ({ children }) => {
 
             {/* Patient Search Modal */}
             {showSearch && (
-                <div 
+                <div
                     className="fixed inset-0 bg-deep-gray/60 backdrop-blur-sm z-50 flex items-start justify-center pt-20 animate-fade-in"
                     onClick={() => setShowSearch(false)}
                 >
-                    <div 
+                    <div
                         className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 animate-scale-in border border-deep-gray/10"
                         onClick={(e) => e.stopPropagation()}
                     >

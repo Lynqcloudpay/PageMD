@@ -5,8 +5,8 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Users, UserPlus, Edit, Trash2, Shield, Lock, Unlock, 
+import {
+  Users, UserPlus, Edit, Trash2, Shield, Lock, Unlock,
   Search, Filter, ChevronDown, CheckCircle2, XCircle, AlertCircle,
   Eye, EyeOff, Save, X, ChevronRight, ChevronLeft
 } from 'lucide-react';
@@ -101,7 +101,7 @@ const UserManagement = () => {
   const handleToggleAdmin = async (user) => {
     try {
       const isCurrentlyAdmin = user.is_admin === true;
-      
+
       if (!isCurrentlyAdmin && !confirm(`Grant admin privileges to ${user.first_name} ${user.last_name}?\n\nThis will give them full system access while keeping their current role (${user.role_name}).`)) {
         return;
       }
@@ -119,9 +119,9 @@ const UserManagement = () => {
   };
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = !searchQuery || 
-      `${user.first_name} ${user.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = !searchQuery ||
+      `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (user.email && user.email.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
     const matchesRole = roleFilter === 'all' || user.role_id === roleFilter;
     return matchesSearch && matchesStatus && matchesRole;
@@ -256,7 +256,7 @@ const UserManagement = () => {
                       {getStatusBadge(user.status)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {user.last_login 
+                      {user.last_login
                         ? new Date(user.last_login).toLocaleDateString()
                         : 'Never'}
                     </td>
@@ -307,7 +307,7 @@ const UserManagement = () => {
                                 } catch (error) {
                                   console.error('Error deleting user:', error);
                                   const errorData = error.response?.data;
-                                  
+
                                   // Handle 409 conflict - user has associated records
                                   if (error.response?.status === 409 && errorData?.details) {
                                     const { visits, signedNotes, messages } = errorData.details;
@@ -316,13 +316,13 @@ const UserManagement = () => {
                                       signedNotes > 0 ? `${signedNotes} signed note(s)` : null,
                                       messages > 0 ? `${messages} message(s)` : null,
                                     ].filter(Boolean).join(', ');
-                                    
+
                                     const shouldDeactivate = confirm(
                                       `Cannot delete user: They have ${recordSummary} that must be preserved for HIPAA compliance.\n\n` +
                                       `Would you like to DEACTIVATE this user instead?\n\n` +
                                       `(Deactivated users cannot log in but their records remain intact)`
                                     );
-                                    
+
                                     if (shouldDeactivate) {
                                       try {
                                         await usersAPI.updateStatus(user.id, { status: 'inactive' });
@@ -385,11 +385,11 @@ const UserManagement = () => {
 
 // Create User Modal Component - Comprehensive OpenEMR Style
 const CreateUserModal = ({ isOpen, onClose, roles }) => {
-  
+
   // Healthcare provider roles that need credentials
   const healthcareProviderRoles = ['Physician', 'Nurse Practitioner', 'Physician Assistant', 'Nurse', 'Medical Assistant'];
   const prescribingRoles = ['Physician', 'Nurse Practitioner', 'Physician Assistant'];
-  
+
   const [formData, setFormData] = useState({
     // Basic Information
     firstName: '',
@@ -398,20 +398,20 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
     title: '',
     email: '',
     username: '',
-    
+
     // Contact Information
     phone: '',
     phoneMobile: '',
     extension: '',
     fax: '',
-    
+
     // Account Settings
     roleId: '',
     status: 'active',
     password: '',
     confirmPassword: '',
     isAdmin: false, // Separate admin privileges flag
-    
+
     // Healthcare Provider Credentials (conditional)
     credentials: '',
     npi: '',
@@ -421,7 +421,7 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
     taxonomyCode: '',
     specialty: '',
     upin: '',
-    
+
     // Additional Information
     facility: '',
     group: '',
@@ -429,18 +429,18 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
     activeDirectory: false,
     notes: ''
   });
-  
+
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  
+
   // Determine role type (moved before step calculation)
   const selectedRole = roles?.find(r => r.id === formData.roleId);
   const isHealthcareProvider = selectedRole && healthcareProviderRoles.includes(selectedRole.name);
   const canPrescribe = selectedRole && prescribingRoles.includes(selectedRole.name);
   const adminRole = roles?.find(r => r.name === 'Admin');
   const isAdmin = selectedRole?.name === 'Admin';
-  
+
   // Memoize steps to prevent infinite loops - only recalculate when role changes
   // Order: Basic Info -> Contact -> Account Settings (role selection) -> Credentials (if healthcare provider)
   const steps = useMemo(() => {
@@ -449,33 +449,33 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
       { id: 2, name: 'Contact', key: 'contact' },
       { id: 3, name: 'Account Settings', key: 'settings' },
     ];
-    
+
     // Add credentials step AFTER account settings if healthcare provider role is selected
     if (isHealthcareProvider && selectedRole) {
       stepList.push({ id: 4, name: 'Credentials', key: 'credentials' });
     }
-    
+
     return stepList;
   }, [isHealthcareProvider, selectedRole]);
-  
+
   const totalSteps = steps.length;
   const currentStepData = steps.find(s => s.id === currentStep);
   const activeTab = currentStepData?.key || 'basic';
-  
+
   // Adjust current step if it's out of bounds (e.g., credentials step was removed)
   useEffect(() => {
     if (currentStep > totalSteps) {
       setCurrentStep(totalSteps);
     }
   }, [totalSteps]); // Only depend on totalSteps, not isHealthcareProvider or steps
-  
+
   // Check if form has unsaved data
   const hasUnsavedData = () => {
     return !!(
-      formData.firstName || 
-      formData.lastName || 
-      formData.email || 
-      formData.username || 
+      formData.firstName ||
+      formData.lastName ||
+      formData.email ||
+      formData.username ||
       formData.password ||
       formData.phone ||
       formData.npi ||
@@ -483,7 +483,7 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
       formData.roleId
     );
   };
-  
+
   const handleClose = () => {
     if (hasUnsavedData()) {
       const confirmed = window.confirm(
@@ -498,19 +498,19 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
       firstName: '', lastName: '', middleName: '', title: '', email: '', username: '',
       phone: '', phoneMobile: '', extension: '', fax: '',
       roleId: '', status: 'active', password: '', confirmPassword: '',
-      credentials: '', npi: '', licenseNumber: '', licenseState: '', deaNumber: '', 
-      taxonomyCode: '', specialty: '', upin: '', facility: '', group: '', 
+      credentials: '', npi: '', licenseNumber: '', licenseState: '', deaNumber: '',
+      taxonomyCode: '', specialty: '', upin: '', facility: '', group: '',
       seeAuth: false, activeDirectory: false, notes: ''
     });
     setErrors({});
     setCurrentStep(1);
     onClose();
   };
-  
+
   // Validate current step before proceeding
   const validateCurrentStep = () => {
     const newErrors = {};
-    
+
     if (activeTab === 'basic') {
       if (!formData.firstName) newErrors.firstName = 'First name is required';
       if (!formData.lastName) newErrors.lastName = 'Last name is required';
@@ -539,18 +539,18 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
         newErrors.confirmPassword = 'Passwords do not match';
       }
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  
+
   const handleNext = () => {
     if (!validateCurrentStep()) {
       return;
     }
-    
+
     const nextStep = currentStep + 1;
-    
+
     // If we just completed Account Settings and selected a healthcare provider role,
     // and credentials step was just added, stay on current step until user clicks next again
     // (This handles the case where credentials step appears dynamically)
@@ -559,30 +559,30 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
       setErrors({});
     }
   };
-  
+
   const handlePrevious = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
       setErrors({});
     }
   };
-  
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({});
-    
+
     // Validation
     if (!formData.username && !formData.email) {
       setErrors({ username: 'Username or email is required' });
       return;
     }
-    
+
     if (formData.password !== formData.confirmPassword) {
       setErrors({ confirmPassword: 'Passwords do not match' });
       return;
     }
-    
+
     if (formData.password.length < 8) {
       setErrors({ password: 'Password must be at least 8 characters' });
       return;
@@ -595,7 +595,7 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
         return;
       }
     }
-    
+
     setLoading(true);
 
     try {
@@ -640,8 +640,8 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
         firstName: '', lastName: '', middleName: '', title: '', email: '', username: '',
         phone: '', phoneMobile: '', extension: '', fax: '',
         roleId: '', status: 'active', password: '', confirmPassword: '',
-        credentials: '', npi: '', licenseNumber: '', licenseState: '', deaNumber: '', 
-        taxonomyCode: '', specialty: '', upin: '', facility: '', group: '', 
+        credentials: '', npi: '', licenseNumber: '', licenseState: '', deaNumber: '',
+        taxonomyCode: '', specialty: '', upin: '', facility: '', group: '',
         seeAuth: false, activeDirectory: false, notes: ''
       });
     } catch (error) {
@@ -664,11 +664,11 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
   };
 
   return (
-    <Modal 
-      isOpen={isOpen} 
-      onClose={handleClose} 
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
       preventOutsideClick={hasUnsavedData()}
-      title="Add New User Account" 
+      title="Add New User Account"
       size="xl"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -685,13 +685,12 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
               <React.Fragment key={step.id}>
                 <div className="flex items-center">
                   <div
-                    className={`flex items-center justify-center w-10 h-10 rounded-full border-2 font-medium text-sm ${
-                      currentStep > step.id
+                    className={`flex items-center justify-center w-10 h-10 rounded-full border-2 font-medium text-sm ${currentStep > step.id
                         ? 'border-strong-azure text-white'
                         : currentStep === step.id
-                        ? 'border-strong-azure text-strong-azure bg-strong-azure/10'
-                        : 'border-gray-300 text-gray-400 bg-white'
-                    }`}
+                          ? 'border-strong-azure text-strong-azure bg-strong-azure/10'
+                          : 'border-gray-300 text-gray-400 bg-white'
+                      }`}
                   >
                     {currentStep > step.id ? (
                       <CheckCircle2 className="w-6 h-6" />
@@ -700,18 +699,16 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
                     )}
                   </div>
                   <span
-                    className={`ml-2 text-sm font-medium ${
-                      currentStep >= step.id ? 'text-gray-900' : 'text-gray-400'
-                    }`}
+                    className={`ml-2 text-sm font-medium ${currentStep >= step.id ? 'text-gray-900' : 'text-gray-400'
+                      }`}
                   >
                     {step.name}
                   </span>
                 </div>
                 {index < steps.length - 1 && (
                   <div
-                    className={`flex-1 h-0.5 mx-4 ${
-                      currentStep > step.id ? 'bg-strong-azure' : 'bg-gray-300'
-                    }`}
+                    className={`flex-1 h-0.5 mx-4 ${currentStep > step.id ? 'bg-strong-azure' : 'bg-gray-300'
+                      }`}
                   />
                 )}
               </React.Fragment>
@@ -879,13 +876,13 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
                       type="checkbox"
                       id="adminPrivileges"
                       checked={isAdmin}
-                    onChange={(e) => {
-                      // Grant/revoke admin privileges WITHOUT changing the role
-                      setFormData({ 
-                        ...formData, 
-                        isAdmin: e.target.checked
-                      });
-                    }}
+                      onChange={(e) => {
+                        // Grant/revoke admin privileges WITHOUT changing the role
+                        setFormData({
+                          ...formData,
+                          isAdmin: e.target.checked
+                        });
+                      }}
                       className="mt-1 h-5 w-5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
                     />
                     <div className="flex-1">
@@ -893,7 +890,7 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
                         🔑 Grant Admin Privileges
                       </label>
                       <p className="text-xs text-gray-700 mt-1 font-medium">
-                        Admin users have full system access including user management, settings, and all clinical features. 
+                        Admin users have full system access including user management, settings, and all clinical features.
                         Only grant this to trusted personnel.
                       </p>
                     </div>
@@ -919,8 +916,8 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
                     onChange={(e) => {
                       const roleId = e.target.value;
                       const role = roles.find(r => r.id === roleId);
-                      setFormData({ 
-                        ...formData, 
+                      setFormData({
+                        ...formData,
                         roleId,
                         professionalType: role?.name || ''
                       });
@@ -982,9 +979,8 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
                         required={selectedRole.name !== 'Medical Assistant'}
                         value={formData.credentials}
                         onChange={(e) => setFormData({ ...formData, credentials: e.target.value })}
-                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${
-                          errors.credentials ? 'border-red-300' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${errors.credentials ? 'border-red-300' : 'border-gray-300'
+                          }`}
                         placeholder="MD, DO, NP, PA-C, RN, LPN, CMA, etc."
                       />
                       <p className="text-xs text-gray-500 mt-1">Professional credentials/licenses</p>
@@ -1001,9 +997,8 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
                         required
                         value={formData.npi}
                         onChange={(e) => setFormData({ ...formData, npi: e.target.value.replace(/\D/g, '') })}
-                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${
-                          errors.npi ? 'border-red-300' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${errors.npi ? 'border-red-300' : 'border-gray-300'
+                          }`}
                         placeholder="1234567890"
                       />
                       <p className="text-xs text-gray-500 mt-1">10-digit National Provider Identifier</p>
@@ -1019,9 +1014,8 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
                         required
                         value={formData.licenseNumber}
                         onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
-                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${
-                          errors.licenseNumber ? 'border-red-300' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${errors.licenseNumber ? 'border-red-300' : 'border-gray-300'
+                          }`}
                         placeholder="Professional license number"
                       />
                       {errors.licenseNumber && <p className="text-xs text-red-600 mt-1">{errors.licenseNumber}</p>}
@@ -1037,9 +1031,8 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
                         required
                         value={formData.licenseState}
                         onChange={(e) => setFormData({ ...formData, licenseState: e.target.value.toUpperCase() })}
-                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${
-                          errors.licenseState ? 'border-red-300' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${errors.licenseState ? 'border-red-300' : 'border-gray-300'
+                          }`}
                         placeholder="CA"
                       />
                       <p className="text-xs text-gray-500 mt-1">2-letter state abbreviation</p>
@@ -1061,9 +1054,8 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
                             required
                             value={formData.deaNumber}
                             onChange={(e) => setFormData({ ...formData, deaNumber: e.target.value.toUpperCase() })}
-                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${
-                              errors.deaNumber ? 'border-red-300' : 'border-gray-300'
-                            }`}
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${errors.deaNumber ? 'border-red-300' : 'border-gray-300'
+                              }`}
                             placeholder="AB1234567"
                           />
                           <p className="text-xs text-gray-500 mt-1">Drug Enforcement Administration number</p>
@@ -1080,9 +1072,8 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
                             maxLength={10}
                             value={formData.taxonomyCode}
                             onChange={(e) => setFormData({ ...formData, taxonomyCode: e.target.value.slice(0, 10) })}
-                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${
-                              errors.taxonomyCode ? 'border-red-300' : 'border-gray-300'
-                            }`}
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${errors.taxonomyCode ? 'border-red-300' : 'border-gray-300'
+                              }`}
                             placeholder="207Q00000X"
                           />
                           <p className="text-xs text-gray-500 mt-1">NPI taxonomy code (10 characters max)</p>
@@ -1114,9 +1105,8 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
                         required
                         value={formData.specialty}
                         onChange={(e) => setFormData({ ...formData, specialty: e.target.value })}
-                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${
-                          errors.specialty ? 'border-red-300' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${errors.specialty ? 'border-red-300' : 'border-gray-300'
+                          }`}
                         placeholder="e.g., Family Medicine, Cardiology, Pediatrics, Internal Medicine"
                       />
                       <p className="text-xs text-gray-500 mt-1">Primary medical specialty</p>
@@ -1139,9 +1129,8 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
                       minLength={12}
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${
-                        errors.password ? 'border-red-300' : 'border-gray-300'
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${errors.password ? 'border-red-300' : 'border-gray-300'
+                        }`}
                     />
                     <p className="text-xs text-gray-500 mt-1">Min 12 chars, uppercase, lowercase, number, special character</p>
                     {errors.password && <p className="text-xs text-red-600 mt-1">{errors.password}</p>}
@@ -1157,9 +1146,8 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
                       minLength={8}
                       value={formData.confirmPassword}
                       onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${
-                        errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
+                        }`}
                     />
                     {errors.confirmPassword && (
                       <p className="text-xs text-red-600 mt-1">{errors.confirmPassword}</p>
@@ -1180,7 +1168,7 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
           >
             Cancel
           </button>
-          
+
           <div className="flex items-center space-x-3">
             {currentStep > 1 && (
               <button
@@ -1192,7 +1180,7 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
                 <span>Previous</span>
               </button>
             )}
-            
+
             {currentStep < totalSteps ? (
               <button
                 type="button"
@@ -1238,7 +1226,7 @@ const EditUserModal = ({ isOpen, onClose, user, roles }) => {
   // Healthcare provider roles that need credentials
   const healthcareProviderRoles = ['Physician', 'Nurse Practitioner', 'Physician Assistant', 'Nurse', 'Medical Assistant'];
   const prescribingRoles = ['Physician', 'Nurse Practitioner', 'Physician Assistant'];
-  
+
   const [formData, setFormData] = useState({
     // Basic Information
     firstName: user.first_name || '',
@@ -1273,7 +1261,7 @@ const EditUserModal = ({ isOpen, onClose, user, roles }) => {
   const [activeTab, setActiveTab] = useState('basic');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  
+
   const selectedRole = roles.find(r => r.id === formData.roleId);
   const adminRole = roles.find(r => r.name === 'Admin');
   const isAdmin = formData.isAdmin === true || formData.isAdmin === 'true';
@@ -1327,14 +1315,14 @@ const EditUserModal = ({ isOpen, onClose, user, roles }) => {
         professionalType: selectedRole?.name || '',
         isAdmin: formData.isAdmin || false
       };
-      
+
       await usersAPI.update(user.id, updateData);
-      
+
       // Update password separately if provided
       if (formData.password) {
         await usersAPI.updatePassword(user.id, formData.password);
       }
-      
+
       onClose();
     } catch (error) {
       console.error('Error updating user:', error);
@@ -1380,11 +1368,10 @@ const EditUserModal = ({ isOpen, onClose, user, roles }) => {
                   key={tab}
                   type="button"
                   onClick={() => setActiveTab(tab)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === tab
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab
                       ? 'border-primary-500 text-primary-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                    }`}
                 >
                   {tabLabels[tab] || tab}
                 </button>
@@ -1676,9 +1663,8 @@ const EditUserModal = ({ isOpen, onClose, user, roles }) => {
                       minLength={12}
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${
-                        errors.password ? 'border-red-300' : 'border-gray-300'
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${errors.password ? 'border-red-300' : 'border-gray-300'
+                        }`}
                       placeholder="Leave blank to keep current"
                     />
                     {errors.password && <p className="text-xs text-red-600 mt-1">{errors.password}</p>}

@@ -11,35 +11,35 @@ export const PatientProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     // Fetch patients from API
-        const fetchPatients = async () => {
-            try {
-                setLoading(true);
-                const response = await patientsAPI.search(''); // Empty search to get all patients
-                const fetchedPatients = response.data.map(p => ({
-                    ...p,
+    const fetchPatients = async () => {
+        try {
+            setLoading(true);
+            const response = await patientsAPI.search(''); // Empty search to get all patients
+            const fetchedPatients = response.data.map(p => ({
+                ...p,
                 name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Unknown Patient',
-                    // Calculate age from dob if needed
-                    age: p.dob ? Math.floor((new Date() - new Date(p.dob)) / (365.25 * 24 * 60 * 60 * 1000)) : null
-                }));
-                setPatients(fetchedPatients);
-            } catch (error) {
-                console.error('Error fetching patients:', error);
-                // Fallback to empty array if API fails
-                setPatients([]);
-            } finally {
-                setLoading(false);
-            }
-        };
+                // Calculate age from dob if needed
+                age: p.dob ? Math.floor((new Date() - new Date(p.dob)) / (365.25 * 24 * 60 * 60 * 1000)) : null
+            }));
+            setPatients(fetchedPatients);
+        } catch (error) {
+            console.error('Error fetching patients:', error);
+            // Fallback to empty array if API fails
+            setPatients([]);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Fetch patients from API on mount and auto-refresh
     useEffect(() => {
         fetchPatients();
-        
+
         // Auto-refresh every 15 seconds
         const interval = setInterval(() => {
             fetchPatients();
         }, 15000);
-        
+
         return () => clearInterval(interval);
     }, []);
 
@@ -99,7 +99,7 @@ export const PatientProvider = ({ children }) => {
 
     const searchPatients = (query) => {
         if (!query) return [];
-        return patients.filter(p => p.name.toLowerCase().includes(query.toLowerCase()) || p.mrn.toLowerCase().includes(query.toLowerCase()));
+        return patients.filter(p => (p.name && p.name.toLowerCase().includes(query.toLowerCase())) || (p.mrn && p.mrn.toLowerCase().includes(query.toLowerCase())));
     };
 
     const getPatient = (id) => {
