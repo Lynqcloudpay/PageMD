@@ -3,7 +3,7 @@ import Modal from './ui/Modal';
 import DiagnosisSelector from './DiagnosisSelector';
 import { Pill, Stethoscope, Upload, Send, Search, X } from 'lucide-react';
 import { searchLabTests, searchImaging } from '../data/labCodes';
-import { codesAPI, ordersAPI } from '../services/api';
+import { codesAPI, ordersAPI, documentsAPI } from '../services/api';
 
 export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [], patientId, assessmentDiagnoses = [], onAddToAssessment = null }) => {
     const [med, setMed] = useState('');
@@ -76,24 +76,24 @@ export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [], 
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-ink-700 mb-1">Sig</label>
-                        <input 
-                            type="text" 
-                            placeholder="e.g. 1 tab PO daily" 
+                        <input
+                            type="text"
+                            placeholder="e.g. 1 tab PO daily"
                             className="w-full p-2 border border-paper-300 rounded-md"
                             value={sig}
                             onChange={(e) => setSig(e.target.value)}
-                            required 
+                            required
                         />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-ink-700 mb-1">Dispense</label>
-                        <input 
-                            type="text" 
-                            placeholder="e.g. 30" 
+                        <input
+                            type="text"
+                            placeholder="e.g. 30"
                             className="w-full p-2 border border-paper-300 rounded-md"
                             value={dispense}
                             onChange={(e) => setDispense(e.target.value)}
-                            required 
+                            required
                         />
                     </div>
                 </div>
@@ -195,7 +195,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
 
         if (e.key === 'ArrowDown') {
             e.preventDefault();
-            setSelectedIndex(prev => 
+            setSelectedIndex(prev =>
                 prev < searchResults.length - 1 ? prev + 1 : prev
             );
         } else if (e.key === 'ArrowUp') {
@@ -213,19 +213,19 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         // Validate diagnosis requirement
         if (!selectedDiagnoses || selectedDiagnoses.length === 0) {
             setError('Please select at least one diagnosis for this order');
             return;
         }
-        
+
         // For labs, require at least one lab selected
         if (selectedType === 'lab' && selectedLabs.length === 0) {
             setError('Please select at least one lab test');
             return;
         }
-        
+
         // For imaging/procedures, require order text
         if (selectedType !== 'lab' && !order) {
             setError('Please enter the order details');
@@ -241,13 +241,13 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
             const diagnosisIds = selectedDiagnoses
                 .map(d => d.id)
                 .filter(id => id && id.toString() !== 'undefined' && id.toString() !== 'null');
-            
+
             if (diagnosisIds.length === 0) {
                 setError('Please select at least one diagnosis.');
                 setLoading(false);
                 return;
             }
-            
+
             const orderTypeMap = {
                 'lab': 'lab',
                 'imaging': 'imaging',
@@ -262,7 +262,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
                 icd10_code: d.icd10_code || d.icd10Code,
                 icd10Code: d.icd10_code || d.icd10Code
             }));
-            
+
             console.log('OrderModal: Sending diagnosis data:', {
                 diagnosisIds: diagnosisIds,
                 diagnosisObjects: diagnosisObjects,
@@ -274,7 +274,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
 
             // Build order templates for ordersets
             let orderTemplates = [];
-            
+
             if (returnTemplateOnly) {
                 // Return templates instead of creating orders
                 if (selectedType === 'lab') {
@@ -361,7 +361,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
             }).join(', ');
             const typeLabel = selectedType === 'lab' ? 'Lab' : selectedType === 'imaging' ? 'Imaging' : 'Procedure';
             let orderText = '';
-            
+
             if (selectedType === 'lab') {
                 selectedLabs.forEach(lab => {
                     const code = labCompany === 'quest' ? lab.questCode : lab.labcorpCode;
@@ -384,7 +384,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
                     onSuccess(diagnosisText, orderText, selectedDiagnoses);
                 }
             }
-            
+
             setOrder('');
             setSelectedDiagnoses([]);
             setSelectedTest(null);
@@ -417,7 +417,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium text-ink-700 mb-1">Order Type</label>
-                    <select 
+                    <select
                         value={selectedType}
                         onChange={(e) => {
                             setSelectedType(e.target.value);
@@ -432,12 +432,12 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
                         <option value="procedure">Procedure</option>
                     </select>
                 </div>
-                
+
                 {/* Lab Company Selection (only for labs) */}
                 {selectedType === 'lab' && (
                     <div>
                         <label className="block text-sm font-medium text-ink-700 mb-1">Lab Company</label>
-                        <select 
+                        <select
                             value={labCompany}
                             onChange={(e) => setLabCompany(e.target.value)}
                             className="w-full p-2 border border-paper-300 rounded-md"
@@ -494,13 +494,12 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
                                         type="button"
                                         onClick={() => handleTestSelect(test)}
                                         disabled={isSelected}
-                                        className={`w-full text-left px-3 py-2 border-b border-paper-100 last:border-b-0 ${
-                                            isSelected 
-                                                ? 'bg-green-50 opacity-75 cursor-not-allowed' 
-                                                : isHighlighted
+                                        className={`w-full text-left px-3 py-2 border-b border-paper-100 last:border-b-0 ${isSelected
+                                            ? 'bg-green-50 opacity-75 cursor-not-allowed'
+                                            : isHighlighted
                                                 ? 'bg-blue-50 hover:bg-blue-100'
                                                 : 'hover:bg-paper-50'
-                                        }`}
+                                            }`}
                                     >
                                         <div className="font-medium text-ink-900 flex items-center justify-between">
                                             <span>{test.name}</span>
@@ -553,7 +552,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
                             })}
                         </div>
                     )}
-                    
+
                     {/* Selected Test (for imaging/procedures) */}
                     {selectedType !== 'lab' && selectedTest && (
                         <div className="mt-2 p-2 bg-paper-50 border border-paper-200 rounded text-sm">
@@ -564,7 +563,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
                         </div>
                     )}
                 </div>
-                
+
                 {/* Diagnosis Selection */}
                 {patientId && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5">
@@ -588,8 +587,8 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, orderType = 'lab', pati
                 )}
                 <div className="flex justify-end space-x-2 pt-2">
                     <button type="button" onClick={onClose} className="px-4 py-2 border border-paper-300 rounded-md hover:bg-paper-50">Cancel</button>
-                    <button 
-                        type="submit" 
+                    <button
+                        type="submit"
                         disabled={loading || selectedDiagnoses.length === 0 || ((selectedType === 'lab' && selectedLabs.length === 0) || (selectedType !== 'lab' && !order))}
                         className="px-4 py-2 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-md flex items-center justify-center gap-2"
                         style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
@@ -631,7 +630,7 @@ export const ReferralModal = ({ isOpen, onClose, onSuccess, diagnoses = [], pati
             alert('Please select at least one diagnosis');
             return;
         }
-        
+
         const referralText = `Referral: ${specialty}${reason ? ` - ${reason}` : ''}`;
         // Extract diagnosis text from selected diagnoses
         const diagnosisTexts = selectedDiagnoses.map(d => {
@@ -639,7 +638,7 @@ export const ReferralModal = ({ isOpen, onClose, onSuccess, diagnoses = [], pati
             const name = d.problem_name || d.name || '';
             return code ? `${code} - ${name}` : name;
         });
-        
+
         if (returnTemplateOnly) {
             // Return referral template for orderset
             const referralTemplate = {
@@ -660,7 +659,7 @@ export const ReferralModal = ({ isOpen, onClose, onSuccess, diagnoses = [], pati
                 setCreating(true);
                 const { referralsAPI } = await import('../services/api');
                 const diagnosisIds = selectedDiagnoses.map(d => d.id).filter(id => id);
-                
+
                 // Send diagnosis objects along with IDs for assessment diagnoses
                 const diagnosisObjects = selectedDiagnoses.map(d => ({
                     id: d.id,
@@ -669,7 +668,7 @@ export const ReferralModal = ({ isOpen, onClose, onSuccess, diagnoses = [], pati
                     icd10_code: d.icd10_code || d.icd10Code,
                     icd10Code: d.icd10_code || d.icd10Code
                 }));
-                
+
                 await referralsAPI.create({
                     patientId,
                     visitId: visitId || null,
@@ -679,7 +678,7 @@ export const ReferralModal = ({ isOpen, onClose, onSuccess, diagnoses = [], pati
                     diagnosisIds: diagnosisIds,
                     diagnosisObjects: diagnosisObjects
                 });
-                
+
                 onSuccess(diagnosisTexts.join(', '), referralText);
                 setSpecialty('');
                 setReason('');
@@ -736,7 +735,7 @@ export const ReferralModal = ({ isOpen, onClose, onSuccess, diagnoses = [], pati
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-ink-700 mb-1">Reason for Referral</label>
-                    <textarea 
+                    <textarea
                         className="w-full p-2 border border-paper-300 rounded-md h-24"
                         value={reason}
                         onChange={(e) => setReason(e.target.value)}
@@ -754,33 +753,170 @@ export const ReferralModal = ({ isOpen, onClose, onSuccess, diagnoses = [], pati
     );
 };
 
-export const UploadModal = ({ isOpen, onClose, onSuccess }) => {
-    const handleSubmit = (e) => {
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import Modal from './ui/Modal';
+import DiagnosisSelector from './DiagnosisSelector';
+import { Pill, Stethoscope, Upload, Send, Search, X } from 'lucide-react';
+import { searchLabTests, searchImaging } from '../data/labCodes';
+import { codesAPI, ordersAPI, documentsAPI } from '../services/api';
+
+export const UploadModal = ({ isOpen, onClose, onSuccess, patientId, visitId }) => {
+    const [file, setFile] = useState(null);
+    const [docType, setDocType] = useState('Lab Result');
+    const [tags, setTags] = useState('');
+    const [uploading, setUploading] = useState(false);
+    const [error, setError] = useState(null);
+    const fileInputRef = useRef(null);
+
+    useEffect(() => {
+        if (isOpen) {
+            setFile(null);
+            setDocType('Lab Result');
+            setTags('');
+            setError(null);
+            setUploading(false);
+        }
+    }, [isOpen]);
+
+    const handleFileChange = (e) => {
+        const selectedFile = e.target.files[0];
+        if (selectedFile) {
+            if (selectedFile.size > 10 * 1024 * 1024) {
+                setError('File size must be less than 10MB');
+                return;
+            }
+            setFile(selectedFile);
+            setError(null);
+        }
+    };
+
+    const handleDrop = (e) => {
         e.preventDefault();
-        onSuccess("Document uploaded successfully");
-        onClose();
+        const selectedFile = e.dataTransfer.files[0];
+        if (selectedFile) {
+            if (selectedFile.size > 10 * 1024 * 1024) {
+                setError('File size must be less than 10MB');
+                return;
+            }
+            setFile(selectedFile);
+            setError(null);
+        }
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!file) {
+            setError('Please select a file');
+            return;
+        }
+
+        setUploading(true);
+        setError(null);
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('patientId', patientId);
+            if (visitId) formData.append('visitId', visitId);
+            formData.append('docType', docType);
+            formData.append('tags', tags);
+
+            await documentsAPI.upload(formData);
+            onSuccess("Document uploaded successfully");
+            onClose();
+        } catch (err) {
+            console.error('Error uploading document:', err);
+            setError(err.response?.data?.error || 'Failed to upload document');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const triggerFileInput = () => {
+        fileInputRef.current.click();
     };
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Upload Document">
             <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="border-2 border-dashed border-paper-300 rounded-lg p-8 text-center hover:bg-paper-50 transition-colors cursor-pointer">
-                    <Upload className="w-12 h-12 text-paper-400 mx-auto mb-2" />
-                    <p className="text-ink-600 font-medium">Click to upload or drag and drop</p>
-                    <p className="text-ink-400 text-sm">PDF, JPG, PNG (max 10MB)</p>
+                <div
+                    onClick={triggerFileInput}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    className={`border-2 border-dashed ${file ? 'border-green-500 bg-green-50' : 'border-paper-300 hover:bg-paper-50'} rounded-lg p-8 text-center transition-colors cursor-pointer`}
+                >
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        className="hidden"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                    />
+                    <Upload className={`w-12 h-12 mx-auto mb-2 ${file ? 'text-green-500' : 'text-paper-400'}`} />
+                    <p className={`font-medium ${file ? 'text-green-700' : 'text-ink-600'}`}>
+                        {file ? file.name : 'Click to upload or drag and drop'}
+                    </p>
+                    <p className="text-ink-400 text-sm mt-1">
+                        {file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'PDF, JPG, PNG (max 10MB)'}
+                    </p>
                 </div>
+
+                {error && (
+                    <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm">
+                        {error}
+                    </div>
+                )}
+
                 <div>
                     <label className="block text-sm font-medium text-ink-700 mb-1">Document Type</label>
-                    <select className="w-full p-2 border border-paper-300 rounded-md">
+                    <select
+                        value={docType}
+                        onChange={(e) => setDocType(e.target.value)}
+                        className="w-full p-2 border border-paper-300 rounded-md"
+                    >
                         <option>Lab Result</option>
                         <option>Imaging Report</option>
                         <option>Consult Note</option>
+                        <option>EKG</option>
+                        <option>ECHO</option>
                         <option>Other</option>
                     </select>
                 </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">Tags (optional)</label>
+                    <input
+                        type="text"
+                        value={tags}
+                        onChange={(e) => setTags(e.target.value)}
+                        placeholder="e.g. cardiac, urgent, follow-up"
+                        className="w-full p-2 border border-paper-300 rounded-md"
+                    />
+                </div>
+
                 <div className="flex justify-end space-x-2 pt-2">
-                    <button type="button" onClick={onClose} className="px-4 py-2 border border-paper-300 rounded-md hover:bg-paper-50">Cancel</button>
-                    <button type="submit" className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'} onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}>Upload</button>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={uploading}
+                        className="px-4 py-2 border border-paper-300 rounded-md hover:bg-paper-50 disabled:opacity-50"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="submit"
+                        disabled={uploading || !file}
+                        className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ background: uploading ? '#9CA3AF' : 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                        onMouseEnter={(e) => !uploading && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+                        onMouseLeave={(e) => !uploading && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
+                    >
+                        {uploading ? 'Uploading...' : 'Upload'}
+                    </button>
                 </div>
             </form>
         </Modal>
