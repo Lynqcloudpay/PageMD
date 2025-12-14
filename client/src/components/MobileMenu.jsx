@@ -25,10 +25,8 @@ const MobileMenu = () => {
       <button
         onClick={() => setIsOpen(true)}
         className="lg:hidden fixed bottom-4 right-4 z-50 w-14 h-14 rounded-full text-white shadow-lg flex items-center justify-center transition-all duration-200 hover:shadow-xl"
-        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-        onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-        onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-        style={{ 
+        style={{
+          background: 'linear-gradient(to right, #3B82F6, #2563EB)',
           boxShadow: '0 10px 25px -5px rgba(37, 99, 235, 0.4), 0 8px 10px -6px rgba(37, 99, 235, 0.4)'
         }}
         aria-label="Open menu"
@@ -44,7 +42,7 @@ const MobileMenu = () => {
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setIsOpen(false)}
           />
-          
+
           {/* Menu Panel */}
           <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-neutral-800 rounded-t-3xl shadow-2xl animate-slide-up max-h-[85vh] flex flex-col">
             {/* Header */}
@@ -68,11 +66,10 @@ const MobileMenu = () => {
                     key={item.path}
                     to={item.path}
                     onClick={() => setIsOpen(false)}
-                    className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                      active
+                    className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${active
                         ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400'
                         : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800'
-                    }`}
+                      }`}
                   >
                     <Icon className="w-5 h-5" />
                     <span className="font-medium">{item.label}</span>

@@ -753,12 +753,7 @@ export const ReferralModal = ({ isOpen, onClose, onSuccess, diagnoses = [], pati
     );
 };
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import Modal from './ui/Modal';
-import DiagnosisSelector from './DiagnosisSelector';
-import { Pill, Stethoscope, Upload, Send, Search, X } from 'lucide-react';
-import { searchLabTests, searchImaging } from '../data/labCodes';
-import { codesAPI, ordersAPI, documentsAPI } from '../services/api';
+
 
 export const UploadModal = ({ isOpen, onClose, onSuccess, patientId, visitId }) => {
     const [file, setFile] = useState(null);
