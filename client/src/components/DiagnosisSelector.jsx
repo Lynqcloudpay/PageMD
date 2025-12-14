@@ -9,10 +9,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { X, Plus, Search, AlertCircle, Check } from 'lucide-react';
 import { patientsAPI, codesAPI } from '../services/api';
 
-const DiagnosisSelector = ({ 
-  patientId, 
-  selectedDiagnoses = [], 
-  onDiagnosesChange, 
+const DiagnosisSelector = ({
+  patientId,
+  selectedDiagnoses = [],
+  onDiagnosesChange,
   required = true,
   allowMultiple = true,
   className = '',
@@ -44,12 +44,12 @@ const DiagnosisSelector = ({
       // Strip any HTML tags that might have been included
       const cleanDx = dx.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim();
       if (!cleanDx) return null;
-      
+
       // Parse diagnosis string - handle multiple formats:
       // 1. "I10 - Essential hypertension" (code first with dash)
       // 2. "Essential hypertension (I10)" (code in parentheses at end)
       // 3. "I10-Essential hypertension" (code first without spaces)
-      
+
       // Try format 1 & 3: Code first with dash
       let match = cleanDx.match(/^([A-Z]\d{2}(?:\.\d+)?)\s*[-–—]\s*(.+)$/);
       if (match) {
@@ -63,7 +63,7 @@ const DiagnosisSelector = ({
           fromAssessment: true
         };
       }
-      
+
       // Try format 2: Code in parentheses at end (handles nested parens like "Description (NSTEMI) (I21.4)")
       // Match the LAST set of parentheses that contains an ICD-10 code
       const parenMatch = cleanDx.match(/\(([A-Z]\d{2}(?:\.\d+)?)\)\s*$/);
@@ -82,7 +82,7 @@ const DiagnosisSelector = ({
           fromAssessment: true
         };
       }
-      
+
       // If no code found, treat entire string as name
       return {
         id: `assessment-${idx}`,
@@ -94,14 +94,14 @@ const DiagnosisSelector = ({
         fromAssessment: true
       };
     }).filter(Boolean); // Remove any null entries
-    
+
     // Debug: Log to help troubleshoot
     if (problems.length > 0) {
       console.log('DiagnosisSelector: Converted assessmentProblems:', problems);
     } else if (assessmentDiagnoses.length > 0) {
       console.log('DiagnosisSelector: assessmentDiagnoses provided but no problems created:', assessmentDiagnoses);
     }
-    
+
     return problems;
   }, [assessmentDiagnoses]);
 
@@ -138,11 +138,11 @@ const DiagnosisSelector = ({
     } else {
       // Filter assessment problems by search term
       const search = searchTerm.toLowerCase();
-      const filtered = assessmentProblems.filter(p => 
-        (p.problem_name?.toLowerCase().includes(search) || 
-         p.name?.toLowerCase().includes(search) ||
-         p.icd10_code?.toLowerCase().includes(search) ||
-         p.icd10Code?.toLowerCase().includes(search))
+      const filtered = assessmentProblems.filter(p =>
+      ((p.problem_name || '').toLowerCase().includes(search) ||
+        (p.name || '').toLowerCase().includes(search) ||
+        (p.icd10_code || '').toLowerCase().includes(search) ||
+        (p.icd10Code || '').toLowerCase().includes(search))
       );
       console.log('DiagnosisSelector: Filtered problems:', filtered);
       setFilteredProblems(filtered);
@@ -198,7 +198,7 @@ const DiagnosisSelector = ({
     if (!codeDetails) return;
 
     const diagnosisText = `${codeDetails.code} - ${codeDetails.description}`;
-    
+
     // Add to assessment FIRST if callback provided - this will trigger a re-render
     // and the new diagnosis will appear in assessmentProblems
     if (onAddToAssessment) {
@@ -219,7 +219,7 @@ const DiagnosisSelector = ({
 
     // Add to selected diagnoses
     handleAddDiagnosis(newProblem);
-    
+
     // Clear search and close dropdown
     setSearchTerm('');
     setShowDropdown(false);
@@ -292,8 +292,8 @@ const DiagnosisSelector = ({
         {/* Dropdown */}
         {showDropdown && (
           <>
-            <div 
-              className="fixed inset-0 z-10" 
+            <div
+              className="fixed inset-0 z-10"
               onClick={() => setShowDropdown(false)}
             />
             <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto">
@@ -312,9 +312,8 @@ const DiagnosisSelector = ({
                         type="button"
                         onClick={() => handleAddDiagnosis(problem)}
                         disabled={isSelected}
-                        className={`w-full p-2 hover:bg-primary-50 border-b border-gray-100 last:border-b-0 flex items-center justify-between text-left transition-colors ${
-                          isSelected ? 'bg-gray-50 opacity-60 cursor-not-allowed' : ''
-                        }`}
+                        className={`w-full p-2 hover:bg-primary-50 border-b border-gray-100 last:border-b-0 flex items-center justify-between text-left transition-colors ${isSelected ? 'bg-gray-50 opacity-60 cursor-not-allowed' : ''
+                          }`}
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-1.5">
