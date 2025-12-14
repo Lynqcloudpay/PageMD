@@ -9,19 +9,109 @@
  * - Audit enhancements
  */
 
-const { Pool } = require('pg');
-require('dotenv').config();
+// Log immediately to verify script is running
+console.log('=== MIGRATE-RBAC SCRIPT STARTING ===');
+console.log('Node version:', process.version);
+console.log('Current working directory:', process.cwd());
 
-const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'paper_emr',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
-});
+const { Pool } = require('pg');
+
+// Check DATABASE_URL BEFORE loading dotenv
+console.log('DATABASE_URL before dotenv:', process.env.DATABASE_URL ? 'EXISTS' : 'NOT SET');
+
+// In Docker, environment variables are already set via docker-compose
+// Only load .env file if DATABASE_URL is not already set (local development)
+// Use override: false to ensure Docker env vars take precedence
+if (!process.env.DATABASE_URL) {
+  console.log('Loading .env file (DATABASE_URL not set)...');
+  require('dotenv').config({ override: false });
+} else {
+  console.log('Skipping .env load (DATABASE_URL already set)');
+}
+
+// Check DATABASE_URL AFTER loading dotenv
+console.log('DATABASE_URL after dotenv:', process.env.DATABASE_URL ? 'EXISTS' : 'NOT SET');
+if (process.env.DATABASE_URL) {
+  const masked = process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@');
+  console.log('DATABASE_URL value:', masked);
+}
+
+// Debug: Show what we have (run immediately, before any async operations)
+console.log('=== Environment check ===');
+console.log('  DATABASE_URL:', process.env.DATABASE_URL ? 'SET (hidden)' : 'NOT SET');
+if (process.env.DATABASE_URL) {
+  const masked = process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@');
+  console.log('  DATABASE_URL value:', masked);
+}
+console.log('  DB_HOST:', process.env.DB_HOST || 'NOT SET');
+console.log('  DB_NAME:', process.env.DB_NAME || 'NOT SET');
+console.log('  DB_USER:', process.env.DB_USER || 'NOT SET');
+console.log('========================');
+
+// Construct DATABASE_URL from individual variables if not set
+let databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+  const dbHost = process.env.DB_HOST || 'db';
+  const dbPort = process.env.DB_PORT || 5432;
+  const dbName = process.env.DB_NAME || 'emr_db';
+  const dbUser = process.env.DB_USER || 'emr_user';
+  const dbPassword = process.env.DB_PASSWORD || '';
+  
+  if (dbPassword) {
+    databaseUrl = `postgresql://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
+    console.log('Constructed DATABASE_URL from individual variables');
+  }
+}
+
+// Use DATABASE_URL if available (preferred for Docker), otherwise use individual connection params
+const pool = databaseUrl
+  ? new Pool({
+      connectionString: databaseUrl,
+      // For Docker internal connections, SSL is handled by the database service
+      // For localhost, disable SSL; for remote, use SSL with self-signed cert support
+      ssl: databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1')
+        ? false
+        : { rejectUnauthorized: false },
+    })
+  : new Pool({
+      host: process.env.DB_HOST || 'db', // Default to 'db' service name in Docker
+      port: process.env.DB_PORT || 5432,
+      database: process.env.DB_NAME || 'emr_db',
+      user: process.env.DB_USER || 'emr_user',
+      password: process.env.DB_PASSWORD || '',
+      // For Docker internal connections, typically no SSL needed
+      ssl: false,
+    });
+
+// Debug: Log connection info (without password)
+if (databaseUrl) {
+  const dbUrl = databaseUrl.replace(/:[^:@]+@/, ':****@');
+  console.log('Using DATABASE_URL:', dbUrl);
+} else {
+  console.log('Using individual connection params:', {
+    host: process.env.DB_HOST || 'db',
+    port: process.env.DB_PORT || 5432,
+    database: process.env.DB_NAME || 'emr_db',
+    user: process.env.DB_USER || 'emr_user',
+  });
+}
 
 async function migrate() {
-  const client = await pool.connect();
+  console.log('\n=== Attempting database connection ===');
+  let client;
+  try {
+    client = await pool.connect();
+    console.log('✅ Database connection successful!');
+  } catch (error) {
+    console.error('❌ Database connection failed:', error.message);
+    console.error('Connection details:', {
+      hasDatabaseUrl: !!databaseUrl,
+      databaseUrl: databaseUrl ? databaseUrl.replace(/:[^:@]+@/, ':****@') : 'none',
+      dbHost: process.env.DB_HOST || 'db',
+      dbPort: process.env.DB_PORT || 5432,
+    });
+    throw error;
+  }
   
   try {
     await client.query('BEGIN');

@@ -79,7 +79,7 @@ export const visitsAPI = {
   signAddendum: (id, addendumIndex) => api.post(`/visits/${id}/addendum/${addendumIndex}/sign`),
   getByPatient: (patientId) => api.get('/visits', { params: { patientId } }),
   getPending: (providerId) => api.get('/visits/pending', { params: { providerId } }),
-  findOrCreate: (patientId, visitType) => api.post('/visits/find-or-create', { patientId, visitType }),
+  findOrCreate: (patientId, visitType, forceNew = false) => api.post('/visits/find-or-create', { patientId, visitType, forceNew }),
   generateSummary: (id) => api.post(`/visits/${id}/summary`),
 };
 
@@ -161,7 +161,7 @@ export const appointmentsAPI = {
 // Cancellation Follow-ups
 export const followupsAPI = {
   getAll: (params) => api.get('/followups', { params }),
-  getStats: () => api.get('/followups/stats'),
+  getStats: (params) => api.get('/followups/stats', { params }),
   ensure: (data) => api.post('/followups/ensure', data),
   addNote: (id, data) => api.post(`/followups/${id}/notes`, data),
   address: (id, data) => api.put(`/followups/${id}/address`, data),
@@ -172,12 +172,12 @@ export const followupsAPI = {
 export const billingAPI = {
   // Fee Schedule
   getFeeSchedule: (params) => api.get('/billing/fee-schedule', { params }),
-  
+
   // Insurance
   getInsurance: () => api.get('/billing/insurance'),
   verifyEligibility: (data) => api.post('/billing/eligibility/verify', data),
   getEligibility: (patientId) => api.get(`/billing/eligibility/patient/${patientId}`),
-  
+
   // Claims
   createClaim: (data) => api.post('/billing/claims', data),
   getClaim: (id) => api.get(`/billing/claims/${id}`),
@@ -186,20 +186,20 @@ export const billingAPI = {
   updateClaim: (id, data) => api.put(`/billing/claims/${id}`, data),
   submitClaim: (id, data) => api.post(`/billing/claims/${id}/submit`, data),
   deleteClaim: (id) => api.delete(`/billing/claims/${id}`),
-  
+
   // Payments
   postPayment: (data) => api.post('/billing/payments', data),
   getPaymentsByClaim: (claimId) => api.get(`/billing/payments/claim/${claimId}`),
-  
+
   // Denials
   createDenial: (data) => api.post('/billing/denials', data),
   getDenialsByClaim: (claimId) => api.get(`/billing/denials/claim/${claimId}`),
   appealDenial: (id, data) => api.post(`/billing/denials/${id}/appeal`, data),
-  
+
   // Prior Authorizations
   createPriorAuth: (data) => api.post('/billing/prior-authorizations', data),
   getPriorAuthsByPatient: (patientId) => api.get(`/billing/prior-authorizations/patient/${patientId}`),
-  
+
   // Statistics
   getStatistics: (params) => api.get('/billing/statistics', { params }),
 };
@@ -241,8 +241,8 @@ export const codesAPI = {
 export const medicationsAPI = {
   search: (query) => api.get('/medications/search', { params: { q: query } }),
   getDetails: (rxcui) => api.get(`/medications/${rxcui}`),
-  checkInteractions: (rxcuis) => api.get('/medications/interactions/check', { 
-    params: { rxcuis: Array.isArray(rxcuis) ? rxcuis.join(',') : rxcuis } 
+  checkInteractions: (rxcuis) => api.get('/medications/interactions/check', {
+    params: { rxcuis: Array.isArray(rxcuis) ? rxcuis.join(',') : rxcuis }
   }),
 };
 
@@ -306,23 +306,23 @@ export const rolesAPI = {
 export const settingsAPI = {
   // Get all settings
   getAll: () => api.get('/settings/all'),
-  
+
   // Practice settings
   getPractice: () => api.get('/settings/practice'),
   updatePractice: (data) => api.put('/settings/practice', data),
-  
+
   // Security settings
   getSecurity: () => api.get('/settings/security'),
   updateSecurity: (data) => api.put('/settings/security', data),
-  
+
   // Clinical settings
   getClinical: () => api.get('/settings/clinical'),
   updateClinical: (data) => api.put('/settings/clinical', data),
-  
+
   // Email settings
   getEmail: () => api.get('/settings/email'),
   updateEmail: (data) => api.put('/settings/email', data),
-  
+
   // Feature flags
   getFeatures: () => api.get('/settings/features'),
   updateFeature: (key, data) => api.put(`/settings/features/${key}`, data),

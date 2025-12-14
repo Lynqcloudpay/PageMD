@@ -30,6 +30,30 @@ async function verifyPrivileges() {
 
     console.log('Checking privilege assignments...\n');
 
+    // Check if required tables exist
+    const tablesCheck = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name IN ('roles', 'privileges', 'role_privileges')
+    `);
+    
+    const existingTables = tablesCheck.rows.map(r => r.table_name);
+    const requiredTables = ['roles', 'privileges', 'role_privileges'];
+    const missingTables = requiredTables.filter(t => !existingTables.includes(t));
+    
+    if (missingTables.length > 0) {
+      console.error('❌ Missing required database tables:', missingTables.join(', '));
+      console.error('\nPlease run the following migrations first:');
+      console.error('  1. node scripts/migrate-rbac.js (creates roles, privileges, role_privileges tables)');
+      if (!existingTables.includes('privileges')) {
+        console.error('  2. node scripts/migrate-hipaa-security.js (adds patient:* privileges)');
+      }
+      console.error('\nThen run this script again.\n');
+      await client.query('ROLLBACK');
+      process.exit(1);
+    }
+
     // Get all roles
     const rolesResult = await client.query('SELECT id, name FROM roles ORDER BY name');
     const roles = {};
@@ -118,4 +142,5 @@ verifyPrivileges()
     console.error(error);
     process.exit(1);
   });
+
 

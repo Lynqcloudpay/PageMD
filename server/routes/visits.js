@@ -43,29 +43,29 @@ router.get('/', requirePrivilege('visit:view'), async (req, res) => {
       console.log('Visits query:', query);
       console.log('Query params:', params);
     }
-    
+
     const result = await pool.query(query, params);
-    
+
     if (process.env.NODE_ENV === 'development') {
       console.log('Visits query result count:', result.rows.length);
       if (result.rows.length > 0) {
         console.log('First visit ID:', result.rows[0].id);
       }
     }
-    
+
     // Ensure all IDs are strings (UUIDs)
     const formattedRows = result.rows.map(row => ({
       ...row,
       id: String(row.id) // Ensure ID is always a string
     }));
-    
+
     res.json(formattedRows);
   } catch (error) {
     console.error('Error fetching visits:', error);
     console.error('Error message:', error.message);
     console.error('Error code:', error.code);
     console.error('Error stack:', error.stack);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch visits',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -77,12 +77,12 @@ router.get('/pending', requirePrivilege('visit:view'), async (req, res) => {
   try {
     const { providerId } = req.query;
     const currentUserId = req.user?.id;
-    
+
     // Debug logging
     if (process.env.NODE_ENV === 'development') {
       console.log('Pending visits request - user:', req.user?.id, 'providerId:', providerId);
     }
-    
+
     let query = `
       SELECT v.*, 
         u.first_name as provider_first_name, 
@@ -115,7 +115,7 @@ router.get('/pending', requirePrivilege('visit:view'), async (req, res) => {
   } catch (error) {
     console.error('Error fetching pending visits:', error);
     console.error('Error stack:', error.stack);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch pending visits',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -125,8 +125,8 @@ router.get('/pending', requirePrivilege('visit:view'), async (req, res) => {
 // Find or create visit - MUST come before /:id
 router.post('/find-or-create', requireRole('clinician'), async (req, res) => {
   try {
-    const { patientId, visitType } = req.body;
-    
+    const { patientId, visitType, forceNew } = req.body;
+
     if (!patientId) {
       return res.status(400).json({ error: 'patientId is required' });
     }
@@ -136,29 +136,34 @@ router.post('/find-or-create', requireRole('clinician'), async (req, res) => {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    // Try to find existing unsigned visit for today
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const providerId = req.user.id;
 
-    const existingResult = await pool.query(
-      `SELECT * FROM visits 
-       WHERE patient_id = $1 
-       AND visit_date >= $2 
-       AND visit_date < $3
-       AND (note_signed_at IS NULL OR note_draft IS NULL OR note_draft = '')
-       ORDER BY created_at DESC
-       LIMIT 1`,
-      [patientId, today, tomorrow]
-    );
+    // If forceNew is true, skip the search and create a new visit
+    if (!forceNew) {
+      // Try to find existing unsigned visit for today BY THIS USER
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
 
-    if (existingResult.rows.length > 0) {
-      return res.json(existingResult.rows[0]);
+      const existingResult = await pool.query(
+        `SELECT * FROM visits 
+         WHERE patient_id = $1 
+         AND visit_date >= $2 
+         AND visit_date < $3
+         AND provider_id = $4
+         AND note_signed_at IS NULL
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [patientId, today, tomorrow, providerId]
+      );
+
+      if (existingResult.rows.length > 0) {
+        return res.json(existingResult.rows[0]);
+      }
     }
 
-    // Create new visit (created_by column doesn't exist, removed it)
-    const providerId = req.user.id;
+    // Create new visit
     if (!providerId) {
       console.error('Provider ID is missing:', req.user);
       return res.status(400).json({ error: 'Provider ID is missing' });
@@ -204,7 +209,7 @@ router.post('/find-or-create', requireRole('clinician'), async (req, res) => {
       userId: req.user?.id,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to find or create visit',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -229,30 +234,30 @@ async function columnExists(client, tableName, columnName) {
 router.post('/:id/sign', requireRole('clinician'), async (req, res) => {
   const startTime = Date.now();
   const client = await pool.connect();
-  
+
   // Hard timeout to prevent hanging forever
   const killTimeout = setTimeout(() => {
     console.error('[SIGN] ❌ HARD TIMEOUT HIT - Request hanging for 25+ seconds');
     console.error('[SIGN] Visit ID:', req.params.id);
     console.error('[SIGN] User ID:', req.user?.id);
     if (!res.headersSent) {
-      res.status(500).json({ 
-        error: 'Sign operation timed out', 
+      res.status(500).json({
+        error: 'Sign operation timed out',
         message: 'The sign operation took too long and was cancelled',
         timeout: true
       });
     }
   }, 25000);
-  
+
   const step = (label) => {
     const elapsed = Date.now() - startTime;
     console.log(`[SIGN] ${label} (+${elapsed}ms)`);
   };
-  
+
   try {
     step('BEGIN - Request received');
     const { id } = req.params;
-    
+
     // Log request payload for debugging
     console.log('📝 SIGN NOTE REQUEST:', {
       visitId: id,
@@ -261,26 +266,26 @@ router.post('/:id/sign', requireRole('clinician'), async (req, res) => {
       vitalsKeys: req.body?.vitals ? Object.keys(req.body.vitals) : [],
       userId: req.user?.id
     });
-    
+
     // Set database timeouts to prevent hanging
     step('Setting DB timeouts');
     await client.query(`SET LOCAL statement_timeout = '10s'`);
     await client.query(`SET LOCAL lock_timeout = '5s'`);
-    
+
     // Handle both noteDraft (camelCase from frontend) and note_draft (snake_case)
     const { noteDraft, note_draft, vitals } = req.body;
     const noteDraftValue = noteDraft || note_draft;
 
     // Allow empty noteDraft (it might be an empty note)
     const noteDraftToSave = noteDraftValue || '';
-    
+
     // Get visit to find patient_id for snapshot
     const visitCheck = await pool.query('SELECT patient_id FROM visits WHERE id = $1', [id]);
     if (visitCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Visit not found' });
     }
     const patientId = visitCheck.rows[0].patient_id;
-    
+
     // Capture snapshot of patient data at time of signing (for legal immutability)
     step('Starting patient snapshot capture');
     let patientSnapshot = null;
@@ -292,7 +297,7 @@ router.post('/:id/sign', requireRole('clinician'), async (req, res) => {
         client.query('SELECT * FROM family_history WHERE patient_id = $1', [patientId]).catch(() => ({ rows: [] })),
         client.query('SELECT * FROM social_history WHERE patient_id = $1', [patientId]).catch(() => ({ rows: [] }))
       ]);
-      
+
       patientSnapshot = JSON.stringify({
         allergies: allergiesRes.rows || [],
         medications: medicationsRes.rows || [],
@@ -328,9 +333,9 @@ router.post('/:id/sign', requireRole('clinician'), async (req, res) => {
     }
 
     if (process.env.NODE_ENV === 'development') {
-      console.log('Signing visit:', { 
-        id, 
-        noteDraftLength: noteDraftToSave.length, 
+      console.log('Signing visit:', {
+        id,
+        noteDraftLength: noteDraftToSave.length,
         hasVitals: !!vitals,
         vitalsData: vitals,
         vitalsValue: vitalsValue ? (typeof vitalsValue === 'string' ? vitalsValue.substring(0, 100) : 'object') : null
@@ -345,7 +350,7 @@ router.post('/:id/sign', requireRole('clinician'), async (req, res) => {
       if (!hasSnapshotColumn && patientSnapshot) {
         console.warn('[SIGN] visits.patient_snapshot column missing; skipping snapshot write');
       }
-      
+
       // If vitals are provided, include them in the update
       if (vitalsValue !== null) {
         step('Updating with vitals');
@@ -411,7 +416,7 @@ router.post('/:id/sign', requireRole('clinician'), async (req, res) => {
         step('Retrying with text cast');
         // Check if patient_snapshot column exists
         const hasSnapshotColumn = await columnExists(client, 'visits', 'patient_snapshot');
-        
+
         if (vitalsValue !== null) {
           if (hasSnapshotColumn && patientSnapshot) {
             result = await client.query(
@@ -481,16 +486,16 @@ router.post('/:id/sign', requireRole('clinician'), async (req, res) => {
       if (assessmentMatch && assessmentMatch[1]) {
         const assessmentText = assessmentMatch[1].trim();
         const assessmentLines = assessmentText.split('\n').filter(line => line.trim());
-        
+
         for (const line of assessmentLines) {
           const trimmedLine = line.trim();
           if (!trimmedLine) continue;
-          
+
           // Parse ICD-10 format: "Code - Description" or just "Description"
           const codeMatch = trimmedLine.match(/^([A-Z]\d{2}(?:\.\d+)?)\s*-\s*(.+)$/);
           let icd10Code = null;
           let problemName = trimmedLine;
-          
+
           if (codeMatch) {
             icd10Code = codeMatch[1].trim();
             problemName = codeMatch[2].trim();
@@ -502,7 +507,7 @@ router.post('/:id/sign', requireRole('clinician'), async (req, res) => {
               problemName = codeAtStart[2].trim();
             }
           }
-          
+
           // Check if problem already exists for this patient (by code or name)
           const existingProblem = await client.query(
             `SELECT id FROM problems 
@@ -514,7 +519,7 @@ router.post('/:id/sign', requireRole('clinician'), async (req, res) => {
              AND status = 'active'`,
             [patientId, icd10Code || '', problemName]
           );
-          
+
           if (existingProblem.rows.length === 0 && problemName) {
             // Add new problem
             try {
@@ -538,7 +543,7 @@ router.post('/:id/sign', requireRole('clinician'), async (req, res) => {
     }
 
     step('Preparing response');
-    
+
     // Non-blocking audit log (fire and forget - don't wait for it)
     logAudit(req.user.id, 'sign_visit', 'visit', id, {}, req.ip).catch(err => {
       console.warn('⚠️ Audit log error (non-fatal):', err.message);
@@ -546,7 +551,7 @@ router.post('/:id/sign', requireRole('clinician'), async (req, res) => {
 
     const duration = Date.now() - startTime;
     step(`RESPOND 200 - Total time: ${duration}ms`);
-    
+
     clearTimeout(killTimeout);
     res.json(result.rows[0]);
   } catch (error) {
@@ -572,8 +577,8 @@ router.post('/:id/sign', requireRole('clinician'), async (req, res) => {
     });
     clearTimeout(killTimeout);
     if (!res.headersSent) {
-      res.status(500).json({ 
-        error: 'Failed to sign visit', 
+      res.status(500).json({
+        error: 'Failed to sign visit',
         message: error.message,
         code: error.code,
         details: process.env.NODE_ENV === 'development' ? {
@@ -596,33 +601,33 @@ router.post('/:id/sign', requireRole('clinician'), async (req, res) => {
 router.post('/:id/summary', requireRole('clinician'), async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Check if note is signed - prevent editing note_draft after signing
     const noteDraftValue = req.body.note_draft !== undefined ? req.body.note_draft : req.body.noteDraft;
     if (noteDraftValue !== undefined) {
       const existingVisit = await pool.query('SELECT note_signed_at FROM visits WHERE id = $1', [id]);
       if (existingVisit.rows.length > 0 && existingVisit.rows[0].note_signed_at) {
-        return res.status(403).json({ 
-          error: 'Cannot edit signed notes. Once a note is signed, it cannot be modified.' 
+        return res.status(403).json({
+          error: 'Cannot edit signed notes. Once a note is signed, it cannot be modified.'
         });
       }
     }
-    
+
     const visitResult = await pool.query('SELECT * FROM visits WHERE id = $1', [id]);
-    
+
     if (visitResult.rows.length === 0) {
       return res.status(404).json({ error: 'Visit not found' });
     }
 
     const visit = visitResult.rows[0];
     const noteText = visit.note_draft || '';
-    
+
     // Simple AI summary generation (you can replace this with OpenAI API call)
     // For now, we'll create a structured summary from the note
     const summary = generateSummary(noteText, visit);
-    
+
     await logAudit(req.user.id, 'generate_summary', 'visit', id, {}, req.ip);
-    
+
     res.json({ summary });
   } catch (error) {
     console.error('Error generating summary:', error);
@@ -654,15 +659,15 @@ function generateSummary(noteText, visit) {
 
   // Build summary
   let summary = `Chief Complaint: ${chiefComplaint}. `;
-  
+
   if (keyFindings.positive.length > 0) {
     summary += `Pertinent Positives: ${keyFindings.positive.join('; ')}. `;
   }
-  
+
   if (keyFindings.negative.length > 0) {
     summary += `Pertinent Negatives: ${keyFindings.negative.join('; ')}. `;
   }
-  
+
   summary += `Assessment: ${assessment}. `;
   summary += `Plan: ${plan}.`;
 
@@ -677,21 +682,21 @@ function extractSection(text, regex) {
 function extractKeyFindings(hpi, pe) {
   const positive = [];
   const negative = [];
-  
+
   const text = `${hpi || ''} ${pe || ''}`.toLowerCase();
-  
+
   // Look for positive findings (symptoms, abnormalities)
   const positivePatterns = [
     /\b(pain|painful|tender|swollen|red|fever|chills|cough|shortness of breath|dyspnea|nausea|vomiting|diarrhea|constipation|rash|lesion|mass|abnormal|decreased|increased|elevated|reduced)\b/gi,
     /\b(positive|present|abnormal|irregular|enlarged|distended)\b/gi
   ];
-  
+
   // Look for negative findings (normal, no symptoms)
   const negativePatterns = [
     /\b(no\s+(pain|fever|chills|cough|shortness|dyspnea|nausea|vomiting|diarrhea|rash|lesion|mass|abnormal))\b/gi,
     /\b(normal|negative|clear|intact|unremarkable|within normal limits)\b/gi
   ];
-  
+
   // Simple extraction - in production, use proper NLP or AI
   if (hpi) {
     const hpiLower = hpi.toLowerCase();
@@ -702,7 +707,7 @@ function extractKeyFindings(hpi, pe) {
       negative.push('Denies significant symptoms');
     }
   }
-  
+
   if (pe) {
     const peLower = pe.toLowerCase();
     if (peLower.includes('tender') || peLower.includes('abnormal') || peLower.includes('irregular')) {
@@ -712,7 +717,7 @@ function extractKeyFindings(hpi, pe) {
       negative.push('Normal physical examination');
     }
   }
-  
+
   return { positive, negative };
 }
 
@@ -720,19 +725,19 @@ function extractKeyFindings(hpi, pe) {
 router.get('/:id', requirePrivilege('visit:view'), async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Check if note is signed - prevent editing note_draft after signing
     const noteDraftValue = req.body.note_draft !== undefined ? req.body.note_draft : req.body.noteDraft;
     if (noteDraftValue !== undefined) {
       const existingVisit = await pool.query('SELECT note_signed_at FROM visits WHERE id = $1', [id]);
       if (existingVisit.rows.length > 0 && existingVisit.rows[0].note_signed_at) {
-        return res.status(403).json({ 
-          error: 'Cannot edit signed notes. Once a note is signed, it cannot be modified.' 
+        return res.status(403).json({
+          error: 'Cannot edit signed notes. Once a note is signed, it cannot be modified.'
         });
       }
     }
-    
-    
+
+
     // Handle both UUID and numeric IDs
     let result;
     try {
@@ -784,7 +789,7 @@ router.get('/:id', requirePrivilege('visit:view'), async (req, res) => {
 router.post('/', requireRole('clinician'), async (req, res) => {
   try {
     const { patient_id, visit_date, visit_type, provider_id } = req.body;
-    
+
     const result = await pool.query(
       `INSERT INTO visits (patient_id, visit_date, visit_type, provider_id)
        VALUES ($1, $2, $3, $4) RETURNING *`,
@@ -804,21 +809,21 @@ router.post('/', requireRole('clinician'), async (req, res) => {
 router.put('/:id', requireRole('clinician'), async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Check if note is signed - prevent editing note_draft after signing
     const noteDraftValue = req.body.note_draft !== undefined ? req.body.note_draft : req.body.noteDraft;
     if (noteDraftValue !== undefined) {
       const existingVisit = await pool.query('SELECT note_signed_at FROM visits WHERE id = $1', [id]);
       if (existingVisit.rows.length > 0 && existingVisit.rows[0].note_signed_at) {
-        return res.status(403).json({ 
-          error: 'Cannot edit signed notes. Once a note is signed, it cannot be modified.' 
+        return res.status(403).json({
+          error: 'Cannot edit signed notes. Once a note is signed, it cannot be modified.'
         });
       }
     }
-    
+
 
     const { visit_date, visit_type, vitals, note_draft, note_signed_at, provider_id } = req.body;
-    
+
     const updates = [];
     const values = [];
     let paramIndex = 1;
@@ -912,7 +917,7 @@ router.post('/:id/addendum', requireRole('clinician'), async (req, res) => {
   try {
     const { id } = req.params;
     const { addendumText } = req.body;
-    
+
     if (!addendumText || !addendumText.trim()) {
       return res.status(400).json({ error: 'Addendum text is required' });
     }
@@ -943,12 +948,12 @@ router.post('/:id/addendum', requireRole('clinician'), async (req, res) => {
         existingAddendums = [];
       }
     }
-    
+
     // Add new addendum with timestamp and user (initially unsigned)
-    const userName = req.user ? 
-      `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || 'Provider' : 
+    const userName = req.user ?
+      `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || 'Provider' :
       'Provider';
-    
+
     const newAddendum = {
       text: addendumText.trim(),
       addedBy: req.user ? req.user.id : null,
@@ -959,14 +964,14 @@ router.post('/:id/addendum', requireRole('clinician'), async (req, res) => {
       signedByName: null,
       signedAt: null
     };
-    
+
     existingAddendums.push(newAddendum);
 
     // Update visit with addendums
     // PostgreSQL JSONB accepts JavaScript objects directly - pg will handle conversion
     console.log('Adding addendum. Existing addendums count:', existingAddendums.length);
     console.log('New addendum:', JSON.stringify(newAddendum, null, 2));
-    
+
     const result = await pool.query(
       `UPDATE visits 
        SET addendums = $1::jsonb, updated_at = CURRENT_TIMESTAMP
@@ -974,12 +979,12 @@ router.post('/:id/addendum', requireRole('clinician'), async (req, res) => {
        RETURNING *`,
       [JSON.stringify(existingAddendums), id]
     );
-    
+
     if (result.rows.length === 0) {
       console.error('Visit not found after update. Visit ID:', id);
       return res.status(404).json({ error: 'Visit not found after update' });
     }
-    
+
     // Parse addendums back from JSONB if needed
     const updatedVisit = result.rows[0];
     if (updatedVisit.addendums && typeof updatedVisit.addendums === 'string') {
@@ -989,7 +994,7 @@ router.post('/:id/addendum', requireRole('clinician'), async (req, res) => {
         console.error('Error parsing addendums from response:', parseErr);
       }
     }
-    
+
     console.log('Addendum added successfully. Total addendums:', updatedVisit.addendums?.length || 0);
 
     // Log audit (non-blocking - don't fail if audit fails)
@@ -1012,7 +1017,7 @@ router.post('/:id/addendum', requireRole('clinician'), async (req, res) => {
       detail: error.detail,
       hint: error.hint
     });
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to add addendum',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -1068,7 +1073,7 @@ router.post('/:id/addendum/:addendumIndex/sign', requireRole('clinician'), async
     const userName = (req.user && (req.user.first_name || req.user.last_name))
       ? `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim()
       : 'Provider';
-    
+
     existingAddendums[index] = {
       ...existingAddendums[index],
       signed: true,
@@ -1080,11 +1085,11 @@ router.post('/:id/addendum/:addendumIndex/sign', requireRole('clinician'), async
     // Update visit with signed addendum
     console.log('Signing addendum. Index:', index, 'Total addendums:', existingAddendums.length);
     console.log('Updated addendum:', JSON.stringify(existingAddendums[index], null, 2));
-    
+
     // Ensure addendums is properly formatted as JSONB
     const addendumsJson = JSON.stringify(existingAddendums);
     console.log('Addendums JSON length:', addendumsJson.length);
-    
+
     const result = await pool.query(
       `UPDATE visits 
        SET addendums = $1::jsonb, updated_at = CURRENT_TIMESTAMP
@@ -1092,12 +1097,12 @@ router.post('/:id/addendum/:addendumIndex/sign', requireRole('clinician'), async
        RETURNING *`,
       [addendumsJson, id]
     );
-    
+
     if (result.rows.length === 0) {
       console.error('Visit not found after update. Visit ID:', id);
       return res.status(404).json({ error: 'Visit not found after update' });
     }
-    
+
     // Parse addendums back from JSONB if needed
     const updatedVisit = result.rows[0];
     if (updatedVisit.addendums && typeof updatedVisit.addendums === 'string') {
@@ -1107,7 +1112,7 @@ router.post('/:id/addendum/:addendumIndex/sign', requireRole('clinician'), async
         console.error('Error parsing addendums from response:', parseErr);
       }
     }
-    
+
     console.log('Addendum signed successfully. Total addendums:', updatedVisit.addendums?.length || 0);
 
     // Log audit (non-blocking)
@@ -1122,7 +1127,7 @@ router.post('/:id/addendum/:addendumIndex/sign', requireRole('clinician'), async
     res.json(updatedVisit);
   } catch (error) {
     console.error('Error signing addendum:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to sign addendum',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -1132,63 +1137,63 @@ router.post('/:id/addendum/:addendumIndex/sign', requireRole('clinician'), async
 // Delete visit
 router.delete('/:id', requireRole('clinician'), async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     const { id } = req.params;
-    
+
     // Check if visit exists and if it's signed
     const existingVisit = await client.query(
-      'SELECT id, note_signed_at, patient_id FROM visits WHERE id = $1', 
+      'SELECT id, note_signed_at, patient_id FROM visits WHERE id = $1',
       [id]
     );
-    
+
     if (existingVisit.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Visit not found' });
     }
-    
+
     const visit = existingVisit.rows[0];
-    
+
     // Prevent deletion of signed visits
     if (visit.note_signed_at) {
       await client.query('ROLLBACK');
-      return res.status(403).json({ 
-        error: 'Cannot delete signed visits. Once a visit is signed, it cannot be deleted.' 
+      return res.status(403).json({
+        error: 'Cannot delete signed visits. Once a visit is signed, it cannot be deleted.'
       });
     }
-    
+
     // Delete associated records first (they're just draft records for unsigned visits)
     // IMPORTANT: Delete in the correct order to respect foreign key constraints
     // We delete ALL records regardless of count to ensure nothing is left behind
-    
+
     // 1. Delete order_diagnoses for orders first (delete all, don't check count)
     await client.query(`
       DELETE FROM order_diagnoses 
       WHERE order_id IN (SELECT id FROM orders WHERE visit_id = $1)
         AND (order_type != 'referral' OR order_type IS NULL)
     `, [id]);
-    
+
     // 2. Delete order_diagnoses for referrals
     await client.query(`
       DELETE FROM order_diagnoses 
       WHERE order_id IN (SELECT id FROM referrals WHERE visit_id = $1)
         AND order_type = 'referral'
     `, [id]);
-    
+
     // 3. Now delete orders (order_diagnoses already deleted) - delete ALL orders for this visit
     const ordersDeleteResult = await client.query('DELETE FROM orders WHERE visit_id = $1 RETURNING id', [id]);
     const orderCount = ordersDeleteResult.rowCount || 0;
-    
+
     // 4. Delete referrals (order_diagnoses already deleted) - delete ALL referrals for this visit
     const referralsDeleteResult = await client.query('DELETE FROM referrals WHERE visit_id = $1 RETURNING id', [id]);
     const referralCount = referralsDeleteResult.rowCount || 0;
-    
+
     // 5. Delete documents - delete ALL documents for this visit
     const documentsDeleteResult = await client.query('DELETE FROM documents WHERE visit_id = $1 RETURNING id', [id]);
     const documentCount = documentsDeleteResult.rowCount || 0;
-    
+
     // Now delete the visit
     const result = await client.query('DELETE FROM visits WHERE id = $1 RETURNING *', [id]);
 
@@ -1201,7 +1206,7 @@ router.delete('/:id', requireRole('clinician'), async (req, res) => {
 
     // Log audit
     try {
-      await logAudit(req.user.id, 'delete_visit', 'visit', id, { 
+      await logAudit(req.user.id, 'delete_visit', 'visit', id, {
         patientId: visit.patient_id,
         ordersDeleted: orderCount,
         referralsDeleted: referralCount
@@ -1211,17 +1216,17 @@ router.delete('/:id', requireRole('clinician'), async (req, res) => {
       // Don't fail the deletion if audit logging fails
     }
 
-    res.json({ 
+    res.json({
       message: 'Visit deleted successfully',
       ordersDeleted: orderCount,
       referralsDeleted: referralCount,
       documentsDeleted: documentCount
     });
   } catch (error) {
-    await client.query('ROLLBACK').catch(() => {});
+    await client.query('ROLLBACK').catch(() => { });
     console.error('Error deleting visit:', error);
     console.error('Error stack:', error.stack);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to delete visit',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });

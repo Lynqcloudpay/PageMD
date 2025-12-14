@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { 
-    Save, Lock, FileText, ChevronDown, ChevronUp, Plus, ClipboardList, 
+import {
+    Save, Lock, FileText, ChevronDown, ChevronUp, Plus, ClipboardList,
     Sparkles, ArrowLeft, Zap, Search, X, Printer, History,
     Activity, CheckSquare, Square, Trash2, FilePlus, AlertCircle, Layers, ChevronRight, Star, Edit2,
     UserCircle, Database, FileImage, FlaskConical, Heart, Pill, Upload
@@ -171,6 +171,8 @@ const VisitNote = () => {
     const id = params.id;
     // Extract visitId from params - check if it's the "new" route or an existing visit
     const urlVisitId = params.visitId || (location.pathname.endsWith('/visit/new') ? 'new' : undefined);
+    // Check if user wants to force create a fresh visit (bypassing existing drafts)
+    const forceNewVisit = new URLSearchParams(location.search).get('fresh') === 'true';
     const [currentVisitId, setCurrentVisitId] = useState(urlVisitId);
     const [isSigned, setIsSigned] = useState(false);
     const [visitData, setVisitData] = useState(null);
@@ -232,7 +234,7 @@ const VisitNote = () => {
     // Close diagnosis menu when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (diagnosisMenuRef.current && !diagnosisMenuRef.current.contains(event.target) && 
+            if (diagnosisMenuRef.current && !diagnosisMenuRef.current.contains(event.target) &&
                 !assessmentRef.current?.contains(event.target)) {
                 setClickedDiagnosis(null);
             }
@@ -242,7 +244,7 @@ const VisitNote = () => {
             return () => document.removeEventListener('mousedown', handleClickOutside);
         }
     }, [clickedDiagnosis]);
-    
+
     // Patient chart data for editing in note
     const [patientChartData, setPatientChartData] = useState({
         allergies: [],
@@ -251,7 +253,7 @@ const VisitNote = () => {
         familyHistory: [],
         socialHistory: null
     });
-    
+
     // Track original patient chart data to detect deletions
     const originalPatientChartDataRef = useRef({
         allergies: [],
@@ -260,13 +262,13 @@ const VisitNote = () => {
         familyHistory: [],
         socialHistory: null
     });
-    
+
     // Auto-save tracking
     const autoSaveTimeoutRef = useRef(null);
     const patientChartDataSaveTimeoutRef = useRef(null);
     const hasInitialSaveRef = useRef(false);
     const isAutoSavingRef = useRef(false);
-    
+
     // Note sections
     const [noteData, setNoteData] = useState({
         chiefComplaint: '',
@@ -301,7 +303,7 @@ const VisitNote = () => {
         plan: '',
         planStructured: [] // Array of {diagnosis: string, orders: string[]}
     });
-    
+
     // Vitals
     const [vitals, setVitals] = useState({
         systolic: '',
@@ -318,34 +320,34 @@ const VisitNote = () => {
         weightUnit: 'lbs',
         heightUnit: 'in'
     });
-    
+
     // Previous visit weight for comparison
     const [previousWeight, setPreviousWeight] = useState(null);
     const [previousWeightUnit, setPreviousWeightUnit] = useState('lbs');
-    
+
     // Dot phrases
     const [showDotPhraseModal, setShowDotPhraseModal] = useState(false);
     const [dotPhraseSearch, setDotPhraseSearch] = useState('');
     const [activeTextArea, setActiveTextArea] = useState(null);
     const [hpiDotPhraseSearch, setHpiDotPhraseSearch] = useState('');
     const [showHpiDotPhraseResults, setShowHpiDotPhraseResults] = useState(false);
-    
+
     // ICD-10 search
     const [showIcd10Search, setShowIcd10Search] = useState(false);
     const [icd10Search, setIcd10Search] = useState('');
     const [icd10Results, setIcd10Results] = useState([]);
-    
+
     // AI Summary
     const [aiSummary, setAiSummary] = useState('');
     const [generatingSummary, setGeneratingSummary] = useState(false);
-    
+
     // Refs for textareas
     const hpiRef = useRef(null);
     const assessmentRef = useRef(null);
     const planRef = useRef(null);
     const rosRef = useRef(null);
     const peRef = useRef(null);
-    
+
     // Refs for vitals inputs
     const systolicRef = useRef(null);
     const diastolicRef = useRef(null);
@@ -355,7 +357,7 @@ const VisitNote = () => {
     const o2satRef = useRef(null);
     const weightRef = useRef(null);
     const heightRef = useRef(null);
-    
+
     // Autocomplete state
     const [autocompleteState, setAutocompleteState] = useState({
         show: false,
@@ -426,7 +428,7 @@ const VisitNote = () => {
         }
         const decodedText = decodeHtmlEntities(text);
         // Parsing note text
-        
+
         // More flexible regex patterns that handle various formats (including end of string)
         const chiefComplaintMatch = decodedText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
         const hpiMatch = decodedText.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
@@ -434,7 +436,7 @@ const VisitNote = () => {
         const peMatch = decodedText.match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):|$)/is);
         const assessmentMatch = decodedText.match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):|$)/is);
         const planMatch = decodedText.match(/(?:Plan|P):\s*(.+?)(?:\n\n|$)/is);
-        
+
         const result = {
             chiefComplaint: chiefComplaintMatch ? decodeHtmlEntities(chiefComplaintMatch[1].trim()) : '',
             hpi: hpiMatch ? decodeHtmlEntities(hpiMatch[1].trim()) : '',
@@ -443,9 +445,9 @@ const VisitNote = () => {
             assessment: assessmentMatch ? decodeHtmlEntities(assessmentMatch[1].trim()) : '',
             plan: planMatch ? decodeHtmlEntities(planMatch[1].trim()) : ''
         };
-        
+
         // Parsed note sections (verbose logging disabled)
-        
+
         return result;
     };
 
@@ -483,7 +485,7 @@ const VisitNote = () => {
                 currentOrders.push(line);
             }
         }
-        
+
         // Don't forget the last diagnosis
         if (currentDiagnosis) {
             structured.push({
@@ -491,7 +493,7 @@ const VisitNote = () => {
                 orders: currentOrders
             });
         }
-        
+
         return structured;
     };
 
@@ -507,7 +509,7 @@ const VisitNote = () => {
     // Format patient background data for note
     const formatPatientBackgroundForNote = () => {
         const parts = [];
-        
+
         // Allergies
         const activeAllergies = patientChartData.allergies.filter(a => a.active && a.allergen);
         if (activeAllergies.length > 0) {
@@ -519,7 +521,7 @@ const VisitNote = () => {
                 parts.push(line);
             });
         }
-        
+
         // Medications
         const activeMeds = patientChartData.medications.filter(m => m.active && m.medication_name);
         if (activeMeds.length > 0) {
@@ -532,7 +534,7 @@ const VisitNote = () => {
                 parts.push(line);
             });
         }
-        
+
         // Problems
         const activeProblems = patientChartData.problems.filter(p => p.status === 'active' && p.problem_name);
         if (activeProblems.length > 0) {
@@ -543,7 +545,7 @@ const VisitNote = () => {
                 parts.push(line);
             });
         }
-        
+
         // Family History
         const familyHistory = patientChartData.familyHistory.filter(fh => fh.condition);
         if (familyHistory.length > 0) {
@@ -556,7 +558,7 @@ const VisitNote = () => {
                 parts.push(line);
             });
         }
-        
+
         // Social History
         if (patientChartData.socialHistory) {
             const sh = patientChartData.socialHistory;
@@ -577,40 +579,40 @@ const VisitNote = () => {
             if (sh.occupation) shParts.push(`- Occupation: ${sh.occupation}`);
             if (sh.living_situation) shParts.push(`- Living Situation: ${sh.living_situation}`);
             if (sh.notes) shParts.push(`- Notes: ${sh.notes}`);
-            
+
             if (shParts.length > 0) {
                 parts.push('**Social History:**');
                 parts.push(...shParts);
             }
         }
-        
+
         return parts.join('\n');
     };
 
     const combineNoteSections = () => {
         const sections = [];
-        
+
         // Patient Background (from editable sections)
         const patientBackground = formatPatientBackgroundForNote();
         if (patientBackground) {
             sections.push(`Patient Background:\n${patientBackground}`);
         }
-        
+
         if (noteData.chiefComplaint) sections.push(`Chief Complaint: ${noteData.chiefComplaint}`);
         if (noteData.hpi) sections.push(`HPI: ${noteData.hpi}`);
-        
+
         // ROS - use rosNotes directly (ros checkbox object may not exist)
         if (noteData.rosNotes) {
             sections.push(`Review of Systems: ${noteData.rosNotes}`);
         }
-        
+
         // PE - use peNotes directly (pe checkbox object may not exist)
         if (noteData.peNotes) {
             sections.push(`Physical Exam: ${noteData.peNotes}`);
         }
-        
+
         if (noteData.assessment) sections.push(`Assessment: ${noteData.assessment}`);
-        
+
         // Use structured plan if available, otherwise use plain plan text
         let planText = '';
         if (noteData.planStructured && noteData.planStructured.length > 0) {
@@ -619,7 +621,7 @@ const VisitNote = () => {
             planText = noteData.plan;
         }
         if (planText) sections.push(`Plan: ${planText}`);
-        
+
         const combined = sections.join('\n\n');
         // Combined note sections (verbose logging disabled)
         return combined;
@@ -632,10 +634,10 @@ const VisitNote = () => {
             // If note is signed, use snapshot data from visit (immutable)
             if (visit && (visit.note_signed_at || visit.locked) && visit.patient_snapshot) {
                 try {
-                    const snapshot = typeof visit.patient_snapshot === 'string' 
-                        ? JSON.parse(visit.patient_snapshot) 
+                    const snapshot = typeof visit.patient_snapshot === 'string'
+                        ? JSON.parse(visit.patient_snapshot)
                         : visit.patient_snapshot;
-                    
+
                     const chartData = {
                         allergies: snapshot.allergies || [],
                         medications: snapshot.medications || [],
@@ -659,7 +661,7 @@ const VisitNote = () => {
                     // Fall through to fetch current data if snapshot is invalid
                 }
             }
-            
+
             // For unsigned notes, fetch current patient data
             const [allergiesRes, medicationsRes, problemsRes, familyHistoryRes, socialHistoryRes] = await Promise.all([
                 patientsAPI.getAllergies(patientId).catch(() => ({ data: [] })),
@@ -668,7 +670,7 @@ const VisitNote = () => {
                 patientsAPI.getFamilyHistory(patientId).catch(() => ({ data: [] })),
                 patientsAPI.getSocialHistory(patientId).catch(() => ({ data: null }))
             ]);
-            
+
             const chartData = {
                 allergies: allergiesRes.data || [],
                 medications: medicationsRes.data || [],
@@ -685,7 +687,7 @@ const VisitNote = () => {
                 familyHistory: (familyHistoryRes.data || []).map(fh => ({ ...fh })),
                 socialHistory: socialHistoryRes.data ? { ...socialHistoryRes.data } : null
             };
-            
+
             // Auto-populate note sections with existing data if note is new/empty
             if (!visit?.note_draft || !visit.note_draft.trim()) {
                 autoPopulateNoteFromChart({
@@ -700,7 +702,7 @@ const VisitNote = () => {
             console.error('Error fetching patient chart data:', error);
         }
     };
-    
+
     // Auto-populate note sections with patient chart data
     const autoPopulateNoteFromChart = (chartData) => {
         // Format allergies
@@ -714,7 +716,7 @@ const VisitNote = () => {
                 allergiesText += '\n';
             });
         }
-        
+
         // Format medications
         let medicationsText = '';
         if (chartData.medications && chartData.medications.length > 0) {
@@ -727,7 +729,7 @@ const VisitNote = () => {
                 medicationsText += '\n';
             });
         }
-        
+
         // Format problems
         let problemsText = '';
         if (chartData.problems && chartData.problems.length > 0) {
@@ -738,7 +740,7 @@ const VisitNote = () => {
                 problemsText += '\n';
             });
         }
-        
+
         // Format family history
         let familyHistoryText = '';
         if (chartData.familyHistory && chartData.familyHistory.length > 0) {
@@ -751,7 +753,7 @@ const VisitNote = () => {
                 familyHistoryText += '\n';
             });
         }
-        
+
         // Format social history
         let socialHistoryText = '';
         if (chartData.socialHistory) {
@@ -773,7 +775,7 @@ const VisitNote = () => {
             if (chartData.socialHistory.living_situation) socialHistoryText += `- Living Situation: ${chartData.socialHistory.living_situation}\n`;
             if (chartData.socialHistory.notes) socialHistoryText += `- Notes: ${chartData.socialHistory.notes}\n`;
         }
-        
+
         // Combine into patient background section
         // Do not autopopulate HPI with patient background
         // Patient background is available via the "Load Patient Background" button if needed
@@ -790,15 +792,15 @@ const VisitNote = () => {
                 .catch(error => {
                     console.error('Error fetching patient:', error);
                 });
-            
+
             // Fetch patient chart data for editing in note (will use snapshot if visit is signed)
             // Note: visitData may not be loaded yet, so we'll fetch it again after visit loads
         }
-        
+
         if (urlVisitId === 'new' && id) {
-            console.log('Creating new visit for patient:', id);
+            console.log('Creating new visit for patient:', id, 'forceNew:', forceNewVisit);
             setLoading(true);
-            visitsAPI.findOrCreate(id, 'Office Visit')
+            visitsAPI.findOrCreate(id, 'Office Visit', forceNewVisit)
                 .then(response => {
                     const visit = response.data;
                     console.log('Created visit:', visit);
@@ -819,11 +821,11 @@ const VisitNote = () => {
                     console.error('Error details:', error.response?.data || error.message);
                     console.error('Error code:', error.code);
                     console.error('Full error:', error);
-                    
+
                     if (error.code === 'ERR_NETWORK' || error.message?.includes('ERR_CONNECTION_REFUSED')) {
                         showToast('Cannot connect to server. Please check if the server is running.', 'error');
                     } else {
-                    showToast('Could not create visit. Please try again.', 'error');
+                        showToast('Could not create visit. Please try again.', 'error');
                     }
                     setLoading(false);
                     // Navigate back to snapshot on error
@@ -839,17 +841,17 @@ const VisitNote = () => {
                     setVisitData(visit);
                     setCurrentVisitId(visit.id);
                     setIsSigned(visit.locked || !!visit.note_signed_by || !!visit.note_signed_at);
-                    
+
                     // Load addendums
                     if (visit.addendums) {
-                        const addendumsData = Array.isArray(visit.addendums) 
-                            ? visit.addendums 
+                        const addendumsData = Array.isArray(visit.addendums)
+                            ? visit.addendums
                             : JSON.parse(visit.addendums || '[]');
                         setAddendums(addendumsData);
                     } else {
                         setAddendums([]);
                     }
-                    
+
                     // Load patient chart data (uses snapshot if signed)
                     fetchPatientChartData(id, visit);
                     if (visit.vitals) {
@@ -922,7 +924,7 @@ const VisitNote = () => {
                         // If no note_draft, ensure we have empty state
                     }
                     setLoading(false);
-                    
+
                     // Mark that initial save should happen after autoSave is defined
                     hasInitialSaveRef.current = false; // Reset to trigger save on mount
                 })
@@ -975,39 +977,39 @@ const VisitNote = () => {
                     const span = btn.querySelector('span');
                     return span && span.textContent === 'Add Order';
                 });
-                
+
                 if (button) {
                     const rect = button.getBoundingClientRect();
                     const menu = addOrderMenuRef.current;
                     const menuHeight = menu.offsetHeight || 150;
                     const viewportHeight = window.innerHeight;
                     const viewportWidth = window.innerWidth;
-                    
+
                     // Position below button by default
                     let top = rect.bottom + 4;
                     let left = rect.left;
-                    
+
                     // If menu would go below viewport, position it above
                     if (top + menuHeight > viewportHeight - 10) {
                         top = rect.top - menuHeight - 4;
                     }
-                    
+
                     // Ensure menu doesn't go above viewport
                     if (top < 10) {
                         top = 10;
                     }
-                    
+
                     // Ensure menu doesn't go off right edge
                     const menuWidth = Math.max(rect.width, 160);
                     if (left + menuWidth > viewportWidth - 10) {
                         left = viewportWidth - menuWidth - 10;
                     }
-                    
+
                     // Ensure menu doesn't go off left edge
                     if (left < 10) {
                         left = 10;
                     }
-                    
+
                     menu.style.position = 'fixed';
                     menu.style.top = `${top}px`;
                     menu.style.left = `${left}px`;
@@ -1041,13 +1043,13 @@ const VisitNote = () => {
             console.warn('Attempted to save patient chart data for signed note - blocked for legal compliance');
             return;
         }
-        
+
         try {
             // Handle deletions first - find items that were in original but not in current
             const originalAllergies = originalPatientChartDataRef.current.allergies || [];
             const currentAllergyIds = new Set(patientChartData.allergies.map(a => a.id).filter(Boolean));
             const deletedAllergies = originalAllergies.filter(a => a.id && !a.id.startsWith('temp-') && !currentAllergyIds.has(a.id));
-            
+
             // Delete removed allergies
             for (const allergy of deletedAllergies) {
                 if (allergy.id) {
@@ -1061,7 +1063,7 @@ const VisitNote = () => {
                     }
                 }
             }
-            
+
             // Save allergies (create/update)
             for (const allergy of patientChartData.allergies) {
                 if (allergy.id && allergy.id.startsWith('temp-')) {
@@ -1098,12 +1100,12 @@ const VisitNote = () => {
                     }
                 }
             }
-            
+
             // Handle medication deletions
             const originalMedications = originalPatientChartDataRef.current.medications || [];
             const currentMedicationIds = new Set(patientChartData.medications.map(m => m.id).filter(Boolean));
             const deletedMedications = originalMedications.filter(m => m.id && !m.id.startsWith('temp-') && !currentMedicationIds.has(m.id));
-            
+
             // Delete removed medications
             for (const med of deletedMedications) {
                 if (med.id) {
@@ -1117,7 +1119,7 @@ const VisitNote = () => {
                     }
                 }
             }
-            
+
             // Save medications (create/update)
             for (const med of patientChartData.medications) {
                 if (med.id && med.id.startsWith('temp-')) {
@@ -1157,12 +1159,12 @@ const VisitNote = () => {
                     }
                 }
             }
-            
+
             // Handle problem deletions
             const originalProblems = originalPatientChartDataRef.current.problems || [];
             const currentProblemIds = new Set(patientChartData.problems.map(p => p.id).filter(Boolean));
             const deletedProblems = originalProblems.filter(p => p.id && !p.id.startsWith('temp-') && !currentProblemIds.has(p.id));
-            
+
             // Delete removed problems
             for (const problem of deletedProblems) {
                 if (problem.id) {
@@ -1176,7 +1178,7 @@ const VisitNote = () => {
                     }
                 }
             }
-            
+
             // Save problems (create/update)
             for (const problem of patientChartData.problems) {
                 if (problem.id && problem.id.startsWith('temp-')) {
@@ -1210,12 +1212,12 @@ const VisitNote = () => {
                     }
                 }
             }
-            
+
             // Handle family history deletions
             const originalFamilyHistory = originalPatientChartDataRef.current.familyHistory || [];
             const currentFamilyHistoryIds = new Set(patientChartData.familyHistory.map(fh => fh.id).filter(Boolean));
             const deletedFamilyHistory = originalFamilyHistory.filter(fh => fh.id && !fh.id.startsWith('temp-') && !currentFamilyHistoryIds.has(fh.id));
-            
+
             // Delete removed family history
             for (const fh of deletedFamilyHistory) {
                 if (fh.id) {
@@ -1229,7 +1231,7 @@ const VisitNote = () => {
                     }
                 }
             }
-            
+
             // Save family history (create/update)
             for (const fh of patientChartData.familyHistory) {
                 if (fh.id && fh.id.startsWith('temp-')) {
@@ -1269,22 +1271,22 @@ const VisitNote = () => {
                     }
                 }
             }
-            
+
             // Save social history
             if (patientChartData.socialHistory) {
                 await patientsAPI.saveSocialHistory(patientId, patientChartData.socialHistory);
             }
-            
+
             // Preserve temporary items (items with temp- IDs that haven't been saved yet)
             const tempAllergies = patientChartData.allergies.filter(a => a.id && a.id.startsWith('temp-'));
             const tempMedications = patientChartData.medications.filter(m => m.id && m.id.startsWith('temp-'));
             const tempProblems = patientChartData.problems.filter(p => p.id && p.id.startsWith('temp-'));
             const tempFamilyHistory = patientChartData.familyHistory.filter(fh => fh.id && fh.id.startsWith('temp-'));
-            
+
             // Refresh patient chart data after saving (get current data, not snapshot)
             // This ensures the UI shows the latest saved data
             await fetchPatientChartData(patientId, null);
-            
+
             // Restore temporary items that weren't saved (empty ones or ones still being edited)
             setPatientChartData(prev => ({
                 ...prev,
@@ -1303,13 +1305,13 @@ const VisitNote = () => {
     const autoSave = useCallback(async (showToastMessage = false) => {
         if (isSigned || isSaving || isAutoSavingRef.current) return;
         if (!id) return; // Need patient ID
-        
+
         isAutoSavingRef.current = true;
-        
+
         try {
             const noteDraft = combineNoteSections();
             let visitId = currentVisitId || urlVisitId;
-            
+
             // Create visit if it doesn't exist
             if (!visitId || visitId === 'new') {
                 try {
@@ -1325,7 +1327,7 @@ const VisitNote = () => {
                     return;
                 }
             }
-            
+
             if (visitId) {
                 const vitalsToSave = {
                     systolic: vitals.systolic || null,
@@ -1341,18 +1343,18 @@ const VisitNote = () => {
                     weightUnit: vitals.weightUnit || 'lbs',
                     heightUnit: vitals.heightUnit || 'in'
                 };
-                
+
                 // Save patient chart data changes (only for unsigned notes)
                 if (!isSigned) {
                     await savePatientChartData(id);
                 }
-                
+
                 // Save even if note is empty
                 await visitsAPI.update(visitId, { noteDraft: noteDraft || '', vitals: vitalsToSave });
-                
+
                 const reloadResponse = await visitsAPI.get(visitId);
                 setVisitData(reloadResponse.data);
-                
+
                 // Reload parsed data to ensure planStructured is reconstructed from saved plan
                 if (reloadResponse.data.note_draft) {
                     const parsed = parseNoteText(reloadResponse.data.note_draft);
@@ -1363,10 +1365,10 @@ const VisitNote = () => {
                         planStructured: planStructured.length > 0 ? planStructured : prev.planStructured
                     }));
                 }
-                
+
                 setLastSaved(new Date());
                 hasInitialSaveRef.current = true;
-                
+
                 if (showToastMessage) {
                     showToast('Draft saved successfully', 'success');
                 }
@@ -1380,20 +1382,20 @@ const VisitNote = () => {
             isAutoSavingRef.current = false;
         }
     }, [id, currentVisitId, urlVisitId, isSigned, isSaving, noteData, vitals, patientChartData, combineNoteSections, parseNoteText, parsePlanText, formatPatientBackgroundForNote, savePatientChartData, fetchPatientChartData, showToast]);
-    
+
     // Debounced auto-save function
     const scheduleAutoSave = useCallback((showToastMessage = false) => {
         // Clear any pending auto-save
         if (autoSaveTimeoutRef.current) {
             clearTimeout(autoSaveTimeoutRef.current);
         }
-        
+
         // Schedule auto-save after 2 seconds of inactivity
         autoSaveTimeoutRef.current = setTimeout(() => {
             autoSave(showToastMessage);
         }, 2000);
     }, [autoSave]);
-    
+
     // Manual save (shows toast)
     const handleSave = async () => {
         // Cancel any pending auto-save and save immediately
@@ -1410,12 +1412,12 @@ const VisitNote = () => {
             showToast('Please enter addendum text', 'error');
             return;
         }
-        
+
         if (!currentVisitId || currentVisitId === 'new') {
             showToast('Please save the note first before adding an addendum', 'error');
             return;
         }
-        
+
         try {
             await visitsAPI.addAddendum(currentVisitId, addendumText);
             // Refresh visit data
@@ -1423,14 +1425,14 @@ const VisitNote = () => {
             const visitData = visitRes.data;
             let addendumsData = [];
             if (visitData.addendums) {
-                addendumsData = Array.isArray(visitData.addendums) 
-                    ? visitData.addendums 
+                addendumsData = Array.isArray(visitData.addendums)
+                    ? visitData.addendums
                     : JSON.parse(visitData.addendums || '[]');
                 setAddendums(addendumsData);
             }
             setAddendumText('');
             setShowAddendumModal(false);
-            
+
             // Find the newly added addendum (last one, unsigned)
             const newAddendumIndex = addendumsData.length - 1;
             if (newAddendumIndex >= 0 && !addendumsData[newAddendumIndex].signed) {
@@ -1442,8 +1444,8 @@ const VisitNote = () => {
                         const refreshRes = await visitsAPI.get(currentVisitId);
                         const refreshData = refreshRes.data;
                         if (refreshData.addendums) {
-                            const refreshedAddendums = Array.isArray(refreshData.addendums) 
-                                ? refreshData.addendums 
+                            const refreshedAddendums = Array.isArray(refreshData.addendums)
+                                ? refreshData.addendums
                                 : JSON.parse(refreshData.addendums || '[]');
                             setAddendums(refreshedAddendums);
                         }
@@ -1469,15 +1471,15 @@ const VisitNote = () => {
     // Sign addendum handler
     const handleSignAddendum = async () => {
         if (addendumToSignIndex === null || !currentVisitId) return;
-        
+
         try {
             await visitsAPI.signAddendum(currentVisitId, addendumToSignIndex);
             // Refresh visit data
             const visitRes = await visitsAPI.get(currentVisitId);
             const visitData = visitRes.data;
             if (visitData.addendums) {
-                const addendumsData = Array.isArray(visitData.addendums) 
-                    ? visitData.addendums 
+                const addendumsData = Array.isArray(visitData.addendums)
+                    ? visitData.addendums
                     : JSON.parse(visitData.addendums || '[]');
                 setAddendums(addendumsData);
             }
@@ -1489,7 +1491,7 @@ const VisitNote = () => {
             showToast('Failed to sign addendum: ' + (error.response?.data?.error || error.message), 'error');
         }
     };
-    
+
     // Auto-save immediately when note is loaded/opened (even if empty)
     useEffect(() => {
         if (!loading && !isSigned && visitData && visitData.id && !hasInitialSaveRef.current) {
@@ -1502,13 +1504,13 @@ const VisitNote = () => {
             return () => clearTimeout(timer);
         }
     }, [loading, isSigned, visitData, autoSave]);
-    
+
     // Auto-save on note data changes (debounced)
     useEffect(() => {
         if (hasInitialSaveRef.current && !isSigned && !loading) {
             scheduleAutoSave(false);
         }
-        
+
         // Cleanup timeout on unmount
         return () => {
             if (autoSaveTimeoutRef.current) {
@@ -1552,18 +1554,18 @@ const VisitNote = () => {
             showToast('Cannot delete signed notes', 'error');
             return;
         }
-        
+
         if (!window.confirm('Are you sure you want to delete this draft note? This action cannot be undone.')) {
             return;
         }
-        
+
         const visitId = currentVisitId || urlVisitId;
         if (!visitId || visitId === 'new') {
             // If it's a new visit that hasn't been saved, just navigate back
             navigate(`/patient/${id}/snapshot`);
             return;
         }
-        
+
         try {
             await visitsAPI.delete(visitId);
             showToast('Draft note deleted successfully', 'success');
@@ -1624,19 +1626,19 @@ const VisitNote = () => {
                     }
                     return cleaned;
                 };
-                
+
                 // Helper to clean all vitals values
                 const cleanVitalValue = (val) => {
                     if (!val || typeof val !== 'string') return val;
                     return normalizeBP(val);
                 };
-                
+
                 // First, save vitals and note draft to ensure everything is saved
                 // Clean all vital values to prevent HTML entity encoding issues
                 const cleanSystolic = cleanVitalValue(vitals.systolic);
                 const cleanDiastolic = cleanVitalValue(vitals.diastolic);
                 const cleanBp = normalizeBP(vitals.bp) || (cleanSystolic && cleanDiastolic ? `${cleanSystolic}/${cleanDiastolic}` : null);
-                
+
                 const vitalsToSave = {
                     systolic: cleanSystolic || null,
                     diastolic: cleanDiastolic || null,
@@ -1651,11 +1653,11 @@ const VisitNote = () => {
                     weightUnit: vitals.weightUnit || 'lbs',
                     heightUnit: vitals.heightUnit || 'in'
                 };
-                
+
                 // Save vitals first to ensure they're in the database
                 console.log('Saving vitals before signing:', vitalsToSave);
                 await visitsAPI.update(visitId, { noteDraft: noteDraft || '', vitals: vitalsToSave });
-                
+
                 // Then sign the note (vitals should already be saved, but include them as backup)
                 console.log('Signing note with vitals:', vitalsToSave);
                 await visitsAPI.sign(visitId, noteDraft, vitalsToSave);
@@ -1697,8 +1699,8 @@ const VisitNote = () => {
         const template = hpiDotPhrases[phrase];
         if (!template) return;
         const textarea = activeTextArea === 'hpi' ? hpiRef.current :
-                        activeTextArea === 'assessment' ? assessmentRef.current :
-                        activeTextArea === 'plan' ? planRef.current : null;
+            activeTextArea === 'assessment' ? assessmentRef.current :
+                activeTextArea === 'plan' ? planRef.current : null;
         if (textarea) {
             const start = textarea.selectionStart;
             const end = textarea.selectionEnd;
@@ -1707,11 +1709,11 @@ const VisitNote = () => {
             const after = text.substring(end);
             const newText = before.replace(new RegExp(`\\.${phrase.replace('.', '')}\\s*$`), '') + template + after;
             if (activeTextArea === 'hpi') {
-                setNoteData({...noteData, hpi: newText});
+                setNoteData({ ...noteData, hpi: newText });
             } else if (activeTextArea === 'assessment') {
-                setNoteData({...noteData, assessment: newText});
+                setNoteData({ ...noteData, assessment: newText });
             } else if (activeTextArea === 'plan') {
-                setNoteData({...noteData, plan: newText});
+                setNoteData({ ...noteData, plan: newText });
             }
             setTimeout(() => {
                 textarea.focus();
@@ -1832,15 +1834,15 @@ const VisitNote = () => {
             const displayText = trimmedLine.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             return `<a href="#" data-diagnosis="${escapedLine}" class="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer" onclick="event.preventDefault(); return false;">${displayText}</a>`;
         }).join('<br />');
-        
+
         // Only update if content changed to avoid cursor issues
         if (element.innerHTML !== html) {
             const selection = window.getSelection();
             const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
             const cursorPos = range ? range.startOffset : 0;
-            
+
             element.innerHTML = html;
-            
+
             // Restore cursor position if possible
             if (range && element.childNodes.length > 0) {
                 try {
@@ -1880,15 +1882,15 @@ const VisitNote = () => {
             const boldLine = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             return `<div>${boldLine}</div>`;
         }).join('');
-        
+
         // Only update if content changed to avoid cursor issues
         if (element.innerHTML !== html) {
             const selection = window.getSelection();
             const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
             const cursorPos = range ? range.startOffset : 0;
-            
+
             element.innerHTML = html;
-            
+
             // Restore cursor position if possible
             if (range && element.childNodes.length > 0) {
                 try {
@@ -1917,21 +1919,21 @@ const VisitNote = () => {
         // Create a temporary div to parse HTML
         const temp = document.createElement('div');
         temp.innerHTML = htmlContent;
-        
+
         // Convert <strong> tags back to **text**
         const strongElements = temp.querySelectorAll('strong');
         strongElements.forEach(strong => {
             const text = strong.textContent;
             strong.outerHTML = `**${text}**`;
         });
-        
+
         // Get text content and restore line breaks
         const lines = temp.innerHTML.split('<br>').map(line => {
             const div = document.createElement('div');
             div.innerHTML = line;
             return div.textContent || div.innerText || '';
         });
-        
+
         return lines.join('\n');
     }, []);
 
@@ -1940,50 +1942,50 @@ const VisitNote = () => {
         // For assessment field, strip HTML tags if present (from contentEditable)
         const cleanValue = field === 'assessment' ? value.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim() : decoded;
         if (field === 'hpi') {
-            setNoteData({...noteData, hpi: decoded});
+            setNoteData({ ...noteData, hpi: decoded });
         } else if (field === 'assessment') {
-            setNoteData({...noteData, assessment: cleanValue});
+            setNoteData({ ...noteData, assessment: cleanValue });
         } else if (field === 'plan') {
-            setNoteData({...noteData, plan: decoded});
+            setNoteData({ ...noteData, plan: decoded });
         }
     };
 
     // ICD-10 search - only search when user is typing
     useEffect(() => {
         const query = icd10Search.trim();
-        
+
         // Don't search if empty - clear results and hide dropdown
         if (query.length === 0) {
             setIcd10Results([]);
             setShowIcd10Search(false);
             return;
         }
-        
+
         const timeout = setTimeout(async () => {
             try {
                 const response = await codesAPI.searchICD10(query);
                 let results = response.data || [];
-                
+
                 // Sort results: shortest description first, with hierarchy codes prioritized
                 results = results.sort((a, b) => {
                     const aHasHierarchy = codesWithHierarchy.has(a.code) || codesWithHierarchy.has(a.code.match(/^([A-Z]\d+)/)?.[1]);
                     const bHasHierarchy = codesWithHierarchy.has(b.code) || codesWithHierarchy.has(b.code.match(/^([A-Z]\d+)/)?.[1]);
                     const aDescLength = (a.description || '').length;
                     const bDescLength = (b.description || '').length;
-                    
+
                     // First priority: hierarchy codes come first
                     if (aHasHierarchy && !bHasHierarchy) return -1;
                     if (!aHasHierarchy && bHasHierarchy) return 1;
-                    
+
                     // Second priority: shortest description first
                     if (aDescLength !== bDescLength) {
                         return aDescLength - bDescLength;
                     }
-                    
+
                     // If same length, sort alphabetically by code
                     return a.code.localeCompare(b.code);
                 });
-                
+
                 setIcd10Results(results);
                 // Only show results if user is actively typing
                 if (query.length > 0) {
@@ -2015,11 +2017,11 @@ const VisitNote = () => {
         // Always check for hierarchy first - try exact code, then base code
         let hasHierarchy = false;
         let hierarchyData = null;
-        
+
         try {
             // Try exact code first
             const hierarchyResponse = await icd10HierarchyAPI.getQuestions(code.code);
-            
+
             if (hierarchyResponse?.data?.questions?.length > 0) {
                 hasHierarchy = true;
                 hierarchyData = hierarchyResponse.data;
@@ -2041,7 +2043,7 @@ const VisitNote = () => {
             // No hierarchy found or API error - continue with direct add
             // Silently fail - not all codes have hierarchies
         }
-        
+
         // If hierarchy exists, open the selector modal
         if (hasHierarchy) {
             // Set the code and description first
@@ -2057,7 +2059,7 @@ const VisitNote = () => {
             }, 150);
             return;
         }
-        
+
         // Direct add (no hierarchy)
         addICD10Directly(code, addToProblem);
     };
@@ -2072,16 +2074,16 @@ const VisitNote = () => {
                 showToast('Error adding to problem list', 'error');
             }
         }
-        const newAssessment = noteData.assessment 
+        const newAssessment = noteData.assessment
             ? `${noteData.assessment}\n${code.code} - ${code.description}`
             : `${code.code} - ${code.description}`;
-        setNoteData({...noteData, assessment: newAssessment});
-        
+        setNoteData({ ...noteData, assessment: newAssessment });
+
         // Collapse the dropdown and clear search
         setShowIcd10Search(false);
         setIcd10Search('');
         setIcd10Results([]);
-        
+
         // Re-render assessment to show clickable diagnoses
         setTimeout(() => {
             if (assessmentRef.current && !isSigned) {
@@ -2117,7 +2119,7 @@ const VisitNote = () => {
     // Helper function to add diagnosis to assessment and trigger re-render
     const handleAddDiagnosisToAssessment = useCallback((diagnosisText) => {
         setNoteData(prev => {
-            const newAssessment = prev.assessment 
+            const newAssessment = prev.assessment
                 ? `${prev.assessment}\n${diagnosisText}`
                 : diagnosisText;
             // Trigger re-render of assessment contentEditable div after state update
@@ -2136,7 +2138,7 @@ const VisitNote = () => {
             const currentPlan = prev.planStructured || [];
             const updatedPlan = currentPlan.filter((_, i) => i !== index);
             const formattedPlan = formatPlanText(updatedPlan);
-            return {...prev, planStructured: updatedPlan, plan: formattedPlan};
+            return { ...prev, planStructured: updatedPlan, plan: formattedPlan };
         });
     };
 
@@ -2146,7 +2148,7 @@ const VisitNote = () => {
             if (currentPlan[index]) {
                 currentPlan[index] = { ...currentPlan[index], diagnosis: newDiagnosis };
                 const formattedPlan = formatPlanText(currentPlan);
-                return {...prev, planStructured: currentPlan, plan: formattedPlan};
+                return { ...prev, planStructured: currentPlan, plan: formattedPlan };
             }
             return prev;
         });
@@ -2161,11 +2163,11 @@ const VisitNote = () => {
                     // If no orders left, remove the entire plan item
                     const updatedPlan = currentPlan.filter((_, i) => i !== diagnosisIndex);
                     const formattedPlan = formatPlanText(updatedPlan);
-                    return {...prev, planStructured: updatedPlan, plan: formattedPlan};
+                    return { ...prev, planStructured: updatedPlan, plan: formattedPlan };
                 } else {
                     currentPlan[diagnosisIndex] = { ...currentPlan[diagnosisIndex], orders: updatedOrders };
                     const formattedPlan = formatPlanText(currentPlan);
-                    return {...prev, planStructured: currentPlan, plan: formattedPlan};
+                    return { ...prev, planStructured: currentPlan, plan: formattedPlan };
                 }
             }
             return prev;
@@ -2180,7 +2182,7 @@ const VisitNote = () => {
                 updatedOrders[orderIndex] = newOrder;
                 currentPlan[diagnosisIndex] = { ...currentPlan[diagnosisIndex], orders: updatedOrders };
                 const formattedPlan = formatPlanText(currentPlan);
-                return {...prev, planStructured: currentPlan, plan: formattedPlan};
+                return { ...prev, planStructured: currentPlan, plan: formattedPlan };
             }
             return prev;
         });
@@ -2194,7 +2196,7 @@ const VisitNote = () => {
                 const updatedOrders = [...(currentPlan[diagnosisIndex].orders || []), newOrder.trim()];
                 currentPlan[diagnosisIndex] = { ...currentPlan[diagnosisIndex], orders: updatedOrders };
                 const formattedPlan = formatPlanText(currentPlan);
-                return {...prev, planStructured: currentPlan, plan: formattedPlan};
+                return { ...prev, planStructured: currentPlan, plan: formattedPlan };
             }
             return prev;
         });
@@ -2221,7 +2223,7 @@ const VisitNote = () => {
                 }
             }, 50);
 
-            return {...prev, assessment: newAssessment, planStructured: updatedPlan, plan: formattedPlan};
+            return { ...prev, assessment: newAssessment, planStructured: updatedPlan, plan: formattedPlan };
         });
         setClickedDiagnosis(null);
     };
@@ -2229,7 +2231,7 @@ const VisitNote = () => {
     // Add order to plan
     const addOrderToPlan = (diagnosis, orderText) => {
         let diagnosisToUse = diagnosis;
-        
+
         // If diagnosis is new, add it to assessment
         // Check for duplicates more robustly - handle both with and without ICD-10 code
         if (diagnosis) {
@@ -2246,12 +2248,12 @@ const VisitNote = () => {
                 if (existingCode && newCode && existingCode[1] === newCode[1]) return true;
                 return false;
             });
-            
+
             if (!diagnosisAlreadyExists) {
-                const newAssessment = noteData.assessment 
+                const newAssessment = noteData.assessment
                     ? `${noteData.assessment}\n${diagnosis}`
                     : diagnosis;
-                setNoteData(prev => ({...prev, assessment: newAssessment}));
+                setNoteData(prev => ({ ...prev, assessment: newAssessment }));
             }
         }
 
@@ -2259,7 +2261,7 @@ const VisitNote = () => {
         setNoteData(prev => {
             const currentPlan = prev.planStructured || [];
             const diagnosisIndex = currentPlan.findIndex(item => item.diagnosis === diagnosisToUse);
-            
+
             let updatedPlan;
             if (diagnosisIndex >= 0) {
                 // Add order to existing diagnosis
@@ -2274,7 +2276,7 @@ const VisitNote = () => {
             }
 
             const formattedPlan = formatPlanText(updatedPlan);
-            return {...prev, planStructured: updatedPlan, plan: formattedPlan};
+            return { ...prev, planStructured: updatedPlan, plan: formattedPlan };
         });
     };
 
@@ -2418,29 +2420,29 @@ const VisitNote = () => {
     // Ensure visitData exists, use empty object if not
     const currentVisitData = visitData || {};
     const visitDate = currentVisitData.visit_date ? format(new Date(currentVisitData.visit_date), 'MMM d, yyyy') : format(new Date(), 'MMM d, yyyy');
-    
+
     // Get current logged-in user name
-    const currentUserName = user 
+    const currentUserName = user
         ? `${user.firstName || user.first_name || ''} ${user.lastName || user.last_name || ''}`.trim()
         : null;
-    
+
     // Use signed_by name if note is signed and it's not "System Administrator"
     const signedByName = currentVisitData.signed_by_first_name && currentVisitData.signed_by_last_name
         ? `${currentVisitData.signed_by_first_name} ${currentVisitData.signed_by_last_name}`
         : null;
-    
+
     // Get provider name from visit data
     const providerNameFromVisit = currentVisitData.provider_first_name && currentVisitData.provider_last_name
         ? `${currentVisitData.provider_first_name} ${currentVisitData.provider_last_name}`
         : null;
-    
+
     // Determine display name priority:
     // 1. If signed and signed_by is valid (not "System Administrator"), use signed_by
     // 2. If not signed or signed_by is "System Administrator", use current logged-in user
     // 3. Fallback to provider from visit if current user not available
     // 4. Final fallback to "Provider"
     let displayName = 'Provider';
-    
+
     if (isSigned && signedByName && signedByName !== 'System Administrator') {
         displayName = signedByName;
     } else if (currentUserName && currentUserName !== 'System Administrator') {
@@ -2449,7 +2451,7 @@ const VisitNote = () => {
     } else if (providerNameFromVisit && providerNameFromVisit !== 'System Administrator') {
         displayName = providerNameFromVisit;
     }
-    
+
     const providerName = displayName;
 
     // Signed notes now use the same template as editable notes, just with disabled inputs
@@ -2476,124 +2478,124 @@ const VisitNote = () => {
             <div className="bg-white border-b border-gray-200 shadow-sm">
                 {/* Quick Navigation Bar - Merged with Header */}
                 <div className="px-6 py-2 bg-gray-50 border-b border-gray-200">
-                        <div className="flex items-center justify-between gap-1">
-                            <div className="flex items-center gap-1 overflow-x-auto flex-1">
-                                <button
-                                    onClick={() => {
-                                        setPatientChartTab('hub');
-                                        setShowPatientChart(true);
-                                    }}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
-                                >
-                                    <UserCircle className="w-3.5 h-3.5 text-green-600" />
-                                    <span>Patient Hub</span>
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setPatientChartTab('data');
-                                        setShowPatientChart(true);
-                                    }}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
-                                >
-                                    <Database className="w-3.5 h-3.5 text-orange-600" />
-                                    <span>Patient Data</span>
-                                </button>
-                                <div className="w-px h-6 bg-gray-300 mx-1"></div>
-                                <button
-                                    onClick={() => {
-                                        setPatientChartTab('images');
-                                        setShowPatientChart(true);
-                                    }}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
-                                >
-                                    <FileImage className="w-3.5 h-3.5 text-purple-600" />
-                                    <span>Images</span>
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setPatientChartTab('labs');
-                                        setShowPatientChart(true);
-                                    }}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
-                                >
-                                    <FlaskConical className="w-3.5 h-3.5 text-blue-600" />
-                                    <span>Labs</span>
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setPatientChartTab('documents');
-                                        setShowPatientChart(true);
-                                    }}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
-                                >
-                                    <FileText className="w-3.5 h-3.5 text-gray-600" />
-                                    <span>Documents</span>
-                                </button>
-                                <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                    <div className="flex items-center justify-between gap-1">
+                        <div className="flex items-center gap-1 overflow-x-auto flex-1">
+                            <button
+                                onClick={() => {
+                                    setPatientChartTab('hub');
+                                    setShowPatientChart(true);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
+                            >
+                                <UserCircle className="w-3.5 h-3.5 text-green-600" />
+                                <span>Patient Hub</span>
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setPatientChartTab('data');
+                                    setShowPatientChart(true);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
+                            >
+                                <Database className="w-3.5 h-3.5 text-orange-600" />
+                                <span>Patient Data</span>
+                            </button>
+                            <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                            <button
+                                onClick={() => {
+                                    setPatientChartTab('images');
+                                    setShowPatientChart(true);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
+                            >
+                                <FileImage className="w-3.5 h-3.5 text-purple-600" />
+                                <span>Images</span>
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setPatientChartTab('labs');
+                                    setShowPatientChart(true);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
+                            >
+                                <FlaskConical className="w-3.5 h-3.5 text-blue-600" />
+                                <span>Labs</span>
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setPatientChartTab('documents');
+                                    setShowPatientChart(true);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
+                            >
+                                <FileText className="w-3.5 h-3.5 text-gray-600" />
+                                <span>Documents</span>
+                            </button>
+                            <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setPatientChartTab('ekg');
+                                    setShowPatientChart(true);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
+                            >
+                                <Activity className="w-3.5 h-3.5 text-red-600" />
+                                <span>EKG</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setPatientChartTab('echo');
+                                    setShowPatientChart(true);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
+                            >
+                                <Heart className="w-3.5 h-3.5 text-blue-600" />
+                                <span>ECHO</span>
+                            </button>
+                            <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                            {hasPrivilege('e_prescribe') && (
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        setPatientChartTab('ekg');
-                                        setShowPatientChart(true);
+                                        setShowEPrescribeEnhanced(true);
                                     }}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-md transition-all duration-200 hover:shadow-md whitespace-nowrap"
+                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
+                                    title="Create New Prescription"
                                 >
-                                    <Activity className="w-3.5 h-3.5 text-red-600" />
-                                    <span>EKG</span>
+                                    <Pill className="w-3.5 h-3.5" />
+                                    <span>e-Prescribe</span>
                                 </button>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setPatientChartTab('echo');
-                                        setShowPatientChart(true);
-                                    }}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
-                                >
-                                    <Heart className="w-3.5 h-3.5 text-blue-600" />
-                                    <span>ECHO</span>
-                                </button>
-                                <div className="w-px h-6 bg-gray-300 mx-1"></div>
-                                {hasPrivilege('e_prescribe') && (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setShowEPrescribeEnhanced(true);
-                                        }}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-md transition-all duration-200 hover:shadow-md whitespace-nowrap"
-                                        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                                        title="Create New Prescription"
-                                    >
-                                        <Pill className="w-3.5 h-3.5" />
-                                        <span>e-Prescribe</span>
-                                    </button>
-                                )}
-                                <button
-                                    onClick={() => {
-                                        setPatientChartTab('prescriptions');
-                                        setShowPatientChart(true);
-                                    }}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
-                                >
-                                    <Pill className="w-3.5 h-3.5 text-primary-600" />
-                                    <span>Prescription Log</span>
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setPatientChartTab('referrals');
-                                        setShowPatientChart(true);
-                                    }}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
-                                >
-                                    <FileText className="w-3.5 h-3.5 text-green-600" />
-                                    <span>Referral Log</span>
-                                </button>
-                            </div>
+                            )}
+                            <button
+                                onClick={() => {
+                                    setPatientChartTab('prescriptions');
+                                    setShowPatientChart(true);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
+                            >
+                                <Pill className="w-3.5 h-3.5 text-primary-600" />
+                                <span>Prescription Log</span>
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setPatientChartTab('referrals');
+                                    setShowPatientChart(true);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
+                            >
+                                <FileText className="w-3.5 h-3.5 text-green-600" />
+                                <span>Referral Log</span>
+                            </button>
                         </div>
                     </div>
                 </div>
-            
+            </div>
+
             <div className="max-w-5xl mx-auto px-6 py-8">
                 {/* Master Back Button */}
                 <div className="mb-4">
@@ -2625,8 +2627,8 @@ const VisitNote = () => {
                                             </span>
                                         )}
                                     </div>
-                                    <button 
-                                        onClick={() => setShowAddendumModal(true)} 
+                                    <button
+                                        onClick={() => setShowAddendumModal(true)}
                                         className="px-2.5 py-1.5 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-all duration-200 hover:shadow-md text-xs font-medium"
                                         style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
                                         onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
@@ -2674,9 +2676,9 @@ const VisitNote = () => {
                                         onChange={(e) => {
                                             const sys = e.target.value;
                                             const bp = sys && vitals.diastolic ? `${sys}/${vitals.diastolic}` : '';
-                                            setVitals({...vitals, systolic: sys, bp});
+                                            setVitals({ ...vitals, systolic: sys, bp });
                                         }}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); diastolicRef.current?.focus(); }}}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); diastolicRef.current?.focus(); } }}
                                         disabled={isSigned}
                                         className={`w-14 px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors ${isAbnormalVital('systolic', vitals.systolic) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
                                     />
@@ -2685,9 +2687,9 @@ const VisitNote = () => {
                                         onChange={(e) => {
                                             const dia = e.target.value;
                                             const bp = vitals.systolic && dia ? `${vitals.systolic}/${dia}` : '';
-                                            setVitals({...vitals, diastolic: dia, bp});
+                                            setVitals({ ...vitals, diastolic: dia, bp });
                                         }}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); pulseRef.current?.focus(); }}}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); pulseRef.current?.focus(); } }}
                                         disabled={isSigned}
                                         className={`w-14 px-1.5 py-1 text-xs border border-gray-300 rounded-md bg-white focus:ring-1 focus:ring-accent-500 focus:border-accent-500 disabled:bg-white disabled:text-gray-900 transition-colors ${isAbnormalVital('diastolic', vitals.diastolic) ? 'text-red-600 font-semibold border-red-300' : 'text-gray-900'}`}
                                     />
@@ -2696,8 +2698,8 @@ const VisitNote = () => {
                             <div>
                                 <label className="block text-xs font-medium text-neutral-700 mb-1">HR (bpm)</label>
                                 <input ref={pulseRef} type="number" placeholder="72" value={vitals.pulse}
-                                    onChange={(e) => setVitals({...vitals, pulse: e.target.value})}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); o2satRef.current?.focus(); }}}
+                                    onChange={(e) => setVitals({ ...vitals, pulse: e.target.value })}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); o2satRef.current?.focus(); } }}
                                     disabled={isSigned}
                                     className={`w-full px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors ${isAbnormalVital('pulse', vitals.pulse) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
                                 />
@@ -2705,8 +2707,8 @@ const VisitNote = () => {
                             <div>
                                 <label className="block text-xs font-medium text-neutral-700 mb-1">O2 Sat (%)</label>
                                 <input ref={o2satRef} type="number" placeholder="98" value={vitals.o2sat}
-                                    onChange={(e) => setVitals({...vitals, o2sat: e.target.value})}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); tempRef.current?.focus(); }}}
+                                    onChange={(e) => setVitals({ ...vitals, o2sat: e.target.value })}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); tempRef.current?.focus(); } }}
                                     disabled={isSigned}
                                     className={`w-full px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors ${isAbnormalVital('o2sat', vitals.o2sat) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
                                 />
@@ -2714,8 +2716,8 @@ const VisitNote = () => {
                             <div>
                                 <label className="block text-xs font-medium text-neutral-700 mb-1">Temp (°F)</label>
                                 <input ref={tempRef} type="number" step="0.1" placeholder="98.6" value={vitals.temp}
-                                    onChange={(e) => setVitals({...vitals, temp: e.target.value})}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); weightRef.current?.focus(); }}}
+                                    onChange={(e) => setVitals({ ...vitals, temp: e.target.value })}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); weightRef.current?.focus(); } }}
                                     disabled={isSigned}
                                     className={`w-full px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors ${isAbnormalVital('temp', vitals.temp) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
                                 />
@@ -2734,7 +2736,7 @@ const VisitNote = () => {
                                     <input ref={weightRef} type="text" value={vitals.weight || ''}
                                         onChange={(e) => {
                                             const weight = e.target.value;
-                                            const newVitals = {...vitals, weight};
+                                            const newVitals = { ...vitals, weight };
                                             if (weight && vitals.height) {
                                                 newVitals.bmi = calculateBMI(weight, vitals.weightUnit, vitals.height, vitals.heightUnit);
                                             } else {
@@ -2742,7 +2744,7 @@ const VisitNote = () => {
                                             }
                                             setVitals(newVitals);
                                         }}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); heightRef.current?.focus(); }}}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); heightRef.current?.focus(); } }}
                                         disabled={isSigned}
                                         className="w-16 px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors text-neutral-900"
                                     />
@@ -2751,22 +2753,22 @@ const VisitNote = () => {
                                             const newUnit = 'lbs';
                                             if (vitals.weight && vitals.weightUnit !== newUnit) {
                                                 const converted = convertWeight(vitals.weight, vitals.weightUnit, newUnit);
-                                                const newVitals = {...vitals, weightUnit: newUnit, weight: converted};
+                                                const newVitals = { ...vitals, weightUnit: newUnit, weight: converted };
                                                 if (converted && vitals.height) newVitals.bmi = calculateBMI(converted, newUnit, vitals.height, vitals.heightUnit);
                                                 setVitals(newVitals);
                                             } else {
-                                                setVitals({...vitals, weightUnit: newUnit});
+                                                setVitals({ ...vitals, weightUnit: newUnit });
                                             }
                                         }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.weightUnit === 'lbs' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.weightUnit === 'lbs' ? { background: '#3B82F6' } : {}}>lbs</button>
                                         <button type="button" onClick={() => {
                                             const newUnit = 'kg';
                                             if (vitals.weight && vitals.weightUnit !== newUnit) {
                                                 const converted = convertWeight(vitals.weight, vitals.weightUnit, newUnit);
-                                                const newVitals = {...vitals, weightUnit: newUnit, weight: converted};
+                                                const newVitals = { ...vitals, weightUnit: newUnit, weight: converted };
                                                 if (converted && vitals.height) newVitals.bmi = calculateBMI(converted, newUnit, vitals.height, vitals.heightUnit);
                                                 setVitals(newVitals);
                                             } else {
-                                                setVitals({...vitals, weightUnit: newUnit});
+                                                setVitals({ ...vitals, weightUnit: newUnit });
                                             }
                                         }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.weightUnit === 'kg' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.weightUnit === 'kg' ? { background: '#3B82F6' } : {}}>kg</button>
                                     </div>
@@ -2778,7 +2780,7 @@ const VisitNote = () => {
                                     <input ref={heightRef} type="number" step="0.1" placeholder="70" value={vitals.height}
                                         onChange={(e) => {
                                             const height = e.target.value;
-                                            const newVitals = {...vitals, height};
+                                            const newVitals = { ...vitals, height };
                                             if (height && vitals.weight) {
                                                 newVitals.bmi = calculateBMI(vitals.weight, vitals.weightUnit, height, vitals.heightUnit);
                                             } else {
@@ -2786,7 +2788,7 @@ const VisitNote = () => {
                                             }
                                             setVitals(newVitals);
                                         }}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); hpiRef.current?.focus(); }}}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); hpiRef.current?.focus(); } }}
                                         disabled={isSigned}
                                         className="w-16 px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors text-neutral-900"
                                     />
@@ -2795,22 +2797,22 @@ const VisitNote = () => {
                                             const newUnit = 'in';
                                             if (vitals.height && vitals.heightUnit !== newUnit) {
                                                 const converted = convertHeight(vitals.height, vitals.heightUnit, newUnit);
-                                                const newVitals = {...vitals, heightUnit: newUnit, height: converted};
+                                                const newVitals = { ...vitals, heightUnit: newUnit, height: converted };
                                                 if (converted && vitals.weight) newVitals.bmi = calculateBMI(vitals.weight, vitals.weightUnit, converted, newUnit);
                                                 setVitals(newVitals);
                                             } else {
-                                                setVitals({...vitals, heightUnit: newUnit});
+                                                setVitals({ ...vitals, heightUnit: newUnit });
                                             }
                                         }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.heightUnit === 'in' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.heightUnit === 'in' ? { background: '#3B82F6' } : {}}>in</button>
                                         <button type="button" onClick={() => {
                                             const newUnit = 'cm';
                                             if (vitals.height && vitals.heightUnit !== newUnit) {
                                                 const converted = convertHeight(vitals.height, vitals.heightUnit, newUnit);
-                                                const newVitals = {...vitals, heightUnit: newUnit, height: converted};
+                                                const newVitals = { ...vitals, heightUnit: newUnit, height: converted };
                                                 if (converted && vitals.weight) newVitals.bmi = calculateBMI(vitals.weight, vitals.weightUnit, converted, newUnit);
                                                 setVitals(newVitals);
                                             } else {
-                                                setVitals({...vitals, heightUnit: newUnit});
+                                                setVitals({ ...vitals, heightUnit: newUnit });
                                             }
                                         }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.heightUnit === 'cm' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.heightUnit === 'cm' ? { background: '#3B82F6' } : {}}>cm</button>
                                     </div>
@@ -2828,7 +2830,7 @@ const VisitNote = () => {
                     <div className="mb-3">
                         <label className="block text-sm font-semibold text-neutral-900 mb-1">Chief Complaint</label>
                         <input type="text" placeholder="Enter chief complaint..." value={noteData.chiefComplaint || ''}
-                            onChange={(e) => setNoteData({...noteData, chiefComplaint: e.target.value})}
+                            onChange={(e) => setNoteData({ ...noteData, chiefComplaint: e.target.value })}
                             disabled={isSigned}
                             className="w-full px-2 py-1.5 text-sm font-medium border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors text-neutral-900"
                         />
@@ -2838,7 +2840,7 @@ const VisitNote = () => {
                     <Section title="History of Present Illness (HPI)" defaultOpen={true}>
                         <div className="relative">
                             {isSigned ? (
-                                <div 
+                                <div
                                     className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white text-neutral-900 leading-relaxed min-h-[80px] whitespace-pre-wrap"
                                     dangerouslySetInnerHTML={{
                                         __html: noteData.hpi ? noteData.hpi.split('\n').map((line, idx) => {
@@ -2896,9 +2898,8 @@ const VisitNote = () => {
                                             key={item.key}
                                             type="button"
                                             onClick={() => insertDotPhrase(item.key, autocompleteState)}
-                                            className={`w-full text-left px-2 py-1 border-b border-neutral-100 hover:bg-primary-50 transition-colors ${
-                                                index === autocompleteState.selectedIndex ? 'bg-primary-100' : ''
-                                            }`}
+                                            className={`w-full text-left px-2 py-1 border-b border-neutral-100 hover:bg-primary-50 transition-colors ${index === autocompleteState.selectedIndex ? 'bg-primary-100' : ''
+                                                }`}
                                         >
                                             <div className="font-medium text-neutral-900 text-xs">{item.key}</div>
                                             <div className="text-xs text-neutral-500 truncate">{item.template.substring(0, 60)}...</div>
@@ -2917,92 +2918,92 @@ const VisitNote = () => {
 
                     {/* ROS */}
                     <Section title="Review of Systems" defaultOpen={true}>
-                            <div className="grid grid-cols-2 gap-1 mb-1.5">
-                                {Object.keys(noteData.ros).map(system => (
-                                    <label key={system} className="flex items-center space-x-1 cursor-pointer">
-                                        {noteData.ros[system] ? <CheckSquare className="w-3 h-3 text-primary-600" /> : <Square className="w-3 h-3 text-neutral-400" />}
-                                        <span className="text-xs text-neutral-700 capitalize">{system}</span>
-                                        <input type="checkbox" checked={noteData.ros[system]}
-                                            onChange={(e) => {
-                                                const isChecked = e.target.checked;
-                                                const systemName = system.charAt(0).toUpperCase() + system.slice(1);
-                                                const findings = rosFindings[system] || '';
-                                                const newRos = {...noteData.ros, [system]: isChecked};
-                                                let newRosNotes = noteData.rosNotes || '';
-                                                const findingsLine = `**${systemName}:** ${findings}`;
-                                                if (isChecked) {
-                                                    if (!newRosNotes.includes(`**${systemName}:**`)) {
-                                                        newRosNotes = newRosNotes.trim() ? `${newRosNotes}\n${findingsLine}` : findingsLine;
-                                                    }
-                                                } else {
-                                                    newRosNotes = newRosNotes.split('\n').filter(line => !line.trim().startsWith(`**${systemName}:**`)).join('\n').trim();
+                        <div className="grid grid-cols-2 gap-1 mb-1.5">
+                            {Object.keys(noteData.ros).map(system => (
+                                <label key={system} className="flex items-center space-x-1 cursor-pointer">
+                                    {noteData.ros[system] ? <CheckSquare className="w-3 h-3 text-primary-600" /> : <Square className="w-3 h-3 text-neutral-400" />}
+                                    <span className="text-xs text-neutral-700 capitalize">{system}</span>
+                                    <input type="checkbox" checked={noteData.ros[system]}
+                                        onChange={(e) => {
+                                            const isChecked = e.target.checked;
+                                            const systemName = system.charAt(0).toUpperCase() + system.slice(1);
+                                            const findings = rosFindings[system] || '';
+                                            const newRos = { ...noteData.ros, [system]: isChecked };
+                                            let newRosNotes = noteData.rosNotes || '';
+                                            const findingsLine = `**${systemName}:** ${findings}`;
+                                            if (isChecked) {
+                                                if (!newRosNotes.includes(`**${systemName}:**`)) {
+                                                    newRosNotes = newRosNotes.trim() ? `${newRosNotes}\n${findingsLine}` : findingsLine;
                                                 }
-                                                setNoteData({...noteData, ros: newRos, rosNotes: newRosNotes});
-                                            }}
-                                            disabled={isSigned}
-                                            className="hidden"
-                                        />
-                                    </label>
-                                ))}
-                            </div>
-                            {isSigned ? (
-                                <div 
-                                    className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white text-neutral-900 leading-relaxed min-h-[120px] whitespace-pre-wrap"
-                                    dangerouslySetInnerHTML={{
-                                        __html: noteData.rosNotes.split('\n').map((line, idx) => {
-                                            const trimmedLine = line.trim();
-                                            if (!trimmedLine) return '<br />';
-                                            // Convert **text** to <strong>text</strong>
-                                            const boldLine = trimmedLine.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                                            return `<div key="${idx}">${boldLine}</div>`;
-                                        }).join('')
-                                    }}
-                                />
-                            ) : (
-                                <div
-                                    ref={rosRef}
-                                    contentEditable
-                                    suppressContentEditableWarning
-                                    onInput={(e) => {
-                                        // Extract markdown from HTML content
-                                        const markdownText = extractMarkdownFromHTML(e.currentTarget.innerHTML);
-                                        setNoteData({...noteData, rosNotes: markdownText});
-                                        // Re-render with bold formatting
-                                        setTimeout(() => {
-                                            renderBoldText(e.currentTarget, markdownText);
-                                        }, 50);
-                                    }}
-                                    onBlur={(e) => {
-                                        // Extract markdown from HTML content
-                                        const markdownText = extractMarkdownFromHTML(e.currentTarget.innerHTML);
-                                        setNoteData({...noteData, rosNotes: markdownText});
-                                    }}
-                                    className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px] cursor-text outline-none"
-                                    style={{ whiteSpace: 'pre-wrap' }}
-                                    dangerouslySetInnerHTML={{
-                                        __html: noteData.rosNotes.split('\n').map((line) => {
-                                            const trimmedLine = line.trim();
-                                            if (!trimmedLine) return '<br />';
-                                            // Convert **text** to <strong>text</strong>
-                                            const boldLine = trimmedLine.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                                            return `<div>${boldLine}</div>`;
-                                        }).join('')
-                                    }}
-                                />
-                            )}
-                            <button onClick={() => {
-                                const allRos = {};
-                                Object.keys(noteData.ros).forEach(key => { allRos[key] = true; });
-                                let rosText = '';
-                                Object.keys(rosFindings).forEach(key => {
-                                    const systemName = key.charAt(0).toUpperCase() + key.slice(1);
-                                    rosText += `**${systemName}:** ${rosFindings[key]}\n`;
-                                });
-                                setNoteData({...noteData, ros: allRos, rosNotes: rosText.trim()});
-                            }} disabled={isSigned} className="mt-1.5 px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
-                                Pre-fill Normal ROS
-                            </button>
-                        </Section>
+                                            } else {
+                                                newRosNotes = newRosNotes.split('\n').filter(line => !line.trim().startsWith(`**${systemName}:**`)).join('\n').trim();
+                                            }
+                                            setNoteData({ ...noteData, ros: newRos, rosNotes: newRosNotes });
+                                        }}
+                                        disabled={isSigned}
+                                        className="hidden"
+                                    />
+                                </label>
+                            ))}
+                        </div>
+                        {isSigned ? (
+                            <div
+                                className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white text-neutral-900 leading-relaxed min-h-[120px] whitespace-pre-wrap"
+                                dangerouslySetInnerHTML={{
+                                    __html: noteData.rosNotes.split('\n').map((line, idx) => {
+                                        const trimmedLine = line.trim();
+                                        if (!trimmedLine) return '<br />';
+                                        // Convert **text** to <strong>text</strong>
+                                        const boldLine = trimmedLine.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                                        return `<div key="${idx}">${boldLine}</div>`;
+                                    }).join('')
+                                }}
+                            />
+                        ) : (
+                            <div
+                                ref={rosRef}
+                                contentEditable
+                                suppressContentEditableWarning
+                                onInput={(e) => {
+                                    // Extract markdown from HTML content
+                                    const markdownText = extractMarkdownFromHTML(e.currentTarget.innerHTML);
+                                    setNoteData({ ...noteData, rosNotes: markdownText });
+                                    // Re-render with bold formatting
+                                    setTimeout(() => {
+                                        renderBoldText(e.currentTarget, markdownText);
+                                    }, 50);
+                                }}
+                                onBlur={(e) => {
+                                    // Extract markdown from HTML content
+                                    const markdownText = extractMarkdownFromHTML(e.currentTarget.innerHTML);
+                                    setNoteData({ ...noteData, rosNotes: markdownText });
+                                }}
+                                className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px] cursor-text outline-none"
+                                style={{ whiteSpace: 'pre-wrap' }}
+                                dangerouslySetInnerHTML={{
+                                    __html: noteData.rosNotes.split('\n').map((line) => {
+                                        const trimmedLine = line.trim();
+                                        if (!trimmedLine) return '<br />';
+                                        // Convert **text** to <strong>text</strong>
+                                        const boldLine = trimmedLine.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                                        return `<div>${boldLine}</div>`;
+                                    }).join('')
+                                }}
+                            />
+                        )}
+                        <button onClick={() => {
+                            const allRos = {};
+                            Object.keys(noteData.ros).forEach(key => { allRos[key] = true; });
+                            let rosText = '';
+                            Object.keys(rosFindings).forEach(key => {
+                                const systemName = key.charAt(0).toUpperCase() + key.slice(1);
+                                rosText += `**${systemName}:** ${rosFindings[key]}\n`;
+                            });
+                            setNoteData({ ...noteData, ros: allRos, rosNotes: rosText.trim() });
+                        }} disabled={isSigned} className="mt-1.5 px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
+                            Pre-fill Normal ROS
+                        </button>
+                    </Section>
 
                     {/* Patient Background - Editable from Note */}
                     <Section title="Patient Background" defaultOpen={true}>
@@ -3454,7 +3455,7 @@ const VisitNote = () => {
                                                 const isChecked = e.target.checked;
                                                 const systemName = system.replace(/([A-Z])/g, ' $1').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
                                                 const findings = peFindings[system] || '';
-                                                const newPe = {...noteData.pe, [system]: isChecked};
+                                                const newPe = { ...noteData.pe, [system]: isChecked };
                                                 let newPeNotes = noteData.peNotes || '';
                                                 const findingsLine = `**${systemName}:** ${findings}`;
                                                 if (isChecked) {
@@ -3464,7 +3465,7 @@ const VisitNote = () => {
                                                 } else {
                                                     newPeNotes = newPeNotes.split('\n').filter(line => !line.trim().startsWith(`**${systemName}:**`)).join('\n').trim();
                                                 }
-                                                setNoteData({...noteData, pe: newPe, peNotes: newPeNotes});
+                                                setNoteData({ ...noteData, pe: newPe, peNotes: newPeNotes });
                                             }}
                                             disabled={isSigned}
                                             className="hidden"
@@ -3473,7 +3474,7 @@ const VisitNote = () => {
                                 ))}
                             </div>
                             {isSigned ? (
-                                <div 
+                                <div
                                     className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white text-neutral-900 leading-relaxed min-h-[120px] whitespace-pre-wrap"
                                     dangerouslySetInnerHTML={{
                                         __html: noteData.peNotes ? noteData.peNotes.split('\n').map((line, idx) => {
@@ -3492,14 +3493,14 @@ const VisitNote = () => {
                                     suppressContentEditableWarning
                                     onInput={(e) => {
                                         const markdownText = extractMarkdownFromHTML(e.currentTarget.innerHTML);
-                                        setNoteData({...noteData, peNotes: markdownText});
+                                        setNoteData({ ...noteData, peNotes: markdownText });
                                         setTimeout(() => {
                                             renderBoldText(e.currentTarget, markdownText);
                                         }, 50);
                                     }}
                                     onBlur={(e) => {
                                         const markdownText = extractMarkdownFromHTML(e.currentTarget.innerHTML);
-                                        setNoteData({...noteData, peNotes: markdownText});
+                                        setNoteData({ ...noteData, peNotes: markdownText });
                                     }}
                                     className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px] cursor-text outline-none"
                                     style={{ whiteSpace: 'pre-wrap' }}
@@ -3522,7 +3523,7 @@ const VisitNote = () => {
                                     const systemName = key.replace(/([A-Z])/g, ' $1').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
                                     peText += `**${systemName}:** ${peFindings[key]}\n`;
                                 });
-                                setNoteData({...noteData, pe: allPe, peNotes: peText.trim()});
+                                setNoteData({ ...noteData, pe: allPe, peNotes: peText.trim() });
                             }} disabled={isSigned} className="mt-1.5 px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
                                 Pre-fill Normal PE
                             </button>
@@ -3574,18 +3575,18 @@ const VisitNote = () => {
                                     />
                                 </div>
                                 {showIcd10Search && icd10Search.trim().length > 0 && icd10Results.length > 0 && (
-                                    <div 
+                                    <div
                                         className="icd10-dropdown mb-2 border border-neutral-200 rounded-md bg-white shadow-lg max-h-60 overflow-y-auto z-50"
                                         onMouseDown={(e) => e.preventDefault()} // Prevent input blur when clicking results
                                     >
                                         {icd10Results.map((code) => {
                                             const hasHierarchy = codesWithHierarchy.has(code.code);
                                             return (
-                                                <div 
-                                                    key={code.code} 
+                                                <div
+                                                    key={code.code}
                                                     className={`flex items-center justify-between p-2 border-b border-neutral-100 hover:bg-primary-50 transition-colors ${hasHierarchy ? 'border-l-4 border-green-500 bg-green-50 border-r-2 border-r-green-200' : ''}`}
                                                 >
-                                                    <button 
+                                                    <button
                                                         onClick={async (e) => {
                                                             e.preventDefault();
                                                             e.stopPropagation();
@@ -3593,7 +3594,7 @@ const VisitNote = () => {
                                                             // Close dropdown - hierarchy will open if needed
                                                             setShowIcd10Search(false);
                                                             setIcd10Search('');
-                                                        }} 
+                                                        }}
                                                         className="flex-1 text-left"
                                                     >
                                                         <div className="flex items-center gap-2 mb-1">
@@ -3611,7 +3612,7 @@ const VisitNote = () => {
                                                         {hasHierarchy && (
                                                             <ChevronRight className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
                                                         )}
-                                                        <button 
+                                                        <button
                                                             onClick={async (e) => {
                                                                 e.preventDefault();
                                                                 e.stopPropagation();
@@ -3619,7 +3620,7 @@ const VisitNote = () => {
                                                                 // Close inline search dropdown
                                                                 setShowIcd10Search(false);
                                                                 setIcd10Search('');
-                                                            }} 
+                                                            }}
                                                             className="px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md transition-colors"
                                                             title="Add to Problem List"
                                                         >
@@ -3640,7 +3641,7 @@ const VisitNote = () => {
                         )}
                         <div className="relative">
                             {isSigned ? (
-                                <div 
+                                <div
                                     className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white text-neutral-900 leading-relaxed min-h-[60px] whitespace-pre-wrap"
                                     dangerouslySetInnerHTML={{
                                         __html: noteData.assessment ? noteData.assessment.split('\n').map((line, idx) => {
@@ -3733,14 +3734,14 @@ const VisitNote = () => {
                                     }}
                                 />
                             )}
-                            
+
                             {/* Diagnosis Context Menu */}
                             {clickedDiagnosis && !isSigned && (
-                                <div 
+                                <div
                                     ref={diagnosisMenuRef}
                                     className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-xl"
-                                    style={{ 
-                                        left: `${diagnosisMenuPosition.x}px`, 
+                                    style={{
+                                        left: `${diagnosisMenuPosition.x}px`,
                                         top: `${diagnosisMenuPosition.y}px`,
                                         minWidth: '180px'
                                     }}
@@ -3758,21 +3759,21 @@ const VisitNote = () => {
                                                     const problemName = (p.problem_name || p.name || '').toLowerCase();
                                                     const diagnosisLower = clickedDiagnosis.toLowerCase();
                                                     const icd10Code = (p.icd10_code || p.icd10Code || '').toLowerCase();
-                                                    
+
                                                     return problemName === diagnosisLower ||
-                                                           diagnosisLower.includes(problemName) ||
-                                                           problemName.includes(diagnosisLower) ||
-                                                           (icd10Code && diagnosisLower.includes(icd10Code)) ||
-                                                           (icd10Code && icd10Code.includes(diagnosisLower));
+                                                        diagnosisLower.includes(problemName) ||
+                                                        problemName.includes(diagnosisLower) ||
+                                                        (icd10Code && diagnosisLower.includes(icd10Code)) ||
+                                                        (icd10Code && icd10Code.includes(diagnosisLower));
                                                 });
-                                                
+
                                                 const diagnosisToUse = problem || {
                                                     id: `temp-${Date.now()}`,
                                                     problem_name: clickedDiagnosis,
                                                     name: clickedDiagnosis,
                                                     icd10_code: clickedDiagnosis.match(/^[A-Z]\d{2}(\.\d+)?/)?.[0] || null
                                                 };
-                                                
+
                                                 setPreSelectedDiagnosisForOrder([diagnosisToUse]);
                                                 setShowEPrescribeEnhanced(true);
                                                 setClickedDiagnosis(null);
@@ -3789,21 +3790,21 @@ const VisitNote = () => {
                                                     const problemName = (p.problem_name || p.name || '').toLowerCase();
                                                     const diagnosisLower = clickedDiagnosis.toLowerCase();
                                                     const icd10Code = (p.icd10_code || p.icd10Code || '').toLowerCase();
-                                                    
+
                                                     return problemName === diagnosisLower ||
-                                                           diagnosisLower.includes(problemName) ||
-                                                           problemName.includes(diagnosisLower) ||
-                                                           (icd10Code && diagnosisLower.includes(icd10Code)) ||
-                                                           (icd10Code && icd10Code.includes(diagnosisLower));
+                                                        diagnosisLower.includes(problemName) ||
+                                                        problemName.includes(diagnosisLower) ||
+                                                        (icd10Code && diagnosisLower.includes(icd10Code)) ||
+                                                        (icd10Code && icd10Code.includes(diagnosisLower));
                                                 });
-                                                
+
                                                 const diagnosisToUse = problem || {
                                                     id: `temp-${Date.now()}`,
                                                     problem_name: clickedDiagnosis,
                                                     name: clickedDiagnosis,
                                                     icd10_code: clickedDiagnosis.match(/^[A-Z]\d{2}(\.\d+)?/)?.[0] || null
                                                 };
-                                                
+
                                                 setPreSelectedDiagnosisForOrder([diagnosisToUse]);
                                                 setShowOrderModal(true);
                                                 setClickedDiagnosis(null);
@@ -3820,21 +3821,21 @@ const VisitNote = () => {
                                                     const problemName = (p.problem_name || p.name || '').toLowerCase();
                                                     const diagnosisLower = clickedDiagnosis.toLowerCase();
                                                     const icd10Code = (p.icd10_code || p.icd10Code || '').toLowerCase();
-                                                    
+
                                                     return problemName === diagnosisLower ||
-                                                           diagnosisLower.includes(problemName) ||
-                                                           problemName.includes(diagnosisLower) ||
-                                                           (icd10Code && diagnosisLower.includes(icd10Code)) ||
-                                                           (icd10Code && icd10Code.includes(diagnosisLower));
+                                                        diagnosisLower.includes(problemName) ||
+                                                        problemName.includes(diagnosisLower) ||
+                                                        (icd10Code && diagnosisLower.includes(icd10Code)) ||
+                                                        (icd10Code && icd10Code.includes(diagnosisLower));
                                                 });
-                                                
+
                                                 const diagnosisToUse = problem || {
                                                     id: `temp-${Date.now()}`,
                                                     problem_name: clickedDiagnosis,
                                                     name: clickedDiagnosis,
                                                     icd10_code: clickedDiagnosis.match(/^[A-Z]\d{2}(\.\d+)?/)?.[0] || null
                                                 };
-                                                
+
                                                 setPreSelectedDiagnosisForOrder([diagnosisToUse]);
                                                 setShowReferralModal(true);
                                                 setClickedDiagnosis(null);
@@ -3851,21 +3852,21 @@ const VisitNote = () => {
                                                     const problemName = (p.problem_name || p.name || '').toLowerCase();
                                                     const diagnosisLower = clickedDiagnosis.toLowerCase();
                                                     const icd10Code = (p.icd10_code || p.icd10Code || '').toLowerCase();
-                                                    
+
                                                     return problemName === diagnosisLower ||
-                                                           diagnosisLower.includes(problemName) ||
-                                                           problemName.includes(diagnosisLower) ||
-                                                           (icd10Code && diagnosisLower.includes(icd10Code)) ||
-                                                           (icd10Code && icd10Code.includes(diagnosisLower));
+                                                        diagnosisLower.includes(problemName) ||
+                                                        problemName.includes(diagnosisLower) ||
+                                                        (icd10Code && diagnosisLower.includes(icd10Code)) ||
+                                                        (icd10Code && icd10Code.includes(diagnosisLower));
                                                 });
-                                                
+
                                                 const diagnosisToUse = problem || {
                                                     id: `temp-${Date.now()}`,
                                                     problem_name: clickedDiagnosis,
                                                     name: clickedDiagnosis,
                                                     icd10_code: clickedDiagnosis.match(/^[A-Z]\d{2}(\.\d+)?/)?.[0] || null
                                                 };
-                                                
+
                                                 setPreSelectedDiagnosisForOrder([diagnosisToUse]);
                                                 setShowOrderModal(true);
                                                 setClickedDiagnosis(null);
@@ -3891,7 +3892,7 @@ const VisitNote = () => {
                                     </div>
                                 </div>
                             )}
-                            
+
                             {autocompleteState.show && autocompleteState.field === 'assessment' && autocompleteState.suggestions.length > 0 && (
                                 <div className="absolute z-50 bg-white border border-neutral-300 rounded-md shadow-lg max-h-32 overflow-y-auto mt-0.5 w-64" style={{ top: `${autocompleteState.position.top}px` }}>
                                     {autocompleteState.suggestions.map((item, index) => (
@@ -3899,9 +3900,8 @@ const VisitNote = () => {
                                             key={item.key}
                                             type="button"
                                             onClick={() => insertDotPhrase(item.key, autocompleteState)}
-                                            className={`w-full text-left px-2 py-1 border-b border-neutral-100 hover:bg-primary-50 transition-colors ${
-                                                index === autocompleteState.selectedIndex ? 'bg-primary-100' : ''
-                                            }`}
+                                            className={`w-full text-left px-2 py-1 border-b border-neutral-100 hover:bg-primary-50 transition-colors ${index === autocompleteState.selectedIndex ? 'bg-primary-100' : ''
+                                                }`}
                                         >
                                             <div className="font-medium text-neutral-900 text-xs">{item.key}</div>
                                             <div className="text-xs text-neutral-500 truncate">{item.template.substring(0, 60)}...</div>
@@ -3933,7 +3933,7 @@ const VisitNote = () => {
                                         {noteData.planStructured.map((item, diagnosisIndex) => {
                                             const isEditingDiagnosis = planEditingState.editingDiagnosis === diagnosisIndex;
                                             const isAddingOrder = planEditingState.addingOrder === diagnosisIndex;
-                                            
+
                                             return (
                                                 <div key={diagnosisIndex} className="border-b border-neutral-200 last:border-b-0 pb-2 last:pb-0 group/plan">
                                                     <div className="flex items-start justify-between mb-1">
@@ -3986,7 +3986,7 @@ const VisitNote = () => {
                                                             </div>
                                                         ) : (
                                                             <>
-                                                                <div 
+                                                                <div
                                                                     className="font-bold underline text-xs text-neutral-900 flex-1 cursor-pointer hover:text-primary-600"
                                                                     onClick={() => {
                                                                         setPlanEditingState(prev => ({ ...prev, editingDiagnosis: diagnosisIndex, editDiagnosisValue: item.diagnosis }));
@@ -4025,7 +4025,7 @@ const VisitNote = () => {
                                                             // Split order by semicolons to create separate bullet points
                                                             const orderParts = order.split(';').map(o => o.trim()).filter(o => o);
                                                             const isEditingOrder = planEditingState.editingOrder?.diagnosisIndex === diagnosisIndex && planEditingState.editingOrder?.orderIndex === orderIdx;
-                                                            
+
                                                             // If editing, show the full order in edit mode
                                                             if (isEditingOrder) {
                                                                 return (
@@ -4079,7 +4079,7 @@ const VisitNote = () => {
                                                                     </li>
                                                                 );
                                                             }
-                                                            
+
                                                             // Otherwise, display each part as a separate bullet point
                                                             return orderParts.map((orderPart, partIdx) => {
                                                                 const uniqueKey = `${orderIdx}-${partIdx}`;
@@ -4171,12 +4171,12 @@ const VisitNote = () => {
                                                                         e.stopPropagation();
                                                                         // Set the diagnosis for this plan item as pre-selected
                                                                         const diagnosisText = item.diagnosis;
-                                                                        
+
                                                                         // Convert diagnosis string to object format that DiagnosisSelector expects
                                                                         // Format: "I25.3 - Aneurysm of heart" or just "Aneurysm of heart"
                                                                         const match = diagnosisText.match(/^([A-Z]\d{2}(?:\.\d+)?)\s*[-–—]\s*(.+)$/);
                                                                         let diagnosisObject;
-                                                                        
+
                                                                         if (match) {
                                                                             // Has ICD-10 code
                                                                             diagnosisObject = {
@@ -4200,7 +4200,7 @@ const VisitNote = () => {
                                                                                 fromAssessment: true
                                                                             };
                                                                         }
-                                                                        
+
                                                                         setPreSelectedDiagnosisForOrder([diagnosisObject]);
                                                                         setShowAddOrderMenu(true);
                                                                     }}
@@ -4306,9 +4306,8 @@ const VisitNote = () => {
                                             key={item.key}
                                             type="button"
                                             onClick={() => insertDotPhrase(item.key, autocompleteState)}
-                                            className={`w-full text-left px-2 py-1 border-b border-neutral-100 hover:bg-primary-50 transition-colors ${
-                                                index === autocompleteState.selectedIndex ? 'bg-primary-100' : ''
-                                            }`}
+                                            className={`w-full text-left px-2 py-1 border-b border-neutral-100 hover:bg-primary-50 transition-colors ${index === autocompleteState.selectedIndex ? 'bg-primary-100' : ''
+                                                }`}
                                         >
                                             <div className="font-medium text-neutral-900 text-xs">{item.key}</div>
                                             <div className="text-xs text-neutral-500 truncate">{item.template.substring(0, 60)}...</div>
@@ -4319,56 +4318,56 @@ const VisitNote = () => {
                         </div>
                         {!isSigned && (
                             <div className="mt-2 relative">
-                                <button 
+                                <button
                                     onClick={() => {
                                         // Clear any pre-selected diagnosis when opening from main button (not from plan item)
                                         setPreSelectedDiagnosisForOrder([]);
                                         setShowAddOrderMenu(!showAddOrderMenu);
-                                    }} 
+                                    }}
                                     className="px-2.5 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors flex items-center gap-1"
                                 >
                                     <span>Add Order</span>
                                     <ChevronDown className={`w-3 h-3 transition-transform ${showAddOrderMenu ? 'rotate-180' : ''}`} />
                                 </button>
-                                
+
                                 {showAddOrderMenu && (
-                                    <div 
+                                    <div
                                         ref={addOrderMenuRef}
                                         className="bg-white border border-neutral-300 rounded-md shadow-lg z-[100] min-w-[160px] max-h-[200px] overflow-y-auto"
                                     >
                                         {hasPrivilege('order_labs') && (
-                                            <button 
+                                            <button
                                                 onClick={() => {
                                                     // preSelectedDiagnosisForOrder is already set when clicking "Add Order" from plan
                                                     setShowOrderModal(true);
                                                     setShowAddOrderMenu(false);
-                                                }} 
+                                                }}
                                                 className="w-full text-left px-3 py-2 text-xs text-neutral-700 hover:bg-primary-50 transition-colors border-b border-neutral-100 first:rounded-t-md"
                                             >
                                                 Add Lab
                                             </button>
                                         )}
                                         {hasPrivilege('e_prescribe') && (
-                                            <button 
+                                            <button
                                                 onClick={(e) => {
                                                     e.preventDefault();
                                                     e.stopPropagation();
                                                     // preSelectedDiagnosisForOrder is already set when clicking "Add Order" from plan
                                                     setShowEPrescribeEnhanced(true);
                                                     setShowAddOrderMenu(false);
-                                                }} 
+                                                }}
                                                 className="w-full text-left px-3 py-2 text-xs text-neutral-700 hover:bg-primary-50 transition-colors border-b border-neutral-100"
                                             >
                                                 e-Prescribe
                                             </button>
                                         )}
                                         {hasPrivilege('create_referrals') && (
-                                            <button 
+                                            <button
                                                 onClick={() => {
                                                     // preSelectedDiagnosisForOrder is already set when clicking "Add Order" from plan
                                                     setShowReferralModal(true);
                                                     setShowAddOrderMenu(false);
-                                                }} 
+                                                }}
                                                 className="w-full text-left px-3 py-2 text-xs text-neutral-700 hover:bg-primary-50 transition-colors last:rounded-b-md"
                                             >
                                                 Send Referral
@@ -4407,8 +4406,8 @@ const VisitNote = () => {
                                     <Printer className="w-3.5 h-3.5" />
                                     <span>Print Orders</span>
                                 </button>
-                                <button 
-                                    onClick={() => navigate(`/patient/${id}/snapshot`)} 
+                                <button
+                                    onClick={() => navigate(`/patient/${id}/snapshot`)}
                                     className="px-2.5 py-1.5 text-xs font-medium text-neutral-700 hover:text-neutral-900 hover:bg-neutral-100 rounded-md transition-colors flex items-center gap-1.5"
                                     title="Return to Chart"
                                 >
@@ -4423,8 +4422,8 @@ const VisitNote = () => {
                     )}
                     {isSigned && (
                         <div className="mt-6 pt-4 border-t border-neutral-200 flex items-center justify-end gap-1.5">
-                            <button 
-                                onClick={() => setShowAddendumModal(true)} 
+                            <button
+                                onClick={() => setShowAddendumModal(true)}
                                 className="px-2.5 py-1.5 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-all duration-200 hover:shadow-md text-xs font-medium"
                                 style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
                                 onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
@@ -4442,8 +4441,8 @@ const VisitNote = () => {
                                 <span>Print Orders</span>
                             </button>
                             <div className="flex items-center gap-1.5">
-                                <button 
-                                    onClick={() => navigate(`/patient/${id}/snapshot`)} 
+                                <button
+                                    onClick={() => navigate(`/patient/${id}/snapshot`)}
                                     className="px-2.5 py-1.5 text-xs font-medium text-neutral-700 hover:text-neutral-900 hover:bg-neutral-100 rounded-md transition-colors flex items-center gap-1.5"
                                     title="Return to Chart"
                                 >
@@ -4462,11 +4461,10 @@ const VisitNote = () => {
                         <Section title="Addendums" defaultOpen={true}>
                             <div className="space-y-2">
                                 {addendums.map((addendum, idx) => (
-                                    <div key={idx} className={`border-l-4 p-2 rounded ${
-                                        addendum.signed 
-                                            ? 'bg-green-50 border-green-400' 
-                                            : 'bg-yellow-50 border-yellow-400'
-                                    }`}>
+                                    <div key={idx} className={`border-l-4 p-2 rounded ${addendum.signed
+                                        ? 'bg-green-50 border-green-400'
+                                        : 'bg-yellow-50 border-yellow-400'
+                                        }`}>
                                         <div className="flex items-center justify-between mb-1">
                                             <div className="text-xs text-gray-600">
                                                 {addendum.signed ? (
@@ -4492,9 +4490,8 @@ const VisitNote = () => {
                                                 </button>
                                             )}
                                         </div>
-                                        <div className={`text-xs whitespace-pre-wrap ${
-                                            addendum.signed ? 'text-gray-900' : 'text-gray-800'
-                                        }`}>
+                                        <div className={`text-xs whitespace-pre-wrap ${addendum.signed ? 'text-gray-900' : 'text-gray-800'
+                                            }`}>
                                             {addendum.text}
                                         </div>
                                     </div>
@@ -4514,12 +4511,12 @@ const VisitNote = () => {
             </div>
 
             {/* Modals */}
-            <OrderModal 
-                isOpen={showOrderModal} 
+            <OrderModal
+                isOpen={showOrderModal}
                 onClose={() => {
                     setShowOrderModal(false);
                     setPreSelectedDiagnosisForOrder([]);
-                }} 
+                }}
                 patientId={id}
                 visitId={currentVisitId || urlVisitId}
                 diagnoses={diagnoses}
@@ -4549,11 +4546,11 @@ const VisitNote = () => {
                         showToast('Order created successfully', 'success');
                     }
                     setPreSelectedDiagnosisForOrder([]);
-                }} 
+                }}
             />
-            <PrescriptionModal 
-                isOpen={showPrescriptionModal} 
-                onClose={() => setShowPrescriptionModal(false)} 
+            <PrescriptionModal
+                isOpen={showPrescriptionModal}
+                onClose={() => setShowPrescriptionModal(false)}
                 diagnoses={diagnoses}
                 patientId={id}
                 assessmentDiagnoses={diagnoses}
@@ -4561,11 +4558,11 @@ const VisitNote = () => {
                 onSuccess={(diagnosis, prescriptionText) => {
                     addOrderToPlan(diagnosis, prescriptionText);
                     showToast('Prescription added to plan', 'success');
-                }} 
+                }}
             />
-            <ReferralModal 
-                isOpen={showReferralModal} 
-                onClose={() => setShowReferralModal(false)} 
+            <ReferralModal
+                isOpen={showReferralModal}
+                onClose={() => setShowReferralModal(false)}
                 diagnoses={diagnoses}
                 patientId={id}
                 visitId={currentVisitId || urlVisitId}
@@ -4585,7 +4582,7 @@ const VisitNote = () => {
                         addOrderToPlan(diagnosis, referralText);
                         showToast('Referral created and added to plan', 'success');
                     }
-                }} 
+                }}
             />
             <EPrescribeEnhanced
                 isOpen={showEPrescribeEnhanced}
@@ -4617,7 +4614,7 @@ const VisitNote = () => {
                 onAddToAssessment={handleAddDiagnosisToAssessment}
             />
             {showPrintModal && <VisitPrint visitId={currentVisitId || urlVisitId} patientId={id} onClose={() => setShowPrintModal(false)} />}
-            
+
             {/* Printable Orders Modal */}
             {showPrintableOrders && (
                 <PrintableOrders
@@ -4629,7 +4626,7 @@ const VisitNote = () => {
                     onClose={() => setShowPrintableOrders(false)}
                 />
             )}
-            
+
             {/* Add Addendum Modal */}
             {showAddendumModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowAddendumModal(false)}>
@@ -4703,7 +4700,7 @@ const VisitNote = () => {
                         <div className="space-y-4">
                             <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
                                 <p className="text-sm text-yellow-800">
-                                    <strong>Warning:</strong> Once signed, this addendum cannot be edited or deleted. 
+                                    <strong>Warning:</strong> Once signed, this addendum cannot be edited or deleted.
                                     This action is permanent and legally binding.
                                 </p>
                             </div>
@@ -4735,7 +4732,7 @@ const VisitNote = () => {
                     </div>
                 </div>
             )}
-            
+
             {/* Unified Patient Chart Panel */}
             <PatientChartPanel
                 patientId={id}
@@ -4743,7 +4740,7 @@ const VisitNote = () => {
                 onClose={() => setShowPatientChart(false)}
                 initialTab={patientChartTab}
             />
-            
+
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
             {/* Enhanced ICD-10 Search Modal */}
@@ -4782,14 +4779,14 @@ const VisitNote = () => {
                                                 if (response.data && response.data.length > 0) {
                                                     setIcd10Results(response.data);
                                                 }
-                                            }).catch(() => {});
+                                            }).catch(() => { });
                                         }
                                     }}
                                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                     autoFocus
                                 />
                             </div>
-                            
+
                             {/* Results */}
                             <div className="flex-1 overflow-y-auto border border-gray-200 rounded-md">
                                 {icd10Results.length > 0 ? (
@@ -4798,21 +4795,21 @@ const VisitNote = () => {
                                             const searchLower = icd10Search.toLowerCase();
                                             const codeMatch = code.code.toLowerCase().includes(searchLower);
                                             const descMatch = code.description.toLowerCase().includes(searchLower);
-                                            
+
                                             // Highlight matching text
                                             const highlightText = (text, searchTerm) => {
                                                 if (!searchTerm) return text;
                                                 const regex = new RegExp(`(${searchTerm})`, 'gi');
                                                 const parts = text.split(regex);
-                                                return parts.map((part, i) => 
+                                                return parts.map((part, i) =>
                                                     regex.test(part) ? (
                                                         <mark key={i} className="bg-yellow-200 px-0.5 rounded">{part}</mark>
                                                     ) : part
                                                 );
                                             };
-                                            
+
                                             const hasHierarchy = codesWithHierarchy.has(code.code);
-                                            
+
                                             return (
                                                 <div key={code.code} className={`p-3 hover:bg-primary-50 transition-colors ${hasHierarchy ? 'border-l-4 border-green-500 bg-green-50 border-r-2 border-r-green-200' : ''}`}>
                                                     <div className="flex items-start justify-between">
@@ -4881,7 +4878,7 @@ const VisitNote = () => {
                                     </div>
                                 )}
                             </div>
-                            
+
                             {/* Footer with tips */}
                             <div className="mt-4 pt-4 border-t border-gray-200">
                                 <div className="flex items-center justify-between text-xs text-gray-500">
@@ -4990,27 +4987,26 @@ const VisitNote = () => {
                                     <button
                                         type="button"
                                         onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-                                        className={`px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 flex items-center gap-1 transition-colors ${
-                                            showFavoritesOnly 
-                                                ? 'bg-yellow-50 border-yellow-300 text-yellow-700' 
-                                                : 'bg-white hover:bg-gray-50'
-                                        }`}
+                                        className={`px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 flex items-center gap-1 transition-colors ${showFavoritesOnly
+                                            ? 'bg-yellow-50 border-yellow-300 text-yellow-700'
+                                            : 'bg-white hover:bg-gray-50'
+                                            }`}
                                     >
-                                        <Star 
+                                        <Star
                                             className={`w-3 h-3 ${showFavoritesOnly ? 'fill-yellow-400 text-yellow-400' : 'text-gray-400'}`}
                                         />
                                         <span>Favorites</span>
                                     </button>
                                 </div>
                             </div>
-                            
+
                             {/* Ordersets List */}
                             <div ref={ordersetsListRef} className="flex-1 overflow-y-auto border border-gray-200 rounded">
                                 {ordersets.length > 0 ? (
                                     <div>
                                         {ordersets
                                             .filter(os => {
-                                                const matchesSearch = !ordersetsSearch || 
+                                                const matchesSearch = !ordersetsSearch ||
                                                     os.name.toLowerCase().includes(ordersetsSearch.toLowerCase()) ||
                                                     (os.description && os.description.toLowerCase().includes(ordersetsSearch.toLowerCase()));
                                                 const matchesCategory = !ordersetsCategory || os.category === ordersetsCategory;
@@ -5034,33 +5030,33 @@ const VisitNote = () => {
                                                                     onClick={async (e) => {
                                                                         e.preventDefault();
                                                                         e.stopPropagation();
-                                                                        
+
                                                                         // Save the clicked element's position relative to viewport
                                                                         const clickedElement = e.currentTarget.closest('[data-orderset-id]');
                                                                         const ordersetId = orderset.id;
                                                                         let elementOffsetFromTop = 0;
                                                                         let containerScrollTop = 0;
-                                                                        
+
                                                                         if (clickedElement && ordersetsListRef.current) {
                                                                             // Get the element's position relative to the scrollable container
                                                                             elementOffsetFromTop = clickedElement.offsetTop;
                                                                             containerScrollTop = ordersetsListRef.current.scrollTop;
                                                                         }
-                                                                        
+
                                                                         try {
                                                                             const response = await ordersetsAPI.toggleFavorite(orderset.id);
                                                                             // Update the orderset in the list
                                                                             // Response structure: { data: { isFavorite: true/false } }
-                                                                            const newFavoriteStatus = response?.data?.isFavorite !== undefined 
-                                                                                ? response.data.isFavorite 
+                                                                            const newFavoriteStatus = response?.data?.isFavorite !== undefined
+                                                                                ? response.data.isFavorite
                                                                                 : !orderset.isFavorite;
-                                                                            
-                                                                            setOrdersets(prev => prev.map(os => 
-                                                                                os.id === orderset.id 
+
+                                                                            setOrdersets(prev => prev.map(os =>
+                                                                                os.id === orderset.id
                                                                                     ? { ...os, isFavorite: newFavoriteStatus }
                                                                                     : os
                                                                             ));
-                                                                            
+
                                                                             // Restore scroll position to keep the same element visible
                                                                             // Use multiple animation frames to ensure DOM has updated after sort
                                                                             requestAnimationFrame(() => {
@@ -5080,11 +5076,11 @@ const VisitNote = () => {
                                                                                     }
                                                                                 });
                                                                             });
-                                                                            
+
                                                                             showToast(
-                                                                                newFavoriteStatus 
-                                                                                    ? 'Added to favorites' 
-                                                                                    : 'Removed from favorites', 
+                                                                                newFavoriteStatus
+                                                                                    ? 'Added to favorites'
+                                                                                    : 'Removed from favorites',
                                                                                 'success'
                                                                             );
                                                                         } catch (error) {
@@ -5097,7 +5093,7 @@ const VisitNote = () => {
                                                                     className="p-0.5 hover:bg-yellow-50 rounded transition-colors flex-shrink-0"
                                                                     title={orderset.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                                                                 >
-                                                                    <Star 
+                                                                    <Star
                                                                         className={`w-3 h-3 ${orderset.isFavorite ? 'fill-yellow-400 text-yellow-400' : 'text-gray-400'}`}
                                                                     />
                                                                 </button>
@@ -5129,27 +5125,27 @@ const VisitNote = () => {
                                                                             console.warn('Orderset has no orders:', orderset);
                                                                             return;
                                                                         }
-                                                                        
+
                                                                         // Validate required IDs
                                                                         if (!id) {
                                                                             showToast('Patient ID is missing. Please refresh the page.', 'error');
                                                                             return;
                                                                         }
-                                                                        
+
                                                                         const visitId = currentVisitId || urlVisitId;
                                                                         if (!visitId || visitId === 'new') {
                                                                             showToast('Please save the visit first before applying ordersets.', 'warning');
                                                                             return;
                                                                         }
-                                                                        
+
                                                                         console.log('Applying orderset:', orderset.name, 'ID:', orderset.id);
-                                                                        
+
                                                                         // Extract diagnosis IDs from assessment - improved matching
                                                                         const assessmentDiagnoses = diagnoses || [];
                                                                         let diagnosisIds = [];
                                                                         let selectedDiagnosisText = null; // Store the diagnosis text for display
                                                                         let diagnosisToAdd = null; // Diagnosis to add to assessment if not present
-                                                                        
+
                                                                         // Always try to infer diagnosis from orderset name first
                                                                         let inferredDiagnosis = null;
                                                                         try {
@@ -5159,10 +5155,10 @@ const VisitNote = () => {
                                                                                 .replace(/\(.*?\)/g, '') // Remove parentheticals
                                                                                 .replace(/\s+/g, ' ')
                                                                                 .trim();
-                                                                            
+
                                                                             // Search for ICD-10 codes matching the orderset name
                                                                             const searchResponse = await codesAPI.searchICD10(searchTerms);
-                                                                            
+
                                                                             if (searchResponse?.data?.length > 0) {
                                                                                 // Use the first result (should be the most relevant)
                                                                                 const matchedCode = searchResponse.data[0];
@@ -5181,29 +5177,29 @@ const VisitNote = () => {
                                                                         } catch (searchError) {
                                                                             console.error('Error searching for ICD-10 code:', searchError);
                                                                         }
-                                                                        
+
                                                                         // Check if inferred diagnosis is already in assessment
-                                                                        const isInferredDiagnosisInAssessment = inferredDiagnosis && 
+                                                                        const isInferredDiagnosisInAssessment = inferredDiagnosis &&
                                                                             assessmentDiagnoses.some(diag => {
                                                                                 const diagCode = diag.split(' - ')[0]?.trim();
                                                                                 const inferredCode = inferredDiagnosis.split(' - ')[0]?.trim();
                                                                                 return diagCode === inferredCode;
                                                                             });
-                                                                        
+
                                                                         if (inferredDiagnosis && !isInferredDiagnosisInAssessment) {
                                                                             // Add the inferred diagnosis to assessment
                                                                             diagnosisToAdd = inferredDiagnosis;
                                                                             selectedDiagnosisText = inferredDiagnosis;
-                                                                            
+
                                                                             // Extract code from inferred diagnosis
                                                                             const inferredCode = inferredDiagnosis.split(' - ')[0]?.trim();
-                                                                            
+
                                                                             // Try to find matching problem
                                                                             const matchingProblem = patientChartData.problems?.find(p => {
                                                                                 const problemCode = (p.icd10_code || '').toLowerCase();
                                                                                 return problemCode === inferredCode.toLowerCase();
                                                                             });
-                                                                            
+
                                                                             if (matchingProblem && matchingProblem.id) {
                                                                                 diagnosisIds.push(matchingProblem.id);
                                                                             }
@@ -5211,25 +5207,25 @@ const VisitNote = () => {
                                                                             // Use existing diagnosis from assessment
                                                                             const primaryDiagnosis = assessmentDiagnoses[0];
                                                                             selectedDiagnosisText = primaryDiagnosis;
-                                                                            
+
                                                                             // Extract diagnosis name and code (format: "Code - Description" or just "Description")
                                                                             const diagParts = primaryDiagnosis.split(' - ');
                                                                             const diagName = diagParts.length > 1 ? diagParts[1].trim() : diagParts[0].trim();
                                                                             const diagCode = diagParts.length > 1 ? diagParts[0].trim() : null;
-                                                                            
+
                                                                             // Try to find matching problem in patient's problem list
                                                                             const matchingProblem = patientChartData.problems?.find(p => {
                                                                                 const problemName = (p.problem_name || p.name || '').toLowerCase();
                                                                                 const problemCode = (p.icd10_code || '').toLowerCase();
                                                                                 const searchName = diagName.toLowerCase();
-                                                                                
+
                                                                                 // Match by name or code
-                                                                                return problemName === searchName || 
-                                                                                       searchName.includes(problemName) || 
-                                                                                       problemName.includes(searchName) ||
-                                                                                       (diagCode && problemCode === diagCode.toLowerCase());
+                                                                                return problemName === searchName ||
+                                                                                    searchName.includes(problemName) ||
+                                                                                    problemName.includes(searchName) ||
+                                                                                    (diagCode && problemCode === diagCode.toLowerCase());
                                                                             });
-                                                                            
+
                                                                             if (matchingProblem && matchingProblem.id) {
                                                                                 diagnosisIds.push(matchingProblem.id);
                                                                             }
@@ -5239,78 +5235,78 @@ const VisitNote = () => {
                                                                             console.warn('No diagnosis found for orderset:', orderset.name);
                                                                             showToast('Note: No matching diagnosis found. Orders will be added without a specific diagnosis link.', 'info');
                                                                         }
-                                                                        
+
                                                                         const requestData = {
                                                                             patientId: id,
                                                                             visitId: visitId,
                                                                             diagnosisIds
                                                                         };
-                                                                        
+
                                                                         console.log('Calling ordersetsAPI.apply with:', { ordersetId: orderset.id, requestData });
                                                                         const response = await ordersetsAPI.apply(orderset.id, requestData);
                                                                         console.log('Orderset apply response:', response);
-                                                                        
+
                                                                         // Add diagnosis to assessment if it was inferred and not already present
                                                                         // Use functional update to ensure we're working with latest state
                                                                         if (diagnosisToAdd) {
                                                                             setNoteData(prev => {
                                                                                 const currentAssessment = prev.assessment || '';
                                                                                 const currentLines = currentAssessment.split('\n').filter(line => line.trim());
-                                                                                
+
                                                                                 // Check if diagnosis is already in assessment (by code)
                                                                                 const diagnosisCode = diagnosisToAdd.split(' - ')[0]?.trim();
                                                                                 const isAlreadyPresent = currentLines.some(line => {
                                                                                     const lineCode = line.split(' - ')[0]?.trim();
                                                                                     return lineCode === diagnosisCode;
                                                                                 });
-                                                                                
+
                                                                                 if (!isAlreadyPresent) {
                                                                                     // Preserve existing assessment and append new diagnosis
                                                                                     const newAssessment = currentAssessment.trim()
                                                                                         ? `${currentAssessment.trim()}\n${diagnosisToAdd}`
                                                                                         : diagnosisToAdd;
-                                                                                    
+
                                                                                     // Re-render assessment to show clickable diagnoses
                                                                                     setTimeout(() => {
                                                                                         if (assessmentRef.current && !isSigned) {
                                                                                             renderClickableDiagnoses(assessmentRef.current, newAssessment);
                                                                                         }
                                                                                     }, 50);
-                                                                                    
+
                                                                                     return { ...prev, assessment: newAssessment };
                                                                                 }
-                                                                                
+
                                                                                 // Diagnosis already present, don't modify assessment
                                                                                 return prev;
                                                                             });
                                                                         }
-                                                                        
+
                                                                         // Show success message
                                                                         showToast(`Successfully applied orderset: ${orderset.name}`, 'success');
-                                                                        
+
                                                                         // Close modal
                                                                         setShowOrdersetsModal(false);
                                                                         setOrdersetsSearch('');
                                                                         setOrdersetsCategory('');
-                                                                        
+
                                                                         // Fetch the created orders and add them to the plan
                                                                         if (!response || !response.data) {
                                                                             console.error('Invalid response from ordersetsAPI.apply:', response);
                                                                             showToast('Error: Invalid response from server. Please try again.', 'error');
                                                                             return;
                                                                         }
-                                                                        
+
                                                                         if (response.data?.orders && response.data.orders.length > 0) {
                                                                             console.log('Processing', response.data.orders.length, 'orders from response');
                                                                             const createdOrders = response.data.orders;
-                                                                            
+
                                                                             // Format order text based on order type and payload
                                                                             const formatOrderText = (order) => {
-                                                                                const payload = typeof order.order_payload === 'string' 
-                                                                                    ? JSON.parse(order.order_payload) 
+                                                                                const payload = typeof order.order_payload === 'string'
+                                                                                    ? JSON.parse(order.order_payload)
                                                                                     : (order.order_payload || {});
                                                                                 const orderType = order.order_type;
-                                                                                
+
                                                                                 if (orderType === 'lab' && payload.testName) {
                                                                                     return `Lab: ${payload.testName}${payload.cpt ? ` (CPT: ${payload.cpt})` : ''}`;
                                                                                 } else if (orderType === 'imaging' && payload.studyName) {
@@ -5326,13 +5322,13 @@ const VisitNote = () => {
                                                                                     return `${orderType}: ${JSON.stringify(payload)}`;
                                                                                 }
                                                                             };
-                                                                            
+
                                                                             // Group orders by diagnosis
                                                                             const ordersByDiagnosis = {};
-                                                                            
+
                                                                             // Use the selected diagnosis text from assessment, or find from problems
                                                                             let diagnosisName = 'General';
-                                                                            
+
                                                                             if (selectedDiagnosisText) {
                                                                                 // Use the full diagnosis text from assessment (e.g., "I25.3 - Aneurysm of heart")
                                                                                 diagnosisName = selectedDiagnosisText;
@@ -5348,35 +5344,35 @@ const VisitNote = () => {
                                                                                 // Last resort: use first diagnosis from assessment
                                                                                 diagnosisName = diagnoses[0];
                                                                             }
-                                                                            
+
                                                                             // Group all orders under the selected diagnosis
                                                                             for (const order of createdOrders) {
                                                                                 const orderText = formatOrderText(order);
-                                                                                
+
                                                                                 if (!ordersByDiagnosis[diagnosisName]) {
                                                                                     ordersByDiagnosis[diagnosisName] = [];
                                                                                 }
                                                                                 ordersByDiagnosis[diagnosisName].push(orderText);
                                                                             }
-                                                                            
+
                                                                             // Convert to planStructured format and merge with existing plan
                                                                             const newPlanItems = Object.entries(ordersByDiagnosis).map(([diagnosis, orders]) => ({
                                                                                 diagnosis,
                                                                                 orders
                                                                             }));
-                                                                            
+
                                                                             // Update planStructured while preserving existing items
                                                                             // Use functional update to ensure we're working with latest state
                                                                             setNoteData(prev => {
                                                                                 // Get current plan from state (preserve all existing items)
                                                                                 const currentPlan = prev.planStructured || [];
-                                                                                
+
                                                                                 // Create a deep copy to avoid mutation
                                                                                 const mergedPlan = currentPlan.map(item => ({
                                                                                     diagnosis: item.diagnosis,
                                                                                     orders: [...item.orders] // Deep copy orders array
                                                                                 }));
-                                                                                
+
                                                                                 // Merge new plan items into existing plan
                                                                                 newPlanItems.forEach(newItem => {
                                                                                     const existingIndex = mergedPlan.findIndex(
@@ -5399,10 +5395,10 @@ const VisitNote = () => {
                                                                                         });
                                                                                     }
                                                                                 });
-                                                                                
+
                                                                                 // Convert merged plan to text format for saving
                                                                                 const formattedPlan = formatPlanText(mergedPlan);
-                                                                                
+
                                                                                 // Preserve all existing noteData fields, only update plan-related fields
                                                                                 return {
                                                                                     ...prev,
@@ -5412,7 +5408,7 @@ const VisitNote = () => {
                                                                                 };
                                                                             });
                                                                         }
-                                                                        
+
                                                                         // Don't reload visit data as it might overwrite planStructured
                                                                         // Just refresh patient chart data if needed
                                                                         fetchPatientChartData(id, null);
@@ -5424,14 +5420,14 @@ const VisitNote = () => {
                                                                             orderset: orderset.name,
                                                                             ordersetId: orderset.id
                                                                         });
-                                                                        
+
                                                                         let errorMessage = 'Failed to apply orderset';
                                                                         if (error.response) {
                                                                             errorMessage = error.response.data?.error || error.response.data?.message || error.response.statusText || `Server error: ${error.response.status}`;
                                                                         } else if (error.message) {
                                                                             errorMessage = error.message;
                                                                         }
-                                                                        
+
                                                                         showToast(`Error applying orderset "${orderset.name}": ${errorMessage}`, 'error');
                                                                     }
                                                                 }}
@@ -5605,7 +5601,7 @@ const VisitNote = () => {
                                         showToast('Please add at least one order', 'error');
                                         return;
                                     }
-                                    
+
                                     try {
                                         const response = await ordersetsAPI.create({
                                             name: newOrderset.name.trim(),
@@ -5615,11 +5611,11 @@ const VisitNote = () => {
                                             orders: newOrderset.orders,
                                             tags: []
                                         });
-                                        
+
                                         showToast('Orderset created successfully!', 'success');
                                         setShowCreateOrdersetModal(false);
                                         setNewOrderset({ name: '', description: '', orders: [], currentOrderType: 'lab', currentOrderName: '' });
-                                        
+
                                         // Refresh ordersets list
                                         const ordersetsResponse = await ordersetsAPI.getAll({ specialty: 'cardiology' });
                                         setOrdersets(ordersetsResponse.data || []);

@@ -88,3 +88,4 @@ The user `mjrodriguez14@live.com` will now have:
 
 **Note:** The script has been committed and will be automatically deployed to your server. You just need to run it once via SSH to apply the database change.
 
+

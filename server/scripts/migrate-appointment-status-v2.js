@@ -7,16 +7,41 @@
  * - Updates patient_status constraint to include 'no_show' and 'cancelled'
  */
 
-const { Pool } = require('pg');
-require('dotenv').config();
+console.log('=== MIGRATE-APPOINTMENT-STATUS-V2 SCRIPT STARTING ===');
+console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
 
-const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'paper_emr',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
-});
+const { Pool } = require('pg');
+
+// In Docker, environment variables are already set via docker-compose
+// Only load .env file if DATABASE_URL is not already set (local development)
+if (!process.env.DATABASE_URL) {
+  console.log('Loading .env file (DATABASE_URL not set)...');
+  require('dotenv').config({ override: false });
+} else {
+  console.log('Skipping .env load (DATABASE_URL already set)');
+  if (process.env.DATABASE_URL) {
+    const masked = process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@');
+    console.log('DATABASE_URL value:', masked);
+  }
+}
+
+// Use DATABASE_URL if available (preferred for Docker), otherwise use individual connection params
+const pool = process.env.DATABASE_URL
+  ? new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.DATABASE_URL.includes('localhost') || process.env.DATABASE_URL.includes('127.0.0.1')
+        ? false
+        : { rejectUnauthorized: false },
+    })
+  : new Pool({
+      host: process.env.DB_HOST || 'db',
+      port: process.env.DB_PORT || 5432,
+      database: process.env.DB_NAME || 'paper_emr',
+      user: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || 'postgres',
+    });
+
+console.log('Pool created, using:', process.env.DATABASE_URL ? 'DATABASE_URL' : 'individual params');
 
 async function migrate() {
   const client = await pool.connect();
