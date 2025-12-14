@@ -917,3 +917,105 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, patientId, visitId }) 
         </Modal>
     );
 };
+
+export const DocumentPreviewModal = ({ isOpen, onClose, document }) => {
+    const [fileUrl, setFileUrl] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        let url = null;
+        if (isOpen && document) {
+            setLoading(true);
+            setError(null);
+
+            documentsAPI.getFile(document.id)
+                .then(response => {
+                    const blob = new Blob([response.data], { type: document.mime_type || 'application/pdf' });
+                    url = URL.createObjectURL(blob);
+                    setFileUrl(url);
+                })
+                .catch(err => {
+                    console.error("Error fetching file:", err);
+                    setError("Failed to load document.");
+                })
+                .finally(() => setLoading(false));
+        }
+
+        return () => {
+            if (url) {
+                URL.revokeObjectURL(url);
+            }
+        };
+    }, [isOpen, document]);
+
+    if (!document) return null;
+
+    const isImage = document.mime_type?.startsWith('image/') || document.filename?.match(/\.(jpg|jpeg|png|gif)$/i);
+    const isPdf = document.mime_type === 'application/pdf' || document.filename?.toLowerCase().endsWith('.pdf');
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={`Preview: ${document.filename}`}>
+            <div className="h-[70vh] flex flex-col">
+                {loading ? (
+                    <div className="flex-1 flex items-center justify-center">
+                        <div className="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+                    </div>
+                ) : error ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-red-600 p-4">
+                        <p>{error}</p>
+                        <button onClick={onClose} className="mt-4 px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 text-gray-800">Close</button>
+                    </div>
+                ) : (
+                    <div className="flex-1 bg-gray-100 rounded-lg overflow-hidden relative">
+                        {fileUrl && (
+                            <>
+                                {isImage && (
+                                    <div className="w-full h-full flex items-center justify-center overflow-auto">
+                                        <img src={fileUrl} alt={document.filename} className="max-w-full max-h-full object-contain" />
+                                    </div>
+                                )}
+                                {isPdf && (
+                                    <iframe
+                                        src={fileUrl}
+                                        className="w-full h-full"
+                                        title={document.filename}
+                                    />
+                                )}
+                                {!isImage && !isPdf && (
+                                    <div className="flex flex-col items-center justify-center h-full">
+                                        <p className="text-gray-600 mb-4">Preview not available for this file type.</p>
+                                        <a
+                                            href={fileUrl}
+                                            download={document.filename}
+                                            className="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors flex items-center"
+                                        >
+                                            <Upload className="w-4 h-4 mr-2 rotate-180" />
+                                            Download File
+                                        </a>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+                )}
+                <div className="mt-4 flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-200">
+                    <div className="text-sm text-gray-500">
+                        <span className="font-medium">Type:</span> {document.doc_type} |
+                        <span className="font-medium ml-2">Size:</span> {(document.file_size / 1024).toFixed(1)} KB
+                    </div>
+                    {fileUrl && (
+                        <a
+                            href={fileUrl}
+                            download={document.filename}
+                            className="text-primary-600 hover:text-primary-800 text-sm font-medium flex items-center"
+                        >
+                            <Upload className="w-3 h-3 mr-1 rotate-180" />
+                            Download
+                        </a>
+                    )}
+                </div>
+            </div>
+        </Modal>
+    );
+};

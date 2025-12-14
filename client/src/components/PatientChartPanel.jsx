@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, FileText, Image, FlaskConical, Pill, ExternalLink, Database, CreditCard, Calendar, Clock, CheckCircle2, XCircle, UserCircle, FileImage, Trash2, Activity, Heart, Upload } from 'lucide-react';
-import { UploadModal } from './ActionModals';
+import { UploadModal, DocumentPreviewModal } from './ActionModals';
 import { visitsAPI, documentsAPI, ordersAPI, referralsAPI, patientsAPI } from '../services/api';
 import { format } from 'date-fns';
 
@@ -32,7 +32,11 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
     });
 
     // Upload Modal State
+    // Upload Modal State
     const [showUploadModal, setShowUploadModal] = useState(false);
+
+    // Preview Modal State
+    const [selectedDocument, setSelectedDocument] = useState(null);
 
 
     useEffect(() => {
@@ -751,19 +755,23 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                                 const date = doc.created_at ? format(new Date(doc.created_at), 'MMM d, yyyy') : '';
 
                                                 return (
-                                                    <div key={doc.id} className="bg-white border-2 border-gray-200 rounded-lg p-3 shadow-sm hover:shadow-md hover:shadow-md transition-shadow">
+                                                    <div
+                                                        key={doc.id}
+                                                        onClick={() => setSelectedDocument(doc)}
+                                                        className="bg-white border-2 border-gray-200 rounded-lg p-3 shadow-sm hover:shadow-md hover:border-primary-300 hover:bg-primary-50 transition-all cursor-pointer group"
+                                                    >
                                                         <div className="flex items-start justify-between mb-2">
                                                             <div className="flex-1">
                                                                 <div className="flex items-center space-x-3 mb-2">
-                                                                    <FileImage className="w-5 h-5 text-gray-600" />
-                                                                    <h4 className="text-base font-bold text-gray-900">{doc.filename || 'Document'}</h4>
+                                                                    <FileImage className="w-5 h-5 text-gray-600 group-hover:text-primary-600" />
+                                                                    <h4 className="text-base font-bold text-gray-900 group-hover:text-primary-800">{doc.filename || 'Document'}</h4>
                                                                 </div>
                                                                 <div className="text-xs text-gray-700 space-y-1">
                                                                     <div><span className="font-medium">Type:</span> {doc.doc_type || 'Document'}</div>
                                                                     {doc.tags && Array.isArray(doc.tags) && doc.tags.length > 0 && (
                                                                         <div className="flex flex-wrap gap-1 mt-2">
                                                                             {doc.tags.map((tag, idx) => (
-                                                                                <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                                                                                <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded group-hover:bg-white">
                                                                                     {tag}
                                                                                 </span>
                                                                             ))}
@@ -772,11 +780,16 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                                                 </div>
                                                             </div>
                                                             {date && (
-                                                                <div className="flex items-center space-x-1 text-xs text-gray-500 ml-4">
+                                                                <div className="flex items-center space-x-1 text-xs text-gray-500 ml-4 group-hover:text-primary-600">
                                                                     <Calendar className="w-4 h-4" />
                                                                     <span>{date}</span>
                                                                 </div>
                                                             )}
+                                                        </div>
+                                                        <div className="mt-2 text-right">
+                                                            <span className="text-xs font-medium text-primary-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                Click to preview
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 );
@@ -928,6 +941,13 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                 onClose={() => setShowUploadModal(false)}
                 patientId={patientId}
                 onSuccess={handleUploadSuccess}
+            />
+
+            {/* Document Preview Modal */}
+            <DocumentPreviewModal
+                isOpen={!!selectedDocument}
+                onClose={() => setSelectedDocument(null)}
+                document={selectedDocument}
             />
 
         </>
