@@ -1489,17 +1489,6 @@ router.post('/:id/photo', requireRole('clinician', 'front_desk', 'admin'), uploa
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // DEBUG: Log first 20 bytes of uploaded file to check for corruption
-    try {
-      const fd = fs.openSync(req.file.path, 'r');
-      const buffer = Buffer.alloc(20);
-      fs.readSync(fd, buffer, 0, 20, 0);
-      fs.closeSync(fd);
-      console.log(`[DEBUG] Uploaded file header (${req.file.mimetype}):`, buffer.toString('hex'));
-    } catch (err) {
-      console.error('[DEBUG] Error reading uploaded file header:', err);
-    }
-
     // Construct photo URL (relative path that can be served statically)
     const photoUrl = `/uploads/patient-photos/${req.file.filename}`;
 
@@ -1533,11 +1522,12 @@ router.post('/:id/photo/base64', requireRole('clinician', 'front_desk', 'admin')
     }
 
     // Convert base64 to buffer
-    const base64Data = photoData.replace(/^data:image\/\w+;base64,/, '');
+    // Robustly strip the data:image/...;base64, prefix
+    const base64Data = photoData.includes(',') ? photoData.split(',')[1] : photoData;
     const buffer = Buffer.from(base64Data, 'base64');
 
     // Determine file extension from data URL
-    const match = photoData.match(/^data:image\/(\w+);base64,/);
+    const match = photoData.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,/);
     const extension = match ? match[1] : 'jpg';
 
     // Generate filename
