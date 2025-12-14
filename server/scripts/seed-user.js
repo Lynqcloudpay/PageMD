@@ -4,13 +4,7 @@ const pool = require('../db');
 async function seedUsers() {
   try {
     const users = [
-      {
-        email: 'superadmin@clinic.com',
-        password: 'SuperAdmin2025!',
-        firstName: 'Super',
-        lastName: 'Admin',
-        role: 'SuperAdmin'
-      },
+
       {
         email: 'doctor@clinic.com',
         password: 'Password123!',

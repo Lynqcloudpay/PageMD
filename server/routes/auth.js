@@ -46,7 +46,7 @@ router.post('/register', [
     );
 
     const user = result.rows[0];
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'dev-secret-key', { expiresIn: '24h' });
 
     await logAudit(user.id, 'user_registered', 'user', user.id, {}, req.ip);
 
@@ -103,7 +103,7 @@ router.post('/login', [
       console.log('[LOGIN] Validation errors:', errors.array());
       return res.status(400).json({ errors: errors.array() });
     }
-    
+
     console.log(`[LOGIN] Attempting login for: ${req.body.email}`);
 
     const { email, password } = req.body;
@@ -114,9 +114,9 @@ router.post('/login', [
     if (process.env.NODE_ENV === 'production' && process.env.DEV_MODE === 'true') {
       throw new Error('DEV_MODE is not allowed in production. This is a security violation.');
     }
-    
+
     const DEV_MODE = process.env.DEV_MODE === 'true' && process.env.NODE_ENV !== 'production';
-    
+
     if (DEV_MODE && (email === 'doctor@clinic.com' || email === 'test@test.com')) {
       // Mock login for development (only in non-production environments)
       const mockUser = {
@@ -126,11 +126,11 @@ router.post('/login', [
         lastName: 'Rodriguez',
         role: 'clinician'
       };
-      
+
       const token = jwt.sign({ userId: mockUser.id }, process.env.JWT_SECRET || 'dev-secret-key', { expiresIn: '24h' });
-      
+
       console.log('⚠️  DEV MODE: Mock login successful (no database required)');
-      
+
       return res.json({
         user: mockUser,
         token,
@@ -150,17 +150,17 @@ router.post('/login', [
       `, [email]);
     } catch (dbError) {
       console.error('Database query error:', dbError);
-      
+
       // In development, provide helpful error message
       if (process.env.NODE_ENV !== 'production') {
-        return res.status(500).json({ 
+        return res.status(500).json({
           error: 'Database connection failed. PostgreSQL is not running.',
           hint: 'Set DEV_MODE=true in .env to use mock authentication, or start PostgreSQL',
           details: dbError.message
         });
       }
-      
-      return res.status(500).json({ 
+
+      return res.status(500).json({
         error: 'Database connection failed',
         details: process.env.NODE_ENV === 'development' ? dbError.message : undefined
       });
@@ -173,7 +173,7 @@ router.post('/login', [
 
     const user = result.rows[0];
     console.log(`[LOGIN] User found: ${email}, status: ${user.status || 'active (null)'}`);
-    
+
     // Allow NULL status as active (for backward compatibility)
     if (user.status && user.status !== 'active') {
       console.log(`[LOGIN] Account ${user.status} for ${email}`);
@@ -201,7 +201,7 @@ router.post('/login', [
       console.error(`[LOGIN] Password verification error for ${email}:`, verifyError.message);
       return res.status(500).json({ error: 'Password verification failed. Please try again.' });
     }
-    
+
     if (!valid) {
       console.error('Login failed: Password mismatch for', email);
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -214,7 +214,7 @@ router.post('/login', [
       console.warn('Failed to update last login:', updateError.message);
     }
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'dev-secret-key', { expiresIn: '24h' });
 
     try {
       await logAudit(user.id, 'user_login', 'user', user.id, {}, req.ip);
@@ -238,7 +238,7 @@ router.post('/login', [
   } catch (error) {
     console.error('Login error:', error);
     console.error('Error details:', error.message, error.stack);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Login failed',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -250,7 +250,7 @@ router.get('/me', authenticate, async (req, res) => {
   try {
     const userService = require('../services/userService');
     const user = await userService.getUserById(req.user.id, true);
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
