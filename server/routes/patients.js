@@ -56,7 +56,7 @@ router.get('/', requirePrivilege('patient:view'), async (req, res) => {
     const { search, limit = 100, offset = 0 } = req.query;
     let query = 'SELECT * FROM patients';
     const params = [];
-    
+
     // Handle search parameter - check if search is provided and not empty
     if (search && search.trim()) {
       query += ` WHERE first_name ILIKE $1 OR last_name ILIKE $1 OR mrn ILIKE $1`;
@@ -69,7 +69,7 @@ router.get('/', requirePrivilege('patient:view'), async (req, res) => {
     }
 
     const result = await pool.query(query, params);
-    
+
     // Decrypt PHI fields before sending response
     let decryptedPatients;
     try {
@@ -79,7 +79,7 @@ router.get('/', requirePrivilege('patient:view'), async (req, res) => {
       // If decryption fails, return encrypted data rather than failing completely
       decryptedPatients = result.rows;
     }
-    
+
     // Log audit (don't fail if audit logging fails)
     try {
       const requestId = req.headers['x-request-id'] || crypto.randomUUID();
@@ -98,13 +98,13 @@ router.get('/', requirePrivilege('patient:view'), async (req, res) => {
     } catch (auditError) {
       console.warn('Failed to log audit for patient list:', auditError.message);
     }
-    
+
     res.json(decryptedPatients);
   } catch (error) {
     console.error('Error fetching patients:', error);
     console.error('Error stack:', error.stack);
     console.error('Error code:', error.code);
-    
+
     // Log failed audit (don't fail if this also fails)
     try {
       await logAudit(
@@ -122,8 +122,8 @@ router.get('/', requirePrivilege('patient:view'), async (req, res) => {
     } catch (auditError) {
       console.warn('Failed to log audit for patient list error:', auditError.message);
     }
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       error: 'Failed to fetch patients',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -141,12 +141,12 @@ router.get('/:id/snapshot', requirePrivilege('patient:view'), async (req, res) =
     try {
       patient = await pool.query('SELECT * FROM patients WHERE id = $1', [id]);
       if (patient.rows.length === 0) {
-      return res.status(404).json({ error: 'Patient not found' });
-    }
+        return res.status(404).json({ error: 'Patient not found' });
+      }
       // Decrypt PHI fields
       patient.rows[0] = await patientEncryptionService.decryptPatientPHI(patient.rows[0]);
-  } catch (error) {
-    console.error('Error fetching patient:', error);
+    } catch (error) {
+      console.error('Error fetching patient:', error);
       throw new Error(`Failed to fetch patient: ${error.message}`);
     }
 
@@ -154,9 +154,9 @@ router.get('/:id/snapshot', requirePrivilege('patient:view'), async (req, res) =
     let allergies = { rows: [] };
     try {
       allergies = await pool.query(
-      'SELECT * FROM allergies WHERE patient_id = $1 AND active = true ORDER BY created_at DESC',
-      [id]
-    );
+        'SELECT * FROM allergies WHERE patient_id = $1 AND active = true ORDER BY created_at DESC',
+        [id]
+      );
     } catch (error) {
       console.warn('Error fetching allergies (continuing):', error.message);
     }
@@ -165,9 +165,9 @@ router.get('/:id/snapshot', requirePrivilege('patient:view'), async (req, res) =
     let medications = { rows: [] };
     try {
       medications = await pool.query(
-      'SELECT * FROM medications WHERE patient_id = $1 AND active = true ORDER BY created_at DESC',
-      [id]
-    );
+        'SELECT * FROM medications WHERE patient_id = $1 AND active = true ORDER BY created_at DESC',
+        [id]
+      );
     } catch (error) {
       console.warn('Error fetching medications (continuing):', error.message);
     }
@@ -176,9 +176,9 @@ router.get('/:id/snapshot', requirePrivilege('patient:view'), async (req, res) =
     let problems = { rows: [] };
     try {
       problems = await pool.query(
-      'SELECT * FROM problems WHERE patient_id = $1 AND status = $2 ORDER BY created_at DESC',
-      [id, 'active']
-    );
+        'SELECT * FROM problems WHERE patient_id = $1 AND status = $2 ORDER BY created_at DESC',
+        [id, 'active']
+      );
     } catch (error) {
       console.warn('Error fetching problems (continuing):', error.message);
     }
@@ -187,7 +187,7 @@ router.get('/:id/snapshot', requirePrivilege('patient:view'), async (req, res) =
     let visits = { rows: [] };
     try {
       visits = await pool.query(
-      `SELECT v.*, 
+        `SELECT v.*, 
               COALESCE(u.first_name, 'Unknown') as provider_first_name, 
               COALESCE(u.last_name, 'Provider') as provider_last_name
        FROM visits v
@@ -195,8 +195,8 @@ router.get('/:id/snapshot', requirePrivilege('patient:view'), async (req, res) =
        WHERE v.patient_id = $1
        ORDER BY v.visit_date DESC
        LIMIT 3`,
-      [id]
-    );
+        [id]
+      );
     } catch (error) {
       console.warn('Error fetching visits (continuing):', error.message);
     }
@@ -206,10 +206,10 @@ router.get('/:id/snapshot', requirePrivilege('patient:view'), async (req, res) =
     setTimeout(async () => {
       try {
         // Try to load clinical rules if it exists
-      try {
-        const { autoCreateAlerts } = require('../middleware/clinical-rules');
+        try {
+          const { autoCreateAlerts } = require('../middleware/clinical-rules');
           if (autoCreateAlerts && typeof autoCreateAlerts === 'function') {
-        await autoCreateAlerts(id);
+            await autoCreateAlerts(id);
           }
         } catch (requireError) {
           // Module doesn't exist or function not available - that's OK
@@ -225,10 +225,10 @@ router.get('/:id/snapshot', requirePrivilege('patient:view'), async (req, res) =
     let lastVisit = { rows: [] };
     try {
       lastVisit = await pool.query(
-      `SELECT vitals FROM visits WHERE patient_id = $1 AND vitals IS NOT NULL
+        `SELECT vitals FROM visits WHERE patient_id = $1 AND vitals IS NOT NULL
        ORDER BY visit_date DESC LIMIT 1`,
-      [id]
-    );
+        [id]
+      );
     } catch (error) {
       console.warn('Error fetching last vitals (continuing):', error.message);
     }
@@ -268,7 +268,7 @@ router.get('/:id/snapshot', requirePrivilege('patient:view'), async (req, res) =
     console.error('Error code:', error.code);
     console.error('Error detail:', error.detail);
     console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch snapshot',
       message: error.message,
       details: process.env.NODE_ENV === 'development' ? {
@@ -286,7 +286,7 @@ router.get('/:id', requirePrivilege('patient:view'), async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query('SELECT * FROM patients WHERE id = $1', [id]);
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Patient not found' });
     }
@@ -312,7 +312,7 @@ router.get('/:id', requirePrivilege('patient:view'), async (req, res) => {
     res.json(decryptedPatient);
   } catch (error) {
     console.error('Error fetching patient:', error);
-    
+
     // Log failed audit
     await logAudit(
       req.user?.id,
@@ -326,8 +326,8 @@ router.get('/:id', requirePrivilege('patient:view'), async (req, res) => {
       req.requestId,
       req.sessionId
     );
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       error: 'Failed to fetch patient',
       details: process.env.NODE_ENV === 'development' ? {
         message: error.message,
@@ -355,7 +355,7 @@ router.post('/', requirePrivilege('patient:create'), async (req, res) => {
       race,
       ethnicity,
       maritalStatus,
-      
+
       // Contact
       phone,
       phoneSecondary,
@@ -369,7 +369,7 @@ router.post('/', requirePrivilege('patient:create'), async (req, res) => {
       communicationPreference,
       consentToText,
       consentToEmail,
-      
+
       // Address
       addressLine1,
       addressLine2,
@@ -378,12 +378,12 @@ router.post('/', requirePrivilege('patient:create'), async (req, res) => {
       zip,
       country,
       addressType,
-      
+
       // Employment
       employmentStatus,
       occupation,
       employerName,
-      
+
       // Emergency Contact
       emergencyContactName,
       emergencyContactPhone,
@@ -392,7 +392,7 @@ router.post('/', requirePrivilege('patient:create'), async (req, res) => {
       emergencyContact2Name,
       emergencyContact2Phone,
       emergencyContact2Relationship,
-      
+
       // Insurance
       insuranceProvider,
       insuranceId,
@@ -406,7 +406,7 @@ router.post('/', requirePrivilege('patient:create'), async (req, res) => {
       insuranceEffectiveDate,
       insuranceExpiryDate,
       insuranceNotes,
-      
+
       // Pharmacy
       pharmacyName,
       pharmacyAddress,
@@ -414,7 +414,7 @@ router.post('/', requirePrivilege('patient:create'), async (req, res) => {
       pharmacyNpi,
       pharmacyFax,
       pharmacyPreferred,
-      
+
       // Additional
       referralSource,
       smokingStatus,
@@ -428,11 +428,11 @@ router.post('/', requirePrivilege('patient:create'), async (req, res) => {
     const trimmedFirstName = firstName?.trim();
     const trimmedLastName = lastName?.trim();
     const trimmedDob = dob?.trim();
-    
+
     if (!trimmedFirstName || !trimmedLastName || !trimmedDob) {
-      return res.status(400).json({ 
-        error: 'Missing required fields', 
-        details: 'First name, last name, and date of birth are required' 
+      return res.status(400).json({
+        error: 'Missing required fields',
+        details: 'First name, last name, and date of birth are required'
       });
     }
 
@@ -571,7 +571,7 @@ router.post('/', requirePrivilege('patient:create'), async (req, res) => {
     // This prevents errors when trying to insert into non-existent columns
     let validFields = [];
     let validValues = [];
-    
+
     try {
       // Get list of actual columns in the patients table
       const columnCheck = await pool.query(`
@@ -581,12 +581,12 @@ router.post('/', requirePrivilege('patient:create'), async (req, res) => {
         AND table_schema = 'public'
       `);
       const existingColumns = new Set(columnCheck.rows.map(row => row.column_name));
-      
+
       // Only include fields that exist in the database
       for (let i = 0; i < fields.length; i++) {
         const field = fields[i];
         const value = values[i];
-        
+
         // Always include required fields (mrn, first_name, last_name, dob)
         if (['mrn', 'first_name', 'last_name', 'dob'].includes(field)) {
           validFields.push(field);
@@ -645,15 +645,15 @@ router.post('/', requirePrivilege('patient:create'), async (req, res) => {
     console.error('Error table:', error.table);
     console.error('Error column:', error.column);
     console.error('Request body:', JSON.stringify(req.body, null, 2));
-    
+
     // Handle specific database errors
     if (error.code === '23505') {
       return res.status(400).json({ error: 'MRN already exists' });
     }
-    
+
     if (error.code === '42703') {
       // Column does not exist
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: 'Database schema mismatch',
         message: `Column '${error.column}' does not exist in the patients table. Please run database migrations.`,
         details: process.env.NODE_ENV === 'development' ? {
@@ -663,10 +663,10 @@ router.post('/', requirePrivilege('patient:create'), async (req, res) => {
         } : undefined
       });
     }
-    
+
     if (error.code === '23502') {
       // Not null constraint violation
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Missing required field',
         message: `Required field '${error.column}' is missing`,
         details: process.env.NODE_ENV === 'development' ? {
@@ -675,13 +675,13 @@ router.post('/', requirePrivilege('patient:create'), async (req, res) => {
         } : undefined
       });
     }
-    
+
     // Provide more detailed error information in development
     const errorResponse = {
       error: 'Failed to create patient',
       message: error.message
     };
-    
+
     // Show details in development OR if not in production
     const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
     if (isDevelopment) {
@@ -695,7 +695,7 @@ router.post('/', requirePrivilege('patient:create'), async (req, res) => {
         stack: error.stack
       };
     }
-    
+
     res.status(500).json(errorResponse);
   }
 });
@@ -723,7 +723,7 @@ router.delete('/:id', requirePrivilege('patient:delete'), async (req, res) => {
         'delete_patient',
         'patient',
         id,
-        { 
+        {
           mrn: patient.mrn,
           name: `${patient.first_name} ${patient.last_name}`.trim()
         },
@@ -737,7 +737,7 @@ router.delete('/:id', requirePrivilege('patient:delete'), async (req, res) => {
       console.warn('Failed to log audit for patient deletion:', auditError.message);
     }
 
-    res.json({ 
+    res.json({
       message: 'Patient deleted successfully',
       deletedPatient: {
         id: patient.id,
@@ -749,7 +749,7 @@ router.delete('/:id', requirePrivilege('patient:delete'), async (req, res) => {
     console.error('Error deleting patient:', error);
     console.error('Error stack:', error.stack);
     console.error('Error code:', error.code);
-    
+
     // Log failed audit
     try {
       await logAudit(
@@ -768,7 +768,7 @@ router.delete('/:id', requirePrivilege('patient:delete'), async (req, res) => {
       console.warn('Failed to log audit for patient deletion error:', auditError.message);
     }
 
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to delete patient',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -873,7 +873,7 @@ router.put('/:id', requirePrivilege('patient:edit'), async (req, res) => {
     // Log audit (non-blocking, don't fail if it errors)
     if (req.user && req.user.id) {
       try {
-    await logAudit(req.user.id, 'update_patient', 'patient', id, { fields: Object.keys(updates) }, req.ip);
+        await logAudit(req.user.id, 'update_patient', 'patient', id, { fields: Object.keys(updates) }, req.ip);
       } catch (auditError) {
         console.warn('Failed to log audit for patient update:', auditError);
       }
@@ -933,7 +933,7 @@ router.post('/:id/medications', requireRole('clinician'), async (req, res) => {
       [id, medicationName, dosage, frequency, route, startDate, req.user.id]
     );
 
-    await logAudit(req.user.id, 'add_medication', 'medication', result.rows[0].id, { 
+    await logAudit(req.user.id, 'add_medication', 'medication', result.rows[0].id, {
       medication: medicationName,
       warnings: warnings.length > 0 ? warnings : null
     }, req.ip);
@@ -1139,7 +1139,7 @@ router.put('/family-history/:historyId', requireRole('clinician'), async (req, r
   } catch (error) {
     console.error('Error updating family history:', error);
     console.error('Error stack:', error.stack);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to update family history',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -1263,7 +1263,7 @@ router.post('/:id/social-history', requireRole('clinician'), async (req, res) =>
       constraint: error.constraint,
       stack: error.stack
     });
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to save social history',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -1484,9 +1484,20 @@ router.delete('/medications/:medicationId', requireRole('clinician'), async (req
 router.post('/:id/photo', requireRole('clinician', 'front_desk', 'admin'), upload.single('photo'), async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // DEBUG: Log first 20 bytes of uploaded file to check for corruption
+    try {
+      const fd = fs.openSync(req.file.path, 'r');
+      const buffer = Buffer.alloc(20);
+      fs.readSync(fd, buffer, 0, 20, 0);
+      fs.closeSync(fd);
+      console.log(`[DEBUG] Uploaded file header (${req.file.mimetype}):`, buffer.toString('hex'));
+    } catch (err) {
+      console.error('[DEBUG] Error reading uploaded file header:', err);
     }
 
     // Construct photo URL (relative path that can be served statically)
@@ -1524,11 +1535,11 @@ router.post('/:id/photo/base64', requireRole('clinician', 'front_desk', 'admin')
     // Convert base64 to buffer
     const base64Data = photoData.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
-    
+
     // Determine file extension from data URL
     const match = photoData.match(/^data:image\/(\w+);base64,/);
     const extension = match ? match[1] : 'jpg';
-    
+
     // Generate filename
     const filename = `patient-${id}-${Date.now()}-${Math.round(Math.random() * 1E9)}.${extension}`;
     // Ensure uploadDir exists and is correct
@@ -1537,11 +1548,11 @@ router.post('/:id/photo/base64', requireRole('clinician', 'front_desk', 'admin')
       fs.mkdirSync(patientPhotosDir, { recursive: true });
     }
     const filepath = path.join(patientPhotosDir, filename);
-    
+
     // Save file
     fs.writeFileSync(filepath, buffer);
     console.log('Photo saved to:', filepath);
-    
+
     // Construct photo URL
     const photoUrl = `/uploads/patient-photos/${filename}`;
 
