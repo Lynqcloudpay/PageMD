@@ -18,9 +18,39 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          # Save the SSH key (preserve line endings)
           echo "${{ secrets.LIGHTSAIL_SSH_KEY }}" > ~/.ssh/lightsail_key
           chmod 600 ~/.ssh/lightsail_key
-          ssh-keyscan -H ${{ secrets.LIGHTSAIL_HOST }} >> ~/.ssh/known_hosts
+          
+          # Verify key format
+          if ! head -1 ~/.ssh/lightsail_key | grep -q "BEGIN.*PRIVATE KEY"; then
+            echo "❌ Error: SSH key doesn't start with BEGIN marker"
+            echo "First line of key: $(head -1 ~/.ssh/lightsail_key)"
+            exit 1
+          fi
+          
+          # Add host to known_hosts
+          ssh-keyscan -H ${{ secrets.LIGHTSAIL_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          
+          # Test SSH connection with verbose output for debugging
+          echo "Testing SSH connection to ${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }}..."
+          ssh -v -i ~/.ssh/lightsail_key \
+              -o StrictHostKeyChecking=no \
+              -o ConnectTimeout=10 \
+              -o UserKnownHostsFile=~/.ssh/known_hosts \
+              ${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }} \
+              "echo 'SSH connection successful'" 2>&1 || {
+            echo "❌ SSH connection test failed!"
+            echo ""
+            echo "Troubleshooting steps:"
+            echo "1. Verify LIGHTSAIL_SSH_KEY secret contains the full private key including BEGIN/END lines"
+            echo "2. Verify LIGHTSAIL_HOST is correct: ${{ secrets.LIGHTSAIL_HOST }}"
+            echo "3. Verify LIGHTSAIL_USER is correct: ${{ secrets.LIGHTSAIL_USER }}"
+            echo "4. Check that the SSH key matches the public key on the server"
+            exit 1
+          }
+          echo "✅ SSH connection successful!"
       
       - name: Deploy to Lightsail
         env:
@@ -30,15 +60,54 @@ jobs:
             set -e
             
             echo "📂 Navigating to app directory..."
-            cd $DEPLOY_DIR || cd /home/ubuntu/emr || { echo "❌ Directory not found!"; exit 1; }
+            # Try multiple possible directory locations
+            if [ -d "$DEPLOY_DIR" ]; then
+              cd "$DEPLOY_DIR"
+              echo "✅ Found app directory: $DEPLOY_DIR"
+            elif [ -d "/home/ubuntu/emr" ]; then
+              cd /home/ubuntu/emr
+              echo "✅ Found app directory: /home/ubuntu/emr"
+            elif [ -d "/home/ubuntu/app" ]; then
+              cd /home/ubuntu/app
+              echo "✅ Found app directory: /home/ubuntu/app"
+            else
+              echo "❌ App directory not found!"
+              echo "Searched in: $DEPLOY_DIR, /home/ubuntu/emr, /home/ubuntu/app"
+              echo "Current directory: $(pwd)"
+              echo "Available directories:"
+              ls -la /home/ubuntu/ | head -10
+              exit 1
+            fi
             
             echo "⬇️  Pulling latest changes from GitHub..."
+            # Check if this is a git repository
+            if [ ! -d .git ]; then
+              echo "❌ Not a git repository! Initializing..."
+              git init
+              git remote add origin https://github.com/Lynqcloudpay/PageMD.git || git remote set-url origin https://github.com/Lynqcloudpay/PageMD.git
+              git fetch origin
+              git checkout -b main origin/main || git checkout -b main
+            fi
+            
             # Ensure we're on main branch and pull latest
-            git fetch origin main || git fetch origin
-            git checkout main 2>/dev/null || true
-            git pull origin main || git pull || { echo "⚠️  Git pull failed, continuing anyway..."; }
+            git fetch origin main || git fetch origin || { echo "⚠️  Git fetch failed, trying to continue..."; }
+            git checkout main 2>/dev/null || git checkout -b main 2>/dev/null || true
+            git pull origin main || git pull || { 
+              echo "⚠️  Git pull failed, but continuing with existing code..."
+              echo "This may happen if the directory was manually set up."
+            }
+            
+            # Check if deploy directory exists
+            if [ ! -d "deploy" ]; then
+              echo "❌ deploy/ directory not found!"
+              echo "Current directory: $(pwd)"
+              echo "Available files:"
+              ls -la | head -10
+              exit 1
+            fi
             
             cd deploy
+            echo "✅ In deploy directory: $(pwd)"
             
             echo "⚙️  Checking environment variables..."
             # Ensure .env.prod has correct domain if it was copied from old example
