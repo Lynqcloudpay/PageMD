@@ -32,6 +32,8 @@ $SSH_CMD $USER@$HOST << EOF
     if grep -q "yourdomain.com" .env.prod; then
       echo "📝 Updating domain in existing .env.prod..."
       sed -i 's/yourdomain.com/bemypcp.com/g' .env.prod
+      sed -i 's|FRONTEND_URL=https://yourdomain.com|FRONTEND_URL=https://bemypcp.com|g' .env.prod
+      sed -i 's|CORS_ORIGIN=https://yourdomain.com|CORS_ORIGIN=https://bemypcp.com|g' .env.prod
     fi
   else
     echo "⚠️  .env.prod not found! Copying from example..."

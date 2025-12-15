@@ -187,17 +187,24 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (email, password) => {
         try {
+            console.log('AuthContext: Attempting login for', email);
             const response = await authAPI.login(email, password);
+            console.log('AuthContext: Login response', response);
             if (response.data.token) {
                 // HIPAA SECURITY: Token stored in memory ONLY
                 // Closing tab = token gone = must log in again
+                console.log('AuthContext: Token received, updating state');
                 tokenManager.setToken(response.data.token);
                 tokenManager.setRememberedUsername(email);
                 setUser(response.data.user);
                 resetInactivityTimer();
+                console.log('AuthContext: User state updated', response.data.user);
                 return response.data;
+            } else {
+                console.warn('AuthContext: Login successful but no token received');
             }
         } catch (error) {
+            console.error('AuthContext: Login error', error);
             throw error;
         }
     };

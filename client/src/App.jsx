@@ -35,8 +35,15 @@ const PatientRedirect = () => {
 const ProtectedRoute = ({ children }) => {
     const auth = useAuth();
 
+    console.log('ProtectedRoute: Render. Auth state:', {
+        loading: auth?.loading,
+        hasUser: !!auth?.user,
+        user: auth?.user
+    });
+
     // Safety check
     if (!auth) {
+        console.error('ProtectedRoute: Auth context is missing!');
         return (
             <div className="min-h-screen bg-white flex items-center justify-center">
                 <div className="text-deep-gray/70">Loading...</div>
@@ -47,6 +54,7 @@ const ProtectedRoute = ({ children }) => {
     const { user, loading } = auth;
 
     if (loading) {
+        console.log('ProtectedRoute: Loading...');
         return (
             <div className="min-h-screen bg-white flex items-center justify-center">
                 <div className="text-deep-gray/70">Loading...</div>
@@ -55,9 +63,11 @@ const ProtectedRoute = ({ children }) => {
     }
 
     if (!user) {
+        console.warn('ProtectedRoute: No user, redirecting to login');
         return <Navigate to="/login" replace />;
     }
 
+    console.log('ProtectedRoute: Access granted');
     return <>{children}</>;
 };
 
