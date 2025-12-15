@@ -1,4 +1,5 @@
 import axios from 'axios';
+import tokenManager from './tokenManager';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -11,7 +12,7 @@ const api = axios.create({
 
 // Add auth token to requests
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = tokenManager.getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -132,12 +133,12 @@ export const followupsAPI = {
 export const billingAPI = {
   // Fee Schedule
   getFeeSchedule: (params) => api.get('/billing/fee-schedule', { params }),
-  
+
   // Insurance
   getInsurance: () => api.get('/billing/insurance'),
   verifyEligibility: (data) => api.post('/billing/eligibility/verify', data),
   getEligibility: (patientId) => api.get(`/billing/eligibility/patient/${patientId}`),
-  
+
   // Claims
   createClaim: (data) => api.post('/billing/claims', data),
   getClaim: (id) => api.get(`/billing/claims/${id}`),
@@ -146,20 +147,20 @@ export const billingAPI = {
   updateClaim: (id, data) => api.put(`/billing/claims/${id}`, data),
   submitClaim: (id, data) => api.post(`/billing/claims/${id}/submit`, data),
   deleteClaim: (id) => api.delete(`/billing/claims/${id}`),
-  
+
   // Payments
   postPayment: (data) => api.post('/billing/payments', data),
   getPaymentsByClaim: (claimId) => api.get(`/billing/payments/claim/${claimId}`),
-  
+
   // Denials
   createDenial: (data) => api.post('/billing/denials', data),
   getDenialsByClaim: (claimId) => api.get(`/billing/denials/claim/${claimId}`),
   appealDenial: (id, data) => api.post(`/billing/denials/${id}/appeal`, data),
-  
+
   // Prior Authorizations
   createPriorAuth: (data) => api.post('/billing/prior-authorizations', data),
   getPriorAuthsByPatient: (patientId) => api.get(`/billing/prior-authorizations/patient/${patientId}`),
-  
+
   // Statistics
   getStatistics: (params) => api.get('/billing/statistics', { params }),
 };
@@ -201,8 +202,8 @@ export const codesAPI = {
 export const medicationsAPI = {
   search: (query) => api.get('/medications/search', { params: { q: query } }),
   getDetails: (rxcui) => api.get(`/medications/${rxcui}`),
-  checkInteractions: (rxcuis) => api.get('/medications/interactions/check', { 
-    params: { rxcuis: Array.isArray(rxcuis) ? rxcuis.join(',') : rxcuis } 
+  checkInteractions: (rxcuis) => api.get('/medications/interactions/check', {
+    params: { rxcuis: Array.isArray(rxcuis) ? rxcuis.join(',') : rxcuis }
   }),
 };
 
@@ -266,23 +267,23 @@ export const rolesAPI = {
 export const settingsAPI = {
   // Get all settings
   getAll: () => api.get('/settings/all'),
-  
+
   // Practice settings
   getPractice: () => api.get('/settings/practice'),
   updatePractice: (data) => api.put('/settings/practice', data),
-  
+
   // Security settings
   getSecurity: () => api.get('/settings/security'),
   updateSecurity: (data) => api.put('/settings/security', data),
-  
+
   // Clinical settings
   getClinical: () => api.get('/settings/clinical'),
   updateClinical: (data) => api.put('/settings/clinical', data),
-  
+
   // Email settings
   getEmail: () => api.get('/settings/email'),
   updateEmail: (data) => api.put('/settings/email', data),
-  
+
   // Feature flags
   getFeatures: () => api.get('/settings/features'),
   updateFeature: (key, data) => api.put(`/settings/features/${key}`, data),
