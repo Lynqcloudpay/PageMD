@@ -1,5 +1,6 @@
 import axios from 'axios';
 import tokenManager from './tokenManager';
+import { showError } from '../utils/toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -38,6 +39,23 @@ api.interceptors.response.use(
         window.dispatchEvent(new CustomEvent('auth:unauthorized'));
       }
     }
+    
+    // Handle 403 Forbidden - insufficient permissions
+    if (error.response?.status === 403) {
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          'You do not have permission to perform this action';
+      const missingPermission = error.response?.data?.missing || error.response?.data?.required;
+      
+      let toastMessage = errorMessage;
+      if (missingPermission) {
+        toastMessage = `Permission denied: ${missingPermission}`;
+      }
+      
+      showError(toastMessage, 5000);
+      console.warn('403 Forbidden:', errorMessage, missingPermission ? `Missing: ${missingPermission}` : '');
+    }
+    
     return Promise.reject(error);
   }
 );

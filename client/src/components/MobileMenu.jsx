@@ -2,20 +2,25 @@ import React, { useState } from 'react';
 import { Menu, X, Calendar, Users, ClipboardList, MessageSquare, Video, LogOut } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../hooks/usePermissions';
 
 const MobileMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { can } = usePermissions();
 
-  const navItems = [
-    { path: '/schedule', icon: Calendar, label: 'Schedule' },
-    { path: '/patients', icon: Users, label: 'Patients' },
-    { path: '/tasks', icon: ClipboardList, label: 'In Basket' },
-    { path: '/messages', icon: MessageSquare, label: 'Messages' },
-    { path: '/telehealth', icon: Video, label: 'Telehealth' },
+  // Filter nav items based on permissions
+  const allNavItems = [
+    { path: '/schedule', icon: Calendar, label: 'Schedule', permission: 'schedule:view' },
+    { path: '/patients', icon: Users, label: 'Patients', permission: 'patients:view_list' },
+    { path: '/tasks', icon: ClipboardList, label: 'In Basket', permission: null }, // No permission check
+    { path: '/messages', icon: MessageSquare, label: 'Messages', permission: null }, // No permission check
+    { path: '/telehealth', icon: Video, label: 'Telehealth', permission: null }, // No permission check
   ];
+  
+  const navItems = allNavItems.filter(item => !item.permission || can(item.permission));
 
   const isActive = (path) => location.pathname.startsWith(path);
 
@@ -89,7 +94,7 @@ const MobileMenu = () => {
                     {user.firstName} {user.lastName}
                   </div>
                   <div className="text-xs text-neutral-500 dark:text-neutral-400 capitalize">
-                    {user.role === 'clinician' ? 'Doctor' : user.role}
+                    {user.role || user.role_name || 'User'}
                   </div>
                 </div>
               )}

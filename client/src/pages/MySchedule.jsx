@@ -3,11 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, User, ChevronRight, ChevronLeft, Filter, FilterX, XCircle } from 'lucide-react';
 import { appointmentsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../hooks/usePermissions';
 import { format, addDays, isToday, isSameDay } from 'date-fns';
 
 const MySchedule = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { can, getScope } = usePermissions();
+    const scope = getScope();
     const [appointments, setAppointments] = useState({ active: [], scheduled: [], checkedOut: [], cancelledNoShow: [] });
     const [loading, setLoading] = useState(true);
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -15,28 +18,14 @@ const MySchedule = () => {
 
     useEffect(() => {
         const fetchAppointments = async () => {
-            if (!user) {
+            // Check if user has schedule:view permission
+            if (!user || !can('schedule:view')) {
                 setLoading(false);
                 return;
             }
-
-            // Check if user is a physician/NP/PA (medical staff) or admin
-            const roleName = user?.role_name || user?.role || '';
-            const roleNameLower = roleName.toLowerCase();
-            const isMedicalStaff = (
-                roleNameLower === 'physician' ||
-                roleNameLower === 'nurse practitioner' ||
-                roleNameLower === 'np' ||
-                roleNameLower === 'physician assistant' ||
-                roleNameLower === 'pa' ||
-                roleNameLower === 'clinician' ||
-                user?.role === 'clinician' ||
-                user?.role === 'admin' ||
-                user?.role_name === 'Admin' ||
-                user?.is_admin
-            );
-
-            if (!isMedicalStaff) {
+            
+            // My Schedule is only for users with SELF scope (clinicians)
+            if (scope.scheduleScope !== 'SELF') {
                 setLoading(false);
                 return;
             }

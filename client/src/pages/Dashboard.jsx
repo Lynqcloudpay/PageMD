@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { reportsAPI, appointmentsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../hooks/usePermissions';
 import { format } from 'date-fns';
 import Card, { CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -14,6 +15,8 @@ import Button from '../components/ui/Button';
 const Dashboard = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { can, getScope } = usePermissions();
+    const scope = getScope();
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [todayAppointments, setTodayAppointments] = useState([]);
@@ -43,16 +46,21 @@ const Dashboard = () => {
 
     useEffect(() => {
         const fetchTodayAppointments = async () => {
-            if (!user || (user.role !== 'clinician' && user.role !== 'admin')) {
+            // Only fetch if user has schedule:view permission
+            if (!user || !can('schedule:view')) {
                 setLoadingAppointments(false);
                 return;
             }
             try {
                 const today = format(new Date(), 'yyyy-MM-dd');
-                const response = await appointmentsAPI.get({ 
-                    date: today,
-                    providerId: user.id 
-                });
+                const params = { date: today };
+                
+                // If SELF scope, only show user's own appointments
+                if (scope.scheduleScope === 'SELF') {
+                    params.providerId = user.id;
+                }
+                
+                const response = await appointmentsAPI.get(params);
                 setTodayAppointments(response.data || []);
             } catch (error) {
                 console.error('Error fetching today\'s appointments:', error);
@@ -62,7 +70,7 @@ const Dashboard = () => {
             }
         };
         fetchTodayAppointments();
-    }, [user]);
+    }, [user, can, scope]);
 
     if (loading) {
         return (

@@ -21,10 +21,12 @@ import {
 } from 'lucide-react';
 import { settingsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../hooks/usePermissions';
 import { useNavigate } from 'react-router-dom';
 
 const AdminSettings = () => {
   const { user } = useAuth();
+  const { can } = usePermissions();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('practice');
   const [loading, setLoading] = useState(true);
@@ -38,32 +40,25 @@ const AdminSettings = () => {
   const [emailSettings, setEmailSettings] = useState({});
   const [featureFlags, setFeatureFlags] = useState([]);
 
-  // Check if user is admin
+  // Check if user has admin permissions
   useEffect(() => {
     if (user) {
-      const userRole = user.role || user.role_name || '';
-      const isAdmin = userRole === 'Admin' || userRole === 'admin' || userRole?.toLowerCase() === 'admin';
-      
-      if (!isAdmin) {
-        console.log('AdminSettings: User is not admin. Role:', userRole, 'User object:', user);
+      // Check for users:manage permission (admin permission)
+      if (!can('users:manage')) {
+        console.log('AdminSettings: User does not have users:manage permission');
         navigate('/dashboard');
       } else {
-        console.log('AdminSettings: User is admin. Loading settings...');
+        console.log('AdminSettings: User has admin permissions. Loading settings...');
       }
     }
-  }, [user, navigate]);
+  }, [user, can, navigate]);
 
   // Load all settings
   useEffect(() => {
-    if (user) {
-      const userRole = user.role || user.role_name || '';
-      const isAdmin = userRole === 'Admin' || userRole === 'admin' || userRole?.toLowerCase() === 'admin';
-      
-      if (isAdmin) {
-        loadAllSettings();
-      }
+    if (user && can('users:manage')) {
+      loadAllSettings();
     }
-  }, [user]);
+  }, [user, can]);
 
   const loadAllSettings = async () => {
     try {

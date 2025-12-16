@@ -7,9 +7,12 @@
 import React, { useState, useEffect } from 'react';
 import { appointmentsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../hooks/usePermissions';
 
 const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled = true, showCancelledBadge = false }) => {
     const { user } = useAuth();
+    const { can } = usePermissions();
+    const canUpdateStatus = can('schedule:status_update');
     const [status, setStatus] = useState(appointment?.patient_status || 'scheduled');
     const [roomSubStatus, setRoomSubStatus] = useState(appointment?.room_sub_status || null);
     const [room, setRoom] = useState(appointment?.current_room || '');
@@ -269,16 +272,19 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
             checked_out: isActive ? 'text-red-600 font-bold bg-red-50 px-1.5 py-0.5 rounded border border-red-300' : isPast ? 'text-red-500' : 'text-gray-300 hover:text-gray-500'
         };
 
+        const isDisabled = saving || isTerminalState || !canUpdateStatus;
+        
         return (
             <button
                 type="button"
                 onClick={() => {
-                    if (!saving && statusKey !== status && !isTerminalState) {
+                    if (!isDisabled && statusKey !== status) {
                         handleStatusChange(statusKey);
                     }
                 }}
-                disabled={saving || isTerminalState}
-                className={`text-[10px] transition-all ${colors[statusKey]} ${saving || isTerminalState ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} inline-flex items-center w-[85px] justify-start`}
+                disabled={isDisabled}
+                title={!canUpdateStatus ? 'You do not have permission to update appointment status' : ''}
+                className={`text-[10px] transition-all ${colors[statusKey]} ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} inline-flex items-center w-[85px] justify-start`}
             >
                 <span className="inline-flex items-center min-w-[20px]">
                     {isPast && <span className="text-[8px] mr-0.5">✓</span>}
@@ -340,7 +346,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
 
         // Handle room button click - opens room input or moves to room
         const handleRoomClick = () => {
-            if (saving || isTerminalState) return;
+            if (saving || isTerminalState || !canUpdateStatus) return;
             
             if (status !== 'in_room') {
                 // First click: move to room with nurse
@@ -410,8 +416,9 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                 <button
                     type="button"
                     onClick={handleRoomClick}
-                    disabled={saving || isTerminalState}
-                    className={`text-[10px] transition-all flex items-center gap-0.5 ${color} ${saving || isTerminalState ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} w-[70px] justify-start`}
+                    disabled={saving || isTerminalState || !canUpdateStatus}
+                    title={!canUpdateStatus ? 'You do not have permission to update appointment status' : ''}
+                    className={`text-[10px] transition-all flex items-center gap-0.5 ${color} ${saving || isTerminalState || !canUpdateStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} w-[70px] justify-start`}
                 >
                     <span className="inline-flex items-center min-w-[8px]">
                         {isPast && <span className="text-[8px]">✓</span>}
