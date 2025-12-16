@@ -10,6 +10,8 @@ router.get('/', async (req, res) => {
   try {
     const { status, startDate, endDate } = req.query;
     
+    console.log(`[FOLLOWUPS] GET request - status: ${status}, startDate: ${startDate}, endDate: ${endDate}`);
+    
     let query = `
       SELECT 
         cf.*,
@@ -61,6 +63,7 @@ router.get('/', async (req, res) => {
     
     query += ` ORDER BY cf.created_at DESC`;
     
+    console.log(`[FOLLOWUPS] Executing query with params:`, params);
     const result = await pool.query(query, params);
     
     console.log(`[FOLLOWUPS] Found ${result.rows.length} follow-ups from query`);
