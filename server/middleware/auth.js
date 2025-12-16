@@ -34,6 +34,8 @@ const authenticate = async (req, res, next) => {
       LEFT JOIN roles r ON u.role_id = r.id
       WHERE u.id = $1
     `, [decoded.userId]);
+    
+    console.log('[AUTH] User query result:', result.rows.length > 0 ? `Found user ${result.rows[0].email}` : 'No user found');
 
     // Check if user has admin privileges through their role (even if role is not Admin)
     if (result.rows.length > 0 && !result.rows[0].is_admin && result.rows[0].role_id) {
@@ -69,6 +71,12 @@ const authenticate = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
+    console.error('[AUTH] Authentication error:', error.message);
+    console.error('[AUTH] Error stack:', error.stack);
+    // If it's a JWT error, provide more specific message
+    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
     return res.status(401).json({ error: 'Invalid token' });
   }
 };
