@@ -111,6 +111,7 @@ class UserService {
         u.professional_type,
         u.npi,
         u.credentials,
+        u.is_admin,
         r.id as role_id,
         r.name as role_name
       FROM users u
