@@ -232,7 +232,7 @@ router.put('/:id', [
   } catch (error) {
     console.error('Error updating user:', error);
     console.error('Error details:', error.message, error.stack);
-    console.error('Update payload:', JSON.stringify(updates, null, 2));
+    console.error('Update payload:', JSON.stringify(req.body, null, 2));
     res.status(400).json({ 
       error: error.message || 'Failed to update user',
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
