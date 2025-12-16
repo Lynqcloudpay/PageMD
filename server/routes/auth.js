@@ -232,15 +232,20 @@ router.get('/me', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    // Return user with permissions and scope from auth context
     res.json({
       id: user.id,
       email: user.email,
       firstName: user.first_name,
       lastName: user.last_name,
-      role: user.role_name,
+      role: req.user.role || user.role_name,
       roleId: user.role_id,
       status: user.status,
       privileges: user.privileges || [],
+      // Add permissions and scope from auth context
+      permissions: req.user.permissions || [],
+      scope: req.user.scope || { scheduleScope: 'CLINIC', patientScope: 'CLINIC' },
+      isAdmin: req.user.isAdmin || false
     });
   } catch (error) {
     console.error('Error fetching current user:', error);

@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const pool = require('../db');
+const { getUserAuthContext } = require('../services/authorization');
 
 const authenticate = async (req, res, next) => {
   try {
@@ -44,7 +45,25 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ error: 'Account is suspended or inactive' });
     }
 
-    req.user = user;
+    // Load authorization context (permissions and scope)
+    try {
+      const authContext = await getUserAuthContext(user.id);
+      if (!authContext) {
+        return res.status(401).json({ error: 'Failed to load authorization context' });
+      }
+      
+      // Merge auth context with user data
+      req.user = {
+        ...user,
+        ...authContext
+      };
+    } catch (authError) {
+      // If permissions system isn't set up yet, fall back to basic user info
+      console.warn('[AUTH] Failed to load auth context, using basic user info:', authError.message);
+      req.user = user;
+      req.user.permissions = [];
+      req.user.scope = { scheduleScope: 'CLINIC', patientScope: 'CLINIC' };
+    }
 
     // Ensure role_name is populated (fallback to legacy role)
     if (!req.user.role_name && req.user.role) {

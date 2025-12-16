@@ -1,7 +1,7 @@
 const express = require('express');
 const pool = require('../db');
-const { authenticate, logAudit, requireRole } = require('../middleware/auth');
-const { requirePrivilege } = require('../middleware/authorization');
+const { authenticate, logAudit } = require('../middleware/auth');
+const { requirePermission, audit } = require('../services/authorization');
 const { v4: uuidv4 } = require('uuid');
 const multer = require('multer');
 const path = require('path');
@@ -50,23 +50,47 @@ const upload = multer({
 // All routes require authentication
 router.use(authenticate);
 
-// Get all patients (with search) - requires patient:view permission
-router.get('/', requirePrivilege('patient:view'), async (req, res) => {
+// Get all patients (with search) - requires patients:view_list permission
+router.get('/', requirePermission('patients:view_list'), async (req, res) => {
   try {
     const { search, limit = 100, offset = 0 } = req.query;
     let query = 'SELECT * FROM patients';
     const params = [];
+    let paramCount = 0;
+    
+    // Scope filtering: patient scope options (CLINIC, ASSIGNED, SELF)
+    if (req.user.scope?.patientScope === 'ASSIGNED' && req.user.role === 'CLINICIAN') {
+      // Only show patients assigned to this clinician
+      // This requires a patient_assignments table or logic based on visits
+      // For now, we'll use visits to determine assignment
+      query += ` WHERE id IN (
+        SELECT DISTINCT patient_id 
+        FROM visits 
+        WHERE provider_id = $${++paramCount}
+      )`;
+      params.push(req.user.id);
+    } else if (req.user.scope?.patientScope === 'SELF') {
+      // Only show own patients (rare, but possible)
+      query += ` WHERE id IN (
+        SELECT DISTINCT patient_id 
+        FROM visits 
+        WHERE provider_id = $${++paramCount}
+      )`;
+      params.push(req.user.id);
+    } else {
+      // CLINIC scope - show all patients
+      query += ' WHERE 1=1';
+    }
     
     // Handle search parameter - check if search is provided and not empty
     if (search && search.trim()) {
-      query += ` WHERE first_name ILIKE $1 OR last_name ILIKE $1 OR mrn ILIKE $1`;
+      paramCount++;
+      query += ` AND (first_name ILIKE $${paramCount} OR last_name ILIKE $${paramCount} OR mrn ILIKE $${paramCount})`;
       params.push(`%${search.trim()}%`);
-      query += ` ORDER BY last_name, first_name LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-      params.push(parseInt(limit), parseInt(offset));
-    } else {
-      query += ` ORDER BY last_name, first_name LIMIT $1 OFFSET $2`;
-      params.push(parseInt(limit), parseInt(offset));
     }
+    
+    query += ` ORDER BY last_name, first_name LIMIT $${++paramCount} OFFSET $${++paramCount}`;
+    params.push(parseInt(limit), parseInt(offset));
 
     const result = await pool.query(query, params);
     
@@ -112,7 +136,7 @@ router.get('/', requirePrivilege('patient:view'), async (req, res) => {
 
 // Get patient snapshot (front page data) - MUST come before /:id route
 // Requires patient:view permission
-router.get('/:id/snapshot', requirePrivilege('patient:view'), async (req, res) => {
+router.get('/:id/snapshot', requirePermission('patients:view_chart'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -262,7 +286,7 @@ router.get('/:id/snapshot', requirePrivilege('patient:view'), async (req, res) =
 });
 
 // Get patient by ID - MUST come after /:id/snapshot route
-router.get('/:id', requirePrivilege('patient:view'), async (req, res) => {
+router.get('/:id', requirePermission('patients:view_chart'), async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query('SELECT * FROM patients WHERE id = $1', [id]);
@@ -319,7 +343,7 @@ router.get('/:id', requirePrivilege('patient:view'), async (req, res) => {
 });
 
 // Create patient - requires patient:create permission
-router.post('/', requirePrivilege('patient:create'), async (req, res) => {
+router.post('/', requirePermission('patients:edit_demographics'), async (req, res) => {
   try {
     const {
       // Basic info
@@ -530,7 +554,7 @@ router.post('/', requirePrivilege('patient:create'), async (req, res) => {
 });
 
 // Update patient
-router.put('/:id', requirePrivilege('patient:edit'), async (req, res) => {
+router.put('/:id', requirePermission('patients:edit_demographics'), async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
@@ -642,7 +666,7 @@ router.put('/:id', requirePrivilege('patient:edit'), async (req, res) => {
 });
 
 // Add allergy
-router.post('/:id/allergies', requireRole('clinician', 'nurse'), async (req, res) => {
+router.post('/:id/allergies', requirePermission('patients:view_chart'), async (req, res) => {
   try {
     const { id } = req.params;
     const { allergen, reaction, severity, onsetDate } = req.body;
@@ -663,7 +687,7 @@ router.post('/:id/allergies', requireRole('clinician', 'nurse'), async (req, res
 });
 
 // Add medication with clinical decision support
-router.post('/:id/medications', requireRole('clinician'), async (req, res) => {
+router.post('/:id/medications', requirePermission('meds:prescribe'), async (req, res) => {
   try {
     const { id } = req.params;
     const { medicationName, dosage, frequency, route, startDate } = req.body;
@@ -703,7 +727,7 @@ router.post('/:id/medications', requireRole('clinician'), async (req, res) => {
 });
 
 // Add problem
-router.post('/:id/problems', requireRole('clinician'), async (req, res) => {
+router.post('/:id/problems', requirePermission('notes:create'), async (req, res) => {
   try {
     const { id } = req.params;
     const { problemName, icd10Code, onsetDate } = req.body;
@@ -724,7 +748,7 @@ router.post('/:id/problems', requireRole('clinician'), async (req, res) => {
 });
 
 // Update problem
-router.put('/problems/:problemId', requireRole('clinician'), async (req, res) => {
+router.put('/problems/:problemId', requirePermission('notes:edit'), async (req, res) => {
   try {
     const { problemId } = req.params;
     const { problemName, icd10Code, onsetDate, status } = req.body;
@@ -779,7 +803,7 @@ router.put('/problems/:problemId', requireRole('clinician'), async (req, res) =>
 });
 
 // Delete problem
-router.delete('/problems/:problemId', requireRole('clinician'), async (req, res) => {
+router.delete('/problems/:problemId', requirePermission('notes:edit'), async (req, res) => {
   try {
     const { problemId } = req.params;
 
@@ -798,7 +822,7 @@ router.delete('/problems/:problemId', requireRole('clinician'), async (req, res)
 });
 
 // Get family history
-router.get('/:id/family-history', requirePrivilege('patient:view'), async (req, res) => {
+router.get('/:id/family-history', requirePermission('patients:view_chart'), async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
@@ -813,7 +837,7 @@ router.get('/:id/family-history', requirePrivilege('patient:view'), async (req, 
 });
 
 // Add family history
-router.post('/:id/family-history', requireRole('clinician'), async (req, res) => {
+router.post('/:id/family-history', requirePermission('notes:create'), async (req, res) => {
   try {
     const { id } = req.params;
     const { condition, relationship, ageAtDiagnosis, ageAtDeath, notes } = req.body;
@@ -833,7 +857,7 @@ router.post('/:id/family-history', requireRole('clinician'), async (req, res) =>
 });
 
 // Update family history
-router.put('/family-history/:historyId', requireRole('clinician'), async (req, res) => {
+router.put('/family-history/:historyId', requirePermission('notes:edit'), async (req, res) => {
   try {
     const { historyId } = req.params;
     const { condition, relationship, ageAtDiagnosis, ageAtDeath, notes } = req.body;
@@ -893,7 +917,7 @@ router.put('/family-history/:historyId', requireRole('clinician'), async (req, r
 });
 
 // Delete family history
-router.delete('/family-history/:historyId', requireRole('clinician'), async (req, res) => {
+router.delete('/family-history/:historyId', requirePermission('notes:edit'), async (req, res) => {
   try {
     const { historyId } = req.params;
     const result = await pool.query('DELETE FROM family_history WHERE id = $1 RETURNING *', [historyId]);
@@ -911,7 +935,7 @@ router.delete('/family-history/:historyId', requireRole('clinician'), async (req
 });
 
 // Get social history
-router.get('/:id/social-history', requirePrivilege('patient:view'), async (req, res) => {
+router.get('/:id/social-history', requirePermission('patients:view_chart'), async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
@@ -926,7 +950,7 @@ router.get('/:id/social-history', requirePrivilege('patient:view'), async (req, 
 });
 
 // Add or update social history
-router.post('/:id/social-history', requireRole('clinician'), async (req, res) => {
+router.post('/:id/social-history', requirePermission('notes:create'), async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -974,7 +998,7 @@ router.post('/:id/social-history', requireRole('clinician'), async (req, res) =>
 });
 
 // Get all problems for patient
-router.get('/:id/problems', requirePrivilege('patient:view'), async (req, res) => {
+router.get('/:id/problems', requirePermission('patients:view_chart'), async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
@@ -989,7 +1013,7 @@ router.get('/:id/problems', requirePrivilege('patient:view'), async (req, res) =
 });
 
 // Get all allergies for patient
-router.get('/:id/allergies', requirePrivilege('patient:view'), async (req, res) => {
+router.get('/:id/allergies', requirePermission('patients:view_chart'), async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
@@ -1004,7 +1028,7 @@ router.get('/:id/allergies', requirePrivilege('patient:view'), async (req, res) 
 });
 
 // Get all medications for patient
-router.get('/:id/medications', requirePrivilege('patient:view'), async (req, res) => {
+router.get('/:id/medications', requirePermission('patients:view_chart'), async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
@@ -1019,7 +1043,7 @@ router.get('/:id/medications', requirePrivilege('patient:view'), async (req, res
 });
 
 // Update allergy
-router.put('/allergies/:allergyId', requireRole('clinician', 'nurse'), async (req, res) => {
+router.put('/allergies/:allergyId', requirePermission('patients:view_chart'), async (req, res) => {
   try {
     const { allergyId } = req.params;
     const { allergen, reaction, severity, onsetDate, active } = req.body;
@@ -1078,7 +1102,7 @@ router.put('/allergies/:allergyId', requireRole('clinician', 'nurse'), async (re
 });
 
 // Delete allergy
-router.delete('/allergies/:allergyId', requireRole('clinician', 'nurse'), async (req, res) => {
+router.delete('/allergies/:allergyId', requirePermission('patients:view_chart'), async (req, res) => {
   try {
     const { allergyId } = req.params;
     const result = await pool.query('DELETE FROM allergies WHERE id = $1 RETURNING *', [allergyId]);
@@ -1096,7 +1120,7 @@ router.delete('/allergies/:allergyId', requireRole('clinician', 'nurse'), async 
 });
 
 // Update medication
-router.put('/medications/:medicationId', requireRole('clinician'), async (req, res) => {
+router.put('/medications/:medicationId', requirePermission('meds:prescribe'), async (req, res) => {
   try {
     const { medicationId } = req.params;
     const { medicationName, dosage, frequency, route, startDate, endDate, active } = req.body;
@@ -1166,7 +1190,7 @@ router.put('/medications/:medicationId', requireRole('clinician'), async (req, r
 });
 
 // Delete medication
-router.delete('/medications/:medicationId', requireRole('clinician'), async (req, res) => {
+router.delete('/medications/:medicationId', requirePermission('meds:prescribe'), async (req, res) => {
   try {
     const { medicationId } = req.params;
     const result = await pool.query('DELETE FROM medications WHERE id = $1 RETURNING *', [medicationId]);
@@ -1184,7 +1208,7 @@ router.delete('/medications/:medicationId', requireRole('clinician'), async (req
 });
 
 // Upload patient photo
-router.post('/:id/photo', requireRole('clinician', 'front_desk', 'admin'), upload.single('photo'), async (req, res) => {
+router.post('/:id/photo', requirePermission('patients:edit_demographics'), upload.single('photo'), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -1215,7 +1239,7 @@ router.post('/:id/photo', requireRole('clinician', 'front_desk', 'admin'), uploa
 });
 
 // Update patient photo (base64 from webcam)
-router.post('/:id/photo/base64', requireRole('clinician', 'front_desk', 'admin'), async (req, res) => {
+router.post('/:id/photo/base64', requirePermission('patients:edit_demographics'), async (req, res) => {
   try {
     const { id } = req.params;
     const { photoData } = req.body; // base64 string

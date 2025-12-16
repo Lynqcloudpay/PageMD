@@ -179,3 +179,4 @@ diagnose()
     console.error('Diagnostic failed:', error);
     process.exit(1);
   });
+

@@ -1,12 +1,13 @@
 const express = require('express');
 const pool = require('../db');
-const { authenticate, requireRole } = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth');
+const { requirePermission, audit } = require('../services/authorization');
 
 const router = express.Router();
 router.use(authenticate);
 
 // Get appointments - filter by date range or specific date
-router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => {
+router.get('/', requirePermission('schedule:view'), async (req, res) => {
   try {
     const { date, startDate, endDate, providerId } = req.query;
     
@@ -27,6 +28,18 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
     const params = [];
     let paramCount = 0;
     
+    // Scope filtering: clinicians with SELF scope only see their own appointments
+    if (req.user.scope?.scheduleScope === 'SELF' && req.user.role === 'CLINICIAN') {
+      paramCount++;
+      query += ` AND a.provider_id = $${paramCount}`;
+      params.push(req.user.id);
+    } else if (providerId) {
+      // Allow filter by providerId if clinic scope or non-clinician
+      paramCount++;
+      query += ` AND a.provider_id = $${paramCount}`;
+      params.push(providerId);
+    }
+    
     if (date) {
       paramCount++;
       query += ` AND a.appointment_date = $${paramCount}`;
@@ -38,12 +51,6 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
       paramCount++;
       query += ` AND a.appointment_date <= $${paramCount}`;
       params.push(endDate);
-    }
-    
-    if (providerId) {
-      paramCount++;
-      query += ` AND a.provider_id = $${paramCount}`;
-      params.push(providerId);
     }
     
     query += ` ORDER BY a.appointment_date ASC, a.appointment_time ASC`;
@@ -99,7 +106,7 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
 });
 
 // Get appointment by ID
-router.get('/:id', requireRole('clinician', 'nurse', 'admin'), async (req, res) => {
+router.get('/:id', requirePermission('schedule:view'), async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
@@ -170,7 +177,7 @@ router.get('/:id', requireRole('clinician', 'nurse', 'admin'), async (req, res) 
 });
 
 // Create appointment
-router.post('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => {
+router.post('/', requirePermission('schedule:edit'), async (req, res) => {
   try {
     const { patientId, providerId, date, time, duration, type, notes } = req.body;
     
@@ -276,7 +283,7 @@ router.post('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) =>
 });
 
 // Update appointment
-router.put('/:id', requireRole('clinician', 'nurse', 'admin'), async (req, res) => {
+router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
   try {
     const { id } = req.params;
     const { 
@@ -339,8 +346,17 @@ router.put('/:id', requireRole('clinician', 'nurse', 'admin'), async (req, res) 
       params.push(providerId);
     }
     
-    // Patient status fields - handle these carefully
+    // Patient status fields - require schedule:status_update permission
     if (normalizedPatientStatus !== undefined) {
+      // Check permission for status updates
+      if (!req.user.permissions || !req.user.permissions.includes('schedule:status_update')) {
+        return res.status(403).json({ 
+          error: 'Forbidden',
+          message: 'Insufficient permissions to update appointment status',
+          required: 'schedule:status_update'
+        });
+      }
+      
       // Validate patient_status value
       const validStatuses = ['scheduled', 'arrived', 'checked_in', 'in_room', 'checked_out', 'no_show', 'cancelled'];
       if (!validStatuses.includes(normalizedPatientStatus)) {
@@ -502,6 +518,21 @@ router.put('/:id', requireRole('clinician', 'nurse', 'admin'), async (req, res) 
       return res.status(400).json({ error: 'No fields to update' });
     }
     
+    // Scope check: verify appointment exists and user has access
+    const checkRes = await pool.query('SELECT id, provider_id FROM appointments WHERE id = $1', [id]);
+    if (checkRes.rows.length === 0) {
+      await audit(req, 'appointment_update', 'appointment', id, false);
+      return res.status(404).json({ error: 'Appointment not found' });
+    }
+    
+    // Scope check: if SELF scope, ensure appointment belongs to user
+    if (req.user.scope?.scheduleScope === 'SELF' && req.user.role === 'CLINICIAN') {
+      if (checkRes.rows[0].provider_id !== req.user.id) {
+        await audit(req, 'appointment_update', 'appointment', id, false);
+        return res.status(403).json({ error: 'Forbidden: Cannot update appointments outside your scope' });
+      }
+    }
+    
     // Add updated_at timestamp
     updates.push(`updated_at = CURRENT_TIMESTAMP`);
     
@@ -538,8 +569,12 @@ router.put('/:id', requireRole('clinician', 'nurse', 'admin'), async (req, res) 
     }
     
     if (updateResult.rows.length === 0) {
+      await audit(req, 'appointment_update', 'appointment', id, false);
       return res.status(404).json({ error: 'Appointment not found after update' });
     }
+    
+    // Audit successful update
+    await audit(req, 'appointment_update', 'appointment', id, true);
     
     // Fetch updated appointment
     const fullResult = await pool.query(
@@ -627,7 +662,7 @@ router.put('/:id', requireRole('clinician', 'nurse', 'admin'), async (req, res) 
 });
 
 // Delete appointment
-router.delete('/:id', requireRole('clinician', 'admin'), async (req, res) => {
+router.delete('/:id', requirePermission('schedule:edit'), async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query('DELETE FROM appointments WHERE id = $1 RETURNING *', [id]);
