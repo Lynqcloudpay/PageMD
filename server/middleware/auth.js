@@ -20,19 +20,12 @@ const authenticate = async (req, res, next) => {
         u.last_name,
         u.status,
         u.role_id,
-<<<<<<< HEAD
-        u.role,
-        u.is_admin,
-        r.name as role_name,
-        r.description as role_description
-=======
         r.name as role_name,
         r.description as role_description,
         CASE 
           WHEN r.name = 'Admin' OR r.name = 'admin' OR r.name = 'SuperAdmin' OR u.role = 'admin' THEN true 
           ELSE false 
         END as is_admin
->>>>>>> 1a2a6913651ab98a78949d19fbc5bcd0d9f56954
       FROM users u
       LEFT JOIN roles r ON u.role_id = r.id
       WHERE u.id = $1

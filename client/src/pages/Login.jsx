@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileText, LogIn } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import tokenManager from '../services/tokenManager';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -35,10 +36,26 @@ const Login = () => {
         setLoading(true);
 
         try {
-            await login(email, password);
-            navigate('/dashboard', { replace: true });
+            const result = await login(email, password);
+            console.log('Login successful, result:', result);
+            
+            // Verify token was set
+            const token = tokenManager.getToken();
+            if (!token) {
+                console.error('Login succeeded but token not set!');
+                setError('Login succeeded but authentication failed. Please try again.');
+                setLoading(false);
+                return;
+            }
+            
+            console.log('Token verified, navigating to dashboard');
+            // Small delay to ensure state is updated
+            setTimeout(() => {
+                navigate('/dashboard', { replace: true });
+            }, 100);
         } catch (error) {
-            setError(error.response?.data?.error || 'Login failed. Please check your credentials.');
+            console.error('Login error:', error);
+            setError(error.response?.data?.error || error.message || 'Login failed. Please check your credentials.');
         } finally {
             setLoading(false);
         }

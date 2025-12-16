@@ -15,9 +15,32 @@ api.interceptors.request.use((config) => {
   const token = tokenManager.getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  } else {
+    // Log when token is missing for debugging
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('API request without token:', config.url);
+    }
   }
   return config;
 });
+
+// Handle response errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Handle 401 Unauthorized - token invalid or missing
+    if (error.response?.status === 401) {
+      // Don't clear token on login endpoint (that's expected)
+      if (!error.config?.url?.includes('/auth/login')) {
+        console.warn('401 Unauthorized - clearing token and dispatching event');
+        tokenManager.clearToken();
+        // Dispatch event for AuthContext to handle
+        window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Patients
 export const patientsAPI = {
