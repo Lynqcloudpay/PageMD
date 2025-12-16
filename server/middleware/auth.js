@@ -23,11 +23,10 @@ const authenticate = async (req, res, next) => {
         u.last_name,
         u.status,
         u.role_id,
-        u.is_admin as user_is_admin,
         r.name as role_name,
         r.description as role_description,
         CASE 
-          WHEN u.is_admin = true OR r.name = 'Admin' OR r.name = 'admin' OR r.name = 'SuperAdmin' THEN true 
+          WHEN r.name = 'Admin' OR r.name = 'admin' OR r.name = 'SuperAdmin' OR u.role = 'admin' THEN true 
           ELSE false 
         END as is_admin
       FROM users u
