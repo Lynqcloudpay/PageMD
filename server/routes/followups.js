@@ -21,7 +21,6 @@ router.get('/', async (req, res) => {
         p.first_name as patient_first_name,
         p.last_name as patient_last_name,
         p.phone as patient_phone,
-        p.phone_cell as patient_phone_cell,
         p.emergency_contact_phone,
         p.emergency_contact_name,
         u_provider.first_name as provider_first_name,
@@ -77,7 +76,7 @@ router.get('/', async (req, res) => {
           ...followup,
           patientName: `${followup.patient_first_name} ${followup.patient_last_name}`,
           providerName: followup.provider_first_name ? `${followup.provider_first_name} ${followup.provider_last_name}` : null,
-          patientPhone: followup.patient_phone || followup.patient_phone_cell,
+          patientPhone: followup.patient_phone,
           notes: notesResult.rows
         };
       })
