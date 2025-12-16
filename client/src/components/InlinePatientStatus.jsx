@@ -503,16 +503,19 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
             ? (statusKey === 'no_show' ? 'text-orange-700 font-bold' : 'text-red-700 font-bold')
             : (statusKey === 'no_show' ? 'text-orange-500 hover:text-orange-600' : 'text-red-500 hover:text-red-600');
 
+        const isDisabled = saving || isTerminalState || !canUpdateStatus;
+        
         return (
             <button
                 type="button"
                 onClick={() => {
-                    if (!saving && statusKey !== status && !isTerminalState) {
+                    if (!isDisabled && statusKey !== status) {
                         handleNoShowOrCancelled(statusKey);
                     }
                 }}
-                disabled={saving || isTerminalState}
-                className={`text-[10px] transition-all cursor-pointer ${color} ${saving || isTerminalState ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={isDisabled}
+                title={!canUpdateStatus ? 'You do not have permission to update appointment status' : ''}
+                className={`text-[10px] transition-all cursor-pointer ${color} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
                 {isActive && <span className="text-[8px] mr-0.5">✓</span>}
                 <span className={isActive ? 'underline underline-offset-2' : ''}>
