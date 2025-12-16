@@ -223,14 +223,19 @@ class UserService {
     const roleName = roleQuery.rows[0]?.name || 'Admin';
     const oldRoleFormat = this.mapRoleToOldFormat(roleName);
 
-    // Insert user (including old role column for backward compatibility)
+    // Handle isAdmin flag - set is_admin column directly (preserves role_id)
+    // Admin privileges are secondary - users keep their primary role (Physician, Nurse, etc.)
+    const isAdminValue = isAdmin === true || isAdmin === 'true' || false;
+
+    // Insert user (including old role column for backward compatibility and is_admin)
     const query = `
+      INSERT INTO users (
         email, password_hash, first_name, last_name, role_id, role, status,
         professional_type, npi, license_number, license_state,
-        dea_number, taxonomy_code, credentials, date_created
+        dea_number, taxonomy_code, credentials, is_admin, date_created
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, CURRENT_TIMESTAMP)
-      RETURNING id, email, first_name, last_name, status, date_created
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, CURRENT_TIMESTAMP)
+      RETURNING id, email, first_name, last_name, status, role_id, is_admin, date_created
     `;
 
     const result = await pool.query(query, [
@@ -247,7 +252,8 @@ class UserService {
       licenseState || null,
       deaNumber || null,
       taxonomyCode || null,
-      credentials || null
+      credentials || null,
+      isAdminValue // is_admin flag (secondary to role_id)
     ]);
 
     return result.rows[0];
@@ -260,21 +266,15 @@ class UserService {
     const allowedFields = [
       'first_name', 'last_name', 'email', 'status', 'role_id',
       'professional_type', 'npi', 'license_number', 'license_state',
-      'dea_number', 'taxonomy_code', 'credentials'
+      'dea_number', 'taxonomy_code', 'credentials', 'is_admin'
     ];
 
-    // Handle isAdmin flag by updating role_id to Admin role (is_admin column doesn't exist)
+    // Handle isAdmin flag by setting is_admin column directly (preserves role_id)
+    // Admin privileges are secondary - users keep their primary role (Physician, Nurse, etc.)
+    let isAdminValue = null;
     if (updates.isAdmin !== undefined) {
-      // Get Admin role ID
-      const adminRoleQuery = await pool.query("SELECT id FROM roles WHERE name = 'Admin' LIMIT 1");
-      const adminRoleId = adminRoleQuery.rows[0]?.id;
-      
-      if (updates.isAdmin === true || updates.isAdmin === 'true') {
-        if (adminRoleId) {
-          updates.roleId = adminRoleId;
-        }
-      }
-      // Remove isAdmin from updates (handled via role_id)
+      isAdminValue = updates.isAdmin === true || updates.isAdmin === 'true';
+      // Remove isAdmin from updates (will be handled separately)
       delete updates.isAdmin;
     }
 
@@ -299,6 +299,13 @@ class UserService {
       }
     }
 
+    // Add is_admin update if provided (preserves existing role_id)
+    if (isAdminValue !== null) {
+      paramCount++;
+      updateFields.push(`is_admin = $${paramCount}`);
+      params.push(isAdminValue);
+    }
+
     if (updateFields.length === 0) {
       throw new Error('No valid fields to update');
     }
@@ -311,7 +318,7 @@ class UserService {
       UPDATE users
       SET ${updateFields.join(', ')}
       WHERE id = $${paramCount}
-      RETURNING id, email, first_name, last_name, status, role_id
+      RETURNING id, email, first_name, last_name, status, role_id, is_admin
     `;
 
     const result = await pool.query(query, params);
