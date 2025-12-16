@@ -63,6 +63,8 @@ router.get('/', async (req, res) => {
     
     const result = await pool.query(query, params);
     
+    console.log(`[FOLLOWUPS] Found ${result.rows.length} follow-ups from query`);
+    
     // Get notes for each follow-up
     const followupsWithNotes = await Promise.all(
       result.rows.map(async (followup) => {
@@ -72,16 +74,24 @@ router.get('/', async (req, res) => {
            ORDER BY created_at DESC`,
           [followup.id]
         );
-        return {
+        const mapped = {
           ...followup,
-          patientName: `${followup.patient_first_name} ${followup.patient_last_name}`,
+          patientName: `${followup.patient_first_name || ''} ${followup.patient_last_name || ''}`.trim(),
           providerName: followup.provider_first_name ? `${followup.provider_first_name} ${followup.provider_last_name}` : null,
           patientPhone: followup.patient_phone,
           notes: notesResult.rows
         };
+        console.log(`[FOLLOWUPS] Mapped follow-up:`, {
+          id: mapped.id,
+          patientName: mapped.patientName,
+          appointment_date: mapped.appointment_date,
+          status: mapped.status
+        });
+        return mapped;
       })
     );
     
+    console.log(`[FOLLOWUPS] Returning ${followupsWithNotes.length} follow-ups to client`);
     res.json(followupsWithNotes);
   } catch (error) {
     console.error('Error fetching follow-ups:', error);
