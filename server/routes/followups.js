@@ -23,8 +23,6 @@ router.get('/', async (req, res) => {
         p.first_name as patient_first_name,
         p.last_name as patient_last_name,
         p.phone as patient_phone,
-        p.emergency_contact_phone,
-        p.emergency_contact_name,
         u_provider.first_name as provider_first_name,
         u_provider.last_name as provider_last_name,
         u_addressed.first_name as addressed_by_first_name,
