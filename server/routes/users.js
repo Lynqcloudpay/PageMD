@@ -231,7 +231,12 @@ router.put('/:id', [
     res.json(user);
   } catch (error) {
     console.error('Error updating user:', error);
-    res.status(400).json({ error: error.message || 'Failed to update user' });
+    console.error('Error details:', error.message, error.stack);
+    console.error('Update payload:', JSON.stringify(updates, null, 2));
+    res.status(400).json({ 
+      error: error.message || 'Failed to update user',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 

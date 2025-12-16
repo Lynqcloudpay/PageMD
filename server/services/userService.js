@@ -307,7 +307,9 @@ class UserService {
     }
 
     if (updateFields.length === 0) {
-      throw new Error('No valid fields to update');
+      // Provide more helpful error message
+      const providedFields = Object.keys(updates).join(', ');
+      throw new Error(`No valid fields to update. Provided fields: ${providedFields || 'none'}. Allowed fields: ${allowedFields.join(', ')}`);
     }
 
     updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
