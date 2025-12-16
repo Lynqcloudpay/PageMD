@@ -16,7 +16,7 @@ async function getUserAuthContext(userId) {
   try {
     // Get user basic info including clinic_id
     const userRes = await pool.query(
-      `SELECT id, email, first_name, last_name, role_id, role, 
+      `SELECT u.id, u.email, u.first_name, u.last_name, u.role_id, u.role, 
               COALESCE(u.is_admin, false) as is_admin,
               u.clinic_id,
               r.name as role_name
