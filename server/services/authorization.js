@@ -14,10 +14,11 @@ const pool = require('../db');
  */
 async function getUserAuthContext(userId) {
   try {
-    // Get user basic info
+    // Get user basic info including clinic_id
     const userRes = await pool.query(
       `SELECT id, email, first_name, last_name, role_id, role, 
               COALESCE(u.is_admin, false) as is_admin,
+              u.clinic_id,
               r.name as role_name
        FROM users u
        LEFT JOIN roles r ON u.role_id = r.id
@@ -86,6 +87,7 @@ async function getUserAuthContext(userId) {
       role: normalizedRole,
       roleId: user.role_id,
       isAdmin: user.is_admin || false,
+      clinicId: user.clinic_id || null,
       permissions: Array.from(base),
       scope: {
         scheduleScope: scope.schedule_scope,

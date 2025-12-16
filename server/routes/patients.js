@@ -58,53 +58,15 @@ router.get('/', requirePermission('patients:view_list'), async (req, res) => {
     const params = [];
     let paramCount = 0;
     
-    // Scope filtering: patient scope options (CLINIC, ASSIGNED, SELF)
-    // IMPORTANT: ASSIGNED/SELF scope only works if visits exist. If no visits, fall back to CLINIC scope
-    if (req.user.scope?.patientScope === 'ASSIGNED' && req.user.role === 'CLINICIAN') {
-      // Only show patients assigned to this clinician
-      // This requires a patient_assignments table or logic based on visits
-      // For now, we'll use visits to determine assignment
-      // BUT: If there are no visits, show all patients (fallback to CLINIC scope)
-      const visitCheck = await pool.query(
-        `SELECT COUNT(*) as count FROM visits WHERE provider_id = $1`,
-        [req.user.id]
-      );
-      const hasVisits = parseInt(visitCheck.rows[0]?.count || 0) > 0;
-      
-      if (hasVisits) {
-        query += ` WHERE id IN (
-          SELECT DISTINCT patient_id 
-          FROM visits 
-          WHERE provider_id = $${++paramCount}
-        )`;
-        params.push(req.user.id);
-      } else {
-        // No visits yet - fall back to CLINIC scope (show all patients)
-        query += ' WHERE 1=1';
-      }
-    } else if (req.user.scope?.patientScope === 'SELF') {
-      // Only show own patients (rare, but possible)
-      // Check if visits exist first
-      const visitCheck = await pool.query(
-        `SELECT COUNT(*) as count FROM visits WHERE provider_id = $1`,
-        [req.user.id]
-      );
-      const hasVisits = parseInt(visitCheck.rows[0]?.count || 0) > 0;
-      
-      if (hasVisits) {
-        query += ` WHERE id IN (
-          SELECT DISTINCT patient_id 
-          FROM visits 
-          WHERE provider_id = $${++paramCount}
-        )`;
-        params.push(req.user.id);
-      } else {
-        // No visits yet - fall back to CLINIC scope (show all patients)
-        query += ' WHERE 1=1';
-      }
-    } else {
-      // CLINIC scope - show all patients
-      query += ' WHERE 1=1';
+    // All users can see all patients (CLINIC scope is now default for all roles)
+    // Only filter by clinic_id if it exists in the user context
+    query += ' WHERE 1=1';
+    
+    // Filter by clinic_id if user has one (multi-tenant support)
+    if (req.user.clinic_id) {
+      paramCount++;
+      query += ` AND clinic_id = $${paramCount}`;
+      params.push(req.user.clinic_id);
     }
     
     // Handle search parameter - check if search is provided and not empty
