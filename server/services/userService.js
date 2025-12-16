@@ -283,6 +283,11 @@ class UserService {
     let paramCount = 0;
 
     for (const [key, value] of Object.entries(updates)) {
+      // Skip undefined, null, or empty string values (unless explicitly setting to null)
+      if (value === undefined || (value === '' && key !== 'email')) {
+        continue;
+      }
+
       const dbKey = key === 'firstName' ? 'first_name' :
         key === 'lastName' ? 'last_name' :
           key === 'roleId' ? 'role_id' :
@@ -292,10 +297,10 @@ class UserService {
                   key === 'deaNumber' ? 'dea_number' :
                     key === 'taxonomyCode' ? 'taxonomy_code' : key;
 
-      if (allowedFields.includes(dbKey) && value !== undefined) {
+      if (allowedFields.includes(dbKey)) {
         paramCount++;
         updateFields.push(`${dbKey} = $${paramCount}`);
-        params.push(value);
+        params.push(value === '' ? null : value);
       }
     }
 
