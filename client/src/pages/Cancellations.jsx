@@ -88,9 +88,14 @@ const Cancellations = () => {
                 params.status = activeTab;
             }
             const response = await followupsAPI.getAll(params);
-            const followupsData = response.data || response;
+            const followupsData = Array.isArray(response.data) 
+                ? response.data 
+                : Array.isArray(response) 
+                    ? response 
+                    : [];
             
             console.log('Follow-ups from API:', followupsData.length);
+            console.log('Follow-ups data:', followupsData);
             
             // Map the data to the expected format
             const mappedFollowups = followupsData.map(f => ({
