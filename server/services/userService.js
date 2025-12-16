@@ -34,7 +34,7 @@ class UserService {
         u.taxonomy_code,
         u.credentials,
         CASE 
-          WHEN u.is_admin = true OR r.name = 'Admin' OR r.name = 'admin' OR r.name = 'SuperAdmin' THEN true 
+          WHEN r.name = 'Admin' OR r.name = 'admin' OR r.name = 'SuperAdmin' OR u.role = 'admin' THEN true 
           ELSE false 
         END as is_admin,
         r.id as role_id,
@@ -94,7 +94,7 @@ class UserService {
         u.status,
         u.role_id,
         CASE 
-          WHEN u.is_admin = true OR r.name = 'Admin' OR r.name = 'admin' OR r.name = 'SuperAdmin' THEN true 
+          WHEN r.name = 'Admin' OR r.name = 'admin' OR r.name = 'SuperAdmin' OR u.role = 'admin' THEN true 
           ELSE false 
         END as is_admin,
         r.name as role_name
@@ -155,7 +155,7 @@ class UserService {
         u.npi,
         u.credentials,
         CASE 
-          WHEN u.is_admin = true OR r.name = 'Admin' OR r.name = 'admin' OR r.name = 'SuperAdmin' THEN true 
+          WHEN r.name = 'Admin' OR r.name = 'admin' OR r.name = 'SuperAdmin' OR u.role = 'admin' THEN true 
           ELSE false 
         END as is_admin,
         r.id as role_id,
@@ -340,18 +340,21 @@ class UserService {
     const allowedFields = [
       'first_name', 'last_name', 'email', 'status', 'role_id',
       'professional_type', 'npi', 'license_number', 'license_state',
-      'dea_number', 'taxonomy_code', 'credentials', 'is_admin'
+      'dea_number', 'taxonomy_code', 'credentials'
     ];
 
-    // Handle isAdmin flag by setting the is_admin column (NOT changing role_id)
+    // Handle isAdmin flag by updating role_id to Admin role (is_admin column doesn't exist)
     if (updates.isAdmin !== undefined) {
-      // Add is_admin to allowed fields for this update
+      // Get Admin role ID
+      const adminRoleQuery = await pool.query("SELECT id FROM roles WHERE name = 'Admin' LIMIT 1");
+      const adminRoleId = adminRoleQuery.rows[0]?.id;
+      
       if (updates.isAdmin === true || updates.isAdmin === 'true') {
-        updates.is_admin = true;
-      } else {
-        updates.is_admin = false;
+        if (adminRoleId) {
+          updates.roleId = adminRoleId;
+        }
       }
-      // Remove isAdmin from updates (use is_admin column instead)
+      // Remove isAdmin from updates (handled via role_id)
       delete updates.isAdmin;
     }
 
