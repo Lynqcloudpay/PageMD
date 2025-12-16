@@ -34,7 +34,14 @@ class UserService {
         u.taxonomy_code,
         u.taxonomy_code,
         u.credentials,
+<<<<<<< HEAD
         u.role,
+=======
+        CASE 
+          WHEN r.name = 'Admin' OR r.name = 'admin' OR r.name = 'SuperAdmin' OR u.role = 'admin' THEN true 
+          ELSE false 
+        END as is_admin,
+>>>>>>> 1a2a6913651ab98a78949d19fbc5bcd0d9f56954
         r.id as role_id,
         r.name as role_name,
         r.description as role_description
@@ -76,6 +83,13 @@ class UserService {
         u.last_name,
         u.status,
         u.role_id,
+<<<<<<< HEAD
+=======
+        CASE 
+          WHEN r.name = 'Admin' OR r.name = 'admin' OR r.name = 'SuperAdmin' OR u.role = 'admin' THEN true 
+          ELSE false 
+        END as is_admin,
+>>>>>>> 1a2a6913651ab98a78949d19fbc5bcd0d9f56954
         r.name as role_name
       FROM users u
       LEFT JOIN roles r ON u.role_id = r.id
@@ -112,6 +126,13 @@ class UserService {
         u.npi,
         u.npi,
         u.credentials,
+<<<<<<< HEAD
+=======
+        CASE 
+          WHEN r.name = 'Admin' OR r.name = 'admin' OR r.name = 'SuperAdmin' OR u.role = 'admin' THEN true 
+          ELSE false 
+        END as is_admin,
+>>>>>>> 1a2a6913651ab98a78949d19fbc5bcd0d9f56954
         r.id as role_id,
         r.name as role_name
       FROM users u
@@ -264,6 +285,24 @@ class UserService {
       'dea_number', 'taxonomy_code', 'credentials'
     ];
 
+<<<<<<< HEAD
+=======
+    // Handle isAdmin flag by updating role_id to Admin role (is_admin column doesn't exist)
+    if (updates.isAdmin !== undefined) {
+      // Get Admin role ID
+      const adminRoleQuery = await pool.query("SELECT id FROM roles WHERE name = 'Admin' LIMIT 1");
+      const adminRoleId = adminRoleQuery.rows[0]?.id;
+      
+      if (updates.isAdmin === true || updates.isAdmin === 'true') {
+        if (adminRoleId) {
+          updates.roleId = adminRoleId;
+        }
+      }
+      // Remove isAdmin from updates (handled via role_id)
+      delete updates.isAdmin;
+    }
+
+>>>>>>> 1a2a6913651ab98a78949d19fbc5bcd0d9f56954
     const updateFields = [];
     const params = [];
     let paramCount = 0;

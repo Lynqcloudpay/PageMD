@@ -1,5 +1,5 @@
-import React from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom'
+import React, { useEffect, useRef } from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom'
 import PatientHeader from './components/PatientHeader'
 import Snapshot from './pages/Snapshot'
 import VisitNote from './pages/VisitNote'
@@ -33,7 +33,9 @@ const PatientRedirect = () => {
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
+    // ALWAYS call all hooks at the top level, unconditionally
     const auth = useAuth();
+<<<<<<< HEAD
 
     console.log('ProtectedRoute: Render. Auth state:', {
         loading: auth?.loading,
@@ -55,6 +57,25 @@ const ProtectedRoute = ({ children }) => {
 
     if (loading) {
         console.log('ProtectedRoute: Loading...');
+=======
+    const navigate = useNavigate();
+    const hasRedirectedRef = useRef(false);
+
+    // Handle redirect in useEffect to avoid hook order issues
+    useEffect(() => {
+        if (auth && !auth.loading && !auth.user && !hasRedirectedRef.current) {
+            hasRedirectedRef.current = true;
+            navigate('/login', { replace: true });
+        }
+        // Reset redirect flag if user becomes available
+        if (auth?.user) {
+            hasRedirectedRef.current = false;
+        }
+    }, [auth?.loading, auth?.user, navigate]);
+
+    // Now handle conditional rendering AFTER all hooks are called
+    if (!auth || auth.loading) {
+>>>>>>> 1a2a6913651ab98a78949d19fbc5bcd0d9f56954
         return (
             <div className="min-h-screen bg-white flex items-center justify-center">
                 <div className="text-deep-gray/70">Loading...</div>
@@ -62,9 +83,19 @@ const ProtectedRoute = ({ children }) => {
         );
     }
 
+<<<<<<< HEAD
     if (!user) {
         console.warn('ProtectedRoute: No user, redirecting to login');
         return <Navigate to="/login" replace />;
+=======
+    if (!auth.user) {
+        // Show loading while redirect happens (useEffect will handle redirect)
+        return (
+            <div className="min-h-screen bg-white flex items-center justify-center">
+                <div className="text-deep-gray/70">Redirecting to login...</div>
+            </div>
+        );
+>>>>>>> 1a2a6913651ab98a78949d19fbc5bcd0d9f56954
     }
 
     console.log('ProtectedRoute: Access granted');
