@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Plus, Clock, User, Search, X, Calendar, User
 import { format, addDays } from 'date-fns';
 import { usePatient } from '../context/PatientContext';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../hooks/usePermissions';
 import { appointmentsAPI, authAPI, patientsAPI, followupsAPI } from '../services/api';
 import AddPatientModal from '../components/AddPatientModal';
 import InlinePatientStatus from '../components/InlinePatientStatus';

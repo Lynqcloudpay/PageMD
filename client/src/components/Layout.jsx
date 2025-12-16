@@ -10,6 +10,7 @@ import { usePatient } from '../context/PatientContext';
 import { useAuth } from '../context/AuthContext';
 import { usePatientTabs } from '../context/PatientTabsContext';
 import { useTasks } from '../context/TaskContext';
+import { usePermissions } from '../hooks/usePermissions';
 import { patientsAPI, messagesAPI, visitsAPI, followupsAPI } from '../services/api';
 import PatientTabs from './PatientTabs';
 import MobileMenu from './MobileMenu';
@@ -98,38 +99,48 @@ const Layout = ({ children }) => {
         return () => clearInterval(interval);
     }, []);
 
-    // Check if user is a physician/NP/PA for "My Schedule" routing
-    const roleName = user?.role_name || user?.role || '';
-    const roleNameLower = String(roleName || '').toLowerCase();
-    const isPhysicianRole = (
-        roleNameLower === 'physician' ||
-        roleNameLower === 'nurse practitioner' ||
-        roleNameLower === 'np' ||
-        roleNameLower === 'physician assistant' ||
-        roleNameLower === 'pa' ||
-        roleNameLower === 'clinician' ||
-        user?.role === 'clinician'
-    );
+    // Use permissions instead of role checks
+    const { can, getScope } = usePermissions();
+    const scope = getScope();
+    
+    // Check permissions for navigation items
+    const canViewSchedule = can('schedule:view');
+    const canManageUsers = can('users:manage');
+    const canViewPatients = can('patients:view_list');
+    const canViewBilling = can('billing:view');
+    const canViewReports = can('reports:view');
+    
+    // Show "My Schedule" if user has schedule:view and scope is SELF (clinicians)
+    const showMySchedule = canViewSchedule && scope.scheduleScope === 'SELF';
 
-    // Navigation items with icons and badges
+    // Navigation items with icons and badges (gated by permissions)
     const navItems = [
-        // Schedule is always visible
-        { path: '/schedule', icon: Calendar, label: 'Schedule', badge: null },
-        // For physicians, also show "My Schedule"
-        ...(isPhysicianRole ? [
-            { path: '/my-schedule', icon: User, label: 'My Schedule', badge: null }
+        // Schedule - requires schedule:view permission
+        ...(canViewSchedule ? [
+            { path: '/schedule', icon: Calendar, label: 'Schedule', badge: null },
+            ...(showMySchedule ? [
+                { path: '/my-schedule', icon: User, label: 'My Schedule', badge: null }
+            ] : [])
         ] : []),
         { path: '/cancellations', icon: AlertCircle, label: 'Cancellations', badge: pendingCancellationsCount > 0 ? pendingCancellationsCount : null },
-        { path: '/patients', icon: Users, label: 'Patients', badge: null },
+        // Patients - requires patients:view_list permission
+        ...(canViewPatients ? [
+            { path: '/patients', icon: Users, label: 'Patients', badge: null }
+        ] : []),
         { path: '/tasks', icon: ClipboardList, label: 'In Basket', badge: tasksCount > 0 ? tasksCount : null },
         { path: '/messages', icon: MessageSquare, label: 'Messages', badge: messagesCount > 0 ? messagesCount : null },
         { path: '/pending-notes', icon: Clock, label: 'Pending Notes', badge: pendingNotesCount > 0 ? pendingNotesCount : null },
-        { path: '/billing', icon: DollarSign, label: 'Billing', badge: null },
+        // Billing - requires billing:view permission
+        ...(canViewBilling ? [
+            { path: '/billing', icon: DollarSign, label: 'Billing', badge: null }
+        ] : []),
         { path: '/telehealth', icon: Video, label: 'Telehealth', badge: null },
-        // Admin-only items
-        ...(user?.role === 'Admin' || user?.role_name === 'Admin' || user?.is_admin ? [
+        // Admin items - requires users:manage or reports:view
+        ...(canManageUsers ? [
             { path: '/analytics', icon: BarChart3, label: 'Analytics', badge: null },
             { path: '/users', icon: Shield, label: 'User Management', badge: null }
+        ] : canViewReports ? [
+            { path: '/analytics', icon: BarChart3, label: 'Analytics', badge: null }
         ] : []),
     ];
 
@@ -411,7 +422,7 @@ const Layout = ({ children }) => {
                                     <div className="text-left flex-1 min-w-0">
                                         <div className="text-[12px] font-semibold text-deep-gray leading-tight truncate">{user.firstName} {user.lastName}</div>
                                         <div className="text-[10px] text-deep-gray/50 capitalize leading-tight truncate font-medium">
-                                            {user.role === 'clinician' ? 'Doctor' : user.role === 'front_desk' ? 'Front Desk' : user.role || user.role_name || 'User'}
+                                            {user.role || user.role_name || 'User'}
                                         </div>
                                     </div>
                                 )}

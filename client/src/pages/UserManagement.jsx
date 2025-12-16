@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { usersAPI, rolesAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../hooks/usePermissions';
 import Modal from '../components/ui/Modal';
 
 const UserManagement = () => {

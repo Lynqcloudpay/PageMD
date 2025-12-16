@@ -124,7 +124,13 @@ export const AuthProvider = ({ children }) => {
                 const response = await authAPI.getMe();
 
                 if (mounted && !cancelled && response && response.data) {
-                    setUser(response.data);
+                    // Ensure permissions and scope are always arrays/objects
+                    const userData = {
+                        ...response.data,
+                        permissions: response.data.permissions || [],
+                        scope: response.data.scope || { scheduleScope: 'CLINIC', patientScope: 'CLINIC' }
+                    };
+                    setUser(userData);
                     resetInactivityTimer();
                 } else if (mounted && !cancelled) {
                     // No valid user data, clear token
@@ -196,9 +202,37 @@ export const AuthProvider = ({ children }) => {
                 console.log('AuthContext: Token received, updating state');
                 tokenManager.setToken(response.data.token);
                 tokenManager.setRememberedUsername(email);
-                setUser(response.data.user);
+                
+                // Fetch full user data with permissions from /auth/me
+                try {
+                    const meResponse = await authAPI.getMe();
+                    if (meResponse && meResponse.data) {
+                        const userData = {
+                            ...meResponse.data,
+                            permissions: meResponse.data.permissions || [],
+                            scope: meResponse.data.scope || { scheduleScope: 'CLINIC', patientScope: 'CLINIC' }
+                        };
+                        setUser(userData);
+                        console.log('AuthContext: User state updated with permissions', userData);
+                    } else {
+                        // Fallback to user from login response
+                        setUser({
+                            ...response.data.user,
+                            permissions: [],
+                            scope: { scheduleScope: 'CLINIC', patientScope: 'CLINIC' }
+                        });
+                    }
+                } catch (meError) {
+                    console.warn('AuthContext: Could not fetch /auth/me, using login response:', meError);
+                    // Fallback to user from login response
+                    setUser({
+                        ...response.data.user,
+                        permissions: [],
+                        scope: { scheduleScope: 'CLINIC', patientScope: 'CLINIC' }
+                    });
+                }
+                
                 resetInactivityTimer();
-                console.log('AuthContext: User state updated', response.data.user);
                 return response.data;
             } else {
                 console.warn('AuthContext: Login successful but no token received');
