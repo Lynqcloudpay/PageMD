@@ -1,5 +1,5 @@
-import React from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom'
+import React, { useEffect, useRef } from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom'
 import PatientHeader from './components/PatientHeader'
 import Snapshot from './pages/Snapshot'
 import VisitNote from './pages/VisitNote'
@@ -32,29 +32,39 @@ const PatientRedirect = () => {
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
+    // ALWAYS call all hooks at the top level, unconditionally
     const auth = useAuth();
-    
-    // Safety check
-    if (!auth) {
+    const navigate = useNavigate();
+    const hasRedirectedRef = useRef(false);
+
+    // Handle redirect in useEffect to avoid hook order issues
+    useEffect(() => {
+        if (auth && !auth.loading && !auth.user && !hasRedirectedRef.current) {
+            hasRedirectedRef.current = true;
+            navigate('/login', { replace: true });
+        }
+        // Reset redirect flag if user becomes available
+        if (auth?.user) {
+            hasRedirectedRef.current = false;
+        }
+    }, [auth?.loading, auth?.user, navigate]);
+
+    // Now handle conditional rendering AFTER all hooks are called
+    if (!auth || auth.loading) {
         return (
             <div className="min-h-screen bg-white flex items-center justify-center">
                 <div className="text-deep-gray/70">Loading...</div>
             </div>
         );
     }
-    
-    const { user, loading } = auth;
 
-    if (loading) {
+    if (!auth.user) {
+        // Show loading while redirect happens (useEffect will handle redirect)
         return (
             <div className="min-h-screen bg-white flex items-center justify-center">
-                <div className="text-deep-gray/70">Loading...</div>
+                <div className="text-deep-gray/70">Redirecting to login...</div>
             </div>
         );
-    }
-
-    if (!user) {
-        return <Navigate to="/login" replace />;
     }
 
     return <>{children}</>;
