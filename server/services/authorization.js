@@ -14,11 +14,10 @@ const pool = require('../db');
  */
 async function getUserAuthContext(userId) {
   try {
-    // Get user basic info including clinic_id
+    // Get user basic info (clinic_id may not exist in all schemas)
     const userRes = await pool.query(
       `SELECT u.id, u.email, u.first_name, u.last_name, u.role_id, u.role, 
               COALESCE(u.is_admin, false) as is_admin,
-              u.clinic_id,
               r.name as role_name
        FROM users u
        LEFT JOIN roles r ON u.role_id = r.id
@@ -87,7 +86,7 @@ async function getUserAuthContext(userId) {
       role: normalizedRole,
       roleId: user.role_id,
       isAdmin: user.is_admin || false,
-      clinicId: user.clinic_id || null,
+      clinicId: null, // clinic_id column may not exist in all schemas
       permissions: Array.from(base),
       scope: {
         scheduleScope: scope.schedule_scope,
