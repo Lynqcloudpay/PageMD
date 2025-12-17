@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { authenticate, requireRole, logAudit } = require('../middleware/auth');
+const { requirePermission } = require('../services/authorization');
 
 const router = express.Router();
 router.use(authenticate);
@@ -214,7 +215,7 @@ router.get('/visit/:visitId', async (req, res) => {
 });
 
 // Create order - IMPROVED VERSION
-router.post('/', requireRole('clinician'), async (req, res) => {
+router.post('/', requirePermission('notes:create'), async (req, res) => {
   const client = await pool.connect();
   
   // --- helpers ---
@@ -440,7 +441,7 @@ router.post('/', requireRole('clinician'), async (req, res) => {
 
 
 // Update order status
-router.put('/:id', requireRole('clinician', 'nurse'), async (req, res) => {
+router.put('/:id', requirePermission('orders:create'), async (req, res) => {
   try {
     const { id } = req.params;
     const { status, externalOrderId, reviewed, comment, orderPayload } = req.body;
@@ -593,7 +594,7 @@ router.post('/:id/favorite', async (req, res) => {
 });
 
 // Delete order
-router.delete('/:id', requireRole('clinician'), async (req, res) => {
+router.delete('/:id', requirePermission('orders:create'), async (req, res) => {
   const client = await pool.connect();
   
   try {
