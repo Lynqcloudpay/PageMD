@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { authenticate, requireRole, logAudit } = require('../middleware/auth');
+const { requirePermission } = require('../services/authorization');
 
 const router = express.Router();
 router.use(authenticate);
@@ -97,7 +98,7 @@ router.get('/insurance', async (req, res) => {
 // CLAIM CREATION - COMMERCIAL GRADE
 // ============================================
 
-router.post('/claims', requireRole('admin', 'front_desk', 'clinician'), async (req, res) => {
+router.post('/claims', requirePermission('billing:edit'), async (req, res) => {
   const client = await pool.connect();
   
   try {
@@ -440,7 +441,7 @@ router.post('/claims', requireRole('admin', 'front_desk', 'clinician'), async (r
 // GET CLAIMS
 // ============================================
 
-router.get('/claims', requireRole('admin', 'front_desk', 'clinician'), async (req, res) => {
+router.get('/claims', requirePermission('billing:view'), async (req, res) => {
   try {
     // Check if claims table exists
     const tableExistsResult = await pool.query(`
@@ -550,7 +551,7 @@ router.get('/claims', requireRole('admin', 'front_desk', 'clinician'), async (re
 });
 
 // Get claim by ID with full details
-router.get('/claims/:id', requireRole('admin', 'front_desk', 'clinician'), async (req, res) => {
+router.get('/claims/:id', requirePermission('billing:view'), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -604,7 +605,7 @@ router.get('/claims/:id', requireRole('admin', 'front_desk', 'clinician'), async
 });
 
 // Get claims by patient
-router.get('/claims/patient/:patientId', requireRole('admin', 'front_desk', 'clinician'), async (req, res) => {
+router.get('/claims/patient/:patientId', requirePermission('billing:view'), async (req, res) => {
   try {
     const { patientId } = req.params;
     const result = await pool.query(

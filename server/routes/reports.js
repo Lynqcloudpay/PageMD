@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { requirePermission } = require('../services/authorization');
 
 const router = express.Router();
 router.use(authenticate);
@@ -68,7 +69,7 @@ router.get('/quality-measures', requireRole('clinician', 'admin'), async (req, r
 });
 
 // Get dashboard statistics
-router.get('/dashboard', requireRole('clinician', 'admin'), async (req, res) => {
+router.get('/dashboard', requirePermission('reports:view'), async (req, res) => {
   try {
     const stats = {};
     

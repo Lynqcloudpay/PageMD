@@ -137,13 +137,13 @@ const DiagnosisSelector = ({
       setFilteredProblems(assessmentProblems);
     } else {
       // Filter assessment problems by search term
-      const search = searchTerm.toLowerCase();
-      const filtered = assessmentProblems.filter(p =>
-      ((p.problem_name || '').toLowerCase().includes(search) ||
-        (p.name || '').toLowerCase().includes(search) ||
-        (p.icd10_code || '').toLowerCase().includes(search) ||
-        (p.icd10Code || '').toLowerCase().includes(search))
-      );
+      const search = (searchTerm || '').toLowerCase();
+      const filtered = assessmentProblems.filter(p => {
+        if (!p) return false;
+        const problemName = (p.problem_name || p.name || '').toLowerCase();
+        const icd10Code = (p.icd10_code || p.icd10Code || '').toLowerCase();
+        return problemName.includes(search) || icd10Code.includes(search);
+      });
       console.log('DiagnosisSelector: Filtered problems:', filtered);
       setFilteredProblems(filtered);
     }
