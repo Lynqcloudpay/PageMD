@@ -584,10 +584,10 @@ const VisitNote = () => {
             clearTimeout(autoSaveTimeoutRef.current);
         }
         
-        // Schedule auto-save after 2 seconds of inactivity
+        // Schedule auto-save after 15 seconds of inactivity (reduced from 2s to prevent 429 errors)
         autoSaveTimeoutRef.current = setTimeout(() => {
             autoSave(showToastMessage);
-        }, 2000);
+        }, 15000);
     }, [autoSave]);
     
     // Manual save (shows toast)
