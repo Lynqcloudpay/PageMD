@@ -6,7 +6,7 @@ const validator = require('validator');
 const isDevelopment = process.env.NODE_ENV !== 'production';
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: isDevelopment ? 100000 : 2000, // Increased to 2000 in production to handle patient searches and normal usage
+  max: isDevelopment ? 100000 : 10000, // Increased to 10000 in production to handle auto-save and normal usage
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
