@@ -2,14 +2,14 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const { authenticate, requireRole, logAudit } = require('../middleware/auth');
-const { requirePrivilege } = require('../middleware/authorization');
+const { requirePermission } = require('../services/authorization');
 const { safeLogger } = require('../middleware/phiRedaction');
 
 // All routes require authentication
 router.use(authenticate);
 
 // Get all visits (with filters)
-router.get('/', requirePrivilege('visit:view'), async (req, res) => {
+router.get('/', requirePermission('notes:view'), async (req, res) => {
   try {
     const { patientId, limit = 50, offset = 0 } = req.query;
     let query = `
@@ -73,7 +73,7 @@ router.get('/', requirePrivilege('visit:view'), async (req, res) => {
 });
 
 // Get pending notes (unsigned/incomplete visits) - MUST come before /:id
-router.get('/pending', requirePrivilege('visit:view'), async (req, res) => {
+router.get('/pending', requirePermission('notes:view'), async (req, res) => {
   try {
     const { providerId } = req.query;
     const currentUserId = req.user?.id;
@@ -123,7 +123,7 @@ router.get('/pending', requirePrivilege('visit:view'), async (req, res) => {
 });
 
 // Find or create visit - MUST come before /:id
-router.post('/find-or-create', requireRole('clinician'), async (req, res) => {
+router.post('/find-or-create', requirePermission('notes:create'), async (req, res) => {
   try {
     const { patientId, visitType } = req.body;
     

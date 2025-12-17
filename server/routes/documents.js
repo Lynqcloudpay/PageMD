@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const pool = require('../db');
 const { authenticate, requireRole, logAudit } = require('../middleware/auth');
-const { requirePrivilege } = require('../middleware/authorization');
+const { requirePermission } = require('../services/authorization');
 
 const router = express.Router();
 router.use(authenticate);
@@ -30,7 +30,7 @@ const upload = multer({
 });
 
 // Get documents for patient
-router.get('/patient/:patientId', requirePrivilege('document:view'), async (req, res) => {
+router.get('/patient/:patientId', requirePermission('patients:view_chart'), async (req, res) => {
   try {
     const { patientId } = req.params;
     const result = await pool.query(
@@ -87,7 +87,7 @@ router.post('/', requireRole('clinician', 'front_desk', 'nurse'), upload.single(
 });
 
 // Get document file
-router.get('/:id/file', requirePrivilege('document:view'), async (req, res) => {
+router.get('/:id/file', requirePermission('patients:view_chart'), async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query('SELECT file_path, filename, mime_type FROM documents WHERE id = $1', [id]);
