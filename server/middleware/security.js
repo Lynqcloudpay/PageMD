@@ -33,7 +33,7 @@ const apiLimiter = rateLimit({
 // More lenient rate limiting for development
 const authLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute window
-  max: isDevelopment ? 10000 : 10, // Increased from 5 to 10 in production to prevent legitimate lockouts
+  max: isDevelopment ? 10000 : 20, // Increased to 20 in production to prevent legitimate lockouts
   message: 'Too many login attempts, please try again later.',
   skipSuccessfulRequests: true,
   standardHeaders: true,
