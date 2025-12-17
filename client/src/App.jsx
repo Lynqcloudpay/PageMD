@@ -35,29 +35,6 @@ const PatientRedirect = () => {
 const ProtectedRoute = ({ children }) => {
     // ALWAYS call all hooks at the top level, unconditionally
     const auth = useAuth();
-<<<<<<< HEAD
-
-    console.log('ProtectedRoute: Render. Auth state:', {
-        loading: auth?.loading,
-        hasUser: !!auth?.user,
-        user: auth?.user
-    });
-
-    // Safety check
-    if (!auth) {
-        console.error('ProtectedRoute: Auth context is missing!');
-        return (
-            <div className="min-h-screen bg-white flex items-center justify-center">
-                <div className="text-deep-gray/70">Loading...</div>
-            </div>
-        );
-    }
-
-    const { user, loading } = auth;
-
-    if (loading) {
-        console.log('ProtectedRoute: Loading...');
-=======
     const navigate = useNavigate();
     const hasRedirectedRef = useRef(false);
 
@@ -75,7 +52,6 @@ const ProtectedRoute = ({ children }) => {
 
     // Now handle conditional rendering AFTER all hooks are called
     if (!auth || auth.loading) {
->>>>>>> 1a2a6913651ab98a78949d19fbc5bcd0d9f56954
         return (
             <div className="min-h-screen bg-white flex items-center justify-center">
                 <div className="text-deep-gray/70">Loading...</div>
@@ -83,11 +59,6 @@ const ProtectedRoute = ({ children }) => {
         );
     }
 
-<<<<<<< HEAD
-    if (!user) {
-        console.warn('ProtectedRoute: No user, redirecting to login');
-        return <Navigate to="/login" replace />;
-=======
     if (!auth.user) {
         // Show loading while redirect happens (useEffect will handle redirect)
         return (
@@ -95,7 +66,6 @@ const ProtectedRoute = ({ children }) => {
                 <div className="text-deep-gray/70">Redirecting to login...</div>
             </div>
         );
->>>>>>> 1a2a6913651ab98a78949d19fbc5bcd0d9f56954
     }
 
     console.log('ProtectedRoute: Access granted');
