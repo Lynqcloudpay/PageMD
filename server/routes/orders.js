@@ -215,7 +215,7 @@ router.get('/visit/:visitId', async (req, res) => {
 });
 
 // Create order - IMPROVED VERSION
-router.post('/', requirePermission('notes:create'), async (req, res) => {
+router.post('/', requirePermission('orders:create'), async (req, res) => {
   const client = await pool.connect();
   
   // --- helpers ---
