@@ -35,10 +35,10 @@ export const PatientProvider = ({ children }) => {
     useEffect(() => {
         fetchPatients();
 
-        // Auto-refresh every 15 seconds
+        // Auto-refresh every 60 seconds (reduced frequency to prevent rate limiting)
         const interval = setInterval(() => {
             fetchPatients();
-        }, 15000);
+        }, 60000);
 
         return () => clearInterval(interval);
     }, []);
