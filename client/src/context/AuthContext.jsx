@@ -6,7 +6,7 @@ import tokenManager from '../services/tokenManager';
 const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes
 const ACTIVITY_CHECK_INTERVAL = 60 * 1000; // Check every minute
 
-const AuthContext = createContext({
+export const AuthContext = createContext({
     user: null,
     loading: true,
     login: async () => { },
