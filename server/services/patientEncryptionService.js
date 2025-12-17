@@ -68,12 +68,16 @@ async function encryptPatientPHI(patient) {
         encryptionMetadata[field] = encryptedData.metadata;
       } catch (error) {
         console.error(`Error encrypting field ${field}:`, error);
-        // In production, fail hard. In development, continue without encryption.
-        if (process.env.NODE_ENV === 'production') {
+        // Check if encryption is enabled - if not, allow plaintext
+        const encryptionEnabled = process.env.ENABLE_PHI_ENCRYPTION === 'true';
+        
+        if (encryptionEnabled && process.env.NODE_ENV === 'production') {
+          // Only fail hard if encryption is explicitly enabled in production
           throw new Error(`Failed to encrypt PHI field: ${field}`);
         }
-        // In development, just log and continue with plaintext
-        console.warn(`[PHI Encryption] Falling back to plaintext for ${field}`);
+        // Otherwise, log warning and continue with plaintext
+        console.warn(`[PHI Encryption] Encryption failed for ${field}, storing as plaintext. Error: ${error.message}`);
+        encrypted[field] = value; // Store as plaintext if encryption fails
       }
     }
   }
