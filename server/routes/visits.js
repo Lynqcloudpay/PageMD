@@ -147,7 +147,7 @@ router.post('/find-or-create', requirePermission('notes:create'), async (req, re
        WHERE patient_id = $1 
        AND visit_date >= $2 
        AND visit_date < $3
-       AND (note_signed_at IS NULL OR note_draft IS NULL OR note_draft = '')
+       AND note_signed_at IS NULL
        ORDER BY created_at DESC
        LIMIT 1`,
       [patientId, today, tomorrow]
