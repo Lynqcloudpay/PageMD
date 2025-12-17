@@ -495,14 +495,28 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
     // Encrypt PHI fields before storing
     const encryptedPatient = await patientEncryptionService.preparePatientForStorage(patientData);
 
+    // List of valid columns in the patients table (to prevent SQL errors)
+    const validColumns = new Set([
+      'id', 'mrn', 'first_name', 'last_name', 'dob', 'sex',
+      'phone', 'email', 'address_line1', 'address_line2', 'city', 'state', 'zip',
+      'insurance_provider', 'insurance_id', 'pharmacy_name', 'pharmacy_address', 'pharmacy_phone',
+      'primary_care_provider', 'photo_url', 'created_at', 'updated_at'
+    ]);
+
     // Build INSERT query with encrypted data
     const fields = ['mrn'];
     const values = [encryptedPatient.mrn];
     let paramIndex = 2;
 
     // Add all fields (encrypted PHI fields will have encrypted values)
+    // Only include fields that exist in the database
     for (const [dbField, value] of Object.entries(encryptedPatient)) {
       if (dbField === 'mrn') continue; // Already added
+      if (dbField === 'encryption_metadata') continue; // Handled separately
+      if (!validColumns.has(dbField)) {
+        console.warn(`Skipping field ${dbField} - column does not exist in patients table`);
+        continue;
+      }
       if (value !== undefined && value !== null && value !== '') {
         fields.push(dbField);
         values.push(value);
