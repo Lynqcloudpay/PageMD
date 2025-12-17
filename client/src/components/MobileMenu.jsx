@@ -26,20 +26,7 @@ const MobileMenu = () => {
 
   return (
     <>
-      {/* Mobile Menu Button */}
-      <button
-        onClick={() => setIsOpen(true)}
-        className="lg:hidden fixed bottom-4 right-4 z-50 w-14 h-14 rounded-full text-white shadow-lg flex items-center justify-center transition-all duration-200 hover:shadow-xl"
-        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-        onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-        onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-        style={{ 
-          boxShadow: '0 10px 25px -5px rgba(37, 99, 235, 0.4), 0 8px 10px -6px rgba(37, 99, 235, 0.4)'
-        }}
-        aria-label="Open menu"
-      >
-        <Menu className="w-6 h-6" />
-      </button>
+      {/* Mobile Menu Button - REMOVED per user request */}
 
       {/* Mobile Menu Overlay */}
       {isOpen && (
