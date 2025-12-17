@@ -122,6 +122,50 @@ router.get('/pending', requirePermission('notes:view'), async (req, res) => {
   }
 });
 
+// Get today's draft visit for a patient - MUST come before /:id
+router.get('/today-draft/:patientId', requirePermission('notes:view'), async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    
+    if (!patientId) {
+      return res.status(400).json({ error: 'patientId is required' });
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const result = await pool.query(
+      `SELECT * FROM visits 
+       WHERE patient_id = $1 
+       AND visit_date >= $2 
+       AND visit_date < $3
+       AND note_signed_at IS NULL
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [patientId, today, tomorrow]
+    );
+
+    if (result.rows.length > 0) {
+      return res.json(result.rows[0]);
+    }
+
+    return res.json(null);
+  } catch (error) {
+    safeLogger.error('Error fetching today\'s draft visit', {
+      message: error.message,
+      code: error.code,
+      patientId: req.params.patientId,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+    res.status(500).json({ 
+      error: 'Failed to fetch today\'s draft visit',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 // Find or create visit - MUST come before /:id
 router.post('/find-or-create', requirePermission('notes:create'), async (req, res) => {
   try {

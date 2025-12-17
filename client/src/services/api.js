@@ -101,6 +101,7 @@ export const visitsAPI = {
   addAddendum: (id, addendumText) => api.post(`/visits/${id}/addendum`, { addendumText }),
   getByPatient: (patientId) => api.get('/visits', { params: { patientId } }),
   getPending: (providerId) => api.get('/visits/pending', { params: { providerId } }),
+  getTodayDraft: (patientId) => api.get(`/visits/today-draft/${patientId}`),
   findOrCreate: (patientId, visitType) => api.post('/visits/find-or-create', { patientId, visitType }),
   generateSummary: (id) => api.post(`/visits/${id}/summary`),
 };

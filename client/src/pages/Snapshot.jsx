@@ -86,6 +86,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
         mrn: ''
     });
     const documentUploadInputRef = React.useRef(null);
+    const [todayDraftVisit, setTodayDraftVisit] = useState(null);
     
     // Layout Editor State
     const [layoutEditMode, setLayoutEditMode] = useState(false);
@@ -142,6 +143,13 @@ const Snapshot = ({ showNotesOnly = false }) => {
         
         setLoading(true);
         try {
+            // Refresh today's draft visit
+            try {
+                const draftResponse = await visitsAPI.getTodayDraft(id);
+                setTodayDraftVisit(draftResponse.data || null);
+            } catch (error) {
+                console.error('Error refreshing today\'s draft visit:', error);
+            }
             // Fetch patient snapshot (includes basic info)
             const snapshotResponse = await patientsAPI.getSnapshot(id);
             const snapshot = snapshotResponse.data;
@@ -342,6 +350,21 @@ const Snapshot = ({ showNotesOnly = false }) => {
         fetchAllData();
     }, [id]);
 
+    // Check for today's draft visit
+    useEffect(() => {
+        const fetchTodayDraft = async () => {
+            if (!id) return;
+            try {
+                const response = await visitsAPI.getTodayDraft(id);
+                setTodayDraftVisit(response.data || null);
+            } catch (error) {
+                console.error('Error fetching today\'s draft visit:', error);
+                setTodayDraftVisit(null);
+            }
+        };
+        fetchTodayDraft();
+    }, [id]);
+
     useEffect(() => {
         const fetchNotes = async () => {
             if (!id) return;
@@ -450,6 +473,13 @@ const Snapshot = ({ showNotesOnly = false }) => {
         
         try {
             await visitsAPI.delete(noteId);
+            // Refresh today's draft visit
+            try {
+                const draftResponse = await visitsAPI.getTodayDraft(id);
+                setTodayDraftVisit(draftResponse.data || null);
+            } catch (error) {
+                console.error('Error refreshing today\'s draft visit:', error);
+            }
             // Refresh notes
             const response = await visitsAPI.getByPatient(id);
             if (response.data && response.data.length > 0) {
@@ -1128,15 +1158,21 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 </div>
                             </div>
                             
-                            {/* Right: New Visit Button */}
+                            {/* Right: New Visit / Open Visit Note Button */}
                             <button
                                 type="button"
                                 onClick={() => {
-                                    console.log('New Visit button clicked, patient id:', id);
+                                    console.log('Visit button clicked, patient id:', id, 'todayDraftVisit:', todayDraftVisit);
                                     if (id) {
-                                        const targetPath = `/patient/${id}/visit/new`;
-                                        console.log('Navigating to:', targetPath);
-                                        navigate(targetPath);
+                                        if (todayDraftVisit && todayDraftVisit.id) {
+                                            // Open existing draft visit
+                                            console.log('Opening existing draft visit:', todayDraftVisit.id);
+                                            navigate(`/patient/${id}/visit/${todayDraftVisit.id}`);
+                                        } else {
+                                            // Create new visit
+                                            console.log('Creating new visit');
+                                            navigate(`/patient/${id}/visit/new`);
+                                        }
                                     } else {
                                         console.error('Patient ID is missing, cannot navigate');
                                         alert('Patient ID is missing. Please refresh the page.');
@@ -1147,8 +1183,17 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
                                 onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                             >
-                                <Plus className="w-5 h-5" />
-                                <span>New Visit</span>
+                                {todayDraftVisit && todayDraftVisit.id ? (
+                                    <>
+                                        <FileText className="w-5 h-5" />
+                                        <span>Open Visit Note</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Plus className="w-5 h-5" />
+                                        <span>New Visit</span>
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>
