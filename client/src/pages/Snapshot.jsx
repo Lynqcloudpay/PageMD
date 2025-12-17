@@ -1158,43 +1158,74 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 </div>
                             </div>
                             
-                            {/* Right: New Visit / Open Visit Note Button */}
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    console.log('Visit button clicked, patient id:', id, 'todayDraftVisit:', todayDraftVisit);
-                                    if (id) {
-                                        if (todayDraftVisit && todayDraftVisit.id) {
-                                            // Open existing draft visit
-                                            console.log('Opening existing draft visit:', todayDraftVisit.id);
-                                            navigate(`/patient/${id}/visit/${todayDraftVisit.id}`);
-                                        } else {
-                                            // Create new visit
-                                            console.log('Creating new visit');
-                                            navigate(`/patient/${id}/visit/new`);
-                                        }
-                                    } else {
-                                        console.error('Patient ID is missing, cannot navigate');
-                                        alert('Patient ID is missing. Please refresh the page.');
-                                    }
-                                }}
-                                className="flex items-center space-x-2 px-5 py-2.5 text-white rounded-lg shadow-md hover:shadow-lg transition-all font-medium text-sm flex-shrink-0"
-                                style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                            >
+                            {/* Right: Visit Buttons */}
+                            <div className="flex items-center space-x-2">
                                 {todayDraftVisit && todayDraftVisit.id ? (
                                     <>
-                                        <FileText className="w-5 h-5" />
-                                        <span>Open Visit Note</span>
+                                        {/* Open Draft Visit Button */}
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                console.log('Opening existing draft visit:', todayDraftVisit.id);
+                                                if (id) {
+                                                    navigate(`/patient/${id}/visit/${todayDraftVisit.id}`);
+                                                } else {
+                                                    console.error('Patient ID is missing, cannot navigate');
+                                                    alert('Patient ID is missing. Please refresh the page.');
+                                                }
+                                            }}
+                                            className="flex items-center space-x-2 px-4 py-2.5 text-white rounded-lg shadow-md hover:shadow-lg transition-all font-medium text-sm flex-shrink-0"
+                                            style={{ background: 'linear-gradient(to right, #10B981, #059669)' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #059669, #047857)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #10B981, #059669)'}
+                                        >
+                                            <FileText className="w-5 h-5" />
+                                            <span>Open Visit Note</span>
+                                        </button>
+                                        {/* New Visit Button (always available) */}
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                console.log('Creating new visit (draft exists)');
+                                                if (id) {
+                                                    navigate(`/patient/${id}/visit/new`);
+                                                } else {
+                                                    console.error('Patient ID is missing, cannot navigate');
+                                                    alert('Patient ID is missing. Please refresh the page.');
+                                                }
+                                            }}
+                                            className="flex items-center space-x-2 px-4 py-2.5 text-white rounded-lg shadow-md hover:shadow-lg transition-all font-medium text-sm flex-shrink-0"
+                                            style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
+                                        >
+                                            <Plus className="w-5 h-5" />
+                                            <span>New Visit</span>
+                                        </button>
                                     </>
                                 ) : (
-                                    <>
+                                    /* New Visit Button (when no draft exists) */
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            console.log('Creating new visit');
+                                            if (id) {
+                                                navigate(`/patient/${id}/visit/new`);
+                                            } else {
+                                                console.error('Patient ID is missing, cannot navigate');
+                                                alert('Patient ID is missing. Please refresh the page.');
+                                            }
+                                        }}
+                                        className="flex items-center space-x-2 px-5 py-2.5 text-white rounded-lg shadow-md hover:shadow-lg transition-all font-medium text-sm flex-shrink-0"
+                                        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
+                                    >
                                         <Plus className="w-5 h-5" />
                                         <span>New Visit</span>
-                                    </>
+                                    </button>
                                 )}
-                            </button>
+                            </div>
                         </div>
                     </div>
                     
