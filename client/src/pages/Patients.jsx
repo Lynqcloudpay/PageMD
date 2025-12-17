@@ -32,26 +32,31 @@ const Patients = () => {
     }, [appointments, patients, currentProvider]);
 
     useEffect(() => {
-        if (searchQuery.trim()) {
-            setLoading(true);
-            // Try API first, fallback to local search
-            patientsAPI.search(searchQuery)
-                .then(response => {
-                    setFilteredPatients(response.data);
-                    setLoading(false);
-                })
-                .catch(() => {
-                    // Fallback to local search
-                    const results = patients.filter(p =>
-                        (p.name && p.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                        (p.mrn && p.mrn.toLowerCase().includes(searchQuery.toLowerCase()))
-                    );
-                    setFilteredPatients(results);
-                    setLoading(false);
-                });
-        } else {
-            setFilteredPatients([]);
-        }
+        // Debounce search to reduce API calls
+        const timeoutId = setTimeout(() => {
+            if (searchQuery.trim()) {
+                setLoading(true);
+                // Try API first, fallback to local search
+                patientsAPI.search(searchQuery)
+                    .then(response => {
+                        setFilteredPatients(response.data);
+                        setLoading(false);
+                    })
+                    .catch(() => {
+                        // Fallback to local search
+                        const results = patients.filter(p =>
+                            (p.name && p.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                            (p.mrn && p.mrn.toLowerCase().includes(searchQuery.toLowerCase()))
+                        );
+                        setFilteredPatients(results);
+                        setLoading(false);
+                    });
+            } else {
+                setFilteredPatients([]);
+            }
+        }, 300); // 300ms debounce delay
+
+        return () => clearTimeout(timeoutId);
     }, [searchQuery, patients]);
 
     const handlePatientClick = (patientId) => {
@@ -77,8 +82,8 @@ const Patients = () => {
     };
 
     return (
-        <div className="h-full bg-white">
-            <div className="p-4 max-w-7xl mx-auto">
+        <div className="h-full bg-white w-full">
+            <div className="p-4 w-full">
                 {/* Header - Compact Design */}
                 <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
                     <div>
