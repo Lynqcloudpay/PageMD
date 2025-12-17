@@ -52,7 +52,7 @@ router.get('/patient/:patientId', requirePermission('patients:view_chart'), asyn
 });
 
 // Upload document
-router.post('/', requireRole('clinician', 'front_desk', 'nurse'), upload.single('file'), async (req, res) => {
+router.post('/', requirePermission('patients:view_chart'), upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -111,7 +111,7 @@ router.get('/:id/file', requirePermission('patients:view_chart'), async (req, re
 });
 
 // Update document (for comments and review status)
-router.put('/:id', requireRole('clinician', 'nurse'), async (req, res) => {
+router.put('/:id', requirePermission('patients:view_chart'), async (req, res) => {
   try {
     const { id } = req.params;
     const { reviewed, comment } = req.body;
@@ -199,7 +199,7 @@ router.put('/:id', requireRole('clinician', 'nurse'), async (req, res) => {
 });
 
 // Delete document
-router.delete('/:id', requireRole('clinician', 'admin'), async (req, res) => {
+router.delete('/:id', requirePermission('patients:view_chart'), async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query('SELECT file_path FROM documents WHERE id = $1', [id]);

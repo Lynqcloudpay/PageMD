@@ -212,7 +212,7 @@ router.post('/find-or-create', requirePermission('notes:create'), async (req, re
 });
 
 // Sign visit - MUST come before /:id
-router.post('/:id/sign', requireRole('clinician'), async (req, res) => {
+router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
   try {
     const { id } = req.params;
     // Handle both noteDraft (camelCase from frontend) and note_draft (snake_case)
@@ -328,7 +328,7 @@ router.post('/:id/sign', requireRole('clinician'), async (req, res) => {
 });
 
 // Generate AI summary for a visit - MUST come before /:id
-router.post('/:id/summary', requireRole('clinician'), async (req, res) => {
+router.post('/:id/summary', requirePermission('notes:create'), async (req, res) => {
   try {
     const { id } = req.params;
     const visitResult = await pool.query('SELECT * FROM visits WHERE id = $1', [id]);
@@ -440,7 +440,7 @@ function extractKeyFindings(hpi, pe) {
 }
 
 // Get visit by ID - MUST come after all specific routes
-router.get('/:id', requirePrivilege('visit:view'), async (req, res) => {
+router.get('/:id', requirePermission('notes:view'), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -492,7 +492,7 @@ router.get('/:id', requirePrivilege('visit:view'), async (req, res) => {
 });
 
 // Create visit
-router.post('/', requireRole('clinician'), async (req, res) => {
+router.post('/', requirePermission('notes:create'), async (req, res) => {
   try {
     const { patient_id, visit_date, visit_type, provider_id } = req.body;
     
@@ -512,7 +512,7 @@ router.post('/', requireRole('clinician'), async (req, res) => {
 });
 
 // Update visit
-router.put('/:id', requireRole('clinician'), async (req, res) => {
+router.put('/:id', requirePermission('notes:edit'), async (req, res) => {
   try {
     const { id } = req.params;
     const { visit_date, visit_type, vitals, note_draft, note_signed_at, provider_id } = req.body;
@@ -607,7 +607,7 @@ router.put('/:id', requireRole('clinician'), async (req, res) => {
 });
 
 // Add addendum to signed visit
-router.post('/:id/addendum', requireRole('clinician'), async (req, res) => {
+router.post('/:id/addendum', requirePermission('notes:edit'), async (req, res) => {
   try {
     const { id } = req.params;
     const { addendumText } = req.body;
@@ -659,7 +659,7 @@ router.post('/:id/addendum', requireRole('clinician'), async (req, res) => {
 });
 
 // Delete visit
-router.delete('/:id', requireRole('clinician'), async (req, res) => {
+router.delete('/:id', requirePermission('notes:edit'), async (req, res) => {
   try {
     const { id } = req.params;
     
