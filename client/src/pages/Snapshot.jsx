@@ -1180,39 +1180,6 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     <Eye className="w-3.5 h-3.5" />
                                     <span>Open Chart</span>
                                 </button>
-
-                                {/* Telephone Encounter - keeps separate quick-encounter entry */}
-                                <button
-                                    type="button"
-                                    onClick={async () => {
-                                        console.log('Creating telephone encounter');
-                                        if (!id) {
-                                            console.error('Patient ID is missing, cannot navigate');
-                                            alert('Patient ID is missing. Please refresh the page.');
-                                            return;
-                                        }
-                                        try {
-                                            const response = await visitsAPI.openToday(id, 'telephone');
-                                            const newNote = response.data?.note || response.data;
-                                            if (newNote?.id) {
-                                                navigate(`/patient/${id}/visit/${newNote.id}`);
-                                            } else {
-                                                console.error('Failed to create telephone encounter');
-                                                alert('Failed to create telephone encounter. Please try again.');
-                                            }
-                                        } catch (error) {
-                                            console.error('Error creating telephone encounter:', error);
-                                            alert('Failed to create telephone encounter. Please try again.');
-                                        }
-                                    }}
-                                    className="flex items-center space-x-1.5 px-3 py-1.5 text-xs text-white rounded-md shadow hover:shadow-md transition-all font-medium flex-shrink-0"
-                                    style={{ background: 'linear-gradient(to right, #8B5CF6, #7C3AED)' }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #7C3AED, #6D28D9)'}
-                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #8B5CF6, #7C3AED)'}
-                                >
-                                    <Phone className="w-4 h-4" />
-                                    <span>Telephone Encounter</span>
-                                </button>
                             </div>
                         </div>
                     </div>
