@@ -1167,7 +1167,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             
                             {/* Right: Visit & Chart Buttons */}
                             <div className="flex items-center space-x-2">
-                                {/* Open Chart - moved up next to visit actions */}
+                                {/* Open Chart - kept in header for quick access */}
                                 <button
                                     type="button"
                                     onClick={() => {
@@ -1179,57 +1179,6 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 >
                                     <Eye className="w-3.5 h-3.5" />
                                     <span>Open Chart</span>
-                                </button>
-
-                                {/* Primary visit action: New Visit or Open Today's Visit (merged) */}
-                                <button
-                                    type="button"
-                                    onClick={async () => {
-                                        if (!id) {
-                                            console.error('Patient ID is missing, cannot navigate');
-                                            alert('Patient ID is missing. Please refresh the page.');
-                                            return;
-                                        }
-
-                                        // If we already have a draft for today, just open it
-                                        if (todayDraftVisit && todayDraftVisit.id) {
-                                            console.log('Opening existing draft visit from header:', todayDraftVisit.id);
-                                            navigate(`/patient/${id}/visit/${todayDraftVisit.id}`);
-                                            return;
-                                        }
-
-                                        // Otherwise, create or open today's office visit
-                                        try {
-                                            console.log('No draft for today, creating/opening new office visit');
-                                            const response = await visitsAPI.openToday(id, 'office_visit');
-                                            const newNote = response.data?.note || response.data;
-                                            if (newNote?.id) {
-                                                navigate(`/patient/${id}/visit/${newNote.id}`);
-                                            } else {
-                                                console.error('Failed to create/open today\'s visit');
-                                                alert('Failed to create today\'s visit. Please try again.');
-                                            }
-                                        } catch (error) {
-                                            console.error('Error creating/opening today\'s visit:', error);
-                                            alert('Failed to create today\'s visit. Please try again.');
-                                        }
-                                    }}
-                                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white rounded-md shadow-md hover:shadow-lg transition-all whitespace-nowrap"
-                                    style={{ background: 'linear-gradient(to right, #10B981, #059669)' }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #059669, #047857)'}
-                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #10B981, #059669)'}
-                                >
-                                    {todayDraftVisit && todayDraftVisit.id ? (
-                                        <>
-                                            <FileText className="w-3.5 h-3.5" />
-                                            <span>Open Today&apos;s Visit</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Plus className="w-3.5 h-3.5" />
-                                            <span>New Visit</span>
-                                        </>
-                                    )}
                                 </button>
 
                                 {/* Telephone Encounter - keeps separate quick-encounter entry */}
@@ -1519,6 +1468,57 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     <span className="bg-primary-100 text-primary-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">
                                         {referrals.length}
                                     </span>
+                                )}
+                            </button>
+
+                            {/* Primary visit action: New Visit or Open Today's Visit (moved down from header) */}
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    if (!id) {
+                                        console.error('Patient ID is missing, cannot navigate');
+                                        alert('Patient ID is missing. Please refresh the page.');
+                                        return;
+                                    }
+
+                                    // If we already have a draft for today, just open it
+                                    if (todayDraftVisit && todayDraftVisit.id) {
+                                        console.log('Opening existing draft visit from quick bar:', todayDraftVisit.id);
+                                        navigate(`/patient/${id}/visit/${todayDraftVisit.id}`);
+                                        return;
+                                    }
+
+                                    // Otherwise, create or open today's office visit
+                                    try {
+                                        console.log('No draft for today, creating/opening new office visit (quick bar)');
+                                        const response = await visitsAPI.openToday(id, 'office_visit');
+                                        const newNote = response.data?.note || response.data;
+                                        if (newNote?.id) {
+                                            navigate(`/patient/${id}/visit/${newNote.id}`);
+                                        } else {
+                                            console.error('Failed to create/open today\'s visit');
+                                            alert('Failed to create today\'s visit. Please try again.');
+                                        }
+                                    } catch (error) {
+                                        console.error('Error creating/opening today\'s visit:', error);
+                                        alert('Failed to create today\'s visit. Please try again.');
+                                    }
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-md shadow-md hover:shadow-lg transition-all whitespace-nowrap"
+                                style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                onMouseEnter={(e) => (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+                                onMouseLeave={(e) => (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
+                            >
+                                {todayDraftVisit && todayDraftVisit.id ? (
+                                    <>
+                                        <FileText className="w-3.5 h-3.5" />
+                                        <span>Open Today&apos;s Visit</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Plus className="w-3.5 h-3.5" />
+                                        <span>New Visit</span>
+                                    </>
                                 )}
                             </button>
                         </div>
