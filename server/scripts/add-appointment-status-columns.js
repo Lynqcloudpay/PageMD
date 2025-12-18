@@ -195,3 +195,6 @@ addAppointmentStatusColumns()
     process.exit(1);
   });
 
+
+
+

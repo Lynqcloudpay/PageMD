@@ -33,6 +33,9 @@ async function getUserAuthContext(userId) {
     // Normalize role name to match permission system
     const normalizedRole = normalizeRoleName(roleName);
 
+    // Determine if this user should be treated as an admin
+    const isAdminUser = user.is_admin || normalizedRole === 'ADMIN';
+
     // Get base permissions from role
     const permsRes = await pool.query(
       `SELECT permission_key AS key
@@ -60,7 +63,7 @@ async function getUserAuthContext(userId) {
     }
 
     // Admin users get all permissions
-    if (user.is_admin) {
+    if (isAdminUser) {
       const allPermsRes = await pool.query('SELECT key FROM permissions');
       allPermsRes.rows.forEach(p => base.add(p.key));
     }
@@ -85,7 +88,8 @@ async function getUserAuthContext(userId) {
       lastName: user.last_name,
       role: normalizedRole,
       roleId: user.role_id,
-      isAdmin: user.is_admin || false,
+      // Expose a clear isAdmin flag that combines DB flag + role
+      isAdmin: isAdminUser,
       clinicId: null, // clinic_id column may not exist in all schemas
       permissions: Array.from(base),
       scope: {
@@ -131,6 +135,11 @@ function requirePermission(permissionKey) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
+    // Admin users bypass specific permission checks
+    if (req.user.isAdmin === true || req.user.is_admin === true) {
+      return next();
+    }
+
     if (!req.user.permissions || !Array.isArray(req.user.permissions)) {
       console.error('User permissions not loaded:', req.user);
       return res.status(500).json({ error: 'Authorization context not loaded' });
@@ -159,7 +168,14 @@ function requirePermission(permissionKey) {
  * @returns {boolean}
  */
 function hasPermission(user, permissionKey) {
-  if (!user || !user.permissions || !Array.isArray(user.permissions)) {
+  if (!user) return false;
+
+  // Admin users always have all permissions
+  if (user.isAdmin === true || user.is_admin === true) {
+    return true;
+  }
+
+  if (!user.permissions || !Array.isArray(user.permissions)) {
     return false;
   }
   return user.permissions.includes(permissionKey);

@@ -34,6 +34,7 @@ class UserService {
         u.taxonomy_code,
         u.taxonomy_code,
         u.credentials,
+        u.is_admin,
         u.role,
         r.id as role_id,
         r.name as role_name,
@@ -383,7 +384,7 @@ class UserService {
   async hasPrivilege(userId, privilegeName) {
     // Admin always has all privileges
     const user = await this.getUserById(userId);
-    if (user && user.role_name === 'Admin') {
+    if (user && (user.role_name === 'Admin' || user.is_admin === true)) {
       return true;
     }
 
@@ -405,7 +406,7 @@ class UserService {
    */
   async isAdmin(userId) {
     const user = await this.getUserById(userId);
-    return user && (user.role_name === 'Admin');
+    return user && (user.role_name === 'Admin' || user.is_admin === true);
   }
 
   /**

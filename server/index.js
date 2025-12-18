@@ -33,17 +33,14 @@ app.use(cors({
   exposedHeaders: ['Content-Range', 'X-Content-Range']
 }));
 
+// Health check - must be before HTTPS enforcement to allow internal health checks
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // HIPAA Security Middleware
-// Enforce HTTPS in production (but skip OPTIONS/preflight requests)
-if (process.env.NODE_ENV === 'production') {
-  app.use((req, res, next) => {
-    // Skip HTTPS redirect for OPTIONS requests (CORS preflight)
-    if (req.method === 'OPTIONS') {
-      return next();
-    }
-    return enforceHTTPS(req, res, next);
-  });
-}
+// NOTE: HTTPS is terminated at Caddy in production, so the API itself only needs to speak HTTP.
+// We disable internal HTTPS redirects here to avoid proxy loops and 502/503 errors.
 
 // Security headers (HSTS, CSP, etc.)
 app.use(setHSTS);
@@ -196,11 +193,6 @@ const appointmentRoutes = require('./routes/appointments');
 const followupsRoutes = require('./routes/followups');
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/followups', followupsRoutes);
-
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
 
 // Root endpoint - redirect to frontend or show API info
 app.get('/', (req, res) => {

@@ -9,6 +9,11 @@
  * Enforce HTTPS - redirect HTTP to HTTPS
  */
 const enforceHTTPS = (req, res, next) => {
+  // Skip HTTPS enforcement for health checks (internal monitoring)
+  if (req.path === '/api/health') {
+    return next();
+  }
+  
   // Skip HTTPS enforcement for localhost in development
   const isLocalhost = req.hostname === 'localhost' || req.hostname === '127.0.0.1' || req.hostname === '::1';
   if (isLocalhost) {

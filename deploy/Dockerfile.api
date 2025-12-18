@@ -10,14 +10,14 @@ RUN apk add --no-cache \
 # Create app directory
 WORKDIR /app
 
-# Copy package files
-COPY server/package*.json ./
+# Copy package files (context is server/ now)
+COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Install dependencies (cache this layer - only rebuilds if package.json changes)
+RUN npm ci --only=production
 
 # Copy application code
-COPY server/ ./
+COPY . ./
 
 # Create directories for logs and uploads
 RUN mkdir -p /app/logs /app/uploads

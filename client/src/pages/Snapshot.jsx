@@ -2,8 +2,8 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
     AlertCircle, Activity, Pill, FileText, Clock, Eye, ChevronDown, ChevronUp, ChevronRight, Plus,
-    Phone, Mail, MapPin, CreditCard, Building2, Users, Heart, Calendar,
-    Stethoscope, CheckCircle2, Edit, ArrowRight, ExternalLink, UserCircle, Camera, User, X, FileImage, Save, FlaskConical, Database, Trash2, Upload, Layout, RotateCcw
+    Phone, Mail, MapPin, CreditCard, Building2, Users, Heart,
+    CheckCircle2, Edit, ArrowRight, ExternalLink, UserCircle, Camera, User, X, FileImage, Save, FlaskConical, Database, Trash2, Upload, Layout, RotateCcw
 } from 'lucide-react';
 import { visitsAPI, patientsAPI, ordersAPI, referralsAPI, documentsAPI } from '../services/api';
 import { format } from 'date-fns';
@@ -144,12 +144,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
         setLoading(true);
         try {
             // Refresh today's draft visit
-            try {
-                const draftResponse = await visitsAPI.getTodayDraft(id);
-                setTodayDraftVisit(draftResponse.data || null);
-            } catch (error) {
-                console.error('Error refreshing today\'s draft visit:', error);
-            }
+            await fetchTodayDraft();
             // Fetch patient snapshot (includes basic info)
             const snapshotResponse = await patientsAPI.getSnapshot(id);
             const snapshot = snapshotResponse.data;
@@ -351,19 +346,32 @@ const Snapshot = ({ showNotesOnly = false }) => {
     }, [id]);
 
     // Check for today's draft visit
-    useEffect(() => {
-        const fetchTodayDraft = async () => {
-            if (!id) return;
-            try {
-                const response = await visitsAPI.getTodayDraft(id);
-                setTodayDraftVisit(response.data || null);
-            } catch (error) {
-                console.error('Error fetching today\'s draft visit:', error);
-                setTodayDraftVisit(null);
+    const fetchTodayDraft = useCallback(async () => {
+        if (!id) return;
+        try {
+            console.log('Fetching today\'s draft for patient:', id);
+            const response = await visitsAPI.getTodayDraft(id);
+            console.log('Today draft response:', response.data);
+            // New API returns { note: ... } or { note: null }
+            const note = response.data?.note || null;
+            console.log('Setting todayDraftVisit to:', note?.id || 'null', note);
+            setTodayDraftVisit(note);
+            // Force re-render check
+            if (note && note.id) {
+                console.log('✅ Draft found, should show "Open Today\'s Note" button');
+            } else {
+                console.log('❌ No draft found, should show "New Visit" button');
             }
-        };
-        fetchTodayDraft();
+        } catch (error) {
+            console.error('Error fetching today\'s draft visit:', error);
+            console.error('Error details:', error.response?.data || error.message);
+            setTodayDraftVisit(null);
+        }
     }, [id]);
+
+    useEffect(() => {
+        fetchTodayDraft();
+    }, [fetchTodayDraft]);
 
     useEffect(() => {
         const fetchNotes = async () => {
@@ -372,9 +380,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 setLoadingNotes(true);
                 const response = await visitsAPI.getByPatient(id);
                 if (response.data && response.data.length > 0) {
-                    const notesToShow = response.data.filter(v => v.note_draft && v.note_draft.trim().length > 0);
-                    
-                    const formattedNotes = notesToShow.map(visit => {
+                    // Show all visits for this patient in Visit History (both signed and drafts)
+                    const formattedNotes = response.data.map(visit => {
                         const noteText = visit.note_draft || "";
                         const hpiMatch = noteText.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):)/is);
                         const planMatch = noteText.match(/(?:Plan|P):\s*(.+?)(?:\n\n|$)/is);
@@ -476,16 +483,16 @@ const Snapshot = ({ showNotesOnly = false }) => {
             // Refresh today's draft visit
             try {
                 const draftResponse = await visitsAPI.getTodayDraft(id);
-                setTodayDraftVisit(draftResponse.data || null);
+                // New API returns { note: ... } or { note: null }
+                setTodayDraftVisit(draftResponse.data?.note || null);
             } catch (error) {
                 console.error('Error refreshing today\'s draft visit:', error);
             }
             // Refresh notes
             const response = await visitsAPI.getByPatient(id);
             if (response.data && response.data.length > 0) {
-                const notesToShow = response.data.filter(v => v.note_draft && v.note_draft.trim().length > 0);
-                // Format notes using the same logic as in fetchNotes
-                const formattedNotes = notesToShow.map(visit => {
+                // Format notes using the same logic as in fetchNotes, but include all visits
+                const formattedNotes = response.data.map(visit => {
                     const noteText = visit.note_draft || "";
                     const ccMatch = noteText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
                     const chiefComplaint = ccMatch ? ccMatch[1].trim() : null;
@@ -1158,73 +1165,105 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 </div>
                             </div>
                             
-                            {/* Right: Visit Buttons */}
+                            {/* Right: Visit & Chart Buttons */}
                             <div className="flex items-center space-x-2">
-                                {todayDraftVisit && todayDraftVisit.id ? (
-                                    <>
-                                        {/* Open Draft Visit Button */}
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                console.log('Opening existing draft visit:', todayDraftVisit.id);
-                                                if (id) {
-                                                    navigate(`/patient/${id}/visit/${todayDraftVisit.id}`);
-                                                } else {
-                                                    console.error('Patient ID is missing, cannot navigate');
-                                                    alert('Patient ID is missing. Please refresh the page.');
-                                                }
-                                            }}
-                                            className="flex items-center space-x-2 px-4 py-2.5 text-white rounded-lg shadow-md hover:shadow-lg transition-all font-medium text-sm flex-shrink-0"
-                                            style={{ background: 'linear-gradient(to right, #10B981, #059669)' }}
-                                            onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #059669, #047857)'}
-                                            onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #10B981, #059669)'}
-                                        >
-                                            <FileText className="w-5 h-5" />
-                                            <span>Open Visit Note</span>
-                                        </button>
-                                        {/* New Visit Button (always available) */}
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                console.log('Creating new visit (draft exists)');
-                                                if (id) {
-                                                    navigate(`/patient/${id}/visit/new`);
-                                                } else {
-                                                    console.error('Patient ID is missing, cannot navigate');
-                                                    alert('Patient ID is missing. Please refresh the page.');
-                                                }
-                                            }}
-                                            className="flex items-center space-x-2 px-4 py-2.5 text-white rounded-lg shadow-md hover:shadow-lg transition-all font-medium text-sm flex-shrink-0"
-                                            style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                            onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                                            onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                                        >
-                                            <Plus className="w-5 h-5" />
-                                            <span>New Visit</span>
-                                        </button>
-                                    </>
-                                ) : (
-                                    /* New Visit Button (when no draft exists) */
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            console.log('Creating new visit');
-                                            if (id) {
-                                                navigate(`/patient/${id}/visit/new`);
+                                {/* Open Chart - moved up next to visit actions */}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setPatientChartTab('history');
+                                        setShowPatientChart(true);
+                                    }}
+                                    className="flex items-center space-x-1.5 px-3 py-1.5 text-[11px] font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md transition-all duration-200 hover:bg-blue-100 whitespace-nowrap"
+                                    title="Open Patient Chart"
+                                >
+                                    <Eye className="w-3.5 h-3.5" />
+                                    <span>Open Chart</span>
+                                </button>
+
+                                {/* Primary visit action: New Visit or Open Today's Visit (merged) */}
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        if (!id) {
+                                            console.error('Patient ID is missing, cannot navigate');
+                                            alert('Patient ID is missing. Please refresh the page.');
+                                            return;
+                                        }
+
+                                        // If we already have a draft for today, just open it
+                                        if (todayDraftVisit && todayDraftVisit.id) {
+                                            console.log('Opening existing draft visit from header:', todayDraftVisit.id);
+                                            navigate(`/patient/${id}/visit/${todayDraftVisit.id}`);
+                                            return;
+                                        }
+
+                                        // Otherwise, create or open today's office visit
+                                        try {
+                                            console.log('No draft for today, creating/opening new office visit');
+                                            const response = await visitsAPI.openToday(id, 'office_visit');
+                                            const newNote = response.data?.note || response.data;
+                                            if (newNote?.id) {
+                                                navigate(`/patient/${id}/visit/${newNote.id}`);
                                             } else {
-                                                console.error('Patient ID is missing, cannot navigate');
-                                                alert('Patient ID is missing. Please refresh the page.');
+                                                console.error('Failed to create/open today\'s visit');
+                                                alert('Failed to create today\'s visit. Please try again.');
                                             }
-                                        }}
-                                        className="flex items-center space-x-2 px-5 py-2.5 text-white rounded-lg shadow-md hover:shadow-lg transition-all font-medium text-sm flex-shrink-0"
-                                        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                                    >
-                                        <Plus className="w-5 h-5" />
-                                        <span>New Visit</span>
-                                    </button>
-                                )}
+                                        } catch (error) {
+                                            console.error('Error creating/opening today\'s visit:', error);
+                                            alert('Failed to create today\'s visit. Please try again.');
+                                        }
+                                    }}
+                                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white rounded-md shadow-md hover:shadow-lg transition-all whitespace-nowrap"
+                                    style={{ background: 'linear-gradient(to right, #10B981, #059669)' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #059669, #047857)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #10B981, #059669)'}
+                                >
+                                    {todayDraftVisit && todayDraftVisit.id ? (
+                                        <>
+                                            <FileText className="w-3.5 h-3.5" />
+                                            <span>Open Today&apos;s Visit</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Plus className="w-3.5 h-3.5" />
+                                            <span>New Visit</span>
+                                        </>
+                                    )}
+                                </button>
+
+                                {/* Telephone Encounter - keeps separate quick-encounter entry */}
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        console.log('Creating telephone encounter');
+                                        if (!id) {
+                                            console.error('Patient ID is missing, cannot navigate');
+                                            alert('Patient ID is missing. Please refresh the page.');
+                                            return;
+                                        }
+                                        try {
+                                            const response = await visitsAPI.openToday(id, 'telephone');
+                                            const newNote = response.data?.note || response.data;
+                                            if (newNote?.id) {
+                                                navigate(`/patient/${id}/visit/${newNote.id}`);
+                                            } else {
+                                                console.error('Failed to create telephone encounter');
+                                                alert('Failed to create telephone encounter. Please try again.');
+                                            }
+                                        } catch (error) {
+                                            console.error('Error creating telephone encounter:', error);
+                                            alert('Failed to create telephone encounter. Please try again.');
+                                        }
+                                    }}
+                                    className="flex items-center space-x-1.5 px-3 py-1.5 text-xs text-white rounded-md shadow hover:shadow-md transition-all font-medium flex-shrink-0"
+                                    style={{ background: 'linear-gradient(to right, #8B5CF6, #7C3AED)' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #7C3AED, #6D28D9)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #8B5CF6, #7C3AED)'}
+                                >
+                                    <Phone className="w-4 h-4" />
+                                    <span>Telephone Encounter</span>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1494,20 +1533,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     <span>Reset</span>
                                 </button>
                             )}
-                            <button
-                                onClick={() => {
-                                    setPatientChartTab('history');
-                                    setShowPatientChart(true);
-                                }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-md transition-all duration-200 hover:shadow-md whitespace-nowrap"
-                                style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                                title="Open Patient Chart"
-                            >
-                                <Eye className="w-3.5 h-3.5" />
-                                <span>Open Chart</span>
-                            </button>
+
+                            {/* Note actions are now in the patient header (Open Chart / New Visit / Open Today's Visit / Telephone Encounter) */}
                         </div>
                     </div>
                 </div>
@@ -1900,40 +1927,6 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             </div>
                         </div>
 
-                        {/* Screening Modalities Module */}
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow md:col-span-2">
-                            <div className="p-2 border-b border-gray-200 flex items-center justify-between">
-                                <div className="flex items-center space-x-2">
-                                    <Stethoscope className="w-4 h-4 text-primary-600" />
-                                    <h3 className="font-semibold text-sm text-gray-900">Screening Modalities</h3>
-                                </div>
-                            </div>
-                            <div className="p-2">
-                                <div className="space-y-1.5">
-                                    <div className="flex items-center justify-between p-1.5 bg-blue-50 rounded-lg">
-                                        <div className="flex items-center space-x-2">
-                                            <CheckCircle2 className="w-3 h-3 text-green-600" />
-                                            <span className="text-xs text-gray-900">Mammogram</span>
-                                        </div>
-                                        <span className="text-xs text-gray-500">Due: 12/2025</span>
-                                    </div>
-                                    <div className="flex items-center justify-between p-1.5 bg-yellow-50 rounded-lg">
-                                        <div className="flex items-center space-x-2">
-                                            <Calendar className="w-3 h-3 text-yellow-600" />
-                                            <span className="text-xs text-gray-900">Colonoscopy</span>
-                                        </div>
-                                        <span className="text-xs text-gray-500">Overdue</span>
-                                    </div>
-                                    <div className="flex items-center justify-between p-1.5 bg-green-50 rounded-lg">
-                                        <div className="flex items-center space-x-2">
-                                            <CheckCircle2 className="w-3 h-3 text-green-600" />
-                                            <span className="text-xs text-gray-900">Flu Shot</span>
-                                        </div>
-                                        <span className="text-xs text-gray-500">Current</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                         </div>
                     ) : null}

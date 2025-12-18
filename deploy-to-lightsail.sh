@@ -56,11 +56,10 @@ $SSH_CMD $USER@$HOST << EOF
   # This step was causing hangs, certificates should already be in place
   echo "✅ Certificate check skipped (assuming already configured)"
 
-  echo "🔄 Rebuilding and restarting services..."
-  # Rebuild api and web containers with timeout
-  # This can take 3-5 minutes, so we'll run it in background and show progress
-  echo "⏳ Building containers (this may take a few minutes)..."
-  docker compose -f docker-compose.prod.yml build --no-cache api web 2>&1 | tail -20
+  echo "🔄 Building and restarting services (using cache for speed)..."
+  # Build WITH cache - much faster, only rebuilds changed layers
+  # Use --no-cache only if you need a completely fresh build
+  docker compose -f docker-compose.prod.yml build api web
   echo "🚀 Starting containers..."
   docker compose -f docker-compose.prod.yml up -d --force-recreate api web
   

@@ -47,9 +47,9 @@ export const usePrivileges = () => {
    */
   const hasPrivilege = (privilegeName) => {
     if (!user) return false;
-    
+
     // Admin always has all privileges
-    if (user.role === 'Admin') {
+    if (isAdmin()) {
       return true;
     }
 
@@ -74,7 +74,16 @@ export const usePrivileges = () => {
    * Check if user is admin
    */
   const isAdmin = () => {
-    return user?.role === 'Admin';
+    if (!user) return false;
+
+    // New auth system exposes isAdmin / is_admin flags
+    if (user.isAdmin === true || user.is_admin === true) {
+      return true;
+    }
+
+    // Fallback to role name checks (case-insensitive)
+    const role = (user.role || '').toString().toLowerCase();
+    return role === 'admin' || role === 'administrator';
   };
 
   return {

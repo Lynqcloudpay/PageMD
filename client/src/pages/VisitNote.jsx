@@ -390,16 +390,18 @@ const VisitNote = () => {
         if (urlVisitId === 'new' && id) {
             console.log('Creating new visit for patient:', id);
             setLoading(true);
-            visitsAPI.findOrCreate(id, 'Office Visit')
+            visitsAPI.openToday(id, 'office_visit')
                 .then(response => {
-                    const visit = response.data;
+                    // New API returns { note: {...} }
+                    const visit = response.data?.note || response.data;
                     console.log('Created visit:', visit);
                     if (!visit || !visit.id) {
                         throw new Error('Invalid visit response');
                     }
                     setCurrentVisitId(visit.id);
                     setVisitData(visit);
-                    setIsSigned(visit.locked || !!visit.note_signed_by || !!visit.note_signed_at);
+                    // Check status field or legacy fields
+                    setIsSigned(visit.status === 'signed' || visit.locked || !!visit.note_signed_by || !!visit.note_signed_at);
                     hasInitialSaveRef.current = true; // Mark that we've created the visit
                     // Use navigate to properly update the route - this will trigger the useEffect to reload with new visitId
                     console.log('Navigating to visit:', `/patient/${id}/visit/${visit.id}`);
@@ -514,10 +516,15 @@ const VisitNote = () => {
             // Create visit if it doesn't exist
             if (!visitId || visitId === 'new') {
                 try {
-                    const response = await visitsAPI.findOrCreate(id, 'Office Visit');
-                    visitId = response.data.id;
+                    const response = await visitsAPI.openToday(id, 'office_visit');
+                    // New API returns { note: {...} }
+                    const visit = response.data?.note || response.data;
+                    if (!visit || !visit.id) {
+                        throw new Error('Invalid visit response');
+                    }
+                    visitId = visit.id;
                     setCurrentVisitId(visitId);
-                    setVisitData(response.data);
+                    setVisitData(visit);
                     window.history.replaceState({}, '', `/patient/${id}/visit/${visitId}`);
                     hasInitialSaveRef.current = true;
                 } catch (error) {
@@ -667,7 +674,7 @@ const VisitNote = () => {
                     return;
                 }
                 try {
-                    const response = await visitsAPI.findOrCreate(id, 'Office Visit');
+                    const response = await visitsAPI.openToday(id, 'office_visit');
                     visitId = response.data.id;
                     setCurrentVisitId(visitId);
                     window.history.replaceState({}, '', `/patient/${id}/visit/${visitId}`);

@@ -8,9 +8,12 @@ const pool = process.env.DATABASE_URL
     ssl: {
       rejectUnauthorized: false // Allow self-signed certificates
     },
-    max: 20,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
+    // Keep a modest pool size; too many connections can hurt small instances
+    max: 10,
+    // Close idle connections a bit sooner to avoid stale sockets
+    idleTimeoutMillis: 15000,
+    // Give the DB more time to accept new connections to avoid spurious timeouts
+    connectionTimeoutMillis: 15000,
   })
   : new Pool({
     host: process.env.DB_HOST || 'localhost',

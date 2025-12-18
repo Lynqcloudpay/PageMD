@@ -24,8 +24,9 @@ services:
 
   api:
     build:
-      context: ..
-      dockerfile: deploy/Dockerfile.api
+      # Limit build context to the server code only for faster builds
+      context: ../server
+      dockerfile: ../deploy/Dockerfile.api
     container_name: emr-api
     restart: unless-stopped
     environment:
@@ -68,8 +69,9 @@ services:
 
   web:
     build:
-      context: ..
-      dockerfile: deploy/Dockerfile.web
+      # Limit build context to the client code only for faster builds
+      context: ../client
+      dockerfile: ../deploy/Dockerfile.web
     container_name: emr-web
     restart: unless-stopped
     networks:

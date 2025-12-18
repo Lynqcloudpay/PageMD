@@ -3,14 +3,14 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY client/package*.json ./
+# Copy package files (context is client/ now)
+COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies (cache this layer - only rebuilds if package.json changes)
+RUN npm ci --prefer-offline --no-audit
 
 # Copy source code
-COPY client/ ./
+COPY . ./
 
 # Build production bundle
 RUN npm run build

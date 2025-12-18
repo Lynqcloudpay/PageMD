@@ -4,6 +4,7 @@ const pool = require('../db');
 const { authenticate, requireRole, logAudit } = require('../middleware/auth');
 const { requirePermission } = require('../services/authorization');
 const { safeLogger } = require('../middleware/phiRedaction');
+const { getTodayDateString } = require('../utils/timezone');
 
 // All routes require authentication
 router.use(authenticate);
@@ -123,35 +124,46 @@ router.get('/pending', requirePermission('notes:view'), async (req, res) => {
 });
 
 // Get today's draft visit for a patient - MUST come before /:id
+// Get today's draft note (single source of truth)
+// GET /api/visits/today-draft/:patientId?providerId=...
 router.get('/today-draft/:patientId', requirePermission('notes:view'), async (req, res) => {
   try {
     const { patientId } = req.params;
+    const { providerId } = req.query;
     
     if (!patientId) {
       return res.status(400).json({ error: 'patientId is required' });
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    // Get today's date in clinic timezone (America/New_York)
+    const todayDate = getTodayDateString();
 
-    const result = await pool.query(
-      `SELECT * FROM visits 
-       WHERE patient_id = $1 
-       AND visit_date >= $2 
-       AND visit_date < $3
-       AND note_signed_at IS NULL
-       ORDER BY created_at DESC
-       LIMIT 1`,
-      [patientId, today, tomorrow]
-    );
+    let query = `
+      SELECT * FROM visits 
+      WHERE patient_id = $1 
+      AND status = 'draft'
+      AND encounter_date = $2
+      AND note_signed_at IS NULL
+    `;
+    const params = [patientId, todayDate];
+    let paramIndex = 3;
 
-    if (result.rows.length > 0) {
-      return res.json(result.rows[0]);
+    // Optional provider filter
+    if (providerId) {
+      query += ` AND provider_id = $${paramIndex}`;
+      params.push(providerId);
+      paramIndex++;
     }
 
-    return res.json(null);
+    query += ` ORDER BY updated_at DESC LIMIT 1`;
+
+    const result = await pool.query(query, params);
+
+    if (result.rows.length > 0) {
+      return res.json({ note: result.rows[0] });
+    }
+
+    return res.json({ note: null });
   } catch (error) {
     safeLogger.error('Error fetching today\'s draft visit', {
       message: error.message,
@@ -166,78 +178,287 @@ router.get('/today-draft/:patientId', requirePermission('notes:view'), async (re
   }
 });
 
-// Find or create visit - MUST come before /:id
-router.post('/find-or-create', requirePermission('notes:create'), async (req, res) => {
+// Create or open today's draft note (idempotent)
+// POST /api/visits/open-today/:patientId
+router.post('/open-today/:patientId', requirePermission('notes:create'), async (req, res) => {
+  const client = await pool.connect();
+  
   try {
-    const { patientId, visitType } = req.body;
+    const { patientId } = req.params;
+    const { noteType = 'office_visit', providerId } = req.body;
     
     if (!patientId) {
       return res.status(400).json({ error: 'patientId is required' });
     }
 
-    if (!req.user || !req.user.id) {
-      console.error('User not authenticated in find-or-create');
-      return res.status(401).json({ error: 'User not authenticated' });
+    const actualProviderId = providerId || req.user.id;
+    if (!actualProviderId) {
+      return res.status(400).json({ error: 'providerId is required' });
     }
 
-    // Try to find existing unsigned visit for today
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    // Get today's date in clinic timezone
+    const todayDate = getTodayDateString();
+    const now = new Date();
 
-    const existingResult = await pool.query(
-      `SELECT * FROM visits 
-       WHERE patient_id = $1 
-       AND visit_date >= $2 
-       AND visit_date < $3
-       AND note_signed_at IS NULL
-       ORDER BY created_at DESC
-       LIMIT 1`,
-      [patientId, today, tomorrow]
-    );
+    await client.query('BEGIN');
 
-    if (existingResult.rows.length > 0) {
-      return res.json(existingResult.rows[0]);
+    // Try to find today's draft (must be unsigned)
+    // Allow any provider to open an existing draft (remove provider_id filter)
+    const findQuery = `
+      SELECT * FROM visits 
+      WHERE patient_id = $1 
+      AND status = 'draft'
+      AND encounter_date = $2
+      AND note_type = $3
+      AND note_signed_at IS NULL
+      ORDER BY updated_at DESC
+      LIMIT 1
+    `;
+    
+    const findResult = await client.query(findQuery, [
+      patientId,
+      todayDate,
+      noteType
+    ]);
+
+    // If exists, return it
+    if (findResult.rows.length > 0) {
+      await client.query('COMMIT');
+      return res.json({ note: findResult.rows[0] });
     }
 
-    // Create new visit (created_by column doesn't exist, removed it)
-    const providerId = req.user.id;
-    if (!providerId) {
-      console.error('Provider ID is missing:', req.user);
-      return res.status(400).json({ error: 'Provider ID is missing' });
-    }
+    // Create new draft note
+    // Note: The unique index will prevent duplicates if there's a race condition
+    const insertQuery = `
+      INSERT INTO visits (
+        patient_id, 
+        provider_id, 
+        status, 
+        note_type, 
+        encounter_date,
+        visit_date,
+        created_at, 
+        updated_at
+      )
+      VALUES ($1, $2, 'draft', $3, $4, $5, $6, $7)
+      RETURNING *
+    `;
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Creating visit with:', { patientId, visitType, providerId });
-    }
+    const insertResult = await client.query(insertQuery, [
+      patientId,
+      actualProviderId,
+      noteType,
+      todayDate,
+      now,
+      now,
+      now
+    ]);
 
-    // Validate UUIDs
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(patientId)) {
-      console.error('Invalid patientId format:', patientId);
-      return res.status(400).json({ error: 'Invalid patient ID format' });
-    }
-    if (!uuidRegex.test(providerId)) {
-      console.error('Invalid providerId format:', providerId);
-      return res.status(400).json({ error: 'Invalid provider ID format' });
-    }
+    await client.query('COMMIT');
 
-    const result = await pool.query(
-      `INSERT INTO visits (patient_id, visit_date, visit_type, provider_id)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [patientId, new Date(), visitType || 'Office Visit', providerId]
-    );
-
-    // Try to log audit, but don't fail if it doesn't work
+    // Log audit
     try {
-      await logAudit(req.user.id, 'create_visit', 'visit', result.rows[0].id, req.body, req.ip);
+      await logAudit(req.user.id, 'create_visit', 'visit', insertResult.rows[0].id, req.body, req.ip);
     } catch (auditError) {
       console.error('Failed to log audit (non-fatal):', auditError.message);
     }
 
-    res.status(201).json(result.rows[0]);
+    res.status(201).json({ note: insertResult.rows[0] });
   } catch (error) {
+    await client.query('ROLLBACK');
+    
+    // Handle unique constraint violation (race condition)
+    if (error.code === '23505' && error.constraint === 'idx_visits_unique_today_draft') {
+      // Retry: fetch the existing note
+      try {
+        const todayDate = getTodayDateString();
+        const retryResult = await pool.query(
+          `SELECT * FROM visits 
+           WHERE patient_id = $1 
+           AND status = 'draft'
+           AND encounter_date = $2
+           AND provider_id = $3
+           AND note_type = $4
+           ORDER BY updated_at DESC
+           LIMIT 1`,
+          [req.params.patientId, todayDate, req.body.providerId || req.user.id, req.body.noteType || 'office_visit']
+        );
+        
+        if (retryResult.rows.length > 0) {
+          return res.json({ note: retryResult.rows[0] });
+        }
+      } catch (retryError) {
+        // Fall through to error handling
+      }
+    }
+
+    safeLogger.error('Error opening today\'s draft visit', {
+      message: error.message,
+      code: error.code,
+      constraint: error.constraint,
+      patientId: req.params.patientId,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+    
+    res.status(500).json({ 
+      error: 'Failed to open today\'s draft visit',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// Find or create visit - DEPRECATED: Use /open-today instead
+// This endpoint is kept for backward compatibility but now uses the new schema
+router.post('/find-or-create', requirePermission('notes:create'), async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    const { patientId, visitType, forceNew } = req.body;
+    const providerId = req.user?.id;
+
+    // Validate inputs
+    if (!patientId) {
+      return res.status(400).json({ error: 'patientId is required' });
+    }
+    if (!providerId) {
+      console.error('User not authenticated in find-or-create:', req.user);
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    // Map old visitType to new note_type
+    const noteTypeMap = {
+      'Office Visit': 'office_visit',
+      'Telephone': 'telephone',
+      'Portal': 'portal',
+      'Refill': 'refill',
+      'Lab Only': 'lab_only',
+      'Nurse Visit': 'nurse_visit'
+    };
+    const noteType = noteTypeMap[visitType] || 'office_visit';
+
+    // Debug logging
+    console.log('find-or-create debug', {
+      patientId: req.body?.patientId,
+      visitType: req.body?.visitType,
+      forceNew: req.body?.forceNew,
+      user: req.user ? { id: req.user.id, email: req.user.email } : null,
+      providerId
+    });
+
+    // Get today's date in clinic timezone
+    const todayDate = getTodayDateString();
+    const now = new Date();
+
+    await client.query('BEGIN');
+
+    // If forceNew = false: try to find today's DRAFT for this patient
+    if (!forceNew) {
+      console.log('Searching for existing draft:', { patientId, todayDate, noteType });
+      const existingResult = await client.query(
+        `SELECT * FROM visits 
+         WHERE patient_id = $1 
+         AND status = 'draft'
+         AND encounter_date = $2
+         AND note_type = $3
+         AND note_signed_at IS NULL
+         ORDER BY updated_at DESC
+         LIMIT 1`,
+        [patientId, todayDate, noteType]
+      );
+
+      console.log('Existing draft query result:', { count: existingResult.rows.length, found: existingResult.rows[0]?.id });
+
+      if (existingResult.rows.length > 0) {
+        await client.query('COMMIT');
+        console.log('Returning existing draft:', existingResult.rows[0].id);
+        return res.json(existingResult.rows[0]);
+      }
+    }
+
+    // Create new visit with new schema
+    console.log('Creating new visit:', { patientId, providerId, noteType, todayDate, visitType: visitType || 'Office Visit' });
+    const insertResult = await client.query(
+      `INSERT INTO visits (
+        patient_id, 
+        visit_date, 
+        visit_type, 
+        provider_id,
+        status,
+        note_type,
+        encounter_date,
+        created_at,
+        updated_at
+      )
+      VALUES ($1, $2, $3, $4, 'draft', $5, $6, $7, $8) RETURNING *`,
+      [patientId, now, visitType || 'Office Visit', providerId, noteType, todayDate, now, now]
+    );
+    console.log('Created visit:', insertResult.rows[0]?.id);
+
+    await client.query('COMMIT');
+
+    // Try to log audit, but don't fail if it doesn't work
+    try {
+      await logAudit(req.user.id, 'create_visit', 'visit', insertResult.rows[0].id, req.body, req.ip);
+    } catch (auditError) {
+      console.error('Failed to log audit (non-fatal):', auditError.message);
+    }
+
+    res.status(201).json(insertResult.rows[0]);
+  } catch (error) {
+    await client.query('ROLLBACK');
+
+    // Handle unique constraint violation (race condition)
+    if (error.code === '23505' && error.constraint === 'idx_visits_unique_today_draft') {
+      // Retry: fetch the existing note
+      try {
+        const todayDate = getTodayDateString();
+        const noteTypeMap = {
+          'Office Visit': 'office_visit',
+          'Telephone': 'telephone',
+          'Portal': 'portal',
+          'Refill': 'refill',
+          'Lab Only': 'lab_only',
+          'Nurse Visit': 'nurse_visit'
+        };
+        const noteType = noteTypeMap[req.body.visitType] || 'office_visit';
+        
+        const retryResult = await pool.query(
+          `SELECT * FROM visits 
+           WHERE patient_id = $1 
+           AND status = 'draft'
+           AND encounter_date = $2
+           AND note_type = $3
+           AND note_signed_at IS NULL
+           ORDER BY updated_at DESC
+           LIMIT 1`,
+          [req.body.patientId, todayDate, noteType]
+        );
+        
+        if (retryResult.rows.length > 0) {
+          return res.json(retryResult.rows[0]);
+        }
+      } catch (retryError) {
+        console.error('Retry failed:', retryError);
+      }
+    }
+
+    // Log the REAL error with full details
+    console.error('find-or-create visit error:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      constraint: error.constraint,
+      table: error.table,
+      where: error.where,
+      stack: error.stack,
+      patientId: req.body.patientId,
+      providerId: req.user?.id,
+      visitType: req.body.visitType,
+      forceNew: req.body.forceNew
+    });
+
     safeLogger.error('Error finding or creating visit', {
       message: error.message,
       code: error.code,
@@ -248,10 +469,18 @@ router.post('/find-or-create', requirePermission('notes:create'), async (req, re
       userId: req.user?.id,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
+
+    // Return error code and hint for debugging (temporarily)
     res.status(500).json({ 
       error: 'Failed to find or create visit',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      code: error.code || 'UNKNOWN_DB_ERROR',
+      hint: error.hint || error.detail || error.message,
+      constraint: error.constraint,
+      table: error.table,
+      column: error.column
     });
+  } finally {
+    client.release();
   }
 });
 
@@ -302,6 +531,7 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
           `UPDATE visits 
            SET note_draft = $1, 
                vitals = $4,
+               status = 'signed',
                note_signed_at = CURRENT_TIMESTAMP,
                note_signed_by = $3,
                updated_at = CURRENT_TIMESTAMP
@@ -313,6 +543,7 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
         result = await pool.query(
           `UPDATE visits 
            SET note_draft = $1, 
+               status = 'signed',
                note_signed_at = CURRENT_TIMESTAMP,
                note_signed_by = $3,
                updated_at = CURRENT_TIMESTAMP
@@ -328,6 +559,7 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
             `UPDATE visits 
              SET note_draft = $1, 
                  vitals = $4,
+                 status = 'signed',
                  note_signed_at = CURRENT_TIMESTAMP,
                  note_signed_by = $3,
                  updated_at = CURRENT_TIMESTAMP
@@ -339,6 +571,7 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
           result = await pool.query(
             `UPDATE visits 
              SET note_draft = $1, 
+                 status = 'signed',
                  note_signed_at = CURRENT_TIMESTAMP,
                  note_signed_by = $3,
                  updated_at = CURRENT_TIMESTAMP
