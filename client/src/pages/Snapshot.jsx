@@ -1165,22 +1165,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 </div>
                             </div>
                             
-                            {/* Right: Visit & Chart Buttons */}
-                            <div className="flex items-center space-x-2">
-                                {/* Open Chart - kept in header for quick access */}
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setPatientChartTab('history');
-                                        setShowPatientChart(true);
-                                    }}
-                                    className="flex items-center space-x-1.5 px-3 py-1.5 text-[11px] font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md transition-all duration-200 hover:bg-blue-100 whitespace-nowrap"
-                                    title="Open Patient Chart"
-                                >
-                                    <Eye className="w-3.5 h-3.5" />
-                                    <span>Open Chart</span>
-                                </button>
-                            </div>
+                            {/* Right column reserved for future header actions (currently empty) */}
+                            <div className="flex items-center space-x-2" />
                         </div>
                     </div>
                     
@@ -1276,6 +1262,25 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             {patient.pharmacy_address}
                                         </div>
                                     )}
+                                </div>
+
+                                {/* Open Chart - moved down next to Pharmacy */}
+                                <div
+                                    onClick={() => {
+                                        setPatientChartTab('history');
+                                        setShowPatientChart(true);
+                                    }}
+                                    className="group cursor-pointer bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:border-blue-400 rounded p-1 transition-all relative text-center"
+                                >
+                                    <div className="flex items-center justify-center mb-0.5 relative">
+                                        <div className="flex items-center space-x-0.5">
+                                            <Eye className="w-2.5 h-2.5 text-blue-600" />
+                                            <span className="text-[9px] font-semibold text-blue-800 uppercase tracking-wide">Open Chart</span>
+                                        </div>
+                                    </div>
+                                    <div className="text-[11px] font-medium text-blue-900 leading-tight">
+                                        View all visits, labs, and documents
+                                    </div>
                                 </div>
 
                                 {/* Emergency Contact */}
@@ -1437,8 +1442,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     </span>
                                 )}
                             </button>
-
-                            {/* Primary visit action: New Visit or Open Today's Visit (moved down from header) */}
+                        </div>
+                        <div className="flex-shrink-0 ml-2 flex items-center gap-2">
+                            {/* Primary visit action: New Visit or Open Today's Visit (moved to right side for spacing) */}
                             <button
                                 type="button"
                                 onClick={async () => {
@@ -1488,8 +1494,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     </>
                                 )}
                             </button>
-                        </div>
-                        <div className="flex-shrink-0 ml-2 flex items-center gap-2">
+
                             {layoutEditMode && (
                                 <button
                                     onClick={resetLayout}
