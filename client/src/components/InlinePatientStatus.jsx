@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { Clock } from 'lucide-react';
 import { appointmentsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
@@ -525,9 +526,41 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
         );
     };
 
+    // Calculate total visit time for display (updates every second)
+    const [displayTotalTime, setDisplayTotalTime] = useState(0);
+    
+    useEffect(() => {
+        if (arrivalTime && status !== 'scheduled' && status !== 'no_show' && status !== 'cancelled') {
+            const updateTotalTime = () => {
+                const now = new Date();
+                const arrival = new Date(arrivalTime);
+                const checkout = checkoutTime ? new Date(checkoutTime) : null;
+                const total = checkout 
+                    ? Math.floor((checkout - arrival) / 1000)
+                    : Math.floor((now - arrival) / 1000);
+                setDisplayTotalTime(Math.max(0, total));
+            };
+            updateTotalTime();
+            const interval = setInterval(updateTotalTime, 1000);
+            return () => clearInterval(interval);
+        } else {
+            setDisplayTotalTime(0);
+        }
+    }, [arrivalTime, checkoutTime, status]);
+    
+    const showTotalTimer = arrivalTime && (status !== 'scheduled' && status !== 'no_show' && status !== 'cancelled');
+
     return (
         <>
             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                {/* Prominent Clock Counter - shows total visit time */}
+                {showTotalTimer && displayTotalTime > 0 && (
+                    <div className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 border border-blue-200 rounded text-[10px] font-semibold text-blue-700 mr-1 flex-shrink-0 animate-pulse">
+                        <Clock className="w-3 h-3" />
+                        <span className="whitespace-nowrap font-mono">{formatCompactTime(displayTotalTime)}</span>
+                    </div>
+                )}
+                
                 <StatusBtn statusKey="arrived" label="Arrived" />
                 <span className="text-gray-300 text-[10px] w-[8px] text-center flex-shrink-0">→</span>
                 <StatusBtn statusKey="checked_in" label="Checked In" />
