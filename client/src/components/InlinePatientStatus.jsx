@@ -553,22 +553,6 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
     return (
         <>
             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                {/* Prominent Clock Counter - shows total visit time */}
-                {showTotalTimer && displayTotalTime > 0 && (
-                    <div className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold mr-1 flex-shrink-0 shadow-sm ${
-                        status === 'checked_out' 
-                            ? 'bg-gray-100 border-2 border-gray-300 text-gray-800' 
-                            : status === 'in_room' || status === 'checked_in'
-                            ? 'bg-gradient-to-r from-blue-500 to-blue-600 border-2 border-blue-700 text-white shadow-md'
-                            : 'bg-gradient-to-r from-blue-400 to-blue-500 border-2 border-blue-600 text-white'
-                    }`}>
-                        <Clock className={`w-3.5 h-3.5 ${status === 'checked_out' ? 'text-gray-700' : 'text-white'}`} />
-                        <span className={`whitespace-nowrap font-mono ${status === 'checked_out' ? 'text-gray-800' : 'text-white'}`}>
-                            {formatCompactTime(displayTotalTime)}
-                        </span>
-                    </div>
-                )}
-                
                 <StatusBtn statusKey="arrived" label="Arrived" />
                 <span className="text-gray-300 text-[10px] w-[8px] text-center flex-shrink-0">→</span>
                 <StatusBtn statusKey="checked_in" label="Checked In" />
