@@ -16,8 +16,8 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies (cache this layer - only rebuilds if package.json changes)
-RUN npm ci --only=production --prefer-offline --no-audit --silent && \
-    npm cache clean --force
+# Use npm install instead of npm ci for better compatibility
+RUN npm install --only=production --prefer-offline --no-audit --silent || npm install --only=production --no-audit --silent
 
 # Remove build dependencies to reduce image size
 RUN apk del .build-deps
