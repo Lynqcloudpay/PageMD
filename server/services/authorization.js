@@ -86,10 +86,12 @@ async function getUserAuthContext(userId) {
       email: user.email,
       firstName: user.first_name,
       lastName: user.last_name,
-      role: normalizedRole,
+      role: normalizedRole, // Normalized for permissions
+      role_name: roleName, // Original role name for display (preserve "Physician" not "CLINICIAN")
       roleId: user.role_id,
       // Expose a clear isAdmin flag that combines DB flag + role
       isAdmin: isAdminUser,
+      is_admin: user.is_admin, // Also include snake_case version
       clinicId: null, // clinic_id column may not exist in all schemas
       permissions: Array.from(base),
       scope: {

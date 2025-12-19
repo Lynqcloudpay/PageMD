@@ -632,17 +632,18 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
 
             <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 print:hidden" id="modal-overlay">
                 <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col print:shadow-none print:rounded-none print:max-w-none print:max-h-none print:w-full print:overflow-visible">
-                    <div className="p-4 border-b border-gray-200 flex items-center justify-between print-hidden bg-white">
-                        <h2 className="text-xl font-bold text-gray-800">Visit Chart View</h2>
-                        <div className="flex items-center space-x-1">
+                    <div className="p-4 border-b border-deep-gray/10 flex items-center justify-between print-hidden bg-gradient-to-r from-white to-soft-gray/30">
+                        <h2 className="text-xl font-bold text-deep-gray">Visit Chart View</h2>
+                        <div className="flex items-center gap-2">
                             {isSigned && (
                                 <>
                                     <button 
                                         onClick={() => setShowAddendumModal(true)} 
-                                        className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-deep-gray bg-white/80 hover:bg-white border border-deep-gray/10 hover:border-strong-azure/30 rounded-lg transition-all duration-200 hover:shadow-sm"
                                         title="Add Addendum"
                                     >
-                                        <FilePlus className="w-4 h-4" />
+                                        <FilePlus className="w-3.5 h-3.5" />
+                                        <span>Addendum</span>
                                     </button>
                                     <button 
                                         onClick={() => {
@@ -653,24 +654,35 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                             setSelectedDiagnosisCodes(diagnosisCodes);
                                             setShowSuperbillModal(true);
                                         }} 
-                                        className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-deep-gray bg-white/80 hover:bg-white border border-deep-gray/10 hover:border-strong-azure/30 rounded-lg transition-all duration-200 hover:shadow-sm"
                                         title="Create Superbill"
                                     >
-                                        <Receipt className="w-4 h-4" />
+                                        <Receipt className="w-3.5 h-3.5" />
+                                        <span>Superbill</span>
                                     </button>
                                 </>
                             )}
                             <button 
                                 onClick={() => setShowBillingModal(true)} 
-                                className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-deep-gray bg-white/80 hover:bg-white border border-deep-gray/10 hover:border-strong-azure/30 rounded-lg transition-all duration-200 hover:shadow-sm"
                                 title="View Billing"
                             >
-                                <DollarSign className="w-4 h-4" />
+                                <DollarSign className="w-3.5 h-3.5" />
+                                <span>Billing</span>
                             </button>
-                            <button onClick={handlePrint} className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors" title="Print">
-                                <Printer className="w-4 h-4" />
+                            <button 
+                                onClick={handlePrint} 
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-deep-gray bg-white/80 hover:bg-white border border-deep-gray/10 hover:border-strong-azure/30 rounded-lg transition-all duration-200 hover:shadow-sm" 
+                                title="Print"
+                            >
+                                <Printer className="w-3.5 h-3.5" />
+                                <span>Print</span>
                             </button>
-                            <button onClick={onClose} className="p-2 text-gray-600 hover:text-gray-800 rounded-lg hover:bg-gray-100 transition-colors">
+                            <button 
+                                onClick={onClose} 
+                                className="flex items-center justify-center w-8 h-8 text-deep-gray/70 hover:text-deep-gray hover:bg-deep-gray/5 rounded-lg transition-all duration-200"
+                                title="Close"
+                            >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>

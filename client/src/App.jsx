@@ -17,6 +17,7 @@ import Billing from './pages/Billing'
 import UserManagement from './pages/UserManagement'
 import AdminSettings from './pages/AdminSettings'
 import Cancellations from './pages/Cancellations'
+import Profile from './pages/Profile'
 import Layout from './components/Layout'
 import ErrorBoundary from './components/ErrorBoundary'
 import { PatientProvider } from './context/PatientContext'
@@ -173,6 +174,13 @@ function App() {
                                             <ProtectedRoute>
                                                 <ErrorBoundary>
                                                     <Layout><AdminSettings /></Layout>
+                                                </ErrorBoundary>
+                                            </ProtectedRoute>
+                                        } />
+                                        <Route path="/profile" element={
+                                            <ProtectedRoute>
+                                                <ErrorBoundary>
+                                                    <Layout><Profile /></Layout>
                                                 </ErrorBoundary>
                                             </ProtectedRoute>
                                         } />

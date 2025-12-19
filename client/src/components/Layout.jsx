@@ -102,6 +102,7 @@ const Layout = ({ children }) => {
     // Use permissions instead of role checks
     const { can, getScope } = usePermissions();
     const scope = getScope();
+    const navigate = useNavigate();
     
     // Check permissions for navigation items
     const canViewSchedule = can('schedule:view');
@@ -409,11 +410,12 @@ const Layout = ({ children }) => {
                         <div className="flex items-center gap-2">
                             {/* User Button */}
                             <button
+                                onClick={() => navigate('/profile')}
                                 className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all flex-1 ${sidebarCollapsed ? 'justify-center' : ''} ${sidebarCollapsed
                                     ? 'hover:bg-soft-gray/80'
                                     : 'bg-white/60 backdrop-blur-sm hover:bg-white border border-deep-gray/5 hover:border-deep-gray/20 hover:shadow-sm'
                                     }`}
-                                title={`${user.firstName} ${user.lastName} - ${user.role === 'clinician' ? 'Doctor' : user.role === 'front_desk' ? 'Front Desk' : user.role || user.role_name || 'User'}`}
+                                title={`${user.firstName} ${user.lastName} - ${user.role_name || user.role || 'User'}${user.isAdmin ? ' (Admin)' : ''} - Click to view profile`}
                             >
                                 <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-strong-azure to-strong-azure/80 flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 shadow-sm">
                                     {(user.firstName?.[0] || 'U') + (user.lastName?.[0] || '')}
@@ -422,7 +424,7 @@ const Layout = ({ children }) => {
                                     <div className="text-left flex-1 min-w-0">
                                         <div className="text-[12px] font-semibold text-deep-gray leading-tight truncate">{user.firstName} {user.lastName}</div>
                                         <div className="text-[10px] text-deep-gray/50 capitalize leading-tight truncate font-medium">
-                                            {user.role || user.role_name || 'User'}
+                                            {user.role_name || user.role || 'User'}
                                         </div>
                                     </div>
                                 )}

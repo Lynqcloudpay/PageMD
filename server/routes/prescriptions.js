@@ -14,6 +14,7 @@ const { authenticate, requireRole, logAudit } = require('../middleware/auth');
 const rxnormService = require('../services/rxnorm');
 const pharmacyService = require('../services/pharmacy');
 const validationService = require('../services/validation');
+const getEPrescribeService = require('../services/eprescribe/EPrescribeService');
 
 const router = express.Router();
 router.use(authenticate);
@@ -122,6 +123,19 @@ router.post('/create', requireRole('clinician'), async (req, res) => {
       if (!controlledValidation.valid) {
         await client.query('ROLLBACK');
         return res.status(400).json({ error: controlledValidation.error });
+      }
+
+      // EPCS validation if enabled
+      const eprescribeService = getEPrescribeService();
+      if (eprescribeService.isEPCSEnabled()) {
+        const epcsValidation = await eprescribeService.validateEPCS(
+          { isControlled, schedule },
+          prescriber
+        );
+        if (!epcsValidation.valid) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: epcsValidation.error });
+        }
       }
     }
 
@@ -284,6 +298,26 @@ router.post('/:id/send', requireRole('clinician'), async (req, res) => {
 
     const { id } = req.params;
     const { transmissionMethod = 'electronic', pharmacyId, pharmacyNcpdpId } = req.body;
+    const prescriber = req.user;
+
+    // Check if using DoseSpot provider
+    const eprescribeService = getEPrescribeService();
+    if (eprescribeService.isDoseSpotEnabled()) {
+      // Route to DoseSpot service
+      await client.query('COMMIT');
+      client.release();
+      
+      try {
+        const result = await eprescribeService.sendPrescription(id);
+        return res.json({
+          prescriptionId: id,
+          status: result.status
+        });
+      } catch (error) {
+        return res.status(500).json({ error: error.message || 'Failed to send prescription' });
+      }
+    }
+    // Otherwise, continue with internal engine below
 
     // Get prescription
     const prescriptionResult = await client.query(`

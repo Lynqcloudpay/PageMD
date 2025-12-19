@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, FileText, Image, FlaskConical, Pill, ExternalLink, Database, CreditCard, Calendar, Clock, CheckCircle2, XCircle, UserCircle, FileImage, Trash2 } from 'lucide-react';
-import { visitsAPI, documentsAPI, ordersAPI, referralsAPI, patientsAPI } from '../services/api';
+import { X, FileText, Image, FlaskConical, Pill, ExternalLink, Database, CreditCard, Calendar, Clock, CheckCircle2, XCircle, UserCircle, FileImage, Trash2, Plus, Activity } from 'lucide-react';
+import { visitsAPI, documentsAPI, ordersAPI, referralsAPI, patientsAPI, eprescribeAPI } from '../services/api';
 import { format } from 'date-fns';
+import DoseSpotPrescribe from './DoseSpotPrescribe';
 
 const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history', initialDataTab = 'problems', onOpenDataManager }) => {
     const [activeTab, setActiveTab] = useState(initialTab);
@@ -18,6 +19,9 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
     const [patient, setPatient] = useState(null);
     const [referrals, setReferrals] = useState([]);
     const [prescriptions, setPrescriptions] = useState([]);
+    const [eprescribePrescriptions, setEprescribePrescriptions] = useState([]);
+    const [eprescribeEnabled, setEprescribeEnabled] = useState(false);
+    const [showDoseSpotModal, setShowDoseSpotModal] = useState(false);
     const [hubDocuments, setHubDocuments] = useState([]);
     const [editing, setEditing] = useState(false);
     const [formData, setFormData] = useState({
@@ -99,6 +103,21 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
             } catch (error) {
                 console.error('Error fetching referrals:', error);
                 setReferrals([]);
+            }
+
+            // Fetch ePrescribe prescriptions and status
+            try {
+                const eprescribeStatus = await eprescribeAPI.getStatus();
+                setEprescribeEnabled(eprescribeStatus.data?.enabled || false);
+                
+                if (eprescribeStatus.data?.enabled) {
+                    const eprescribeResponse = await eprescribeAPI.getPrescriptions(patientId);
+                    setEprescribePrescriptions(eprescribeResponse.data?.prescriptions || []);
+                }
+            } catch (error) {
+                console.error('Error fetching ePrescribe data:', error);
+                setEprescribeEnabled(false);
+                setEprescribePrescriptions([]);
             }
 
             // Fetch documents
@@ -420,8 +439,48 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                             {/* Prescriptions Tab */}
                             {activeTab === 'prescriptions' && (
                                 <div className="space-y-4">
-                                    <h3 className="text-lg font-bold text-deep-gray mb-3">Prescription Log ({prescriptions.length})</h3>
-                                    {prescriptions.length === 0 ? (
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h3 className="text-lg font-bold text-deep-gray">
+                                            Prescription Log ({prescriptions.length + eprescribePrescriptions.length})
+                                        </h3>
+                                        {eprescribeEnabled && (
+                                            <button
+                                                onClick={() => setShowDoseSpotModal(true)}
+                                                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors text-sm font-medium"
+                                            >
+                                                <Plus className="w-4 h-4" />
+                                                New Prescription
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Rx Activity Section (ePrescribe statuses) */}
+                                    {eprescribeEnabled && eprescribePrescriptions.length > 0 && (
+                                        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <Activity className="w-5 h-5 text-blue-600" />
+                                                <h4 className="font-semibold text-blue-900">Rx Activity</h4>
+                                            </div>
+                                            <div className="space-y-2">
+                                                {eprescribePrescriptions.slice(0, 5).map((rx) => (
+                                                    <div key={rx.id} className="flex items-center justify-between text-sm">
+                                                        <span className="text-blue-800">{rx.medication_name}</span>
+                                                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                                            rx.status === 'SENT' || rx.status === 'sent' ? 'bg-green-100 text-green-800' :
+                                                            rx.status === 'DRAFT' || rx.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                                                            rx.status === 'CANCELLED' || rx.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                                            'bg-gray-100 text-gray-800'
+                                                        }`}>
+                                                            {rx.status}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Combined Prescriptions List */}
+                                    {prescriptions.length === 0 && eprescribePrescriptions.length === 0 ? (
                                         <div className="text-center py-12">
                                             <Pill className="w-16 h-16 text-deep-gray/20 mx-auto mb-4" />
                                             <h4 className="text-lg font-bold text-deep-gray mb-2">No Prescriptions</h4>
@@ -429,6 +488,47 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                         </div>
                                     ) : (
                                         <div className="space-y-4">
+                                            {/* ePrescribe Prescriptions */}
+                                            {eprescribePrescriptions.map((prescription) => {
+                                                const date = prescription.created_at ? format(new Date(prescription.created_at), 'MMM d, yyyy') : '';
+                                                const sentDate = prescription.sent_at ? format(new Date(prescription.sent_at), 'MMM d, yyyy') : '';
+
+                                                return (
+                                                    <div key={prescription.id} className="bg-white border border-deep-gray/10 rounded-xl p-4 hover:shadow-lg hover:border-strong-azure/30 transition-all duration-200">
+                                                        <div className="flex items-start justify-between mb-3">
+                                                            <div className="flex-1">
+                                                                <div className="flex items-center space-x-3 mb-2">
+                                                                    <h4 className="text-lg font-bold text-deep-gray">{prescription.medication_name}</h4>
+                                                                    {getStatusBadge(prescription.status)}
+                                                                </div>
+                                                                {prescription.sig && (
+                                                                    <p className="text-sm text-deep-gray/80 mb-1">
+                                                                        <span className="font-medium">Sig:</span> {prescription.sig}
+                                                                    </p>
+                                                                )}
+                                                                {prescription.quantity && (
+                                                                    <p className="text-sm text-deep-gray/80 mb-1">
+                                                                        <span className="font-medium">Quantity:</span> {prescription.quantity}
+                                                                    </p>
+                                                                )}
+                                                                {prescription.refills !== undefined && (
+                                                                    <p className="text-sm text-deep-gray/80 mb-1">
+                                                                        <span className="font-medium">Refills:</span> {prescription.refills}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                            {(date || sentDate) && (
+                                                                <div className="flex items-center space-x-1 text-xs text-deep-gray/60 ml-4">
+                                                                    <Calendar className="w-4 h-4" />
+                                                                    <span>{sentDate || date}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+
+                                            {/* Legacy Prescriptions */}
                                             {prescriptions.map((prescription) => {
                                                 const payload = prescription.order_payload || {};
                                                 const medicationName = payload.medication_name || payload.medication || 'Unknown Medication';
@@ -685,6 +785,27 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                 </div>
             </div>
 
+        </>
+
+            {/* DoseSpot Prescribing Modal */}
+            {patient && (
+                <DoseSpotPrescribe
+                    isOpen={showDoseSpotModal}
+                    onClose={() => setShowDoseSpotModal(false)}
+                    patientId={patientId}
+                    patientName={patient ? `${patient.first_name} ${patient.last_name}` : ''}
+                    onPrescriptionSent={async (newPrescriptions) => {
+                        // Refresh prescriptions list
+                        try {
+                            const eprescribeResponse = await eprescribeAPI.getPrescriptions(patientId);
+                            setEprescribePrescriptions(eprescribeResponse.data?.prescriptions || []);
+                        } catch (error) {
+                            console.error('Error refreshing prescriptions:', error);
+                        }
+                        setShowDoseSpotModal(false);
+                    }}
+                />
+            )}
         </>
     );
 };

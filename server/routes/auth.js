@@ -201,6 +201,9 @@ router.post('/login', [
       console.warn('Audit log failed (non-critical):', auditError.message);
     }
 
+    // Get is_admin flag directly from the user query result
+    const isAdmin = user.is_admin === true || user.is_admin === 'true' || String(user.is_admin) === 'true';
+
     res.json({
       user: {
         id: user.id,
@@ -208,7 +211,10 @@ router.post('/login', [
         firstName: user.first_name,
         lastName: user.last_name,
         role: user.role_name,
+        role_name: user.role_name, // Include both for consistency
         roleId: user.role_id,
+        isAdmin: isAdmin,
+        is_admin: isAdmin, // Include both formats
       },
       token,
     });
@@ -233,19 +239,23 @@ router.get('/me', authenticate, async (req, res) => {
     }
 
     // Return user with permissions and scope from auth context
+    // Prioritize fresh database role_name over cached JWT role
+    const displayRole = user.role_name || req.user.role_name || req.user.role || 'User';
     res.json({
       id: user.id,
       email: user.email,
       firstName: user.first_name,
       lastName: user.last_name,
-      role: req.user.role || user.role_name,
+      role: displayRole, // Original role name for display
+      role_name: displayRole, // Also include role_name for consistency
       roleId: user.role_id,
       status: user.status,
       privileges: user.privileges || [],
       // Add permissions and scope from auth context
       permissions: req.user.permissions || [],
       scope: req.user.scope || { scheduleScope: 'CLINIC', patientScope: 'CLINIC' },
-      isAdmin: req.user.isAdmin || false
+      isAdmin: user.is_admin || req.user.isAdmin || req.user.is_admin || false,
+      is_admin: user.is_admin || req.user.is_admin || false // Include both formats
     });
   } catch (error) {
     console.error('Error fetching current user:', error);

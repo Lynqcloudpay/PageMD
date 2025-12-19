@@ -270,6 +270,22 @@ export const pharmaciesAPI = {
   getByNCPDP: (ncpdpId) => api.get(`/pharmacies/ncpdp/${ncpdpId}`),
 };
 
+// E-Prescribing (DoseSpot)
+export const eprescribeAPI = {
+  getStatus: () => api.get('/eprescribe/status'),
+  createSession: (patientId, returnUrl) => api.post('/eprescribe/session', { patientId, returnUrl }),
+  getPrescriptions: (patientId) => api.get(`/eprescribe/patient/${patientId}/prescriptions`),
+  createDraft: (patientId, data) => api.post(`/eprescribe/patient/${patientId}/prescriptions`, data),
+  sendPrescription: (prescriptionId) => api.post(`/eprescribe/prescriptions/${prescriptionId}/send`),
+  cancelPrescription: (prescriptionId, reason) => api.post(`/eprescribe/prescriptions/${prescriptionId}/cancel`, { reason }),
+  searchPharmacies: (query, location) => api.get('/eprescribe/pharmacies/search', { 
+    params: { query, ...location } 
+  }),
+  searchMedications: (query) => api.get('/eprescribe/medications/search', { 
+    params: { query } 
+  }),
+};
+
 // Auth
 export const authAPI = {
   login: (email, password) => api.post('/auth/login', { email, password }),

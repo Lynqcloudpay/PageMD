@@ -146,8 +146,10 @@ app.use('/api/codes', codesRoutes);
 const prescriptionRoutes = require('./routes/prescriptions');
 const pharmacyRoutes = require('./routes/pharmacies');
 const medicationRoutes = require('./routes/medications');
+const eprescribeRoutes = require('./routes/eprescribe');
 app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/pharmacies', pharmacyRoutes);
+app.use('/api/eprescribe', eprescribeRoutes);
 app.use('/api/medications', medicationRoutes);
 
 // Billing endpoints

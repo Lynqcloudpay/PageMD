@@ -23,10 +23,7 @@ const authenticate = async (req, res, next) => {
         u.role_id,
         r.name as role_name,
         r.description as role_description,
-        CASE 
-          WHEN r.name = 'Admin' OR r.name = 'admin' OR r.name = 'SuperAdmin' OR u.role = 'admin' THEN true 
-          ELSE false 
-        END as is_admin
+        COALESCE(u.is_admin, false) as is_admin
       FROM users u
       LEFT JOIN roles r ON u.role_id = r.id
       WHERE u.id = $1
@@ -53,21 +50,48 @@ const authenticate = async (req, res, next) => {
       }
       
       // Merge auth context with user data
+      // CRITICAL: Preserve is_admin from database query (it's the source of truth)
+      // authContext might normalize it or not include it, so we always use the DB value
+      const dbIsAdmin = user.is_admin === true || user.is_admin === 'true' || String(user.is_admin) === 'true';
+      
       req.user = {
         ...user,
-        ...authContext
+        ...authContext,
+        // Force is_admin to use database value (highest priority)
+        is_admin: dbIsAdmin,
+        isAdmin: dbIsAdmin,   // Also set camelCase version
+        role_name: user.role_name || authContext?.role_name || user.role || 'User', // Preserve original role name
+        role: user.role_name || authContext?.role_name || user.role || 'User' // Also set role for compatibility
       };
+      
+      // Debug log in development
+      if (process.env.DEBUG_AUTH === 'true') {
+        console.log('[AUTH] User merged:', {
+          email: req.user.email,
+          role_name: req.user.role_name,
+          is_admin_db: user.is_admin,
+          is_admin_final: req.user.is_admin,
+          isAdmin_final: req.user.isAdmin
+        });
+      }
     } catch (authError) {
       // If permissions system isn't set up yet, fall back to basic user info
       console.warn('[AUTH] Failed to load auth context, using basic user info:', authError.message);
       req.user = user;
       req.user.permissions = [];
       req.user.scope = { scheduleScope: 'CLINIC', patientScope: 'CLINIC' };
+      req.user.isAdmin = user.is_admin; // Ensure camelCase version exists
     }
 
     // Ensure role_name is populated (fallback to legacy role)
     if (!req.user.role_name && req.user.role) {
       req.user.role_name = req.user.role;
+    }
+
+    // Ensure role_name and role are always strings (never undefined/null)
+    if (!req.user.role_name && !req.user.role) {
+      req.user.role_name = 'User';
+      req.user.role = 'User';
     }
 
     next();
@@ -88,16 +112,61 @@ const requireRole = (...roles) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    // Check if user has one of the required roles (case-insensitive)
-    const userRole = (req.user.role_name || req.user.role || '').toLowerCase();
-    const normalizedRoles = roles.map(r => r.toLowerCase());
+    // Safely get user role with proper null/undefined handling
+    const roleName = req.user.role_name || req.user.role;
+    const userRole = (roleName && typeof roleName === 'string' ? roleName : '').toLowerCase();
+    const normalizedRoles = roles.map(r => (r && typeof r === 'string' ? r : '').toLowerCase());
 
-    // Admin users always have access
-    if (req.user.is_admin === true || userRole === 'admin') {
+    // Admin users always have access (check both is_admin flag and role)
+    // Check multiple possible admin flags - be very explicit about boolean checks
+    // Convert to boolean explicitly to handle 't', 'true', true, etc.
+    const checkAdminFlag = (flag) => {
+      if (flag === true || flag === 'true' || flag === 't' || String(flag).toLowerCase() === 'true') {
+        return true;
+      }
+      return false;
+    };
+
+    const isAdmin = checkAdminFlag(req.user.is_admin) || 
+                    checkAdminFlag(req.user.isAdmin) ||
+                    userRole === 'admin' ||
+                    userRole === 'superadmin';
+
+    // Debug logging
+    console.log('[requireRole]', {
+      path: req.path,
+      email: req.user.email,
+      userRole,
+      role_name: req.user.role_name,
+      is_admin_raw: req.user.is_admin,
+      is_admin_type: typeof req.user.is_admin,
+      isAdmin_raw: req.user.isAdmin,
+      isAdminCheck: isAdmin,
+      requiredRoles: roles
+    });
+
+    if (isAdmin) {
+      console.log('[requireRole] Admin access granted for', req.user.email);
       return next();
     }
 
-    if (!normalizedRoles.includes(userRole)) {
+    // Map role aliases (physician = clinician, doctor = clinician, etc.)
+    const roleAliases = {
+      'physician': 'clinician',
+      'doctor': 'clinician',
+      'md': 'clinician',
+      'nurse practitioner': 'clinician',
+      'np': 'clinician',
+      'pa': 'clinician',
+      'physician assistant': 'clinician'
+    };
+    
+    const mappedUserRole = roleAliases[userRole] || userRole;
+
+    // Check if user role matches (either directly or via alias)
+    const hasAccess = normalizedRoles.includes(mappedUserRole) || normalizedRoles.includes(userRole);
+
+    if (!hasAccess) {
       // Log unauthorized access attempt
       logAudit(
         req.user.id,
@@ -118,7 +187,8 @@ const requireRole = (...roles) => {
       return res.status(403).json({
         error: 'Insufficient permissions',
         required: roles,
-        current: req.user.role_name || req.user.role
+        current: req.user.role_name || req.user.role,
+        message: `Missing: ${roles.join(',')}`
       });
     }
     next();

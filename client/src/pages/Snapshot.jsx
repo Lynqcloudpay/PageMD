@@ -1265,23 +1265,20 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 </div>
 
                                 {/* Open Chart - moved down next to Pharmacy */}
-                                <div
+                                <button
+                                    type="button"
                                     onClick={() => {
                                         setPatientChartTab('history');
                                         setShowPatientChart(true);
                                     }}
-                                    className="group cursor-pointer bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:border-blue-400 rounded p-1 transition-all relative text-center"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-md shadow-md hover:shadow-lg transition-all whitespace-nowrap"
+                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+                                    onMouseLeave={(e) => (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
                                 >
-                                    <div className="flex items-center justify-center mb-0.5 relative">
-                                        <div className="flex items-center space-x-0.5">
-                                            <Eye className="w-2.5 h-2.5 text-blue-600" />
-                                            <span className="text-[9px] font-semibold text-blue-800 uppercase tracking-wide">Open Chart</span>
-                                        </div>
-                                    </div>
-                                    <div className="text-[11px] font-medium text-blue-900 leading-tight">
-                                        View all visits, labs, and documents
-                                    </div>
-                                </div>
+                                    <Eye className="w-3.5 h-3.5" />
+                                    <span>Open Chart</span>
+                                </button>
 
                                 {/* Emergency Contact */}
                                 {(patient.emergency_contact_name || patient.emergency_contact_phone) && (
