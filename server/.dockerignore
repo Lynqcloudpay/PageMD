@@ -1,0 +1,48 @@
+# Node modules (will be installed in container)
+node_modules
+npm-debug.log
+yarn.lock
+package-lock.json
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Tests
+coverage
+.nyc_output
+test
+tests
+*.test.js
+*.spec.js
+
+# Documentation
+README.md
+docs
+
+# Scripts (keep migration scripts, exclude dev scripts)
+scripts/dev-*.js
+scripts/test-*.js
+

@@ -1,19 +1,22 @@
+# syntax=docker/dockerfile:1.4
 # Build stage
 FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files (context is client/ now)
+# Copy package files first for better caching
 COPY package*.json ./
 
-# Install dependencies (cache this layer - only rebuilds if package.json changes)
-RUN npm ci --prefer-offline --no-audit
+# Install dependencies with BuildKit cache mount (faster rebuilds)
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit --silent
 
 # Copy source code
 COPY . ./
 
-# Build production bundle
-RUN npm run build
+# Build with cache mount for node_modules/.cache
+RUN --mount=type=cache,target=/app/node_modules/.cache \
+    npm run build
 
 # Production stage - serve with Caddy
 FROM caddy:2-alpine

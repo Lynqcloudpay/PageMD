@@ -1,29 +1,35 @@
+# syntax=docker/dockerfile:1.4
 FROM node:18-alpine
 
-# Install build dependencies
-RUN apk add --no-cache \
+# Install build dependencies in one layer
+RUN apk add --no-cache --virtual .build-deps \
     python3 \
     make \
-    g++ \
-    postgresql-client
+    g++ && \
+    apk add --no-cache \
+    postgresql-client && \
+    rm -rf /var/cache/apk/*
 
 # Create app directory
 WORKDIR /app
 
-# Copy package files (context is server/ now)
+# Copy package files first for better caching
 COPY package*.json ./
 
-# Install dependencies (cache this layer - only rebuilds if package.json changes)
-RUN npm ci --only=production
+# Install dependencies with BuildKit cache mount (faster rebuilds)
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --only=production --prefer-offline --no-audit --silent && \
+    npm cache clean --force
+
+# Remove build dependencies to reduce image size
+RUN apk del .build-deps
 
 # Copy application code
 COPY . ./
 
 # Create directories for logs and uploads
-RUN mkdir -p /app/logs /app/uploads
-
-# Set permissions
-RUN chown -R node:node /app
+RUN mkdir -p /app/logs /app/uploads && \
+    chown -R node:node /app
 
 # Switch to non-root user
 USER node
@@ -31,9 +37,9 @@ USER node
 # Expose port
 EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+# Optimized health check (faster timeout)
+HEALTHCHECK --interval=20s --timeout=5s --start-period=30s --retries=2 \
+  CMD node -e "require('http').get('http://localhost:3000/api/health', {timeout: 3000}, (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))"
 
 # Start application
 CMD ["node", "index.js"]

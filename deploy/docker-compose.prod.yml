@@ -27,6 +27,9 @@ services:
       # Limit build context to the server code only for faster builds
       context: ../server
       dockerfile: ../deploy/Dockerfile.api
+      # Enable BuildKit features for faster builds
+      args:
+        BUILDKIT_INLINE_CACHE: 1
     container_name: emr-api
     restart: unless-stopped
     environment:
@@ -53,6 +56,14 @@ services:
       GCP_KMS_KEY_NAME: ${GCP_KMS_KEY_NAME:-}
       GCP_PROJECT_ID: ${GCP_PROJECT_ID:-}
       AZURE_KEY_VAULT_URL: ${AZURE_KEY_VAULT_URL:-}
+      # E-Prescribing (DoseSpot)
+      EPRESCRIBE_PROVIDER: ${EPRESCRIBE_PROVIDER:-internal}
+      DOSESPOT_BASE_URL: ${DOSESPOT_BASE_URL:-}
+      DOSESPOT_CLIENT_ID: ${DOSESPOT_CLIENT_ID:-}
+      DOSESPOT_CLIENT_SECRET: ${DOSESPOT_CLIENT_SECRET:-}
+      DOSESPOT_CLINIC_ID: ${DOSESPOT_CLINIC_ID:-}
+      DOSESPOT_WEBHOOK_SECRET: ${DOSESPOT_WEBHOOK_SECRET:-}
+      EPRESCRIBE_EPCS_ENABLED: ${EPRESCRIBE_EPCS_ENABLED:-false}
     depends_on:
       db:
         condition: service_healthy
@@ -72,6 +83,9 @@ services:
       # Limit build context to the client code only for faster builds
       context: ../client
       dockerfile: ../deploy/Dockerfile.web
+      # Enable BuildKit features for faster builds
+      args:
+        BUILDKIT_INLINE_CACHE: 1
     container_name: emr-web
     restart: unless-stopped
     networks:
@@ -101,10 +115,11 @@ services:
       - web
       - api
     healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "--timeout=5", "http://localhost/" ]
+      interval: 20s
+      timeout: 5s
+      retries: 2
+      start_period: 10s
 
 volumes:
   postgres_data:
