@@ -7,7 +7,8 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies (cache this layer - only rebuilds if package.json changes)
-RUN npm ci --prefer-offline --no-audit --silent
+# Use npm install instead of npm ci for better compatibility
+RUN npm install --prefer-offline --no-audit --silent || npm install --no-audit --silent
 
 # Copy source code
 COPY . ./
