@@ -555,9 +555,17 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                 {/* Prominent Clock Counter - shows total visit time */}
                 {showTotalTimer && displayTotalTime > 0 && (
-                    <div className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 border border-blue-200 rounded text-[10px] font-semibold text-blue-700 mr-1 flex-shrink-0 animate-pulse">
-                        <Clock className="w-3 h-3" />
-                        <span className="whitespace-nowrap font-mono">{formatCompactTime(displayTotalTime)}</span>
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold mr-1 flex-shrink-0 shadow-sm ${
+                        status === 'checked_out' 
+                            ? 'bg-gray-100 border-2 border-gray-300 text-gray-800' 
+                            : status === 'in_room' || status === 'checked_in'
+                            ? 'bg-gradient-to-r from-blue-500 to-blue-600 border-2 border-blue-700 text-white shadow-md'
+                            : 'bg-gradient-to-r from-blue-400 to-blue-500 border-2 border-blue-600 text-white'
+                    }`}>
+                        <Clock className={`w-3.5 h-3.5 ${status === 'checked_out' ? 'text-gray-700' : 'text-white'}`} />
+                        <span className={`whitespace-nowrap font-mono ${status === 'checked_out' ? 'text-gray-800' : 'text-white'}`}>
+                            {formatCompactTime(displayTotalTime)}
+                        </span>
                     </div>
                 )}
                 
