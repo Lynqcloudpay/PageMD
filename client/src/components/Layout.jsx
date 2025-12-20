@@ -102,7 +102,6 @@ const Layout = ({ children }) => {
     // Use permissions instead of role checks
     const { can, getScope } = usePermissions();
     const scope = getScope();
-    const navigate = useNavigate();
     
     // Check permissions for navigation items
     const canViewSchedule = can('schedule:view');
