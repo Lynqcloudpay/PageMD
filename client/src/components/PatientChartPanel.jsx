@@ -785,7 +785,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                 </div>
             </div>
 
-        </>
+
 
             {/* DoseSpot Prescribing Modal */}
             {patient && (
