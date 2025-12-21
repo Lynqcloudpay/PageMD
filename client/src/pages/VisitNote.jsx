@@ -1056,6 +1056,34 @@ const VisitNote = () => {
         });
     };
 
+    const removeFromPlan = (diagnosisIndex, orderIndex = null) => {
+        setNoteData(prev => {
+            const updatedPlan = [...(prev.planStructured || [])];
+            if (orderIndex === null) {
+                updatedPlan.splice(diagnosisIndex, 1);
+            } else {
+                const diag = updatedPlan[diagnosisIndex];
+                const updatedOrders = [...diag.orders];
+                updatedOrders.splice(orderIndex, 1);
+                if (updatedOrders.length === 0) {
+                    updatedPlan.splice(diagnosisIndex, 1);
+                } else {
+                    updatedPlan[diagnosisIndex] = { ...diag, orders: updatedOrders };
+                }
+            }
+            const formattedPlan = formatPlanText(updatedPlan);
+            return { ...prev, planStructured: updatedPlan, plan: formattedPlan };
+        });
+    };
+
+    const removeDiagnosisFromAssessment = (index) => {
+        setNoteData(prev => {
+            const lines = prev.assessment.split('\n').filter(l => l.trim());
+            lines.splice(index, 1);
+            return { ...prev, assessment: lines.join('\n') };
+        });
+    };
+
     const generateAISummary = async (parsed, visit) => {
         if (generatingSummary || aiSummary) return;
         setGeneratingSummary(true);
@@ -1831,6 +1859,21 @@ const VisitNote = () => {
 
                     {/* Assessment */}
                     <Section title="Assessment" defaultOpen={true}>
+                        {!isSigned && diagnoses.length > 0 && (
+                            <div className="mb-2 flex flex-wrap gap-1.5">
+                                {diagnoses.map((diag, idx) => (
+                                    <div key={idx} className="flex items-center gap-1.5 px-2 py-1 bg-primary-50 text-primary-700 rounded-md border border-primary-100 text-xs font-bold group hover:border-primary-300 transition-all">
+                                        <span>{diag}</span>
+                                        <button
+                                            onClick={() => removeDiagnosisFromAssessment(idx)}
+                                            className="text-primary-300 hover:text-red-500 transition-colors"
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                         {hasPrivilege('search_icd10') && (
                             <div className="mb-2">
                                 <button
@@ -1960,17 +2003,31 @@ const VisitNote = () => {
                                 <div className="mb-2 p-2 bg-neutral-50 rounded-md border border-neutral-200">
                                     <div className="space-y-3">
                                         {noteData.planStructured.map((item, index) => (
-                                            <div key={index} className="border-b border-neutral-200 last:border-b-0 pb-2 last:pb-0">
-                                                <div className="font-bold underline text-xs text-neutral-900 mb-1">
-                                                    {index + 1}. {item.diagnosis}
+                                            <div key={index} className="border-b border-neutral-200 last:border-b-0 pb-2 last:pb-0 group">
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <div className="font-bold underline text-xs text-neutral-900">
+                                                        {index + 1}. {item.diagnosis}
+                                                    </div>
+                                                    <button
+                                                        onClick={() => removeFromPlan(index)}
+                                                        className="opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-red-500 transition-all p-1"
+                                                    >
+                                                        <Trash2 className="w-3 h-3" />
+                                                    </button>
                                                 </div>
                                                 <ul className="ml-4 space-y-0.5">
                                                     {item.orders.flatMap((order, orderIdx) => {
-                                                        // Split orders that contain semicolons into separate bullet points
                                                         const orderParts = order.split(';').map(part => part.trim()).filter(part => part);
                                                         return orderParts.map((part, partIdx) => (
-                                                            <li key={`${orderIdx}-${partIdx}`} className="text-xs text-neutral-900 list-disc">
-                                                                {part}
+                                                            <li key={`${orderIdx}-${partIdx}`} className="text-xs text-neutral-900 flex items-center group/order">
+                                                                <span className="mr-2 text-neutral-400">•</span>
+                                                                <span className="flex-1">{part}</span>
+                                                                <button
+                                                                    onClick={() => removeFromPlan(index, orderIdx)}
+                                                                    className="opacity-0 group-hover/order:opacity-100 text-neutral-300 hover:text-red-400 transition-all ml-2"
+                                                                >
+                                                                    <X className="w-2.5 h-2.5" />
+                                                                </button>
                                                             </li>
                                                         ));
                                                     })}

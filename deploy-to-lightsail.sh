@@ -22,7 +22,6 @@ $SSH_CMD $USER@$HOST << EOF
   cd $DIR
   
   echo "⬇️  Pulling latest changes..."
-  # Handle any merge conflicts by resetting to clean state
   git merge --abort 2>/dev/null || true
   git reset --hard HEAD 2>/dev/null || true
   git stash || true
@@ -32,42 +31,35 @@ $SSH_CMD $USER@$HOST << EOF
   cd deploy
   
   echo "⚙️  Checking environment variables..."
-  # Ensure .env.prod has correct domain if it was copied from old example
   if [ -f .env.prod ]; then
     if grep -q "yourdomain.com" .env.prod; then
-      echo "📝 Updating domain in existing .env.prod..."
       sed -i 's/yourdomain.com/bemypcp.com/g' .env.prod
       sed -i 's|FRONTEND_URL=https://yourdomain.com|FRONTEND_URL=https://bemypcp.com|g' .env.prod
       sed -i 's|CORS_ORIGIN=https://yourdomain.com|CORS_ORIGIN=https://bemypcp.com|g' .env.prod
     fi
   else
-    echo "⚠️  .env.prod not found! Copying from example..."
     cp env.prod.example .env.prod
   fi
   
-  echo "📝 Setting up frontend environment variables..."
-  # Create .env.production for the frontend build
-  # This ensures VITE_API_URL is baked into the static files
-  mkdir -p ../client
-  echo "VITE_API_URL=https://bemypcp.com/api" > ../client/.env.production
+  echo "🏗️  Building frontend on server (this may be slow)..."
+  mkdir -p static
+  cd ../client
+  if [ ! -d "node_modules" ] || [ package.json -nt node_modules ]; then
+    npm install --prefer-offline --no-audit --silent
+  fi
+  echo "🔨 Running build..."
+  VITE_API_URL=https://bemypcp.com/api npm run build
+  cp -r dist/* ../deploy/static/
+  cd ../deploy
   
-  echo "🔑 Checking DB SSL certificates (skipping if already exist)..."
-  # Skip certificate generation - assume they already exist
-  echo "✅ Certificate check skipped (assuming already configured)"
-
-  echo "🔄 Building services (forcing NO CACHE)..."
-  docker compose -f docker-compose.prod.yml build --no-cache api web
+  echo "🔄 Building API service (using BuildKit)..."
+  DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build api
   
-  echo "🛑 Stopping all services..."
-  # Bring down all containers to release volume locks
-  docker compose -f docker-compose.prod.yml down
+  echo "🚀 Rolling update of services..."
+  docker compose -f docker-compose.prod.yml up -d --remove-orphans
   
-  echo "🧹 Cleaning up stale static assets volume..."
-  # Now safe to remove the volume as no containers are using it
-  docker volume rm deploy_web_static 2>/dev/null || true
-  
-  echo "🚀 Re-starting all services..."
-  docker compose -f docker-compose.prod.yml up -d
+  echo "🧹 Cleaning up old images..."
+  docker image prune -f
   
   echo "✅ Deployment complete!"
   echo "🌍 Checking site status..."

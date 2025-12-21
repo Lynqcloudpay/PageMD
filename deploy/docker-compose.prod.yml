@@ -81,31 +81,6 @@ services:
       timeout: 10s
       retries: 3
 
-  web:
-    build:
-      # Limit build context to the client code only for faster builds
-      context: ../client
-      dockerfile: ../deploy/Dockerfile.web
-      # Enable BuildKit features for faster builds
-      args:
-        BUILDKIT_INLINE_CACHE: 1
-      # Use cache from previous builds
-      cache_from:
-        - deploy-web:latest
-    container_name: emr-web
-    restart: unless-stopped
-    networks:
-      - emr-network
-    volumes:
-      - web_static:/usr/share/caddy
-    # Optimize container resources
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 256M
-
   caddy:
     image: caddy:2-alpine
     container_name: emr-caddy
@@ -121,11 +96,10 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
-      - web_static:/usr/share/caddy:ro
+      - ./static:/usr/share/caddy:ro
     networks:
       - emr-network
     depends_on:
-      - web
       - api
     healthcheck:
       test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "--timeout=5", "http://localhost/" ]
@@ -142,8 +116,6 @@ volumes:
   api_logs:
     driver: local
   uploads:
-    driver: local
-  web_static:
     driver: local
   caddy_data:
     driver: local

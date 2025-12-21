@@ -20,10 +20,11 @@ import Modal from './ui/Modal';
 import { useAuth } from '../context/AuthContext';
 import { medicationsAPI, prescriptionsAPI, pharmaciesAPI } from '../services/api';
 
-const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName, visitId, currentMedications = [] }) => {
+const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName, visitId, diagnoses = [], currentMedications = [] }) => {
   const { user } = useAuth();
   const [step, setStep] = useState(1); // 1: medication & sig, 2: pharmacy, 3: review
   const [loading, setLoading] = useState(false);
+  const [selectedDiagnosis, setSelectedDiagnosis] = useState('');
 
   // Medication search
   const [medicationSearch, setMedicationSearch] = useState('');
@@ -210,8 +211,8 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
         pharmacyId: selectedPharmacy?.id || null
       };
 
-      const res = await prescriptionsAPI.create(prescriptionData);
-      const pId = res.data.id || res.data.prescriptionId;
+      const createResponse = await prescriptionsAPI.create(prescriptionData);
+      const pId = createResponse.data.id || createResponse.data.prescriptionId;
 
       if (selectedPharmacy && pId) {
         await prescriptionsAPI.send(pId, {
@@ -221,7 +222,11 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
       }
 
       setSuccess('Prescription processed successfully');
-      setTimeout(() => { onClose(); onSuccess?.(); }, 1500);
+      const summary = `${selectedMedication.name} ${sigStructured.dose} - ${buildSigText()}`;
+      setTimeout(() => {
+        onClose();
+        onSuccess?.(selectedDiagnosis, summary);
+      }, 1500);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to submit prescription');
     } finally {
@@ -236,6 +241,7 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
     setInteractions([]);
     setError(null);
     setSuccess(null);
+    setSelectedDiagnosis('');
     onClose();
   };
 
@@ -325,6 +331,18 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
                     )}
 
                     <div className="pt-2">
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Associate Diagnosis</label>
+                      <select
+                        value={selectedDiagnosis}
+                        onChange={e => setSelectedDiagnosis(e.target.value)}
+                        className="w-full p-2 bg-white border border-gray-200 rounded-lg text-xs mb-4 outline-none focus:ring-2 focus:ring-primary-500"
+                      >
+                        <option value="">Select diagnosis...</option>
+                        {diagnoses.map((d, i) => (
+                          <option key={i} value={d.code}>{d.code} - {d.description}</option>
+                        ))}
+                      </select>
+
                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Instructions Helper</p>
                       <div className="grid grid-cols-1 gap-2">
                         {[
