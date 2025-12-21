@@ -1890,62 +1890,65 @@ const VisitNote = () => {
                                 </button>
                             </div>
                         )}
-                        <div className="relative">
-                            <textarea ref={assessmentRef} value={noteData.assessment}
-                                onChange={(e) => {
-                                    handleTextChange(e.target.value, 'assessment');
-                                    handleDotPhraseAutocomplete(e.target.value, 'assessment', assessmentRef);
-                                }}
-                                onKeyDown={(e) => {
-                                    if (autocompleteState.show && autocompleteState.field === 'assessment') {
-                                        if (e.key === 'ArrowDown') {
-                                            e.preventDefault();
-                                            setAutocompleteState(prev => ({
-                                                ...prev,
-                                                selectedIndex: Math.min(prev.selectedIndex + 1, prev.suggestions.length - 1)
-                                            }));
-                                        } else if (e.key === 'ArrowUp') {
-                                            e.preventDefault();
-                                            setAutocompleteState(prev => ({
-                                                ...prev,
-                                                selectedIndex: Math.max(prev.selectedIndex - 1, 0)
-                                            }));
-                                        } else if (e.key === 'Enter' && !e.shiftKey) {
-                                            e.preventDefault();
-                                            if (autocompleteState.suggestions[autocompleteState.selectedIndex]) {
-                                                insertDotPhrase(autocompleteState.suggestions[autocompleteState.selectedIndex].key, autocompleteState);
+                        {/* Only show textarea when signed OR when there are no structured diagnoses */}
+                        {(isSigned || diagnoses.length === 0) && (
+                            <div className="relative">
+                                <textarea ref={assessmentRef} value={noteData.assessment}
+                                    onChange={(e) => {
+                                        handleTextChange(e.target.value, 'assessment');
+                                        handleDotPhraseAutocomplete(e.target.value, 'assessment', assessmentRef);
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (autocompleteState.show && autocompleteState.field === 'assessment') {
+                                            if (e.key === 'ArrowDown') {
+                                                e.preventDefault();
+                                                setAutocompleteState(prev => ({
+                                                    ...prev,
+                                                    selectedIndex: Math.min(prev.selectedIndex + 1, prev.suggestions.length - 1)
+                                                }));
+                                            } else if (e.key === 'ArrowUp') {
+                                                e.preventDefault();
+                                                setAutocompleteState(prev => ({
+                                                    ...prev,
+                                                    selectedIndex: Math.max(prev.selectedIndex - 1, 0)
+                                                }));
+                                            } else if (e.key === 'Enter' && !e.shiftKey) {
+                                                e.preventDefault();
+                                                if (autocompleteState.suggestions[autocompleteState.selectedIndex]) {
+                                                    insertDotPhrase(autocompleteState.suggestions[autocompleteState.selectedIndex].key, autocompleteState);
+                                                }
+                                            } else if (e.key === 'Escape') {
+                                                e.preventDefault();
+                                                setAutocompleteState(prev => ({ ...prev, show: false }));
                                             }
-                                        } else if (e.key === 'Escape') {
-                                            e.preventDefault();
-                                            setAutocompleteState(prev => ({ ...prev, show: false }));
+                                        } else {
+                                            handleF2Key(e, assessmentRef, 'assessment');
                                         }
-                                    } else {
-                                        handleF2Key(e, assessmentRef, 'assessment');
-                                    }
-                                }}
-                                onFocus={() => setActiveTextArea('assessment')}
-                                disabled={isSigned}
-                                rows={4}
-                                className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[60px]"
-                                placeholder="Enter diagnoses..."
-                            />
-                            {autocompleteState.show && autocompleteState.field === 'assessment' && autocompleteState.suggestions.length > 0 && (
-                                <div className="absolute z-50 bg-white border border-neutral-300 rounded-md shadow-lg max-h-32 overflow-y-auto mt-0.5 w-64" style={{ top: `${autocompleteState.position.top}px` }}>
-                                    {autocompleteState.suggestions.map((item, index) => (
-                                        <button
-                                            key={item.key}
-                                            type="button"
-                                            onClick={() => insertDotPhrase(item.key, autocompleteState)}
-                                            className={`w-full text-left px-2 py-1 border-b border-neutral-100 hover:bg-primary-50 transition-colors ${index === autocompleteState.selectedIndex ? 'bg-primary-100' : ''
-                                                }`}
-                                        >
-                                            <div className="font-medium text-neutral-900 text-xs">{item.key}</div>
-                                            <div className="text-xs text-neutral-500 truncate">{item.template.substring(0, 60)}...</div>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                                    }}
+                                    onFocus={() => setActiveTextArea('assessment')}
+                                    disabled={isSigned}
+                                    rows={4}
+                                    className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[60px]"
+                                    placeholder="Enter diagnoses..."
+                                />
+                                {autocompleteState.show && autocompleteState.field === 'assessment' && autocompleteState.suggestions.length > 0 && (
+                                    <div className="absolute z-50 bg-white border border-neutral-300 rounded-md shadow-lg max-h-32 overflow-y-auto mt-0.5 w-64" style={{ top: `${autocompleteState.position.top}px` }}>
+                                        {autocompleteState.suggestions.map((item, index) => (
+                                            <button
+                                                key={item.key}
+                                                type="button"
+                                                onClick={() => insertDotPhrase(item.key, autocompleteState)}
+                                                className={`w-full text-left px-2 py-1 border-b border-neutral-100 hover:bg-primary-50 transition-colors ${index === autocompleteState.selectedIndex ? 'bg-primary-100' : ''
+                                                    }`}
+                                            >
+                                                <div className="font-medium text-neutral-900 text-xs">{item.key}</div>
+                                                <div className="text-xs text-neutral-500 truncate">{item.template.substring(0, 60)}...</div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </Section>
 
                     {/* Plan */}
