@@ -573,8 +573,8 @@ router.put('/:id', requirePermission('patients:edit_demographics'), async (req, 
     // Decrypt existing patient data
     const existingPatient = await patientEncryptionService.decryptPatientPHI(existingResult.rows[0]);
 
-    // Merge updates with existing data (convert camelCase to snake_case)
-    const updatedPatient = { ...existingPatient };
+    // Track which fields are being updated
+    const changedFields = {};
     const allowedFields = [
       // Basic info
       'first_name', 'middle_name', 'last_name', 'name_suffix', 'preferred_name',
@@ -604,39 +604,41 @@ router.put('/:id', requirePermission('patients:edit_demographics'), async (req, 
       'allergies_known', 'photo_url', 'notes', 'deceased', 'deceased_date',
     ];
 
+    // Only collect fields that are actually being updated
     for (const field of allowedFields) {
       const camelField = field.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
       if (updates[camelField] !== undefined) {
-        updatedPatient[field] = updates[camelField];
+        changedFields[field] = updates[camelField];
       }
     }
 
-    // Encrypt PHI fields before storing
-    const encryptedPatient = await patientEncryptionService.preparePatientForStorage(updatedPatient);
+    if (Object.keys(changedFields).length === 0) {
+      return res.status(400).json({ error: 'No valid fields to update' });
+    }
 
-    // Build UPDATE query
+    // Only encrypt the fields that are being changed
+    const encryptedChanges = await patientEncryptionService.preparePatientForStorage(changedFields);
+
+    // Build UPDATE query with only changed fields
     const setClause = [];
     const values = [];
     let paramIndex = 1;
 
     for (const field of allowedFields) {
-      if (encryptedPatient[field] !== undefined && encryptedPatient[field] !== existingPatient[field]) {
+      if (encryptedChanges[field] !== undefined) {
         setClause.push(`${field} = $${paramIndex}`);
-        values.push(encryptedPatient[field]);
+        values.push(encryptedChanges[field]);
         paramIndex++;
       }
     }
 
     // Update encryption_metadata if PHI fields changed
-    if (encryptedPatient.encryption_metadata) {
+    if (encryptedChanges.encryption_metadata) {
       setClause.push(`encryption_metadata = $${paramIndex}`);
-      values.push(JSON.stringify(encryptedPatient.encryption_metadata));
+      values.push(JSON.stringify(encryptedChanges.encryption_metadata));
       paramIndex++;
     }
 
-    if (setClause.length === 0) {
-      return res.status(400).json({ error: 'No valid fields to update' });
-    }
 
     setClause.push(`updated_at = CURRENT_TIMESTAMP`);
     values.push(id);

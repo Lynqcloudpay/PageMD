@@ -177,7 +177,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
         <div className="fixed inset-0 z-50 flex justify-end">
             <div className="absolute inset-0 bg-gray-900/30 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
-            <div className="relative w-full max-w-[900px] bg-white h-full shadow-2xl flex flex-col md:flex-row overflow-hidden animate-slide-in-right transform duration-300">
+            <div className="relative w-full bg-white h-full shadow-2xl flex flex-col md:flex-row overflow-hidden animate-slide-in-right transform duration-300">
 
                 {/* Sidebar Navigation */}
                 <div className="w-full md:w-64 bg-gray-50/80 border-b md:border-b-0 md:border-r border-gray-200 flex flex-col backdrop-blur-xl">
