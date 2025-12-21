@@ -44,29 +44,29 @@ router.get('/', requirePermission('notes:view'), async (req, res) => {
       console.log('Visits query:', query);
       console.log('Query params:', params);
     }
-    
+
     const result = await pool.query(query, params);
-    
+
     if (process.env.NODE_ENV === 'development') {
       console.log('Visits query result count:', result.rows.length);
       if (result.rows.length > 0) {
         console.log('First visit ID:', result.rows[0].id);
       }
     }
-    
+
     // Ensure all IDs are strings (UUIDs)
     const formattedRows = result.rows.map(row => ({
       ...row,
       id: String(row.id) // Ensure ID is always a string
     }));
-    
+
     res.json(formattedRows);
   } catch (error) {
     console.error('Error fetching visits:', error);
     console.error('Error message:', error.message);
     console.error('Error code:', error.code);
     console.error('Error stack:', error.stack);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch visits',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -78,19 +78,19 @@ router.get('/pending', requirePermission('notes:view'), async (req, res) => {
   try {
     const { providerId } = req.query;
     const currentUserId = req.user?.id;
-    
+
     // Debug logging
     if (process.env.NODE_ENV === 'development') {
       console.log('Pending visits request - user:', req.user?.id, 'providerId:', providerId);
     }
-    
+
     let query = `
       SELECT v.*, 
         u.first_name as provider_first_name, 
         u.last_name as provider_last_name,
         p.first_name as patient_first_name,
         p.last_name as patient_last_name,
-        p.mrn as patient_mrn,
+        p.mrn as mrn,
         signed_by_user.first_name as signed_by_first_name,
         signed_by_user.last_name as signed_by_last_name
       FROM visits v
@@ -98,7 +98,7 @@ router.get('/pending', requirePermission('notes:view'), async (req, res) => {
       INNER JOIN patients p ON v.patient_id = p.id
       LEFT JOIN users signed_by_user ON v.note_signed_by = signed_by_user.id
       WHERE v.note_signed_at IS NULL 
-        AND (v.note_draft IS NOT NULL AND v.note_draft != '')
+        AND v.status = 'draft'
     `;
     const params = [];
     let paramIndex = 1;
@@ -116,7 +116,7 @@ router.get('/pending', requirePermission('notes:view'), async (req, res) => {
   } catch (error) {
     console.error('Error fetching pending visits:', error);
     console.error('Error stack:', error.stack);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch pending visits',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -130,7 +130,7 @@ router.get('/today-draft/:patientId', requirePermission('notes:view'), async (re
   try {
     const { patientId } = req.params;
     const { providerId } = req.query;
-    
+
     if (!patientId) {
       return res.status(400).json({ error: 'patientId is required' });
     }
@@ -171,7 +171,7 @@ router.get('/today-draft/:patientId', requirePermission('notes:view'), async (re
       patientId: req.params.patientId,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch today\'s draft visit',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -182,11 +182,11 @@ router.get('/today-draft/:patientId', requirePermission('notes:view'), async (re
 // POST /api/visits/open-today/:patientId
 router.post('/open-today/:patientId', requirePermission('notes:create'), async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     const { patientId } = req.params;
     const { noteType = 'office_visit', providerId } = req.body;
-    
+
     if (!patientId) {
       return res.status(400).json({ error: 'patientId is required' });
     }
@@ -214,7 +214,7 @@ router.post('/open-today/:patientId', requirePermission('notes:create'), async (
       ORDER BY updated_at DESC
       LIMIT 1
     `;
-    
+
     const findResult = await client.query(findQuery, [
       patientId,
       todayDate,
@@ -266,7 +266,7 @@ router.post('/open-today/:patientId', requirePermission('notes:create'), async (
     res.status(201).json({ note: insertResult.rows[0] });
   } catch (error) {
     await client.query('ROLLBACK');
-    
+
     // Handle unique constraint violation (race condition)
     if (error.code === '23505' && error.constraint === 'idx_visits_unique_today_draft') {
       // Retry: fetch the existing note
@@ -283,7 +283,7 @@ router.post('/open-today/:patientId', requirePermission('notes:create'), async (
            LIMIT 1`,
           [req.params.patientId, todayDate, req.body.providerId || req.user.id, req.body.noteType || 'office_visit']
         );
-        
+
         if (retryResult.rows.length > 0) {
           return res.json({ note: retryResult.rows[0] });
         }
@@ -299,8 +299,8 @@ router.post('/open-today/:patientId', requirePermission('notes:create'), async (
       patientId: req.params.patientId,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       error: 'Failed to open today\'s draft visit',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -313,7 +313,7 @@ router.post('/open-today/:patientId', requirePermission('notes:create'), async (
 // This endpoint is kept for backward compatibility but now uses the new schema
 router.post('/find-or-create', requirePermission('notes:create'), async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     const { patientId, visitType, forceNew } = req.body;
     const providerId = req.user?.id;
@@ -423,7 +423,7 @@ router.post('/find-or-create', requirePermission('notes:create'), async (req, re
           'Nurse Visit': 'nurse_visit'
         };
         const noteType = noteTypeMap[req.body.visitType] || 'office_visit';
-        
+
         const retryResult = await pool.query(
           `SELECT * FROM visits 
            WHERE patient_id = $1 
@@ -435,7 +435,7 @@ router.post('/find-or-create', requirePermission('notes:create'), async (req, re
            LIMIT 1`,
           [req.body.patientId, todayDate, noteType]
         );
-        
+
         if (retryResult.rows.length > 0) {
           return res.json(retryResult.rows[0]);
         }
@@ -471,7 +471,7 @@ router.post('/find-or-create', requirePermission('notes:create'), async (req, re
     });
 
     // Return error code and hint for debugging (temporarily)
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to find or create visit',
       code: error.code || 'UNKNOWN_DB_ERROR',
       hint: error.hint || error.detail || error.message,
@@ -514,9 +514,9 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
     }
 
     if (process.env.NODE_ENV === 'development') {
-      console.log('Signing visit:', { 
-        id, 
-        noteDraftLength: noteDraftToSave.length, 
+      console.log('Signing visit:', {
+        id,
+        noteDraftLength: noteDraftToSave.length,
         hasVitals: !!vitals,
         vitalsData: vitals,
         vitalsValue: vitalsValue ? (typeof vitalsValue === 'string' ? vitalsValue.substring(0, 100) : 'object') : null
@@ -609,20 +609,20 @@ router.post('/:id/summary', requirePermission('notes:create'), async (req, res) 
   try {
     const { id } = req.params;
     const visitResult = await pool.query('SELECT * FROM visits WHERE id = $1', [id]);
-    
+
     if (visitResult.rows.length === 0) {
       return res.status(404).json({ error: 'Visit not found' });
     }
 
     const visit = visitResult.rows[0];
     const noteText = visit.note_draft || '';
-    
+
     // Simple AI summary generation (you can replace this with OpenAI API call)
     // For now, we'll create a structured summary from the note
     const summary = generateSummary(noteText, visit);
-    
+
     await logAudit(req.user.id, 'generate_summary', 'visit', id, {}, req.ip);
-    
+
     res.json({ summary });
   } catch (error) {
     console.error('Error generating summary:', error);
@@ -654,15 +654,15 @@ function generateSummary(noteText, visit) {
 
   // Build summary
   let summary = `Chief Complaint: ${chiefComplaint}. `;
-  
+
   if (keyFindings.positive.length > 0) {
     summary += `Pertinent Positives: ${keyFindings.positive.join('; ')}. `;
   }
-  
+
   if (keyFindings.negative.length > 0) {
     summary += `Pertinent Negatives: ${keyFindings.negative.join('; ')}. `;
   }
-  
+
   summary += `Assessment: ${assessment}. `;
   summary += `Plan: ${plan}.`;
 
@@ -677,21 +677,21 @@ function extractSection(text, regex) {
 function extractKeyFindings(hpi, pe) {
   const positive = [];
   const negative = [];
-  
+
   const text = `${hpi || ''} ${pe || ''}`.toLowerCase();
-  
+
   // Look for positive findings (symptoms, abnormalities)
   const positivePatterns = [
     /\b(pain|painful|tender|swollen|red|fever|chills|cough|shortness of breath|dyspnea|nausea|vomiting|diarrhea|constipation|rash|lesion|mass|abnormal|decreased|increased|elevated|reduced)\b/gi,
     /\b(positive|present|abnormal|irregular|enlarged|distended)\b/gi
   ];
-  
+
   // Look for negative findings (normal, no symptoms)
   const negativePatterns = [
     /\b(no\s+(pain|fever|chills|cough|shortness|dyspnea|nausea|vomiting|diarrhea|rash|lesion|mass|abnormal))\b/gi,
     /\b(normal|negative|clear|intact|unremarkable|within normal limits)\b/gi
   ];
-  
+
   // Simple extraction - in production, use proper NLP or AI
   if (hpi) {
     const hpiLower = hpi.toLowerCase();
@@ -702,7 +702,7 @@ function extractKeyFindings(hpi, pe) {
       negative.push('Denies significant symptoms');
     }
   }
-  
+
   if (pe) {
     const peLower = pe.toLowerCase();
     if (peLower.includes('tender') || peLower.includes('abnormal') || peLower.includes('irregular')) {
@@ -712,7 +712,7 @@ function extractKeyFindings(hpi, pe) {
       negative.push('Normal physical examination');
     }
   }
-  
+
   return { positive, negative };
 }
 
@@ -720,7 +720,7 @@ function extractKeyFindings(hpi, pe) {
 router.get('/:id', requirePermission('notes:view'), async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Handle both UUID and numeric IDs
     let result;
     try {
@@ -772,7 +772,7 @@ router.get('/:id', requirePermission('notes:view'), async (req, res) => {
 router.post('/', requirePermission('notes:create'), async (req, res) => {
   try {
     const { patient_id, visit_date, visit_type, provider_id } = req.body;
-    
+
     const result = await pool.query(
       `INSERT INTO visits (patient_id, visit_date, visit_type, provider_id)
        VALUES ($1, $2, $3, $4) RETURNING *`,
@@ -793,7 +793,7 @@ router.put('/:id', requirePermission('notes:edit'), async (req, res) => {
   try {
     const { id } = req.params;
     const { visit_date, visit_type, vitals, note_draft, note_signed_at, provider_id } = req.body;
-    
+
     const updates = [];
     const values = [];
     let paramIndex = 1;
@@ -888,7 +888,7 @@ router.post('/:id/addendum', requirePermission('notes:edit'), async (req, res) =
   try {
     const { id } = req.params;
     const { addendumText } = req.body;
-    
+
     if (!addendumText || !addendumText.trim()) {
       return res.status(400).json({ error: 'Addendum text is required' });
     }
@@ -906,7 +906,7 @@ router.post('/:id/addendum', requirePermission('notes:edit'), async (req, res) =
 
     // Get existing addendums or initialize
     const existingAddendums = visit.addendums ? (Array.isArray(visit.addendums) ? visit.addendums : JSON.parse(visit.addendums)) : [];
-    
+
     // Add new addendum with timestamp and user
     const newAddendum = {
       text: addendumText.trim(),
@@ -914,7 +914,7 @@ router.post('/:id/addendum', requirePermission('notes:edit'), async (req, res) =
       addedByName: `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || 'Provider',
       addedAt: new Date().toISOString()
     };
-    
+
     existingAddendums.push(newAddendum);
 
     // Update visit with addendums
@@ -939,7 +939,7 @@ router.post('/:id/addendum', requirePermission('notes:edit'), async (req, res) =
 router.delete('/:id', requirePermission('notes:edit'), async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const result = await pool.query('DELETE FROM visits WHERE id = $1 RETURNING *', [id]);
 
     if (result.rows.length === 0) {
