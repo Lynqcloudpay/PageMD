@@ -1,17 +1,25 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { patientsAPI } from '../services/api';
+import { useAuth } from './AuthContext';
 
 const PatientContext = createContext();
 
 export const usePatient = () => useContext(PatientContext);
 
 export const PatientProvider = ({ children }) => {
+    const { isAuthenticated } = useAuth(); // Get auth state
     const [patients, setPatients] = useState([]);
     const [appointments, setAppointments] = useState([]);
     const [loading, setLoading] = useState(true);
 
     // Fetch patients from API
     const fetchPatients = async () => {
+        // Only fetch if authenticated
+        if (!isAuthenticated) {
+            setLoading(false);
+            return;
+        }
+
         try {
             setLoading(true);
             const response = await patientsAPI.search(''); // Empty search to get all patients
@@ -31,17 +39,24 @@ export const PatientProvider = ({ children }) => {
         }
     };
 
-    // Fetch patients from API on mount and auto-refresh
+    // Fetch patients from API on mount and auto-refresh - ONLY if authenticated
     useEffect(() => {
+        if (!isAuthenticated) {
+            setLoading(false);
+            return;
+        }
+
         fetchPatients();
 
         // Auto-refresh every 60 seconds (reduced frequency to prevent rate limiting)
         const interval = setInterval(() => {
-            fetchPatients();
+            if (isAuthenticated) {
+                fetchPatients();
+            }
         }, 60000);
 
         return () => clearInterval(interval);
-    }, []);
+    }, [isAuthenticated]); // Re-run when auth state changes
 
     // Keep appointments in localStorage for now (can be migrated to API later)
     useEffect(() => {
