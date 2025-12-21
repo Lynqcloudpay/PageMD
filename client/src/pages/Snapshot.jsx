@@ -1143,8 +1143,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
         let path = patient.photo_url;
 
-        // If it's already a data URL (base64), return it as is
-        if (path.startsWith('data:')) {
+        // If it's already a data URL (base64) or a blob, return it as is
+        if (path.startsWith('data:') || path.startsWith('blob:')) {
             return path;
         }
 
@@ -1169,6 +1169,61 @@ const Snapshot = ({ showNotesOnly = false }) => {
             : path.startsWith('/') ? path : `/${path}`;
         return `${url}?v=${photoVersion}`;
     }, [patient?.photo_url, photoVersion]);
+
+    // Dedicated Photo Component for the header
+    const PatientHeaderPhoto = () => {
+        const [imgError, setImgError] = useState(false);
+        const [imgLoaded, setImgLoaded] = useState(false);
+
+        // Reset error state when photoUrl changes
+        useEffect(() => {
+            setImgError(false);
+            setImgLoaded(false);
+        }, [photoUrl]);
+
+        return (
+            <button
+                onClick={() => setShowPhotoModal(true)}
+                className={`w-20 h-20 rounded-full flex items-center justify-center transition-all cursor-pointer relative group overflow-hidden flex-shrink-0 ring-4 ring-white shadow-xl ${!photoUrl || imgError ? 'bg-gradient-to-br from-gray-100 to-gray-200' : 'bg-white'}`}
+                title="Click to change photo"
+            >
+                {photoUrl && !imgError ? (
+                    <>
+                        {!imgLoaded && (
+                            <div className="absolute inset-0 flex items-center justify-center overflow-hidden rounded-full">
+                                <div className="w-full h-full bg-gray-100 animate-pulse flex items-center justify-center">
+                                    <User className="w-10 h-10 text-gray-300" />
+                                </div>
+                            </div>
+                        )}
+                        <img
+                            src={photoUrl}
+                            alt={`${patient?.first_name} ${patient?.last_name}`}
+                            className={`w-full h-full object-cover rounded-full transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+                            onLoad={() => setImgLoaded(true)}
+                            onError={(e) => {
+                                console.error('Failed to load image:', photoUrl);
+                                setImgError(true);
+                            }}
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Camera className="w-6 h-6 text-white" />
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <div className="flex flex-col items-center">
+                            <User className="w-10 h-10 text-gray-400" />
+                            <Plus className="w-3 h-3 text-gray-400 absolute bottom-4 right-4 bg-white rounded-full shadow-sm" />
+                        </div>
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Camera className="w-5 h-5 text-gray-600" />
+                        </div>
+                    </>
+                )}
+            </button>
+        );
+    };
 
     if (showNotesOnly) {
         return (
@@ -1358,41 +1413,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     <div className="px-6 py-4 border-b border-gray-100" style={{ background: 'linear-gradient(to right, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.08), transparent)' }}>
                         <div className="flex items-center justify-between">
                             {/* Left: Photo and Basic Info */}
-                            <div className="flex items-center space-x-4">
-                                {/* Patient Photo */}
-                                <button
-                                    onClick={() => setShowPhotoModal(true)}
-                                    className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-300 transition-all cursor-pointer relative group overflow-hidden flex-shrink-0 ring-2 ring-white shadow-md"
-                                    title="Click to add/change photo"
-                                >
-                                    {photoUrl ? (
-                                        <>
-                                            <img
-                                                src={photoUrl}
-                                                alt={patient?.first_name || 'Patient'}
-                                                className="w-full h-full object-cover rounded-full"
-                                                key={`${patient.photo_url}-${photoVersion}`}
-                                                onError={(e) => {
-                                                    console.error('Error loading patient photo:', patient.photo_url);
-                                                    e.target.style.display = 'none';
-                                                }}
-                                                onLoad={(e) => {
-                                                    e.target.style.display = 'block';
-                                                }}
-                                            />
-                                            <div className="absolute inset-0 hidden items-center justify-center bg-black bg-opacity-50 group-hover:flex transition-opacity rounded-full">
-                                                <Camera className="w-4 h-4 text-white" />
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <User className="w-8 h-8" />
-                                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black bg-opacity-30 transition-opacity rounded-full">
-                                                <Camera className="w-4 h-4 text-white" />
-                                            </div>
-                                        </>
-                                    )}
-                                </button>
+                            <div className="flex items-center space-x-6">
+                                {/* Redesigned Patient Photo */}
+                                <PatientHeaderPhoto />
 
                                 {/* Patient Name and Info */}
                                 <div className="min-w-0">
