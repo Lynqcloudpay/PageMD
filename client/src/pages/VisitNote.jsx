@@ -482,9 +482,26 @@ const VisitNote = () => {
                 .catch(error => console.error('Error fetching family history:', error));
 
             // Fetch Social History
-            patientsAPI.getSocialHistory(id)
-                .then(response => setSocialHistory(response.data || {}))
-                .catch(error => console.error('Error fetching social history:', error));
+            const fetchSocialHistory = () => {
+                patientsAPI.getSocialHistory(id)
+                    .then(response => setSocialHistory(response.data || {}))
+                    .catch(error => console.error('Error fetching social history:', error));
+            };
+            fetchSocialHistory();
+
+            // Listen for patient data updates
+            const handlePatientDataUpdate = () => {
+                fetchSocialHistory();
+                // Also refresh snapshot data as it might have changed
+                patientsAPI.getSnapshot(id)
+                    .then(response => setPatientData(response.data))
+                    .catch(error => console.error('Error fetching patient snapshot:', error));
+            };
+
+            window.addEventListener('patient-data-updated', handlePatientDataUpdate);
+            return () => {
+                window.removeEventListener('patient-data-updated', handlePatientDataUpdate);
+            };
         }
 
         if (urlVisitId === 'new' && id) {
