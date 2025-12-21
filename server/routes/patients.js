@@ -52,8 +52,11 @@ router.use(authenticate);
 
 // Get all patients (with search) - temporarily public for debugging
 router.get('/', async (req, res) => {
+  console.log('[PATIENTS-GET] Request received');
   try {
     const { search, limit = 100, offset = 0 } = req.query;
+    console.log(`[PATIENTS-GET] Query params: search="${search}", limit=${limit}, offset=${offset}`);
+
     let query = 'SELECT * FROM patients';
     const params = [];
     let paramCount = 0;
@@ -63,14 +66,18 @@ router.get('/', async (req, res) => {
     query += ' WHERE 1=1';
 
     // Filter by clinic_id if user has one (multi-tenant support)
-    if (req.user.clinic_id) {
+    if (req.user && req.user.clinic_id) {
+      console.log(`[PATIENTS-GET] Filtering by clinic_id: ${req.user.clinic_id}`);
       paramCount++;
       query += ` AND clinic_id = $${paramCount}`;
       params.push(req.user.clinic_id);
+    } else {
+      console.log('[PATIENTS-GET] No clinic_id filtering');
     }
 
     // Handle search parameter - check if search is provided and not empty
     if (search && search.trim()) {
+      console.log(`[PATIENTS-GET] Adding search filter: ${search}`);
       paramCount++;
       query += ` AND (first_name ILIKE $${paramCount} OR last_name ILIKE $${paramCount} OR mrn ILIKE $${paramCount})`;
       params.push(`%${search.trim()}%`);
@@ -79,12 +86,16 @@ router.get('/', async (req, res) => {
     query += ` ORDER BY last_name, first_name LIMIT $${++paramCount} OFFSET $${++paramCount}`;
     params.push(parseInt(limit), parseInt(offset));
 
+    console.log(`[PATIENTS-GET] Executing query: ${query}`);
+    console.log(`[PATIENTS-GET] Params: ${JSON.stringify(params)}`);
+
     const result = await pool.query(query, params);
 
-    console.log(`[DEBUG] Patients search: query="${search || ''}", user="${req.user.email}", rows=${result.rows.length}`);
+    console.log(`[PATIENTS-GET] Query result rows: ${result.rows.length}`);
 
     // Decrypt PHI fields before sending response
     const decryptedPatients = await patientEncryptionService.decryptPatientsPHI(result.rows);
+    console.log(`[PATIENTS-GET] Decrypted rows: ${decryptedPatients.length}`);
 
     // Log audit
     const requestId = req.headers['x-request-id'] || crypto.randomUUID();
@@ -108,7 +119,8 @@ router.get('/', async (req, res) => {
 
     res.json(decryptedPatients);
   } catch (error) {
-    console.error('Error fetching patients:', error);
+    console.error('[PATIENTS-GET] Error fetching patients:', error);
+    console.error(error.stack);
     res.status(500).json({ error: 'Failed to fetch patients' });
   }
 });
