@@ -10,6 +10,11 @@
 const crypto = require('crypto');
 const pool = require('../db');
 
+// DEK Cache to prevent repeated DB/KMS calls
+// keyId -> { dek: Buffer, expires: Number }
+const dekCache = new Map();
+const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+
 // KMS client (abstracted - supports AWS KMS, GCP KMS, Azure Key Vault)
 let kmsClient = null;
 
@@ -18,9 +23,9 @@ let kmsClient = null;
  */
 const getKMSClient = () => {
   if (kmsClient) return kmsClient;
-  
+
   const kmsProvider = process.env.KMS_PROVIDER || 'local'; // 'aws', 'gcp', 'azure', 'local'
-  
+
   if (kmsProvider === 'aws') {
     // AWS KMS
     const { KMSClient, EncryptCommand, DecryptCommand } = require('@aws-sdk/client-kms');
@@ -107,10 +112,10 @@ const getKMSClient = () => {
   } else {
     // Local/Development: Use app secret (NOT for production)
     // Allow local KMS on localhost even in production mode (for local testing)
-    const isLocalhost = process.env.DB_HOST === 'localhost' || 
-                       process.env.DB_HOST === '127.0.0.1' || 
-                       !process.env.DB_HOST;
-    
+    const isLocalhost = process.env.DB_HOST === 'localhost' ||
+      process.env.DB_HOST === '127.0.0.1' ||
+      !process.env.DB_HOST;
+
     if (process.env.NODE_ENV === 'production' && kmsProvider === 'local' && !isLocalhost) {
       throw new Error('KMS_PROVIDER=local is not allowed in production. Use AWS KMS, GCP KMS, or Azure Key Vault.');
     }
@@ -136,12 +141,12 @@ const getKMSClient = () => {
         } else {
           dataString = ciphertext.toString('utf8');
         }
-        
+
         const parts = dataString.split(':');
         if (parts.length !== 3) {
           throw new Error('Invalid ciphertext format');
         }
-        
+
         const [ivHex, authTagHex, encrypted] = parts;
         const iv = Buffer.from(ivHex, 'hex');
         const authTag = Buffer.from(authTagHex, 'hex');
@@ -154,7 +159,7 @@ const getKMSClient = () => {
       }
     };
   }
-  
+
   return kmsClient;
 };
 
@@ -162,9 +167,22 @@ const getKMSClient = () => {
  * Get or create Data Encryption Key (DEK)
  * DEK is encrypted with KMS and stored in database
  */
+/**
+ * Get or create Data Encryption Key (DEK)
+ * DEK is encrypted with KMS and stored in database
+ */
 const getDEK = async () => {
   try {
-    // Get active DEK
+    const now = Date.now();
+
+    // Check active key cache
+    // We don't easily know which key is active without querying, 
+    // but we can query mostly for the ID and see if we have it cached.
+    // However, for encryption (writing), we want the LATEST active key.
+    // A short cache (e.g. 1 min) for the "active key ID" could work,
+    // but let's just cache the DEK *content* once we have the ID.
+
+    // 1. Get active DEK metadata (fast query)
     const result = await pool.query(`
       SELECT id, key_id, key_version, dek_encrypted, algorithm
       FROM encryption_keys
@@ -172,44 +190,72 @@ const getDEK = async () => {
       ORDER BY created_at DESC
       LIMIT 1
     `);
-    
+
     if (result.rows.length > 0) {
       const row = result.rows[0];
+
+      // Check cache for this specific key
+      if (dekCache.has(row.key_id)) {
+        const cached = dekCache.get(row.key_id);
+        if (cached.expires > now) {
+          return {
+            id: row.id,
+            keyId: row.key_id,
+            keyVersion: row.key_version,
+            dek: cached.dek,
+            algorithm: row.algorithm
+          };
+        }
+      }
+
       const kms = getKMSClient();
-      
+
       // Decrypt DEK with KMS (works for both test and production)
       const dekPlaintext = await kms.decrypt(row.dek_encrypted);
-      
+
       // KMS decrypt returns string (base64), convert to Buffer
       const dekBase64 = typeof dekPlaintext === 'string' ? dekPlaintext : dekPlaintext.toString('utf8');
-      
+      const dekBuffer = Buffer.from(dekBase64, 'base64');
+
+      // Cache it
+      dekCache.set(row.key_id, {
+        dek: dekBuffer,
+        expires: now + CACHE_TTL
+      });
+
       return {
         id: row.id,
         keyId: row.key_id,
         keyVersion: row.key_version,
-        dek: Buffer.from(dekBase64, 'base64'),
+        dek: dekBuffer,
         algorithm: row.algorithm
       };
     }
-    
+
     // Create new DEK
     const dek = crypto.randomBytes(32); // 256 bits for AES-256
     const dekBase64 = dek.toString('base64');
-    
+
     // Encrypt DEK with KMS
     const kms = getKMSClient();
     const dekEncrypted = await kms.encrypt(dekBase64);
-    
+
     // Store encrypted DEK
     const keyId = `dek-${Date.now()}`;
     const keyVersion = '1';
-    
+
     const insertResult = await pool.query(`
       INSERT INTO encryption_keys (key_id, key_version, dek_encrypted, algorithm, active)
       VALUES ($1, $2, $3, $4, true)
       RETURNING id, key_id, key_version
     `, [keyId, keyVersion, dekEncrypted, 'AES-256-GCM']);
-    
+
+    // Cache the new key
+    dekCache.set(keyId, {
+      dek: dek,
+      expires: now + CACHE_TTL
+    });
+
     return {
       id: insertResult.rows[0].id,
       keyId: insertResult.rows[0].key_id,
@@ -231,16 +277,16 @@ class EncryptionService {
    */
   async encryptField(plaintext) {
     if (!plaintext) return null;
-    
+
     try {
       const dek = await getDEK();
       const iv = crypto.randomBytes(12); // 96 bits for GCM
-      
+
       const cipher = crypto.createCipheriv('aes-256-gcm', dek.dek, iv);
       let ciphertext = cipher.update(plaintext, 'utf8');
       ciphertext = Buffer.concat([ciphertext, cipher.final()]);
       const authTag = cipher.getAuthTag();
-      
+
       return {
         ciphertext,
         iv,
@@ -264,35 +310,55 @@ class EncryptionService {
    */
   async decryptField(ciphertextBlob, iv, authTag, keyId = null) {
     if (!ciphertextBlob || !iv || !authTag) return null;
-    
+
     try {
       let dek;
-      
+
       if (keyId) {
-        // Get specific DEK
-        const result = await pool.query(`
-          SELECT dek_encrypted FROM encryption_keys WHERE key_id = $1
-        `, [keyId]);
-        
-        if (result.rows.length === 0) {
-          throw new Error('Encryption key not found');
+        // Check cache first
+        const now = Date.now();
+        if (dekCache.has(keyId)) {
+          const cached = dekCache.get(keyId);
+          if (cached.expires > now) {
+            dek = cached.dek;
+          }
         }
-        
-        const kms = getKMSClient();
-        const dekPlaintext = await kms.decrypt(result.rows[0].dek_encrypted);
-        dek = Buffer.from(dekPlaintext, 'base64');
+
+        if (!dek) {
+          // Get specific DEK
+          const result = await pool.query(`
+            SELECT dek_encrypted FROM encryption_keys WHERE key_id = $1
+          `, [keyId]);
+
+          if (result.rows.length === 0) {
+            throw new Error('Encryption key not found');
+          }
+
+          const kms = getKMSClient();
+          const dekPlaintext = await kms.decrypt(result.rows[0].dek_encrypted);
+
+          // Use Buffer directly for AES-GCM
+          const dekBase64 = typeof dekPlaintext === 'string' ? dekPlaintext : dekPlaintext.toString('utf8');
+          dek = Buffer.from(dekBase64, 'base64');
+
+          // Cache it
+          dekCache.set(keyId, {
+            dek: dek,
+            expires: now + CACHE_TTL
+          });
+        }
       } else {
         // Use active DEK
         const dekData = await getDEK();
         dek = dekData.dek;
       }
-      
+
       const decipher = crypto.createDecipheriv('aes-256-gcm', dek, iv);
       decipher.setAuthTag(authTag);
-      
+
       let plaintext = decipher.update(ciphertextBlob);
       plaintext = Buffer.concat([plaintext, decipher.final()]);
-      
+
       return plaintext.toString('utf8');
     } catch (error) {
       console.error('Field decryption error:', error);
@@ -307,23 +373,23 @@ class EncryptionService {
    */
   async encryptFieldToBase64(plaintext) {
     if (!plaintext) return null;
-    
+
     const encrypted = await this.encryptField(plaintext);
-    
+
     // Combine iv:authTag:ciphertext:keyId:keyVersion
     const combined = Buffer.concat([
       encrypted.iv,
       encrypted.authTag,
       encrypted.ciphertext
     ]);
-    
+
     // Store metadata separately in encryption_metadata JSONB column
     const metadata = {
       keyId: encrypted.keyId,
       keyVersion: encrypted.keyVersion,
       algorithm: 'AES-256-GCM'
     };
-    
+
     return {
       ciphertext: combined.toString('base64'),
       metadata
@@ -338,14 +404,14 @@ class EncryptionService {
    */
   async decryptFieldFromBase64(base64Blob, metadata) {
     if (!base64Blob || !metadata) return null;
-    
+
     const combined = Buffer.from(base64Blob, 'base64');
-    
+
     // Extract components
     const iv = combined.slice(0, 12);
     const authTag = combined.slice(12, 28);
     const ciphertext = combined.slice(28);
-    
+
     return await this.decryptField(ciphertext, iv, authTag, metadata.keyId);
   }
 
