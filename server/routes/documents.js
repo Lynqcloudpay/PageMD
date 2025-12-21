@@ -58,7 +58,23 @@ router.post('/', requirePermission('patients:view_chart'), upload.single('file')
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const { patientId, visitId, docType, tags } = req.body;
+    let { patientId, visitId, docType, tags } = req.body;
+
+    // Sanitize docType to match DB CHECK constraint: ('imaging', 'consult', 'lab', 'other')
+    const validDocTypes = ['imaging', 'consult', 'lab', 'other'];
+    if (!docType) {
+      docType = 'other';
+    } else {
+      docType = docType.toLowerCase();
+      // Map common subtypes to valid categories
+      if (docType === 'echo' || docType === 'ekg' || docType === 'stress' || docType === 'cardiac_cath') {
+        docType = 'imaging';
+      }
+      // If still not valid, default to 'other'
+      if (!validDocTypes.includes(docType)) {
+        docType = 'other';
+      }
+    }
 
     const result = await pool.query(
       `INSERT INTO documents (
@@ -124,7 +140,7 @@ router.put('/:id', requirePermission('patients:view_chart'), async (req, res) =>
       updates.push(`reviewed = $${paramIndex}`);
       values.push(reviewed);
       paramIndex++;
-      
+
       if (reviewed) {
         updates.push(`reviewed_at = CURRENT_TIMESTAMP`);
         updates.push(`reviewed_by = $${paramIndex}`);
@@ -138,7 +154,7 @@ router.put('/:id', requirePermission('patients:view_chart'), async (req, res) =>
       // IMPORTANT: Always preserve all previous comments for legal record keeping
       const currentDoc = await pool.query('SELECT comments FROM documents WHERE id = $1', [id]);
       let existingComments = currentDoc.rows[0]?.comments || [];
-      
+
       // Parse existing comments if they're stored as a string
       if (typeof existingComments === 'string') {
         try {
@@ -148,26 +164,26 @@ router.put('/:id', requirePermission('patients:view_chart'), async (req, res) =>
           existingComments = [];
         }
       }
-      
+
       // Ensure existingComments is an array
       if (!Array.isArray(existingComments)) {
         existingComments = [];
       }
-      
+
       const newComment = {
         comment: comment.trim(),
         timestamp: new Date().toISOString(),
         userId: req.user.id,
         userName: `${req.user.first_name} ${req.user.last_name}` || 'Unknown'
       };
-      
+
       // Append new comment to existing comments (never delete previous comments)
       const updatedComments = [...existingComments, newComment];
-      
+
       updates.push(`comments = $${paramIndex}`);
       values.push(JSON.stringify(updatedComments));
       paramIndex++;
-      
+
       // Also update the legacy comment field for backward compatibility (keep most recent)
       updates.push(`comment = $${paramIndex}`);
       values.push(comment.trim());
