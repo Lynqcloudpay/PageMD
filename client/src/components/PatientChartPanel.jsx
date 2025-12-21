@@ -327,10 +327,65 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                             </div>
                                                         </div>
                                                         {expandedNotes[note.id] && (
-                                                            <div className="px-4 pb-4 pt-2 border-t border-gray-100">
-                                                                <div className="bg-gray-50 rounded p-3 text-xs font-mono text-gray-600 whitespace-pre-wrap leading-relaxed shadow-inner">
-                                                                    {note.note_draft || <span className="italic text-gray-400">No content.</span>}
-                                                                </div>
+                                                            <div className="px-4 pb-4 pt-2 border-t border-gray-100 bg-gray-50/30">
+                                                                {(() => {
+                                                                    // Parse note sections
+                                                                    const parseNote = (text) => {
+                                                                        const ccMatch = text.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
+                                                                        const hpiMatch = text.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
+                                                                        const assessMatch = text.match(/(?:Assessment):\s*(.+?)(?:\n\n|\n(?:Plan):|$)/is);
+                                                                        const planMatch = text.match(/(?:Plan):\s*(.+?)$/is);
+
+                                                                        return {
+                                                                            cc: ccMatch ? ccMatch[1].trim() : null,
+                                                                            hpi: hpiMatch ? hpiMatch[1].trim().substring(0, 200) : null,
+                                                                            assessment: assessMatch ? assessMatch[1].trim().substring(0, 300) : null,
+                                                                            plan: planMatch ? planMatch[1].trim().substring(0, 300) : null
+                                                                        };
+                                                                    };
+
+                                                                    const sections = parseNote(noteText);
+
+                                                                    return (
+                                                                        <div className="space-y-3">
+                                                                            {sections.cc && (
+                                                                                <div>
+                                                                                    <div className="text-xs font-bold text-gray-700 mb-1">Chief Complaint:</div>
+                                                                                    <div className="text-sm text-gray-600 leading-relaxed">{sections.cc}</div>
+                                                                                </div>
+                                                                            )}
+                                                                            {sections.hpi && (
+                                                                                <div>
+                                                                                    <div className="text-xs font-bold text-gray-700 mb-1">History of Present Illness:</div>
+                                                                                    <div className="text-sm text-gray-600 leading-relaxed">{sections.hpi}{sections.hpi.length >= 200 ? '...' : ''}</div>
+                                                                                </div>
+                                                                            )}
+                                                                            {sections.assessment && (
+                                                                                <div>
+                                                                                    <div className="text-xs font-bold text-gray-700 mb-1">Assessment:</div>
+                                                                                    <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{sections.assessment}{sections.assessment.length >= 300 ? '...' : ''}</div>
+                                                                                </div>
+                                                                            )}
+                                                                            {sections.plan && (
+                                                                                <div>
+                                                                                    <div className="text-xs font-bold text-gray-700 mb-1">Plan:</div>
+                                                                                    <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{sections.plan}{sections.plan.length >= 300 ? '...' : ''}</div>
+                                                                                </div>
+                                                                            )}
+
+                                                                            <a
+                                                                                href={`/visit/${note.id}`}
+                                                                                target="_blank"
+                                                                                rel="noopener noreferrer"
+                                                                                className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
+                                                                            >
+                                                                                <FileText className="w-4 h-4" />
+                                                                                View Full Note
+                                                                                <ExternalLink className="w-3 h-3" />
+                                                                            </a>
+                                                                        </div>
+                                                                    );
+                                                                })()}
                                                             </div>
                                                         )}
                                                     </div>
