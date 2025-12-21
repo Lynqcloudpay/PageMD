@@ -87,6 +87,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
     });
     const documentUploadInputRef = React.useRef(null);
     const [todayDraftVisit, setTodayDraftVisit] = useState(null);
+    const [showNewVisitDropdown, setShowNewVisitDropdown] = useState(false);
 
     // Layout Editor State
     const [layoutEditMode, setLayoutEditMode] = useState(false);
@@ -136,6 +137,24 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const handleLayoutChange = useCallback((layout) => {
         saveLayout(layout);
     }, [saveLayout]);
+
+    // Create new visit helper
+    const handleCreateNewVisit = async () => {
+        if (!id) return;
+        try {
+            // Force create new visit using the updated API
+            const response = await visitsAPI.findOrCreate(id, 'Office Visit', true);
+            const newNote = response.data;
+            if (newNote?.id) {
+                navigate(`/patient/${id}/visit/${newNote.id}`);
+            } else {
+                alert('Failed to create new visit.');
+            }
+        } catch (error) {
+            console.error('Error creating new visit:', error);
+            alert('Failed to create new visit.');
+        }
+    };
 
     // Function to refresh all patient data
     const refreshPatientData = async () => {
@@ -914,8 +933,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             <button
                                 onClick={() => setNoteFilter('all')}
                                 className={`px-3 py-1 text-xs rounded-md transition-colors ${noteFilter === 'all'
-                                        ? 'text-white font-medium'
-                                        : 'bg-white text-deep-gray hover:bg-soft-gray border border-deep-gray/20'
+                                    ? 'text-white font-medium'
+                                    : 'bg-white text-deep-gray hover:bg-soft-gray border border-deep-gray/20'
                                     }`}
                             >
                                 All ({recentNotes.length})
@@ -923,8 +942,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             <button
                                 onClick={() => setNoteFilter('draft')}
                                 className={`px-3 py-1 text-xs rounded-md transition-colors ${noteFilter === 'draft'
-                                        ? 'bg-orange-600 text-white font-medium'
-                                        : 'bg-white text-ink-700 hover:bg-paper-50 border border-paper-300'
+                                    ? 'bg-orange-600 text-white font-medium'
+                                    : 'bg-white text-ink-700 hover:bg-paper-50 border border-paper-300'
                                     }`}
                             >
                                 Draft ({recentNotes.filter(n => !n.signed).length})
@@ -932,8 +951,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             <button
                                 onClick={() => setNoteFilter('signed')}
                                 className={`px-3 py-1 text-xs rounded-md transition-colors ${noteFilter === 'signed'
-                                        ? 'bg-green-600 text-white font-medium'
-                                        : 'bg-white text-ink-700 hover:bg-paper-50 border border-paper-300'
+                                    ? 'bg-green-600 text-white font-medium'
+                                    : 'bg-white text-ink-700 hover:bg-paper-50 border border-paper-300'
                                     }`}
                             >
                                 Signed ({recentNotes.filter(n => n.signed).length})
@@ -998,8 +1017,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             handleViewNote(note.id, e);
                                                         }}
                                                         className={`ml-4 text-xs font-medium flex items-center space-x-1 flex-shrink-0 px-3 py-1.5 rounded-md ${note.signed
-                                                                ? 'bg-paper-100 text-paper-700 hover:bg-paper-200 hover:text-paper-900'
-                                                                : 'bg-orange-100 text-orange-700 hover:bg-orange-200 hover:text-orange-900 font-semibold'
+                                                            ? 'bg-paper-100 text-paper-700 hover:bg-paper-200 hover:text-paper-900'
+                                                            : 'bg-orange-100 text-orange-700 hover:bg-orange-200 hover:text-orange-900 font-semibold'
                                                             }`}
                                                     >
                                                         <Eye className="w-3 h-3" />
@@ -1034,8 +1053,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         <button
                                                             onClick={(e) => handleViewNote(note.id, e)}
                                                             className={`text-xs font-medium flex items-center space-x-1 px-3 py-1.5 rounded-md ${note.signed
-                                                                    ? 'bg-paper-100 text-paper-700 hover:bg-paper-200 hover:text-paper-900'
-                                                                    : 'bg-orange-100 text-orange-700 hover:bg-orange-200 hover:text-orange-900 font-semibold'
+                                                                ? 'bg-paper-100 text-paper-700 hover:bg-paper-200 hover:text-paper-900'
+                                                                : 'bg-orange-100 text-orange-700 hover:bg-orange-200 hover:text-orange-900 font-semibold'
                                                                 }`}
                                                         >
                                                             <Eye className="w-3 h-3" />
@@ -1437,55 +1456,74 @@ const Snapshot = ({ showNotesOnly = false }) => {
                         </div>
                         <div className="flex-shrink-0 ml-2 flex items-center gap-2">
                             {/* Primary visit action: New Visit or Open Today's Visit (moved to right side for spacing) */}
-                            <button
-                                type="button"
-                                onClick={async () => {
-                                    if (!id) {
-                                        console.error('Patient ID is missing, cannot navigate');
-                                        alert('Patient ID is missing. Please refresh the page.');
-                                        return;
-                                    }
-
-                                    // If we already have a draft for today, just open it
-                                    if (todayDraftVisit && todayDraftVisit.id) {
-                                        console.log('Opening existing draft visit from quick bar:', todayDraftVisit.id);
-                                        navigate(`/patient/${id}/visit/${todayDraftVisit.id}`);
-                                        return;
-                                    }
-
-                                    // Otherwise, create or open today's office visit
-                                    try {
-                                        console.log('No draft for today, creating/opening new office visit (quick bar)');
-                                        const response = await visitsAPI.openToday(id, 'office_visit');
-                                        const newNote = response.data?.note || response.data;
-                                        if (newNote?.id) {
-                                            navigate(`/patient/${id}/visit/${newNote.id}`);
-                                        } else {
-                                            console.error('Failed to create/open today\'s visit');
-                                            alert('Failed to create today\'s visit. Please try again.');
+                            <div className="relative flex items-center shadow-md rounded-md transition-all hover:shadow-lg group" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}>
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        if (!id) {
+                                            alert('Patient ID is missing. Please refresh the page.');
+                                            return;
                                         }
-                                    } catch (error) {
-                                        console.error('Error creating/opening today\'s visit:', error);
-                                        alert('Failed to create today\'s visit. Please try again.');
-                                    }
-                                }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-md shadow-md hover:shadow-lg transition-all whitespace-nowrap"
-                                style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                onMouseEnter={(e) => (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
-                                onMouseLeave={(e) => (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
-                            >
-                                {todayDraftVisit && todayDraftVisit.id ? (
+
+                                        // If we already have a draft for today, just open it
+                                        if (todayDraftVisit && todayDraftVisit.id) {
+                                            navigate(`/patient/${id}/visit/${todayDraftVisit.id}`);
+                                            return;
+                                        }
+
+                                        // Otherwise, create new
+                                        handleCreateNewVisit();
+                                    }}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white ${todayDraftVisit && todayDraftVisit.id ? 'rounded-l-md border-r border-blue-400/30' : 'rounded-md'}`}
+                                >
+                                    {todayDraftVisit && todayDraftVisit.id ? (
+                                        <>
+                                            <FileText className="w-3.5 h-3.5" />
+                                            <span>Open Today&apos;s Visit</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Plus className="w-3.5 h-3.5" />
+                                            <span>New Visit</span>
+                                        </>
+                                    )}
+                                </button>
+
+                                {todayDraftVisit && todayDraftVisit.id && (
                                     <>
-                                        <FileText className="w-3.5 h-3.5" />
-                                        <span>Open Today&apos;s Visit</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Plus className="w-3.5 h-3.5" />
-                                        <span>New Visit</span>
+                                        <button
+                                            onClick={() => setShowNewVisitDropdown(!showNewVisitDropdown)}
+                                            className="px-1.5 py-1.5 rounded-r-md text-white hover:bg-white/10 h-full flex items-center justify-center transition-colors"
+                                        >
+                                            <ChevronDown className="w-3.5 h-3.5" />
+                                        </button>
+
+                                        {showNewVisitDropdown && (
+                                            <>
+                                                <div
+                                                    className="fixed inset-0 z-30"
+                                                    onClick={() => setShowNewVisitDropdown(false)}
+                                                />
+                                                <div className="absolute top-full right-0 mt-1 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-40 py-1 animate-fade-in-up">
+                                                    <div className="px-3 py-2 border-b border-gray-100 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                                                        Actions
+                                                    </div>
+                                                    <button
+                                                        onClick={() => {
+                                                            setShowNewVisitDropdown(false);
+                                                            handleCreateNewVisit();
+                                                        }}
+                                                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 flex items-center gap-2 transition-colors"
+                                                    >
+                                                        <Plus className="w-4 h-4" />
+                                                        Start New Visit
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
                                     </>
                                 )}
-                            </button>
+                            </div>
 
                             {layoutEditMode && (
                                 <button
