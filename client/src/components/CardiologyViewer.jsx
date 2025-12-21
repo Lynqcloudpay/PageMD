@@ -27,10 +27,15 @@ const CardiologyViewer = ({ isOpen, onClose, type, documents, patientName }) => 
     }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     useEffect(() => {
-        if (isOpen && filteredDocs.length > 0 && !selectedDoc) {
-            setSelectedDoc(filteredDocs[0]);
+        if (isOpen) {
+            // Reset state when opening a new type of study
+            setSelectedDoc(filteredDocs.length > 0 ? filteredDocs[0] : null);
+            setCompareDoc(null);
+            setIsComparing(false);
+            setZoom(1);
+            setRotation(0);
         }
-    }, [isOpen, filteredDocs, selectedDoc]);
+    }, [isOpen, type]); // Depend on isOpen and type to reset fresh each time it's opened
 
     if (!isOpen) return null;
 
