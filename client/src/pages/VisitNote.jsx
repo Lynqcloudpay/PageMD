@@ -1370,9 +1370,9 @@ const VisitNote = () => {
             <div className="max-w-5xl mx-auto px-6">
                 {/* Master Back Button */}
                 <div className="mb-4">
-                    <button onClick={() => navigate(-1)} className="flex items-center space-x-2 text-gray-600 hover:text-primary-900 transition-colors">
+                    <button onClick={() => navigate(`/patient/${id}/snapshot`)} className="flex items-center space-x-2 text-gray-600 hover:text-primary-900 transition-colors">
                         <ArrowLeft className="w-5 h-5" />
-                        <span className="text-sm font-medium">Back</span>
+                        <span className="text-sm font-medium">Back to Patient Chart</span>
                     </button>
                 </div>
 
@@ -2246,9 +2246,9 @@ const VisitNote = () => {
                                 </button>
                             </div>
                             <div className="flex items-center gap-2">
-                                <button onClick={() => navigate('/dashboard')} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors flex items-center gap-1" title="Back to Dashboard">
+                                <button onClick={() => navigate(`/patient/${id}/snapshot`)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors flex items-center gap-1" title="Back to Patient Chart">
                                     <ArrowLeft className="w-3.5 h-3.5" />
-                                    <span className="text-xs font-medium">Dashboard</span>
+                                    <span className="text-xs font-medium">Chart</span>
                                 </button>
                                 <button onClick={() => setShowPrintModal(true)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors" title="Print">
                                     <Printer className="w-3.5 h-3.5" />
@@ -2259,9 +2259,9 @@ const VisitNote = () => {
                     {isSigned && (
                         <div className="mt-6 pt-4 border-t border-neutral-200 flex items-center justify-end">
                             <div className="flex items-center gap-2">
-                                <button onClick={() => navigate('/dashboard')} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors flex items-center gap-1" title="Back to Dashboard">
+                                <button onClick={() => navigate(`/patient/${id}/snapshot`)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors flex items-center gap-1" title="Back to Patient Chart">
                                     <ArrowLeft className="w-3.5 h-3.5" />
-                                    <span className="text-xs font-medium">Dashboard</span>
+                                    <span className="text-xs font-medium">Chart</span>
                                 </button>
                                 <button onClick={() => setShowPrintModal(true)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors" title="Print">
                                     <Printer className="w-3.5 h-3.5" />
