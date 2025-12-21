@@ -13,6 +13,20 @@ const Patients = () => {
     const [filteredPatients, setFilteredPatients] = useState([]);
     const [pendingPatients, setPendingPatients] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [recentlyViewed, setRecentlyViewed] = useState([]);
+
+    // Load recently viewed from local storage
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem('recentPatients');
+            if (saved) {
+                setRecentlyViewed(JSON.parse(saved));
+            }
+        } catch (e) {
+            console.error('Failed to load recent patients', e);
+        }
+    }, []);
+
     const [showAddModal, setShowAddModal] = useState(false);
 
     // Get current user (mock for now - in production would come from auth context)
@@ -60,6 +74,22 @@ const Patients = () => {
     }, [searchQuery, patients]);
 
     const handlePatientClick = (patientId) => {
+        // Find patient details from search results or all patients
+        // Only if we have full patient details do we add to recent
+        const patient = filteredPatients.find(p => p.id === patientId) ||
+            patients.find(p => p.id === patientId) ||
+            recentlyViewed.find(p => p.id === patientId);
+
+        if (patient) {
+            const newRecent = [
+                patient,
+                ...recentlyViewed.filter(p => p.id !== patientId)
+            ].slice(0, 10); // Keep last 10
+
+            setRecentlyViewed(newRecent);
+            localStorage.setItem('recentPatients', JSON.stringify(newRecent));
+        }
+
         navigate(`/patient/${patientId}/snapshot`);
     };
 
@@ -155,7 +185,7 @@ const Patients = () => {
                     </div>
                 )}
 
-                {/* Search Results or All Patients - Compact Card Design */}
+                {/* Search Results or Recently Viewed */}
                 {searchQuery.trim() ? (
                     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                         <div className="px-4 py-2.5 bg-blue-50 border-b border-gray-200">
@@ -196,12 +226,14 @@ const Patients = () => {
                                                         <Calendar className="w-3 h-3 text-blue-600" />
                                                         <span className="font-medium">{formatDate(patient.dob || patient.date_of_birth)}</span>
                                                     </span>
-                                                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${patient.sex === 'M' ? 'bg-blue-100 text-blue-700' :
+                                                    {patient.sex && (
+                                                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${patient.sex === 'M' ? 'bg-blue-100 text-blue-700' :
                                                             patient.sex === 'F' ? 'bg-pink-100 text-pink-700' :
                                                                 'bg-gray-100 text-gray-700'
-                                                        }`}>
-                                                        {patient.sex === 'M' ? 'Male' : patient.sex === 'F' ? 'Female' : patient.sex}
-                                                    </span>
+                                                            }`}>
+                                                            {patient.sex === 'M' ? 'Male' : patient.sex === 'F' ? 'Female' : patient.sex}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -225,16 +257,30 @@ const Patients = () => {
                         <div className="px-4 py-2.5 bg-blue-50 border-b border-gray-200 flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
-                                    <User className="w-4 h-4 text-blue-600" />
+                                    <Clock className="w-4 h-4 text-blue-600" />
                                 </div>
-                                <h2 className="font-semibold text-gray-800 text-sm">All Patients ({patients.length})</h2>
+                                <h2 className="font-semibold text-gray-800 text-sm">Recently Viewed</h2>
                             </div>
+                            {recentlyViewed.length > 0 && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (confirm('Clear recently viewed list?')) {
+                                            setRecentlyViewed([]);
+                                            localStorage.removeItem('recentPatients');
+                                        }
+                                    }}
+                                    className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                                >
+                                    Clear History
+                                </button>
+                            )}
                         </div>
-                        {patients.length > 0 ? (
+                        {recentlyViewed.length > 0 ? (
                             <div className="divide-y divide-gray-100">
-                                {patients.map((patient, index) => (
+                                {recentlyViewed.map((patient, index) => (
                                     <div
-                                        key={patient.id}
+                                        key={`${patient.id}-${index}`}
                                         onClick={() => handlePatientClick(patient.id)}
                                         className="p-3 hover:bg-blue-50 cursor-pointer transition-all flex items-center justify-between group border-l-4 border-transparent hover:border-blue-500"
                                     >
@@ -249,16 +295,20 @@ const Patients = () => {
                                                         <span className="text-gray-500 text-xs">MRN:</span>
                                                         <span className="font-mono font-semibold text-gray-700">{patient.mrn}</span>
                                                     </span>
-                                                    <span className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded">
-                                                        <Calendar className="w-3 h-3 text-blue-600" />
-                                                        <span className="font-medium">{formatDate(patient.dob || patient.date_of_birth)}</span>
-                                                    </span>
-                                                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${patient.sex === 'M' ? 'bg-blue-100 text-blue-700' :
+                                                    {patient.dob && (
+                                                        <span className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded">
+                                                            <Calendar className="w-3 h-3 text-blue-600" />
+                                                            <span className="font-medium">{formatDate(patient.dob || patient.date_of_birth)}</span>
+                                                        </span>
+                                                    )}
+                                                    {patient.sex && (
+                                                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${patient.sex === 'M' ? 'bg-blue-100 text-blue-700' :
                                                             patient.sex === 'F' ? 'bg-pink-100 text-pink-700' :
                                                                 'bg-gray-100 text-gray-700'
-                                                        }`}>
-                                                        {patient.sex === 'M' ? 'Male' : patient.sex === 'F' ? 'Female' : patient.sex}
-                                                    </span>
+                                                            }`}>
+                                                            {patient.sex === 'M' ? 'Male' : patient.sex === 'F' ? 'Female' : patient.sex}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -272,14 +322,20 @@ const Patients = () => {
                             </div>
                         ) : (
                             <div className="p-8 text-center text-gray-500">
-                                <User className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                                <p className="mb-4 text-sm">No patients enrolled yet.</p>
-                                <button
-                                    onClick={() => setShowAddModal(true)}
-                                    className="px-5 py-2 bg-blue-600 text-white rounded-lg shadow-sm transition-all hover:bg-blue-700 hover:shadow-md font-medium text-sm"
-                                >
-                                    Enroll First Patient
-                                </button>
+                                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-3">
+                                    <Clock className="w-6 h-6 text-blue-400" />
+                                </div>
+                                <p className="mb-2 text-sm font-medium text-gray-900">No recently viewed patients</p>
+                                <p className="text-xs text-gray-500 mb-4">Search for a patient to view their chart. Recent patients will appear here.</p>
+                                <div className="text-center">
+                                    <button
+                                        onClick={() => setShowAddModal(true)}
+                                        className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 hover:text-gray-900 transition-all font-medium text-xs inline-flex items-center gap-2"
+                                    >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        <span>Enroll New Patient</span>
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
