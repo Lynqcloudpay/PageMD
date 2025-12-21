@@ -36,62 +36,69 @@ async function searchMedications(searchTerm, maxResults = 20) {
       }
     }
 
-    // Search RxNorm API
-    const response = await axios.get(`${RXNORM_BASE_URL}/drugs.json`, {
-      params: {
-        name: searchTerm
-      },
-      timeout: 5000 // 5 second timeout
-    });
+    // Try RxNorm API with short timeout
+    try {
+      const response = await axios.get(`${RXNORM_BASE_URL}/drugs.json`, {
+        params: {
+          name: searchTerm
+        },
+        timeout: 3000 // 3 second timeout
+      });
 
-    const drugs = response.data?.drugGroup?.conceptGroup;
-    if (!drugs || !Array.isArray(drugs)) {
-      return [];
-    }
+      const drugs = response.data?.drugGroup?.conceptGroup;
+      if (drugs && Array.isArray(drugs)) {
+        // Extract medication concepts
+        const medications = [];
+        for (const group of drugs) {
+          if (group.conceptProperties && Array.isArray(group.conceptProperties)) {
+            for (const concept of group.conceptProperties) {
+              medications.push({
+                rxcui: concept.rxcui,
+                name: concept.name,
+                synonym: concept.synonym || concept.name,
+                tty: concept.tty, // Term Type
+                language: concept.language
+              });
+            }
+          }
+        }
 
-    // Extract medication concepts
-    const medications = [];
-    for (const group of drugs) {
-      if (group.conceptProperties && Array.isArray(group.conceptProperties)) {
-        for (const concept of group.conceptProperties) {
-          medications.push({
-            rxcui: concept.rxcui,
-            name: concept.name,
-            synonym: concept.synonym || concept.name,
-            tty: concept.tty, // Term Type
-            language: concept.language
-          });
+        // Cache results if found
+        if (USE_CACHE && medications.length > 0) {
+          await cacheMedicationSearch(searchTerm, medications);
+        }
+
+        if (medications.length > 0) {
+          return medications.slice(0, maxResults);
         }
       }
+    } catch (apiError) {
+      console.log(`RxNorm API failed for "${searchTerm}": ${apiError.message}`);
+      // Continue to fallback
     }
 
-    // Cache results
-    if (USE_CACHE && medications.length > 0) {
-      await cacheMedicationSearch(searchTerm, medications);
+    // Fallback to local database
+    console.log(`Using fallback for medication search: ${searchTerm}`);
+    const localResults = await searchLocalMedicationDatabase(searchTerm, maxResults);
+    if (localResults && localResults.length > 0) {
+      console.log(`Found ${localResults.length} results in local database/fallback`);
+      return localResults;
     }
 
-    return medications.slice(0, maxResults);
+    // Return empty array if nothing found
+    return [];
 
   } catch (error) {
-    console.error('RxNorm search error:', error.message);
-    
-    // Fallback to local database cache
-    if (USE_CACHE) {
-      try {
-        const localResults = await searchLocalMedicationDatabase(searchTerm, maxResults);
-        if (localResults && localResults.length > 0) {
-          console.log(`Using local database cache for: ${searchTerm}`);
-          return localResults;
-        }
-      } catch (dbError) {
-        console.error('Local database search error:', dbError.message);
-      }
+    console.error('Medication search error:', error.message);
+
+    // Final fallback
+    try {
+      const fallbackResults = await searchLocalMedicationDatabase(searchTerm, maxResults);
+      return fallbackResults || [];
+    } catch (fallbackError) {
+      console.error('Fallback search also failed:', fallbackError.message);
+      return [];
     }
-    
-    // Final fallback: return empty array instead of throwing
-    // This allows the UI to show "No medications found" instead of an error
-    console.warn(`Medication search failed for "${searchTerm}", returning empty results`);
-    return [];
   }
 }
 
@@ -153,7 +160,7 @@ async function getMedicationStructures(rxcui) {
     // Parse structures from response
     const structures = [];
     const allRelated = response.data?.allRelatedGroup?.conceptGroup;
-    
+
     if (allRelated && Array.isArray(allRelated)) {
       for (const group of allRelated) {
         if (group.conceptProperties) {
@@ -242,7 +249,7 @@ function parseMedicationName(name) {
   // Common patterns: "LISINOPRIL 10 MG TABLET", "ATORVASTATIN 20 MG ORAL TABLET"
   const strengthMatch = name.match(/(\d+(?:\.\d+)?)\s*(MG|MCG|G|ML|IU|MEQ)\b/i);
   const formMatch = name.match(/(TABLET|CAPSULE|SOLUTION|SUSPENSION|CREAM|OINTMENT|INJECTION|POWDER|LIQUID|SPRAY|DROPS)\b/i);
-  
+
   return {
     strength: strengthMatch ? `${strengthMatch[1]} ${strengthMatch[2].toUpperCase()}` : null,
     form: formMatch ? formMatch[1].toUpperCase() : null
@@ -266,7 +273,7 @@ async function searchLocalMedicationDatabase(searchTerm, limit = 20) {
         AND table_name = 'medication_database'
       );
     `);
-    
+
     if (!tableCheck.rows[0]?.exists) {
       console.log('medication_database table does not exist, using simple fallback');
       return getCommonMedicationsFallback(searchTerm, limit);
@@ -358,8 +365,8 @@ function getCommonMedicationsFallback(searchTerm, limit = 20) {
   ];
 
   const searchLower = searchTerm.toLowerCase();
-  const filtered = commonMeds.filter(med => 
-    med.name.toLowerCase().includes(searchLower) || 
+  const filtered = commonMeds.filter(med =>
+    med.name.toLowerCase().includes(searchLower) ||
     med.synonym.toLowerCase().includes(searchLower)
   );
 
