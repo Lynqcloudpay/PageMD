@@ -1508,7 +1508,7 @@ const VisitNote = () => {
                     </Section>
 
                     {/* PAMFOS Section - Past Medical, Allergies, Meds, Family, Social/Other */}
-                    <Section title="Patient History (PAMFOS)" defaultOpen={true}>
+                    <Section title="Patient History (PAMFOS) [NEW]" defaultOpen={true}>
                         <div className="bg-white p-1">
                             <div className="space-y-4">
 
