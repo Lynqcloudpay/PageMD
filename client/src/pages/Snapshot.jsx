@@ -1083,10 +1083,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
             if (uploadResponse.data) {
                 const newPhotoUrl = uploadResponse.data.photoUrl || uploadResponse.data.patient?.photo_url;
 
-                // Update local state immediately for snappy UI
+                // Update local state immediately for snappy UI using the local base64
+                // This ensures the photo shows up immediately even if there's a slight server delay/proxy lag
                 setPatient(prev => ({
                     ...prev,
-                    photo_url: newPhotoUrl
+                    photo_url: capturedPhoto
                 }));
 
                 // Force version update to bust cache
@@ -1141,6 +1142,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
         if (!patient?.photo_url) return null;
 
         let path = patient.photo_url;
+
+        // If it's already a data URL (base64), return it as is
+        if (path.startsWith('data:')) {
+            return path;
+        }
 
         // Handle absolute paths by finding the /uploads/ marker
         if (path.includes('/uploads/')) {
