@@ -344,32 +344,42 @@ async function searchLocalMedicationDatabase(searchTerm, limit = 20) {
  */
 function getCommonMedicationsFallback(searchTerm, limit = 20) {
   const commonMeds = [
-    { rxcui: '197806', name: 'LISINOPRIL 10 MG TABLET', synonym: 'Lisinopril 10mg', tty: 'SBD' },
-    { rxcui: '83367', name: 'ATORVASTATIN 20 MG TABLET', synonym: 'Atorvastatin 20mg', tty: 'SBD' },
-    { rxcui: '197884', name: 'METFORMIN 500 MG TABLET', synonym: 'Metformin 500mg', tty: 'SBD' },
-    { rxcui: '314076', name: 'AMLODIPINE 5 MG TABLET', synonym: 'Amlodipine 5mg', tty: 'SBD' },
-    { rxcui: '860975', name: 'LEVOTHYROXINE 75 MCG TABLET', synonym: 'Levothyroxine 75mcg', tty: 'SBD' },
-    { rxcui: '198029', name: 'OMEPRAZOLE 20 MG CAPSULE', synonym: 'Omeprazole 20mg', tty: 'SBD' },
-    { rxcui: '199849', name: 'AMOXICILLIN 500 MG CAPSULE', synonym: 'Amoxicillin 500mg', tty: 'SBD' },
-    { rxcui: '197847', name: 'ALBUTEROL 90 MCG INHALER', synonym: 'Albuterol 90mcg', tty: 'SBD' },
-    { rxcui: '198046', name: 'GABAPENTIN 300 MG CAPSULE', synonym: 'Gabapentin 300mg', tty: 'SBD' },
-    { rxcui: '199726', name: 'SERTRALINE 50 MG TABLET', synonym: 'Sertraline 50mg', tty: 'SBD' },
-    { rxcui: '197808', name: 'IBUPROFEN 200 MG TABLET', synonym: 'Ibuprofen 200mg', tty: 'SBD' },
-    { rxcui: '197857', name: 'PREDNISONE 20 MG TABLET', synonym: 'Prednisone 20mg', tty: 'SBD' },
-    { rxcui: '198045', name: 'TRAZODONE 50 MG TABLET', synonym: 'Trazodone 50mg', tty: 'SBD' },
-    { rxcui: '198058', name: 'FUROSEMIDE 40 MG TABLET', synonym: 'Furosemide 40mg', tty: 'SBD' },
-    { rxcui: '199794', name: 'LOSARTAN 50 MG TABLET', synonym: 'Losartan 50mg', tty: 'SBD' },
-    { rxcui: '198019', name: 'METOPROLOL 25 MG TABLET', synonym: 'Metoprolol 25mg', tty: 'SBD' },
-    { rxcui: '197854', name: 'AMLODIPINE-BENAZEPRIL 5-10 MG TABLET', synonym: 'Amlodipine-Benazepril', tty: 'SBD' },
-    { rxcui: '197806', name: 'HYDROCHLOROTHIAZIDE 25 MG TABLET', synonym: 'HCTZ 25mg', tty: 'SBD' },
+    { rxcui: '197806', name: 'Lisinopril 10 MG Oral Tablet', synonym: 'Lisinopril 10mg', tty: 'SBD', strength: '10 MG' },
+    { rxcui: '314076', name: 'Lisinopril 20 MG Oral Tablet', synonym: 'Lisinopril 20mg', tty: 'SBD', strength: '20 MG' },
+    { rxcui: '83367', name: 'Atorvastatin 20 MG Oral Tablet', synonym: 'Atorvastatin 20mg', tty: 'SBD', strength: '20 MG' },
+    { rxcui: '617310', name: 'Atorvastatin 40 MG Oral Tablet', synonym: 'Atorvastatin 40mg', tty: 'SBD', strength: '40 MG' },
+    { rxcui: '860975', name: 'Metformin 500 MG Oral Tablet', synonym: 'Metformin 500mg', tty: 'SBD', strength: '500 MG' },
+    { rxcui: '861007', name: 'Metformin 1000 MG Oral Tablet', synonym: 'Metformin 1000mg', tty: 'SBD', strength: '1000 MG' },
+    { rxcui: '197884', name: 'Amlodipine 5 MG Oral Tablet', synonym: 'Amlodipine 5mg', tty: 'SBD', strength: '5 MG' },
+    { rxcui: '329528', name: 'Amlodipine 10 MG Oral Tablet', synonym: 'Amlodipine 10mg', tty: 'SBD', strength: '10 MG' },
+    { rxcui: '966529', name: 'Levothyroxine 75 MCG Oral Tablet', synonym: 'Levothyroxine 75mcg', tty: 'SBD', strength: '75 MCG' },
+    { rxcui: '966524', name: 'Levothyroxine 100 MCG Oral Tablet', synonym: 'Levothyroxine 100mcg', tty: 'SBD', strength: '100 MCG' },
+    { rxcui: '198029', name: 'Omeprazole 20 MG Delayed Release Oral Capsule', synonym: 'Omeprazole 20mg', tty: 'SBD', strength: '20 MG' },
+    { rxcui: '308136', name: 'Omeprazole 40 MG Delayed Release Oral Capsule', synonym: 'Omeprazole 40mg', tty: 'SBD', strength: '40 MG' },
+    { rxcui: '308191', name: 'Amoxicillin 500 MG Oral Capsule', synonym: 'Amoxicillin 500mg', tty: 'SBD', strength: '500 MG' },
+    { rxcui: '745678', name: 'Albuterol 0.09 MG/ACTUAT Metered Dose Inhaler', synonym: 'Albuterol Inhaler', tty: 'SBD', strength: '90 MCG' },
+    { rxcui: '835829', name: 'Gabapentin 300 MG Oral Capsule', synonym: 'Gabapentin 300mg', tty: 'SBD', strength: '300 MG' },
+    { rxcui: '835838', name: 'Gabapentin 600 MG Oral Tablet', synonym: 'Gabapentin 600mg', tty: 'SBD', strength: '600 MG' },
+    { rxcui: '312940', name: 'Sertraline 50 MG Oral Tablet', synonym: 'Sertraline 50mg', tty: 'SBD', strength: '50 MG' },
+    { rxcui: '312961', name: 'Sertraline 100 MG Oral Tablet', synonym: 'Sertraline 100mg', tty: 'SBD', strength: '100 MG' },
+    { rxcui: '310965', name: 'Ibuprofen 200 MG Oral Tablet', synonym: 'Ibuprofen 200mg', tty: 'SBD', strength: '200 MG' },
+    { rxcui: '197857', name: 'Prednisone 20 MG Oral Tablet', synonym: 'Prednisone 20mg', tty: 'SBD', strength: '20 MG' },
+    { rxcui: '312617', name: 'Trazodone 50 MG Oral Tablet', synonym: 'Trazodone 50mg', tty: 'SBD', strength: '50 MG' },
+    { rxcui: '310429', name: 'Furosemide 40 MG Oral Tablet', synonym: 'Furosemide 40mg', tty: 'SBD', strength: '40 MG' },
+    { rxcui: '979492', name: 'Losartan 50 MG Oral Tablet', synonym: 'Losartan 50mg', tty: 'SBD', strength: '50 MG' },
+    { rxcui: '866427', name: 'Metoprolol 25 MG Oral Tablet', synonym: 'Metoprolol 25mg', tty: 'SBD', strength: '25 MG' },
+    { rxcui: '310798', name: 'Hydrochlorothiazide 25 MG Oral Tablet', synonym: 'HCTZ 25mg', tty: 'SBD', strength: '25 MG' },
   ];
 
-  const searchLower = searchTerm.toLowerCase();
+  const searchLower = searchTerm.toLowerCase().trim();
+
+  // Filter with case-insensitive partial matching
   const filtered = commonMeds.filter(med =>
     med.name.toLowerCase().includes(searchLower) ||
     med.synonym.toLowerCase().includes(searchLower)
   );
 
+  console.log(`Fallback search for "${searchTerm}": found ${filtered.length} matches`);
   return filtered.slice(0, limit);
 }
 
