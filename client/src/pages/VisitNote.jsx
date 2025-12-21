@@ -1914,17 +1914,10 @@ const VisitNote = () => {
                                             </div>
                                         )}
                                         {icd10Results.map((code) => (
-                                            <div key={code.code} className="flex items-center justify-between p-2 border-b border-neutral-100 hover:bg-primary-50 transition-colors">
-                                                <button onClick={() => handleAddICD10(code, false)} className="flex-1 text-left">
+                                            <div key={code.code} className="p-2 border-b border-neutral-100 hover:bg-primary-50 transition-colors">
+                                                <button onClick={() => handleAddICD10(code, false)} className="w-full text-left">
                                                     <div className="font-medium text-neutral-900 text-xs">{code.code}</div>
                                                     <div className="text-xs text-neutral-600">{code.description}</div>
-                                                </button>
-                                                <button
-                                                    onClick={() => handleAddICD10(code, true)}
-                                                    className="ml-2 px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md transition-colors"
-                                                    title="Add to Problem List"
-                                                >
-                                                    + Problem
                                                 </button>
                                             </div>
                                         ))}
