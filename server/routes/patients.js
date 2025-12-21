@@ -81,44 +81,34 @@ router.get('/', async (req, res) => {
 
     const result = await pool.query(query, params);
 
-    console.log(`[DEBUG] Patients search: query="${search || ''}", user="${req.user.email}", clinic="${req.user.clinic_id}", raw_count=${result.rows.length}`);
+    console.log(`[DEBUG] Patients search: query="${search || ''}", user="${req.user.email}", rows=${result.rows.length}`);
 
     // Decrypt PHI fields before sending response
     const decryptedPatients = await patientEncryptionService.decryptPatientsPHI(result.rows);
 
     // Log audit
     const requestId = req.headers['x-request-id'] || crypto.randomUUID();
-    await logAudit(
-      req.user.id,
-      'patient.list',
-      'patient',
-      null,
-      { search: search ? '[REDACTED]' : null, count: decryptedPatients.length },
-      req.ip,
-      req.get('user-agent'),
-      'success',
-      requestId,
-      req.sessionId
-    );
+    // Use try-catch for audit to prevent blocking main response
+    try {
+      await logAudit(
+        req.user.id,
+        'patient.list',
+        'patient',
+        null,
+        { search: search ? '[REDACTED]' : null, count: decryptedPatients.length },
+        req.ip,
+        req.get('user-agent'),
+        'success',
+        requestId,
+        req.sessionId
+      );
+    } catch (auditErr) {
+      console.warn('Audit log failed', auditErr.message);
+    }
 
     res.json(decryptedPatients);
   } catch (error) {
     console.error('Error fetching patients:', error);
-
-    // Log failed audit
-    await logAudit(
-      req.user?.id,
-      'patient.list',
-      'patient',
-      null,
-      { error: error.message },
-      req.ip,
-      req.get('user-agent'),
-      'failure',
-      req.requestId,
-      req.sessionId
-    );
-
     res.status(500).json({ error: 'Failed to fetch patients' });
   }
 });
