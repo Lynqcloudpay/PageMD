@@ -1,88 +1,121 @@
-# 🔒 STABLE VERSION - RECOVERY GUIDE
+# STABLE VERSION RECOVERY GUIDE
 
-## Stable Version Information
-
-**Tag:** `v1.0-stable`  
-**Commit:** `e968276`  
-**Date:** December 21, 2025 - 4:07 AM EST  
-**Description:** Major UX improvements: ICD-10 search at top, compact Orders dropdown, EPrescribe loading indicator
+## Current Stable Version
+**Tag:** `v1.0.0-stable`  
+**Commit:** `ad13621fa329f3065321150fad3b3e7f05bace61`  
+**Date:** December 21, 2025 at 14:23 EST
 
 ## Features in This Stable Version
+✅ Social History inline editing with proper field mapping (snake_case to camelCase)
+✅ Social History real-time sync via event listeners
+✅ Navigation buttons correctly point to Patient Chart (not EMR dashboard)
+✅ Pending Notes shows all draft visits (including empty notes)
+✅ Visit notes load correctly without infinite loops
+✅ All PAMFOS (Problems, Allergies, Medications, Family History, Other/Social) working
+✅ Backend API stable and running
+✅ Database healthy
+✅ Caddy reverse proxy configured
 
-✅ **Core Functionality:**
-- ICD-10 search with 2-character trigger
-- Quick search bar at top of Assessment section
-- Structured diagnosis list with hover delete
-- Smart diagnosis deletion (orders move to "Other")
-- EPrescribe with loading indicator and 2-character search
-- Orders modal with compact diagnosis dropdown
-- Mandatory diagnosis selection for orders
-- All ReferenceErrors fixed
+## How to Revert to This Stable Version
 
-✅ **UI/UX:**
-- Clean, intuitive interface
-- No duplicate textareas
-- No clutter or unnecessary dropdowns
-- Proper search feedback
-- Responsive design
-
-## How to Revert to This Version
-
-### Option 1: Using the Tag (Recommended)
+### Option 1: Quick Revert (Recommended)
 ```bash
 cd "/Volumes/Mel's SSD/paper emr"
-git checkout v1.0-stable
+
+# Revert to stable version
+git fetch origin
+git checkout v1.0.0-stable
+
+# Deploy to production
+./deploy-to-lightsail.sh temp_deploy_key
 ```
 
-### Option 2: Using the Commit Hash
+### Option 2: Revert by Commit Hash
 ```bash
 cd "/Volumes/Mel's SSD/paper emr"
-git checkout e968276
+
+# Revert to specific commit
+git checkout ad13621fa329f3065321150fad3b3e7f05bace61
+
+# Deploy to production
+./deploy-to-lightsail.sh temp_deploy_key
 ```
 
-### Option 3: Create a New Branch from This Version
+### Option 3: Create New Branch from Stable
 ```bash
 cd "/Volumes/Mel's SSD/paper emr"
-git checkout -b recovery-branch v1.0-stable
+
+# Create a recovery branch
+git checkout -b recovery-from-stable v1.0.0-stable
+
+# Deploy to production
+./deploy-to-lightsail.sh temp_deploy_key
 ```
 
-## After Reverting
+## Emergency Server Recovery
 
-1. **Rebuild the frontend:**
-```bash
-cd client
-npm run build
-```
-
-2. **Deploy to live server:**
-```bash
-cd ..
-scp -i temp_deploy_key -r client/dist/* ubuntu@bemypcp.com:/home/ubuntu/emr/deploy/static/
-ssh -i temp_deploy_key ubuntu@bemypcp.com "cd /home/ubuntu/emr/deploy && docker compose -f docker-compose.prod.yml restart caddy"
-```
-
-3. **Hard refresh browser:** `Cmd + Shift + R` (Mac) or `Ctrl + Shift + R` (Windows)
-
-## To Return to Latest Development
+If the deployment fails or server is unresponsive:
 
 ```bash
-git checkout main
+# SSH into the server
+ssh -i temp_deploy_key ubuntu@bemypcp.com
+
+# Navigate to deployment directory
+cd /home/ubuntu/emr/deploy
+
+# Restart all services
+docker compose -f docker-compose.prod.yml down
+docker compose -f docker-compose.prod.yml up -d
+
+# Check service status
+docker compose -f docker-compose.prod.yml ps
+
+# View logs if needed
+docker compose -f docker-compose.prod.yml logs api
+docker compose -f docker-compose.prod.yml logs db
 ```
 
-## Backup Location
+## Verify Deployment Success
 
-This version is also backed up on GitHub:
-- Repository: https://github.com/Lynqcloudpay/PageMD
-- Tag: v1.0-stable
-- Branch: main (as of commit e968276)
+After reverting, verify the following:
 
-## Notes
+1. **Login Works:** Visit https://bemypcp.com and log in
+2. **Visit Notes Load:** Open a patient chart and create/view a visit note
+3. **Social History Saves:** Edit social history fields and verify they save
+4. **Pending Notes Shows Drafts:** Check the Pending Notes tab shows draft visits
+5. **Navigation Works:** Test "Back to Patient Chart" buttons
 
-- This tag will NEVER be deleted
-- You can always access this exact version
-- All changes are tracked in git history
-- The tag is pushed to remote, so it's safe even if local files are lost
+## Important Files Modified in This Version
+
+### Frontend Changes:
+- `client/src/pages/VisitNote.jsx` - Social History inline editing, navigation fixes, event listener
+- `client/src/pages/PendingNotes.jsx` - (No changes, but works with backend fix)
+
+### Backend Changes:
+- `server/routes/visits.js` - Pending notes query fix (removed note_draft requirement)
+- `server/routes/patients.js` - Social History save endpoint (camelCase field mapping)
+
+## Database State
+The database schema is stable and requires no migrations for this version.
+
+## Known Issues (None)
+This version has no known critical issues. All core functionality is working as expected.
+
+## Next Steps After Revert
+1. Test all critical features
+2. Identify what broke in the newer version
+3. Fix the issue in a new branch
+4. Test thoroughly before deploying
+5. Create a new stable tag when ready
+
+## Support
+If you encounter issues reverting:
+1. Check the deployment logs
+2. Verify SSH key permissions: `chmod 600 temp_deploy_key`
+3. Ensure Docker is running on the server
+4. Check server disk space: `df -h`
+5. Review server logs: `docker compose -f docker-compose.prod.yml logs`
 
 ---
-**Created:** December 21, 2025  
 **Last Updated:** December 21, 2025
+**Maintained By:** Development Team
