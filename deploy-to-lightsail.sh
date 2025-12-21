@@ -52,6 +52,11 @@ $SSH_CMD $USER@$HOST << EOF
     node:18-alpine \
     sh -c "npm install --legacy-peer-deps && npm run build"
     
+  echo "📂 Copying build artifacts to deployment directory..."
+  rm -rf static/*
+  mkdir -p static
+  cp -r ../client/dist/* static/
+    
   echo "🔄 Building API service (using BuildKit)..."
   DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build api
   
