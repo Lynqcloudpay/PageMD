@@ -26,7 +26,7 @@ async function getUserAuthContext(userId) {
     );
 
     if (!userRes.rows.length) return null;
-    
+
     const user = userRes.rows[0];
     const roleName = user.role_name || user.role || 'CLINICIAN';
 
@@ -76,9 +76,9 @@ async function getUserAuthContext(userId) {
       [normalizedRole]
     );
 
-    const scope = scopeRes.rows[0] || { 
-      schedule_scope: 'CLINIC', 
-      patient_scope: 'CLINIC' 
+    const scope = scopeRes.rows[0] || {
+      schedule_scope: 'CLINIC',
+      patient_scope: 'CLINIC'
     };
 
     return {
@@ -111,9 +111,9 @@ async function getUserAuthContext(userId) {
  */
 function normalizeRoleName(roleName) {
   if (!roleName) return 'CLINICIAN';
-  
+
   const upper = roleName.toUpperCase();
-  
+
   // Map common variations
   if (upper.includes('ADMIN') || upper === 'ADMIN') return 'ADMIN';
   if (upper.includes('PHYSICIAN') || upper.includes('CLINICIAN') || upper === 'DOCTOR') return 'CLINICIAN';
@@ -121,7 +121,7 @@ function normalizeRoleName(roleName) {
   if (upper.includes('FRONT') || upper.includes('RECEPTION')) return 'FRONT_DESK';
   if (upper.includes('BILLING') || upper === 'BILLER') return 'BILLING';
   if (upper.includes('AUDITOR')) return 'AUDITOR_READONLY';
-  
+
   // Default to CLINICIAN for unknown roles
   return 'CLINICIAN';
 }
@@ -149,15 +149,18 @@ function requirePermission(permissionKey) {
 
     if (!req.user.permissions.includes(permissionKey)) {
       // Log the denied access attempt
-      audit(req, 'permission_denied', 'authorization', null, false).catch(() => {});
-      
-      return res.status(403).json({ 
+      console.error(`[AUTH-DEBUG] Permission denied. User: ${req.user.email}, Role: ${req.user.role}, Required: ${permissionKey}, Has: ${JSON.stringify(req.user.permissions)}`);
+      audit(req, 'permission_denied', 'authorization', null, false).catch(() => { });
+
+      return res.status(403).json({
         error: 'Forbidden',
         message: 'Insufficient permissions',
         missing: permissionKey,
         required: permissionKey
       });
     }
+
+    console.log(`[AUTH-DEBUG] Permission granted. User: ${req.user.email}, Required: ${permissionKey}`);
 
     next();
   };
