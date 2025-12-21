@@ -176,6 +176,8 @@ const VisitNote = () => {
     const [showPatientChart, setShowPatientChart] = useState(false);
     const [patientChartTab, setPatientChartTab] = useState('history');
     const [patientData, setPatientData] = useState(null);
+    const [editingDiagnosisIndex, setEditingDiagnosisIndex] = useState(null);
+    const [selectedDiagnosis, setSelectedDiagnosis] = useState(null);
 
     // Auto-save tracking
     const autoSaveTimeoutRef = useRef(null);
@@ -1006,10 +1008,51 @@ const VisitNote = () => {
                 showToast('Error adding to problem list', 'error');
             }
         }
-        const newAssessment = noteData.assessment
-            ? `${noteData.assessment}\n${code.code} - ${code.description}`
-            : `${code.code} - ${code.description}`;
-        setNoteData({ ...noteData, assessment: newAssessment });
+
+        if (editingDiagnosisIndex !== null) {
+            // Replace existing diagnosis
+            setNoteData(prev => {
+                const lines = prev.assessment.split('\n').filter(l => l.trim());
+                const oldName = lines[editingDiagnosisIndex];
+                const newName = `${code.code} - ${code.description}`;
+                lines[editingDiagnosisIndex] = newName;
+
+                // Sync Plan Structured
+                let updatedPlanStructured = prev.planStructured || [];
+                if (oldName && updatedPlanStructured.length > 0) {
+                    const matchIndex = updatedPlanStructured.findIndex(item =>
+                        item.diagnosis === oldName || item.diagnosis.includes(oldName) || oldName.includes(item.diagnosis)
+                    );
+                    if (matchIndex !== -1) {
+                        updatedPlanStructured = [...updatedPlanStructured];
+                        updatedPlanStructured[matchIndex] = {
+                            ...updatedPlanStructured[matchIndex],
+                            diagnosis: newName
+                        };
+                    }
+                }
+
+                // Regenerate plan text from structured data
+                const updatedPlanText = updatedPlanStructured.length > 0 && typeof formatPlanText === 'function'
+                    ? formatPlanText(updatedPlanStructured)
+                    : prev.plan;
+
+                return {
+                    ...prev,
+                    assessment: lines.join('\n'),
+                    planStructured: updatedPlanStructured,
+                    plan: updatedPlanText
+                };
+            });
+            setEditingDiagnosisIndex(null);
+        } else {
+            // Add new diagnosis
+            const newAssessment = noteData.assessment
+                ? `${noteData.assessment}\n${code.code} - ${code.description}`
+                : `${code.code} - ${code.description}`;
+            setNoteData(prev => ({ ...prev, assessment: newAssessment }));
+        }
+
         setShowIcd10Search(false);
         setIcd10Search('');
     };
@@ -1981,46 +2024,16 @@ const VisitNote = () => {
                                         <div key={idx} className="flex items-center justify-between py-1 px-2 hover:bg-neutral-50 rounded group transition-colors">
                                             <div className="flex-1 text-xs text-neutral-900 flex items-center">
                                                 <span className="font-medium mr-2">{idx + 1}.</span>
-                                                <input
-                                                    type="text"
-                                                    value={diag}
-                                                    onChange={(e) => {
-                                                        const newName = e.target.value;
-                                                        setNoteData(prev => {
-                                                            const lines = prev.assessment.split('\n').filter(l => l.trim());
-                                                            const oldName = lines[idx];
-                                                            lines[idx] = newName;
-
-                                                            // Also update planStructured if it exists
-                                                            let updatedPlanStructured = prev.planStructured || [];
-                                                            if (oldName && updatedPlanStructured.length > 0) {
-                                                                const matchIndex = updatedPlanStructured.findIndex(item =>
-                                                                    item.diagnosis === oldName || item.diagnosis.includes(oldName) || oldName.includes(item.diagnosis)
-                                                                );
-                                                                if (matchIndex !== -1) {
-                                                                    updatedPlanStructured = [...updatedPlanStructured];
-                                                                    updatedPlanStructured[matchIndex] = {
-                                                                        ...updatedPlanStructured[matchIndex],
-                                                                        diagnosis: newName
-                                                                    };
-                                                                }
-                                                            }
-
-                                                            const updatedPlanText = updatedPlanStructured.length > 0
-                                                                ? formatPlanText(updatedPlanStructured)
-                                                                : prev.plan;
-
-                                                            return {
-                                                                ...prev,
-                                                                assessment: lines.join('\n'),
-                                                                planStructured: updatedPlanStructured,
-                                                                plan: updatedPlanText
-                                                            };
-                                                        });
+                                                <button
+                                                    onClick={() => {
+                                                        setEditingDiagnosisIndex(idx);
+                                                        setShowIcd10Search(true);
+                                                        setIcd10Search('');
                                                     }}
-                                                    className="flex-1 bg-transparent border-none focus:ring-0 p-0 text-xs text-neutral-900 font-medium placeholder-neutral-400"
-                                                    placeholder="Diagnosis..."
-                                                />
+                                                    className="flex-1 text-left hover:text-primary-600 hover:underline transition-colors"
+                                                >
+                                                    {diag}
+                                                </button>
                                             </div>
                                             <button
                                                 onClick={() => removeDiagnosisFromAssessment(idx)}
@@ -2033,65 +2046,7 @@ const VisitNote = () => {
                                 </div>
                             </div>
                         )}
-                        {/* Only show textarea when signed OR when there are no structured diagnoses */}
-                        {(isSigned || diagnoses.length === 0) && (
-                            <div className="relative">
-                                <textarea ref={assessmentRef} value={noteData.assessment}
-                                    onChange={(e) => {
-                                        handleTextChange(e.target.value, 'assessment');
-                                        handleDotPhraseAutocomplete(e.target.value, 'assessment', assessmentRef);
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (autocompleteState.show && autocompleteState.field === 'assessment') {
-                                            if (e.key === 'ArrowDown') {
-                                                e.preventDefault();
-                                                setAutocompleteState(prev => ({
-                                                    ...prev,
-                                                    selectedIndex: Math.min(prev.selectedIndex + 1, prev.suggestions.length - 1)
-                                                }));
-                                            } else if (e.key === 'ArrowUp') {
-                                                e.preventDefault();
-                                                setAutocompleteState(prev => ({
-                                                    ...prev,
-                                                    selectedIndex: Math.max(prev.selectedIndex - 1, 0)
-                                                }));
-                                            } else if (e.key === 'Enter' && !e.shiftKey) {
-                                                e.preventDefault();
-                                                if (autocompleteState.suggestions[autocompleteState.selectedIndex]) {
-                                                    insertDotPhrase(autocompleteState.suggestions[autocompleteState.selectedIndex].key, autocompleteState);
-                                                }
-                                            } else if (e.key === 'Escape') {
-                                                e.preventDefault();
-                                                setAutocompleteState(prev => ({ ...prev, show: false }));
-                                            }
-                                        } else {
-                                            handleF2Key(e, assessmentRef, 'assessment');
-                                        }
-                                    }}
-                                    onFocus={() => setActiveTextArea('assessment')}
-                                    disabled={isSigned}
-                                    rows={4}
-                                    className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[60px]"
-                                    placeholder="Enter diagnoses..."
-                                />
-                                {autocompleteState.show && autocompleteState.field === 'assessment' && autocompleteState.suggestions.length > 0 && (
-                                    <div className="absolute z-50 bg-white border border-neutral-300 rounded-md shadow-lg max-h-32 overflow-y-auto mt-0.5 w-64" style={{ top: `${autocompleteState.position.top}px` }}>
-                                        {autocompleteState.suggestions.map((item, index) => (
-                                            <button
-                                                key={item.key}
-                                                type="button"
-                                                onClick={() => insertDotPhrase(item.key, autocompleteState)}
-                                                className={`w-full text-left px-2 py-1 border-b border-neutral-100 hover:bg-primary-50 transition-colors ${index === autocompleteState.selectedIndex ? 'bg-primary-100' : ''
-                                                    }`}
-                                            >
-                                                <div className="font-medium text-neutral-900 text-xs">{item.key}</div>
-                                                <div className="text-xs text-neutral-500 truncate">{item.template.substring(0, 60)}...</div>
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                        {/* Free text assessment removed per request */}
                     </Section>
 
                     {/* Plan */}
@@ -2104,9 +2059,15 @@ const VisitNote = () => {
                                         {noteData.planStructured.map((item, index) => (
                                             <div key={index} className="border-b border-neutral-200 last:border-b-0 pb-2 last:pb-0 group">
                                                 <div className="flex items-center justify-between mb-1">
-                                                    <div className="font-bold underline text-xs text-neutral-900">
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedDiagnosis(item.diagnosis);
+                                                            setShowOrderModal(true);
+                                                        }}
+                                                        className="font-bold underline text-xs text-primary-700 hover:text-primary-900 text-left"
+                                                    >
                                                         {index + 1}. {item.diagnosis}
-                                                    </div>
+                                                    </button>
                                                     <button
                                                         onClick={() => removeFromPlan(index)}
                                                         className="opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-red-500 transition-all p-1"
@@ -2137,56 +2098,7 @@ const VisitNote = () => {
                                 </div>
                             )}
                             {/* Always show textarea - sync changes to structured plan on blur */}
-                            {(!isSigned) && (
-                                <textarea ref={planRef} value={noteData.plan}
-                                    onChange={(e) => {
-                                        handleTextChange(e.target.value, 'plan');
-                                        handleDotPhraseAutocomplete(e.target.value, 'plan', planRef);
-                                    }}
-                                    onBlur={(e) => {
-                                        // Try to parse plan text to update structured data
-                                        const parsed = parsePlanText(e.target.value);
-                                        if (parsed.length > 0) {
-                                            setNoteData(prev => ({
-                                                ...prev,
-                                                planStructured: parsed
-                                            }));
-                                        }
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (autocompleteState.show && autocompleteState.field === 'plan') {
-                                            if (e.key === 'ArrowDown') {
-                                                e.preventDefault();
-                                                setAutocompleteState(prev => ({
-                                                    ...prev,
-                                                    selectedIndex: Math.min(prev.selectedIndex + 1, prev.suggestions.length - 1)
-                                                }));
-                                            } else if (e.key === 'ArrowUp') {
-                                                e.preventDefault();
-                                                setAutocompleteState(prev => ({
-                                                    ...prev,
-                                                    selectedIndex: Math.max(prev.selectedIndex - 1, 0)
-                                                }));
-                                            } else if (e.key === 'Enter' && !e.shiftKey) {
-                                                e.preventDefault();
-                                                if (autocompleteState.suggestions[autocompleteState.selectedIndex]) {
-                                                    insertDotPhrase(autocompleteState.suggestions[autocompleteState.selectedIndex].key, autocompleteState);
-                                                }
-                                            } else if (e.key === 'Escape') {
-                                                e.preventDefault();
-                                                setAutocompleteState(prev => ({ ...prev, show: false }));
-                                            }
-                                        } else {
-                                            handleF2Key(e, planRef, 'plan');
-                                        }
-                                    }}
-                                    onFocus={() => setActiveTextArea('plan')}
-                                    disabled={isSigned}
-                                    rows={6}
-                                    className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[80px]"
-                                    placeholder="Plan text (auto-generated from orders)..."
-                                />
-                            )}
+                            {/* Free text plan removed per request */}
                             {isSigned && (
                                 <div className="p-2 border border-neutral-200 rounded-md bg-neutral-50 text-xs">
                                     <PlanDisplay plan={noteData.plan} />
@@ -2296,12 +2208,14 @@ const VisitNote = () => {
             {/* Modals */}
             <OrderModal
                 isOpen={showOrderModal}
-                onClose={() => setShowOrderModal(false)}
+                onClose={() => { setShowOrderModal(false); setSelectedDiagnosis(null); }}
                 initialTab={orderModalTab}
                 diagnoses={diagnoses}
+                selectedDiagnosis={selectedDiagnosis}
                 onSuccess={(diagnosis, orderText) => {
                     addOrderToPlan(diagnosis, orderText);
                     showToast('Order added to plan', 'success');
+                    setSelectedDiagnosis(null);
                 }}
             />
             <EPrescribeEnhanced
