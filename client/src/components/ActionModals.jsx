@@ -227,7 +227,8 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, initialTab = 'labs', di
             setSearchQuery('');
             setSearchResults([]);
             setActiveTab(initialTab);
-            setOrderStep(diagnoses.length > 0 ? 1 : 2); // Go straight to ordering if no diagnoses exist yet
+            // Always start at diagnosis selection if diagnoses exist
+            setOrderStep(diagnoses.length > 0 ? 1 : 2);
             setSelectedDiagnosis(diagnoses.length === 1 ? diagnoses[0] : '');
         }
     }, [isOpen, initialTab, diagnoses]);
@@ -388,292 +389,263 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, initialTab = 'labs', di
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Order Entry" size="xl">
             <div className="flex flex-col h-[600px] overflow-hidden">
-                {orderStep === 1 && diagnoses.length > 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gray-50">
-                        <div className="max-w-md w-full bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-                            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                <Plus className="w-5 h-5 text-primary-600" />
-                                Select Diagnosis for Orders
-                            </h3>
-                            <p className="text-sm text-gray-500 mb-6">Choose which diagnosis these orders are associated with to ensure medical necessity is documented.</p>
-
-                            <div className="space-y-2 mb-8 max-h-60 overflow-y-auto pr-1">
-                                {diagnoses.map((dx, idx) => (
-                                    <button
-                                        key={idx}
-                                        onClick={() => {
-                                            setSelectedDiagnosis(dx);
-                                            setOrderStep(2);
-                                        }}
-                                        className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:border-primary-500 hover:bg-primary-50 transition-all group flex items-center justify-between"
-                                    >
-                                        <span className="text-sm font-medium text-gray-700">{dx}</span>
-                                        <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-primary-500" />
-                                    </button>
-                                ))}
-                            </div>
-
-                            <button
-                                onClick={() => setOrderStep(2)}
-                                className="w-full py-2.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
-                            >
-                                Skip diagnosis (not recommended)
-                            </button>
-                        </div>
-                    </div>
-                ) : (
-                    <>
-                        {/* Tabs */}
-                        <div className="flex border-b border-gray-200 bg-gray-50">
-                            <div className="flex-1 flex overflow-x-auto">
-                                {['Labs', 'Imaging', 'Procedures', 'Referrals', 'Medications'].map(tab => {
-                                    const id = tab.toLowerCase();
-                                    return (
-                                        <button
-                                            key={id}
-                                            onClick={() => setActiveTab(id)}
-                                            className={`px-6 py-3 text-sm font-medium transition-colors border-r border-gray-200 whitespace-nowrap ${activeTab === id
-                                                ? 'bg-white text-primary-600 border-t-2 border-t-primary-600'
-                                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                                                }`}
-                                        >
-                                            {tab}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                            {diagnoses.length > 0 && (
+                {/* Tabs */}
+                <div className="flex border-b border-gray-200 bg-gray-50">
+                    <div className="flex-1 flex overflow-x-auto">
+                        {['Labs', 'Imaging', 'Procedures', 'Referrals', 'Medications'].map(tab => {
+                            const id = tab.toLowerCase();
+                            return (
                                 <button
-                                    onClick={() => setOrderStep(1)}
-                                    className="px-4 py-2 text-xs font-bold text-primary-700 hover:bg-primary-50 flex items-center gap-1 transition-colors border-l border-gray-200"
+                                    key={id}
+                                    onClick={() => setActiveTab(id)}
+                                    className={`px-6 py-3 text-sm font-medium transition-colors border-r border-gray-200 whitespace-nowrap ${activeTab === id
+                                        ? 'bg-white text-primary-600 border-t-2 border-t-primary-600'
+                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                        }`}
                                 >
-                                    <div className="px-2 py-0.5 bg-primary-100 rounded text-[10px] truncate max-w-[150px]">{selectedDiagnosis || 'Select Dx'}</div>
-                                    <ChevronRight className="w-3 h-3 rotate-90" />
+                                    {tab}
                                 </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Diagnosis Selector - Compact dropdown at top */}
+                {diagnoses.length > 0 && (
+                    <div className="p-3 bg-blue-50 border-b border-blue-200">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Select Diagnosis for Orders:</label>
+                        <select
+                            value={selectedDiagnosis}
+                            onChange={(e) => setSelectedDiagnosis(e.target.value)}
+                            className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                        >
+                            <option value="">-- Select Diagnosis --</option>
+                            {diagnoses.map((dx, idx) => (
+                                <option key={idx} value={dx}>{dx}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
+
+                <div className="flex-1 flex overflow-hidden">
+                    {/* Left Column: Search & Browse */}
+                    <div className="w-1/2 flex flex-col border-r border-gray-200 bg-white">
+                        <div className="p-4 border-b border-gray-100">
+                            {/* Vendor Toggle for Labs */}
+                            {activeTab === 'labs' && (
+                                <div className="flex rounded-md shadow-sm mb-3">
+                                    <button
+                                        onClick={() => setLabVendor('quest')}
+                                        className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-l-md border ${labVendor === 'quest' ? 'bg-primary-50 text-primary-700 border-primary-200' : 'bg-white text-gray-700 border-gray-200'}`}
+                                    >
+                                        Quest
+                                    </button>
+                                    <button
+                                        onClick={() => setLabVendor('labcorp')}
+                                        className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-r-md border-t border-b border-r ${labVendor === 'labcorp' ? 'bg-primary-50 text-primary-700 border-primary-200' : 'bg-white text-gray-700 border-gray-200'}`}
+                                    >
+                                        LabCorp
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Search Input */}
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                <input
+                                    type="text"
+                                    placeholder={`Search ${activeTab}...`}
+                                    className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    autoFocus
+                                />
+                            </div>
+                        </div>
+
+                        {/* Search Results */}
+                        <div className="flex-1 overflow-y-auto">
+                            {activeTab === 'medications' ? (
+                                <div className="p-4 space-y-4">
+                                    <div className="bg-blue-50 p-3 rounded-md text-sm text-blue-700 mb-4">
+                                        Use e-Prescribe for simpler workflows. Use this form to manually document prescriptions.
+                                    </div>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">Medication Name</label>
+                                            <input
+                                                className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                                                value={currentMed.name}
+                                                onChange={e => setCurrentMed({ ...currentMed, name: e.target.value })}
+                                                placeholder="e.g. Lisinopril 10mg"
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-xs font-medium text-gray-700 mb-1">Sig</label>
+                                                <input
+                                                    className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                                                    value={currentMed.sig}
+                                                    onChange={e => setCurrentMed({ ...currentMed, sig: e.target.value })}
+                                                    placeholder="e.g. 1 tab PO daily"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-gray-700 mb-1">Dispense</label>
+                                                <input
+                                                    className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                                                    value={currentMed.dispense}
+                                                    onChange={e => setCurrentMed({ ...currentMed, dispense: e.target.value })}
+                                                    placeholder="e.g. 30"
+                                                />
+                                            </div>
+                                        </div>
+                                        <button
+                                            disabled={!currentMed.name || !currentMed.sig}
+                                            onClick={() => addToCart({ name: currentMed.name })}
+                                            className="w-full py-2 bg-primary-600 text-white rounded-md text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
+                                        >
+                                            Add Medication
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : searchResults.length > 0 ? (
+                                <div className="divide-y divide-gray-100">
+                                    {searchResults.map((item, idx) => (
+                                        <SearchResultItem key={idx} item={item} />
+                                    ))}
+                                </div>
+                            ) : searchQuery.length > 2 ? (
+                                <div className="p-8 text-center">
+                                    <p className="text-gray-500 text-sm">No results found.</p>
+                                    <button
+                                        onClick={() => addToCart({ name: searchQuery })}
+                                        className="mt-2 text-primary-600 text-sm hover:underline"
+                                    >
+                                        Add "{searchQuery}" as custom order
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="p-8 text-center text-gray-400 text-sm">
+                                    Start typing to search {activeTab}...
+                                </div>
                             )}
                         </div>
 
-                        <div className="flex-1 flex overflow-hidden">
-                            {/* Left Column: Search & Browse */}
-                            <div className="w-1/2 flex flex-col border-r border-gray-200 bg-white">
-                                <div className="p-4 border-b border-gray-100">
-                                    {/* Vendor Toggle for Labs */}
-                                    {activeTab === 'labs' && (
-                                        <div className="flex rounded-md shadow-sm mb-3">
-                                            <button
-                                                onClick={() => setLabVendor('quest')}
-                                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-l-md border ${labVendor === 'quest' ? 'bg-primary-50 text-primary-700 border-primary-200' : 'bg-white text-gray-700 border-gray-200'}`}
-                                            >
-                                                Quest
-                                            </button>
-                                            <button
-                                                onClick={() => setLabVendor('labcorp')}
-                                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-r-md border-t border-b border-r ${labVendor === 'labcorp' ? 'bg-primary-50 text-primary-700 border-primary-200' : 'bg-white text-gray-700 border-gray-200'}`}
-                                            >
-                                                LabCorp
-                                            </button>
-                                        </div>
-                                    )}
+                        {/* Referral Extras */}
+                        {activeTab === 'referrals' && (
+                            <div className="p-4 border-t border-gray-200 bg-gray-50">
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Referral Reason (optional)</label>
+                                <input
+                                    className="w-full p-2 border border-gray-300 rounded-md text-sm mb-2"
+                                    placeholder="e.g. Evaluate and Treat"
+                                    value={referralReason}
+                                    onChange={e => setReferralReason(e.target.value)}
+                                />
+                            </div>
+                        )}
+                    </div>
 
-                                    {/* Search Input */}
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                        <input
-                                            type="text"
-                                            placeholder={`Search ${activeTab}...`}
-                                            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            autoFocus
-                                        />
-                                    </div>
+                    {/* Right Column: Cart */}
+                    <div className="w-1/2 flex flex-col bg-gray-50/50">
+                        <div className="p-4 bg-white border-b border-gray-200">
+                            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                                <ShoppingCart className="w-4 h-4 text-primary-600" />
+                                Pending Orders ({cart.length})
+                            </h3>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                            {cart.length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
+                                    <ShoppingCart className="w-8 h-8 mb-2 opacity-20" />
+                                    <p className="text-sm">Your cart is empty</p>
                                 </div>
-
-                                {/* Search Results */}
-                                <div className="flex-1 overflow-y-auto">
-                                    {activeTab === 'medications' ? (
-                                        <div className="p-4 space-y-4">
-                                            <div className="bg-blue-50 p-3 rounded-md text-sm text-blue-700 mb-4">
-                                                Use e-Prescribe for simpler workflows. Use this form to manually document prescriptions.
-                                            </div>
-                                            <div className="space-y-3">
-                                                <div>
-                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Medication Name</label>
-                                                    <input
-                                                        className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                                                        value={currentMed.name}
-                                                        onChange={e => setCurrentMed({ ...currentMed, name: e.target.value })}
-                                                        placeholder="e.g. Lisinopril 10mg"
-                                                    />
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <div>
-                                                        <label className="block text-xs font-medium text-gray-700 mb-1">Sig</label>
-                                                        <input
-                                                            className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                                                            value={currentMed.sig}
-                                                            onChange={e => setCurrentMed({ ...currentMed, sig: e.target.value })}
-                                                            placeholder="e.g. 1 tab PO daily"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-xs font-medium text-gray-700 mb-1">Dispense</label>
-                                                        <input
-                                                            className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                                                            value={currentMed.dispense}
-                                                            onChange={e => setCurrentMed({ ...currentMed, dispense: e.target.value })}
-                                                            placeholder="e.g. 30"
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    disabled={!currentMed.name || !currentMed.sig}
-                                                    onClick={() => addToCart({ name: currentMed.name })}
-                                                    className="w-full py-2 bg-primary-600 text-white rounded-md text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
-                                                >
-                                                    Add Medication
-                                                </button>
-                                            </div>
+                            ) : (
+                                Object.entries(groupedCart).map(([diagnosis, items]) => (
+                                    <div key={diagnosis} className="space-y-3">
+                                        <div className="flex items-center gap-2 pb-1 border-b border-gray-200">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-primary-500"></div>
+                                            <h4 className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider">
+                                                {diagnosis === 'Unassigned' ? 'Unassigned Diagnosis' : diagnosis}
+                                            </h4>
+                                            <span className="text-[10px] text-gray-300 font-normal">({items.length})</span>
                                         </div>
-                                    ) : searchResults.length > 0 ? (
-                                        <div className="divide-y divide-gray-100">
-                                            {searchResults.map((item, idx) => (
-                                                <SearchResultItem key={idx} item={item} />
+                                        <div className="space-y-3">
+                                            {items.map((item) => (
+                                                <div key={item.id} className="bg-white border border-gray-200 rounded-lg shadow-sm p-3 group hover:shadow-md transition-all">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${item.type === 'labs' ? 'bg-purple-100 text-purple-700' :
+                                                                    item.type === 'imaging' ? 'bg-blue-100 text-blue-700' :
+                                                                        item.type === 'medications' ? 'bg-green-100 text-green-700' :
+                                                                            'bg-orange-100 text-orange-700'
+                                                                    }`}>{item.type}</span>
+                                                                <span className="font-medium text-gray-900 text-sm">{item.name}</span>
+                                                            </div>
+                                                            {item.type === 'medications' && (
+                                                                <div className="text-xs text-gray-500 mt-0.5 ml-1">
+                                                                    {item.sig} • #{item.dispense}
+                                                                </div>
+                                                            )}
+                                                            {item.type === 'referrals' && item.reason && (
+                                                                <div className="text-xs text-gray-500 mt-0.5 ml-1">
+                                                                    Reason: {item.reason}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <button
+                                                            onClick={() => removeFromCart(item.id)}
+                                                            className="text-gray-300 hover:text-red-500 transition-colors p-1"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2 mt-2 bg-gray-50 p-2 rounded text-xs border border-gray-100">
+                                                        <span className="text-gray-400 font-medium whitespace-nowrap">Dx:</span>
+                                                        <select
+                                                            value={item.diagnosis}
+                                                            onChange={(e) => updateCartItemDx(item.id, e.target.value)}
+                                                            className="w-full bg-transparent border-0 focus:ring-0 text-gray-700 py-0 px-0 cursor-pointer"
+                                                        >
+                                                            <option value="">-- Unassigned --</option>
+                                                            {diagnoses.map((dx, idx) => (
+                                                                <option key={idx} value={dx}>{dx}</option>
+                                                            ))}
+                                                            <option value="General">General / Routine</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
                                             ))}
                                         </div>
-                                    ) : searchQuery.length > 2 ? (
-                                        <div className="p-8 text-center">
-                                            <p className="text-gray-500 text-sm">No results found.</p>
-                                            <button
-                                                onClick={() => addToCart({ name: searchQuery })}
-                                                className="mt-2 text-primary-600 text-sm hover:underline"
-                                            >
-                                                Add "{searchQuery}" as custom order
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className="p-8 text-center text-gray-400 text-sm">
-                                            Start typing to search {activeTab}...
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Referral Extras */}
-                                {activeTab === 'referrals' && (
-                                    <div className="p-4 border-t border-gray-200 bg-gray-50">
-                                        <label className="block text-xs font-medium text-gray-700 mb-1">Referral Reason (optional)</label>
-                                        <input
-                                            className="w-full p-2 border border-gray-300 rounded-md text-sm mb-2"
-                                            placeholder="e.g. Evaluate and Treat"
-                                            value={referralReason}
-                                            onChange={e => setReferralReason(e.target.value)}
-                                        />
                                     </div>
-                                )}
-                            </div>
-
-                            {/* Right Column: Cart */}
-                            <div className="w-1/2 flex flex-col bg-gray-50/50">
-                                <div className="p-4 bg-white border-b border-gray-200">
-                                    <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                                        <ShoppingCart className="w-4 h-4 text-primary-600" />
-                                        Pending Orders ({cart.length})
-                                    </h3>
-                                </div>
-
-                                <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                                    {cart.length === 0 ? (
-                                        <div className="h-full flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
-                                            <ShoppingCart className="w-8 h-8 mb-2 opacity-20" />
-                                            <p className="text-sm">Your cart is empty</p>
-                                        </div>
-                                    ) : (
-                                        Object.entries(groupedCart).map(([diagnosis, items]) => (
-                                            <div key={diagnosis} className="space-y-3">
-                                                <div className="flex items-center gap-2 pb-1 border-b border-gray-200">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-primary-500"></div>
-                                                    <h4 className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider">
-                                                        {diagnosis === 'Unassigned' ? 'Unassigned Diagnosis' : diagnosis}
-                                                    </h4>
-                                                    <span className="text-[10px] text-gray-300 font-normal">({items.length})</span>
-                                                </div>
-                                                <div className="space-y-3">
-                                                    {items.map((item) => (
-                                                        <div key={item.id} className="bg-white border border-gray-200 rounded-lg shadow-sm p-3 group hover:shadow-md transition-all">
-                                                            <div className="flex justify-between items-start mb-2">
-                                                                <div className="flex-1">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${item.type === 'labs' ? 'bg-purple-100 text-purple-700' :
-                                                                            item.type === 'imaging' ? 'bg-blue-100 text-blue-700' :
-                                                                                item.type === 'medications' ? 'bg-green-100 text-green-700' :
-                                                                                    'bg-orange-100 text-orange-700'
-                                                                            }`}>{item.type}</span>
-                                                                        <span className="font-medium text-gray-900 text-sm">{item.name}</span>
-                                                                    </div>
-                                                                    {item.type === 'medications' && (
-                                                                        <div className="text-xs text-gray-500 mt-0.5 ml-1">
-                                                                            {item.sig} • #{item.dispense}
-                                                                        </div>
-                                                                    )}
-                                                                    {item.type === 'referrals' && item.reason && (
-                                                                        <div className="text-xs text-gray-500 mt-0.5 ml-1">
-                                                                            Reason: {item.reason}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                                <button
-                                                                    onClick={() => removeFromCart(item.id)}
-                                                                    className="text-gray-300 hover:text-red-500 transition-colors p-1"
-                                                                >
-                                                                    <Trash2 className="w-4 h-4" />
-                                                                </button>
-                                                            </div>
-
-                                                            <div className="flex items-center gap-2 mt-2 bg-gray-50 p-2 rounded text-xs border border-gray-100">
-                                                                <span className="text-gray-400 font-medium whitespace-nowrap">Dx:</span>
-                                                                <select
-                                                                    value={item.diagnosis}
-                                                                    onChange={(e) => updateCartItemDx(item.id, e.target.value)}
-                                                                    className="w-full bg-transparent border-0 focus:ring-0 text-gray-700 py-0 px-0 cursor-pointer"
-                                                                >
-                                                                    <option value="">-- Unassigned --</option>
-                                                                    {diagnoses.map((dx, idx) => (
-                                                                        <option key={idx} value={dx}>{dx}</option>
-                                                                    ))}
-                                                                    <option value="General">General / Routine</option>
-                                                                </select>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-
-                                {/* Footer Actions */}
-                                <div className="p-4 bg-white border-t border-gray-200 flex justify-end gap-3">
-                                    <button
-                                        onClick={onClose}
-                                        className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleBatchSubmit}
-                                        disabled={cart.length === 0}
-                                        className="px-6 py-2 text-sm font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-md shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
-                                    >
-                                        <Check className="w-4 h-4" />
-                                        Sign & Submit ({cart.length})
-                                    </button>
-                                </div>
-                            </div>
+                                ))
+                            )}
                         </div>
-                    </>
-                )}
+
+                        {/* Footer Actions */}
+                        <div className="p-4 bg-white border-t border-gray-200 flex justify-end gap-3">
+                            <button
+                                onClick={onClose}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleBatchSubmit}
+                                disabled={cart.length === 0}
+                                className="px-6 py-2 text-sm font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-md shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                            >
+                                <Check className="w-4 h-4" />
+                                Sign & Submit ({cart.length})
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </Modal>
+        </Modal >
     );
 };
 

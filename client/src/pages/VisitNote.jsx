@@ -1906,26 +1906,7 @@ const VisitNote = () => {
 
                     {/* Assessment */}
                     <Section title="Assessment" defaultOpen={true}>
-                        {/* Show structured list of diagnoses when not signed and diagnoses exist */}
-                        {!isSigned && diagnoses.length > 0 && (
-                            <div className="mb-2 border border-neutral-200 rounded-md bg-white p-2">
-                                <div className="space-y-1">
-                                    {diagnoses.map((diag, idx) => (
-                                        <div key={idx} className="flex items-start justify-between py-1 px-2 hover:bg-neutral-50 rounded group transition-colors">
-                                            <div className="flex-1 text-xs text-neutral-900">
-                                                <span className="font-medium">{idx + 1}.</span> {diag}
-                                            </div>
-                                            <button
-                                                onClick={() => removeDiagnosisFromAssessment(idx)}
-                                                className="opacity-0 group-hover:opacity-100 text-neutral-300 hover:text-red-500 transition-all ml-2"
-                                            >
-                                                <X className="w-3 h-3" />
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                        {/* ICD-10 Search - Show first for easy access */}
                         {hasPrivilege('search_icd10') && (
                             <div className="mb-2">
                                 <button
@@ -1978,6 +1959,27 @@ const VisitNote = () => {
                                         <p className="text-xs text-neutral-500">No codes found for "{icd10Search}"</p>
                                     </div>
                                 )}
+                            </div>
+                        )}
+
+                        {/* Show structured list of diagnoses when not signed and diagnoses exist */}
+                        {!isSigned && diagnoses.length > 0 && (
+                            <div className="mb-2 border border-neutral-200 rounded-md bg-white p-2">
+                                <div className="space-y-1">
+                                    {diagnoses.map((diag, idx) => (
+                                        <div key={idx} className="flex items-start justify-between py-1 px-2 hover:bg-neutral-50 rounded group transition-colors">
+                                            <div className="flex-1 text-xs text-neutral-900">
+                                                <span className="font-medium">{idx + 1}.</span> {diag}
+                                            </div>
+                                            <button
+                                                onClick={() => removeDiagnosisFromAssessment(idx)}
+                                                className="opacity-0 group-hover:opacity-100 text-neutral-300 hover:text-red-500 transition-all ml-2"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
                         {/* Only show textarea when signed OR when there are no structured diagnoses */}

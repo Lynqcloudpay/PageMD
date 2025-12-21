@@ -288,7 +288,13 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
                     </div>
 
                     <div className="space-y-1 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar border border-gray-100 rounded-xl p-2 bg-gray-50/50">
-                      {(medicationSearch.length >= 2 ? medicationResults : []).map((m, i) => (
+                      {searching && medicationSearch.length >= 2 && (
+                        <div className="p-8 text-center text-primary-600 text-sm">
+                          <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600 mb-2"></div>
+                          <p>Searching medications...</p>
+                        </div>
+                      )}
+                      {!searching && (medicationSearch.length >= 2 ? medicationResults : []).map((m, i) => (
                         <button key={i} onClick={() => handleSelectMedication(m)} className="w-full flex items-center justify-between p-3 rounded-lg bg-white border border-gray-100 hover:border-primary-200 hover:bg-primary-50 transition-all group">
                           <div className="flex items-center gap-3">
                             <div className="p-2 bg-primary-50 rounded-md text-primary-600"><Pill className="w-4 h-4" /></div>
@@ -300,10 +306,10 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
                           <Plus className="w-4 h-4 text-gray-300 group-hover:text-primary-500" />
                         </button>
                       ))}
-                      {medicationSearch.length < 2 && (
-                        <div className="p-8 text-center text-gray-400 text-sm italic">Enter at least 2 characters to search medications...</div>
+                      {!searching && medicationSearch.length < 2 && (
+                        <div className="p-8 text-center text-gray-400 text-sm italic">Type at least 2 characters to search...</div>
                       )}
-                      {medicationSearch.length >= 2 && medicationResults.length === 0 && !searching && (
+                      {!searching && medicationSearch.length >= 2 && medicationResults.length === 0 && (
                         <div className="p-8 text-center text-gray-400 text-sm">No results found for "{medicationSearch}"</div>
                       )}
                     </div>
