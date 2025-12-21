@@ -14,17 +14,18 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Pill, Search, X, AlertTriangle, Check, Building2, Phone,
   ChevronRight, MapPin, ChevronLeft, Loader, AlertCircle,
-  CheckCircle2, FileText, ShoppingCart
+  CheckCircle2, FileText, ShoppingCart, Plus
 } from 'lucide-react';
 import Modal from './ui/Modal';
 import { useAuth } from '../context/AuthContext';
-import { medicationsAPI, prescriptionsAPI, pharmaciesAPI } from '../services/api';
+import { medicationsAPI, prescriptionsAPI, pharmaciesAPI, patientsAPI } from '../services/api';
 
 const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName, visitId, diagnoses = [], currentMedications = [] }) => {
   const { user } = useAuth();
-  const [step, setStep] = useState(1); // 1: medication & sig, 2: pharmacy, 3: review
+  const [step, setStep] = useState(1); // 1: Order Entry (Med/Pharmacy), 2: Review
   const [loading, setLoading] = useState(false);
   const [selectedDiagnosis, setSelectedDiagnosis] = useState('');
+  const [patient, setPatient] = useState(null);
 
   // Medication search
   const [medicationSearch, setMedicationSearch] = useState('');
@@ -43,7 +44,6 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
     additionalInstructions: ''
   });
   const [quantity, setQuantity] = useState('30');
-  const [daysSupply, setDaysSupply] = useState('');
   const [refills, setRefills] = useState('0');
   const [substitutionAllowed, setSubstitutionAllowed] = useState(true);
 
@@ -51,7 +51,7 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
   const [pharmacySearch, setPharmacySearch] = useState('');
   const [pharmacyResults, setPharmacyResults] = useState([]);
   const [selectedPharmacy, setSelectedPharmacy] = useState(null);
-  const [useLocation, setUseLocation] = useState(false);
+  const [showPharmacySearch, setShowPharmacySearch] = useState(false);
 
   // Interactions and warnings
   const [interactions, setInteractions] = useState([]);
@@ -74,23 +74,31 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
     'As needed', 'At bedtime', 'With meals', 'Before meals'
   ];
 
-  // Common medications for quick access
-  const commonMedications = [
-    { name: 'Lisinopril', rxcui: '29046', strength: '10 mg tablet' },
-    { name: 'Metformin', rxcui: '6809', strength: '500 mg tablet' },
-    { name: 'Atorvastatin', rxcui: '83367', strength: '20 mg tablet' },
-    { name: 'Amlodipine', rxcui: '17767', strength: '5 mg tablet' },
-    { name: 'Omeprazole', rxcui: '7646', strength: '20 mg capsule' },
-    { name: 'Albuterol', rxcui: '435', strength: '90 mcg/actuation inhaler' },
-    { name: 'Gabapentin', rxcui: '441467', strength: '300 mg capsule' },
-    { name: 'Sertraline', rxcui: '36437', strength: '50 mg tablet' },
-    { name: 'Levothyroxine', rxcui: '10224', strength: '75 mcg tablet' },
-    { name: 'Losartan', rxcui: '82122', strength: '50 mg tablet' },
-  ];
-
-  // Search medications
+  // Fetch Patient Data for Pharmacy on File
   useEffect(() => {
-    if (medicationSearch.length < 2) {
+    if (isOpen && patientId) {
+      patientsAPI.get(patientId).then(res => {
+        const pData = res.data || res;
+        setPatient(pData);
+        if (pData.pharmacy_name) {
+          setSelectedPharmacy({
+            id: 'on-file',
+            name: pData.pharmacy_name,
+            address: { full: pData.pharmacy_address },
+            phone: pData.pharmacy_phone,
+            onFile: true
+          });
+        }
+      });
+    }
+  }, [isOpen, patientId]);
+
+  // Medication search logic - "after 2 words" or 3+ characters
+  useEffect(() => {
+    const words = medicationSearch.trim().split(/\s+/);
+    const shouldSearch = words.length >= 2 || (words.length === 1 && words[0].length >= 2);
+
+    if (!shouldSearch) {
       setMedicationResults([]);
       return;
     }
@@ -108,7 +116,7 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
       } finally {
         setSearching(false);
       }
-    }, 300);
+    }, 250);
 
     return () => clearTimeout(searchTimer);
   }, [medicationSearch]);
@@ -125,7 +133,6 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
       ]).then(([detailsRes, interactionRes]) => {
         if (detailsRes?.data) {
           setMedicationDetails(detailsRes.data);
-          // Auto-fill logic
           const struct = detailsRes.data.structures?.[0];
           if (struct) {
             setSigStructured(prev => ({
@@ -145,26 +152,18 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
 
   // Pharmacy search
   useEffect(() => {
-    if (step === 2 && (pharmacySearch.length >= 2 || useLocation)) {
+    if (showPharmacySearch && pharmacySearch.length >= 2) {
       const searchTimer = setTimeout(async () => {
         try {
-          let response;
-          if (useLocation && navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-              response = await pharmaciesAPI.getNearby({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-              setPharmacyResults(response.data || []);
-            });
-          } else {
-            response = await pharmaciesAPI.search({ query: pharmacySearch });
-            setPharmacyResults(response.data || []);
-          }
+          const response = await pharmaciesAPI.search({ query: pharmacySearch });
+          setPharmacyResults(response.data || []);
         } catch (err) {
           console.error(err);
         }
       }, 300);
       return () => clearTimeout(searchTimer);
     }
-  }, [pharmacySearch, useLocation, step]);
+  }, [pharmacySearch, showPharmacySearch]);
 
   // Build sig
   const buildSigText = useCallback(() => {
@@ -251,42 +250,36 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
     <Modal isOpen={isOpen} onClose={handleClose} title="Integrated E-Prescribe" size="xl">
       <div className="flex flex-col h-full bg-white rounded-xl overflow-hidden">
 
-        {/* Progress Header */}
-        <div className="px-8 py-6 bg-gray-50 border-b border-gray-100">
-          <div className="flex items-center justify-between max-w-2xl mx-auto relative">
-            <div className="absolute top-5 left-0 w-full h-0.5 bg-gray-200 z-0"></div>
-            <div className="absolute top-5 left-0 h-0.5 bg-primary-500 z-0 transition-all duration-500" style={{ width: `${(step - 1) * 50}%`, backgroundColor: '#3B82F6' }}></div>
-
-            {[1, 2, 3].map(s => (
-              <div key={s} className="relative z-10 flex flex-col items-center">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${step >= s ? 'bg-primary-500 border-primary-500 text-white shadow-lg' : 'bg-white border-gray-200 text-gray-400'
-                  }`} style={step >= s ? { backgroundColor: '#3B82F6', borderColor: '#3B82F6' } : {}}>
-                  {step > s ? <Check className="w-5 h-5" /> : s}
-                </div>
-                <span className={`text-[10px] font-bold uppercase mt-2 tracking-tighter ${step >= s ? 'text-primary-600' : 'text-gray-400'}`}>
-                  {s === 1 ? 'Medication' : s === 2 ? 'Pharmacy' : 'Review'}
-                </span>
-              </div>
-            ))}
+        {/* Improved Step Header */}
+        <div className="px-8 py-4 bg-gray-50 border-b border-gray-100">
+          <div className="flex items-center justify-center gap-8">
+            <div className={`flex items-center gap-2 pb-2 border-b-2 transition-all ${step === 1 ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-400'}`}>
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${step === 1 ? 'bg-primary-500 text-white' : 'bg-gray-200 text-gray-500'}`}>1</span>
+              <span className="text-sm font-bold">Order Entry</span>
+            </div>
+            <div className={`flex items-center gap-2 pb-2 border-b-2 transition-all ${step === 2 ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-400'}`}>
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${step === 2 ? 'bg-primary-500 text-white' : 'bg-gray-200 text-gray-500'}`}>2</span>
+              <span className="text-sm font-bold">Review & Sign</span>
+            </div>
           </div>
         </div>
 
-        {/* Content area */}
         <div className="flex-1 overflow-y-auto p-6 min-h-[500px]">
           {error && <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg text-red-700 text-sm flex gap-2"><AlertCircle className="w-4 h-4" />{error}</div>}
           {success && <div className="mb-4 p-3 bg-green-50 border border-green-100 rounded-lg text-green-700 text-sm flex gap-2"><CheckCircle2 className="w-4 h-4" />{success}</div>}
 
           {step === 1 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
-              {/* Left Column: Search */}
+              {/* Left Column: Medication Search & Selection */}
               <div className="space-y-4">
                 {!selectedMedication ? (
-                  <>
+                  <div className="space-y-4">
+                    <label className="block text-xs font-bold text-gray-500 uppercase">Search Medication</label>
                     <div className="relative group">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-primary-500" />
                       <input
                         type="text"
-                        placeholder="Search for a medication..."
+                        placeholder="Type medication name (e.g. Lisinopril)..."
                         className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-primary-50 focus:border-primary-500 outline-none transition-all"
                         value={medicationSearch}
                         onChange={e => setMedicationSearch(e.target.value)}
@@ -295,190 +288,231 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
                       {searching && <Loader className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-primary-500" />}
                     </div>
 
-                    <div className="space-y-1 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                      {(medicationSearch.length >= 2 ? medicationResults : commonMedications).map((m, i) => (
-                        <button key={i} onClick={() => handleSelectMedication(m)} className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-primary-50 transition-colors group">
+                    <div className="space-y-1 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar border border-gray-100 rounded-xl p-2 bg-gray-50/50">
+                      {(medicationSearch.length >= 2 ? medicationResults : []).map((m, i) => (
+                        <button key={i} onClick={() => handleSelectMedication(m)} className="w-full flex items-center justify-between p-3 rounded-lg bg-white border border-gray-100 hover:border-primary-200 hover:bg-primary-50 transition-all group">
                           <div className="flex items-center gap-3">
-                            <div className="p-2 bg-white rounded-md border border-gray-100 text-primary-600"><Pill className="w-4 h-4" /></div>
-                            <div className="text-left">
-                              <p className="text-sm font-semibold text-gray-900 leading-none">{m.name}</p>
-                              {m.strength && <p className="text-[11px] text-gray-500 mt-1">{m.strength}</p>}
+                            <div className="p-2 bg-primary-50 rounded-md text-primary-600"><Pill className="w-4 h-4" /></div>
+                            <div className="text-left leading-tight">
+                              <p className="text-sm font-bold text-gray-900">{m.name}</p>
+                              {m.strength && <p className="text-[11px] text-gray-500">{m.strength}</p>}
                             </div>
                           </div>
-                          <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-primary-500 group-hover:translate-x-1 transition-all" />
+                          <Plus className="w-4 h-4 text-gray-300 group-hover:text-primary-500" />
                         </button>
                       ))}
+                      {medicationSearch.length < 2 && (
+                        <div className="p-8 text-center text-gray-400 text-sm italic">Enter at least 2 characters to search medications...</div>
+                      )}
+                      {medicationSearch.length >= 2 && medicationResults.length === 0 && !searching && (
+                        <div className="p-8 text-center text-gray-400 text-sm">No results found for "{medicationSearch}"</div>
+                      )}
                     </div>
-                  </>
+                  </div>
                 ) : (
-                  <div className="space-y-4 animate-in fade-in slide-in-from-left-4">
-                    <div className="p-4 bg-primary-600 rounded-xl text-white shadow-xl relative overflow-hidden">
+                  <div className="space-y-6 animate-in slide-in-from-left-4 duration-300">
+                    <div className="p-4 bg-primary-600 rounded-xl text-white shadow-lg relative overflow-hidden">
                       <Pill className="absolute -right-4 -bottom-4 w-24 h-24 opacity-10 rotate-12" />
                       <div className="flex justify-between items-start relative z-10">
                         <div>
-                          <h3 className="text-xl font-bold font-display">{selectedMedication.name}</h3>
-                          <p className="text-primary-100 text-xs mt-1">RxNorm: {selectedMedication.rxcui}</p>
+                          <h3 className="text-xl font-bold">{selectedMedication.name}</h3>
+                          <p className="text-primary-100 text-[10px] mt-1">RxNorm: {selectedMedication.rxcui}</p>
                         </div>
-                        <button onClick={() => { setSelectedMedication(null); setMedicationDetails(null); }} className="p-1 hover:bg-white/10 rounded-full transition-colors"><X className="w-5 h-5" /></button>
+                        <button onClick={() => { setSelectedMedication(null); setMedicationDetails(null); }} className="p-1 hover:bg-white/20 rounded-full transition-colors"><X className="w-5 h-5" /></button>
                       </div>
                     </div>
 
                     {showInteractionWarning && interactions.length > 0 && (
-                      <div className="p-3 bg-red-50 border border-red-100 rounded-lg space-y-2">
-                        <div className="flex items-center gap-2 text-red-700 font-bold text-xs uppercase"><AlertTriangle className="w-4 h-4" /> Drug Interaction Risk</div>
-                        {interactions.map((i, idx) => <p key={idx} className="text-red-600 text-[11px] leading-tight">• {i.description}</p>)}
+                      <div className="p-3 bg-red-50 border border-red-100 rounded-lg">
+                        <div className="flex items-center gap-2 text-red-700 font-bold text-xs uppercase mb-2"><AlertTriangle className="w-4 h-4" /> Drug Interaction Risk</div>
+                        <div className="space-y-1">
+                          {interactions.map((i, idx) => <p key={idx} className="text-red-600 text-[11px] leading-tight">• {i.description}</p>)}
+                        </div>
                       </div>
                     )}
 
-                    <div className="pt-2">
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Associate Diagnosis</label>
-                      <select
-                        value={selectedDiagnosis}
-                        onChange={e => setSelectedDiagnosis(e.target.value)}
-                        className="w-full p-2 bg-white border border-gray-200 rounded-lg text-xs mb-4 outline-none focus:ring-2 focus:ring-primary-500"
-                      >
-                        <option value="">Select diagnosis...</option>
-                        {diagnoses.map((d, i) => (
-                          <option key={i} value={d.code}>{d.code} - {d.description}</option>
-                        ))}
-                      </select>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Associate Diagnosis</label>
+                        <select
+                          value={selectedDiagnosis}
+                          onChange={e => setSelectedDiagnosis(e.target.value)}
+                          className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                        >
+                          <option value="">-- Select Diagnosis --</option>
+                          {diagnoses.map((d, i) => {
+                            const dxStr = typeof d === 'string' ? d : `${d.code} - ${d.description}`;
+                            return <option key={i} value={dxStr}>{dxStr}</option>;
+                          })}
+                        </select>
+                      </div>
 
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Instructions Helper</p>
-                      <div className="grid grid-cols-1 gap-2">
-                        {[
-                          { l: 'Once daily', d: selectedMedication.strength || '1 Tab', f: 'Once daily' },
-                          { l: 'Twice daily', d: selectedMedication.strength || '1 Tab', f: 'Twice daily' },
-                          { l: 'As needed (PRN)', d: selectedMedication.strength || '1 Tab', f: 'As needed', p: true }
-                        ].map((s, i) => (
-                          <button key={i} onClick={() => setSigStructured({ ...sigStructured, dose: s.d, frequency: s.f, asNeeded: !!s.p })} className="w-full text-left p-2.5 rounded-lg border border-gray-100 hover:border-primary-200 hover:bg-white transition-all">
-                            <span className="text-xs font-bold text-gray-700">{s.l}</span>
-                            <span className="text-[11px] text-gray-400 block italic leading-none">{s.d} {s.f}</span>
+                      <div className="p-4 bg-gray-50 border border-gray-200 rounded-2xl">
+                        <div className="flex justify-between items-center mb-3">
+                          <label className="text-xs font-bold text-gray-500 uppercase">Pharmacy</label>
+                          <button onClick={() => setShowPharmacySearch(!showPharmacySearch)} className="text-[10px] font-bold text-primary-600 hover:underline">
+                            {showPharmacySearch ? 'Cancel' : 'Change Pharmacy'}
                           </button>
-                        ))}
+                        </div>
+
+                        {showPharmacySearch ? (
+                          <div className="space-y-3">
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                              <input type="text" value={pharmacySearch} onChange={e => setPharmacySearch(e.target.value)} placeholder="Search pharmacies..." className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-xs" />
+                            </div>
+                            <div className="space-y-1 max-h-[150px] overflow-y-auto">
+                              {pharmacyResults.map(p => (
+                                <button key={p.id} onClick={() => { setSelectedPharmacy(p); setShowPharmacySearch(false); }} className="w-full text-left p-2 rounded hover:bg-primary-50 text-[11px] border border-transparent hover:border-primary-100">
+                                  <p className="font-bold text-gray-800">{p.name}</p>
+                                  <p className="text-gray-500 truncate">{p.address?.full}</p>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 bg-white rounded-lg border border-gray-200 text-gray-400"><Building2 className="w-5 h-5" /></div>
+                            <div>
+                              {selectedPharmacy ? (
+                                <>
+                                  <p className="text-sm font-bold text-gray-900">{selectedPharmacy.name}</p>
+                                  <p className="text-[11px] text-gray-500 leading-tight mt-0.5">{selectedPharmacy.address?.full}</p>
+                                  {selectedPharmacy.onFile && <span className="text-[9px] font-bold text-green-600 uppercase mt-1 inline-block">On File</span>}
+                                </>
+                              ) : (
+                                <p className="text-xs text-gray-400 italic mt-1">No pharmacy selected</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Right Column: Details */}
-              <div className={`space-y-6 ${!selectedMedication ? 'opacity-20 pointer-events-none' : 'animate-in fade-in slide-in-from-right-4'}`}>
+              {/* Right Column: Sig Details & Build */}
+              <div className={`space-y-6 ${!selectedMedication ? 'opacity-20 pointer-events-none' : 'animate-in slide-in-from-right-4 duration-300'}`}>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Dose Strength</label>
-                    <input type="text" value={sigStructured.dose} onChange={e => setSigStructured({ ...sigStructured, dose: e.target.value })} className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-50 focus:border-primary-500 text-sm" placeholder="e.g. 10mg" />
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Dose Strength</label>
+                    <input type="text" value={sigStructured.dose} onChange={e => setSigStructured({ ...sigStructured, dose: e.target.value })} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-50 focus:border-primary-500 text-sm" placeholder="e.g. 10mg" />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Route</label>
-                    <select value={sigStructured.route} onChange={e => setSigStructured({ ...sigStructured, route: e.target.value })} className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-50 focus:border-primary-500 text-sm">
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Route</label>
+                    <select value={sigStructured.route} onChange={e => setSigStructured({ ...sigStructured, route: e.target.value })} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-50 focus:border-primary-500 text-sm">
                       {routes.map(r => <option key={r} value={r}>{r}</option>)}
                     </select>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Frequency</label>
-                  <select value={sigStructured.frequency} onChange={e => setSigStructured({ ...sigStructured, frequency: e.target.value })} className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-50 focus:border-primary-500 text-sm">
-                    <option value="">Select...</option>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-5">Frequency & Common Instructions</label>
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    {[
+                      { l: 'Once daily', f: 'Once daily' },
+                      { l: 'Twice daily', f: 'Twice daily' },
+                      { l: 'Three times daily', f: 'Three times daily' },
+                      { l: 'Every 8 hours', f: 'Every 8 hours' },
+                      { l: 'At bedtime', f: 'At bedtime' },
+                      { l: 'As needed (PRN)', f: 'As needed', p: true }
+                    ].map((s, i) => (
+                      <button key={i} onClick={() => setSigStructured({ ...sigStructured, frequency: s.f, asNeeded: !!s.p })}
+                        className={`text-left px-3 py-2 rounded-lg border text-[11px] font-medium transition-all ${sigStructured.frequency === s.f ? 'bg-primary-50 border-primary-200 text-primary-700' : 'bg-white border-gray-100 hover:border-gray-300 text-gray-600'}`}>
+                        {s.l}
+                      </button>
+                    ))}
+                  </div>
+                  <select value={sigStructured.frequency} onChange={e => setSigStructured({ ...sigStructured, frequency: e.target.value })} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none">
+                    <option value="">Other frequency...</option>
                     {frequencies.map(f => <option key={f} value={f}>{f}</option>)}
                   </select>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Qty</label>
-                    <input type="number" value={quantity} onChange={e => setQuantity(e.target.value)} className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm" />
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Quantity</label>
+                    <input type="number" value={quantity} onChange={e => setQuantity(e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm" />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Refills</label>
-                    <input type="number" value={refills} onChange={e => setRefills(e.target.value)} className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm" />
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Refills</label>
+                    <input type="number" value={refills} onChange={e => setRefills(e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm" />
                   </div>
                   <div className="flex flex-col justify-end">
-                    <label className="flex items-center gap-2 cursor-pointer mb-2">
-                      <input type="checkbox" checked={sigStructured.asNeeded} onChange={e => setSigStructured({ ...sigStructured, asNeeded: e.target.checked })} className="rounded text-primary-500" />
-                      <span className="text-[11px] font-bold text-gray-600">PRN</span>
+                    <label className="flex items-center gap-2 cursor-pointer mb-3 px-2">
+                      <input type="checkbox" checked={substitutionAllowed} onChange={e => setSubstitutionAllowed(e.target.checked)} className="rounded text-primary-500" />
+                      <span className="text-[10px] font-bold text-gray-600">GENERIC OK</span>
                     </label>
                   </div>
                 </div>
 
-                <div className="p-4 bg-gray-900 rounded-xl text-primary-50 relative group">
+                <div className="p-4 bg-gray-900 rounded-2xl text-primary-50 relative group">
                   <FileText className="absolute right-3 top-3 w-4 h-4 text-gray-700" />
-                  <p className="text-[10px] font-bold text-primary-500 uppercase tracking-widest mb-1.5">Sig Translation</p>
-                  <p className="text-sm font-mono italic opacity-90">{buildSigText() || 'Enter instructions...'}</p>
+                  <p className="text-[10px] font-bold text-primary-500 uppercase tracking-widest mb-2">Sig Translation</p>
+                  <p className="text-sm font-medium italic opacity-90 leading-tight">Take {buildSigText() || '...'}</p>
                 </div>
               </div>
             </div>
           )}
 
           {step === 2 && (
-            <div className="space-y-6 max-w-lg mx-auto py-8">
-              <div className="text-center space-y-2 mb-8">
-                <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto text-primary-600"><Building2 className="w-8 h-8" /></div>
-                <h3 className="text-xl font-bold font-display">Select Pharmacy</h3>
-                <p className="text-sm text-gray-500">Search for the local pharmacy where the patient will pick up.</p>
+            <div className="max-w-2xl mx-auto space-y-8 animate-in zoom-in-95 duration-300">
+              <div className="text-center">
+                <CheckCircle2 className="w-12 h-12 text-primary-500 mx-auto mb-2" />
+                <h3 className="text-2xl font-bold text-gray-900">Review Prescription</h3>
+                <p className="text-gray-500 text-sm">Verify the details below before signing and sending.</p>
               </div>
 
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input type="text" value={pharmacySearch} onChange={e => setPharmacySearch(e.target.value)} placeholder="Search by name, city, or ZIP..." className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-4 focus:ring-primary-50" />
-              </div>
-
-              <div className="space-y-2 h-[300px] overflow-y-auto">
-                {pharmacyResults.length > 0 ? (
-                  pharmacyResults.map(p => (
-                    <button key={p.id} onClick={() => { setSelectedPharmacy(p); setStep(3); }} className="w-full p-4 border border-gray-100 rounded-xl hover:bg-primary-50 text-left transition-all">
-                      <p className="font-bold text-gray-900">{p.name}</p>
-                      <p className="text-xs text-gray-500 mt-1">{p.address?.full}</p>
-                      {p.integrationEnabled && <span className="mt-2 inline-block px-1.5 py-0.5 rounded bg-green-100 text-green-700 text-[10px] font-bold">EPCS-READY</span>}
-                    </button>
-                  ))
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                    <MapPin className="w-12 h-12 opacity-10 mb-2" />
-                    <p className="text-sm">Search to see results</p>
+              <div className="bg-white border-2 border-primary-100 rounded-3xl overflow-hidden shadow-xl">
+                <div className="p-6 bg-primary-50 border-b border-primary-100 flex justify-between items-center">
+                  <div>
+                    <p className="text-[10px] font-bold text-primary-400 uppercase tracking-widest mb-1">Medication & Strength</p>
+                    <p className="text-xl font-black text-primary-900">{selectedMedication?.name}</p>
                   </div>
-                )}
-              </div>
-
-              <button onClick={() => { setSelectedPharmacy(null); setStep(3); }} className="w-full py-3 text-sm font-semibold text-gray-500 hover:bg-gray-50 rounded-xl transition-colors">Skip for now (Save as Draft)</button>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="max-w-2xl mx-auto space-y-6 py-4">
-              <h3 className="text-2xl font-bold text-gray-900 font-display">Verify Order</h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Medication</p>
-                  <p className="text-lg font-bold text-gray-900">{selectedMedication?.name}</p>
-                  <p className="text-sm text-gray-500 mt-1">{buildSigText()}</p>
+                  <Pill className="w-10 h-10 text-primary-200" />
                 </div>
-                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Pharmacy</p>
-                  {selectedPharmacy ? (
-                    <>
-                      <p className="text-lg font-bold text-gray-900">{selectedPharmacy.name}</p>
-                      <p className="text-sm text-gray-500 mt-1">{selectedPharmacy.address?.full}</p>
-                    </>
-                  ) : <p className="text-gray-400 italic">No pharmacy selected (Draft)</p>}
-                </div>
-              </div>
 
-              <div className="p-6 bg-primary-900 rounded-3xl text-white shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12"><FileText className="w-32 h-32" /></div>
-                <div className="grid grid-cols-3 gap-8 relative z-10">
-                  <div>
-                    <label className="text-[10px] font-black text-primary-400 uppercase mb-1 block">Quantity</label>
-                    <p className="text-2xl font-black">{quantity}</p>
+                <div className="p-8 space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Sig</p>
+                        <p className="text-base font-bold text-gray-900 leading-tight">{buildSigText()}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Diagnosis</p>
+                        <p className="text-sm font-medium text-gray-700">{selectedDiagnosis || 'General / Not Specified'}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Qty</p>
+                          <p className="text-lg font-black text-gray-900">{quantity}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Refills</p>
+                          <p className="text-lg font-black text-gray-900">{refills}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Substitution Allowed</p>
+                        <p className="text-sm font-bold text-gray-900">{substitutionAllowed ? 'YES' : 'NO'}</p>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-[10px] font-black text-primary-400 uppercase mb-1 block">Refills</label>
-                    <p className="text-2xl font-black">{refills}</p>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-primary-400 uppercase mb-1 block">Sub</label>
-                    <p className="text-2xl font-black">{substitutionAllowed ? 'YES' : 'NO'}</p>
+
+                  <div className="pt-6 border-t border-gray-100">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-gray-50 rounded-xl text-gray-400"><Building2 className="w-6 h-6" /></div>
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Destination Pharmacy</p>
+                        <p className="text-base font-bold text-gray-900">{selectedPharmacy?.name || 'TBD - Draft Only'}</p>
+                        <p className="text-xs text-gray-500">{selectedPharmacy?.address?.full}</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -489,18 +523,30 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
         {/* Action Footer */}
         <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
           <button onClick={() => step > 1 ? setStep(step - 1) : handleClose()} className="px-6 py-2.5 text-gray-600 hover:bg-white rounded-xl font-bold text-sm transition-all flex items-center gap-2">
-            <ChevronLeft className="w-4 h-4" /> {step === 1 ? 'Cancel' : 'Back'}
+            <ChevronLeft className="w-4 h-4" /> {step === 1 ? 'Cancel' : 'Back to Edit'}
           </button>
 
-          {step < 3 ? (
-            <button onClick={() => setStep(step + 1)} disabled={step === 1 && (!selectedMedication || !sigStructured.dose || !sigStructured.frequency)} className="px-8 py-2.5 bg-primary-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-primary-500/30 hover:bg-primary-700 transition-all flex items-center gap-2 disabled:opacity-50" style={{ backgroundColor: '#3B82F6' }}>
-              Next Step <ChevronRight className="w-4 h-4" />
-            </button>
-          ) : (
-            <button onClick={handleSubmit} disabled={loading} className="px-10 py-3 bg-primary-600 text-white rounded-xl font-bold text-lg shadow-xl shadow-primary-500/40 hover:scale-105 active:scale-95 transition-all flex items-center gap-3" style={{ backgroundColor: '#3B82F6' }}>
-              {loading ? <Loader className="w-5 h-5 animate-spin" /> : <><CheckCircle2 className="w-6 h-6" /> Send Prescription</>}
-            </button>
-          )}
+          <div className="flex gap-3">
+            {step === 1 ? (
+              <button
+                onClick={() => setStep(2)}
+                disabled={!selectedMedication || !sigStructured.dose || !sigStructured.frequency}
+                className="px-8 py-2.5 bg-primary-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-primary-500/20 hover:bg-primary-700 transition-all flex items-center gap-2 disabled:opacity-50"
+                style={{ backgroundColor: '#3B82F6' }}
+              >
+                Review & Sign <ChevronRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="px-10 py-3 bg-primary-600 text-white rounded-xl font-bold text-lg shadow-xl shadow-primary-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3"
+                style={{ backgroundColor: '#3B82F6' }}
+              >
+                {loading ? <Loader className="w-5 h-5 animate-spin" /> : <><CheckCircle2 className="w-6 h-6" /> Sign & Send</>}
+              </button>
+            )}
+          </div>
         </div>
 
       </div>
