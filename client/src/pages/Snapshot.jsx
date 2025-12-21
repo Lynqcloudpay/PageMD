@@ -1084,7 +1084,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
         try {
             // We don't have a specific delete photo API, so we update with null
-            await patientsAPI.update(id, { photo_url: null });
+            await patientsAPI.update(id, { photoUrl: null });
             setPatient(prev => ({ ...prev, photo_url: null }));
             window.dispatchEvent(new CustomEvent('patient-data-updated'));
         } catch (error) {
