@@ -39,23 +39,23 @@ api.interceptors.response.use(
         window.dispatchEvent(new CustomEvent('auth:unauthorized'));
       }
     }
-    
+
     // Handle 403 Forbidden - insufficient permissions
     if (error.response?.status === 403) {
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.error || 
-                          'You do not have permission to perform this action';
+      const errorMessage = error.response?.data?.message ||
+        error.response?.data?.error ||
+        'You do not have permission to perform this action';
       const missingPermission = error.response?.data?.missing || error.response?.data?.required;
-      
+
       let toastMessage = errorMessage;
       if (missingPermission) {
         toastMessage = `Permission denied: ${missingPermission}`;
       }
-      
+
       showError(toastMessage, 5000);
       console.warn('403 Forbidden:', errorMessage, missingPermission ? `Missing: ${missingPermission}` : '');
     }
-    
+
     return Promise.reject(error);
   }
 );
@@ -105,7 +105,7 @@ export const visitsAPI = {
     const params = providerId ? { providerId } : {};
     return api.get(`/visits/today-draft/${patientId}`, { params });
   },
-  openToday: (patientId, noteType = 'office_visit', providerId) => 
+  openToday: (patientId, noteType = 'office_visit', providerId) =>
     api.post(`/visits/open-today/${patientId}`, { noteType, providerId }),
   findOrCreate: (patientId, visitType) => api.post('/visits/find-or-create', { patientId, visitType }),
   generateSummary: (id) => api.post(`/visits/${id}/summary`),
@@ -130,6 +130,7 @@ export const documentsAPI = {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
   getFile: (id) => api.get(`/documents/${id}/file`, { responseType: 'blob' }),
+  delete: (id) => api.delete(`/documents/${id}`),
 };
 
 // Referrals
@@ -278,11 +279,11 @@ export const eprescribeAPI = {
   createDraft: (patientId, data) => api.post(`/eprescribe/patient/${patientId}/prescriptions`, data),
   sendPrescription: (prescriptionId) => api.post(`/eprescribe/prescriptions/${prescriptionId}/send`),
   cancelPrescription: (prescriptionId, reason) => api.post(`/eprescribe/prescriptions/${prescriptionId}/cancel`, { reason }),
-  searchPharmacies: (query, location) => api.get('/eprescribe/pharmacies/search', { 
-    params: { query, ...location } 
+  searchPharmacies: (query, location) => api.get('/eprescribe/pharmacies/search', {
+    params: { query, ...location }
   }),
-  searchMedications: (query) => api.get('/eprescribe/medications/search', { 
-    params: { query } 
+  searchMedications: (query) => api.get('/eprescribe/medications/search', {
+    params: { query }
   }),
 };
 

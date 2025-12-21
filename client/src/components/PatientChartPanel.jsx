@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, FileText, Image, FlaskConical, Pill, ExternalLink, Database, CreditCard, Calendar, Clock, CheckCircle2, XCircle, UserCircle, FileImage, Trash2, Plus, Activity } from 'lucide-react';
 import { visitsAPI, documentsAPI, ordersAPI, referralsAPI, patientsAPI, eprescribeAPI } from '../services/api';
 import { format } from 'date-fns';
@@ -7,14 +7,14 @@ import DoseSpotPrescribe from './DoseSpotPrescribe';
 const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history', initialDataTab = 'problems', onOpenDataManager }) => {
     const [activeTab, setActiveTab] = useState(initialTab);
     const [loading, setLoading] = useState(false);
-    
+
     // History Panel State
     const [notes, setNotes] = useState([]);
     const [labs, setLabs] = useState([]);
     const [images, setImages] = useState([]);
     const [documents, setDocuments] = useState([]);
     const [expandedNotes, setExpandedNotes] = useState({});
-    
+
     // Patient Hub State
     const [patient, setPatient] = useState(null);
     const [referrals, setReferrals] = useState([]);
@@ -31,7 +31,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
         pharmacyAddress: '',
         pharmacyPhone: ''
     });
-    
+
 
     useEffect(() => {
         if (isOpen && patientId) {
@@ -47,7 +47,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
             const patientResponse = await patientsAPI.get(patientId);
             const patientData = patientResponse.data || patientResponse;
             setPatient(patientData);
-            
+
             if (patientData) {
                 setFormData({
                     insuranceProvider: patientData.insurance_provider || '',
@@ -82,11 +82,11 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
             try {
                 const ordersResponse = await ordersAPI.getByPatient(patientId);
                 const orders = ordersResponse.data || [];
-                
+
                 // Filter prescriptions
                 const rxOrders = orders.filter(order => order.order_type === 'rx');
                 setPrescriptions(rxOrders);
-                
+
                 // Filter labs
                 const labOrders = orders.filter(order => order.order_type === 'lab');
                 setLabs(labOrders);
@@ -109,7 +109,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
             try {
                 const eprescribeStatus = await eprescribeAPI.getStatus();
                 setEprescribeEnabled(eprescribeStatus.data?.enabled || false);
-                
+
                 if (eprescribeStatus.data?.enabled) {
                     const eprescribeResponse = await eprescribeAPI.getPrescriptions(patientId);
                     setEprescribePrescriptions(eprescribeResponse.data?.prescriptions || []);
@@ -124,15 +124,15 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
             try {
                 const docsResponse = await documentsAPI.getByPatient(patientId);
                 const docs = docsResponse.data || [];
-                
+
                 // Separate images from other documents
                 const imageDocs = docs.filter(d => d.doc_type === 'imaging');
                 const otherDocs = docs.filter(d => d.doc_type !== 'imaging');
-                
+
                 // Sort by date, most recent first
                 imageDocs.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
                 otherDocs.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-                
+
                 setImages(imageDocs);
                 setDocuments(otherDocs);
                 setHubDocuments(docs);
@@ -165,6 +165,53 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
             ...prev,
             [noteId]: !prev[noteId]
         }));
+    };
+
+    // Document Upload Logic
+    const fileInputRef = useRef(null);
+    const handleFileUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('patientId', patientId);
+        formData.append('docType', 'other'); // Default type
+        // formData.append('visitId', ...); // Optional if linked to visit
+
+        try {
+            await documentsAPI.upload(formData);
+            // Refresh documents
+            const docsResponse = await documentsAPI.getByPatient(patientId);
+            const docs = docsResponse.data || [];
+            const imageDocs = docs.filter(d => d.doc_type === 'imaging');
+            const otherDocs = docs.filter(d => d.doc_type !== 'imaging');
+
+            setImages(imageDocs);
+            setDocuments(otherDocs);
+            setHubDocuments(docs);
+
+            alert('Document uploaded successfully');
+        } catch (error) {
+            console.error('Error uploading document:', error);
+            alert('Failed to upload document');
+        }
+    };
+
+    const handleDeleteDocument = async (docId, e) => {
+        if (e) e.stopPropagation();
+        if (!window.confirm('Are you sure you want to delete this document?')) return;
+
+        try {
+            await documentsAPI.delete(docId);
+            // Update state locally
+            setDocuments(prev => prev.filter(d => d.id !== docId));
+            setImages(prev => prev.filter(d => d.id !== docId));
+            setHubDocuments(prev => prev.filter(d => d.id !== docId));
+        } catch (error) {
+            console.error('Error deleting document:', error);
+            alert('Failed to delete document');
+        }
     };
 
     const truncateNote = (noteText) => {
@@ -212,12 +259,11 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center space-x-2 px-5 py-3.5 text-sm font-semibold whitespace-nowrap border-b-2 transition-all duration-200 ${
-                                    isActive
-                                        ? 'border-strong-azure text-strong-azure'
-                                        : 'border-transparent text-deep-gray/60 hover:text-deep-gray hover:bg-soft-gray'
-                                }`}
-                                style={isActive ? { 
+                                className={`flex items-center space-x-2 px-5 py-3.5 text-sm font-semibold whitespace-nowrap border-b-2 transition-all duration-200 ${isActive
+                                    ? 'border-strong-azure text-strong-azure'
+                                    : 'border-transparent text-deep-gray/60 hover:text-deep-gray hover:bg-soft-gray'
+                                    }`}
+                                style={isActive ? {
                                     background: 'linear-gradient(to bottom, rgba(59, 130, 246, 0.08), transparent)',
                                     borderBottomColor: '#3B82F6'
                                 } : {}}
@@ -240,40 +286,44 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                         <>
                             {/* History Tab */}
                             {activeTab === 'history' && (
-                                <div className="space-y-1">
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center px-1 mb-2">
+                                        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Note History</h3>
+                                        <button className="text-blue-600 text-xs font-medium hover:underline">View All</button>
+                                    </div>
                                     {notes.length === 0 ? (
                                         <p className="text-deep-gray/60 text-sm text-center py-8">No visit notes found</p>
                                     ) : (
                                         notes.map((note) => {
                                             const noteText = note.note_draft || '';
-                                            
+
                                             // Parse chief complaint
                                             const ccMatch = noteText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
                                             const chiefComplaint = ccMatch ? ccMatch[1].trim() : null;
-                                            
+
                                             // Format date and time
                                             const visitDateObj = note.visit_date ? new Date(note.visit_date) : (note.created_at ? new Date(note.created_at) : new Date());
                                             const createdDateObj = note.created_at ? new Date(note.created_at) : visitDateObj;
                                             const dateStr = visitDateObj.toLocaleDateString();
-                                            
+
                                             // Check if visit_date has time component
                                             const hasTime = visitDateObj.getHours() !== 0 || visitDateObj.getMinutes() !== 0 || visitDateObj.getSeconds() !== 0;
                                             const timeSource = hasTime ? visitDateObj : createdDateObj;
                                             const timeStr = timeSource.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                                             const dateTimeStr = `${dateStr} ${timeStr}`;
-                                            
+
                                             const visitType = note.visit_type || "Office Visit";
                                             const isSigned = note.locked || !!note.note_signed_by;
-                                            
+
                                             // Use signed_by name if note is signed, but fallback to provider if signed_by is "System Administrator"
                                             const signedByName = note.signed_by_first_name && note.signed_by_last_name
                                                 ? `${note.signed_by_first_name} ${note.signed_by_last_name}`
                                                 : null;
-                                            
+
                                             const providerNameFallback = (note.provider_first_name && note.provider_last_name)
                                                 ? `${note.provider_first_name} ${note.provider_last_name}`
                                                 : note.provider_first_name || note.provider_last_name || "Provider";
-                                            
+
                                             // Use signed_by name unless it's "System Administrator", then use provider name
                                             const providerName = (isSigned && signedByName && signedByName !== 'System Administrator')
                                                 ? signedByName
@@ -285,7 +335,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                                 if (!window.confirm('Are you sure you want to delete this draft note? This action cannot be undone.')) {
                                                     return;
                                                 }
-                                                
+
                                                 try {
                                                     await visitsAPI.delete(note.id);
                                                     // Refresh notes
@@ -298,37 +348,61 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                             };
 
                                             return (
-                                                <div 
-                                                    key={note.id} 
-                                                    className="relative p-4 border border-deep-gray/10 rounded-xl hover:bg-strong-azure/5 transition-all duration-200 cursor-pointer group"
+                                                <div
+                                                    key={note.id}
+                                                    className="relative p-3.5 border border-gray-100 bg-white rounded-xl shadow-sm hover:shadow-md hover:border-blue-100 transition-all duration-200 cursor-pointer group mb-2"
                                                     onClick={() => toggleNote(note.id)}
                                                 >
-                                                    <div className="flex items-center space-x-2 flex-wrap">
-                                                        <span className="text-xs font-semibold text-deep-gray">{visitType}</span>
-                                                        {isSigned ? (
-                                                            <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded flex-shrink-0">Signed</span>
-                                                        ) : (
-                                                            <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded flex-shrink-0">Draft</span>
-                                                        )}
-                                                        <span className="text-xs text-deep-gray/60 flex-shrink-0">{dateTimeStr} • {providerName}</span>
-                                                        {chiefComplaint && (
-                                                            <span className="text-xs text-deep-gray/80 italic">
-                                                                • "{chiefComplaint.substring(0, 60)}{chiefComplaint.length > 60 ? '...' : ''}"
-                                                            </span>
-                                                        )}
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-3 overflow-hidden">
+                                                            {/* Icon & Type */}
+                                                            <div className="flex items-center gap-2 flex-shrink-0">
+                                                                <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
+                                                                    <FileText className="w-4 h-4" />
+                                                                </div>
+                                                                <span className="font-semibold text-gray-900 text-sm">{visitType}</span>
+                                                            </div>
+
+                                                            {/* Status Badge - Pill Style */}
+                                                            {isSigned ? (
+                                                                <span className="px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-xs font-medium border border-green-100/50 flex-shrink-0">
+                                                                    Signed
+                                                                </span>
+                                                            ) : (
+                                                                <span className="px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 text-xs font-medium border border-orange-100/50 flex-shrink-0">
+                                                                    Draft
+                                                                </span>
+                                                            )}
+
+                                                            {/* Date & Provider */}
+                                                            <div className="flex items-center gap-2 text-xs text-gray-500 whitespace-nowrap overflow-hidden text-ellipsis">
+                                                                <span>{dateTimeStr}</span>
+                                                                <span>•</span>
+                                                                <span className="text-gray-700">{providerName}</span>
+                                                            </div>
+
+                                                            {/* Snippet */}
+                                                            {chiefComplaint && (
+                                                                <span className="hidden md:inline-block text-xs text-gray-400 italic truncate max-w-[200px]">
+                                                                    — {chiefComplaint}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
+
                                                     {!isSigned && (
                                                         <button
                                                             onClick={handleDeleteNote}
-                                                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all absolute right-2 top-2"
+                                                            className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded-lg transition-all absolute right-2 top-2"
                                                             title="Delete draft"
                                                         >
-                                                            <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                                                            <Trash2 className="w-4 h-4" />
                                                         </button>
                                                     )}
+
                                                     {isExpanded && noteText && (
-                                                        <div className="mt-3 pt-3 border-t border-deep-gray/10">
-                                                            <div className="text-xs text-deep-gray/80 whitespace-pre-wrap">
+                                                        <div className="mt-3 pt-3 border-t border-gray-50 pl-10">
+                                                            <div className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed font-mono bg-gray-50/50 p-3 rounded-lg">
                                                                 {noteText}
                                                             </div>
                                                         </div>
@@ -465,12 +539,11 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                                                 {eprescribePrescriptions.slice(0, 5).map((rx) => (
                                                     <div key={rx.id} className="flex items-center justify-between text-sm">
                                                         <span className="text-blue-800">{rx.medication_name}</span>
-                                                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                                            rx.status === 'SENT' || rx.status === 'sent' ? 'bg-green-100 text-green-800' :
+                                                        <span className={`px-2 py-1 rounded text-xs font-medium ${rx.status === 'SENT' || rx.status === 'sent' ? 'bg-green-100 text-green-800' :
                                                             rx.status === 'DRAFT' || rx.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
-                                                            rx.status === 'CANCELLED' || rx.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                                            'bg-gray-100 text-gray-800'
-                                                        }`}>
+                                                                rx.status === 'CANCELLED' || rx.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                                                    'bg-gray-100 text-gray-800'
+                                                            }`}>
                                                             {rx.status}
                                                         </span>
                                                     </div>
@@ -733,45 +806,72 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'history',
                             {/* Documents Tab */}
                             {activeTab === 'documents' && (
                                 <div className="space-y-4">
-                                    <h3 className="text-lg font-semibold text-deep-gray mb-3">Documents ({documents.length})</h3>
+                                    {/* Removed duplicate div */}
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-lg font-bold text-gray-800">Documents ({documents.length})</h3>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="file"
+                                                ref={fileInputRef}
+                                                className="hidden"
+                                                onChange={handleFileUpload}
+                                                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
+                                            />
+                                            <button
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
+                                            >
+                                                <Plus className="w-4 h-4" />
+                                                Upload Document
+                                            </button>
+                                        </div>
+                                    </div>
+
                                     {documents.length === 0 ? (
-                                        <div className="text-center py-12">
-                                            <FileImage className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                                            <h4 className="text-lg font-semibold text-deep-gray mb-2">No Documents</h4>
-                                            <p className="text-deep-gray/70">No documents have been uploaded for this patient.</p>
+                                        <div className="text-center py-16 bg-gray-50 rounded-xl border-dashed border-2 border-gray-200">
+                                            <FileImage className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                                            <h4 className="text-base font-semibold text-gray-600 mb-1">No Documents</h4>
+                                            <p className="text-gray-400 text-sm">Upload a document to get started</p>
                                         </div>
                                     ) : (
-                                        <div className="space-y-4">
+                                        <div className="grid grid-cols-1 gap-3">
                                             {documents.map((doc) => {
                                                 const date = doc.created_at ? format(new Date(doc.created_at), 'MMM d, yyyy') : '';
 
                                                 return (
-                                                    <div key={doc.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                                                        <div className="flex items-start justify-between mb-2">
-                                                            <div className="flex-1">
-                                                                <div className="flex items-center space-x-3 mb-2">
-                                                                    <FileImage className="w-5 h-5 text-deep-gray/70" />
-                                                                    <h4 className="text-lg font-semibold text-deep-gray">{doc.filename || 'Document'}</h4>
-                                                                </div>
-                                                                <div className="text-sm text-gray-700 space-y-1">
-                                                                    <div><span className="font-medium">Type:</span> {doc.doc_type || 'Document'}</div>
-                                                                    {doc.tags && Array.isArray(doc.tags) && doc.tags.length > 0 && (
-                                                                        <div className="flex flex-wrap gap-1 mt-2">
-                                                                            {doc.tags.map((tag, idx) => (
-                                                                                <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-                                                                                    {tag}
-                                                                                </span>
-                                                                            ))}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
+                                                    <div key={doc.id} className="group bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md transition-all flex items-center justify-between">
+                                                        <div className="flex items-center gap-3 overflow-hidden">
+                                                            <div className="p-2 bg-gray-100 rounded-lg text-gray-500">
+                                                                <FileText className="w-5 h-5" />
                                                             </div>
-                                                            {date && (
-                                                                <div className="flex items-center space-x-1 text-xs text-deep-gray/60 ml-4">
-                                                                    <Calendar className="w-4 h-4" />
+                                                            <div className="min-w-0">
+                                                                <h4 className="text-sm font-semibold text-gray-900 truncate pr-4" title={doc.filename}>{doc.filename || 'Document'}</h4>
+                                                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                                    <span className="capitalize bg-gray-100 px-1.5 py-0.5 rounded">{doc.doc_type || 'Document'}</span>
+                                                                    <span>•</span>
                                                                     <span>{date}</span>
                                                                 </div>
-                                                            )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <a
+                                                                href={`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/documents/${doc.id}/file`}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                                                                title="View"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                <ExternalLink className="w-4 h-4" />
+                                                            </a>
+                                                            <button
+                                                                onClick={(e) => handleDeleteDocument(doc.id, e)}
+                                                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                                                title="Delete"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
                                                         </div>
                                                     </div>
                                                 );
