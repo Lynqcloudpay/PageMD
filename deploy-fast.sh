@@ -8,11 +8,9 @@ USER="ubuntu"
 DIR="/home/ubuntu/emr"
 KEY_PATH="$1"
 
-SSH_CMD="ssh"
-RSYNC_CMD="rsync -az"
+SSH_OPTS=""
 if [ ! -z "$KEY_PATH" ]; then
-  SSH_CMD="ssh -i $KEY_PATH"
-  RSYNC_CMD="rsync -az -e \"ssh -i $KEY_PATH\""
+  SSH_OPTS="-i $KEY_PATH"
 fi
 
 echo "🚀 Starting ULTRA-FAST deployment to $HOST..."
@@ -20,24 +18,34 @@ echo "🚀 Starting ULTRA-FAST deployment to $HOST..."
 # 1. Local Build
 echo "🏗️  Building frontend locally..."
 cd client
-# Use a temp env file to avoid messing with local dev
 echo "VITE_API_URL=https://bemypcp.com/api" > .env.production.local
-VITE_API_URL=https://bemypcp.com/api npm run build
+npm run build
 cd ..
 
 # 2. Sync Static Files
 echo "📤 Syncing static files to server..."
-$SSH_CMD $USER@$HOST "mkdir -p $DIR/deploy/static"
-echo "Running: $RSYNC_CMD --delete client/dist/ $USER@$HOST:$DIR/deploy/static/"
-$RSYNC_CMD -v --delete client/dist/ $USER@$HOST:$DIR/deploy/static/
+ssh $SSH_OPTS $USER@$HOST "mkdir -p $DIR/deploy/static"
+
+LOCAL_DIST="$(pwd)/client/dist/"
+echo "Syncing from $LOCAL_DIST to $USER@$HOST:$DIR/deploy/static/"
+
+if [ ! -z "$KEY_PATH" ]; then
+  rsync -av --delete -e "ssh -i $KEY_PATH" "$LOCAL_DIST" "$USER@$HOST:$DIR/deploy/static/"
+else
+  rsync -av --delete "$LOCAL_DIST" "$USER@$HOST:$DIR/deploy/static/"
+fi
+
+# Verify files reached the server
+echo "🔍 Verifying files on server..."
+ssh $SSH_OPTS $USER@$HOST "ls -la $DIR/deploy/static/index.html"
 
 # 3. Server-side API build & restart
 echo "⚙️  Updating server code and restarting API..."
-$SSH_CMD $USER@$HOST << EOF
+ssh $SSH_OPTS $USER@$HOST << EOF
   set -e
   cd $DIR
   
-  echo "⬇️  Pulling latest changes (excluding client build)..."
+  echo "⬇️  Pulling latest changes..."
   git fetch origin
   git reset --hard origin/main
   
@@ -49,10 +57,10 @@ $SSH_CMD $USER@$HOST << EOF
     sed -i 's/yourdomain.com/bemypcp.com/g' .env.prod
   fi
   
-  echo "🔄 Building API service (using BuildKit)..."
+  echo "🔄 Building API service..."
   DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build api
   
-  echo "🚀 Rolling update..."
+  echo "🚀 Restarting containers..."
   docker compose -f docker-compose.prod.yml up -d --remove-orphans
   
   echo "🧹 Cleanup..."
@@ -60,4 +68,4 @@ $SSH_CMD $USER@$HOST << EOF
 EOF
 
 echo "✅ Ultra-fast deployment complete!"
-echo "🌍 https://bemypcp.com is updated."
+echo "🌍 Visit https://bemypcp.com"

@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
     Save, Lock, FileText, ChevronDown, ChevronUp, Plus, ClipboardList,
     Sparkles, ArrowLeft, Zap, Search, X, Printer, History,
-    Activity, CheckSquare, Square, Trash2, Pill, Users, UserCircle
+    Activity, CheckSquare, Square, Trash2, Pill, Users, UserCircle, ChevronRight
 } from 'lucide-react';
 import Toast from '../components/ui/Toast';
 import { OrderModal, PrescriptionModal, ReferralModal } from '../components/ActionModals';
@@ -2200,6 +2200,7 @@ const VisitNote = () => {
                 patientId={id}
                 patientName={patientData ? `${patientData.first_name || ''} ${patientData.last_name || ''}`.trim() : ''}
                 visitId={currentVisitId || urlVisitId}
+                diagnoses={diagnoses}
             />
             {showPrintModal && <VisitPrint visitId={currentVisitId || urlVisitId} patientId={id} onClose={() => setShowPrintModal(false)} />}
 

@@ -93,12 +93,11 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
     }
   }, [isOpen, patientId]);
 
-  // Medication search logic - "after 2 words" or 3+ characters
+  // Medication search logic - trigger after 2+ characters
   useEffect(() => {
-    const words = medicationSearch.trim().split(/\s+/);
-    const shouldSearch = words.length >= 2 || (words.length === 1 && words[0].length >= 2);
+    const trimmed = medicationSearch.trim();
 
-    if (!shouldSearch) {
+    if (trimmed.length < 2) {
       setMedicationResults([]);
       return;
     }

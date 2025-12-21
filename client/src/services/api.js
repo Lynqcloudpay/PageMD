@@ -266,7 +266,8 @@ export const codesAPI = {
         params: {
           terms: search,
           maxList: 100,
-          df: 'code,name'
+          df: 'code,name',
+          sf: 'code,name,synonyms' // Search across code, name and synonyms
         }
       });
       // Response format: [count, codes, null, [[code, description], ...]]
