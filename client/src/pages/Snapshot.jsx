@@ -789,7 +789,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
             const formData = new FormData();
             formData.append('file', ekgFile);
             formData.append('patientId', id);
-            formData.append('docType', 'ekg');
+            formData.append('docType', 'imaging');  // Use 'imaging' - 'ekg' is not a valid doc_type. Type is distinguished via tags.
             // Tags for EKG data
             const tags = [
                 'ekg',
@@ -819,7 +819,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
             const formData = new FormData();
             formData.append('file', echoFile);
             formData.append('patientId', id);
-            formData.append('docType', 'echo');
+            formData.append('docType', 'imaging');  // Use 'imaging' - 'echo' is not a valid doc_type. Type is distinguished via tags.
             // Tags for ECHO data
             const tags = [
                 'echo',
