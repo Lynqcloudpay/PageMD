@@ -60,6 +60,13 @@ $SSH_CMD $USER@$HOST << EOF
   # Build WITH cache - much faster, only rebuilds changed layers
   # Use --no-cache only if you need a completely fresh build
   docker compose -f docker-compose.prod.yml build api web
+  
+  echo "🧹 Cleaning up stale static assets..."
+  # Remove the web_static volume to force Caddy to serve fresh files from the new image
+  # We use || true to prevent failure if volume explicitly doesn't exist yet
+  # The volume name is typically foldername_volumename, so deploy_web_static
+  docker volume rm deploy_web_static 2>/dev/null || true
+  
   echo "🚀 Starting containers..."
   docker compose -f docker-compose.prod.yml up -d --force-recreate api web
   
