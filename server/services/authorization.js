@@ -51,26 +51,29 @@ async function getUserAuthContext(userId) {
       console.warn('Could not fetch role_privileges, using defaults:', err.message);
     }
 
-    // If no permissions found from DB, provide sensible defaults based on role
-    const base = new Set(permsRes.rows.map(r => r.key));
+    // Start with default permissions for this role to ensure new format keys are present
+    const defaultPerms = getDefaultPermissionsForRole(normalizedRole);
+    const base = new Set(defaultPerms);
 
-    // Add default permissions based on role if none found
-    if (base.size === 0) {
-      const defaultPerms = getDefaultPermissionsForRole(normalizedRole);
-      defaultPerms.forEach(p => base.add(p));
-    }
+    // Merge in DB permissions if any exist
+    permsRes.rows.forEach(r => {
+      if (r.key) base.add(r.key);
+    });
 
-    // Admin users get all permissions
+    // Admin users get all permissions (both from privileges table and our hardcoded list)
     if (isAdminUser) {
       try {
         const allPermsRes = await pool.query('SELECT name AS key FROM privileges');
-        allPermsRes.rows.forEach(p => base.add(p.key));
+        allPermsRes.rows.forEach(p => {
+          if (p.key) base.add(p.key);
+        });
       } catch (err) {
-        console.warn('Could not fetch all privileges:', err.message);
-        // Add comprehensive admin permissions as fallback
-        const adminPerms = getAllAdminPermissions();
-        adminPerms.forEach(p => base.add(p));
+        console.warn('Could not fetch all privileges from DB:', err.message);
       }
+
+      // Always add comprehensive admin permissions list (new format keys)
+      const adminPerms = getAllAdminPermissions();
+      adminPerms.forEach(p => base.add(p));
     }
 
     return {
@@ -87,8 +90,8 @@ async function getUserAuthContext(userId) {
       clinicId: null, // clinic_id column may not exist in all schemas
       permissions: Array.from(base),
       scope: {
-        scheduleScope: 'CLINIC',
-        patientScope: 'CLINIC'
+        scheduleScope: normalizedRole === 'CLINICIAN' ? 'SELF' : 'CLINIC',
+        patientScope: normalizedRole === 'CLINICIAN' ? 'ASSIGNED' : 'CLINIC'
       }
     };
   } catch (error) {
@@ -105,17 +108,20 @@ function getDefaultPermissionsForRole(role) {
     'patients:view_list',
     'patients:view_chart',
     'patients:view_demographics',
-    'appointments:view',
+    'schedule:view',
     'prescriptions:view'
   ];
 
   const clinicianPerms = [
     ...commonPerms,
-    'patients:edit',
+    'patients:edit_demographics',
     'patients:create',
     'visits:create',
     'visits:edit',
     'visits:sign',
+    'notes:create',
+    'notes:edit',
+    'notes:sign',
     'orders:create',
     'orders:edit',
     'prescriptions:create',
@@ -123,18 +129,18 @@ function getDefaultPermissionsForRole(role) {
     'meds:prescribe',
     'referrals:create',
     'referrals:edit',
-    'appointments:create',
-    'appointments:edit'
+    'schedule:edit',
+    'schedule:status_update'
   ];
 
   const nursePerms = [
     ...commonPerms,
-    'patients:edit',
+    'patients:edit_demographics',
     'visits:create',
     'visits:edit',
     'orders:view',
-    'appointments:create',
-    'appointments:edit'
+    'schedule:view',
+    'schedule:status_update'
   ];
 
   switch (role) {
@@ -145,7 +151,7 @@ function getDefaultPermissionsForRole(role) {
     case 'NURSE_MA':
       return nursePerms;
     case 'FRONT_DESK':
-      return [...commonPerms, 'appointments:create', 'appointments:edit', 'patients:create'];
+      return [...commonPerms, 'schedule:edit', 'schedule:status_update', 'patients:create'];
     default:
       return commonPerms;
   }
@@ -157,15 +163,16 @@ function getDefaultPermissionsForRole(role) {
 function getAllAdminPermissions() {
   return [
     'patients:view_list', 'patients:view_chart', 'patients:view_demographics',
-    'patients:edit', 'patients:create', 'patients:delete',
+    'patients:edit_demographics', 'patients:edit_insurance', 'patients:create', 'patients:delete',
+    'notes:view', 'notes:create', 'notes:edit', 'notes:sign', 'notes:delete',
     'visits:create', 'visits:edit', 'visits:sign', 'visits:delete',
     'orders:create', 'orders:edit', 'orders:delete', 'orders:view',
     'prescriptions:create', 'prescriptions:edit', 'prescriptions:view', 'prescriptions:delete', 'meds:prescribe',
     'referrals:create', 'referrals:edit', 'referrals:view', 'referrals:delete',
-    'appointments:create', 'appointments:edit', 'appointments:view', 'appointments:delete',
-    'users:create', 'users:edit', 'users:view', 'users:delete',
-    'billing:view', 'billing:create', 'billing:edit',
-    'reports:view', 'settings:edit', 'admin:access'
+    'schedule:view', 'schedule:edit', 'schedule:status_update', 'schedule:assign_provider', 'schedule:delete',
+    'users:manage', 'roles:manage', 'permissions:manage',
+    'billing:view', 'billing:create', 'billing:edit', 'claims:submit',
+    'reports:view', 'settings:edit', 'admin:access', 'audit:view'
   ];
 }
 
