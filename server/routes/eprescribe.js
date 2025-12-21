@@ -40,7 +40,7 @@ router.get('/status', async (req, res) => {
     const service = getEPrescribeService();
     const provider = service.getProvider();
     const isDoseSpotEnabled = service.isDoseSpotEnabled();
-    
+
     res.json({
       enabled: isDoseSpotEnabled || provider === 'internal',
       provider: provider,
@@ -60,7 +60,7 @@ router.get('/status', async (req, res) => {
  */
 router.post('/session', requirePrivilege('prescriptions:create'), async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     const { patientId, returnUrl } = req.body;
     const userId = req.user.id;
@@ -81,7 +81,7 @@ router.post('/session', requirePrivilege('prescriptions:create'), async (req, re
     }
 
     const service = getEPrescribeService();
-    
+
     if (!service.isDoseSpotEnabled()) {
       return res.status(503).json({ error: 'DoseSpot e-prescribing service is not enabled. Set EPRESCRIBE_PROVIDER=dosespot' });
     }
@@ -108,7 +108,7 @@ router.post('/session', requirePrivilege('prescriptions:create'), async (req, re
       token: ssoData.token
     });
   } catch (error) {
-    safeLogger.error('[ePrescribe] Session creation failed', { 
+    safeLogger.error('[ePrescribe] Session creation failed', {
       error: error.message,
       userId: req.user.id
     });
@@ -125,7 +125,7 @@ router.post('/session', requirePrivilege('prescriptions:create'), async (req, re
  */
 router.get('/patient/:id/prescriptions', requirePrivilege('prescriptions:view'), async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     const { id: patientId } = req.params;
     const userId = req.user.id;
@@ -158,11 +158,12 @@ router.get('/patient/:id/prescriptions', requirePrivilege('prescriptions:view'),
     res.json({
       prescriptions: result.rows.map(row => ({
         ...row,
-        vendor_payload: row.vendor_payload ? JSON.parse(row.vendor_payload) : null
+        // Since vendor_payload is jsonb, pg driver already returns it as an object
+        vendor_payload: typeof row.vendor_payload === 'string' ? JSON.parse(row.vendor_payload) : row.vendor_payload
       }))
     });
   } catch (error) {
-    safeLogger.error('[ePrescribe] Failed to fetch prescriptions', { 
+    safeLogger.error('[ePrescribe] Failed to fetch prescriptions', {
       error: error.message,
       patientId: req.params.id
     });
@@ -179,7 +180,7 @@ router.get('/patient/:id/prescriptions', requirePrivilege('prescriptions:view'),
  */
 router.post('/patient/:id/prescriptions', requirePrivilege('prescriptions:create'), async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
 
@@ -223,7 +224,7 @@ router.post('/patient/:id/prescriptions', requirePrivilege('prescriptions:create
     }
 
     const service = getEPrescribeService();
-    
+
     if (!service.isDoseSpotEnabled()) {
       await client.query('ROLLBACK');
       return res.status(503).json({ error: 'DoseSpot e-prescribing service is not enabled. Set EPRESCRIBE_PROVIDER=dosespot' });
@@ -274,7 +275,7 @@ router.post('/patient/:id/prescriptions', requirePrivilege('prescriptions:create
     });
   } catch (error) {
     await client.query('ROLLBACK');
-    safeLogger.error('[ePrescribe] Failed to create prescription draft', { 
+    safeLogger.error('[ePrescribe] Failed to create prescription draft', {
       error: error.message,
       patientId: req.params.id,
       userId: req.user.id
@@ -292,7 +293,7 @@ router.post('/patient/:id/prescriptions', requirePrivilege('prescriptions:create
  */
 router.post('/prescriptions/:id/send', requirePrivilege('prescriptions:create'), async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
 
@@ -326,7 +327,7 @@ router.post('/prescriptions/:id/send', requirePrivilege('prescriptions:create'),
     }
 
     const service = getEPrescribeService();
-    
+
     if (!service.isDoseSpotEnabled()) {
       await client.query('ROLLBACK');
       return res.status(503).json({ error: 'DoseSpot e-prescribing service is not enabled' });
@@ -353,7 +354,7 @@ router.post('/prescriptions/:id/send', requirePrivilege('prescriptions:create'),
     });
   } catch (error) {
     await client.query('ROLLBACK');
-    safeLogger.error('[ePrescribe] Failed to send prescription', { 
+    safeLogger.error('[ePrescribe] Failed to send prescription', {
       error: error.message,
       prescriptionId: req.params.id,
       userId: req.user.id
@@ -371,7 +372,7 @@ router.post('/prescriptions/:id/send', requirePrivilege('prescriptions:create'),
  */
 router.post('/prescriptions/:id/cancel', requirePrivilege('prescriptions:create'), async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
 
@@ -401,7 +402,7 @@ router.post('/prescriptions/:id/cancel', requirePrivilege('prescriptions:create'
     }
 
     const service = getEPrescribeService();
-    
+
     if (!service.isDoseSpotEnabled()) {
       await client.query('ROLLBACK');
       return res.status(503).json({ error: 'DoseSpot e-prescribing service is not enabled' });
@@ -429,7 +430,7 @@ router.post('/prescriptions/:id/cancel', requirePrivilege('prescriptions:create'
     });
   } catch (error) {
     await client.query('ROLLBACK');
-    safeLogger.error('[ePrescribe] Failed to cancel prescription', { 
+    safeLogger.error('[ePrescribe] Failed to cancel prescription', {
       error: error.message,
       prescriptionId: req.params.id,
       userId: req.user.id
@@ -454,7 +455,7 @@ router.get('/pharmacies/search', requirePrivilege('prescriptions:view'), async (
     }
 
     const service = getEPrescribeService();
-    
+
     const location = (latitude && longitude) ? {
       latitude: parseFloat(latitude),
       longitude: parseFloat(longitude),
@@ -465,7 +466,7 @@ router.get('/pharmacies/search', requirePrivilege('prescriptions:view'), async (
 
     res.json({ pharmacies });
   } catch (error) {
-    safeLogger.error('[ePrescribe] Pharmacy search failed', { 
+    safeLogger.error('[ePrescribe] Pharmacy search failed', {
       error: error.message,
       query: req.query.query
     });
@@ -487,12 +488,12 @@ router.get('/medications/search', requirePrivilege('prescriptions:view'), async 
     }
 
     const service = getEPrescribeService();
-    
+
     const medications = await service.searchMedications(query);
 
     res.json({ medications });
   } catch (error) {
-    safeLogger.error('[ePrescribe] Medication search failed', { 
+    safeLogger.error('[ePrescribe] Medication search failed', {
       error: error.message,
       query: req.query.query
     });
@@ -510,7 +511,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     const payload = JSON.parse(req.body.toString());
 
     const service = getEPrescribeService();
-    
+
     if (!service.isDoseSpotEnabled()) {
       return res.status(503).json({ error: 'DoseSpot e-prescribing service is not enabled' });
     }
@@ -518,7 +519,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     // Get DoseSpot service for webhook handling
     const getDoseSpotService = require('../services/eprescribe/dosespot/DoseSpotService');
     const dosespotService = getDoseSpotService();
-    
+
     // Verify signature
     if (!dosespotService.client.verifyWebhookSignature(JSON.stringify(payload), signature)) {
       return res.status(401).json({ error: 'Invalid webhook signature' });
@@ -527,7 +528,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     await dosespotService.handleWebhook(payload, signature);
     res.status(200).json({ received: true });
   } catch (error) {
-    safeLogger.error('[ePrescribe] Webhook handling failed', { 
+    safeLogger.error('[ePrescribe] Webhook handling failed', {
       error: error.message
     });
     res.status(400).json({ error: 'Webhook processing failed' });

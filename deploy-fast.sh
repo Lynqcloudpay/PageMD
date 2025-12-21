@@ -49,6 +49,12 @@ ssh $SSH_OPTS $USER@$HOST << EOF
   git fetch origin
   git reset --hard origin/main
   
+  echo "🗄️  Applying database schema fixes..."
+  # Run the schema fix script inside the DB container
+  # We use 'docker exec' to reach the database container
+  # We use the service name 'emr-db' defined in docker-compose.prod.yml
+  docker compose -f deploy/docker-compose.prod.yml exec -T emr-db psql -U postgres -d paper_emr -f ./fix_schema.sql || echo "⚠️ Warning: Schema fix failed, but continuing deployment..."
+  
   cd deploy
   
   # Ensure env files exist
