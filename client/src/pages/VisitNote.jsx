@@ -165,6 +165,7 @@ const VisitNote = () => {
     const [lastSaved, setLastSaved] = useState(null);
     const [toast, setToast] = useState(null);
     const [showOrderModal, setShowOrderModal] = useState(false);
+    const [orderModalTab, setOrderModalTab] = useState('labs');
     const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
     const [showEPrescribeEnhanced, setShowEPrescribeEnhanced] = useState(false);
     const [showICD10Modal, setShowICD10Modal] = useState(false);
@@ -2040,22 +2041,49 @@ const VisitNote = () => {
                         {!isSigned && (
                             <div className="mt-2 flex space-x-1.5">
                                 {hasPrivilege('order_labs') && (
-                                    <button onClick={() => setShowOrderModal(true)} className="px-2.5 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors">Add Order</button>
-                                )}
-                                {hasPrivilege('e_prescribe') && (
                                     <button
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            setShowEPrescribeEnhanced(true);
+                                        onClick={() => {
+                                            setOrderModalTab('labs');
+                                            setShowOrderModal(true);
                                         }}
                                         className="px-2.5 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors"
                                     >
-                                        e-Prescribe
+                                        Add Order
                                     </button>
                                 )}
+                                {hasPrivilege('e_prescribe') && (
+                                    <>
+                                        <button
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                setShowEPrescribeEnhanced(true);
+                                            }}
+                                            className="px-2.5 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors"
+                                        >
+                                            e-Prescribe
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setOrderModalTab('medications');
+                                                setShowOrderModal(true);
+                                            }}
+                                            className="px-2.5 py-1.5 text-xs font-medium bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-md border border-neutral-300 transition-colors"
+                                        >
+                                            Manual Rx
+                                        </button>
+                                    </>
+                                )}
                                 {hasPrivilege('create_referrals') && (
-                                    <button onClick={() => setShowReferralModal(true)} className="px-2.5 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors">Send Referral</button>
+                                    <button
+                                        onClick={() => {
+                                            setOrderModalTab('referrals');
+                                            setShowOrderModal(true);
+                                        }}
+                                        className="px-2.5 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors"
+                                    >
+                                        Send Referral
+                                    </button>
                                 )}
                             </div>
                         )}
@@ -2098,28 +2126,11 @@ const VisitNote = () => {
             <OrderModal
                 isOpen={showOrderModal}
                 onClose={() => setShowOrderModal(false)}
+                initialTab={orderModalTab}
                 diagnoses={diagnoses}
                 onSuccess={(diagnosis, orderText) => {
                     addOrderToPlan(diagnosis, orderText);
                     showToast('Order added to plan', 'success');
-                }}
-            />
-            <PrescriptionModal
-                isOpen={showPrescriptionModal}
-                onClose={() => setShowPrescriptionModal(false)}
-                diagnoses={diagnoses}
-                onSuccess={(diagnosis, prescriptionText) => {
-                    addOrderToPlan(diagnosis, prescriptionText);
-                    showToast('Prescription added to plan', 'success');
-                }}
-            />
-            <ReferralModal
-                isOpen={showReferralModal}
-                onClose={() => setShowReferralModal(false)}
-                diagnoses={diagnoses}
-                onSuccess={(diagnosis, referralText) => {
-                    addOrderToPlan(diagnosis, referralText);
-                    showToast('Referral added to plan', 'success');
                 }}
             />
             <EPrescribeEnhanced

@@ -242,7 +242,31 @@ export const alertsAPI = {
 
 // Codes (ICD-10, CPT)
 export const codesAPI = {
-  searchICD10: (search) => api.get('/codes/icd10', { params: { search } }),
+  searchICD10: async (search) => {
+    if (!search || search.length < 2) return { data: [] };
+    try {
+      // Use NLM Clinical Tables API
+      const response = await axios.get('https://clinicaltables.nlm.nih.gov/api/icd10cm/v3/search', {
+        params: {
+          sf: 'code,name',
+          terms: search,
+          maxList: 50
+        }
+      });
+      // Response format: [count, codes, null, [[code, description], ...]]
+      const results = response.data[3] || [];
+      const mapped = results.map(item => ({
+        code: item[0],
+        description: item[1],
+        billable: true // NLM API returns valid codes, assume billable for now or generic
+      }));
+      return { data: mapped };
+    } catch (error) {
+      console.error('External ICD10 search failed, falling back to local:', error);
+      // Fallback to local if external fails
+      return api.get('/codes/icd10', { params: { search } });
+    }
+  },
   searchCPT: (search) => api.get('/codes/cpt', { params: { search } }),
 };
 
