@@ -56,10 +56,9 @@ $SSH_CMD $USER@$HOST << EOF
   # This step was causing hangs, certificates should already be in place
   echo "✅ Certificate check skipped (assuming already configured)"
 
-  echo "🔄 Building and restarting services (using cache for speed)..."
-  # Build WITH cache - much faster, only rebuilds changed layers
-  # Use --no-cache only if you need a completely fresh build
-  docker compose -f docker-compose.prod.yml build api web
+  echo "🔄 Building and restarting services (forcing NO CACHE for fresh content)..."
+  # Build WITHOUT cache to ensure latest React code is compiled
+  docker compose -f docker-compose.prod.yml build --no-cache api web
   
   echo "🧹 Cleaning up stale static assets..."
   # Remove the web_static volume to force Caddy to serve fresh files from the new image
@@ -68,6 +67,8 @@ $SSH_CMD $USER@$HOST << EOF
   docker volume rm deploy_web_static 2>/dev/null || true
   
   echo "🚀 Starting containers..."
+  # Face remove containers to avoid conflicts
+  docker rm -f emr-web emr-api 2>/dev/null || true
   docker compose -f docker-compose.prod.yml up -d --force-recreate api web
   
   echo "✅ Deployment complete!"

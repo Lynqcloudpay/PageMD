@@ -1525,8 +1525,109 @@ const VisitNote = () => {
                         </div>
                     </Section>
 
+                    {/* ROS and PE Side by Side */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
+                        {/* ROS */}
+                        <Section title="Review of Systems" defaultOpen={true}>
+                            <div className="grid grid-cols-2 gap-1 mb-1.5">
+                                {Object.keys(noteData.ros).map(system => (
+                                    <label key={system} className="flex items-center space-x-1 cursor-pointer">
+                                        {noteData.ros[system] ? <CheckSquare className="w-3 h-3 text-primary-600" /> : <Square className="w-3 h-3 text-neutral-400" />}
+                                        <span className="text-xs text-neutral-700 capitalize">{system}</span>
+                                        <input type="checkbox" checked={noteData.ros[system]}
+                                            onChange={(e) => {
+                                                const isChecked = e.target.checked;
+                                                const systemName = system.charAt(0).toUpperCase() + system.slice(1);
+                                                const findings = rosFindings[system] || '';
+                                                const newRos = { ...noteData.ros, [system]: isChecked };
+                                                let newRosNotes = noteData.rosNotes || '';
+                                                const findingsLine = `**${systemName}:** ${findings}`;
+                                                if (isChecked) {
+                                                    if (!newRosNotes.includes(`**${systemName}:**`)) {
+                                                        newRosNotes = newRosNotes.trim() ? `${newRosNotes}\n${findingsLine}` : findingsLine;
+                                                    }
+                                                } else {
+                                                    newRosNotes = newRosNotes.split('\n').filter(line => !line.trim().startsWith(`**${systemName}:**`)).join('\n').trim();
+                                                }
+                                                setNoteData({ ...noteData, ros: newRos, rosNotes: newRosNotes });
+                                            }}
+                                            disabled={isSigned}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                ))}
+                            </div>
+                            <textarea value={noteData.rosNotes} onChange={(e) => setNoteData({ ...noteData, rosNotes: e.target.value })}
+                                disabled={isSigned} rows={10}
+                                className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px]"
+                                placeholder="ROS notes..."
+                            />
+                            <button onClick={() => {
+                                const allRos = {};
+                                Object.keys(noteData.ros).forEach(key => { allRos[key] = true; });
+                                let rosText = '';
+                                Object.keys(rosFindings).forEach(key => {
+                                    const systemName = key.charAt(0).toUpperCase() + key.slice(1);
+                                    rosText += `**${systemName}:** ${rosFindings[key]}\n`;
+                                });
+                                setNoteData({ ...noteData, ros: allRos, rosNotes: rosText.trim() });
+                            }} disabled={isSigned} className="mt-1.5 px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
+                                Pre-fill Normal ROS
+                            </button>
+                        </Section>
+
+                        {/* Physical Exam */}
+                        <Section title="Physical Examination" defaultOpen={true}>
+                            <div className="grid grid-cols-2 gap-1 mb-1.5">
+                                {Object.keys(noteData.pe).map(system => (
+                                    <label key={system} className="flex items-center space-x-1 cursor-pointer">
+                                        {noteData.pe[system] ? <CheckSquare className="w-3 h-3 text-primary-600" /> : <Square className="w-3 h-3 text-neutral-400" />}
+                                        <span className="text-xs text-neutral-700 capitalize">{system.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                        <input type="checkbox" checked={noteData.pe[system]}
+                                            onChange={(e) => {
+                                                const isChecked = e.target.checked;
+                                                const systemName = system.replace(/([A-Z])/g, ' $1').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+                                                const findings = peFindings[system] || '';
+                                                const newPe = { ...noteData.pe, [system]: isChecked };
+                                                let newPeNotes = noteData.peNotes || '';
+                                                const findingsLine = `**${systemName}:** ${findings}`;
+                                                if (isChecked) {
+                                                    if (!newPeNotes.includes(`**${systemName}:**`)) {
+                                                        newPeNotes = newPeNotes.trim() ? `${newPeNotes}\n${findingsLine}` : findingsLine;
+                                                    }
+                                                } else {
+                                                    newPeNotes = newPeNotes.split('\n').filter(line => !line.trim().startsWith(`**${systemName}:**`)).join('\n').trim();
+                                                }
+                                                setNoteData({ ...noteData, pe: newPe, peNotes: newPeNotes });
+                                            }}
+                                            disabled={isSigned}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                ))}
+                            </div>
+                            <textarea value={noteData.peNotes} onChange={(e) => setNoteData({ ...noteData, peNotes: e.target.value })}
+                                disabled={isSigned} rows={10}
+                                className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px]"
+                                placeholder="PE findings..."
+                            />
+                            <button onClick={() => {
+                                const allPe = {};
+                                Object.keys(noteData.pe).forEach(key => { allPe[key] = true; });
+                                let peText = '';
+                                Object.keys(peFindings).forEach(key => {
+                                    const systemName = key.replace(/([A-Z])/g, ' $1').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+                                    peText += `**${systemName}:** ${peFindings[key]}\n`;
+                                });
+                                setNoteData({ ...noteData, pe: allPe, peNotes: peText.trim() });
+                            }} disabled={isSigned} className="mt-1.5 px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
+                                Pre-fill Normal PE
+                            </button>
+                        </Section>
+                    </div>
+
                     {/* PAMFOS Section - Past Medical, Allergies, Meds, Family, Social/Other */}
-                    <Section title="Patient History (PAMFOS) [NEW]" defaultOpen={true}>
+                    <Section title="Patient History (PAMFOS)" defaultOpen={true}>
                         <div className="bg-white p-1">
                             <div className="space-y-4">
 
@@ -1726,107 +1827,6 @@ const VisitNote = () => {
                             </div>
                         </div>
                     </Section>
-
-                    {/* ROS and PE Side by Side */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
-                        {/* ROS */}
-                        <Section title="Review of Systems" defaultOpen={true}>
-                            <div className="grid grid-cols-2 gap-1 mb-1.5">
-                                {Object.keys(noteData.ros).map(system => (
-                                    <label key={system} className="flex items-center space-x-1 cursor-pointer">
-                                        {noteData.ros[system] ? <CheckSquare className="w-3 h-3 text-primary-600" /> : <Square className="w-3 h-3 text-neutral-400" />}
-                                        <span className="text-xs text-neutral-700 capitalize">{system}</span>
-                                        <input type="checkbox" checked={noteData.ros[system]}
-                                            onChange={(e) => {
-                                                const isChecked = e.target.checked;
-                                                const systemName = system.charAt(0).toUpperCase() + system.slice(1);
-                                                const findings = rosFindings[system] || '';
-                                                const newRos = { ...noteData.ros, [system]: isChecked };
-                                                let newRosNotes = noteData.rosNotes || '';
-                                                const findingsLine = `**${systemName}:** ${findings}`;
-                                                if (isChecked) {
-                                                    if (!newRosNotes.includes(`**${systemName}:**`)) {
-                                                        newRosNotes = newRosNotes.trim() ? `${newRosNotes}\n${findingsLine}` : findingsLine;
-                                                    }
-                                                } else {
-                                                    newRosNotes = newRosNotes.split('\n').filter(line => !line.trim().startsWith(`**${systemName}:**`)).join('\n').trim();
-                                                }
-                                                setNoteData({ ...noteData, ros: newRos, rosNotes: newRosNotes });
-                                            }}
-                                            disabled={isSigned}
-                                            className="hidden"
-                                        />
-                                    </label>
-                                ))}
-                            </div>
-                            <textarea value={noteData.rosNotes} onChange={(e) => setNoteData({ ...noteData, rosNotes: e.target.value })}
-                                disabled={isSigned} rows={10}
-                                className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px]"
-                                placeholder="ROS notes..."
-                            />
-                            <button onClick={() => {
-                                const allRos = {};
-                                Object.keys(noteData.ros).forEach(key => { allRos[key] = true; });
-                                let rosText = '';
-                                Object.keys(rosFindings).forEach(key => {
-                                    const systemName = key.charAt(0).toUpperCase() + key.slice(1);
-                                    rosText += `**${systemName}:** ${rosFindings[key]}\n`;
-                                });
-                                setNoteData({ ...noteData, ros: allRos, rosNotes: rosText.trim() });
-                            }} disabled={isSigned} className="mt-1.5 px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
-                                Pre-fill Normal ROS
-                            </button>
-                        </Section>
-
-                        {/* Physical Exam */}
-                        <Section title="Physical Examination" defaultOpen={true}>
-                            <div className="grid grid-cols-2 gap-1 mb-1.5">
-                                {Object.keys(noteData.pe).map(system => (
-                                    <label key={system} className="flex items-center space-x-1 cursor-pointer">
-                                        {noteData.pe[system] ? <CheckSquare className="w-3 h-3 text-primary-600" /> : <Square className="w-3 h-3 text-neutral-400" />}
-                                        <span className="text-xs text-neutral-700 capitalize">{system.replace(/([A-Z])/g, ' $1').trim()}</span>
-                                        <input type="checkbox" checked={noteData.pe[system]}
-                                            onChange={(e) => {
-                                                const isChecked = e.target.checked;
-                                                const systemName = system.replace(/([A-Z])/g, ' $1').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-                                                const findings = peFindings[system] || '';
-                                                const newPe = { ...noteData.pe, [system]: isChecked };
-                                                let newPeNotes = noteData.peNotes || '';
-                                                const findingsLine = `**${systemName}:** ${findings}`;
-                                                if (isChecked) {
-                                                    if (!newPeNotes.includes(`**${systemName}:**`)) {
-                                                        newPeNotes = newPeNotes.trim() ? `${newPeNotes}\n${findingsLine}` : findingsLine;
-                                                    }
-                                                } else {
-                                                    newPeNotes = newPeNotes.split('\n').filter(line => !line.trim().startsWith(`**${systemName}:**`)).join('\n').trim();
-                                                }
-                                                setNoteData({ ...noteData, pe: newPe, peNotes: newPeNotes });
-                                            }}
-                                            disabled={isSigned}
-                                            className="hidden"
-                                        />
-                                    </label>
-                                ))}
-                            </div>
-                            <textarea value={noteData.peNotes} onChange={(e) => setNoteData({ ...noteData, peNotes: e.target.value })}
-                                disabled={isSigned} rows={10}
-                                className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px]"
-                                placeholder="PE findings..."
-                            />
-                            <button onClick={() => {
-                                const allPe = {};
-                                Object.keys(noteData.pe).forEach(key => { allPe[key] = true; });
-                                let peText = '';
-                                Object.keys(peFindings).forEach(key => {
-                                    const systemName = key.replace(/([A-Z])/g, ' $1').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-                                    peText += `**${systemName}:** ${peFindings[key]}\n`;
-                                });
-                                setNoteData({ ...noteData, pe: allPe, peNotes: peText.trim() });
-                            }} disabled={isSigned} className="mt-1.5 px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
-                                Pre-fill Normal PE
-                            </button>
-                        </Section>
-                    </div>
 
                     {/* Assessment */}
                     <Section title="Assessment" defaultOpen={true}>
