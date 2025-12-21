@@ -18,6 +18,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
     const [notes, setNotes] = useState([]);
     const [labs, setLabs] = useState([]);
     const [images, setImages] = useState([]);
+    const [imagingOrders, setImagingOrders] = useState([]);
     const [ekgs, setEkgs] = useState([]);
     const [echos, setEchos] = useState([]);
     const [documents, setDocuments] = useState([]);
@@ -101,11 +102,12 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                 setNotes(visitsData);
             }
 
-            // Process Orders (Meds & Labs)
+            // Process Orders (Meds, Labs, Imaging)
             if (ordersRes.status === 'fulfilled') {
                 const orders = ordersRes.value.data || [];
-                setPrescriptions(orders.filter(o => o.order_type === 'rx'));
+                setPrescriptions(orders.filter(o => ['rx', 'prescription'].includes(o.order_type)));
                 setLabs(orders.filter(o => o.order_type === 'lab'));
+                setImagingOrders(orders.filter(o => o.order_type === 'imaging'));
             }
 
             // Process Referrals
@@ -114,8 +116,8 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                     .filter(o => o.order_type === 'referral')
                     .map(o => ({
                         id: o.id,
-                        recipient_name: o.order_payload?.specialist || 'Specialist',
-                        recipient_specialty: o.order_payload?.specialist || 'Specialty',
+                        recipient_name: o.order_payload?.name || o.order_payload?.specialist || 'Specialist',
+                        recipient_specialty: o.order_payload?.specialty || o.order_payload?.specialist || 'Specialty',
                         reason: o.order_payload?.reason || 'Reason not specified',
                         status: o.status,
                         created_at: o.created_at
@@ -450,7 +452,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                 }
 
                                                 return allMeds.map((rx, idx) => {
-                                                    const name = rx.medication_name || rx.order_payload?.medication_name || rx.order_payload?.medication || 'Unknown Med';
+                                                    const name = rx.medication_name || rx.order_payload?.medication_name || rx.order_payload?.medication || rx.order_payload?.name || 'Unknown Med';
                                                     const sig = rx.sig || rx.order_payload?.sig || rx.order_payload?.instructions || '';
                                                     const date = rx.created_at || rx.sent_at ? new Date(rx.created_at || rx.sent_at).toLocaleDateString() : 'N/A';
 
@@ -494,7 +496,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                     labs.map(lab => (
                                                         <div key={lab.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
                                                             <div>
-                                                                <div className="font-medium text-sm text-gray-900">{lab.order_payload?.test_name || 'Lab Test'}</div>
+                                                                <div className="font-medium text-sm text-gray-900">{lab.order_payload?.test_name || lab.order_payload?.name || 'Lab Test'}</div>
                                                                 <div className="text-xs text-gray-500">{new Date(lab.created_at).toLocaleDateString()}</div>
                                                             </div>
                                                             {getStatusBadge(lab.status)}
@@ -551,29 +553,57 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                         </div>
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            {(activeTab === 'images' ? images : documents).length === 0 ? (
-                                                <p className="col-span-2 text-center py-10 text-gray-400 text-sm italic">No {activeTab} found.</p>
-                                            ) : (activeTab === 'images' ? images : documents).map(doc => (
-                                                <div key={doc.id} className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md transition-all flex justify-between items-start group">
-                                                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 min-w-0 flex-1">
-                                                        <div className="bg-gray-100 p-2 rounded text-gray-500">
-                                                            {activeTab === 'images' ? <Image className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
-                                                        </div>
-                                                        <div className="min-w-0">
-                                                            <div className="text-sm font-medium text-gray-900 truncate">{doc.filename}</div>
-                                                            <div className="text-xs text-gray-400">{new Date(doc.created_at).toLocaleDateString()}</div>
-                                                        </div>
-                                                    </a>
-                                                    <button onClick={async (e) => {
-                                                        e.stopPropagation();
-                                                        if (!confirm('Delete document?')) return;
-                                                        await documentsAPI.delete(doc.id);
-                                                        fetchAllData();
-                                                    }} className="text-gray-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            ))}
+                                            {(() => {
+                                                const currentDocs = activeTab === 'images' ? images : documents;
+                                                const currentOrders = activeTab === 'images' ? imagingOrders : [];
+
+                                                if (currentDocs.length === 0 && currentOrders.length === 0) {
+                                                    return <p className="col-span-2 text-center py-10 text-gray-400 text-sm italic">No {activeTab} found.</p>;
+                                                }
+
+                                                return (
+                                                    <>
+                                                        {/* Render Orders first (Pending Requests) */}
+                                                        {currentOrders.map(order => (
+                                                            <div key={order.id} className="bg-blue-50 border border-blue-100 rounded-lg p-3 flex justify-between items-start">
+                                                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                                                    <div className="bg-blue-100 p-2 rounded text-blue-500">
+                                                                        <Clock className="w-4 h-4" />
+                                                                    </div>
+                                                                    <div className="min-w-0">
+                                                                        <div className="text-sm font-medium text-blue-900 truncate">{order.order_payload?.name || 'Imaging Order'}</div>
+                                                                        <div className="text-[10px] text-blue-400 uppercase font-bold">Ordered: {new Date(order.created_at).toLocaleDateString()}</div>
+                                                                    </div>
+                                                                </div>
+                                                                {getStatusBadge(order.status)}
+                                                            </div>
+                                                        ))}
+
+                                                        {/* Render Uploaded Documents */}
+                                                        {currentDocs.map(doc => (
+                                                            <div key={doc.id} className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md transition-all flex justify-between items-start group">
+                                                                <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 min-w-0 flex-1">
+                                                                    <div className="bg-gray-100 p-2 rounded text-gray-500">
+                                                                        {activeTab === 'images' ? <Image className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                                                                    </div>
+                                                                    <div className="min-w-0">
+                                                                        <div className="text-sm font-medium text-gray-900 truncate">{doc.filename}</div>
+                                                                        <div className="text-xs text-gray-400">{new Date(doc.created_at).toLocaleDateString()}</div>
+                                                                    </div>
+                                                                </a>
+                                                                <button onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    if (!confirm('Delete document?')) return;
+                                                                    await documentsAPI.delete(doc.id);
+                                                                    fetchAllData();
+                                                                }} className="text-gray-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 )}

@@ -450,12 +450,43 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
 
             onSave(newPlanStructured);
 
-            // Save referrals and prescriptions to database for tracking
+            // Save all new orders to the database for tracking in Patient Chart
             if (patientId) {
                 cart.forEach(async (item) => {
+                    // Skip items that were loaded from existing strings (already saved)
+                    if (item.originalString) return;
+
                     try {
-                        if (item.type === 'referrals' && !item.originalString) {
-                            // Only save new referrals (not ones loaded from existing orders)
+                        // 1. Create a general order record for all types (Labs, Imaging, Meds, Referrals, Procedures)
+                        // This ensures they show up in the orders search and specific logs
+                        let orderType = 'lab';
+                        if (item.type === 'imaging') orderType = 'imaging';
+                        if (item.type === 'medications') orderType = 'prescription';
+                        if (item.type === 'referrals') orderType = 'referral';
+                        if (item.type === 'procedures') orderType = 'procedure';
+
+                        const orderPayload = {
+                            name: item.name,
+                            ...(item.details || {}),
+                            sig: item.sig,
+                            dispense: item.dispense,
+                            reason: item.reason,
+                            diagnosis: item.diagnosis
+                        };
+
+                        await ordersAPI.create({
+                            patientId,
+                            visitId,
+                            orderType,
+                            orderPayload,
+                            // Resolve diagnosis to object format required by backend
+                            diagnosisObjects: [
+                                { problem_name: item.diagnosis || 'General' }
+                            ]
+                        });
+
+                        // 2. Also call dedicated APIs for specialized tracking if needed
+                        if (item.type === 'referrals') {
                             await referralsAPI.create({
                                 patientId,
                                 visitId,
@@ -464,14 +495,13 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                 reason: item.reason || item.diagnosis || 'General Referral',
                                 status: 'sent',
                                 notes: `Linked to: ${item.diagnosis || 'General'}`,
-                                // Backend requires at least one diagnosis
                                 diagnosisObjects: [
-                                    { problem_name: item.diagnosis || 'General Consultation' }
+                                    { problem_name: item.diagnosis || 'General' }
                                 ]
                             });
                         }
-                        if (item.type === 'medications' && !item.originalString) {
-                            // Only save new prescriptions (not ones loaded from existing orders)
+
+                        if (item.type === 'medications') {
                             await eprescribeAPI.createDraft(patientId, {
                                 medicationName: item.name,
                                 medicationDisplay: item.name,
@@ -482,9 +512,12 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                             });
                         }
                     } catch (error) {
-                        console.error('Error saving to database:', error);
+                        console.error(`Error saving ${item.type} order:`, error);
                     }
                 });
+
+                // Trigger refresh in chart/snapshot
+                window.dispatchEvent(new CustomEvent('patient-data-updated'));
             }
         } else {
             // Fallback for older usage

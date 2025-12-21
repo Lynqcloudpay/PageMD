@@ -89,6 +89,25 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const [todayDraftVisit, setTodayDraftVisit] = useState(null);
     const [showNewVisitDropdown, setShowNewVisitDropdown] = useState(false);
 
+    // Stress Test States
+    const [showStressTestModal, setShowStressTestModal] = useState(false);
+    const [stressTestData, setStressTestData] = useState({
+        type: 'treadmill',
+        stressor: 'exercise',
+        date: new Date().toISOString().split('T')[0],
+        notes: ''
+    });
+    const [stressTestFile, setStressTestFile] = useState(null);
+
+    // Cardiac Cath States
+    const [showCardiacCathModal, setShowCardiacCathModal] = useState(false);
+    const [cardiacCathData, setCardiacCathData] = useState({
+        facility: '',
+        date: new Date().toISOString().split('T')[0],
+        notes: ''
+    });
+    const [cardiacCathFile, setCardiacCathFile] = useState(null);
+
     // Layout Editor State
     const [layoutEditMode, setLayoutEditMode] = useState(false);
     const [moduleLayout, setModuleLayout] = useState([]);
@@ -711,13 +730,67 @@ const Snapshot = ({ showNotesOnly = false }) => {
             // Refresh patient data
             await refreshPatientData();
 
-            // Close modal and reset
-            setShowEditPatientModal(false);
-
             alert('Patient information updated successfully!');
+            setShowEditPatientModal(false);
+            refreshPatientData();
         } catch (error) {
             console.error('Error updating patient:', error);
-            alert('Failed to update patient information. Please try again.');
+            alert('Failed to update patient information.');
+        }
+    };
+
+    const handleStressTestUpload = async () => {
+        if (!stressTestFile || !id) return;
+
+        try {
+            const formData = new FormData();
+            formData.append('file', stressTestFile);
+            formData.append('patientId', id);
+            formData.append('docType', 'imaging');
+            // Tags: stress_test, type, stressor
+            const tags = ['stress_test', `type:${stressTestData.type}`, `stressor:${stressTestData.stressor}`];
+            formData.append('tags', tags.join(','));
+
+            // Helpful for filtering: include info in original filename if possible, or just rely on tags
+            // Our backend uses original filename in records
+
+            await documentsAPI.upload(formData);
+
+            // Refetch to update UI
+            const docsResponse = await documentsAPI.getByPatient(id);
+            setDocuments(docsResponse.data || []);
+
+            setShowStressTestModal(false);
+            setStressTestFile(null);
+            alert('Stress Test uploaded successfully!');
+        } catch (error) {
+            console.error('Error uploading Stress Test:', error);
+            alert('Failed to upload Stress Test.');
+        }
+    };
+
+    const handleCardiacCathUpload = async () => {
+        if (!cardiacCathFile || !id) return;
+
+        try {
+            const formData = new FormData();
+            formData.append('file', cardiacCathFile);
+            formData.append('patientId', id);
+            formData.append('docType', 'imaging');
+            const tags = ['cardiac_cath', `facility:${cardiacCathData.facility}`];
+            formData.append('tags', tags.join(','));
+
+            await documentsAPI.upload(formData);
+
+            const docsResponse = await documentsAPI.getByPatient(id);
+            setDocuments(docsResponse.data || []);
+
+            setShowCardiacCathModal(false);
+            setCardiacCathFile(null);
+            alert('Cardiac Cath uploaded successfully!');
+        } catch (error) {
+            console.error('Error uploading Cardiac Cath:', error);
+            alert('Failed to upload Cardiac Cath.');
         }
     };
 
@@ -1662,16 +1735,16 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
                         {!layoutEditMode ? (
                             <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
-                                {/* Medications and Problem List - Side by side, thinner */}
+                                {/* Left Column: Compact Reference Cards */}
                                 <div className="lg:col-span-1 space-y-4">
                                     {/* Allergies Module - Smallest Card */}
                                     <div className="bg-white rounded-lg shadow-sm border border-red-100 hover:shadow-md transition-shadow">
                                         <div className="p-1.5 border-b border-gray-100 flex items-center justify-between">
                                             <div className="flex items-center space-x-1">
                                                 <AlertCircle className="w-3.5 h-3.5 text-red-600" />
-                                                <h3 className="font-semibold text-[11px] text-gray-900">Allergies</h3>
+                                                <h3 className="font-semibold text-[11px] text-gray-900 uppercase tracking-wider">Allergies</h3>
                                                 {allergies.length > 0 && (
-                                                    <span className="text-[10px] text-gray-500 flex-shrink-0">({allergies.length})</span>
+                                                    <span className="text-[10px] text-gray-500 font-bold">({allergies.length})</span>
                                                 )}
                                             </div>
                                             <button
@@ -1679,9 +1752,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     setPatientDataManagerTab('allergies');
                                                     setShowPatientDataManager(true);
                                                 }}
-                                                className="text-[10px] text-primary-600 hover:text-primary-700 font-medium"
+                                                className="text-[9px] text-primary-600 hover:text-primary-700 font-bold"
                                             >
-                                                Manage
+                                                EDIT
                                             </button>
                                         </div>
                                         <div className="p-1.5">
@@ -1689,408 +1762,309 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 <div className="space-y-1">
                                                     {allergies.slice(0, 3).map(allergy => (
                                                         <div key={allergy.id} className="pb-1 border-b border-gray-50 last:border-b-0 last:pb-0">
-                                                            <p className="font-medium text-[10px] text-red-900 leading-tight">{allergy.allergen}</p>
+                                                            <p className="font-bold text-[10px] text-red-900 leading-tight">{allergy.allergen}</p>
                                                             {allergy.reaction && (
                                                                 <p className="text-[9px] text-gray-600 leading-tight truncate">Rxn: {allergy.reaction}</p>
                                                             )}
                                                         </div>
                                                     ))}
                                                     {allergies.length > 3 && (
-                                                        <p className="text-[9px] text-gray-500 text-center pt-0.5">+{allergies.length - 3} more</p>
+                                                        <p className="text-[9px] text-gray-400 text-center font-medium pt-0.5">+{allergies.length - 3} more</p>
                                                     )}
                                                 </div>
                                             ) : (
-                                                <p className="text-[10px] text-gray-500 text-center py-1.5">NKA</p>
+                                                <p className="text-[10px] text-gray-500 text-center py-1 font-bold">NKA</p>
                                             )}
                                         </div>
                                     </div>
 
-                                    {/* Medications Module - Taller */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between">
-                                            <div className="flex items-center space-x-1.5 flex-1 min-w-0">
-                                                <Pill className="w-3.5 h-3.5 text-primary-600 flex-shrink-0" />
-                                                <h3 className="font-semibold text-xs text-gray-900 truncate">Medications</h3>
-                                                {medications.length > 0 && (
-                                                    <span className="text-[10px] text-gray-500 flex-shrink-0">({medications.length})</span>
-                                                )}
-                                            </div>
-                                            <button
-                                                onClick={() => {
-                                                    setPatientDataManagerTab('medications');
-                                                    setShowPatientDataManager(true);
-                                                }}
-                                                className="text-[10px] text-primary-600 hover:text-primary-700 font-medium flex-shrink-0 ml-1"
-                                            >
-                                                Manage
-                                            </button>
-                                        </div>
-                                        <div className="p-1.5 max-h-[180px] overflow-y-auto">
-                                            {medications.length > 0 ? (
-                                                <div className="space-y-0.5">
-                                                    {medications.slice(0, 5).map(med => (
-                                                        <div key={med.id} className="py-0.5 border-b border-gray-100 last:border-b-0">
-                                                            <div className="flex items-start justify-between gap-1">
-                                                                <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap">
-                                                                    <p className="font-medium text-[11px] text-gray-900 leading-tight truncate">{med.medication_name}</p>
-                                                                    {(med.dosage || med.frequency) && (
-                                                                        <p className="text-[10px] text-gray-600 leading-tight flex-shrink-0">
-                                                                            {med.dosage && `${med.dosage}`}
-                                                                            {med.dosage && med.frequency && ' • '}
-                                                                            {med.frequency && `${med.frequency}`}
-                                                                        </p>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                    {medications.length > 5 && (
-                                                        <p className="text-[10px] text-gray-500 text-center pt-1">+{medications.length - 5} more</p>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <p className="text-[11px] text-gray-500 text-center py-4">No medications</p>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Problem List Module - Taller */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between">
-                                            <div className="flex items-center space-x-1.5 flex-1 min-w-0">
-                                                <AlertCircle className="w-3.5 h-3.5 text-orange-600 flex-shrink-0" />
-                                                <h3 className="font-semibold text-xs text-gray-900 truncate">Problem List</h3>
-                                                {problems.length > 0 && (
-                                                    <span className="text-[10px] text-gray-500 flex-shrink-0">({problems.length})</span>
-                                                )}
-                                            </div>
-                                            <button
-                                                onClick={() => {
-                                                    setPatientDataManagerTab('problems');
-                                                    setShowPatientDataManager(true);
-                                                }}
-                                                className="text-[10px] text-primary-600 hover:text-primary-700 font-medium flex-shrink-0 ml-1"
-                                            >
-                                                Manage
-                                            </button>
-                                        </div>
-                                        <div className="p-1.5 max-h-[180px] overflow-y-auto">
-                                            {problems.length > 0 ? (
-                                                <div className="space-y-0.5">
-                                                    {problems.slice(0, 5).map(prob => (
-                                                        <div key={prob.id} className="py-0.5 border-b border-gray-100 last:border-b-0">
-                                                            <div className="flex items-start justify-between gap-1">
-                                                                <div className="flex-1 min-w-0 flex items-center gap-1.5">
-                                                                    <p className="font-medium text-[11px] text-gray-900 leading-tight truncate">{prob.name || prob.problem_name}</p>
-                                                                    <span className={`inline-block text-[9px] px-1 py-0.5 rounded-full font-medium flex-shrink-0 ${prob.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                                                                        }`}>
-                                                                        {prob.status}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <p className="text-[11px] text-gray-500 text-center py-4">No active problems</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Right Column - PAMFOS, Vitals, EKG, ECHO with more space */}
-                                <div className="lg:col-span-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                                    {/* Recent Vitals Module */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between">
-                                            <div className="flex items-center space-x-2">
-                                                <Activity className="w-4 h-4 text-primary-600" />
-                                                <h3 className="font-semibold text-sm text-gray-900">Recent Vitals</h3>
-                                            </div>
-                                            <button
-                                                onClick={() => {
-                                                    setPatientChartTab('history');
-                                                    setShowPatientChart(true);
-                                                }}
-                                                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                                            >
-                                                View All
-                                            </button>
-                                        </div>
-                                        <div className="p-2">
-                                            {vitals.length > 0 ? (
-                                                <div className="space-y-2">
-                                                    {vitals.slice(0, 3).map((vital, idx) => (
-                                                        <div key={idx} className="p-2 bg-gradient-to-r from-blue-50 to-transparent rounded-lg border border-blue-100">
-                                                            <p className="text-[10px] font-semibold text-blue-700 mb-1.5">{vital.date}</p>
-                                                            <div className="grid grid-cols-2 gap-2 text-xs">
-                                                                <div className="flex items-center gap-1">
-                                                                    <span className="text-gray-600 font-medium">BP:</span>
-                                                                    <span className="font-semibold text-gray-900">
-                                                                        {vital.bp ? vital.bp.replace(/&#x2F;/g, '/').replace(/&amp;#x2F;/g, '/') : 'N/A'}
-                                                                    </span>
-                                                                </div>
-                                                                <div className="flex items-center gap-1">
-                                                                    <span className="text-gray-600 font-medium">HR:</span>
-                                                                    <span className="font-semibold text-gray-900">{vital.hr || 'N/A'}</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-1">
-                                                                    <span className="text-gray-600 font-medium">Temp:</span>
-                                                                    <span className="font-semibold text-gray-900">{vital.temp || 'N/A'}</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-1">
-                                                                    <span className="text-gray-600 font-medium">SpO₂:</span>
-                                                                    <span className="font-semibold text-gray-900">{vital.spo2 || 'N/A'}</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <p className="text-xs text-gray-500 text-center py-4">No vitals recorded</p>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Family History Module */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between">
-                                            <div className="flex items-center space-x-2">
-                                                <Heart className="w-4 h-4 text-primary-600" />
-                                                <h3 className="font-semibold text-sm text-gray-900">Family History</h3>
+                                    {/* Family History Module - Compact */}
+                                    <div className="bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                                        <div className="p-1.5 border-b border-gray-100 flex items-center justify-between">
+                                            <div className="flex items-center space-x-1">
+                                                <Heart className="w-3.5 h-3.5 text-purple-600" />
+                                                <h3 className="font-semibold text-[11px] text-gray-900 uppercase tracking-wider">Family Hx</h3>
                                             </div>
                                             <button
                                                 onClick={() => {
                                                     setPatientDataManagerTab('family');
                                                     setShowPatientDataManager(true);
                                                 }}
-                                                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                                                className="text-[9px] text-primary-600 hover:text-primary-700 font-bold"
                                             >
-                                                Manage
+                                                EDIT
                                             </button>
                                         </div>
-                                        <div className="p-2">
+                                        <div className="p-1.5">
                                             {familyHistory.length > 0 ? (
-                                                <div className="space-y-1.5">
+                                                <div className="space-y-1">
                                                     {familyHistory.slice(0, 3).map(hist => (
-                                                        <div key={hist.id} className="pb-1.5 border-b border-gray-100 last:border-b-0 last:pb-0">
-                                                            <p className="font-medium text-xs text-gray-900">{hist.condition}</p>
-                                                            <p className="text-xs text-gray-600">{hist.relationship}</p>
+                                                        <div key={hist.id} className="pb-1 border-b border-gray-50 last:border-b-0 last:pb-0">
+                                                            <p className="font-bold text-[10px] text-purple-900 leading-tight">{hist.condition}</p>
+                                                            <p className="text-[9px] text-gray-600 leading-tight">{hist.relationship}</p>
                                                         </div>
                                                     ))}
                                                     {familyHistory.length > 3 && (
-                                                        <p className="text-xs text-gray-500 text-center pt-1">+{familyHistory.length - 3} more</p>
+                                                        <p className="text-[9px] text-gray-400 text-center font-medium pt-0.5">+{familyHistory.length - 3} more</p>
                                                     )}
                                                 </div>
                                             ) : (
-                                                <p className="text-xs text-gray-500 text-center py-2">No family history</p>
+                                                <p className="text-[10px] text-gray-400 text-center py-1 italic">Not recorded</p>
                                             )}
                                         </div>
                                     </div>
 
-                                    {/* Social History Module */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between">
-                                            <div className="flex items-center space-x-2">
-                                                <UserCircle className="w-4 h-4 text-primary-600" />
-                                                <h3 className="font-semibold text-sm text-gray-900">Social History</h3>
+                                    {/* Social History Module - Compact */}
+                                    <div className="bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                                        <div className="p-1.5 border-b border-gray-100 flex items-center justify-between">
+                                            <div className="flex items-center space-x-1">
+                                                <UserCircle className="w-3.5 h-3.5 text-blue-600" />
+                                                <h3 className="font-semibold text-[11px] text-gray-900 uppercase tracking-wider">Social Hx</h3>
                                             </div>
                                             <button
                                                 onClick={() => {
                                                     setPatientDataManagerTab('social');
                                                     setShowPatientDataManager(true);
                                                 }}
-                                                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                                                className="text-[9px] text-primary-600 hover:text-primary-700 font-bold"
                                             >
-                                                Manage
+                                                EDIT
                                             </button>
                                         </div>
-                                        <div className="p-2">
+                                        <div className="p-1.5">
                                             {socialHistory ? (
-                                                <div className="space-y-1 text-xs">
+                                                <div className="space-y-1 text-[10px]">
                                                     {socialHistory.smoking_status && (
-                                                        <div>
-                                                            <span className="font-medium text-gray-700">Smoking: </span>
-                                                            <span className="text-gray-600">{socialHistory.smoking_status}</span>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-500">Smoking:</span>
+                                                            <span className="font-bold text-gray-900">{socialHistory.smoking_status}</span>
                                                         </div>
                                                     )}
                                                     {socialHistory.alcohol_use && (
-                                                        <div>
-                                                            <span className="font-medium text-gray-700">Alcohol: </span>
-                                                            <span className="text-gray-600">{socialHistory.alcohol_use}</span>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-500">Alcohol:</span>
+                                                            <span className="font-bold text-gray-900">{socialHistory.alcohol_use}</span>
                                                         </div>
                                                     )}
                                                     {socialHistory.exercise_frequency && (
-                                                        <div>
-                                                            <span className="font-medium text-gray-700">Exercise: </span>
-                                                            <span className="text-gray-600">{socialHistory.exercise_frequency}</span>
-                                                        </div>
-                                                    )}
-                                                    {socialHistory.occupation && (
-                                                        <div>
-                                                            <span className="font-medium text-gray-700">Occupation: </span>
-                                                            <span className="text-gray-600">{socialHistory.occupation}</span>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-500">Exercise:</span>
+                                                            <span className="font-bold text-gray-900">{socialHistory.exercise_frequency}</span>
                                                         </div>
                                                     )}
                                                 </div>
                                             ) : (
-                                                <p className="text-xs text-gray-500 text-center py-2">No social history</p>
+                                                <p className="text-[10px] text-gray-400 text-center py-1 italic">Not recorded</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Right Column: Main Grid */}
+                                <div className="lg:col-span-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                    {/* Medications Module */}
+                                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between bg-emerald-50/50">
+                                            <div className="flex items-center space-x-1.5">
+                                                <Pill className="w-4 h-4 text-emerald-600" />
+                                                <h3 className="font-bold text-sm text-gray-900">Medications</h3>
+                                                {medications.length > 0 && <span className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{medications.length}</span>}
+                                            </div>
+                                            <button onClick={() => { setPatientDataManagerTab('medications'); setShowPatientDataManager(true); }} className="text-[10px] text-emerald-600 hover:text-emerald-700 font-bold uppercase tracking-wider">Manage</button>
+                                        </div>
+                                        <div className="p-2 max-h-[200px] overflow-y-auto">
+                                            {medications.length > 0 ? (
+                                                <div className="space-y-1.5">
+                                                    {medications.slice(0, 10).map(med => (
+                                                        <div key={med.id} className="pb-1 border-b border-gray-50 last:border-b-0">
+                                                            <p className="font-bold text-xs text-gray-900 truncate">{med.medication_name}</p>
+                                                            <p className="text-[10px] text-gray-600">{med.dosage} {med.frequency}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-xs text-gray-500 text-center py-6">No active medications</p>
                                             )}
                                         </div>
                                     </div>
 
-                                    {/* EKG Studies Module */}
+                                    {/* Problem List Module */}
+                                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between bg-orange-50/50">
+                                            <div className="flex items-center space-x-1.5">
+                                                <AlertCircle className="w-4 h-4 text-orange-600" />
+                                                <h3 className="font-bold text-sm text-gray-900">Problem List</h3>
+                                                {problems.length > 0 && <span className="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{problems.length}</span>}
+                                            </div>
+                                            <button onClick={() => { setPatientDataManagerTab('problems'); setShowPatientDataManager(true); }} className="text-[10px] text-orange-600 hover:text-orange-700 font-bold uppercase tracking-wider">Manage</button>
+                                        </div>
+                                        <div className="p-2 max-h-[200px] overflow-y-auto">
+                                            {problems.length > 0 ? (
+                                                <div className="space-y-1.5">
+                                                    {problems.filter(p => p.status === 'active').slice(0, 10).map(prob => (
+                                                        <div key={prob.id} className="pb-1 border-b border-gray-50 last:border-b-0 flex items-center justify-between gap-2">
+                                                            <p className="font-bold text-xs text-gray-900 truncate">{prob.name || prob.problem_name}</p>
+                                                            <span className="text-[9px] bg-green-100 text-green-700 px-1 rounded font-bold uppercase">Active</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-xs text-gray-500 text-center py-6">No active problems</p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Recent Vitals Module */}
+                                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between bg-blue-50/50">
+                                            <div className="flex items-center space-x-2">
+                                                <Activity className="w-4 h-4 text-blue-600" />
+                                                <h3 className="font-bold text-sm text-gray-900">Recent Vitals</h3>
+                                            </div>
+                                            <button onClick={() => { setPatientChartTab('history'); setShowPatientChart(true); }} className="text-[10px] text-blue-600 hover:text-blue-700 font-bold uppercase tracking-wider">View All</button>
+                                        </div>
+                                        <div className="p-2 space-y-2">
+                                            {vitals.slice(0, 1).map((vital, idx) => (
+                                                <div key={idx} className="bg-blue-50/30 rounded-lg p-2 border border-blue-100/50">
+                                                    <div className="grid grid-cols-2 gap-y-2">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[9px] text-gray-500 font-bold uppercase">BP</span>
+                                                            <span className="text-sm font-black text-blue-900">{vital.bp?.replace(/&#x2F;/g, '/') || 'N/A'}</span>
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[9px] text-gray-500 font-bold uppercase">HR</span>
+                                                            <span className="text-sm font-black text-blue-900">{vital.hr || 'N/A'} <span className="text-[10px] font-medium text-gray-400">bpm</span></span>
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[9px] text-gray-500 font-bold uppercase">SpO2</span>
+                                                            <span className="text-sm font-black text-blue-900">{vital.spo2 || 'N/A'}%</span>
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[9px] text-gray-500 font-bold uppercase">Temp</span>
+                                                            <span className="text-sm font-black text-blue-900">{vital.temp || 'N/A'}°F</span>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-[9px] text-gray-400 font-bold mt-2 text-right">{new Date(vital.date).toLocaleDateString()} {vital.time}</p>
+                                                </div>
+                                            ))}
+                                            {vitals.length === 0 && <p className="text-xs text-gray-500 text-center py-6">No vitals recorded</p>}
+                                        </div>
+                                    </div>
+
+                                    {/* Cardiology Studies Section */}
+                                    {/* EKG Studies */}
                                     <div className="bg-white rounded-lg shadow-sm border border-red-200 hover:shadow-md transition-shadow">
-                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-red-50 to-transparent">
+                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between bg-red-50/50">
                                             <div className="flex items-center space-x-2">
                                                 <Activity className="w-4 h-4 text-red-600" />
-                                                <h3 className="font-semibold text-sm text-gray-900">EKG Studies</h3>
-                                                {documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('ekg')).length > 0 && (
-                                                    <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-semibold">
-                                                        {documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('ekg')).length}
-                                                    </span>
-                                                )}
+                                                <h3 className="font-bold text-sm text-gray-900">EKG</h3>
+                                                {documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('ekg')).length > 0 &&
+                                                    <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('ekg')).length}</span>
+                                                }
                                             </div>
-                                            <button
-                                                onClick={() => {
-                                                    setDocumentUploadType('imaging');
-                                                    setShowDocumentUploadModal(true);
-                                                }}
-                                                className="text-[10px] text-white px-2 py-1 rounded font-semibold flex items-center gap-1 shadow-sm hover:shadow-md transition-all"
-                                                style={{ background: 'linear-gradient(to right, #DC2626, #B91C1C)' }}
-                                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #B91C1C, #991B1B)'}
-                                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #DC2626, #B91C1C)'}
-                                            >
-                                                <Upload className="w-3 h-3" />
-                                                Upload EKG
+                                            <button onClick={() => { setDocumentUploadType('imaging'); setShowDocumentUploadModal(true); }} className="p-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors">
+                                                <Plus className="w-3 h-3" />
                                             </button>
                                         </div>
-                                        <div className="p-2">
-                                            {documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('ekg')).length > 0 ? (
-                                                <div className="space-y-1.5">
-                                                    {documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('ekg')).slice(0, 3).map(doc => (
-                                                        <div key={doc.id} className="bg-red-50 border border-red-100 rounded-lg p-2 hover:bg-red-100 transition-colors cursor-pointer"
-                                                            onClick={() => {
-                                                                setPatientChartTab('images');
-                                                                setShowPatientChart(true);
-                                                            }}
-                                                        >
-                                                            <div className="flex items-center justify-between gap-2">
-                                                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                                                    <Activity className="w-3.5 h-3.5 text-red-600 flex-shrink-0" />
-                                                                    <span className="text-xs font-medium text-red-900 truncate">{doc.file_name || 'EKG Study'}</span>
-                                                                </div>
-                                                                <span className="text-[10px] text-red-600 flex-shrink-0">
-                                                                    {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No date'}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                    {documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('ekg')).length > 3 && (
-                                                        <button
-                                                            onClick={() => {
-                                                                setPatientChartTab('images');
-                                                                setShowPatientChart(true);
-                                                            }}
-                                                            className="w-full text-center text-xs text-red-600 hover:text-red-700 font-medium py-1"
-                                                        >
-                                                            +{documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('ekg')).length - 3} more
-                                                        </button>
-                                                    )}
+                                        <div className="p-2 space-y-1">
+                                            {documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('ekg')).slice(0, 3).map(doc => (
+                                                <div key={doc.id} className="flex items-center justify-between text-[11px] p-1.5 bg-red-50/30 rounded border border-red-100/50 hover:bg-red-50 transition-colors cursor-pointer" onClick={() => { setPatientChartTab('images'); setShowPatientChart(true); }}>
+                                                    <span className="font-bold text-red-900 truncate flex-1 mr-2">{doc.file_name || 'EKG Study'}</span>
+                                                    <span className="text-red-500 font-medium whitespace-nowrap">{new Date(doc.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                                                 </div>
-                                            ) : (
-                                                <div className="text-center py-4">
-                                                    <Activity className="w-8 h-8 text-red-200 mx-auto mb-2" />
-                                                    <p className="text-xs text-gray-500 mb-2">No EKG studies</p>
-                                                    <button
-                                                        onClick={() => {
-                                                            setDocumentUploadType('imaging');
-                                                            setShowDocumentUploadModal(true);
-                                                        }}
-                                                        className="text-xs text-red-600 hover:text-red-700 font-medium"
-                                                    >
-                                                        Upload EKG
-                                                    </button>
-                                                </div>
-                                            )}
+                                            ))}
+                                            {documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('ekg')).length === 0 && <p className="text-xs text-gray-500 text-center py-4">No EKGs recorded</p>}
                                         </div>
                                     </div>
 
-                                    {/* ECHO Studies Module */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-purple-200 hover:shadow-md transition-shadow">
-                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-purple-50 to-transparent">
+                                    {/* ECHO Studies */}
+                                    <div className="bg-white rounded-lg shadow-sm border border-indigo-200 hover:shadow-md transition-shadow">
+                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between bg-indigo-50/50">
                                             <div className="flex items-center space-x-2">
-                                                <Heart className="w-4 h-4 text-purple-600" />
-                                                <h3 className="font-semibold text-sm text-gray-900">Echo Studies</h3>
-                                                {documents.filter(d => d.doc_type === 'imaging' && (d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length > 0 && (
-                                                    <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-semibold">
-                                                        {documents.filter(d => d.doc_type === 'imaging' && (d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length}
-                                                    </span>
-                                                )}
+                                                <Heart className="w-4 h-4 text-indigo-600" />
+                                                <h3 className="font-bold text-sm text-gray-900">ECHO</h3>
+                                                {documents.filter(d => d.doc_type === 'imaging' && (d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length > 0 &&
+                                                    <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{documents.filter(d => d.doc_type === 'imaging' && (d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length}</span>
+                                                }
                                             </div>
-                                            <button
-                                                onClick={() => {
-                                                    setDocumentUploadType('imaging');
-                                                    setShowDocumentUploadModal(true);
-                                                }}
-                                                className="text-[10px] text-white px-2 py-1 rounded font-semibold flex items-center gap-1 shadow-sm hover:shadow-md transition-all"
-                                                style={{ background: 'linear-gradient(to right, #7C3AED, #6D28D9)' }}
-                                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #6D28D9, #5B21B6)'}
-                                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #7C3AED, #6D28D9)'}
-                                            >
-                                                <Upload className="w-3 h-3" />
-                                                Upload Echo
+                                            <button onClick={() => { setDocumentUploadType('imaging'); setShowDocumentUploadModal(true); }} className="p-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors">
+                                                <Plus className="w-3 h-3" />
                                             </button>
                                         </div>
-                                        <div className="p-2">
-                                            {documents.filter(d => d.doc_type === 'imaging' && (d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length > 0 ? (
-                                                <div className="space-y-1.5">
-                                                    {documents.filter(d => d.doc_type === 'imaging' && (d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).slice(0, 3).map(doc => (
-                                                        <div key={doc.id} className="bg-purple-50 border border-purple-100 rounded-lg p-2 hover:bg-purple-100 transition-colors cursor-pointer"
-                                                            onClick={() => {
-                                                                setPatientChartTab('images');
-                                                                setShowPatientChart(true);
-                                                            }}
-                                                        >
-                                                            <div className="flex items-center justify-between gap-2">
-                                                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                                                    <Heart className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" />
-                                                                    <span className="text-xs font-medium text-purple-900 truncate">{doc.file_name || 'Echo Study'}</span>
-                                                                </div>
-                                                                <span className="text-[10px] text-purple-600 flex-shrink-0">
-                                                                    {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No date'}
-                                                                </span>
-                                                            </div>
+                                        <div className="p-2 space-y-1">
+                                            {documents.filter(d => d.doc_type === 'imaging' && (d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).slice(0, 3).map(doc => (
+                                                <div key={doc.id} className="flex items-center justify-between text-[11px] p-1.5 bg-indigo-50/30 rounded border border-indigo-100/50 hover:bg-indigo-50 transition-colors cursor-pointer" onClick={() => { setPatientChartTab('images'); setShowPatientChart(true); }}>
+                                                    <span className="font-bold text-indigo-900 truncate flex-1 mr-2">{doc.file_name || 'Echo Study'}</span>
+                                                    <span className="text-indigo-500 font-medium whitespace-nowrap">{new Date(doc.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                                                </div>
+                                            ))}
+                                            {documents.filter(d => d.doc_type === 'imaging' && (d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length === 0 && <p className="text-xs text-gray-500 text-center py-4">No ECHO studies</p>}
+                                        </div>
+                                    </div>
+
+                                    {/* Stress Tests (New) */}
+                                    <div className="bg-white rounded-lg shadow-sm border border-fuchsia-200 hover:shadow-md transition-shadow">
+                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between bg-fuchsia-50/50">
+                                            <div className="flex items-center space-x-2">
+                                                <Activity className="w-4 h-4 text-fuchsia-600" />
+                                                <h3 className="font-bold text-sm text-gray-900">Stress Test</h3>
+                                                {documents.filter(d => d.tags?.includes('stress_test')).length > 0 &&
+                                                    <span className="bg-fuchsia-100 text-fuchsia-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{documents.filter(d => d.tags?.includes('stress_test')).length}</span>
+                                                }
+                                            </div>
+                                            <button onClick={() => setShowStressTestModal(true)} className="p-1 bg-fuchsia-600 text-white rounded hover:bg-fuchsia-700 transition-colors">
+                                                <Plus className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                        <div className="p-2 space-y-1">
+                                            {documents.filter(d => d.tags?.includes('stress_test')).slice(0, 3).map(doc => {
+                                                const typeTag = doc.tags?.find(t => t.startsWith('type:'))?.split(':')[1] || '';
+                                                const stressorTag = doc.tags?.find(t => t.startsWith('stressor:'))?.split(':')[1] || '';
+                                                return (
+                                                    <div key={doc.id} className="block text-[11px] p-2 bg-fuchsia-50/30 rounded border border-fuchsia-100/50 hover:bg-fuchsia-50 transition-colors cursor-pointer" onClick={() => { setPatientChartTab('images'); setShowPatientChart(true); }}>
+                                                        <div className="flex justify-between items-start mb-1">
+                                                            <span className="font-black text-fuchsia-900 uppercase tracking-tighter">{typeTag || 'Cardiac Stress'}</span>
+                                                            <span className="text-fuchsia-500 font-bold">{new Date(doc.created_at).toLocaleDateString()}</span>
                                                         </div>
-                                                    ))}
-                                                    {documents.filter(d => d.doc_type === 'imaging' && (d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length > 3 && (
-                                                        <button
-                                                            onClick={() => {
-                                                                setPatientChartTab('images');
-                                                                setShowPatientChart(true);
-                                                            }}
-                                                            className="w-full text-center text-xs text-purple-600 hover:text-purple-700 font-medium py-1"
-                                                        >
-                                                            +{documents.filter(d => d.doc_type === 'imaging' && (d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length - 3} more
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <div className="text-center py-4">
-                                                    <Heart className="w-8 h-8 text-purple-200 mx-auto mb-2" />
-                                                    <p className="text-xs text-gray-500 mb-2">No Echo studies</p>
-                                                    <button
-                                                        onClick={() => {
-                                                            setDocumentUploadType('imaging');
-                                                            setShowDocumentUploadModal(true);
-                                                        }}
-                                                        className="text-xs text-purple-600 hover:text-purple-700 font-medium"
-                                                    >
-                                                        Upload Echo
-                                                    </button>
-                                                </div>
-                                            )}
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="px-1.5 py-0.5 bg-white border border-fuchsia-100 rounded text-[9px] font-bold text-fuchsia-700 uppercase">{stressorTag}</span>
+                                                            <span className="truncate text-gray-500 italic">{doc.file_name}</span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                            {documents.filter(d => d.tags?.includes('stress_test')).length === 0 && <p className="text-xs text-gray-500 text-center py-4">No Stress tests recorded</p>}
+                                        </div>
+                                    </div>
+
+                                    {/* Cardiac Cath (New) */}
+                                    <div className="bg-white rounded-lg shadow-sm border border-slate-300 hover:shadow-md transition-shadow">
+                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between bg-slate-50/50">
+                                            <div className="flex items-center space-x-2">
+                                                <Heart className="w-4 h-4 text-slate-700" />
+                                                <h3 className="font-bold text-sm text-gray-900">Cardiac Cath</h3>
+                                                {documents.filter(d => d.tags?.includes('cardiac_cath')).length > 0 &&
+                                                    <span className="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{documents.filter(d => d.tags?.includes('cardiac_cath')).length}</span>
+                                                }
+                                            </div>
+                                            <button onClick={() => setShowCardiacCathModal(true)} className="p-1 bg-slate-700 text-white rounded hover:bg-slate-800 transition-colors">
+                                                <Plus className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                        <div className="p-2 space-y-1">
+                                            {documents.filter(d => d.tags?.includes('cardiac_cath')).slice(0, 3).map(doc => {
+                                                const facility = doc.tags?.find(t => t.startsWith('facility:'))?.split(':')[1] || '';
+                                                return (
+                                                    <div key={doc.id} className="block text-[11px] p-2 bg-slate-50/30 rounded border border-slate-200/50 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => { setPatientChartTab('images'); setShowPatientChart(true); }}>
+                                                        <div className="flex justify-between items-start mb-1">
+                                                            <span className="font-black text-slate-900 uppercase tracking-tighter">{facility || 'Cardiac Cath'}</span>
+                                                            <span className="text-slate-500 font-bold">{new Date(doc.created_at).toLocaleDateString()}</span>
+                                                        </div>
+                                                        <span className="truncate text-gray-500 italic text-[10px]">{doc.file_name}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                            {documents.filter(d => d.tags?.includes('cardiac_cath')).length === 0 && <p className="text-xs text-gray-500 text-center py-4">No Cardiac Cath records</p>}
                                         </div>
                                     </div>
 
@@ -2803,6 +2777,138 @@ const Snapshot = ({ showNotesOnly = false }) => {
                         patientId={id}
                     />
                 )}
+
+                {/* Stress Test Upload Modal */}
+                <Modal
+                    isOpen={showStressTestModal}
+                    onClose={() => setShowStressTestModal(false)}
+                    title="Log Cardiac Stress Test"
+                >
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Test Type</label>
+                                <select
+                                    className="w-full px-3 py-2 border rounded-md font-medium"
+                                    value={stressTestData.type}
+                                    onChange={(e) => setStressTestData({ ...stressTestData, type: e.target.value })}
+                                >
+                                    <option value="treadmill">Treadmill (Exercise)</option>
+                                    <option value="nuclear">Nuclear</option>
+                                    <option value="spect">SPECT</option>
+                                    <option value="pet">PET</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Stressor</label>
+                                <select
+                                    className="w-full px-3 py-2 border rounded-md font-medium"
+                                    value={stressTestData.stressor}
+                                    onChange={(e) => setStressTestData({ ...stressTestData, stressor: e.target.value })}
+                                >
+                                    <option value="exercise">Exercise</option>
+                                    <option value="regadenoson">Regadenoson (Lexiscan)</option>
+                                    <option value="adenosine">Adenosine</option>
+                                    <option value="dobutamine">Dobutamine</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Date of Test</label>
+                            <input
+                                type="date"
+                                className="w-full px-3 py-2 border rounded-md"
+                                value={stressTestData.date}
+                                onChange={(e) => setStressTestData({ ...stressTestData, date: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Attach Final Report</label>
+                            <input
+                                type="file"
+                                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-fuchsia-50 file:text-fuchsia-700 hover:file:bg-fuchsia-100"
+                                onChange={(e) => setStressTestFile(e.target.files?.[0] || null)}
+                                accept=".pdf,.jpg,.jpeg,.png"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Results Summary</label>
+                            <textarea
+                                className="w-full px-3 py-2 border rounded-md h-20"
+                                placeholder="e.g. Negative for ischemia, Normal EF 60%"
+                                value={stressTestData.notes}
+                                onChange={(e) => setStressTestData({ ...stressTestData, notes: e.target.value })}
+                            />
+                        </div>
+                        <div className="flex justify-end gap-2 pt-4">
+                            <button onClick={() => setShowStressTestModal(false)} className="px-4 py-2 text-gray-600 font-bold">Cancel</button>
+                            <button
+                                onClick={handleStressTestUpload}
+                                disabled={!stressTestFile}
+                                className="px-6 py-2 bg-fuchsia-600 text-white rounded-md font-bold shadow-md hover:bg-fuchsia-700 disabled:bg-gray-300"
+                            >
+                                Save Result
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
+
+                {/* Cardiac Cath Upload Modal */}
+                <Modal
+                    isOpen={showCardiacCathModal}
+                    onClose={() => setShowCardiacCathModal(false)}
+                    title="Log Cardiac Catheterization"
+                >
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Facility / Performing Center</label>
+                            <input
+                                type="text"
+                                className="w-full px-3 py-2 border rounded-md"
+                                placeholder="e.g. Memorial Hospital"
+                                value={cardiacCathData.facility}
+                                onChange={(e) => setCardiacCathData({ ...cardiacCathData, facility: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Date of Procedure</label>
+                            <input
+                                type="date"
+                                className="w-full px-3 py-2 border rounded-md"
+                                value={cardiacCathData.date}
+                                onChange={(e) => setCardiacCathData({ ...cardiacCathData, date: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Attach Final Report</label>
+                            <input
+                                type="file"
+                                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-slate-50 file:text-slate-700 hover:file:bg-slate-100"
+                                onChange={(e) => setCardiacCathFile(e.target.files?.[0] || null)}
+                                accept=".pdf,.jpg,.jpeg,.png"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Procedural Findings</label>
+                            <textarea
+                                className="w-full px-3 py-2 border rounded-md h-24"
+                                placeholder="e.g. LAD 20% stenosis, RCA clean. No stent placed."
+                                value={cardiacCathData.notes}
+                                onChange={(e) => setCardiacCathData({ ...cardiacCathData, notes: e.target.value })}
+                            />
+                        </div>
+                        <div className="flex justify-end gap-2 pt-4">
+                            <button onClick={() => setShowCardiacCathModal(false)} className="px-4 py-2 text-gray-600 font-bold">Cancel</button>
+                            <button
+                                onClick={handleCardiacCathUpload}
+                                disabled={!cardiacCathFile}
+                                className="px-6 py-2 bg-slate-700 text-white rounded-md font-bold shadow-md hover:bg-slate-800 disabled:bg-gray-300"
+                            >
+                                Save Result
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
             </div>
         </div>
     );
