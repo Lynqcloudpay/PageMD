@@ -1192,10 +1192,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         setPatientChartTab('history');
                                         setShowPatientChart(true);
                                     }}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white rounded-lg transition-all shadow-md hover:shadow-lg" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')} onMouseLeave={(e) => (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-blue-50 border-2 border-blue-400 hover:border-blue-500 rounded-lg transition-all shadow-sm hover:shadow-md"
                                 >
-                                    <Eye className="w-4 h-4" />
-                                    <span>Open Chart</span>
+                                    <Eye className="w-4 h-4 text-blue-600" />
+                                    <span className="text-sm font-bold text-blue-700">Open Chart</span>
                                 </button>
                             </div>
                         </div>
