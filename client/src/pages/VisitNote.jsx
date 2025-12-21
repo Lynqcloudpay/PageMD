@@ -16,6 +16,7 @@ import { usePrivileges } from '../hooks/usePrivileges';
 import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
 import { hpiDotPhrases } from '../data/hpiDotPhrases';
+import { ProblemInput, MedicationInput, AllergyInput, FamilyHistoryInput } from '../components/PAMFOSInputs';
 
 // Collapsible Section Component
 const Section = ({ title, children, defaultOpen = true }) => {
@@ -71,7 +72,7 @@ const PlanDisplay = ({ plan }) => {
 };
 
 // Generic History List Component
-const HistoryList = ({ title, icon, items, renderItem, onAdd, onDelete, emptyMessage, addPlaceholder = "Add item..." }) => {
+const HistoryList = ({ title, icon, items, renderItem, onAdd, onDelete, emptyMessage, addPlaceholder = "Add item...", renderInput }) => {
     const [isAdding, setIsAdding] = useState(false);
     const [newItem, setNewItem] = useState('');
 
@@ -118,18 +119,30 @@ const HistoryList = ({ title, icon, items, renderItem, onAdd, onDelete, emptyMes
                 )}
 
                 {isAdding && (
-                    <div className="mt-2 flex items-center gap-2">
-                        <input
-                            type="text"
-                            value={newItem}
-                            onChange={(e) => setNewItem(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-                            placeholder={addPlaceholder}
-                            className="flex-1 text-sm border-gray-300 rounded focus:ring-primary-500 focus:border-primary-500 px-2 py-1"
-                            autoFocus
-                        />
-                        <button onClick={handleAdd} className="text-xs bg-primary-600 text-white px-2 py-1 rounded hover:bg-primary-700">Save</button>
-                        <button onClick={() => setIsAdding(false)} className="text-xs text-gray-500 hover:text-gray-700 px-1">Cancel</button>
+                    <div className="mt-2">
+                        {renderInput ? (
+                            renderInput({
+                                onSave: (data) => {
+                                    onAdd(data);
+                                    setIsAdding(false);
+                                },
+                                onCancel: () => setIsAdding(false)
+                            })
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    value={newItem}
+                                    onChange={(e) => setNewItem(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+                                    placeholder={addPlaceholder}
+                                    className="flex-1 text-sm border-gray-300 rounded focus:ring-primary-500 focus:border-primary-500 px-2 py-1"
+                                    autoFocus
+                                />
+                                <button onClick={handleAdd} className="text-xs bg-primary-600 text-white px-2 py-1 rounded hover:bg-primary-700">Save</button>
+                                <button onClick={() => setIsAdding(false)} className="text-xs text-gray-500 hover:text-gray-700 px-1">Cancel</button>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -1237,8 +1250,13 @@ const VisitNote = () => {
                             <p className="text-xs text-neutral-600">{visitDate} • {providerName}</p>
                         </div>
                         <div className="flex items-center space-x-1.5">
-                            <button onClick={() => { setPatientChartTab('history'); setShowPatientChart(!showPatientChart); }} className={`p-1.5 rounded-md transition-colors ${showPatientChart && patientChartTab === 'history' ? 'bg-primary-200 text-primary-700' : 'text-neutral-600 hover:bg-primary-100'}`} title="Patient Chart">
+                            <button
+                                onClick={() => { setPatientChartTab('history'); setShowPatientChart(!showPatientChart); }}
+                                className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md transition-colors text-xs font-medium border ${showPatientChart ? 'bg-primary-50 text-primary-700 border-primary-200' : 'bg-white text-neutral-700 border-gray-200 hover:bg-gray-50'}`}
+                                title="Toggle Patient Chart Side Panel"
+                            >
                                 <History className="w-3.5 h-3.5" />
+                                <span>Chart</span>
                             </button>
                             {isSigned && (
                                 <div className="flex items-center space-x-2 text-green-700 text-xs font-medium">
@@ -1529,9 +1547,10 @@ const VisitNote = () => {
                                             </span>
                                         </div>
                                     )}
-                                    onAdd={async (text) => {
+                                    renderInput={(props) => <ProblemInput {...props} />}
+                                    onAdd={async (data) => {
                                         try {
-                                            const res = await patientsAPI.addProblem(id, { problemName: text, onsetDate: new Date().toISOString() });
+                                            const res = await patientsAPI.addProblem(id, data);
                                             setPatientData(prev => ({ ...prev, problems: [res.data, ...(prev.problems || [])] }));
                                             showToast('Problem added', 'success');
                                         } catch (e) { showToast('Failed to add problem', 'error'); }
@@ -1555,12 +1574,15 @@ const VisitNote = () => {
                                     renderItem={(allergy) => (
                                         <div className="flex justify-between items-start w-full">
                                             <span className="font-medium text-red-700">{allergy.allergen}</span>
-                                            {allergy.reaction && <span className="text-gray-500 text-xs">{allergy.reaction}</span>}
+                                            {allergy.reaction && <span className="text-gray-500 text-xs mx-1">- {allergy.reaction}</span>}
+                                            {allergy.severity && allergy.severity !== 'unknown' && <span className="text-gray-400 text-[10px] italic">({allergy.severity})</span>}
                                         </div>
                                     )}
-                                    onAdd={async (text) => {
+                                    renderInput={(props) => <AllergyInput {...props} />}
+                                    onAdd={async (data) => {
                                         try {
-                                            const res = await patientsAPI.addAllergy(id, { allergen: text, severity: 'unknown' });
+                                            const payload = typeof data === 'string' ? { allergen: data, severity: 'unknown' } : data;
+                                            const res = await patientsAPI.addAllergy(id, payload);
                                             setPatientData(prev => ({ ...prev, allergies: [res.data, ...(prev.allergies || [])] }));
                                             showToast('Allergy added', 'success');
                                         } catch (e) { showToast('Failed to add allergy', 'error'); }
@@ -1584,12 +1606,15 @@ const VisitNote = () => {
                                     renderItem={(med) => (
                                         <div className="flex justify-between items-start w-full">
                                             <span className="font-medium text-gray-900">{med.medication_name}</span>
-                                            <span className="text-gray-500 text-xs">{med.dosage || ''} {med.frequency || ''}</span>
+                                            <span className="text-gray-500 text-xs">
+                                                {[med.dosage, med.frequency, med.route].filter(Boolean).join(' ')}
+                                            </span>
                                         </div>
                                     )}
-                                    onAdd={async (text) => {
+                                    renderInput={(props) => <MedicationInput {...props} />}
+                                    onAdd={async (data) => {
                                         try {
-                                            const res = await patientsAPI.addMedication(id, { medicationName: text, startDate: new Date().toISOString() });
+                                            const res = await patientsAPI.addMedication(id, data);
                                             setPatientData(prev => ({ ...prev, medications: [res.data, ...(prev.medications || [])] }));
                                             showToast('Medication added', 'success');
                                         } catch (e) { showToast('Failed to add medication', 'error'); }
@@ -1616,17 +1641,10 @@ const VisitNote = () => {
                                             <span className="text-gray-500 text-xs">{hist.relationship}</span>
                                         </div>
                                     )}
-                                    onAdd={async (text) => {
-                                        // Simple parsing: "Diabetes (Father)"
-                                        let condition = text;
-                                        let relationship = 'Unknown';
-                                        if (text.includes('(')) {
-                                            const parts = text.split('(');
-                                            condition = parts[0].trim();
-                                            relationship = parts[1].replace(')', '').trim();
-                                        }
+                                    renderInput={(props) => <FamilyHistoryInput {...props} />}
+                                    onAdd={async (data) => {
                                         try {
-                                            const res = await patientsAPI.addFamilyHistory(id, { condition, relationship });
+                                            const res = await patientsAPI.addFamilyHistory(id, data);
                                             setFamilyHistory(prev => [res.data, ...prev]);
                                             showToast('Family history added', 'success');
                                         } catch (e) { showToast('Failed to add family history', 'error'); }
@@ -1639,7 +1657,6 @@ const VisitNote = () => {
                                             showToast('Family history deleted', 'success');
                                         } catch (e) { showToast('Failed to delete family history', 'error'); }
                                     }}
-                                    addPlaceholder="Condition (Relationship)"
                                 />
 
                                 {/* O/S - Social History */}
@@ -2184,6 +2201,12 @@ const VisitNote = () => {
                     </div>
                 </div>
             )}
+            <PatientChartPanel
+                patientId={id}
+                isOpen={showPatientChart}
+                onClose={() => setShowPatientChart(false)}
+                initialTab={patientChartTab}
+            />
         </div>
     );
 };
