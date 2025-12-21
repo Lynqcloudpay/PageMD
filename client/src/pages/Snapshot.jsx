@@ -1285,7 +1285,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         setPatientChartTab('history');
                                         setShowPatientChart(true);
                                     }}
-                                    className="flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-semibold text-white rounded transition-all whitespace-nowrap shadow-sm hover:shadow-md"
+                                    className="flex items-center justify-center gap-1 px-2.5 py-1 text-xs font-semibold text-white rounded transition-all whitespace-nowrap shadow-sm hover:shadow-md"
                                     style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
                                     onMouseEnter={(e) => (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
                                     onMouseLeave={(e) => (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
