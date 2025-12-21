@@ -411,16 +411,27 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                         </div>
 
                                         <div className="grid grid-cols-1 gap-3">
-                                            {[...eprescribePrescriptions, ...prescriptions].length === 0 ? (
-                                                <div className="text-center py-10 text-gray-400 text-sm">No prescriptions found.</div>
-                                            ) : (
-                                                [...eprescribePrescriptions, ...prescriptions].map((rx, idx) => {
+                                            {(() => {
+                                                const homeMeds = (patient?.medications || []).map(med => ({
+                                                    id: med.id,
+                                                    medication_name: med.name || med.medication,
+                                                    sig: med.dosage || med.instructions || '',
+                                                    created_at: med.created_at,
+                                                    source: 'home'
+                                                }));
+                                                const allMeds = [...homeMeds, ...eprescribePrescriptions, ...prescriptions];
+                                                
+                                                if (allMeds.length === 0) {
+                                                    return <div className="text-center py-10 text-gray-400 text-sm">No medications found.</div>;
+                                                }
+                                                
+                                                return allMeds.map((rx, idx) => {
                                                     const name = rx.medication_name || rx.order_payload?.medication_name || rx.order_payload?.medication || 'Unknown Med';
                                                     const sig = rx.sig || rx.order_payload?.sig || rx.order_payload?.instructions || '';
-                                                    const date = new Date(rx.created_at || rx.sent_at).toLocaleDateString();
+                                                    const date = rx.created_at || rx.sent_at ? new Date(rx.created_at || rx.sent_at).toLocaleDateString() : 'N/A';
 
                                                     return (
-                                                        <div key={rx.id || idx} className="bg-white border border-gray-200 rounded-lg p-3 hover:border-primary-200 hover:shadow-sm transition-all">
+                                                        <div key={rx.id || `med-${idx}`} className="bg-white border border-gray-200 rounded-lg p-3 hover:border-primary-200 hover:shadow-sm transition-all">
                                                             <div className="flex justify-between items-start">
                                                                 <div>
                                                                     <div className="font-bold text-gray-900 text-sm">{name}</div>
@@ -428,14 +439,18 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                                     {rx.order_payload?.dispense && <div className="text-xs text-gray-400 mt-0.5">Qty: {rx.order_payload.dispense}</div>}
                                                                 </div>
                                                                 <div className="text-right flex flex-col items-end gap-1">
-                                                                    {getStatusBadge(rx.status)}
+                                                                    {rx.source === 'home' ? (
+                                                                        <span className="px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wide font-bold bg-blue-100 text-blue-800">Home Med</span>
+                                                                    ) : (
+                                                                        getStatusBadge(rx.status)
+                                                                    )}
                                                                     <span className="text-[10px] text-gray-400">{date}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     );
-                                                })
-                                            )}
+                                                });
+                                            })()}
                                         </div>
                                     </div>
                                 )}
