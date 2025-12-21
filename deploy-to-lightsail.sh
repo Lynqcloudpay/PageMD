@@ -53,23 +53,21 @@ $SSH_CMD $USER@$HOST << EOF
   
   echo "🔑 Checking DB SSL certificates (skipping if already exist)..."
   # Skip certificate generation - assume they already exist
-  # This step was causing hangs, certificates should already be in place
   echo "✅ Certificate check skipped (assuming already configured)"
 
-  echo "🔄 Building and restarting services (forcing NO CACHE for fresh content)..."
-  # Build WITHOUT cache to ensure latest React code is compiled
+  echo "🔄 Building services (forcing NO CACHE)..."
   docker compose -f docker-compose.prod.yml build --no-cache api web
   
-  echo "🧹 Cleaning up stale static assets..."
-  # Remove the web_static volume to force Caddy to serve fresh files from the new image
-  # We use || true to prevent failure if volume explicitly doesn't exist yet
-  # The volume name is typically foldername_volumename, so deploy_web_static
+  echo "🛑 Stopping all services..."
+  # Bring down all containers to release volume locks
+  docker compose -f docker-compose.prod.yml down
+  
+  echo "🧹 Cleaning up stale static assets volume..."
+  # Now safe to remove the volume as no containers are using it
   docker volume rm deploy_web_static 2>/dev/null || true
   
-  echo "🚀 Starting containers..."
-  # Face remove containers to avoid conflicts
-  docker rm -f emr-web emr-api 2>/dev/null || true
-  docker compose -f docker-compose.prod.yml up -d --force-recreate api web
+  echo "🚀 Re-starting all services..."
+  docker compose -f docker-compose.prod.yml up -d
   
   echo "✅ Deployment complete!"
   echo "🌍 Checking site status..."
