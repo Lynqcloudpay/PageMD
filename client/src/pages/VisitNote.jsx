@@ -1644,7 +1644,7 @@ const VisitNote = () => {
                                 let rosText = '';
                                 Object.keys(rosFindings).forEach(key => {
                                     const systemName = key.charAt(0).toUpperCase() + key.slice(1);
-                                    rosText += `**${systemName}:** ${rosFindings[key]}\n`;
+                                    rosText += `${systemName}: ${rosFindings[key]}\n`;
                                 });
                                 setNoteData({ ...noteData, ros: allRos, rosNotes: rosText.trim() });
                             }} disabled={isSigned} className="mt-1.5 px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
@@ -1693,7 +1693,7 @@ const VisitNote = () => {
                                 let peText = '';
                                 Object.keys(peFindings).forEach(key => {
                                     const systemName = key.replace(/([A-Z])/g, ' $1').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-                                    peText += `**${systemName}:** ${peFindings[key]}\n`;
+                                    peText += `${systemName}: ${peFindings[key]}\n`;
                                 });
                                 setNoteData({ ...noteData, pe: allPe, peNotes: peText.trim() });
                             }} disabled={isSigned} className="mt-1.5 px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
