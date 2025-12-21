@@ -1319,6 +1319,23 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         </div>
                                     </div>
                                 )}
+
+                                {/* Chart Button - Compact in demographics row */}
+                                <div
+                                    className="group cursor-pointer bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border border-blue-300 hover:border-blue-400 rounded p-1 transition-all relative text-center shadow-sm hover:shadow-md"
+                                    onClick={() => {
+                                        setPatientChartTab('history');
+                                        setShowPatientChart(true);
+                                    }}
+                                >
+                                    <div className="flex items-center justify-center mb-0.5 relative">
+                                        <div className="flex items-center space-x-0.5">
+                                            <Eye className="w-2.5 h-2.5 text-blue-700" />
+                                            <span className="text-[9px] font-bold text-blue-800 uppercase tracking-wide">Chart</span>
+                                        </div>
+                                    </div>
+                                    <div className="text-[10px] font-semibold text-blue-700 leading-tight">Full View</div>
+                                </div>
                             </div>
                         </div>
                     )}
