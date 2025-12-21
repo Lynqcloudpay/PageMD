@@ -21,6 +21,8 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
     const [imagingOrders, setImagingOrders] = useState([]);
     const [ekgs, setEkgs] = useState([]);
     const [echos, setEchos] = useState([]);
+    const [stressTests, setStressTests] = useState([]);
+    const [cardiacCaths, setCardiacCaths] = useState([]);
     const [documents, setDocuments] = useState([]);
     const [expandedNotes, setExpandedNotes] = useState({});
     const [selectedVisitForView, setSelectedVisitForView] = useState(null);
@@ -32,6 +34,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
     const [eprescribePrescriptions, setEprescribePrescriptions] = useState([]);
     const [eprescribeEnabled, setEprescribeEnabled] = useState(false);
     const [showDoseSpotModal, setShowDoseSpotModal] = useState(false);
+    const [activeMedications, setActiveMedications] = useState([]);
     const [hubDocuments, setHubDocuments] = useState([]);
 
     // Patient Details
@@ -72,14 +75,16 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                 ordersRes,
                 referralsRes,
                 eprescribeStatusRes,
-                docsRes
+                docsRes,
+                activeMedsRes
             ] = await Promise.allSettled([
                 patientsAPI.get(patientId),
                 visitsAPI.getByPatient(patientId),
                 ordersAPI.getByPatient(patientId),
                 referralsAPI.getByPatient(patientId),
                 eprescribeAPI.getStatus(),
-                documentsAPI.getByPatient(patientId)
+                documentsAPI.getByPatient(patientId),
+                patientsAPI.getMedications(patientId)
             ]);
 
             // Process Patient Data
@@ -112,7 +117,8 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
 
             // Process Referrals
             if (referralsRes.status === 'fulfilled') {
-                const legacyReferrals = (ordersRes.status === 'fulfilled' ? ordersRes.value.data : [])
+                const ordersData = Array.isArray(ordersRes.value?.data) ? ordersRes.value.data : [];
+                const legacyReferrals = ordersData
                     .filter(o => o.order_type === 'referral')
                     .map(o => ({
                         id: o.id,
@@ -123,8 +129,8 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                         created_at: o.created_at
                     }));
 
-                const dedicatedReferrals = referralsRes.value.data || [];
-                setReferrals([...dedicatedReferrals, ...legacyReferrals]);
+                const dedicatedReferrals = Array.isArray(referralsRes.value?.data) ? referralsRes.value.data : [];
+                setReferrals([...dedicatedReferrals, ...legacyReferrals].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
             }
 
             // Process ePrescribe
@@ -139,13 +145,20 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                 }
             }
 
+            // Process Active Medications
+            if (activeMedsRes?.status === 'fulfilled') {
+                setActiveMedications(activeMedsRes.value.data || []);
+            }
+
             // Process Documents
             if (docsRes.status === 'fulfilled') {
                 const docs = docsRes.value.data || [];
                 setImages(docs.filter(d => d.doc_type === 'imaging').sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
                 setEkgs(docs.filter(d => d.doc_type === 'ekg').sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
                 setEchos(docs.filter(d => d.doc_type === 'echo').sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
-                setDocuments(docs.filter(d => !['imaging', 'ekg', 'echo'].includes(d.doc_type)).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
+                setStressTests(docs.filter(d => d.doc_type === 'stress_test').sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
+                setCardiacCaths(docs.filter(d => d.doc_type === 'cardiac_cath').sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
+                setDocuments(docs.filter(d => !['imaging', 'ekg', 'echo', 'stress_test', 'cardiac_cath'].includes(d.doc_type)).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
                 setHubDocuments(docs);
             }
 
@@ -438,10 +451,10 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
 
                                         <div className="grid grid-cols-1 gap-3">
                                             {(() => {
-                                                const homeMeds = (patient?.medications || []).map(med => ({
+                                                const homeMeds = activeMedications.map(med => ({
                                                     id: med.id,
-                                                    medication_name: med.name || med.medication,
-                                                    sig: med.dosage || med.instructions || '',
+                                                    medication_name: med.medication_name || med.name || med.medication,
+                                                    sig: med.sig || med.dosage || med.instructions || (med.frequency ? `${med.dosage || ''} ${med.frequency}` : ''),
                                                     created_at: med.created_at,
                                                     source: 'home'
                                                 }));
@@ -484,6 +497,43 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                 {/* LABS TAB */}
                                 {activeTab === 'labs' && (
                                     <div className="space-y-4">
+                                        {/* Cardiac Procedures Section */}
+                                        {[...stressTests, ...cardiacCaths].length > 0 && (
+                                            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                                <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                                                    <HeartPulse className="w-4 h-4 text-rose-500" />
+                                                    Cardiac Procedures
+                                                </h3>
+                                                <div className="grid grid-cols-1 gap-2">
+                                                    {[...stressTests, ...cardiacCaths].map(study => {
+                                                        const isStress = study.doc_type === 'stress_test';
+                                                        const tagsStr = study.tags || '';
+                                                        const mets = tagsStr.match(/mets:([^,]+)/)?.[1];
+                                                        const ef = tagsStr.match(/ef:([^,]+)/)?.[1];
+                                                        return (
+                                                            <div key={study.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                                                <div className="flex justify-between items-start mb-1">
+                                                                    <div className="font-bold text-sm text-slate-900">{isStress ? 'Stress Test' : 'Cardiac Cath'}</div>
+                                                                    <div className="text-[10px] text-slate-500">{new Date(study.created_at).toLocaleDateString()}</div>
+                                                                </div>
+                                                                <div className="text-xs text-slate-600 flex gap-4">
+                                                                    {mets && <span>METS: <strong className="text-slate-900">{mets}</strong></span>}
+                                                                    {ef && <span>LVEF: <strong className="text-slate-900">{ef}</strong></span>}
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => window.open(`/api/documents/view/${study.id}`, '_blank')}
+                                                                    className="mt-2 text-[10px] text-primary-600 font-bold hover:underline flex items-center gap-1 uppercase tracking-wider"
+                                                                >
+                                                                    <FileImage className="w-3 h-3" /> View Report
+                                                                </button>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Lab Results Section */}
                                         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                                             <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
                                                 <FlaskConical className="w-4 h-4 text-primary-500" />

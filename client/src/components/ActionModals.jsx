@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Modal from './ui/Modal';
 import { Pill, Stethoscope, Upload, Send, Search, X, ShoppingCart, Trash2, Plus, Check, ChevronRight } from 'lucide-react';
 import { searchLabTests, searchImaging } from '../data/labCodes';
-import { codesAPI, referralsAPI, eprescribeAPI } from '../services/api';
+import axios from 'axios';
+import { codesAPI, referralsAPI, eprescribeAPI, medicationsAPI } from '../services/api';
 
 export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [] }) => {
     const [med, setMed] = useState('');
@@ -220,6 +221,8 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
     const [labVendor, setLabVendor] = useState('quest');
     const [referralReason, setReferralReason] = useState('');
     const [currentMed, setCurrentMed] = useState({ name: '', sig: '', dispense: '' });
+    const [searchingMed, setSearchingMed] = useState(false);
+    const [medResults, setMedResults] = useState([]);
 
     useEffect(() => {
         if (isOpen) {
@@ -302,25 +305,60 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
         return groups;
     }, [cart]);
 
-    // Search Logic
+    // Unified search logic
     useEffect(() => {
-        if (searchQuery.length < 2) {
+        const query = searchQuery.trim();
+        if (query.length < 2) {
             setSearchResults([]);
+            setMedResults([]);
             return;
         }
 
-        const query = searchQuery.toLowerCase();
-        let results = [];
+        if (activeTab === 'medications') {
+            const searchTimer = setTimeout(async () => {
+                setSearchingMed(true);
+                try {
+                    const response = await medicationsAPI.search(query);
+                    let results = Array.isArray(response.data) ? response.data : (Array.isArray(response) ? response : []);
+                    if (results.length === 0) {
+                        try {
+                            const rxnormResponse = await axios.get('https://rxnav.nlm.nih.gov/REST/drugs.json', { params: { name: query } });
+                            if (rxnormResponse?.data?.drugGroup?.conceptGroup) {
+                                const rxResults = [];
+                                rxnormResponse.data.drugGroup.conceptGroup.forEach(group => {
+                                    if (group.conceptProperties) {
+                                        group.conceptProperties.forEach(drug => {
+                                            rxResults.push({ name: drug.name, rxcui: drug.rxcui });
+                                        });
+                                    }
+                                });
+                                setMedResults(rxResults.slice(0, 15));
+                            }
+                        } catch (err) {
+                            console.warn('External RxNorm search failed:', err);
+                        }
+                    } else {
+                        setMedResults(results);
+                    }
+                } catch (e) {
+                    console.error('Medication search error:', e);
+                } finally {
+                    setSearchingMed(false);
+                }
+            }, 500);
+            return () => clearTimeout(searchTimer);
+        }
 
+        let results = [];
+        const lowerQuery = query.toLowerCase();
         switch (activeTab) {
             case 'labs':
-                results = searchLabTests(query).slice(0, 20);
+                results = searchLabTests(lowerQuery, labVendor).slice(0, 20);
                 break;
             case 'imaging':
-                results = searchImaging(query).slice(0, 20);
+                results = searchImaging(lowerQuery).slice(0, 20);
                 break;
             case 'procedures':
-                // Expanded list of common clinical procedures
                 const commonProcs = [
                     { name: '93000 - EKG (12-Lead)', cpt: '93000' },
                     { name: '94010 - Spirometry', cpt: '94010' },
@@ -338,7 +376,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                     { name: '96372 - Therapeutic Injection (IM)', cpt: '96372' },
                     { name: 'G0439 - AWV (Subsequent)', cpt: 'G0439' }
                 ];
-                results = commonProcs.filter(p => p.name.toLowerCase().includes(query) || p.cpt?.includes(query));
+                results = commonProcs.filter(p => p.name.toLowerCase().includes(lowerQuery) || p.cpt?.includes(lowerQuery));
                 break;
             case 'referrals':
                 const specialties = [
@@ -348,19 +386,13 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                     'Podiatry', 'Psychiatry', 'Pulmonology', 'Rheumatology', 'Sleep Medicine',
                     'Sports Medicine', 'Urology', 'Vascular Surgery', 'General Surgery', 'OB/GYN'
                 ];
-                results = specialties.filter(s => s.toLowerCase().includes(query)).map(s => ({ name: s }));
-                break;
-            case 'medications':
-                // Rely on user typing for now, or mock
-                // In a real app, this would hit medicationsAPI.search(query)
-                // For now, allow adding whatever they type via the "Add custom" button if no results
-                results = []; // handled by API usually
+                results = specialties.filter(s => s.toLowerCase().includes(lowerQuery)).map(s => ({ name: s }));
                 break;
             default:
                 break;
         }
         setSearchResults(results);
-    }, [searchQuery, activeTab]);
+    }, [searchQuery, activeTab, labVendor]);
 
     const addToCart = (item) => {
         const newItem = {
@@ -491,7 +523,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                 patientId,
                                 visitId,
                                 recipientName: item.name,
-                                specialty: item.name,
+                                recipientSpecialty: item.name,
                                 reason: item.reason || item.diagnosis || 'General Referral',
                                 status: 'sent',
                                 notes: `Linked to: ${item.diagnosis || 'General'}`,
@@ -655,47 +687,90 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                         <div className="flex-1 overflow-y-auto">
                             {activeTab === 'medications' ? (
                                 <div className="p-4 space-y-4">
-                                    <div className="bg-blue-50 p-3 rounded-md text-sm text-blue-700 mb-4">
-                                        Use e-Prescribe for simpler workflows. Use this form to manually document prescriptions.
+                                    <div className="bg-blue-50 p-3 rounded-md text-sm text-blue-700">
+                                        Manual documentation of prescriptions. For e-prescribing, use the <strong>EPrescribe</strong> button.
                                     </div>
-                                    <div className="space-y-3">
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-700 mb-1">Medication Name</label>
-                                            <input
-                                                className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                                                value={currentMed.name}
-                                                onChange={e => setCurrentMed({ ...currentMed, name: e.target.value })}
-                                                placeholder="e.g. Lisinopril 10mg"
-                                            />
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div>
-                                                <label className="block text-xs font-medium text-gray-700 mb-1">Sig</label>
+
+                                    {!currentMed.name ? (
+                                        <div className="space-y-4">
+                                            <div className="relative">
+                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                                 <input
-                                                    className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                                                    value={currentMed.sig}
-                                                    onChange={e => setCurrentMed({ ...currentMed, sig: e.target.value })}
-                                                    placeholder="e.g. 1 tab PO daily"
+                                                    className="w-full pl-9 pr-4 py-2 bg-white border border-gray-300 rounded-md text-sm outline-none focus:ring-2 focus:ring-primary-500"
+                                                    placeholder="Search medication name..."
+                                                    value={searchQuery}
+                                                    onChange={e => setSearchQuery(e.target.value)}
                                                 />
+                                                {searchingMed && <div className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin rounded-full h-4 w-4 border-b-2 border-primary-500"></div>}
                                             </div>
-                                            <div>
-                                                <label className="block text-xs font-medium text-gray-700 mb-1">Dispense</label>
-                                                <input
-                                                    className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                                                    value={currentMed.dispense}
-                                                    onChange={e => setCurrentMed({ ...currentMed, dispense: e.target.value })}
-                                                    placeholder="e.g. 30"
-                                                />
+
+                                            <div className="space-y-1 max-h-[300px] overflow-y-auto">
+                                                {medResults.length > 0 ? (
+                                                    medResults.map((m, i) => (
+                                                        <button
+                                                            key={i}
+                                                            onClick={() => setCurrentMed({ ...currentMed, name: m.name })}
+                                                            className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-primary-50 border border-transparent hover:border-primary-100 transition-all text-left group"
+                                                        >
+                                                            <Pill className="w-4 h-4 text-primary-400 group-hover:text-primary-600" />
+                                                            <div>
+                                                                <p className="text-sm font-semibold text-gray-900 leading-tight">{m.name}</p>
+                                                                {m.strength && <p className="text-[10px] text-gray-500">{m.strength}</p>}
+                                                            </div>
+                                                        </button>
+                                                    ))
+                                                ) : searchQuery.length > 2 && !searchingMed ? (
+                                                    <div className="p-4 text-center border-2 border-dashed border-gray-100 rounded-lg">
+                                                        <p className="text-sm text-gray-400 mb-2">No matching medications found</p>
+                                                        <button
+                                                            onClick={() => setCurrentMed({ ...currentMed, name: searchQuery })}
+                                                            className="text-primary-600 text-xs font-bold uppercase tracking-wider hover:underline"
+                                                        >
+                                                            Use "{searchQuery}" as custom input
+                                                        </button>
+                                                    </div>
+                                                ) : null}
                                             </div>
                                         </div>
-                                        <button
-                                            disabled={!currentMed.name || !currentMed.sig}
-                                            onClick={() => addToCart({ name: currentMed.name })}
-                                            className="w-full py-2 bg-primary-600 text-white rounded-md text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
-                                        >
-                                            Add Medication
-                                        </button>
-                                    </div>
+                                    ) : (
+                                        <div className="space-y-4 animate-in slide-in-from-top-2">
+                                            <div className="p-3 bg-primary-50 border border-primary-100 rounded-lg flex justify-between items-center text-primary-900">
+                                                <span className="font-bold text-sm truncate">{currentMed.name}</span>
+                                                <button onClick={() => setCurrentMed({ ...currentMed, name: '' })} className="p-1 hover:bg-white rounded-full transition-colors"><X className="w-4 h-4" /></button>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sig / Instructions</label>
+                                                    <input
+                                                        className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                                                        value={currentMed.sig}
+                                                        onChange={e => setCurrentMed({ ...currentMed, sig: e.target.value })}
+                                                        placeholder="e.g. 1 tab PO daily"
+                                                        autoFocus
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Dispense Qty</label>
+                                                    <input
+                                                        className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                                                        value={currentMed.dispense}
+                                                        onChange={e => setCurrentMed({ ...currentMed, dispense: e.target.value })}
+                                                        placeholder="e.g. 30"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <button
+                                                disabled={!currentMed.sig}
+                                                onClick={() => {
+                                                    addToCart({ name: currentMed.name });
+                                                }}
+                                                className="w-full py-2.5 bg-primary-600 text-white rounded-md text-sm font-bold shadow-md hover:bg-primary-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                                            >
+                                                <Plus className="w-4 h-4" /> Add to Plan
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             ) : searchResults.length > 0 ? (
                                 <div className="divide-y divide-gray-100">

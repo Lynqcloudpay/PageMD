@@ -89,12 +89,42 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const [todayDraftVisit, setTodayDraftVisit] = useState(null);
     const [showNewVisitDropdown, setShowNewVisitDropdown] = useState(false);
 
+    // EKG States
+    const [showEKGModal, setShowEKGModal] = useState(false);
+    const [ekgData, setEKGData] = useState({
+        date: new Date().toISOString().split('T')[0],
+        rhythm: 'NSR',
+        rate: '',
+        pr: '',
+        qrs: '',
+        qtc: '',
+        axis: '',
+        interpretation: ''
+    });
+    const [ekgFile, setEKGFile] = useState(null);
+
+    // ECHO States
+    const [showECHOModal, setShowECHOModal] = useState(false);
+    const [echoData, setECHOData] = useState({
+        date: new Date().toISOString().split('T')[0],
+        ef: '',
+        la_size: '',
+        lv_size: '',
+        rv_size: '',
+        valve_findings: '',
+        notes: ''
+    });
+    const [echoFile, setECHOFile] = useState(null);
+
     // Stress Test States
     const [showStressTestModal, setShowStressTestModal] = useState(false);
     const [stressTestData, setStressTestData] = useState({
         type: 'treadmill',
         stressor: 'exercise',
         date: new Date().toISOString().split('T')[0],
+        mets: '',
+        peak_hr: '',
+        bp_response: '',
         notes: ''
     });
     const [stressTestFile, setStressTestFile] = useState(null);
@@ -104,6 +134,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const [cardiacCathData, setCardiacCathData] = useState({
         facility: '',
         date: new Date().toISOString().split('T')[0],
+        findings: '', // LM, LAD, LCx, RCA
+        ef: '',
         notes: ''
     });
     const [cardiacCathFile, setCardiacCathFile] = useState(null);
@@ -388,6 +420,18 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
         fetchAllData();
     }, [id]);
+
+    // Listen for data updates from other components (e.g. ActionModals)
+    useEffect(() => {
+        const handleDataUpdate = () => {
+            if (id) {
+                refreshPatientData();
+            }
+        };
+
+        window.addEventListener('patient-data-updated', handleDataUpdate);
+        return () => window.removeEventListener('patient-data-updated', handleDataUpdate);
+    }, [id, refreshPatientData]); // refreshPatientData is stable via useCallback if it was one, but it's not. I'll make it stable or just depend on id.
 
     // Check for today's draft visit
     const fetchTodayDraft = useCallback(async () => {
@@ -739,58 +783,119 @@ const Snapshot = ({ showNotesOnly = false }) => {
         }
     };
 
+    const handleEKGUpload = async () => {
+        if (!ekgFile || !id) return;
+        try {
+            const formData = new FormData();
+            formData.append('file', ekgFile);
+            formData.append('patientId', id);
+            formData.append('docType', 'ekg');
+            // Tags for EKG data
+            const tags = [
+                'ekg',
+                `date:${ekgData.date}`,
+                `rhythm:${ekgData.rhythm}`,
+                `rate:${ekgData.rate}`,
+                `qtc:${ekgData.qtc}`,
+                `interpretation:${ekgData.interpretation}`
+            ].filter(Boolean);
+            formData.append('tags', tags.join(','));
+
+            await documentsAPI.upload(formData);
+            const docsResponse = await documentsAPI.getByPatient(id);
+            setDocuments(docsResponse.data || []);
+            setShowEKGModal(false);
+            setEKGFile(null);
+            alert('EKG saved successfully!');
+        } catch (error) {
+            console.error('Error saving EKG:', error);
+            alert('Failed to save EKG.');
+        }
+    };
+
+    const handleECHOUpload = async () => {
+        if (!echoFile || !id) return;
+        try {
+            const formData = new FormData();
+            formData.append('file', echoFile);
+            formData.append('patientId', id);
+            formData.append('docType', 'echo');
+            // Tags for ECHO data
+            const tags = [
+                'echo',
+                `date:${echoData.date}`,
+                `ef:${echoData.ef}%`,
+                `la_size:${echoData.la_size}`,
+                `lv_size:${echoData.lv_size}`,
+                `valve_findings:${echoData.valve_findings}`
+            ].filter(Boolean);
+            formData.append('tags', tags.join(','));
+
+            await documentsAPI.upload(formData);
+            const docsResponse = await documentsAPI.getByPatient(id);
+            setDocuments(docsResponse.data || []);
+            setShowECHOModal(false);
+            setECHOFile(null);
+            alert('ECHO saved successfully!');
+        } catch (error) {
+            console.error('Error saving ECHO:', error);
+            alert('Failed to save ECHO.');
+        }
+    };
+
     const handleStressTestUpload = async () => {
         if (!stressTestFile || !id) return;
-
         try {
             const formData = new FormData();
             formData.append('file', stressTestFile);
             formData.append('patientId', id);
             formData.append('docType', 'imaging');
-            // Tags: stress_test, type, stressor
-            const tags = ['stress_test', `type:${stressTestData.type}`, `stressor:${stressTestData.stressor}`];
+            const tags = [
+                'stress_test',
+                `type:${stressTestData.type}`,
+                `stressor:${stressTestData.stressor}`,
+                `mets:${stressTestData.mets}`,
+                `peak_hr:${stressTestData.peak_hr}`,
+                `bp_response:${stressTestData.bp_response}`
+            ].filter(Boolean);
             formData.append('tags', tags.join(','));
 
-            // Helpful for filtering: include info in original filename if possible, or just rely on tags
-            // Our backend uses original filename in records
-
             await documentsAPI.upload(formData);
-
-            // Refetch to update UI
             const docsResponse = await documentsAPI.getByPatient(id);
             setDocuments(docsResponse.data || []);
-
             setShowStressTestModal(false);
             setStressTestFile(null);
-            alert('Stress Test uploaded successfully!');
+            alert('Stress Test saved successfully!');
         } catch (error) {
-            console.error('Error uploading Stress Test:', error);
-            alert('Failed to upload Stress Test.');
+            console.error('Error saving Stress Test:', error);
+            alert('Failed to save Stress Test.');
         }
     };
 
     const handleCardiacCathUpload = async () => {
         if (!cardiacCathFile || !id) return;
-
         try {
             const formData = new FormData();
             formData.append('file', cardiacCathFile);
             formData.append('patientId', id);
             formData.append('docType', 'imaging');
-            const tags = ['cardiac_cath', `facility:${cardiacCathData.facility}`];
+            const tags = [
+                'cardiac_cath',
+                `facility:${cardiacCathData.facility}`,
+                `findings:${cardiacCathData.findings}`,
+                `ef:${cardiacCathData.ef}%`
+            ].filter(Boolean);
             formData.append('tags', tags.join(','));
 
             await documentsAPI.upload(formData);
-
             const docsResponse = await documentsAPI.getByPatient(id);
             setDocuments(docsResponse.data || []);
-
             setShowCardiacCathModal(false);
             setCardiacCathFile(null);
-            alert('Cardiac Cath uploaded successfully!');
+            alert('Cardiac Cath saved successfully!');
         } catch (error) {
-            console.error('Error uploading Cardiac Cath:', error);
-            alert('Failed to upload Cardiac Cath.');
+            console.error('Error saving Cardiac Cath:', error);
+            alert('Failed to save Cardiac Cath.');
         }
     };
 
@@ -1962,7 +2067,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('ekg')).length}</span>
                                                 }
                                             </div>
-                                            <button onClick={() => { setDocumentUploadType('imaging'); setShowDocumentUploadModal(true); }} className="p-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors">
+                                            <button onClick={() => setShowEKGModal(true)} className="p-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors">
                                                 <Plus className="w-3 h-3" />
                                             </button>
                                         </div>
@@ -1987,7 +2092,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{documents.filter(d => d.doc_type === 'imaging' && (d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length}</span>
                                                 }
                                             </div>
-                                            <button onClick={() => { setDocumentUploadType('imaging'); setShowDocumentUploadModal(true); }} className="p-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors">
+                                            <button onClick={() => setShowECHOModal(true)} className="p-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors">
                                                 <Plus className="w-3 h-3" />
                                             </button>
                                         </div>
@@ -2831,6 +2936,20 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 accept=".pdf,.jpg,.jpeg,.png"
                             />
                         </div>
+                        <div className="grid grid-cols-3 gap-2">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">METS</label>
+                                <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={stressTestData.mets} onChange={e => setStressTestData({ ...stressTestData, mets: e.target.value })} placeholder="e.g. 10.2" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Peak HR</label>
+                                <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={stressTestData.peak_hr} onChange={e => setStressTestData({ ...stressTestData, peak_hr: e.target.value })} placeholder="e.g. 165" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">BP Resp</label>
+                                <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={stressTestData.bp_response} onChange={e => setStressTestData({ ...stressTestData, bp_response: e.target.value })} placeholder="Normal/Hypertensive" />
+                            </div>
+                        </div>
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-1">Results Summary</label>
                             <textarea
@@ -2853,6 +2972,109 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     </div>
                 </Modal>
 
+                {/* EKG Result Modal */}
+                <Modal
+                    isOpen={showEKGModal}
+                    onClose={() => setShowEKGModal(false)}
+                    title="Log EKG Study"
+                >
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
+                                <input type="date" className="w-full px-3 py-2 border rounded-md" value={ekgData.date} onChange={e => setEKGData({ ...ekgData, date: e.target.value })} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Rhythm</label>
+                                <select className="w-full px-3 py-2 border rounded-md" value={ekgData.rhythm} onChange={e => setEKGData({ ...ekgData, rhythm: e.target.value })}>
+                                    <option value="NSR">NSR</option>
+                                    <option value="Sinus Brady">Sinus Brady</option>
+                                    <option value="Sinus Tachy">Sinus Tachy</option>
+                                    <option value="Afib">Atrial Fibrillation</option>
+                                    <option value="Aflutter">Atrial Flutter</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-4 gap-2">
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase">Rate</label>
+                                <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={ekgData.rate} onChange={e => setEKGData({ ...ekgData, rate: e.target.value })} placeholder="72" />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase">PR</label>
+                                <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={ekgData.pr} onChange={e => setEKGData({ ...ekgData, pr: e.target.value })} placeholder="160" />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase">QRS</label>
+                                <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={ekgData.qrs} onChange={e => setEKGData({ ...ekgData, qrs: e.target.value })} placeholder="90" />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase">QTc</label>
+                                <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={ekgData.qtc} onChange={e => setEKGData({ ...ekgData, qtc: e.target.value })} placeholder="420" />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Attach Image/Scan</label>
+                            <input type="file" className="w-full text-sm" onChange={e => setEKGFile(e.target.files[0])} accept="image/*,.pdf" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Interpretation</label>
+                            <textarea className="w-full px-3 py-2 border rounded-md h-16" value={ekgData.interpretation} onChange={e => setEKGData({ ...ekgData, interpretation: e.target.value })} placeholder="e.g. Normal EKG, no ST changes" />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <button onClick={() => setShowEKGModal(false)} className="px-4 py-2 text-gray-600 font-bold">Cancel</button>
+                            <button onClick={handleEKGUpload} disabled={!ekgFile} className="px-6 py-2 bg-red-600 text-white rounded-md font-bold hover:bg-red-700 disabled:bg-gray-300">Save EKG</button>
+                        </div>
+                    </div>
+                </Modal>
+
+                {/* ECHO Result Modal */}
+                <Modal
+                    isOpen={showECHOModal}
+                    onClose={() => setShowECHOModal(false)}
+                    title="Log Echocardiogram"
+                >
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
+                                <input type="date" className="w-full px-3 py-2 border rounded-md" value={echoData.date} onChange={e => setECHOData({ ...echoData, date: e.target.value })} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">LVEF (%)</label>
+                                <input type="text" className="w-full px-3 py-2 border rounded-md" value={echoData.ef} onChange={e => setECHOData({ ...echoData, ef: e.target.value })} placeholder="e.g. 60-65" />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase">LA Size</label>
+                                <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={echoData.la_size} onChange={e => setECHOData({ ...echoData, la_size: e.target.value })} placeholder="Normal/Enlarged" />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase">LV Size</label>
+                                <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={echoData.lv_size} onChange={e => setECHOData({ ...echoData, lv_size: e.target.value })} placeholder="Normal/Dilated" />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase">RV Size</label>
+                                <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={echoData.rv_size} onChange={e => setECHOData({ ...echoData, rv_size: e.target.value })} placeholder="Normal" />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Valve Findings</label>
+                            <textarea className="w-full px-3 py-2 border rounded-md h-16" value={echoData.valve_findings} onChange={e => setECHOData({ ...echoData, valve_findings: e.target.value })} placeholder="e.g. Trace MR, No stenosis" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Attach Final Report</label>
+                            <input type="file" className="w-full text-sm" onChange={e => setECHOFile(e.target.files[0])} accept=".pdf,image/*" />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <button onClick={() => setShowECHOModal(false)} className="px-4 py-2 text-gray-600 font-bold">Cancel</button>
+                            <button onClick={handleECHOUpload} disabled={!echoFile} className="px-6 py-2 bg-indigo-600 text-white rounded-md font-bold hover:bg-indigo-700 disabled:bg-gray-300">Save ECHO</button>
+                        </div>
+                    </div>
+                </Modal>
+
                 {/* Cardiac Cath Upload Modal */}
                 <Modal
                     isOpen={showCardiacCathModal}
@@ -2870,42 +3092,27 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 onChange={(e) => setCardiacCathData({ ...cardiacCathData, facility: e.target.value })}
                             />
                         </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
+                                <input type="date" className="w-full px-3 py-2 border rounded-md" value={cardiacCathData.date} onChange={e => setCardiacCathData({ ...cardiacCathData, date: e.target.value })} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">LVEF (%)</label>
+                                <input type="text" className="w-full px-3 py-2 border rounded-md" value={cardiacCathData.ef} onChange={e => setCardiacCathData({ ...cardiacCathData, ef: e.target.value })} placeholder="e.g. 55" />
+                            </div>
+                        </div>
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">Date of Procedure</label>
-                            <input
-                                type="date"
-                                className="w-full px-3 py-2 border rounded-md"
-                                value={cardiacCathData.date}
-                                onChange={(e) => setCardiacCathData({ ...cardiacCathData, date: e.target.value })}
-                            />
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Coronary Findings</label>
+                            <textarea className="w-full px-3 py-2 border rounded-md h-20" value={cardiacCathData.findings} onChange={e => setCardiacCathData({ ...cardiacCathData, findings: e.target.value })} placeholder="e.g. LAD 80% (stented), LCx clean, RCA 40%" />
                         </div>
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-1">Attach Final Report</label>
-                            <input
-                                type="file"
-                                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-slate-50 file:text-slate-700 hover:file:bg-slate-100"
-                                onChange={(e) => setCardiacCathFile(e.target.files?.[0] || null)}
-                                accept=".pdf,.jpg,.jpeg,.png"
-                            />
+                            <input type="file" className="w-full text-sm" onChange={e => setCardiacCathFile(e.target.files[0])} accept=".pdf,image/*" />
                         </div>
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">Procedural Findings</label>
-                            <textarea
-                                className="w-full px-3 py-2 border rounded-md h-24"
-                                placeholder="e.g. LAD 20% stenosis, RCA clean. No stent placed."
-                                value={cardiacCathData.notes}
-                                onChange={(e) => setCardiacCathData({ ...cardiacCathData, notes: e.target.value })}
-                            />
-                        </div>
-                        <div className="flex justify-end gap-2 pt-4">
+                        <div className="flex justify-end gap-2">
                             <button onClick={() => setShowCardiacCathModal(false)} className="px-4 py-2 text-gray-600 font-bold">Cancel</button>
-                            <button
-                                onClick={handleCardiacCathUpload}
-                                disabled={!cardiacCathFile}
-                                className="px-6 py-2 bg-slate-700 text-white rounded-md font-bold shadow-md hover:bg-slate-800 disabled:bg-gray-300"
-                            >
-                                Save Result
-                            </button>
+                            <button onClick={handleCardiacCathUpload} disabled={!cardiacCathFile} className="px-6 py-2 bg-slate-700 text-white rounded-md font-bold hover:bg-slate-800 disabled:bg-gray-300">Save Result</button>
                         </div>
                     </div>
                 </Modal>
