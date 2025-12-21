@@ -3,7 +3,7 @@ import {
     X, FileText, Image, FlaskConical, Pill, ExternalLink,
     Database, CreditCard, Calendar, Clock, CheckCircle2,
     XCircle, UserCircle, FileImage, Trash2, Plus, Activity,
-    LayoutDashboard, ChevronRight, Search, FilePlus
+    LayoutDashboard, ChevronRight, Search, FilePlus, ChevronDown, HeartPulse, ActivitySquare
 } from 'lucide-react';
 import { visitsAPI, documentsAPI, ordersAPI, referralsAPI, patientsAPI, eprescribeAPI } from '../services/api';
 import { format } from 'date-fns';
@@ -17,6 +17,8 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
     const [notes, setNotes] = useState([]);
     const [labs, setLabs] = useState([]);
     const [images, setImages] = useState([]);
+    const [ekgs, setEkgs] = useState([]);
+    const [echos, setEchos] = useState([]);
     const [documents, setDocuments] = useState([]);
     const [expandedNotes, setExpandedNotes] = useState({});
 
@@ -113,7 +115,9 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
             if (docsRes.status === 'fulfilled') {
                 const docs = docsRes.value.data || [];
                 setImages(docs.filter(d => d.doc_type === 'imaging').sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
-                setDocuments(docs.filter(d => d.doc_type !== 'imaging').sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
+                setEkgs(docs.filter(d => d.doc_type === 'ekg').sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
+                setEchos(docs.filter(d => d.doc_type === 'echo').sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
+                setDocuments(docs.filter(d => !['imaging', 'ekg', 'echo'].includes(d.doc_type)).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
                 setHubDocuments(docs);
             }
 
@@ -131,6 +135,8 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
         { id: 'labs', label: 'Labs / Studies', icon: FlaskConical },
         { id: 'documents', label: 'Documents', icon: FileImage },
         { id: 'images', label: 'Imaging', icon: Image },
+        { id: 'ekg', label: 'EKG', icon: ActivitySquare },
+        { id: 'echo', label: 'ECHO', icon: HeartPulse },
         { id: 'referrals', label: 'Referrals', icon: ExternalLink },
         { id: 'data', label: 'PAMFOS Data', icon: Database },
     ];
@@ -277,36 +283,59 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                         {notes.length === 0 ? (
                                             <div className="text-center py-12 text-gray-400">No visit history found.</div>
                                         ) : (
-                                            notes.map(note => (
-                                                <div key={note.id} className="group bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-200 cursor-pointer" onClick={() => setExpandedNotes({ ...expandedNotes, [note.id]: !expandedNotes[note.id] })}>
-                                                    <div className="flex justify-between items-start">
-                                                        <div className="flex gap-3">
-                                                            <div className="mt-1 bg-gray-100 p-2 rounded-lg text-gray-500">
-                                                                <FileText className="w-4 h-4" />
+                                            notes.map(note => {
+                                                const noteText = note.note_draft || "";
+                                                // Extract chief complaint
+                                                const ccMatch = noteText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
+                                                const chiefComplaint = ccMatch ? ccMatch[1].trim() : "No Chief Complaint";
+
+                                                return (
+                                                    <div key={note.id} className="group bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-all duration-200">
+                                                        <div
+                                                            className="p-4 cursor-pointer hover:bg-gray-50 flex justify-between items-center"
+                                                            onClick={() => setExpandedNotes({ ...expandedNotes, [note.id]: !expandedNotes[note.id] })}
+                                                        >
+                                                            <div className="flex gap-3 items-center flex-1 min-w-0">
+                                                                <div className={`p-2 rounded-lg text-gray-500 ${expandedNotes[note.id] ? 'bg-primary-50 text-primary-600' : 'bg-gray-100'}`}>
+                                                                    <FileText className="w-4 h-4" />
+                                                                </div>
+                                                                <div className="min-w-0 flex-1">
+                                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                                        <span className="font-bold text-gray-900 text-sm">
+                                                                            {note.visit_date ? new Date(note.visit_date).toLocaleDateString() : 'Unknown Date'}
+                                                                        </span>
+                                                                        <span className="text-xs text-gray-500">• {note.visit_type || 'Office Visit'}</span>
+                                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${note.locked || note.note_signed_at ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}`}>
+                                                                            {note.locked || note.note_signed_at ? 'Signed' : 'Draft'}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500">
+                                                                        <span>{note.signed_by_last_name ? `Dr. ${note.signed_by_last_name}` : 'Unknown Provider'}</span>
+                                                                        <span className="text-gray-300">|</span>
+                                                                        <span className="font-medium text-gray-700 truncate max-w-[300px] italic">
+                                                                            {chiefComplaint}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                            <div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="font-bold text-gray-900 text-sm">
-                                                                        {note.visit_date ? new Date(note.visit_date).toLocaleDateString() : 'Unknown Date'}
-                                                                    </span>
-                                                                    <span className="text-xs text-gray-500">• {note.visit_type || 'Office Visit'}</span>
-                                                                </div>
-                                                                <div className="text-xs text-gray-500 mt-0.5">
-                                                                    {note.signed_by_last_name ? `Dr. ${note.signed_by_last_name}` : 'Unknown Provider'}
-                                                                </div>
+                                                            <div className="ml-2">
+                                                                {expandedNotes[note.id] ? (
+                                                                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                                                                ) : (
+                                                                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                                                                )}
                                                             </div>
                                                         </div>
-                                                        <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${note.locked || note.note_signed_at ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}`}>
-                                                            {note.locked || note.note_signed_at ? 'Signed' : 'Draft'}
-                                                        </span>
+                                                        {expandedNotes[note.id] && (
+                                                            <div className="px-4 pb-4 pt-2 border-t border-gray-100">
+                                                                <div className="bg-gray-50 rounded p-3 text-xs font-mono text-gray-600 whitespace-pre-wrap leading-relaxed shadow-inner">
+                                                                    {note.note_draft || <span className="italic text-gray-400">No content.</span>}
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    {(expandedNotes[note.id] || !note.locked) && (
-                                                        <div className="mt-3 pl-11 pt-3 border-t border-gray-100 text-xs font-mono text-gray-600 whitespace-pre-wrap leading-relaxed">
-                                                            {note.note_draft || <span className="italic text-gray-400">No content.</span>}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))
+                                                )
+                                            })
                                         )}
                                     </div>
                                 )}
