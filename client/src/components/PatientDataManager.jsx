@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Edit2, Trash2, AlertCircle, Pill, ClipboardList, Users, Heart, Save, ArrowLeft } from 'lucide-react';
-import { patientsAPI } from '../services/api';
+import { patientsAPI, medicationsAPI } from '../services/api';
+import axios from 'axios';
 import Toast from './ui/Toast';
 import { format } from 'date-fns';
+import { Search, Loader2 } from 'lucide-react';
 
 const PatientDataManager = ({ patientId, isOpen, onClose, initialTab = 'problems', onUpdate, onBack }) => {
     const [activeTab, setActiveTab] = useState(initialTab);
@@ -14,7 +16,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose, initialTab = 'problems
     const [loading, setLoading] = useState(false);
     const [editing, setEditing] = useState(null);
     const [toast, setToast] = useState(null);
-    
+
     // Form states
     const [problemForm, setProblemForm] = useState({ problemName: '', icd10Code: '', onsetDate: '', status: 'active' });
     const [medicationForm, setMedicationForm] = useState({ medicationName: '', dosage: '', frequency: '', route: '', startDate: '', active: true });
@@ -24,6 +26,11 @@ const PatientDataManager = ({ patientId, isOpen, onClose, initialTab = 'problems
         smokingStatus: '', smokingPackYears: '', alcoholUse: '', alcoholQuantity: '',
         drugUse: '', exerciseFrequency: '', diet: '', occupation: '', livingSituation: '', notes: ''
     });
+
+    // Med search state
+    const [searchingMed, setSearchingMed] = useState(false);
+    const [medResults, setMedResults] = useState([]);
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         if (isOpen && patientId) {
@@ -48,7 +55,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose, initialTab = 'problems
             setAllergies(Array.isArray(allergiesRes.data) ? allergiesRes.data : []);
             setFamilyHistory(Array.isArray(familyHistoryRes.data) ? familyHistoryRes.data : []);
             setSocialHistory(socialHistoryRes.data || null);
-            
+
             if (socialHistoryRes.data) {
                 setSocialHistoryForm({
                     smokingStatus: socialHistoryRes.data.smoking_status || '',
@@ -136,6 +143,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose, initialTab = 'problems
             });
             setMedications([response.data, ...medications]);
             setMedicationForm({ medicationName: '', dosage: '', frequency: '', route: '', startDate: '', active: true });
+            setSearchQuery('');
             showToast('Medication added successfully');
             triggerUpdate();
         } catch (error) {
@@ -149,6 +157,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose, initialTab = 'problems
             setMedications(medications.map(m => m.id === id ? response.data : m));
             setEditing(null);
             setMedicationForm({ medicationName: '', dosage: '', frequency: '', route: '', startDate: '', active: true });
+            setSearchQuery('');
             showToast('Medication updated successfully');
             triggerUpdate();
         } catch (error) {
@@ -267,6 +276,48 @@ const PatientDataManager = ({ patientId, isOpen, onClose, initialTab = 'problems
         }
     };
 
+    // Medication Search Logic
+    useEffect(() => {
+        const query = searchQuery.trim();
+        if (query.length < 2) {
+            setMedResults([]);
+            return;
+        }
+
+        const searchTimer = setTimeout(async () => {
+            setSearchingMed(true);
+            try {
+                const response = await medicationsAPI.search(query);
+                let results = Array.isArray(response.data) ? response.data : (Array.isArray(response) ? response : []);
+                if (results.length === 0) {
+                    try {
+                        const rxnormResponse = await axios.get('https://rxnav.nlm.nih.gov/REST/drugs.json', { params: { name: query } });
+                        if (rxnormResponse?.data?.drugGroup?.conceptGroup) {
+                            const rxResults = [];
+                            rxnormResponse.data.drugGroup.conceptGroup.forEach(group => {
+                                if (group.conceptProperties) {
+                                    group.conceptProperties.forEach(drug => {
+                                        rxResults.push({ name: drug.name, rxcui: drug.rxcui });
+                                    });
+                                }
+                            });
+                            setMedResults(rxResults.slice(0, 15));
+                        }
+                    } catch (err) {
+                        console.warn('External RxNorm search failed:', err);
+                    }
+                } else {
+                    setMedResults(results);
+                }
+            } catch (e) {
+                console.error('Medication search error:', e);
+            } finally {
+                setSearchingMed(false);
+            }
+        }, 500);
+        return () => clearTimeout(searchTimer);
+    }, [searchQuery]);
+
     if (!isOpen) return null;
 
     const tabs = [
@@ -285,8 +336,8 @@ const PatientDataManager = ({ patientId, isOpen, onClose, initialTab = 'problems
                 <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white">
                     <div className="flex items-center space-x-3">
                         {onBack && (
-                            <button 
-                                onClick={onBack} 
+                            <button
+                                onClick={onBack}
                                 className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 transition-colors"
                                 title="Back to Patient Chart"
                             >
@@ -308,11 +359,10 @@ const PatientDataManager = ({ patientId, isOpen, onClose, initialTab = 'problems
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center space-x-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                                    activeTab === tab.id
-                                        ? 'border-primary-600 text-primary-700 bg-primary-50'
-                                        : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                                }`}
+                                className={`flex items-center space-x-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${activeTab === tab.id
+                                    ? 'border-primary-600 text-primary-700 bg-primary-50'
+                                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                    }`}
                             >
                                 <Icon className="w-4 h-4" />
                                 <span>{tab.label}</span>
@@ -442,10 +492,9 @@ const PatientDataManager = ({ patientId, isOpen, onClose, initialTab = 'problems
                                                             <div className="text-sm text-gray-600">ICD-10: {problem.icd10_code}</div>
                                                         )}
                                                         <div className="text-xs text-gray-500 mt-1">
-                                                            Status: <span className={`font-medium ${
-                                                                problem.status === 'active' ? 'text-red-600' :
+                                                            Status: <span className={`font-medium ${problem.status === 'active' ? 'text-red-600' :
                                                                 problem.status === 'resolved' ? 'text-green-600' : 'text-gray-600'
-                                                            }`}>{problem.status}</span>
+                                                                }`}>{problem.status}</span>
                                                             {problem.onset_date && ` • Onset: ${format(new Date(problem.onset_date), 'MMM d, yyyy')}`}
                                                         </div>
                                                     </div>
@@ -487,6 +536,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose, initialTab = 'problems
                                             onClick={() => {
                                                 setEditing('new-medication');
                                                 setMedicationForm({ medicationName: '', dosage: '', frequency: '', route: '', startDate: '', active: true });
+                                                setSearchQuery('');
                                             }}
                                             className="flex items-center space-x-2 px-3 py-1.5 text-sm text-white rounded-md transition-all duration-200 hover:shadow-md"
                                             style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
@@ -504,15 +554,62 @@ const PatientDataManager = ({ patientId, isOpen, onClose, initialTab = 'problems
                                                 {editing === 'new-medication' ? 'Add New Medication' : 'Edit Medication'}
                                             </h4>
                                             <div className="space-y-3">
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Medication Name *</label>
-                                                    <input
-                                                        type="text"
-                                                        value={medicationForm.medicationName}
-                                                        onChange={(e) => setMedicationForm({ ...medicationForm, medicationName: e.target.value })}
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                                    />
+                                                <div className="relative">
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Search Medication *</label>
+                                                    <div className="relative">
+                                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                                        <input
+                                                            type="text"
+                                                            value={searchQuery}
+                                                            onChange={(e) => {
+                                                                setSearchQuery(e.target.value);
+                                                                setMedicationForm({ ...medicationForm, medicationName: e.target.value });
+                                                            }}
+                                                            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 outline-none"
+                                                            placeholder="Search RxNorm for med name..."
+                                                        />
+                                                        {searchingMed && (
+                                                            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-500 animate-spin" />
+                                                        )}
+                                                    </div>
+
+                                                    {medResults.length > 0 && (
+                                                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                                            {medResults.map((result, idx) => (
+                                                                <button
+                                                                    key={idx}
+                                                                    onClick={() => {
+                                                                        setMedicationForm({
+                                                                            ...medicationForm,
+                                                                            medicationName: result.name
+                                                                        });
+                                                                        setSearchQuery(result.name);
+                                                                        setMedResults([]);
+                                                                    }}
+                                                                    className="w-full text-left px-4 py-2 hover:bg-primary-50 text-sm border-b border-gray-50 last:border-0"
+                                                                >
+                                                                    <div className="font-medium text-gray-900">{result.name}</div>
+                                                                    {result.rxcui && <div className="text-[10px] text-gray-400 text-uppercase">RxCUI: {result.rxcui}</div>}
+                                                                </button>
+                                                            ))}
+                                                            <button
+                                                                onClick={() => {
+                                                                    setMedicationForm({ ...medicationForm, medicationName: searchQuery });
+                                                                    setMedResults([]);
+                                                                }}
+                                                                className="w-full text-left px-4 py-2 hover:bg-gray-50 text-xs text-primary-600 font-medium italic italic border-t border-gray-100"
+                                                            >
+                                                                Use custom input: "{searchQuery}"
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
+
+                                                <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                                                    <span className="text-xs text-blue-700 font-bold uppercase tracking-wider block mb-1">Selected Drug</span>
+                                                    <div className="text-sm font-semibold text-blue-900">{medicationForm.medicationName || 'No medication selected'}</div>
+                                                </div>
+
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 mb-1">Dosage</label>
@@ -578,6 +675,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose, initialTab = 'problems
                                                         onClick={() => {
                                                             setEditing(null);
                                                             setMedicationForm({ medicationName: '', dosage: '', frequency: '', route: '', startDate: '', active: true });
+                                                            setSearchQuery('');
                                                         }}
                                                         className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
                                                     >
@@ -620,6 +718,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose, initialTab = 'problems
                                                                     startDate: med.start_date ? format(new Date(med.start_date), 'yyyy-MM-dd') : '',
                                                                     active: med.active
                                                                 });
+                                                                setSearchQuery(med.medication_name);
                                                             }}
                                                             className="p-1.5 text-gray-600 hover:bg-gray-200 rounded"
                                                         >
