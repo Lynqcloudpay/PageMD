@@ -847,10 +847,13 @@ router.post('/:id/family-history', requirePermission('notes:create'), async (req
     const { id } = req.params;
     const { condition, relationship, ageAtDiagnosis, ageAtDeath, notes } = req.body;
 
+    const sanitizedAgeDiagnosis = (ageAtDiagnosis === '' || ageAtDiagnosis === null || ageAtDiagnosis === undefined) ? null : ageAtDiagnosis;
+    const sanitizedAgeDeath = (ageAtDeath === '' || ageAtDeath === null || ageAtDeath === undefined) ? null : ageAtDeath;
+
     const result = await pool.query(
       `INSERT INTO family_history (patient_id, condition, relationship, age_at_diagnosis, age_at_death, notes)
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [id, condition, relationship, ageAtDiagnosis, ageAtDeath, notes]
+      [id, condition, relationship, sanitizedAgeDiagnosis, sanitizedAgeDeath, notes]
     );
 
     await logAudit(req.user.id, 'add_family_history', 'family_history', result.rows[0].id, {}, req.ip);
@@ -883,12 +886,12 @@ router.put('/family-history/:historyId', requirePermission('notes:edit'), async 
     }
     if (ageAtDiagnosis !== undefined) {
       updates.push(`age_at_diagnosis = $${paramIndex}`);
-      values.push(ageAtDiagnosis);
+      values.push((ageAtDiagnosis === '' || ageAtDiagnosis === null) ? null : ageAtDiagnosis);
       paramIndex++;
     }
     if (ageAtDeath !== undefined) {
       updates.push(`age_at_death = $${paramIndex}`);
-      values.push(ageAtDeath);
+      values.push((ageAtDeath === '' || ageAtDeath === null) ? null : ageAtDeath);
       paramIndex++;
     }
     if (notes !== undefined) {
@@ -963,6 +966,9 @@ router.post('/:id/social-history', requirePermission('notes:create'), async (req
       drugUse, exerciseFrequency, diet, occupation, livingSituation, notes
     } = req.body;
 
+    // Sanitize numeric values
+    const sanitizedPackYears = (smokingPackYears === '' || smokingPackYears === null || smokingPackYears === undefined) ? null : smokingPackYears;
+
     // Check if social history exists
     const existing = await pool.query(
       'SELECT id FROM social_history WHERE patient_id = $1',
@@ -978,7 +984,7 @@ router.post('/:id/social-history', requirePermission('notes:create'), async (req
           drug_use = $5, exercise_frequency = $6, diet = $7, occupation = $8,
           living_situation = $9, notes = $10, updated_at = CURRENT_TIMESTAMP
          WHERE patient_id = $11 RETURNING *`,
-        [smokingStatus, smokingPackYears, alcoholUse, alcoholQuantity, drugUse,
+        [smokingStatus, sanitizedPackYears, alcoholUse, alcoholQuantity, drugUse,
           exerciseFrequency, diet, occupation, livingSituation, notes, id]
       );
       await logAudit(req.user.id, 'update_social_history', 'social_history', existing.rows[0].id, {}, req.ip);
@@ -989,7 +995,7 @@ router.post('/:id/social-history', requirePermission('notes:create'), async (req
           patient_id, smoking_status, smoking_pack_years, alcohol_use, alcohol_quantity,
           drug_use, exercise_frequency, diet, occupation, living_situation, notes
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-        [id, smokingStatus, smokingPackYears, alcoholUse, alcoholQuantity, drugUse,
+        [id, smokingStatus, sanitizedPackYears, alcoholUse, alcoholQuantity, drugUse,
           exerciseFrequency, diet, occupation, livingSituation, notes]
       );
       await logAudit(req.user.id, 'add_social_history', 'social_history', result.rows[0].id, {}, req.ip);

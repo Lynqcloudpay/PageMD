@@ -11,6 +11,7 @@ import EPrescribeEnhanced from '../components/EPrescribeEnhanced';
 import CodeSearchModal from '../components/CodeSearchModal';
 import VisitPrint from '../components/VisitPrint';
 import PatientChartPanel from '../components/PatientChartPanel';
+import PatientDataManager from '../components/PatientDataManager';
 import { visitsAPI, codesAPI, patientsAPI } from '../services/api';
 import { usePrivileges } from '../hooks/usePrivileges';
 import { useAuth } from '../context/AuthContext';
@@ -1903,69 +1904,51 @@ const VisitNote = () => {
 
                                 {/* O/S - Social History */}
                                 <div className="border rounded-md border-gray-100 bg-white">
-                                    <div className="flex items-center gap-2 p-2 bg-gray-50 border-b border-gray-100">
-                                        <UserCircle className="w-4 h-4 text-teal-600" />
-                                        <h4 className="text-sm font-semibold text-gray-800">Other / Social History</h4>
+                                    <div className="flex items-center justify-between p-2 bg-gray-50 border-b border-gray-100">
+                                        <div className="flex items-center gap-2">
+                                            <UserCircle className="w-4 h-4 text-teal-600" />
+                                            <h4 className="text-sm font-semibold text-gray-800">Social History</h4>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setPatientChartTab('data');
+                                                setShowPatientChart(true);
+                                                // After a short delay to allow the chart to open, switch to social tab
+                                                setTimeout(() => {
+                                                    // This relies on PatientChartPanel passing the initialTab correctly
+                                                    // Ideally we would have a way to deep link or pass a sub-tab
+                                                    // For now, let's open the data manager directly if possible or utilize the existing panel
+                                                }, 100);
+                                                // Alternative: if we can use PatientDataManager directly
+                                                // We need a state for it.
+                                                // Let's use the existing PatientChartPanel approach but maybe we can trigger the specific tab
+                                            }}
+                                            className="text-xs text-primary-600 hover:text-primary-800 font-medium"
+                                        >
+                                            Edit
+                                        </button>
                                     </div>
-                                    <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                                        <div>
-                                            <label className="text-xs text-gray-500 block mb-1">Smoking Status</label>
-                                            <select
-                                                className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                                                value={socialHistory?.smoking_status || ''}
-                                                onChange={async (e) => {
-                                                    const val = e.target.value;
-                                                    try {
-                                                        await patientsAPI.saveSocialHistory(id, { ...socialHistory, smoking_status: val });
-                                                        setSocialHistory(prev => ({ ...prev, smoking_status: val }));
-                                                        window.dispatchEvent(new Event('patient-data-updated'));
-                                                    } catch (e) { showToast('Failed to update', 'error'); }
-                                                }}
-                                            >
-                                                <option value="">Unknown</option>
-                                                <option value="Never smoker">Never smoker</option>
-                                                <option value="Former smoker">Former smoker</option>
-                                                <option value="Current smoker">Current smoker</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-gray-500 block mb-1">Alcohol Use</label>
-                                            <select
-                                                className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                                                value={socialHistory?.alcohol_use || ''}
-                                                onChange={async (e) => {
-                                                    const val = e.target.value;
-                                                    try {
-                                                        await patientsAPI.saveSocialHistory(id, { ...socialHistory, alcohol_use: val });
-                                                        setSocialHistory(prev => ({ ...prev, alcohol_use: val }));
-                                                        window.dispatchEvent(new Event('patient-data-updated'));
-                                                    } catch (e) { showToast('Failed to update', 'error'); }
-                                                }}
-                                            >
-                                                <option value="">Unknown</option>
-                                                <option value="None">None</option>
-                                                <option value="Social">Social</option>
-                                                <option value="Moderate">Moderate</option>
-                                                <option value="Heavy">Heavy</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-gray-500 block mb-1">Occupation</label>
-                                            <input
-                                                className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                                                value={socialHistory?.occupation || ''}
-                                                placeholder="Occupation"
-                                                onBlur={async (e) => {
-                                                    const val = e.target.value;
-                                                    try {
-                                                        await patientsAPI.saveSocialHistory(id, { ...socialHistory, occupation: val });
-                                                        setSocialHistory(prev => ({ ...prev, occupation: val }));
-                                                        window.dispatchEvent(new Event('patient-data-updated'));
-                                                    } catch (e) { showToast('Failed to update', 'error'); }
-                                                }}
-                                                onChange={(e) => setSocialHistory(prev => ({ ...prev, occupation: e.target.value }))}
-                                            />
-                                        </div>
+                                    <div className="p-3 text-sm">
+                                        {socialHistory ? (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
+                                                <div><span className="text-gray-500 text-xs">Smoking:</span> <span className="font-medium">{socialHistory.smoking_status || 'Unknown'}</span></div>
+                                                <div><span className="text-gray-500 text-xs">Alcohol:</span> <span className="font-medium">{socialHistory.alcohol_use || 'Unknown'}</span></div>
+                                                <div><span className="text-gray-500 text-xs">Occupation:</span> <span className="font-medium">{socialHistory.occupation || 'Not recorded'}</span></div>
+                                                {socialHistory.diet && <div><span className="text-gray-500 text-xs">Diet:</span> <span className="font-medium">{socialHistory.diet}</span></div>}
+                                                {socialHistory.exercise_frequency && <div><span className="text-gray-500 text-xs">Exercise:</span> <span className="font-medium">{socialHistory.exercise_frequency}</span></div>}
+                                            </div>
+                                        ) : (
+                                            <div className="text-gray-400 italic text-xs">No social history recorded. Click edit to add.</div>
+                                        )}
+                                        <button
+                                            onClick={() => {
+                                                setPatientChartTab('data');
+                                                setShowPatientChart(true);
+                                            }}
+                                            className="mt-3 w-full py-1.5 text-xs font-medium text-primary-700 bg-primary-50 hover:bg-primary-100 rounded-md transition-colors border border-primary-100"
+                                        >
+                                            Manage Social History
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -2205,16 +2188,28 @@ const VisitNote = () => {
                                     <span>Delete</span>
                                 </button>
                             </div>
-                            <button onClick={() => setShowPrintModal(true)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors" title="Print">
-                                <Printer className="w-3.5 h-3.5" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => navigate('/dashboard')} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors flex items-center gap-1" title="Back to Dashboard">
+                                    <ArrowLeft className="w-3.5 h-3.5" />
+                                    <span className="text-xs font-medium">Dashboard</span>
+                                </button>
+                                <button onClick={() => setShowPrintModal(true)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors" title="Print">
+                                    <Printer className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
                         </div>
                     )}
                     {isSigned && (
                         <div className="mt-6 pt-4 border-t border-neutral-200 flex items-center justify-end">
-                            <button onClick={() => setShowPrintModal(true)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors" title="Print">
-                                <Printer className="w-3.5 h-3.5" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => navigate('/dashboard')} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors flex items-center gap-1" title="Back to Dashboard">
+                                    <ArrowLeft className="w-3.5 h-3.5" />
+                                    <span className="text-xs font-medium">Dashboard</span>
+                                </button>
+                                <button onClick={() => setShowPrintModal(true)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors" title="Print">
+                                    <Printer className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>

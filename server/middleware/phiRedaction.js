@@ -31,30 +31,30 @@ const PHI_FIELDS = [
  */
 const redactPHI = (obj, depth = 0) => {
   if (depth > 10) return '[MAX_DEPTH]'; // Prevent infinite recursion
-  
+
   if (obj === null || obj === undefined) {
     return obj;
   }
-  
+
   if (typeof obj === 'string') {
     // Check if string looks like PHI (SSN, MRN, etc.)
     if (/^\d{3}-\d{2}-\d{4}$/.test(obj) || // SSN
-        /^\d{9}$/.test(obj) || // 9-digit number
-        /^[A-Z]{2}\d{7}$/.test(obj)) { // DEA number
+      /^\d{9}$/.test(obj) || // 9-digit number
+      /^[A-Z]{2}\d{7}$/.test(obj)) { // DEA number
       return '[REDACTED]';
     }
     return obj;
   }
-  
+
   if (Array.isArray(obj)) {
     return obj.map(item => redactPHI(item, depth + 1));
   }
-  
+
   if (typeof obj === 'object') {
     const redacted = {};
     for (const [key, value] of Object.entries(obj)) {
       const keyLower = key.toLowerCase();
-      
+
       // Check if key is a PHI field
       if (PHI_FIELDS.some(phiField => keyLower.includes(phiField.toLowerCase()))) {
         redacted[key] = '[REDACTED]';
@@ -64,7 +64,7 @@ const redactPHI = (obj, depth = 0) => {
     }
     return redacted;
   }
-  
+
   return obj;
 };
 
@@ -73,10 +73,10 @@ const redactPHI = (obj, depth = 0) => {
  */
 const redactURL = (url) => {
   if (!url || typeof url !== 'string') return url;
-  
+
   try {
     const urlObj = new URL(url, 'http://localhost'); // Base URL for parsing
-    
+
     // Redact query parameters that might contain PHI
     const phiQueryParams = ['mrn', 'ssn', 'name', 'dob', 'email', 'phone'];
     phiQueryParams.forEach(param => {
@@ -84,10 +84,10 @@ const redactURL = (url) => {
         urlObj.searchParams.set(param, '[REDACTED]');
       }
     });
-    
+
     // Redact path segments that look like identifiers
     urlObj.pathname = urlObj.pathname.replace(/\b[A-Z0-9]{8,}\b/g, '[ID]');
-    
+
     return urlObj.pathname + urlObj.search;
   } catch (error) {
     // If URL parsing fails, return sanitized version
@@ -103,13 +103,13 @@ const redactRequestForLogging = (req, res, next) => {
   req.originalBody = req.body;
   req.originalQuery = req.query;
   req.originalParams = req.params;
-  
+
   // Create redacted versions for logging
   req.bodyForLogging = redactPHI(req.body);
   req.queryForLogging = redactPHI(req.query);
   req.paramsForLogging = redactPHI(req.params);
   req.urlForLogging = redactURL(req.originalUrl || req.url);
-  
+
   next();
 };
 
@@ -152,14 +152,13 @@ const safeLogger = {
 const validateURLParams = (req, res, next) => {
   // Check if path contains what looks like PHI (names, MRNs, etc.)
   const path = req.path.toLowerCase();
-  
+
   // Reject if path contains common PHI patterns
   const phiPatterns = [
-    /\/patient\/[^\/]+\/[^\/]+/, // /patient/name/lastname
     /\/mrn\/[^\/]+/, // /mrn/12345
     /\/ssn\/[^\/]+/ // /ssn/123-45-6789
   ];
-  
+
   for (const pattern of phiPatterns) {
     if (pattern.test(path)) {
       return res.status(400).json({
@@ -168,7 +167,7 @@ const validateURLParams = (req, res, next) => {
       });
     }
   }
-  
+
   next();
 };
 
