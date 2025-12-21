@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Modal from './ui/Modal';
 import { Pill, Stethoscope, Upload, Send, Search, X, ShoppingCart, Trash2, Plus, Check, ChevronRight } from 'lucide-react';
 import { searchLabTests, searchImaging } from '../data/labCodes';
-import { codesAPI, referralsAPI } from '../services/api';
+import { codesAPI, referralsAPI, eprescribeAPI } from '../services/api';
 
 export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [] }) => {
     const [med, setMed] = useState('');
@@ -466,8 +466,18 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                 notes: `Linked to: ${item.diagnosis || 'General'}`
                             });
                         }
+                        if (item.type === 'medications' && !item.originalString) {
+                            // Only save new prescriptions (not ones loaded from existing orders)
+                            await eprescribeAPI.createDraft(patientId, {
+                                drugName: item.name,
+                                dosage: item.sig,
+                                dispense: item.dispense,
+                                diagnosis: item.diagnosis || 'General',
+                                dateWritten: new Date().toISOString()
+                            });
+                        }
                     } catch (error) {
-                        console.error('Error saving referral to database:', error);
+                        console.error('Error saving to database:', error);
                     }
                 });
             }
