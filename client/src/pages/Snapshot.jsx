@@ -1450,9 +1450,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             >
                                 <ExternalLink className="w-3.5 h-3.5 text-primary-600" />
                                 <span>Referral Log</span>
-                                {referrals.length > 0 && (
+                                {(referrals.length > 0 || orders.filter(o => o.order_type === 'referral').length > 0) && (
                                     <span className="bg-primary-100 text-primary-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">
-                                        {referrals.length}
+                                        {referrals.length + orders.filter(o => o.order_type === 'referral').length}
                                     </span>
                                 )}
                             </button>

@@ -461,17 +461,22 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                 visitId,
                                 recipientName: item.name,
                                 specialty: item.name,
-                                reason: item.reason || item.diagnosis || '',
+                                reason: item.reason || item.diagnosis || 'General Referral',
                                 status: 'sent',
-                                notes: `Linked to: ${item.diagnosis || 'General'}`
+                                notes: `Linked to: ${item.diagnosis || 'General'}`,
+                                // Backend requires at least one diagnosis
+                                diagnosisObjects: [
+                                    { problem_name: item.diagnosis || 'General Consultation' }
+                                ]
                             });
                         }
                         if (item.type === 'medications' && !item.originalString) {
                             // Only save new prescriptions (not ones loaded from existing orders)
                             await eprescribeAPI.createDraft(patientId, {
-                                drugName: item.name,
-                                dosage: item.sig,
-                                dispense: item.dispense,
+                                medicationName: item.name,
+                                medicationDisplay: item.name,
+                                sig: item.sig || 'As directed',
+                                quantity: parseInt(item.dispense) || 30,
                                 diagnosis: item.diagnosis || 'General',
                                 dateWritten: new Date().toISOString()
                             });

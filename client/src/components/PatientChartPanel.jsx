@@ -110,7 +110,19 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
 
             // Process Referrals
             if (referralsRes.status === 'fulfilled') {
-                setReferrals(referralsRes.value.data || []);
+                const legacyReferrals = (ordersRes.status === 'fulfilled' ? ordersRes.value.data : [])
+                    .filter(o => o.order_type === 'referral')
+                    .map(o => ({
+                        id: o.id,
+                        recipient_name: o.order_payload?.specialist || 'Specialist',
+                        recipient_specialty: o.order_payload?.specialist || 'Specialty',
+                        reason: o.order_payload?.reason || 'Reason not specified',
+                        status: o.status,
+                        created_at: o.created_at
+                    }));
+
+                const dedicatedReferrals = referralsRes.value.data || [];
+                setReferrals([...dedicatedReferrals, ...legacyReferrals]);
             }
 
             // Process ePrescribe
