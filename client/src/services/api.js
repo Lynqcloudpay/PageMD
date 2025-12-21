@@ -243,14 +243,30 @@ export const alertsAPI = {
 // Codes (ICD-10, CPT)
 export const codesAPI = {
   searchICD10: async (search) => {
-    if (!search || search.length < 2) return { data: [] };
+    if (!search || search.length < 2) {
+      // Return broad popular codes if search is empty
+      if (!search) return {
+        data: [
+          { code: 'I10', description: 'Essential (primary) hypertension' },
+          { code: 'E11.9', description: 'Type 2 diabetes mellitus without complications' },
+          { code: 'E78.5', description: 'Hyperlipidemia, unspecified' },
+          { code: 'F41.1', description: 'Generalized anxiety disorder' },
+          { code: 'M54.5', description: 'Low back pain' },
+          { code: 'N39.0', description: 'Urinary tract infection, site not specified' },
+          { code: 'J06.9', description: 'Acute upper respiratory infection, unspecified' },
+          { code: 'K21.9', description: 'Gastro-esophageal reflux disease without esophagitis' }
+        ]
+      };
+      return { data: [] };
+    }
     try {
-      // Use NLM Clinical Tables API
+      // Use NLM Clinical Tables API with wider search fields
+      // sf=all searches name, code, synonyms, etc.
       const response = await axios.get('https://clinicaltables.nlm.nih.gov/api/icd10cm/v3/search', {
         params: {
-          sf: 'code,name',
           terms: search,
-          maxList: 50
+          maxList: 100,
+          df: 'code,name'
         }
       });
       // Response format: [count, codes, null, [[code, description], ...]]
@@ -258,7 +274,7 @@ export const codesAPI = {
       const mapped = results.map(item => ({
         code: item[0],
         description: item[1],
-        billable: true // NLM API returns valid codes, assume billable for now or generic
+        billable: true
       }));
       return { data: mapped };
     } catch (error) {

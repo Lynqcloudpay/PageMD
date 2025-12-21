@@ -236,6 +236,17 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, initialTab = 'labs', di
         }
     }, [isOpen, initialTab, diagnoses]);
 
+    // Group cart by diagnosis
+    const groupedCart = useMemo(() => {
+        const groups = {};
+        cart.forEach(item => {
+            const dx = item.diagnosis || 'Unassigned';
+            if (!groups[dx]) groups[dx] = [];
+            groups[dx].push(item);
+        });
+        return groups;
+    }, [cart]);
+
     // Search Logic
     useEffect(() => {
         if (searchQuery.length < 2) {
@@ -530,57 +541,70 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, initialTab = 'labs', di
                             </h3>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                        <div className="flex-1 overflow-y-auto p-4 space-y-6">
                             {cart.length === 0 ? (
                                 <div className="h-full flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
                                     <ShoppingCart className="w-8 h-8 mb-2 opacity-20" />
                                     <p className="text-sm">Your cart is empty</p>
                                 </div>
                             ) : (
-                                cart.map((item, index) => (
-                                    <div key={item.id} className="bg-white border border-gray-200 rounded-lg shadow-sm p-3 group hover:shadow-md transition-all">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${item.type === 'labs' ? 'bg-purple-100 text-purple-700' :
-                                                        item.type === 'imaging' ? 'bg-blue-100 text-blue-700' :
-                                                            item.type === 'medications' ? 'bg-green-100 text-green-700' :
-                                                                'bg-orange-100 text-orange-700'
-                                                        }`}>{item.type}</span>
-                                                    <span className="font-medium text-gray-900 text-sm">{item.name}</span>
-                                                </div>
-                                                {item.type === 'medications' && (
-                                                    <div className="text-xs text-gray-500 mt-0.5 ml-1">
-                                                        {item.sig} • #{item.dispense}
-                                                    </div>
-                                                )}
-                                                {item.type === 'referrals' && item.reason && (
-                                                    <div className="text-xs text-gray-500 mt-0.5 ml-1">
-                                                        Reason: {item.reason}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <button
-                                                onClick={() => removeFromCart(item.id)}
-                                                className="text-gray-300 hover:text-red-500 transition-colors p-1"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
+                                Object.entries(groupedCart).map(([diagnosis, items]) => (
+                                    <div key={diagnosis} className="space-y-3">
+                                        <div className="flex items-center gap-2 pb-1 border-b border-gray-200">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-primary-500"></div>
+                                            <h4 className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider">
+                                                {diagnosis === 'Unassigned' ? 'Unassigned Diagnosis' : diagnosis}
+                                            </h4>
+                                            <span className="text-[10px] text-gray-300 font-normal">({items.length})</span>
                                         </div>
+                                        <div className="space-y-3">
+                                            {items.map((item) => (
+                                                <div key={item.id} className="bg-white border border-gray-200 rounded-lg shadow-sm p-3 group hover:shadow-md transition-all">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${item.type === 'labs' ? 'bg-purple-100 text-purple-700' :
+                                                                    item.type === 'imaging' ? 'bg-blue-100 text-blue-700' :
+                                                                        item.type === 'medications' ? 'bg-green-100 text-green-700' :
+                                                                            'bg-orange-100 text-orange-700'
+                                                                    }`}>{item.type}</span>
+                                                                <span className="font-medium text-gray-900 text-sm">{item.name}</span>
+                                                            </div>
+                                                            {item.type === 'medications' && (
+                                                                <div className="text-xs text-gray-500 mt-0.5 ml-1">
+                                                                    {item.sig} • #{item.dispense}
+                                                                </div>
+                                                            )}
+                                                            {item.type === 'referrals' && item.reason && (
+                                                                <div className="text-xs text-gray-500 mt-0.5 ml-1">
+                                                                    Reason: {item.reason}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <button
+                                                            onClick={() => removeFromCart(item.id)}
+                                                            className="text-gray-300 hover:text-red-500 transition-colors p-1"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
 
-                                        <div className="flex items-center gap-2 mt-2 bg-gray-50 p-2 rounded text-xs">
-                                            <span className="text-gray-500 font-medium whitespace-nowrap">Dx:</span>
-                                            <select
-                                                value={item.diagnosis}
-                                                onChange={(e) => updateCartItemDx(item.id, e.target.value)}
-                                                className="w-full bg-white border border-gray-200 rounded px-2 py-1 focus:ring-1 focus:ring-primary-500 text-gray-800"
-                                            >
-                                                <option value="">-- Select Diagnosis --</option>
-                                                {diagnoses.map((dx, idx) => (
-                                                    <option key={idx} value={dx}>{dx}</option>
-                                                ))}
-                                                <option value="General">General / Routine</option>
-                                            </select>
+                                                    <div className="flex items-center gap-2 mt-2 bg-gray-50 p-2 rounded text-xs border border-gray-100">
+                                                        <span className="text-gray-400 font-medium whitespace-nowrap">Dx:</span>
+                                                        <select
+                                                            value={item.diagnosis}
+                                                            onChange={(e) => updateCartItemDx(item.id, e.target.value)}
+                                                            className="w-full bg-transparent border-0 focus:ring-0 text-gray-700 py-0 px-0 cursor-pointer"
+                                                        >
+                                                            <option value="">-- Unassigned --</option>
+                                                            {diagnoses.map((dx, idx) => (
+                                                                <option key={idx} value={dx}>{dx}</option>
+                                                            ))}
+                                                            <option value="General">General / Routine</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
                                 ))
