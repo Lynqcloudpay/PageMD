@@ -1859,19 +1859,24 @@ const VisitNote = () => {
 
                     {/* Assessment */}
                     <Section title="Assessment" defaultOpen={true}>
+                        {/* Show structured list of diagnoses when not signed and diagnoses exist */}
                         {!isSigned && diagnoses.length > 0 && (
-                            <div className="mb-2 flex flex-wrap gap-1.5">
-                                {diagnoses.map((diag, idx) => (
-                                    <div key={idx} className="flex items-center gap-1.5 px-2 py-1 bg-primary-50 text-primary-700 rounded-md border border-primary-100 text-xs font-bold group hover:border-primary-300 transition-all">
-                                        <span>{diag}</span>
-                                        <button
-                                            onClick={() => removeDiagnosisFromAssessment(idx)}
-                                            className="text-primary-300 hover:text-red-500 transition-colors"
-                                        >
-                                            <X className="w-3 h-3" />
-                                        </button>
-                                    </div>
-                                ))}
+                            <div className="mb-2 border border-neutral-200 rounded-md bg-white p-2">
+                                <div className="space-y-1">
+                                    {diagnoses.map((diag, idx) => (
+                                        <div key={idx} className="flex items-start justify-between py-1 px-2 hover:bg-neutral-50 rounded group transition-colors">
+                                            <div className="flex-1 text-xs text-neutral-900">
+                                                <span className="font-medium">{idx + 1}.</span> {diag}
+                                            </div>
+                                            <button
+                                                onClick={() => removeDiagnosisFromAssessment(idx)}
+                                                className="opacity-0 group-hover:opacity-100 text-neutral-300 hover:text-red-500 transition-all ml-2"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
                         {hasPrivilege('search_icd10') && (
