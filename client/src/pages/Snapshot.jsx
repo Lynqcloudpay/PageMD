@@ -1092,10 +1092,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
     // Generate photo URL with cache-busting (must be before early returns)
     const photoUrl = useMemo(() => {
         if (!patient?.photo_url) return null;
-        const baseUrl = patient.photo_url.startsWith('http')
+        // Use relative path for production, base URL will be handle by the browser
+        const url = patient.photo_url.startsWith('http')
             ? patient.photo_url
-            : `http://localhost:3000${patient.photo_url}`;
-        return `${baseUrl}?v=${photoVersion}`;
+            : patient.photo_url.startsWith('/') ? patient.photo_url : `/${patient.photo_url}`;
+        return `${url}?v=${photoVersion}`;
     }, [patient?.photo_url, photoVersion]);
 
     if (showNotesOnly) {
@@ -2072,12 +2073,29 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </button>
                                         </div>
                                         <div className="p-2 space-y-1">
-                                            {documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('ekg') || d.file_name?.toLowerCase().includes('ekg'))).slice(0, 3).map(doc => (
-                                                <div key={doc.id} className="flex items-center justify-between text-[11px] p-1.5 bg-red-50/30 rounded border border-red-100/50 hover:bg-red-50 transition-colors cursor-pointer" onClick={() => { setPatientChartTab('images'); setShowPatientChart(true); }}>
-                                                    <span className="font-bold text-red-900 truncate flex-1 mr-2">{doc.file_name || 'EKG Study'}</span>
-                                                    <span className="text-red-500 font-medium whitespace-nowrap">{new Date(doc.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                                                </div>
-                                            ))}
+                                            {documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('ekg') || d.file_name?.toLowerCase().includes('ekg'))).slice(0, 3).map(doc => {
+                                                const rhythm = doc.tags?.find(t => t.startsWith('rhythm:'))?.split(':')[1] || '';
+                                                const rate = doc.tags?.find(t => t.startsWith('rate:'))?.split(':')[1] || '';
+                                                return (
+                                                    <div key={doc.id} className="flex flex-col p-2 bg-red-50/30 rounded border border-red-100/50 hover:bg-red-50 transition-colors">
+                                                        <div className="flex items-center justify-between mb-1">
+                                                            <span className="font-bold text-red-900 text-[11px] truncate">{doc.file_name || 'EKG'}</span>
+                                                            <div className="flex items-center space-x-2">
+                                                                <span className="text-red-500 text-[10px] whitespace-nowrap">{new Date(doc.created_at).toLocaleDateString()}</span>
+                                                                <a href={doc.file_path ? (doc.file_path.startsWith('http') ? doc.file_path : `/${doc.file_path}`) : '#'} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-red-200 rounded text-red-600">
+                                                                    <Eye className="w-3 h-3" />
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                        {(rhythm || rate) && (
+                                                            <div className="flex items-center gap-2 mt-0.5">
+                                                                {rhythm && <span className="text-[9px] px-1 bg-white border border-red-100 rounded text-red-700 font-bold uppercase">{rhythm}</span>}
+                                                                {rate && <span className="text-[9px] text-gray-500 font-medium">{rate} bpm</span>}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
                                             {documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('ekg') || d.file_name?.toLowerCase().includes('ekg'))).length === 0 && <p className="text-xs text-gray-500 text-center py-4">No EKGs recorded</p>}
                                         </div>
                                     </div>
@@ -2097,12 +2115,31 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </button>
                                         </div>
                                         <div className="p-2 space-y-1">
-                                            {documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('echo') || d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).slice(0, 3).map(doc => (
-                                                <div key={doc.id} className="flex items-center justify-between text-[11px] p-1.5 bg-indigo-50/30 rounded border border-indigo-100/50 hover:bg-indigo-50 transition-colors cursor-pointer" onClick={() => { setPatientChartTab('images'); setShowPatientChart(true); }}>
-                                                    <span className="font-bold text-indigo-900 truncate flex-1 mr-2">{doc.file_name || 'Echo Study'}</span>
-                                                    <span className="text-indigo-500 font-medium whitespace-nowrap">{new Date(doc.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                                                </div>
-                                            ))}
+                                            {documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('echo') || d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).slice(0, 3).map(doc => {
+                                                const ef = doc.tags?.find(t => t.startsWith('ef:'))?.split(':')[1] || '';
+                                                const la = doc.tags?.find(t => t.startsWith('la_size:'))?.split(':')[1] || '';
+                                                const lv = doc.tags?.find(t => t.startsWith('lv_size:'))?.split(':')[1] || '';
+                                                return (
+                                                    <div key={doc.id} className="flex flex-col p-2 bg-indigo-50/30 rounded border border-indigo-100/50 hover:bg-indigo-50 transition-colors">
+                                                        <div className="flex items-center justify-between mb-1">
+                                                            <span className="font-bold text-indigo-900 text-[11px] truncate">{doc.file_name || 'Echo Study'}</span>
+                                                            <div className="flex items-center space-x-2">
+                                                                <span className="text-indigo-500 text-[10px] whitespace-nowrap">{new Date(doc.created_at).toLocaleDateString()}</span>
+                                                                <a href={doc.file_path ? (doc.file_path.startsWith('http') ? doc.file_path : `/${doc.file_path}`) : '#'} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-indigo-200 rounded text-indigo-600">
+                                                                    <Eye className="w-3 h-3" />
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                        {(ef || la || lv) && (
+                                                            <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                                                                {ef && <span className="text-[9px] px-1 bg-white border border-indigo-100 rounded text-indigo-700 font-black">EF {ef}</span>}
+                                                                {la && <span className="text-[9px] text-gray-500">LA: <span className="font-bold">{la}</span></span>}
+                                                                {lv && <span className="text-[9px] text-gray-500">LV: <span className="font-bold">{lv}</span></span>}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
                                             {documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('echo') || d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length === 0 && <p className="text-xs text-gray-500 text-center py-4">No ECHO studies</p>}
                                         </div>
                                     </div>
