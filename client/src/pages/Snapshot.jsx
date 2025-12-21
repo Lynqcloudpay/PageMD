@@ -2063,8 +2063,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             <div className="flex items-center space-x-2">
                                                 <Activity className="w-4 h-4 text-red-600" />
                                                 <h3 className="font-bold text-sm text-gray-900">EKG</h3>
-                                                {documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('ekg')).length > 0 &&
-                                                    <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('ekg')).length}</span>
+                                                {documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('ekg') || d.file_name?.toLowerCase().includes('ekg'))).length > 0 &&
+                                                    <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('ekg') || d.file_name?.toLowerCase().includes('ekg'))).length}</span>
                                                 }
                                             </div>
                                             <button onClick={() => setShowEKGModal(true)} className="p-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors">
@@ -2072,13 +2072,13 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </button>
                                         </div>
                                         <div className="p-2 space-y-1">
-                                            {documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('ekg')).slice(0, 3).map(doc => (
+                                            {documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('ekg') || d.file_name?.toLowerCase().includes('ekg'))).slice(0, 3).map(doc => (
                                                 <div key={doc.id} className="flex items-center justify-between text-[11px] p-1.5 bg-red-50/30 rounded border border-red-100/50 hover:bg-red-50 transition-colors cursor-pointer" onClick={() => { setPatientChartTab('images'); setShowPatientChart(true); }}>
                                                     <span className="font-bold text-red-900 truncate flex-1 mr-2">{doc.file_name || 'EKG Study'}</span>
                                                     <span className="text-red-500 font-medium whitespace-nowrap">{new Date(doc.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                                                 </div>
                                             ))}
-                                            {documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('ekg')).length === 0 && <p className="text-xs text-gray-500 text-center py-4">No EKGs recorded</p>}
+                                            {documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('ekg') || d.file_name?.toLowerCase().includes('ekg'))).length === 0 && <p className="text-xs text-gray-500 text-center py-4">No EKGs recorded</p>}
                                         </div>
                                     </div>
 
@@ -2088,8 +2088,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             <div className="flex items-center space-x-2">
                                                 <Heart className="w-4 h-4 text-indigo-600" />
                                                 <h3 className="font-bold text-sm text-gray-900">ECHO</h3>
-                                                {documents.filter(d => d.doc_type === 'imaging' && (d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length > 0 &&
-                                                    <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{documents.filter(d => d.doc_type === 'imaging' && (d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length}</span>
+                                                {documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('echo') || d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length > 0 &&
+                                                    <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('echo') || d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length}</span>
                                                 }
                                             </div>
                                             <button onClick={() => setShowECHOModal(true)} className="p-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors">
@@ -2097,13 +2097,13 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </button>
                                         </div>
                                         <div className="p-2 space-y-1">
-                                            {documents.filter(d => d.doc_type === 'imaging' && (d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).slice(0, 3).map(doc => (
+                                            {documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('echo') || d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).slice(0, 3).map(doc => (
                                                 <div key={doc.id} className="flex items-center justify-between text-[11px] p-1.5 bg-indigo-50/30 rounded border border-indigo-100/50 hover:bg-indigo-50 transition-colors cursor-pointer" onClick={() => { setPatientChartTab('images'); setShowPatientChart(true); }}>
                                                     <span className="font-bold text-indigo-900 truncate flex-1 mr-2">{doc.file_name || 'Echo Study'}</span>
                                                     <span className="text-indigo-500 font-medium whitespace-nowrap">{new Date(doc.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                                                 </div>
                                             ))}
-                                            {documents.filter(d => d.doc_type === 'imaging' && (d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length === 0 && <p className="text-xs text-gray-500 text-center py-4">No ECHO studies</p>}
+                                            {documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('echo') || d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length === 0 && <p className="text-xs text-gray-500 text-center py-4">No ECHO studies</p>}
                                         </div>
                                     </div>
 
