@@ -1278,20 +1278,20 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     )}
                                 </div>
 
-                                {/* Open Chart - moved down next to Pharmacy */}
+                                {/* Open Chart - Redesigned */}
                                 <button
                                     type="button"
                                     onClick={() => {
                                         setPatientChartTab('history');
                                         setShowPatientChart(true);
                                     }}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-md shadow-md hover:shadow-lg transition-all whitespace-nowrap"
+                                    className="flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-semibold text-white rounded transition-all whitespace-nowrap shadow-sm hover:shadow-md"
                                     style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
                                     onMouseEnter={(e) => (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
                                     onMouseLeave={(e) => (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
                                 >
-                                    <Eye className="w-3.5 h-3.5" />
-                                    <span>Open Chart</span>
+                                    <Eye className="w-3 h-3" />
+                                    <span>Chart</span>
                                 </button>
 
                                 {/* Emergency Contact */}
@@ -1810,33 +1810,35 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         </div>
                                         <div className="p-2">
                                             {vitals.length > 0 ? (
-                                                <div className="space-y-1.5">
+                                                <div className="space-y-2">
                                                     {vitals.slice(0, 3).map((vital, idx) => (
-                                                        <div key={idx} className="pb-1.5 border-b border-gray-100 last:border-b-0 last:pb-0">
-                                                            <p className="text-xs text-gray-500 mb-0.5">{vital.date}</p>
-                                                            <div className="grid grid-cols-2 gap-1 text-xs">
-                                                                <div>
-                                                                    <span className="text-gray-500">BP: </span>
-                                                                    <span className="font-medium text-gray-900">{vital.bp || 'N/A'}</span>
+                                                        <div key={idx} className="p-2 bg-gradient-to-r from-blue-50 to-transparent rounded-lg border border-blue-100">
+                                                            <p className="text-[10px] font-semibold text-blue-700 mb-1.5">{vital.date}</p>
+                                                            <div className="grid grid-cols-2 gap-2 text-xs">
+                                                                <div className="flex items-center gap-1">
+                                                                    <span className="text-gray-600 font-medium">BP:</span>
+                                                                    <span className="font-semibold text-gray-900">
+                                                                        {vital.bp ? vital.bp.replace(/&#x2F;/g, '/').replace(/&amp;#x2F;/g, '/') : 'N/A'}
+                                                                    </span>
                                                                 </div>
-                                                                <div>
-                                                                    <span className="text-gray-500">HR: </span>
-                                                                    <span className="font-medium text-gray-900">{vital.hr || 'N/A'}</span>
+                                                                <div className="flex items-center gap-1">
+                                                                    <span className="text-gray-600 font-medium">HR:</span>
+                                                                    <span className="font-semibold text-gray-900">{vital.hr || 'N/A'}</span>
                                                                 </div>
-                                                                <div>
-                                                                    <span className="text-gray-500">Temp: </span>
-                                                                    <span className="font-medium text-gray-900">{vital.temp || 'N/A'}</span>
+                                                                <div className="flex items-center gap-1">
+                                                                    <span className="text-gray-600 font-medium">Temp:</span>
+                                                                    <span className="font-semibold text-gray-900">{vital.temp || 'N/A'}</span>
                                                                 </div>
-                                                                <div>
-                                                                    <span className="text-gray-500">SpO2: </span>
-                                                                    <span className="font-medium text-gray-900">{vital.spo2 || 'N/A'}</span>
+                                                                <div className="flex items-center gap-1">
+                                                                    <span className="text-gray-600 font-medium">SpO₂:</span>
+                                                                    <span className="font-semibold text-gray-900">{vital.spo2 || 'N/A'}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     ))}
                                                 </div>
                                             ) : (
-                                                <p className="text-xs text-gray-500 text-center py-2">No vitals recorded</p>
+                                                <p className="text-xs text-gray-500 text-center py-4">No vitals recorded</p>
                                             )}
                                         </div>
                                     </div>
@@ -1928,78 +1930,154 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         </div>
                                     </div>
 
-                                    {/* EKG/ECHO Studies Module */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-purple-200 hover:shadow-md transition-shadow md:col-span-2">
-                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between">
+                                    {/* EKG Studies Module */}
+                                    <div className="bg-white rounded-lg shadow-sm border border-red-200 hover:shadow-md transition-shadow">
+                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-red-50 to-transparent">
                                             <div className="flex items-center space-x-2">
-                                                <Activity className="w-4 h-4 text-purple-600" />
-                                                <h3 className="font-semibold text-sm text-gray-900">EKG / Echo Studies</h3>
-                                                {documents.filter(d => d.doc_type === 'imaging' && (d.file_name?.toLowerCase().includes('ekg') || d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length > 0 && (
-                                                    <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-semibold">
-                                                        {documents.filter(d => d.doc_type === 'imaging' && (d.file_name?.toLowerCase().includes('ekg') || d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length}
+                                                <Activity className="w-4 h-4 text-red-600" />
+                                                <h3 className="font-semibold text-sm text-gray-900">EKG Studies</h3>
+                                                {documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('ekg')).length > 0 && (
+                                                    <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-semibold">
+                                                        {documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('ekg')).length}
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => {
-                                                        setDocumentUploadType('imaging');
-                                                        setShowDocumentUploadModal(true);
-                                                    }}
-                                                    className="text-xs text-white px-2 py-1 rounded font-medium flex items-center gap-1"
-                                                    style={{ background: 'linear-gradient(to right, #7C3AED, #6D28D9)' }}
-                                                >
-                                                    <Upload className="w-3 h-3" />
-                                                    Upload
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setPatientChartTab('images');
-                                                        setShowPatientChart(true);
-                                                    }}
-                                                    className="text-xs text-purple-600 hover:text-purple-700 font-medium"
-                                                >
-                                                    View All
-                                                </button>
-                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    setDocumentUploadType('imaging');
+                                                    setShowDocumentUploadModal(true);
+                                                }}
+                                                className="text-[10px] text-white px-2 py-1 rounded font-semibold flex items-center gap-1 shadow-sm hover:shadow-md transition-all"
+                                                style={{ background: 'linear-gradient(to right, #DC2626, #B91C1C)' }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #B91C1C, #991B1B)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #DC2626, #B91C1C)'}
+                                            >
+                                                <Upload className="w-3 h-3" />
+                                                Upload EKG
+                                            </button>
                                         </div>
                                         <div className="p-2">
-                                            {documents.filter(d => d.doc_type === 'imaging').length > 0 ? (
-                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                                    {documents.filter(d => d.doc_type === 'imaging').slice(0, 4).map(doc => (
+                                            {documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('ekg')).length > 0 ? (
+                                                <div className="space-y-1.5">
+                                                    {documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('ekg')).slice(0, 3).map(doc => (
+                                                        <div key={doc.id} className="bg-red-50 border border-red-100 rounded-lg p-2 hover:bg-red-100 transition-colors cursor-pointer"
+                                                            onClick={() => {
+                                                                setPatientChartTab('images');
+                                                                setShowPatientChart(true);
+                                                            }}
+                                                        >
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                                    <Activity className="w-3.5 h-3.5 text-red-600 flex-shrink-0" />
+                                                                    <span className="text-xs font-medium text-red-900 truncate">{doc.file_name || 'EKG Study'}</span>
+                                                                </div>
+                                                                <span className="text-[10px] text-red-600 flex-shrink-0">
+                                                                    {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No date'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    {documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('ekg')).length > 3 && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setPatientChartTab('images');
+                                                                setShowPatientChart(true);
+                                                            }}
+                                                            className="w-full text-center text-xs text-red-600 hover:text-red-700 font-medium py-1"
+                                                        >
+                                                            +{documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('ekg')).length - 3} more
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="text-center py-4">
+                                                    <Activity className="w-8 h-8 text-red-200 mx-auto mb-2" />
+                                                    <p className="text-xs text-gray-500 mb-2">No EKG studies</p>
+                                                    <button
+                                                        onClick={() => {
+                                                            setDocumentUploadType('imaging');
+                                                            setShowDocumentUploadModal(true);
+                                                        }}
+                                                        className="text-xs text-red-600 hover:text-red-700 font-medium"
+                                                    >
+                                                        Upload EKG
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* ECHO Studies Module */}
+                                    <div className="bg-white rounded-lg shadow-sm border border-purple-200 hover:shadow-md transition-shadow">
+                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-purple-50 to-transparent">
+                                            <div className="flex items-center space-x-2">
+                                                <Heart className="w-4 h-4 text-purple-600" />
+                                                <h3 className="font-semibold text-sm text-gray-900">Echo Studies</h3>
+                                                {documents.filter(d => d.doc_type === 'imaging' && (d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length > 0 && (
+                                                    <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-semibold">
+                                                        {documents.filter(d => d.doc_type === 'imaging' && (d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    setDocumentUploadType('imaging');
+                                                    setShowDocumentUploadModal(true);
+                                                }}
+                                                className="text-[10px] text-white px-2 py-1 rounded font-semibold flex items-center gap-1 shadow-sm hover:shadow-md transition-all"
+                                                style={{ background: 'linear-gradient(to right, #7C3AED, #6D28D9)' }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #6D28D9, #5B21B6)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #7C3AED, #6D28D9)'}
+                                            >
+                                                <Upload className="w-3 h-3" />
+                                                Upload Echo
+                                            </button>
+                                        </div>
+                                        <div className="p-2">
+                                            {documents.filter(d => d.doc_type === 'imaging' && (d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length > 0 ? (
+                                                <div className="space-y-1.5">
+                                                    {documents.filter(d => d.doc_type === 'imaging' && (d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).slice(0, 3).map(doc => (
                                                         <div key={doc.id} className="bg-purple-50 border border-purple-100 rounded-lg p-2 hover:bg-purple-100 transition-colors cursor-pointer"
                                                             onClick={() => {
                                                                 setPatientChartTab('images');
                                                                 setShowPatientChart(true);
                                                             }}
                                                         >
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <FileImage className="w-4 h-4 text-purple-600 flex-shrink-0" />
-                                                                <span className="text-xs font-medium text-purple-900 truncate">{doc.file_name || 'Study'}</span>
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                                    <Heart className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" />
+                                                                    <span className="text-xs font-medium text-purple-900 truncate">{doc.file_name || 'Echo Study'}</span>
+                                                                </div>
+                                                                <span className="text-[10px] text-purple-600 flex-shrink-0">
+                                                                    {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No date'}
+                                                                </span>
                                                             </div>
-                                                            <p className="text-[10px] text-purple-600">
-                                                                {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : 'No date'}
-                                                            </p>
                                                         </div>
                                                     ))}
-                                                    {documents.filter(d => d.doc_type === 'imaging').length > 4 && (
-                                                        <div className="flex items-center justify-center">
-                                                            <span className="text-xs text-purple-600">+{documents.filter(d => d.doc_type === 'imaging').length - 4} more</span>
-                                                        </div>
+                                                    {documents.filter(d => d.doc_type === 'imaging' && (d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length > 3 && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setPatientChartTab('images');
+                                                                setShowPatientChart(true);
+                                                            }}
+                                                            className="w-full text-center text-xs text-purple-600 hover:text-purple-700 font-medium py-1"
+                                                        >
+                                                            +{documents.filter(d => d.doc_type === 'imaging' && (d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length - 3} more
+                                                        </button>
                                                     )}
                                                 </div>
                                             ) : (
                                                 <div className="text-center py-4">
-                                                    <FileImage className="w-8 h-8 text-purple-300 mx-auto mb-2" />
-                                                    <p className="text-xs text-gray-500">No EKG/Echo studies uploaded</p>
+                                                    <Heart className="w-8 h-8 text-purple-200 mx-auto mb-2" />
+                                                    <p className="text-xs text-gray-500 mb-2">No Echo studies</p>
                                                     <button
                                                         onClick={() => {
                                                             setDocumentUploadType('imaging');
                                                             setShowDocumentUploadModal(true);
                                                         }}
-                                                        className="mt-2 text-xs text-purple-600 hover:text-purple-700 font-medium"
+                                                        className="text-xs text-purple-600 hover:text-purple-700 font-medium"
                                                     >
-                                                        Upload your first study
+                                                        Upload Echo
                                                     </button>
                                                 </div>
                                             )}
