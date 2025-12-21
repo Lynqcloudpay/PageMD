@@ -210,7 +210,7 @@ export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [] }
     );
 };
 
-export const OrderModal = ({ isOpen, onClose, onSuccess, initialTab = 'labs', diagnoses = [] }) => {
+export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'labs', diagnoses = [], existingOrders = [] }) => {
     const [activeTab, setActiveTab] = useState(initialTab);
     const [cart, setCart] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
@@ -223,15 +223,73 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, initialTab = 'labs', di
 
     useEffect(() => {
         if (isOpen) {
-            setCart([]);
             setSearchQuery('');
             setSearchResults([]);
             setActiveTab(initialTab);
             // Always start at diagnosis selection if diagnoses exist
             setOrderStep(diagnoses.length > 0 ? 1 : 2);
             setSelectedDiagnosis(diagnoses.length === 1 ? diagnoses[0] : '');
+
+            // Populate cart from existing orders
+            const initialCart = [];
+            if (existingOrders && existingOrders.length > 0) {
+                existingOrders.forEach(group => {
+                    const dx = group.diagnosis;
+                    if (group.orders) {
+                        group.orders.forEach(orderStr => {
+                            // Parse order string to determine type and content
+                            let type = 'other';
+                            let name = orderStr;
+                            let details = {};
+                            let sig = '';
+                            let dispense = '';
+                            let reason = '';
+
+                            if (orderStr.startsWith('Lab: ')) {
+                                type = 'labs';
+                                name = orderStr.substring(5).split('[')[0].trim();
+                            } else if (orderStr.startsWith('Imaging: ')) {
+                                type = 'imaging';
+                                name = orderStr.substring(9).split('[')[0].trim();
+                            } else if (orderStr.startsWith('Procedure: ')) {
+                                type = 'procedures';
+                                name = orderStr.substring(11).split('[')[0].trim();
+                            } else if (orderStr.startsWith('Referral: ')) {
+                                type = 'referrals';
+                                const parts = orderStr.substring(10).split(' - ');
+                                name = parts[0].trim();
+                                if (parts.length > 1) reason = parts[1].trim();
+                            } else if (orderStr.startsWith('Prescription: ')) {
+                                type = 'medications';
+                                // Prescription: Name - Sig, Dispense: #
+                                const match = orderStr.match(/Prescription: (.*?) - (.*?), Dispense: (.*)/);
+                                if (match) {
+                                    name = match[1].trim();
+                                    sig = match[2].trim();
+                                    dispense = match[3].trim();
+                                } else {
+                                    name = orderStr.substring(14).trim();
+                                }
+                            }
+
+                            initialCart.push({
+                                id: Date.now() + Math.random(),
+                                type,
+                                name,
+                                details,
+                                diagnosis: dx,
+                                sig,
+                                dispense,
+                                reason,
+                                originalString: orderStr // Keep original for reference
+                            });
+                        });
+                    }
+                });
+            }
+            setCart(initialCart);
         }
-    }, [isOpen, initialTab, diagnoses]);
+    }, [isOpen, initialTab, diagnoses, existingOrders]);
 
     // Group cart by diagnosis
     const groupedCart = useMemo(() => {
@@ -333,31 +391,91 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, initialTab = 'labs', di
     };
 
     const handleBatchSubmit = () => {
-        cart.forEach(item => {
-            let orderText = '';
+        if (onSave) {
+            // Group cart items by diagnosis to reconstruct structured plan
+            const newPlanStructured = [];
+            const grouped = {};
 
-            if (item.type === 'labs') {
-                const code = labVendor === 'quest' ? item.details?.questCode : item.details?.labcorpCode;
-                const company = labVendor === 'quest' ? 'Quest' : 'LabCorp';
-                orderText = `Lab: ${item.name} [${company}: ${code || 'N/A'}]`;
-            } else if (item.type === 'imaging') {
-                orderText = `Imaging: ${item.name}${item.details?.cpt ? ` [CPT: ${item.details.cpt}]` : ''}`;
-            } else if (item.type === 'procedures') {
-                orderText = `Procedure: ${item.name}${item.details?.cpt ? ` [CPT: ${item.details.cpt}]` : ''}`;
-            } else if (item.type === 'referrals') {
-                orderText = `Referral: ${item.name}${item.reason ? ` - ${item.reason}` : ''}`;
-            } else if (item.type === 'medications') {
-                orderText = `Prescription: ${item.name} - ${item.sig}, Dispense: ${item.dispense}`;
-            }
+            // Initialize groups with diagnoses that have existing orders or new ones
+            // We want to preserve the order of diagnoses if possible, or just append
 
-            if (item.diagnosis && item.diagnosis !== 'None') {
-                onSuccess(item.diagnosis, orderText);
-            } else {
-                // If no diagnosis, maybe alert or default? 
-                // For now, pass a generic one or handle empty in parent
-                onSuccess(diagnoses[0] || 'General', orderText);
-            }
-        });
+            cart.forEach(item => {
+                const dx = item.diagnosis || 'Unassigned';
+                if (!grouped[dx]) grouped[dx] = [];
+
+                let orderText = '';
+                // If we parsed it from existing, we might have originalString. 
+                // However, user might have EDITED it (though we don't support inline edit yet, just delete/add).
+                // Re-generate string to be safe and consistent.
+
+                if (item.type === 'labs') {
+                    const code = item.details?.questCode || item.details?.labcorpCode; // Might be missing if loaded from string
+                    const company = labVendor === 'quest' ? 'Quest' : 'LabCorp';
+                    // If we have details, use them. If not, use name (loaded from string)
+                    if (item.originalString && !item.details?.questCode) {
+                        orderText = item.originalString; // Preserve original if we didn't fully parse details
+                    } else {
+                        orderText = `Lab: ${item.name} [${company}: ${code || 'N/A'}]`;
+                    }
+                } else if (item.type === 'imaging') {
+                    if (item.originalString && !item.details?.cpt) {
+                        orderText = item.originalString;
+                    } else {
+                        orderText = `Imaging: ${item.name}${item.details?.cpt ? ` [CPT: ${item.details.cpt}]` : ''}`;
+                    }
+                } else if (item.type === 'procedures') {
+                    if (item.originalString && !item.details?.cpt) {
+                        orderText = item.originalString;
+                    } else {
+                        orderText = `Procedure: ${item.name}${item.details?.cpt ? ` [CPT: ${item.details.cpt}]` : ''}`;
+                    }
+                } else if (item.type === 'referrals') {
+                    orderText = `Referral: ${item.name}${item.reason ? ` - ${item.reason}` : ''}`;
+                } else if (item.type === 'medications') {
+                    orderText = `Prescription: ${item.name} - ${item.sig}, Dispense: ${item.dispense}`;
+                } else {
+                    orderText = item.name;
+                }
+
+                grouped[dx].push(orderText);
+            });
+
+            // Convert to array format expected by planStructured
+            Object.keys(grouped).forEach(dx => {
+                newPlanStructured.push({
+                    diagnosis: dx,
+                    orders: grouped[dx]
+                });
+            });
+
+            onSave(newPlanStructured);
+        } else {
+            // Fallback for older usage
+            cart.forEach(item => {
+                let orderText = ''; // ... (same generation logic)
+                // ... logic to call onSuccess
+                // For brevity, assuming onSave is used now.
+                if (item.type === 'labs') {
+                    const code = labVendor === 'quest' ? item.details?.questCode : item.details?.labcorpCode;
+                    const company = labVendor === 'quest' ? 'Quest' : 'LabCorp';
+                    orderText = `Lab: ${item.name} [${company}: ${code || 'N/A'}]`;
+                } else if (item.type === 'imaging') {
+                    orderText = `Imaging: ${item.name}${item.details?.cpt ? ` [CPT: ${item.details.cpt}]` : ''}`;
+                } else if (item.type === 'procedures') {
+                    orderText = `Procedure: ${item.name}${item.details?.cpt ? ` [CPT: ${item.details.cpt}]` : ''}`;
+                } else if (item.type === 'referrals') {
+                    orderText = `Referral: ${item.name}${item.reason ? ` - ${item.reason}` : ''}`;
+                } else if (item.type === 'medications') {
+                    orderText = `Prescription: ${item.name} - ${item.sig}, Dispense: ${item.dispense}`;
+                }
+
+                if (item.diagnosis && item.diagnosis !== 'None') {
+                    onSuccess(item.diagnosis, orderText);
+                } else {
+                    onSuccess(diagnoses[0] || 'General', orderText);
+                }
+            });
+        }
         onClose();
     };
 
