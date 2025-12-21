@@ -467,6 +467,8 @@ const VisitNote = () => {
 
     // Find or create visit on mount
     useEffect(() => {
+        let cleanup = null;
+
         // Always fetch patient data if we have a patient ID
         if (id) {
             // Fetch Patient Snapshot (Demographics, Problems, Meds, Allergies)
@@ -499,7 +501,7 @@ const VisitNote = () => {
             };
 
             window.addEventListener('patient-data-updated', handlePatientDataUpdate);
-            return () => {
+            cleanup = () => {
                 window.removeEventListener('patient-data-updated', handlePatientDataUpdate);
             };
         }
@@ -617,6 +619,9 @@ const VisitNote = () => {
             setLoading(false);
             setVisitData({});
         }
+
+        // Return cleanup function if it was set
+        return cleanup || (() => { });
     }, [urlVisitId, id, navigate]);
 
     // Auto-save function (can be called with or without user action)
