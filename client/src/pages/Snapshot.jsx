@@ -1101,7 +1101,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
     return (
         <div className="min-h-screen bg-neutral-50">
-            <div className="max-w-7xl mx-auto">
+            <div className="w-full px-4">
                 {/* Patient Hub Header Section */}
                 <div className="bg-white border-b border-gray-200 shadow-sm mb-6">
                     {/* Patient Info Header */}

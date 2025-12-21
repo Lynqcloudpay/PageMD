@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Modal from './ui/Modal';
 import { Pill, Stethoscope, Upload, Send, Search, X, ShoppingCart, Trash2, Plus, Check, ChevronRight } from 'lucide-react';
 import { searchLabTests, searchImaging } from '../data/labCodes';
-import { codesAPI } from '../services/api';
+import { codesAPI, referralsAPI } from '../services/api';
 
 export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [] }) => {
     const [med, setMed] = useState('');
@@ -210,7 +210,7 @@ export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [] }
     );
 };
 
-export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'labs', diagnoses = [], existingOrders = [] }) => {
+export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'labs', diagnoses = [], existingOrders = [], patientId = null, visitId = null }) => {
     const [activeTab, setActiveTab] = useState(initialTab);
     const [cart, setCart] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
@@ -449,6 +449,28 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
             });
 
             onSave(newPlanStructured);
+
+            // Save referrals and prescriptions to database for tracking
+            if (patientId) {
+                cart.forEach(async (item) => {
+                    try {
+                        if (item.type === 'referrals' && !item.originalString) {
+                            // Only save new referrals (not ones loaded from existing orders)
+                            await referralsAPI.create({
+                                patientId,
+                                visitId,
+                                recipientName: item.name,
+                                specialty: item.name,
+                                reason: item.reason || item.diagnosis || '',
+                                status: 'sent',
+                                notes: `Linked to: ${item.diagnosis || 'General'}`
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Error saving referral to database:', error);
+                    }
+                });
+            }
         } else {
             // Fallback for older usage
             cart.forEach(item => {

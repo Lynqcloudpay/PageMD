@@ -2302,6 +2302,8 @@ const VisitNote = () => {
                 selectedDiagnosis={selectedDiagnosis}
                 existingOrders={noteData.planStructured}
                 onSave={handleUpdatePlan}
+                patientId={id}
+                visitId={currentVisitId || urlVisitId}
             />
             <EPrescribeEnhanced
                 isOpen={showEPrescribeEnhanced}
