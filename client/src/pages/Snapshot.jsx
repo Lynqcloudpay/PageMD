@@ -640,7 +640,19 @@ const Snapshot = ({ showNotesOnly = false }) => {
             e.preventDefault();
             e.stopPropagation();
         }
-        setSelectedVisitForView({ visitId: noteId, patientId: id });
+
+        // Find the note in our local state to check its status
+        const note = recentNotes.find(n => n.id === noteId);
+
+        // If it's a draft, go to the full visit editor
+        if (note && !note.signed) {
+            console.log('Opening draft note editor for visit:', noteId);
+            navigate(`/patient/${id}/visit/${noteId}`);
+        } else {
+            // If it's signed or not found (fallback), open the modal view
+            console.log('Opening signed note modal for visit:', noteId);
+            setSelectedVisitForView({ visitId: noteId, patientId: id });
+        }
     };
 
     const handleOpenDemographics = (field) => {
@@ -1051,7 +1063,17 @@ const Snapshot = ({ showNotesOnly = false }) => {
     };
 
     const handleSavePhoto = async () => {
-        if (!capturedPhoto || !id) return;
+        console.log('handleSavePhoto called. id:', id, 'hasCapturedPhoto:', !!capturedPhoto);
+        if (!capturedPhoto) {
+            console.warn('Cannot save photo: capturedPhoto is null');
+            showError('No photo captured. Please take a photo or upload one first.');
+            return;
+        }
+        if (!id) {
+            console.warn('Cannot save photo: patient id is missing');
+            showError('Patient ID is missing. Please refresh the page.');
+            return;
+        }
 
         console.log('Attempting to save photo for patient:', id);
         setPhotoLoading(true);
@@ -2614,6 +2636,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <button
                                     onClick={async () => {
+                                        console.log('Webcam button clicked - starting webcam');
                                         setPhotoMode('webcam');
                                         await startWebcam();
                                     }}
@@ -2628,7 +2651,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
                                 <button
                                     onClick={() => {
-                                        setPhotoMode('preview');
+                                        console.log('Upload button clicked - opening file dialog');
                                         fileInputRef.current?.click();
                                     }}
                                     className="group flex flex-col items-center justify-center p-8 bg-white border-2 border-dashed border-gray-200 rounded-2xl hover:border-primary-500 hover:bg-primary-50/50 transition-all duration-300"
