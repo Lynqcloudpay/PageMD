@@ -1933,8 +1933,51 @@ const VisitNote = () => {
                                     className="w-full px-3 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors flex items-center justify-center space-x-1"
                                 >
                                     <Search className="w-3.5 h-3.5" />
-                                    <span>Search ICD-10 Codes</span>
+                                    <span>Search ICD-10 Codes (Modal)</span>
                                 </button>
+
+                                {/* Simple inline search */}
+                                <div className="relative mt-2">
+                                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Quick search: Type diagnosis or code..."
+                                        value={icd10Search}
+                                        onChange={(e) => {
+                                            setIcd10Search(e.target.value);
+                                            setShowIcd10Search(true);
+                                        }}
+                                        className="w-full pl-8 pr-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                                    />
+                                </div>
+
+                                {/* Clean results dropdown - only shows when searching */}
+                                {showIcd10Search && icd10Results.length > 0 && icd10Search.trim().length >= 2 && (
+                                    <div className="mt-1 border border-neutral-200 rounded-md bg-white shadow-lg max-h-60 overflow-y-auto">
+                                        {icd10Results.map((code) => (
+                                            <button
+                                                key={code.code}
+                                                onClick={() => {
+                                                    handleAddICD10(code, false);
+                                                    setIcd10Search('');
+                                                    setIcd10Results([]);
+                                                    setShowIcd10Search(false);
+                                                }}
+                                                className="w-full text-left p-2 border-b border-neutral-100 hover:bg-primary-50 transition-colors"
+                                            >
+                                                <div className="font-medium text-neutral-900 text-xs">{code.code}</div>
+                                                <div className="text-xs text-neutral-600">{code.description}</div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* No results message */}
+                                {showIcd10Search && icd10Results.length === 0 && icd10Search.trim().length >= 2 && (
+                                    <div className="mt-1 border border-neutral-200 rounded-md bg-white p-3 text-center">
+                                        <p className="text-xs text-neutral-500">No codes found for "{icd10Search}"</p>
+                                    </div>
+                                )}
                             </div>
                         )}
                         {/* Only show textarea when signed OR when there are no structured diagnoses */}
