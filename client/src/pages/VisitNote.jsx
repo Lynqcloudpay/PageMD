@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { 
-    Save, Lock, FileText, ChevronDown, ChevronUp, Plus, ClipboardList, 
+import {
+    Save, Lock, FileText, ChevronDown, ChevronUp, Plus, ClipboardList,
     Sparkles, ArrowLeft, Zap, Search, X, Printer, History,
-    Activity, CheckSquare, Square, Trash2
+    Activity, CheckSquare, Square, Trash2, Pill, Users, UserCircle
 } from 'lucide-react';
 import Toast from '../components/ui/Toast';
 import { OrderModal, PrescriptionModal, ReferralModal } from '../components/ActionModals';
@@ -70,6 +70,73 @@ const PlanDisplay = ({ plan }) => {
     return <div className="whitespace-pre-wrap">{formattedLines}</div>;
 };
 
+// Generic History List Component
+const HistoryList = ({ title, icon, items, renderItem, onAdd, onDelete, emptyMessage, addPlaceholder = "Add item..." }) => {
+    const [isAdding, setIsAdding] = useState(false);
+    const [newItem, setNewItem] = useState('');
+
+    const handleAdd = () => {
+        if (newItem.trim()) {
+            onAdd(newItem);
+            setNewItem('');
+            setIsAdding(false);
+        }
+    };
+
+    return (
+        <div className="border rounded-md border-gray-100 bg-white">
+            <div className="flex items-center justify-between p-2 bg-gray-50 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                    {icon}
+                    <h4 className="text-sm font-semibold text-gray-800">{title}</h4>
+                </div>
+                {!isAdding && (
+                    <button onClick={() => setIsAdding(true)} className="text-primary-600 hover:bg-primary-50 p-1 rounded">
+                        <Plus className="w-3.5 h-3.5" />
+                    </button>
+                )}
+            </div>
+            <div className="p-2">
+                {items && items.length > 0 ? (
+                    <div className="space-y-1">
+                        {items.map((item, idx) => (
+                            <div key={item.id || idx} className="group flex items-start justify-between py-1 px-2 hover:bg-gray-50 rounded text-sm">
+                                <div className="flex-1 mr-2">
+                                    {renderItem(item)}
+                                </div>
+                                <button
+                                    onClick={() => onDelete(item.id)}
+                                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
+                                >
+                                    <Trash2 className="w-3 h-3" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-xs text-gray-400 italic text-center py-2">{emptyMessage}</p>
+                )}
+
+                {isAdding && (
+                    <div className="mt-2 flex items-center gap-2">
+                        <input
+                            type="text"
+                            value={newItem}
+                            onChange={(e) => setNewItem(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+                            placeholder={addPlaceholder}
+                            className="flex-1 text-sm border-gray-300 rounded focus:ring-primary-500 focus:border-primary-500 px-2 py-1"
+                            autoFocus
+                        />
+                        <button onClick={handleAdd} className="text-xs bg-primary-600 text-white px-2 py-1 rounded hover:bg-primary-700">Save</button>
+                        <button onClick={() => setIsAdding(false)} className="text-xs text-gray-500 hover:text-gray-700 px-1">Cancel</button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 const VisitNote = () => {
     const params = useParams();
     const navigate = useNavigate();
@@ -95,12 +162,17 @@ const VisitNote = () => {
     const [showPatientChart, setShowPatientChart] = useState(false);
     const [patientChartTab, setPatientChartTab] = useState('history');
     const [patientData, setPatientData] = useState(null);
-    
+
     // Auto-save tracking
     const autoSaveTimeoutRef = useRef(null);
     const hasInitialSaveRef = useRef(false);
     const isAutoSavingRef = useRef(false);
-    
+
+    // Patient History State (PAMFOS)
+    const [familyHistory, setFamilyHistory] = useState([]);
+    const [socialHistory, setSocialHistory] = useState(null);
+    const [showHistoryModal, setShowHistoryModal] = useState(false); // For extended editing if needed
+
     // Note sections
     const [noteData, setNoteData] = useState({
         chiefComplaint: '',
@@ -135,7 +207,7 @@ const VisitNote = () => {
         plan: '',
         planStructured: [] // Array of {diagnosis: string, orders: string[]}
     });
-    
+
     // Vitals
     const [vitals, setVitals] = useState({
         systolic: '',
@@ -152,32 +224,32 @@ const VisitNote = () => {
         weightUnit: 'lbs',
         heightUnit: 'in'
     });
-    
+
     // Previous visit weight for comparison
     const [previousWeight, setPreviousWeight] = useState(null);
     const [previousWeightUnit, setPreviousWeightUnit] = useState('lbs');
-    
+
     // Dot phrases
     const [showDotPhraseModal, setShowDotPhraseModal] = useState(false);
     const [dotPhraseSearch, setDotPhraseSearch] = useState('');
     const [activeTextArea, setActiveTextArea] = useState(null);
     const [hpiDotPhraseSearch, setHpiDotPhraseSearch] = useState('');
     const [showHpiDotPhraseResults, setShowHpiDotPhraseResults] = useState(false);
-    
+
     // ICD-10 search
     const [showIcd10Search, setShowIcd10Search] = useState(false);
     const [icd10Search, setIcd10Search] = useState('');
     const [icd10Results, setIcd10Results] = useState([]);
-    
+
     // AI Summary
     const [aiSummary, setAiSummary] = useState('');
     const [generatingSummary, setGeneratingSummary] = useState(false);
-    
+
     // Refs for textareas
     const hpiRef = useRef(null);
     const assessmentRef = useRef(null);
     const planRef = useRef(null);
-    
+
     // Refs for vitals inputs
     const systolicRef = useRef(null);
     const diastolicRef = useRef(null);
@@ -187,7 +259,7 @@ const VisitNote = () => {
     const o2satRef = useRef(null);
     const weightRef = useRef(null);
     const heightRef = useRef(null);
-    
+
     // Autocomplete state
     const [autocompleteState, setAutocompleteState] = useState({
         show: false,
@@ -258,7 +330,7 @@ const VisitNote = () => {
         }
         const decodedText = decodeHtmlEntities(text);
         console.log('parseNoteText: Decoded text length:', decodedText.length, 'Preview:', decodedText.substring(0, 100));
-        
+
         // More flexible regex patterns that handle various formats (including end of string)
         const chiefComplaintMatch = decodedText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
         const hpiMatch = decodedText.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
@@ -266,7 +338,7 @@ const VisitNote = () => {
         const peMatch = decodedText.match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):|$)/is);
         const assessmentMatch = decodedText.match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):|$)/is);
         const planMatch = decodedText.match(/(?:Plan|P):\s*(.+?)(?:\n\n|$)/is);
-        
+
         const result = {
             chiefComplaint: chiefComplaintMatch ? decodeHtmlEntities(chiefComplaintMatch[1].trim()) : '',
             hpi: hpiMatch ? decodeHtmlEntities(hpiMatch[1].trim()) : '',
@@ -275,7 +347,7 @@ const VisitNote = () => {
             assessment: assessmentMatch ? decodeHtmlEntities(assessmentMatch[1].trim()) : '',
             plan: planMatch ? decodeHtmlEntities(planMatch[1].trim()) : ''
         };
-        
+
         console.log('parseNoteText: Parsed result lengths:', {
             cc: result.chiefComplaint.length,
             hpi: result.hpi.length,
@@ -284,7 +356,7 @@ const VisitNote = () => {
             assessment: result.assessment.length,
             plan: result.plan.length
         });
-        
+
         return result;
     };
 
@@ -322,7 +394,7 @@ const VisitNote = () => {
                 currentOrders.push(line);
             }
         }
-        
+
         // Don't forget the last diagnosis
         if (currentDiagnosis) {
             structured.push({
@@ -330,7 +402,7 @@ const VisitNote = () => {
                 orders: currentOrders
             });
         }
-        
+
         return structured;
     };
 
@@ -347,19 +419,19 @@ const VisitNote = () => {
         const sections = [];
         if (noteData.chiefComplaint) sections.push(`Chief Complaint: ${noteData.chiefComplaint}`);
         if (noteData.hpi) sections.push(`HPI: ${noteData.hpi}`);
-        
+
         // ROS - use rosNotes directly (ros checkbox object may not exist)
         if (noteData.rosNotes) {
             sections.push(`Review of Systems: ${noteData.rosNotes}`);
         }
-        
+
         // PE - use peNotes directly (pe checkbox object may not exist)
         if (noteData.peNotes) {
             sections.push(`Physical Exam: ${noteData.peNotes}`);
         }
-        
+
         if (noteData.assessment) sections.push(`Assessment: ${noteData.assessment}`);
-        
+
         // Use structured plan if available, otherwise use plain plan text
         let planText = '';
         if (noteData.planStructured && noteData.planStructured.length > 0) {
@@ -368,7 +440,7 @@ const VisitNote = () => {
             planText = noteData.plan;
         }
         if (planText) sections.push(`Plan: ${planText}`);
-        
+
         const combined = sections.join('\n\n');
         console.log('Combined note sections length:', combined.length);
         return combined;
@@ -378,15 +450,24 @@ const VisitNote = () => {
     useEffect(() => {
         // Always fetch patient data if we have a patient ID
         if (id) {
-            patientsAPI.get(id)
-                .then(patientResponse => {
-                    setPatientData(patientResponse.data);
+            // Fetch Patient Snapshot (Demographics, Problems, Meds, Allergies)
+            patientsAPI.getSnapshot(id)
+                .then(response => {
+                    setPatientData(response.data);
                 })
-                .catch(error => {
-                    console.error('Error fetching patient:', error);
-                });
+                .catch(error => console.error('Error fetching patient snapshot:', error));
+
+            // Fetch Family History
+            patientsAPI.getFamilyHistory(id)
+                .then(response => setFamilyHistory(response.data || []))
+                .catch(error => console.error('Error fetching family history:', error));
+
+            // Fetch Social History
+            patientsAPI.getSocialHistory(id)
+                .then(response => setSocialHistory(response.data || {}))
+                .catch(error => console.error('Error fetching social history:', error));
         }
-        
+
         if (urlVisitId === 'new' && id) {
             console.log('Creating new visit for patient:', id);
             setLoading(true);
@@ -413,11 +494,11 @@ const VisitNote = () => {
                     console.error('Error details:', error.response?.data || error.message);
                     console.error('Error code:', error.code);
                     console.error('Full error:', error);
-                    
+
                     if (error.code === 'ERR_NETWORK' || error.message?.includes('ERR_CONNECTION_REFUSED')) {
                         showToast('Cannot connect to server. Please check if the server is running.', 'error');
                     } else {
-                    showToast('Could not create visit. Please try again.', 'error');
+                        showToast('Could not create visit. Please try again.', 'error');
                     }
                     setLoading(false);
                     // Navigate back to snapshot on error
@@ -484,7 +565,7 @@ const VisitNote = () => {
                         console.log('No note_draft found in visit');
                     }
                     setLoading(false);
-                    
+
                     // Mark that initial save should happen after autoSave is defined
                     hasInitialSaveRef.current = false; // Reset to trigger save on mount
                 })
@@ -506,13 +587,13 @@ const VisitNote = () => {
     const autoSave = useCallback(async (showToastMessage = false) => {
         if (isSigned || isSaving || isAutoSavingRef.current) return;
         if (!id) return; // Need patient ID
-        
+
         isAutoSavingRef.current = true;
-        
+
         try {
             const noteDraft = combineNoteSections();
             let visitId = currentVisitId || urlVisitId;
-            
+
             // Create visit if it doesn't exist
             if (!visitId || visitId === 'new') {
                 try {
@@ -533,7 +614,7 @@ const VisitNote = () => {
                     return;
                 }
             }
-            
+
             if (visitId) {
                 const vitalsToSave = {
                     systolic: vitals.systolic || null,
@@ -549,13 +630,13 @@ const VisitNote = () => {
                     weightUnit: vitals.weightUnit || 'lbs',
                     heightUnit: vitals.heightUnit || 'in'
                 };
-                
+
                 // Save even if note is empty
                 await visitsAPI.update(visitId, { noteDraft: noteDraft || '', vitals: vitalsToSave });
-                
+
                 const reloadResponse = await visitsAPI.get(visitId);
                 setVisitData(reloadResponse.data);
-                
+
                 // Reload parsed data to ensure planStructured is reconstructed from saved plan
                 if (reloadResponse.data.note_draft) {
                     const parsed = parseNoteText(reloadResponse.data.note_draft);
@@ -566,10 +647,10 @@ const VisitNote = () => {
                         planStructured: planStructured.length > 0 ? planStructured : prev.planStructured
                     }));
                 }
-                
+
                 setLastSaved(new Date());
                 hasInitialSaveRef.current = true;
-                
+
                 if (showToastMessage) {
                     showToast('Draft saved successfully', 'success');
                 }
@@ -583,20 +664,20 @@ const VisitNote = () => {
             isAutoSavingRef.current = false;
         }
     }, [id, currentVisitId, urlVisitId, isSigned, isSaving, noteData, vitals, combineNoteSections, parseNoteText, parsePlanText, showToast]);
-    
+
     // Debounced auto-save function
     const scheduleAutoSave = useCallback((showToastMessage = false) => {
         // Clear any pending auto-save
         if (autoSaveTimeoutRef.current) {
             clearTimeout(autoSaveTimeoutRef.current);
         }
-        
+
         // Schedule auto-save after 15 seconds of inactivity (reduced from 2s to prevent 429 errors)
         autoSaveTimeoutRef.current = setTimeout(() => {
             autoSave(showToastMessage);
         }, 15000);
     }, [autoSave]);
-    
+
     // Manual save (shows toast)
     const handleSave = async () => {
         // Cancel any pending auto-save and save immediately
@@ -606,7 +687,7 @@ const VisitNote = () => {
         }
         await autoSave(true);
     };
-    
+
     // Auto-save immediately when note is loaded/opened (even if empty)
     useEffect(() => {
         if (!loading && !isSigned && visitData && visitData.id && !hasInitialSaveRef.current) {
@@ -619,13 +700,13 @@ const VisitNote = () => {
             return () => clearTimeout(timer);
         }
     }, [loading, isSigned, visitData, autoSave]);
-    
+
     // Auto-save on note data changes (debounced)
     useEffect(() => {
         if (hasInitialSaveRef.current && !isSigned && !loading) {
             scheduleAutoSave(false);
         }
-        
+
         // Cleanup timeout on unmount
         return () => {
             if (autoSaveTimeoutRef.current) {
@@ -639,18 +720,18 @@ const VisitNote = () => {
             showToast('Cannot delete signed notes', 'error');
             return;
         }
-        
+
         if (!window.confirm('Are you sure you want to delete this draft note? This action cannot be undone.')) {
             return;
         }
-        
+
         const visitId = currentVisitId || urlVisitId;
         if (!visitId || visitId === 'new') {
             // If it's a new visit that hasn't been saved, just navigate back
             navigate(`/patient/${id}/snapshot`);
             return;
         }
-        
+
         try {
             await visitsAPI.delete(visitId);
             showToast('Draft note deleted successfully', 'success');
@@ -700,11 +781,11 @@ const VisitNote = () => {
                     weightUnit: vitals.weightUnit || 'lbs',
                     heightUnit: vitals.heightUnit || 'in'
                 };
-                
+
                 // Save vitals first to ensure they're in the database
                 console.log('Saving vitals before signing:', vitalsToSave);
                 await visitsAPI.update(visitId, { noteDraft: noteDraft || '', vitals: vitalsToSave });
-                
+
                 // Then sign the note (vitals should already be saved, but include them as backup)
                 console.log('Signing note with vitals:', vitalsToSave);
                 await visitsAPI.sign(visitId, noteDraft, vitalsToSave);
@@ -737,8 +818,8 @@ const VisitNote = () => {
         const template = hpiDotPhrases[phrase];
         if (!template) return;
         const textarea = activeTextArea === 'hpi' ? hpiRef.current :
-                        activeTextArea === 'assessment' ? assessmentRef.current :
-                        activeTextArea === 'plan' ? planRef.current : null;
+            activeTextArea === 'assessment' ? assessmentRef.current :
+                activeTextArea === 'plan' ? planRef.current : null;
         if (textarea) {
             const start = textarea.selectionStart;
             const end = textarea.selectionEnd;
@@ -747,11 +828,11 @@ const VisitNote = () => {
             const after = text.substring(end);
             const newText = before.replace(new RegExp(`\\.${phrase.replace('.', '')}\\s*$`), '') + template + after;
             if (activeTextArea === 'hpi') {
-                setNoteData({...noteData, hpi: newText});
+                setNoteData({ ...noteData, hpi: newText });
             } else if (activeTextArea === 'assessment') {
-                setNoteData({...noteData, assessment: newText});
+                setNoteData({ ...noteData, assessment: newText });
             } else if (activeTextArea === 'plan') {
-                setNoteData({...noteData, plan: newText});
+                setNoteData({ ...noteData, plan: newText });
             }
             setTimeout(() => {
                 textarea.focus();
@@ -858,11 +939,11 @@ const VisitNote = () => {
     const handleTextChange = (value, field) => {
         const decoded = decodeHtmlEntities(value);
         if (field === 'hpi') {
-            setNoteData({...noteData, hpi: decoded});
+            setNoteData({ ...noteData, hpi: decoded });
         } else if (field === 'assessment') {
-            setNoteData({...noteData, assessment: decoded});
+            setNoteData({ ...noteData, assessment: decoded });
         } else if (field === 'plan') {
-            setNoteData({...noteData, plan: decoded});
+            setNoteData({ ...noteData, plan: decoded });
         }
     };
 
@@ -885,7 +966,7 @@ const VisitNote = () => {
         }, 300);
         return () => clearTimeout(timeout);
     }, [icd10Search]);
-    
+
     // Load popular codes on mount
     useEffect(() => {
         const loadPopularCodes = async () => {
@@ -911,10 +992,10 @@ const VisitNote = () => {
                 showToast('Error adding to problem list', 'error');
             }
         }
-        const newAssessment = noteData.assessment 
+        const newAssessment = noteData.assessment
             ? `${noteData.assessment}\n${code.code} - ${code.description}`
             : `${code.code} - ${code.description}`;
-        setNoteData({...noteData, assessment: newAssessment});
+        setNoteData({ ...noteData, assessment: newAssessment });
         setShowIcd10Search(false);
         setIcd10Search('');
     };
@@ -929,20 +1010,20 @@ const VisitNote = () => {
     // Add order to plan
     const addOrderToPlan = (diagnosis, orderText) => {
         let diagnosisToUse = diagnosis;
-        
+
         // If diagnosis is new, add it to assessment
         if (diagnosis && !diagnoses.includes(diagnosis)) {
-            const newAssessment = noteData.assessment 
+            const newAssessment = noteData.assessment
                 ? `${noteData.assessment}\n${diagnosis}`
                 : diagnosis;
-            setNoteData(prev => ({...prev, assessment: newAssessment}));
+            setNoteData(prev => ({ ...prev, assessment: newAssessment }));
         }
 
         // Find or create diagnosis entry in structured plan
         setNoteData(prev => {
             const currentPlan = prev.planStructured || [];
             const diagnosisIndex = currentPlan.findIndex(item => item.diagnosis === diagnosisToUse);
-            
+
             let updatedPlan;
             if (diagnosisIndex >= 0) {
                 // Add order to existing diagnosis
@@ -957,7 +1038,7 @@ const VisitNote = () => {
             }
 
             const formattedPlan = formatPlanText(updatedPlan);
-            return {...prev, planStructured: updatedPlan, plan: formattedPlan};
+            return { ...prev, planStructured: updatedPlan, plan: formattedPlan };
         });
     };
 
@@ -1101,29 +1182,29 @@ const VisitNote = () => {
     // Ensure visitData exists, use empty object if not
     const currentVisitData = visitData || {};
     const visitDate = currentVisitData.visit_date ? format(new Date(currentVisitData.visit_date), 'MMM d, yyyy') : format(new Date(), 'MMM d, yyyy');
-    
+
     // Get current logged-in user name
-    const currentUserName = user 
+    const currentUserName = user
         ? `${user.firstName || user.first_name || ''} ${user.lastName || user.last_name || ''}`.trim()
         : null;
-    
+
     // Use signed_by name if note is signed and it's not "System Administrator"
     const signedByName = currentVisitData.signed_by_first_name && currentVisitData.signed_by_last_name
         ? `${currentVisitData.signed_by_first_name} ${currentVisitData.signed_by_last_name}`
         : null;
-    
+
     // Get provider name from visit data
     const providerNameFromVisit = currentVisitData.provider_first_name && currentVisitData.provider_last_name
         ? `${currentVisitData.provider_first_name} ${currentVisitData.provider_last_name}`
         : null;
-    
+
     // Determine display name priority:
     // 1. If signed and signed_by is valid (not "System Administrator"), use signed_by
     // 2. If not signed or signed_by is "System Administrator", use current logged-in user
     // 3. Fallback to provider from visit if current user not available
     // 4. Final fallback to "Provider"
     let displayName = 'Provider';
-    
+
     if (isSigned && signedByName && signedByName !== 'System Administrator') {
         displayName = signedByName;
     } else if (currentUserName && currentUserName !== 'System Administrator') {
@@ -1132,7 +1213,7 @@ const VisitNote = () => {
     } else if (providerNameFromVisit && providerNameFromVisit !== 'System Administrator') {
         displayName = providerNameFromVisit;
     }
-    
+
     const providerName = displayName;
 
     // Signed notes now use the same template as editable notes, just with disabled inputs
@@ -1199,9 +1280,9 @@ const VisitNote = () => {
                                         onChange={(e) => {
                                             const sys = e.target.value;
                                             const bp = sys && vitals.diastolic ? `${sys}/${vitals.diastolic}` : '';
-                                            setVitals({...vitals, systolic: sys, bp});
+                                            setVitals({ ...vitals, systolic: sys, bp });
                                         }}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); diastolicRef.current?.focus(); }}}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); diastolicRef.current?.focus(); } }}
                                         disabled={isSigned}
                                         className={`w-14 px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors ${isAbnormalVital('systolic', vitals.systolic) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
                                     />
@@ -1210,9 +1291,9 @@ const VisitNote = () => {
                                         onChange={(e) => {
                                             const dia = e.target.value;
                                             const bp = vitals.systolic && dia ? `${vitals.systolic}/${dia}` : '';
-                                            setVitals({...vitals, diastolic: dia, bp});
+                                            setVitals({ ...vitals, diastolic: dia, bp });
                                         }}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); pulseRef.current?.focus(); }}}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); pulseRef.current?.focus(); } }}
                                         disabled={isSigned}
                                         className={`w-14 px-1.5 py-1 text-xs border border-gray-300 rounded-md bg-white focus:ring-1 focus:ring-accent-500 focus:border-accent-500 disabled:bg-white disabled:text-gray-900 transition-colors ${isAbnormalVital('diastolic', vitals.diastolic) ? 'text-red-600 font-semibold border-red-300' : 'text-gray-900'}`}
                                     />
@@ -1221,8 +1302,8 @@ const VisitNote = () => {
                             <div>
                                 <label className="block text-xs font-medium text-neutral-700 mb-1">HR (bpm)</label>
                                 <input ref={pulseRef} type="number" placeholder="72" value={vitals.pulse}
-                                    onChange={(e) => setVitals({...vitals, pulse: e.target.value})}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); o2satRef.current?.focus(); }}}
+                                    onChange={(e) => setVitals({ ...vitals, pulse: e.target.value })}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); o2satRef.current?.focus(); } }}
                                     disabled={isSigned}
                                     className={`w-full px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors ${isAbnormalVital('pulse', vitals.pulse) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
                                 />
@@ -1230,8 +1311,8 @@ const VisitNote = () => {
                             <div>
                                 <label className="block text-xs font-medium text-neutral-700 mb-1">O2 Sat (%)</label>
                                 <input ref={o2satRef} type="number" placeholder="98" value={vitals.o2sat}
-                                    onChange={(e) => setVitals({...vitals, o2sat: e.target.value})}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); tempRef.current?.focus(); }}}
+                                    onChange={(e) => setVitals({ ...vitals, o2sat: e.target.value })}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); tempRef.current?.focus(); } }}
                                     disabled={isSigned}
                                     className={`w-full px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors ${isAbnormalVital('o2sat', vitals.o2sat) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
                                 />
@@ -1239,8 +1320,8 @@ const VisitNote = () => {
                             <div>
                                 <label className="block text-xs font-medium text-neutral-700 mb-1">Temp (°F)</label>
                                 <input ref={tempRef} type="number" step="0.1" placeholder="98.6" value={vitals.temp}
-                                    onChange={(e) => setVitals({...vitals, temp: e.target.value})}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); weightRef.current?.focus(); }}}
+                                    onChange={(e) => setVitals({ ...vitals, temp: e.target.value })}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); weightRef.current?.focus(); } }}
                                     disabled={isSigned}
                                     className={`w-full px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors ${isAbnormalVital('temp', vitals.temp) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
                                 />
@@ -1259,7 +1340,7 @@ const VisitNote = () => {
                                     <input ref={weightRef} type="text" value={vitals.weight || ''}
                                         onChange={(e) => {
                                             const weight = e.target.value;
-                                            const newVitals = {...vitals, weight};
+                                            const newVitals = { ...vitals, weight };
                                             if (weight && vitals.height) {
                                                 newVitals.bmi = calculateBMI(weight, vitals.weightUnit, vitals.height, vitals.heightUnit);
                                             } else {
@@ -1267,7 +1348,7 @@ const VisitNote = () => {
                                             }
                                             setVitals(newVitals);
                                         }}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); heightRef.current?.focus(); }}}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); heightRef.current?.focus(); } }}
                                         disabled={isSigned}
                                         className="w-16 px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors text-neutral-900"
                                     />
@@ -1276,22 +1357,22 @@ const VisitNote = () => {
                                             const newUnit = 'lbs';
                                             if (vitals.weight && vitals.weightUnit !== newUnit) {
                                                 const converted = convertWeight(vitals.weight, vitals.weightUnit, newUnit);
-                                                const newVitals = {...vitals, weightUnit: newUnit, weight: converted};
+                                                const newVitals = { ...vitals, weightUnit: newUnit, weight: converted };
                                                 if (converted && vitals.height) newVitals.bmi = calculateBMI(converted, newUnit, vitals.height, vitals.heightUnit);
                                                 setVitals(newVitals);
                                             } else {
-                                                setVitals({...vitals, weightUnit: newUnit});
+                                                setVitals({ ...vitals, weightUnit: newUnit });
                                             }
                                         }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.weightUnit === 'lbs' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.weightUnit === 'lbs' ? { background: '#3B82F6' } : {}}>lbs</button>
                                         <button type="button" onClick={() => {
                                             const newUnit = 'kg';
                                             if (vitals.weight && vitals.weightUnit !== newUnit) {
                                                 const converted = convertWeight(vitals.weight, vitals.weightUnit, newUnit);
-                                                const newVitals = {...vitals, weightUnit: newUnit, weight: converted};
+                                                const newVitals = { ...vitals, weightUnit: newUnit, weight: converted };
                                                 if (converted && vitals.height) newVitals.bmi = calculateBMI(converted, newUnit, vitals.height, vitals.heightUnit);
                                                 setVitals(newVitals);
                                             } else {
-                                                setVitals({...vitals, weightUnit: newUnit});
+                                                setVitals({ ...vitals, weightUnit: newUnit });
                                             }
                                         }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.weightUnit === 'kg' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.weightUnit === 'kg' ? { background: '#3B82F6' } : {}}>kg</button>
                                     </div>
@@ -1303,7 +1384,7 @@ const VisitNote = () => {
                                     <input ref={heightRef} type="number" step="0.1" placeholder="70" value={vitals.height}
                                         onChange={(e) => {
                                             const height = e.target.value;
-                                            const newVitals = {...vitals, height};
+                                            const newVitals = { ...vitals, height };
                                             if (height && vitals.weight) {
                                                 newVitals.bmi = calculateBMI(vitals.weight, vitals.weightUnit, height, vitals.heightUnit);
                                             } else {
@@ -1311,7 +1392,7 @@ const VisitNote = () => {
                                             }
                                             setVitals(newVitals);
                                         }}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); hpiRef.current?.focus(); }}}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); hpiRef.current?.focus(); } }}
                                         disabled={isSigned}
                                         className="w-16 px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors text-neutral-900"
                                     />
@@ -1320,22 +1401,22 @@ const VisitNote = () => {
                                             const newUnit = 'in';
                                             if (vitals.height && vitals.heightUnit !== newUnit) {
                                                 const converted = convertHeight(vitals.height, vitals.heightUnit, newUnit);
-                                                const newVitals = {...vitals, heightUnit: newUnit, height: converted};
+                                                const newVitals = { ...vitals, heightUnit: newUnit, height: converted };
                                                 if (converted && vitals.weight) newVitals.bmi = calculateBMI(vitals.weight, vitals.weightUnit, converted, newUnit);
                                                 setVitals(newVitals);
                                             } else {
-                                                setVitals({...vitals, heightUnit: newUnit});
+                                                setVitals({ ...vitals, heightUnit: newUnit });
                                             }
                                         }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.heightUnit === 'in' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.heightUnit === 'in' ? { background: '#3B82F6' } : {}}>in</button>
                                         <button type="button" onClick={() => {
                                             const newUnit = 'cm';
                                             if (vitals.height && vitals.heightUnit !== newUnit) {
                                                 const converted = convertHeight(vitals.height, vitals.heightUnit, newUnit);
-                                                const newVitals = {...vitals, heightUnit: newUnit, height: converted};
+                                                const newVitals = { ...vitals, heightUnit: newUnit, height: converted };
                                                 if (converted && vitals.weight) newVitals.bmi = calculateBMI(vitals.weight, vitals.weightUnit, converted, newUnit);
                                                 setVitals(newVitals);
                                             } else {
-                                                setVitals({...vitals, heightUnit: newUnit});
+                                                setVitals({ ...vitals, heightUnit: newUnit });
                                             }
                                         }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.heightUnit === 'cm' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.heightUnit === 'cm' ? { background: '#3B82F6' } : {}}>cm</button>
                                     </div>
@@ -1354,7 +1435,7 @@ const VisitNote = () => {
                     <div className="mb-3">
                         <label className="block text-sm font-semibold text-neutral-900 mb-1">Chief Complaint</label>
                         <input type="text" placeholder="Enter chief complaint..." value={noteData.chiefComplaint || ''}
-                            onChange={(e) => setNoteData({...noteData, chiefComplaint: e.target.value})}
+                            onChange={(e) => setNoteData({ ...noteData, chiefComplaint: e.target.value })}
                             disabled={isSigned}
                             className="w-full px-2 py-1.5 text-sm font-medium border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors text-neutral-900"
                         />
@@ -1408,9 +1489,8 @@ const VisitNote = () => {
                                             key={item.key}
                                             type="button"
                                             onClick={() => insertDotPhrase(item.key, autocompleteState)}
-                                            className={`w-full text-left px-2 py-1 border-b border-neutral-100 hover:bg-primary-50 transition-colors ${
-                                                index === autocompleteState.selectedIndex ? 'bg-primary-100' : ''
-                                            }`}
+                                            className={`w-full text-left px-2 py-1 border-b border-neutral-100 hover:bg-primary-50 transition-colors ${index === autocompleteState.selectedIndex ? 'bg-primary-100' : ''
+                                                }`}
                                         >
                                             <div className="font-medium text-neutral-900 text-xs">{item.key}</div>
                                             <div className="text-xs text-neutral-500 truncate">{item.template.substring(0, 60)}...</div>
@@ -1424,6 +1504,209 @@ const VisitNote = () => {
                                 <Zap className="w-3.5 h-3.5" />
                                 <span className="text-xs font-medium">Dot Phrases (F2)</span>
                             </button>
+                        </div>
+                    </Section>
+
+                    {/* PAMFOS Section - Past Medical, Allergies, Meds, Family, Social/Other */}
+                    <Section title="Patient History (PAMFOS)" defaultOpen={true}>
+                        <div className="bg-white p-1">
+                            <div className="space-y-4">
+
+                                {/* P - Past Medical History */}
+                                <HistoryList
+                                    title="Past Medical History"
+                                    icon={<Activity className="w-4 h-4 text-red-600" />}
+                                    items={patientData?.problems || []}
+                                    emptyMessage="No active problems"
+                                    renderItem={(problem) => (
+                                        <div className="flex justify-between items-start w-full">
+                                            <div>
+                                                <span className="font-medium text-gray-900">{problem.problem_name}</span>
+                                                {problem.icd10_code && <span className="text-gray-500 ml-2 text-xs">({problem.icd10_code})</span>}
+                                            </div>
+                                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${problem.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                                                {problem.status}
+                                            </span>
+                                        </div>
+                                    )}
+                                    onAdd={async (text) => {
+                                        try {
+                                            const res = await patientsAPI.addProblem(id, { problemName: text, onsetDate: new Date().toISOString() });
+                                            setPatientData(prev => ({ ...prev, problems: [res.data, ...(prev.problems || [])] }));
+                                            showToast('Problem added', 'success');
+                                        } catch (e) { showToast('Failed to add problem', 'error'); }
+                                    }}
+                                    onDelete={async (itemId) => {
+                                        if (!confirm('Are you sure?')) return;
+                                        try {
+                                            await patientsAPI.deleteProblem(itemId);
+                                            setPatientData(prev => ({ ...prev, problems: prev.problems.filter(p => p.id !== itemId) }));
+                                            showToast('Problem deleted', 'success');
+                                        } catch (e) { showToast('Failed to delete problem', 'error'); }
+                                    }}
+                                />
+
+                                {/* A - Allergies */}
+                                <HistoryList
+                                    title="Allergies"
+                                    icon={<Activity className="w-4 h-4 text-orange-600" />}
+                                    items={patientData?.allergies || []}
+                                    emptyMessage="No known allergies"
+                                    renderItem={(allergy) => (
+                                        <div className="flex justify-between items-start w-full">
+                                            <span className="font-medium text-red-700">{allergy.allergen}</span>
+                                            {allergy.reaction && <span className="text-gray-500 text-xs">{allergy.reaction}</span>}
+                                        </div>
+                                    )}
+                                    onAdd={async (text) => {
+                                        try {
+                                            const res = await patientsAPI.addAllergy(id, { allergen: text, severity: 'unknown' });
+                                            setPatientData(prev => ({ ...prev, allergies: [res.data, ...(prev.allergies || [])] }));
+                                            showToast('Allergy added', 'success');
+                                        } catch (e) { showToast('Failed to add allergy', 'error'); }
+                                    }}
+                                    onDelete={async (itemId) => {
+                                        if (!confirm('Are you sure?')) return;
+                                        try {
+                                            await patientsAPI.deleteAllergy(itemId);
+                                            setPatientData(prev => ({ ...prev, allergies: prev.allergies.filter(a => a.id !== itemId) }));
+                                            showToast('Allergy deleted', 'success');
+                                        } catch (e) { showToast('Failed to delete allergy', 'error'); }
+                                    }}
+                                />
+
+                                {/* M - Medications */}
+                                <HistoryList
+                                    title="Home Medications"
+                                    icon={<Pill className="w-4 h-4 text-blue-600" />}
+                                    items={patientData?.medications || []}
+                                    emptyMessage="No active medications"
+                                    renderItem={(med) => (
+                                        <div className="flex justify-between items-start w-full">
+                                            <span className="font-medium text-gray-900">{med.medication_name}</span>
+                                            <span className="text-gray-500 text-xs">{med.dosage || ''} {med.frequency || ''}</span>
+                                        </div>
+                                    )}
+                                    onAdd={async (text) => {
+                                        try {
+                                            const res = await patientsAPI.addMedication(id, { medicationName: text, startDate: new Date().toISOString() });
+                                            setPatientData(prev => ({ ...prev, medications: [res.data, ...(prev.medications || [])] }));
+                                            showToast('Medication added', 'success');
+                                        } catch (e) { showToast('Failed to add medication', 'error'); }
+                                    }}
+                                    onDelete={async (itemId) => {
+                                        if (!confirm('Are you sure?')) return;
+                                        try {
+                                            await patientsAPI.deleteMedication(itemId);
+                                            setPatientData(prev => ({ ...prev, medications: prev.medications.filter(m => m.id !== itemId) }));
+                                            showToast('Medication deleted', 'success');
+                                        } catch (e) { showToast('Failed to delete medication', 'error'); }
+                                    }}
+                                />
+
+                                {/* F - Family History */}
+                                <HistoryList
+                                    title="Family History"
+                                    icon={<Users className="w-4 h-4 text-purple-600" />}
+                                    items={familyHistory}
+                                    emptyMessage="No family history recorded"
+                                    renderItem={(hist) => (
+                                        <div className="flex justify-between items-start w-full">
+                                            <span className="font-medium text-gray-900">{hist.condition}</span>
+                                            <span className="text-gray-500 text-xs">{hist.relationship}</span>
+                                        </div>
+                                    )}
+                                    onAdd={async (text) => {
+                                        // Simple parsing: "Diabetes (Father)"
+                                        let condition = text;
+                                        let relationship = 'Unknown';
+                                        if (text.includes('(')) {
+                                            const parts = text.split('(');
+                                            condition = parts[0].trim();
+                                            relationship = parts[1].replace(')', '').trim();
+                                        }
+                                        try {
+                                            const res = await patientsAPI.addFamilyHistory(id, { condition, relationship });
+                                            setFamilyHistory(prev => [res.data, ...prev]);
+                                            showToast('Family history added', 'success');
+                                        } catch (e) { showToast('Failed to add family history', 'error'); }
+                                    }}
+                                    onDelete={async (itemId) => {
+                                        if (!confirm('Are you sure?')) return;
+                                        try {
+                                            await patientsAPI.deleteFamilyHistory(itemId);
+                                            setFamilyHistory(prev => prev.filter(h => h.id !== itemId));
+                                            showToast('Family history deleted', 'success');
+                                        } catch (e) { showToast('Failed to delete family history', 'error'); }
+                                    }}
+                                    addPlaceholder="Condition (Relationship)"
+                                />
+
+                                {/* O/S - Social History */}
+                                <div className="border rounded-md border-gray-100 bg-white">
+                                    <div className="flex items-center gap-2 p-2 bg-gray-50 border-b border-gray-100">
+                                        <UserCircle className="w-4 h-4 text-teal-600" />
+                                        <h4 className="text-sm font-semibold text-gray-800">Other / Social History</h4>
+                                    </div>
+                                    <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                                        <div>
+                                            <label className="text-xs text-gray-500 block mb-1">Smoking Status</label>
+                                            <select
+                                                className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                                value={socialHistory?.smoking_status || ''}
+                                                onChange={async (e) => {
+                                                    const val = e.target.value;
+                                                    try {
+                                                        await patientsAPI.saveSocialHistory(id, { ...socialHistory, smoking_status: val });
+                                                        setSocialHistory(prev => ({ ...prev, smoking_status: val }));
+                                                    } catch (e) { showToast('Failed to update', 'error'); }
+                                                }}
+                                            >
+                                                <option value="">Unknown</option>
+                                                <option value="Never smoker">Never smoker</option>
+                                                <option value="Former smoker">Former smoker</option>
+                                                <option value="Current smoker">Current smoker</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-500 block mb-1">Alcohol Use</label>
+                                            <select
+                                                className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                                value={socialHistory?.alcohol_use || ''}
+                                                onChange={async (e) => {
+                                                    const val = e.target.value;
+                                                    try {
+                                                        await patientsAPI.saveSocialHistory(id, { ...socialHistory, alcohol_use: val });
+                                                        setSocialHistory(prev => ({ ...prev, alcohol_use: val }));
+                                                    } catch (e) { showToast('Failed to update', 'error'); }
+                                                }}
+                                            >
+                                                <option value="">Unknown</option>
+                                                <option value="None">None</option>
+                                                <option value="Social">Social</option>
+                                                <option value="Moderate">Moderate</option>
+                                                <option value="Heavy">Heavy</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-500 block mb-1">Occupation</label>
+                                            <input
+                                                className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                                value={socialHistory?.occupation || ''}
+                                                placeholder="Occupation"
+                                                onBlur={async (e) => {
+                                                    const val = e.target.value;
+                                                    try {
+                                                        await patientsAPI.saveSocialHistory(id, { ...socialHistory, occupation: val });
+                                                        setSocialHistory(prev => ({ ...prev, occupation: val }));
+                                                    } catch (e) { showToast('Failed to update', 'error'); }
+                                                }}
+                                                onChange={(e) => setSocialHistory(prev => ({ ...prev, occupation: e.target.value }))}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </Section>
 
@@ -1441,7 +1724,7 @@ const VisitNote = () => {
                                                 const isChecked = e.target.checked;
                                                 const systemName = system.charAt(0).toUpperCase() + system.slice(1);
                                                 const findings = rosFindings[system] || '';
-                                                const newRos = {...noteData.ros, [system]: isChecked};
+                                                const newRos = { ...noteData.ros, [system]: isChecked };
                                                 let newRosNotes = noteData.rosNotes || '';
                                                 const findingsLine = `**${systemName}:** ${findings}`;
                                                 if (isChecked) {
@@ -1451,7 +1734,7 @@ const VisitNote = () => {
                                                 } else {
                                                     newRosNotes = newRosNotes.split('\n').filter(line => !line.trim().startsWith(`**${systemName}:**`)).join('\n').trim();
                                                 }
-                                                setNoteData({...noteData, ros: newRos, rosNotes: newRosNotes});
+                                                setNoteData({ ...noteData, ros: newRos, rosNotes: newRosNotes });
                                             }}
                                             disabled={isSigned}
                                             className="hidden"
@@ -1459,7 +1742,7 @@ const VisitNote = () => {
                                     </label>
                                 ))}
                             </div>
-                            <textarea value={noteData.rosNotes} onChange={(e) => setNoteData({...noteData, rosNotes: e.target.value})}
+                            <textarea value={noteData.rosNotes} onChange={(e) => setNoteData({ ...noteData, rosNotes: e.target.value })}
                                 disabled={isSigned} rows={10}
                                 className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px]"
                                 placeholder="ROS notes..."
@@ -1472,7 +1755,7 @@ const VisitNote = () => {
                                     const systemName = key.charAt(0).toUpperCase() + key.slice(1);
                                     rosText += `**${systemName}:** ${rosFindings[key]}\n`;
                                 });
-                                setNoteData({...noteData, ros: allRos, rosNotes: rosText.trim()});
+                                setNoteData({ ...noteData, ros: allRos, rosNotes: rosText.trim() });
                             }} disabled={isSigned} className="mt-1.5 px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
                                 Pre-fill Normal ROS
                             </button>
@@ -1490,7 +1773,7 @@ const VisitNote = () => {
                                                 const isChecked = e.target.checked;
                                                 const systemName = system.replace(/([A-Z])/g, ' $1').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
                                                 const findings = peFindings[system] || '';
-                                                const newPe = {...noteData.pe, [system]: isChecked};
+                                                const newPe = { ...noteData.pe, [system]: isChecked };
                                                 let newPeNotes = noteData.peNotes || '';
                                                 const findingsLine = `**${systemName}:** ${findings}`;
                                                 if (isChecked) {
@@ -1500,7 +1783,7 @@ const VisitNote = () => {
                                                 } else {
                                                     newPeNotes = newPeNotes.split('\n').filter(line => !line.trim().startsWith(`**${systemName}:**`)).join('\n').trim();
                                                 }
-                                                setNoteData({...noteData, pe: newPe, peNotes: newPeNotes});
+                                                setNoteData({ ...noteData, pe: newPe, peNotes: newPeNotes });
                                             }}
                                             disabled={isSigned}
                                             className="hidden"
@@ -1508,7 +1791,7 @@ const VisitNote = () => {
                                     </label>
                                 ))}
                             </div>
-                            <textarea value={noteData.peNotes} onChange={(e) => setNoteData({...noteData, peNotes: e.target.value})}
+                            <textarea value={noteData.peNotes} onChange={(e) => setNoteData({ ...noteData, peNotes: e.target.value })}
                                 disabled={isSigned} rows={10}
                                 className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px]"
                                 placeholder="PE findings..."
@@ -1521,7 +1804,7 @@ const VisitNote = () => {
                                     const systemName = key.replace(/([A-Z])/g, ' $1').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
                                     peText += `**${systemName}:** ${peFindings[key]}\n`;
                                 });
-                                setNoteData({...noteData, pe: allPe, peNotes: peText.trim()});
+                                setNoteData({ ...noteData, pe: allPe, peNotes: peText.trim() });
                             }} disabled={isSigned} className="mt-1.5 px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
                                 Pre-fill Normal PE
                             </button>
@@ -1556,7 +1839,7 @@ const VisitNote = () => {
                                                     if (response.data && response.data.length > 0) {
                                                         setIcd10Results(response.data);
                                                     }
-                                                }).catch(() => {});
+                                                }).catch(() => { });
                                             }
                                         }}
                                         className="w-full pl-8 pr-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors"
@@ -1575,8 +1858,8 @@ const VisitNote = () => {
                                                     <div className="font-medium text-neutral-900 text-xs">{code.code}</div>
                                                     <div className="text-xs text-neutral-600">{code.description}</div>
                                                 </button>
-                                                <button 
-                                                    onClick={() => handleAddICD10(code, true)} 
+                                                <button
+                                                    onClick={() => handleAddICD10(code, true)}
                                                     className="ml-2 px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md transition-colors"
                                                     title="Add to Problem List"
                                                 >
@@ -1639,9 +1922,8 @@ const VisitNote = () => {
                                             key={item.key}
                                             type="button"
                                             onClick={() => insertDotPhrase(item.key, autocompleteState)}
-                                            className={`w-full text-left px-2 py-1 border-b border-neutral-100 hover:bg-primary-50 transition-colors ${
-                                                index === autocompleteState.selectedIndex ? 'bg-primary-100' : ''
-                                            }`}
+                                            className={`w-full text-left px-2 py-1 border-b border-neutral-100 hover:bg-primary-50 transition-colors ${index === autocompleteState.selectedIndex ? 'bg-primary-100' : ''
+                                                }`}
                                         >
                                             <div className="font-medium text-neutral-900 text-xs">{item.key}</div>
                                             <div className="text-xs text-neutral-500 truncate">{item.template.substring(0, 60)}...</div>
@@ -1728,9 +2010,8 @@ const VisitNote = () => {
                                             key={item.key}
                                             type="button"
                                             onClick={() => insertDotPhrase(item.key, autocompleteState)}
-                                            className={`w-full text-left px-2 py-1 border-b border-neutral-100 hover:bg-primary-50 transition-colors ${
-                                                index === autocompleteState.selectedIndex ? 'bg-primary-100' : ''
-                                            }`}
+                                            className={`w-full text-left px-2 py-1 border-b border-neutral-100 hover:bg-primary-50 transition-colors ${index === autocompleteState.selectedIndex ? 'bg-primary-100' : ''
+                                                }`}
                                         >
                                             <div className="font-medium text-neutral-900 text-xs">{item.key}</div>
                                             <div className="text-xs text-neutral-500 truncate">{item.template.substring(0, 60)}...</div>
@@ -1745,12 +2026,12 @@ const VisitNote = () => {
                                     <button onClick={() => setShowOrderModal(true)} className="px-2.5 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors">Add Order</button>
                                 )}
                                 {hasPrivilege('e_prescribe') && (
-                                    <button 
+                                    <button
                                         onClick={(e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
                                             setShowEPrescribeEnhanced(true);
-                                        }} 
+                                        }}
                                         className="px-2.5 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors"
                                     >
                                         e-Prescribe
@@ -1797,32 +2078,32 @@ const VisitNote = () => {
             </div>
 
             {/* Modals */}
-            <OrderModal 
-                isOpen={showOrderModal} 
-                onClose={() => setShowOrderModal(false)} 
+            <OrderModal
+                isOpen={showOrderModal}
+                onClose={() => setShowOrderModal(false)}
                 diagnoses={diagnoses}
                 onSuccess={(diagnosis, orderText) => {
                     addOrderToPlan(diagnosis, orderText);
                     showToast('Order added to plan', 'success');
-                }} 
+                }}
             />
-            <PrescriptionModal 
-                isOpen={showPrescriptionModal} 
-                onClose={() => setShowPrescriptionModal(false)} 
+            <PrescriptionModal
+                isOpen={showPrescriptionModal}
+                onClose={() => setShowPrescriptionModal(false)}
                 diagnoses={diagnoses}
                 onSuccess={(diagnosis, prescriptionText) => {
                     addOrderToPlan(diagnosis, prescriptionText);
                     showToast('Prescription added to plan', 'success');
-                }} 
+                }}
             />
-            <ReferralModal 
-                isOpen={showReferralModal} 
-                onClose={() => setShowReferralModal(false)} 
+            <ReferralModal
+                isOpen={showReferralModal}
+                onClose={() => setShowReferralModal(false)}
                 diagnoses={diagnoses}
                 onSuccess={(diagnosis, referralText) => {
                     addOrderToPlan(diagnosis, referralText);
                     showToast('Referral added to plan', 'success');
-                }} 
+                }}
             />
             <EPrescribeEnhanced
                 isOpen={showEPrescribeEnhanced}
@@ -1836,7 +2117,7 @@ const VisitNote = () => {
                 visitId={currentVisitId || urlVisitId}
             />
             {showPrintModal && <VisitPrint visitId={currentVisitId || urlVisitId} patientId={id} onClose={() => setShowPrintModal(false)} />}
-            
+
             {/* Unified Patient Chart Panel */}
             <PatientChartPanel
                 patientId={id}
@@ -1844,7 +2125,7 @@ const VisitNote = () => {
                 onClose={() => setShowPatientChart(false)}
                 initialTab={patientChartTab}
             />
-            
+
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
             {/* Dot Phrase Modal */}
