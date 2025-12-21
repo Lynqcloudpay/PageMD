@@ -19,6 +19,7 @@ import VisitChartView from '../components/VisitChartView';
 import EPrescribeEnhanced from '../components/EPrescribeEnhanced';
 import Modal from '../components/ui/Modal';
 import { usePrivileges } from '../hooks/usePrivileges';
+import CardiologyViewer from '../components/CardiologyViewer';
 
 const Snapshot = ({ showNotesOnly = false }) => {
     const { id } = useParams();
@@ -139,6 +140,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
         notes: ''
     });
     const [cardiacCathFile, setCardiacCathFile] = useState(null);
+
+    // Cardiology Viewer States
+    const [showCardiologyViewer, setShowCardiologyViewer] = useState(false);
+    const [cardiologyViewerType, setCardiologyViewerType] = useState(null); // 'EKG', 'ECHO', 'STRESS', 'CATH'
 
     // Layout Editor State
     const [layoutEditMode, setLayoutEditMode] = useState(false);
@@ -2061,9 +2066,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     {/* EKG Studies */}
                                     <div className="bg-white rounded-lg shadow-sm border border-red-200 hover:shadow-md transition-shadow">
                                         <div className="p-2 border-b border-gray-200 flex items-center justify-between bg-red-50/50">
-                                            <div className="flex items-center space-x-2">
-                                                <Activity className="w-4 h-4 text-red-600" />
-                                                <h3 className="font-bold text-sm text-gray-900">EKG</h3>
+                                            <div className="flex items-center space-x-2 cursor-pointer group" onClick={() => { setCardiologyViewerType('EKG'); setShowCardiologyViewer(true); }}>
+                                                <Activity className="w-4 h-4 text-red-600 group-hover:scale-110 transition-transform" />
+                                                <h3 className="font-bold text-sm text-gray-900 group-hover:text-red-600 transition-colors">EKG</h3>
                                                 {documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('ekg') || d.file_name?.toLowerCase().includes('ekg'))).length > 0 &&
                                                     <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('ekg') || d.file_name?.toLowerCase().includes('ekg'))).length}</span>
                                                 }
@@ -2103,9 +2108,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     {/* ECHO Studies */}
                                     <div className="bg-white rounded-lg shadow-sm border border-indigo-200 hover:shadow-md transition-shadow">
                                         <div className="p-2 border-b border-gray-200 flex items-center justify-between bg-indigo-50/50">
-                                            <div className="flex items-center space-x-2">
-                                                <Heart className="w-4 h-4 text-indigo-600" />
-                                                <h3 className="font-bold text-sm text-gray-900">ECHO</h3>
+                                            <div className="flex items-center space-x-2 cursor-pointer group" onClick={() => { setCardiologyViewerType('ECHO'); setShowCardiologyViewer(true); }}>
+                                                <Heart className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform" />
+                                                <h3 className="font-bold text-sm text-gray-900 group-hover:text-indigo-600 transition-colors">ECHO</h3>
                                                 {documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('echo') || d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length > 0 &&
                                                     <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('echo') || d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length}</span>
                                                 }
@@ -2147,11 +2152,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     {/* Stress Tests (New) */}
                                     <div className="bg-white rounded-lg shadow-sm border border-fuchsia-200 hover:shadow-md transition-shadow">
                                         <div className="p-2 border-b border-gray-200 flex items-center justify-between bg-fuchsia-50/50">
-                                            <div className="flex items-center space-x-2">
-                                                <Activity className="w-4 h-4 text-fuchsia-600" />
-                                                <h3 className="font-bold text-sm text-gray-900">Stress Test</h3>
-                                                {documents.filter(d => d.tags?.includes('stress_test')).length > 0 &&
-                                                    <span className="bg-fuchsia-100 text-fuchsia-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{documents.filter(d => d.tags?.includes('stress_test')).length}</span>
+                                            <div className="flex items-center space-x-2 cursor-pointer group" onClick={() => { setCardiologyViewerType('STRESS'); setShowCardiologyViewer(true); }}>
+                                                <Activity className="w-4 h-4 text-fuchsia-600 group-hover:scale-110 transition-transform" />
+                                                <h3 className="font-bold text-sm text-gray-900 group-hover:text-fuchsia-600 transition-colors">Stress Test</h3>
+                                                {(documents.filter(d => d.tags?.includes('stress_test')).length > 0 || documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('stress')).length > 0) &&
+                                                    <span className="bg-fuchsia-100 text-fuchsia-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{documents.filter(d => d.tags?.includes('stress_test') || (d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('stress'))).length}</span>
                                                 }
                                             </div>
                                             <button onClick={() => setShowStressTestModal(true)} className="p-1 bg-fuchsia-600 text-white rounded hover:bg-fuchsia-700 transition-colors">
@@ -2182,11 +2187,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     {/* Cardiac Cath (New) */}
                                     <div className="bg-white rounded-lg shadow-sm border border-slate-300 hover:shadow-md transition-shadow">
                                         <div className="p-2 border-b border-gray-200 flex items-center justify-between bg-slate-50/50">
-                                            <div className="flex items-center space-x-2">
-                                                <Heart className="w-4 h-4 text-slate-700" />
-                                                <h3 className="font-bold text-sm text-gray-900">Cardiac Cath</h3>
-                                                {documents.filter(d => d.tags?.includes('cardiac_cath')).length > 0 &&
-                                                    <span className="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{documents.filter(d => d.tags?.includes('cardiac_cath')).length}</span>
+                                            <div className="flex items-center space-x-2 cursor-pointer group" onClick={() => { setCardiologyViewerType('CATH'); setShowCardiologyViewer(true); }}>
+                                                <Waves className="w-4 h-4 text-slate-700 group-hover:scale-110 transition-transform" />
+                                                <h3 className="font-bold text-sm text-gray-900 group-hover:text-slate-700 transition-colors">Cardiac Cath</h3>
+                                                {(documents.filter(d => d.tags?.includes('cardiac_cath')).length > 0 || documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('cath')).length > 0) &&
+                                                    <span className="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{documents.filter(d => d.tags?.includes('cardiac_cath') || (d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('cath'))).length}</span>
                                                 }
                                             </div>
                                             <button onClick={() => setShowCardiacCathModal(true)} className="p-1 bg-slate-700 text-white rounded hover:bg-slate-800 transition-colors">
@@ -3154,6 +3159,14 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     </div>
                 </Modal>
             </div>
+            {/* Cardiology Review Center */}
+            <CardiologyViewer
+                isOpen={showCardiologyViewer}
+                onClose={() => setShowCardiologyViewer(false)}
+                type={cardiologyViewerType}
+                documents={documents}
+                patientName={patient ? `${patient.first_name} ${patient.last_name}` : 'Patient'}
+            />
         </div>
     );
 };
