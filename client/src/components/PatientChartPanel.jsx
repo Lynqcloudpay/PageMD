@@ -8,6 +8,7 @@ import {
 import { visitsAPI, documentsAPI, ordersAPI, referralsAPI, patientsAPI, eprescribeAPI } from '../services/api';
 import { format } from 'date-fns';
 import DoseSpotPrescribe from './DoseSpotPrescribe';
+import VisitChartView from './VisitChartView';
 
 const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview', initialDataTab = 'problems', onOpenDataManager }) => {
     const [activeTab, setActiveTab] = useState(initialTab);
@@ -21,6 +22,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
     const [echos, setEchos] = useState([]);
     const [documents, setDocuments] = useState([]);
     const [expandedNotes, setExpandedNotes] = useState({});
+    const [selectedVisitForView, setSelectedVisitForView] = useState(null);
 
     // Patient Hub State
     const [patient, setPatient] = useState(null);
@@ -373,16 +375,14 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                                                 </div>
                                                                             )}
 
-                                                                            <a
-                                                                                href={`/visit/${note.id}`}
-                                                                                target="_blank"
-                                                                                rel="noopener noreferrer"
+                                                                            <button
+                                                                                onClick={() => setSelectedVisitForView({ visitId: note.id, patientId: patientId })}
                                                                                 className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
                                                                             >
                                                                                 <FileText className="w-4 h-4" />
                                                                                 View Full Note
                                                                                 <ExternalLink className="w-3 h-3" />
-                                                                            </a>
+                                                                            </button>
                                                                         </div>
                                                                     );
                                                                 })()}
@@ -420,11 +420,11 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                     source: 'home'
                                                 }));
                                                 const allMeds = [...homeMeds, ...eprescribePrescriptions, ...prescriptions];
-                                                
+
                                                 if (allMeds.length === 0) {
                                                     return <div className="text-center py-10 text-gray-400 text-sm">No medications found.</div>;
                                                 }
-                                                
+
                                                 return allMeds.map((rx, idx) => {
                                                     const name = rx.medication_name || rx.order_payload?.medication_name || rx.order_payload?.medication || 'Unknown Med';
                                                     const sig = rx.sig || rx.order_payload?.sig || rx.order_payload?.instructions || '';
@@ -589,6 +589,15 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                         setShowDoseSpotModal(false);
                         fetchAllData(); // Refresh after closing
                     }}
+                />
+            )}
+
+            {/* Visit Chart View Modal */}
+            {selectedVisitForView && (
+                <VisitChartView
+                    visitId={selectedVisitForView.visitId}
+                    patientId={selectedVisitForView.patientId}
+                    onClose={() => setSelectedVisitForView(null)}
                 />
             )}
         </div>
