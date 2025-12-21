@@ -1230,7 +1230,7 @@ router.post('/:id/photo', requirePermission('patients:edit_demographics'), uploa
     }
 
     // Construct photo URL (relative path that can be served statically)
-    const photoUrl = `/uploads/patient-photos/${req.file.filename}`;
+    const photoUrl = `/api/uploads/patient-photos/${req.file.filename}`;
 
     // Update patient record with photo URL
     const result = await pool.query(
@@ -1283,7 +1283,7 @@ router.post('/:id/photo/base64', requirePermission('patients:edit_demographics')
     console.log('Photo saved to:', filepath);
 
     // Construct photo URL
-    const photoUrl = `/uploads/patient-photos/${filename}`;
+    const photoUrl = `/api/uploads/patient-photos/${filename}`;
 
     // Update patient record
     const result = await pool.query(

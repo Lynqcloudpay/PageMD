@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { visitsAPI, patientsAPI, ordersAPI, referralsAPI, documentsAPI } from '../services/api';
 import { format } from 'date-fns';
+import { showError, showSuccess } from '../utils/toast';
 // GridLayout temporarily disabled to fix 500 error
 // TODO: Re-enable with proper implementation
 // import GridLayout from 'react-grid-layout';
@@ -276,17 +277,19 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
             // Fetch additional data
             try {
-                const [familyHistResponse, socialHistResponse, ordersResponse, referralsResponse] = await Promise.all([
+                const [familyHistResponse, socialHistResponse, ordersResponse, referralsResponse, docsResponse] = await Promise.all([
                     patientsAPI.getFamilyHistory(id).catch(() => ({ data: [] })),
                     patientsAPI.getSocialHistory(id).catch(() => ({ data: null })),
                     ordersAPI.getByPatient(id).catch(() => ({ data: [] })),
-                    referralsAPI.getByPatient(id).catch(() => ({ data: [] }))
+                    referralsAPI.getByPatient(id).catch(() => ({ data: [] })),
+                    documentsAPI.getByPatient(id).catch(() => ({ data: [] }))
                 ]);
 
                 setFamilyHistory(familyHistResponse?.data || []);
                 setSocialHistory(socialHistResponse?.data || null);
                 setOrders(ordersResponse?.data || []);
                 setReferrals(referralsResponse?.data || []);
+                setDocuments(docsResponse?.data || []);
             } catch (error) {
                 console.error('Error fetching additional data:', error);
                 setFamilyHistory([]);
@@ -632,12 +635,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
             e.preventDefault();
             e.stopPropagation();
         }
-        const note = recentNotes.find(n => n.id === noteId) || filteredNotes.find(n => n.id === noteId);
-        if (note && !note.signed) {
-            navigate(`/patient/${id}/visit/${noteId}`);
-        } else {
-            setSelectedVisitForView({ visitId: noteId, patientId: id });
-        }
+        setSelectedVisitForView({ visitId: noteId, patientId: id });
     };
 
     const handleOpenDemographics = (field) => {
@@ -1003,88 +1001,94 @@ const Snapshot = ({ showNotesOnly = false }) => {
             canvas.width = videoRef.current.videoWidth;
             canvas.height = videoRef.current.videoHeight;
             const ctx = canvas.getContext('2d');
+
+            // Mirror if using front camera
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+
             ctx.drawImage(videoRef.current, 0, 0);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
             setCapturedPhoto(dataUrl);
             stopWebcam();
         }
     };
 
     const handleFileUpload = (e) => {
-        console.log('handleFileUpload called', e.target.files);
         const file = e.target.files?.[0];
         if (file) {
-            console.log('File selected:', file.name, file.type, file.size);
-            // Validate file type
-            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-            if (!allowedTypes.includes(file.type)) {
-                alert('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
-                e.target.value = ''; // Reset file input
-                return;
-            }
-
-            // Validate file size (5MB max)
-            if (file.size > 5 * 1024 * 1024) {
-                alert('File size must be less than 5MB');
-                e.target.value = ''; // Reset file input
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                console.log('File read complete, setting captured photo');
-                setCapturedPhoto(reader.result);
-                setPhotoMode('upload'); // Ensure photoMode is set
-            };
-            reader.onerror = () => {
-                console.error('Error reading file');
-                alert('Error reading file. Please try again.');
-                e.target.value = ''; // Reset file input
-            };
-            reader.readAsDataURL(file);
-        } else {
-            console.log('No file selected');
+            processImageFile(file);
         }
+    };
+
+    const processImageFile = (file) => {
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            showError('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
+            return;
+        }
+
+        // Validate file size (5MB max)
+        if (file.size > 10 * 1024 * 1024) {
+            showError('File size must be less than 10MB');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setCapturedPhoto(reader.result);
+            setPhotoMode('preview');
+        };
+        reader.onerror = () => {
+            showError('Error reading file. Please try again.');
+        };
+        reader.readAsDataURL(file);
     };
 
     const handleSavePhoto = async () => {
         if (!capturedPhoto || !id) return;
+
+        setLoading(true);
         try {
             const uploadResponse = await patientsAPI.uploadPhotoBase64(id, capturedPhoto);
-            console.log('Photo upload response:', uploadResponse);
 
-            // Update patient state with new photo_url immediately
-            if (uploadResponse.data?.photoUrl || uploadResponse.data?.patient?.photo_url) {
-                const newPhotoUrl = uploadResponse.data?.photoUrl || uploadResponse.data?.patient?.photo_url;
+            if (uploadResponse.data) {
+                const newPhotoUrl = uploadResponse.data.photoUrl || uploadResponse.data.patient?.photo_url;
+
+                // Update local state immediately for snappy UI
                 setPatient(prev => ({
                     ...prev,
                     photo_url: newPhotoUrl
                 }));
-                // Increment photo version to force cache bust
-                setPhotoVersion(prev => prev + 1);
+
+                // Force version update to bust cache
+                setPhotoVersion(Date.now());
+
+                setShowPhotoModal(false);
+                setPhotoMode(null);
+                setCapturedPhoto(null);
+
+                // Trigger global update event
+                window.dispatchEvent(new CustomEvent('patient-data-updated'));
             }
-
-            setShowPhotoModal(false);
-            setPhotoMode(null);
-            setCapturedPhoto(null);
-
-            // Refresh patient data after a short delay to ensure everything is synced
-            setTimeout(() => {
-                patientsAPI.get(id).then(res => {
-                    if (res.data) {
-                        setPatient(prev => ({
-                            ...prev,
-                            ...res.data,
-                            photo_url: res.data.photo_url
-                        }));
-                        // Increment photo version again after refresh
-                        setPhotoVersion(prev => prev + 1);
-                    }
-                }).catch(err => console.error('Error refreshing patient:', err));
-            }, 300);
         } catch (error) {
             console.error('Error uploading photo:', error);
-            alert('Failed to upload photo. Please try again.');
+            showError('Failed to upload photo. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeletePhoto = async () => {
+        if (!confirm('Are you sure you want to remove this patient photo?')) return;
+
+        try {
+            // We don't have a specific delete photo API, so we update with null
+            await patientsAPI.update(id, { photo_url: null });
+            setPatient(prev => ({ ...prev, photo_url: null }));
+            window.dispatchEvent(new CustomEvent('patient-data-updated'));
+        } catch (error) {
+            showError('Failed to remove photo.');
         }
     };
 
@@ -1097,10 +1101,28 @@ const Snapshot = ({ showNotesOnly = false }) => {
     // Generate photo URL with cache-busting (must be before early returns)
     const photoUrl = useMemo(() => {
         if (!patient?.photo_url) return null;
-        // Use relative path for production, base URL will be handle by the browser
-        const url = patient.photo_url.startsWith('http')
-            ? patient.photo_url
-            : patient.photo_url.startsWith('/') ? patient.photo_url : `/${patient.photo_url}`;
+
+        let path = patient.photo_url;
+
+        // Handle absolute paths by finding the /uploads/ marker
+        if (path.includes('/uploads/')) {
+            const index = path.indexOf('/uploads/');
+            path = path.substring(index); // results in /uploads/...
+        }
+
+        // Apply /api prefix to any path that looks like it's in uploads
+        if (path.startsWith('/uploads/')) {
+            path = `/api${path}`;
+        } else if (path.startsWith('uploads/')) {
+            path = `/api/${path}`;
+        } else if (!path.startsWith('/') && !path.includes('/')) {
+            // It's just a filename. For patient photos, they are usually in patient-photos/
+            path = `/api/uploads/patient-photos/${path}`;
+        }
+
+        const url = path.startsWith('http')
+            ? path
+            : path.startsWith('/') ? path : `/${path}`;
         return `${url}?v=${photoVersion}`;
     }, [patient?.photo_url, photoVersion]);
 
@@ -2559,206 +2581,154 @@ const Snapshot = ({ showNotesOnly = false }) => {
                         onClose={() => setSelectedVisitForView(null)}
                     />
                 )}
-
-                {/* Photo Modal */}
-                {showPhotoModal && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" onClick={() => {
+                {/* Photo Modal - Redesigned */}
+                <Modal
+                    isOpen={showPhotoModal}
+                    onClose={() => {
                         setShowPhotoModal(false);
                         setPhotoMode(null);
-                        stopWebcam();
                         setCapturedPhoto(null);
-                    }}>
-                        <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
-                                    <Camera className="w-5 h-5 text-primary-600" />
-                                    <span>Add Patient Photo</span>
-                                </h3>
+                        stopWebcam();
+                    }}
+                    title="Patient Profile Picture"
+                    maxWidth="max-w-xl"
+                >
+                    <div className="space-y-6">
+                        {!photoMode ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <button
+                                    onClick={async () => {
+                                        setPhotoMode('webcam');
+                                        await startWebcam();
+                                    }}
+                                    className="group flex flex-col items-center justify-center p-8 bg-white border-2 border-dashed border-gray-200 rounded-2xl hover:border-primary-500 hover:bg-primary-50/50 transition-all duration-300"
+                                >
+                                    <div className="w-16 h-16 rounded-full bg-primary-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                        <Camera className="w-8 h-8 text-primary-600" />
+                                    </div>
+                                    <span className="text-lg font-semibold text-gray-900">Take Photo</span>
+                                    <span className="text-sm text-gray-500 mt-1">Use device camera</span>
+                                </button>
+
                                 <button
                                     onClick={() => {
-                                        setShowPhotoModal(false);
-                                        setPhotoMode(null);
-                                        stopWebcam();
-                                        setCapturedPhoto(null);
+                                        setPhotoMode('preview');
+                                        fileInputRef.current?.click();
                                     }}
-                                    className="p-1 hover:bg-gray-100 rounded text-gray-500"
+                                    className="group flex flex-col items-center justify-center p-8 bg-white border-2 border-dashed border-gray-200 rounded-2xl hover:border-primary-500 hover:bg-primary-50/50 transition-all duration-300"
                                 >
-                                    <X className="w-5 h-5" />
+                                    <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                        <FileImage className="w-8 h-8 text-blue-600" />
+                                    </div>
+                                    <span className="text-lg font-semibold text-gray-900">Upload</span>
+                                    <span className="text-sm text-gray-500 mt-1">From computer</span>
                                 </button>
+
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleFileUpload}
+                                    className="hidden"
+                                />
                             </div>
-
-                            {/* Hidden file input - always present */}
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                                onChange={handleFileUpload}
-                                className="hidden"
-                            />
-
-                            {!photoMode ? (
-                                <div className="space-y-4">
-                                    <p className="text-sm text-gray-600 mb-4">Choose how you want to add the photo:</p>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <button
-                                            onClick={async () => {
-                                                setPhotoMode('webcam');
-                                                await startWebcam();
-                                            }}
-                                            className="flex flex-col items-center justify-center p-6 border-2 border-gray-300 rounded-lg hover:border-primary-500 hover:bg-gray-50 transition-colors"
-                                        >
-                                            <Camera className="w-12 h-12 text-primary-600 mb-2" />
-                                            <span className="font-medium text-gray-900">Use Webcam</span>
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setPhotoMode('upload');
-                                                setTimeout(() => {
-                                                    fileInputRef.current?.click();
-                                                }, 100);
-                                            }}
-                                            className="flex flex-col items-center justify-center p-6 border-2 border-gray-300 rounded-lg hover:border-primary-500 hover:bg-gray-50 transition-colors"
-                                        >
-                                            <FileImage className="w-12 h-12 text-primary-600 mb-2" />
-                                            <span className="font-medium text-gray-900">Upload Photo</span>
-                                        </button>
+                        ) : photoMode === 'webcam' && !capturedPhoto ? (
+                            <div className="flex flex-col items-center">
+                                <div className="relative w-full aspect-[4/3] bg-black rounded-2xl overflow-hidden shadow-inner mb-6">
+                                    <video
+                                        ref={videoRef}
+                                        autoPlay
+                                        playsInline
+                                        className="w-full h-full object-cover -scale-x-100"
+                                    />
+                                    <div className="absolute inset-0 pointer-events-none border-[16px] border-black/20"></div>
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                        <div className="w-64 h-64 border-2 border-white/40 rounded-full"></div>
                                     </div>
                                 </div>
-                            ) : photoMode === 'webcam' ? (
-                                <div className="space-y-4">
-                                    {!capturedPhoto ? (
-                                        <>
-                                            <div className="relative bg-black rounded-lg overflow-hidden" style={{ aspectRatio: '4/3' }}>
-                                                <video
-                                                    ref={videoRef}
-                                                    autoPlay
-                                                    playsInline
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            </div>
-                                            <div className="flex space-x-3">
-                                                <button
-                                                    onClick={capturePhoto}
-                                                    className="flex-1 px-4 py-2 text-white rounded-md flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
-                                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                                                >
-                                                    <Camera className="w-4 h-4" />
-                                                    <span>Capture Photo</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        stopWebcam();
-                                                        setPhotoMode(null);
-                                                    }}
-                                                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                                                >
-                                                    Cancel
-                                                </button>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div className="relative bg-black rounded-lg overflow-hidden" style={{ aspectRatio: '4/3' }}>
-                                                <img src={capturedPhoto} alt="Captured" className="w-full h-full object-contain" />
-                                            </div>
-                                            <div className="flex space-x-3">
-                                                <button
-                                                    onClick={handleSavePhoto}
-                                                    className="flex-1 px-4 py-2 text-white rounded-md flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
-                                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                                                >
-                                                    <CheckCircle2 className="w-4 h-4" />
-                                                    <span>Save Photo</span>
-                                                </button>
-                                                <button
-                                                    onClick={async () => {
-                                                        setCapturedPhoto(null);
-                                                        await startWebcam();
-                                                    }}
-                                                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                                                >
-                                                    Retake
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setPhotoMode(null);
-                                                        setCapturedPhoto(null);
-                                                        stopWebcam();
-                                                    }}
-                                                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                                                >
-                                                    Cancel
-                                                </button>
-                                            </div>
-                                        </>
-                                    )}
+
+                                <div className="flex w-full gap-3">
+                                    <button
+                                        onClick={capturePhoto}
+                                        className="flex-1 bg-primary-600 text-white py-3 rounded-xl font-bold hover:bg-primary-700 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-primary-200"
+                                    >
+                                        <Camera className="w-5 h-5" />
+                                        Capture
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            stopWebcam();
+                                            setPhotoMode(null);
+                                        }}
+                                        className="px-6 bg-gray-100 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
                                 </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {capturedPhoto ? (
-                                        <>
-                                            <div className="relative bg-black rounded-lg overflow-hidden" style={{ aspectRatio: '4/3' }}>
-                                                <img src={capturedPhoto} alt="Uploaded" className="w-full h-full object-contain" />
-                                            </div>
-                                            <div className="flex space-x-3">
-                                                <button
-                                                    onClick={handleSavePhoto}
-                                                    className="flex-1 px-4 py-2 text-white rounded-md flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
-                                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                                                >
-                                                    <CheckCircle2 className="w-4 h-4" />
-                                                    <span>Save Photo</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setCapturedPhoto(null);
-                                                        fileInputRef.current?.click();
-                                                    }}
-                                                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                                                >
-                                                    Choose Different
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setPhotoMode(null);
-                                                        setCapturedPhoto(null);
-                                                    }}
-                                                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                                                >
-                                                    Cancel
-                                                </button>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <div className="text-center py-8">
-                                            <p className="text-gray-600 mb-4">No file selected</p>
-                                            <button
-                                                onClick={() => {
-                                                    setPhotoMode('upload');
-                                                    setTimeout(() => {
-                                                        fileInputRef.current?.click();
-                                                    }, 100);
-                                                }}
-                                                className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md"
-                                                style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                                            >
-                                                Choose File
-                                            </button>
-                                        </div>
-                                    )}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center">
+                                <div className="relative w-full aspect-[4/3] bg-gray-100 rounded-2xl overflow-hidden shadow-inner mb-6 flex items-center justify-center">
+                                    <img
+                                        src={capturedPhoto}
+                                        alt="Preview"
+                                        className="max-w-full max-h-full object-contain"
+                                    />
                                 </div>
-                            )}
-                        </div>
+
+                                <div className="flex w-full gap-3">
+                                    <button
+                                        onClick={handleSavePhoto}
+                                        disabled={loading}
+                                        className="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-200"
+                                    >
+                                        {loading ? (
+                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                        ) : (
+                                            <CheckCircle2 className="w-5 h-5" />
+                                        )}
+                                        {loading ? 'Saving...' : 'Set Profile Photo'}
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (photoMode === 'webcam') {
+                                                setCapturedPhoto(null);
+                                                startWebcam();
+                                            } else {
+                                                fileInputRef.current?.click();
+                                            }
+                                        }}
+                                        className="px-6 bg-gray-100 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                                    >
+                                        Retake
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            stopWebcam();
+                                            setCapturedPhoto(null);
+                                            setPhotoMode(null);
+                                        }}
+                                        className="px-6 bg-gray-100 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {patient?.photo_url && !photoMode && (
+                            <div className="pt-4 border-t border-gray-100 flex justify-center">
+                                <button
+                                    onClick={handleDeletePhoto}
+                                    className="text-red-500 text-sm font-medium hover:text-red-600 flex items-center gap-1.5"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    Remove Current Photo
+                                </button>
+                            </div>
+                        )}
                     </div>
-                )}
+                </Modal>
 
                 {/* Document Upload Modal */}
                 <Modal
@@ -3167,7 +3137,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 documents={documents}
                 patientName={patient ? `${patient.first_name} ${patient.last_name}` : 'Patient'}
             />
-        </div>
+        </div >
     );
 };
 

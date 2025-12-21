@@ -3,7 +3,7 @@ import {
     X, FileText, Image, FlaskConical, Pill, ExternalLink,
     Database, CreditCard, Calendar, Clock, CheckCircle2,
     XCircle, UserCircle, FileImage, Trash2, Plus, Activity,
-    LayoutDashboard, ChevronRight, Search, FilePlus, ChevronDown, HeartPulse, ActivitySquare
+    LayoutDashboard, ChevronRight, Search, FilePlus, ChevronDown, HeartPulse, ActivitySquare, Zap, Waves
 } from 'lucide-react';
 import { visitsAPI, documentsAPI, ordersAPI, referralsAPI, patientsAPI, eprescribeAPI } from '../services/api';
 import { format } from 'date-fns';
@@ -153,12 +153,40 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
             // Process Documents
             if (docsRes.status === 'fulfilled') {
                 const docs = docsRes.value.data || [];
-                setImages(docs.filter(d => d.doc_type === 'imaging').sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
-                setEkgs(docs.filter(d => d.doc_type === 'ekg').sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
-                setEchos(docs.filter(d => d.doc_type === 'echo').sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
-                setStressTests(docs.filter(d => d.doc_type === 'stress_test').sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
-                setCardiacCaths(docs.filter(d => d.doc_type === 'cardiac_cath').sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
-                setDocuments(docs.filter(d => !['imaging', 'ekg', 'echo', 'stress_test', 'cardiac_cath'].includes(d.doc_type)).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
+
+                const isEkg = (d) => d.doc_type === 'ekg' ||
+                    (d.tags && d.tags.some(t => t.toLowerCase() === 'ekg')) ||
+                    (d.file_name && d.file_name.toLowerCase().includes('ekg')) ||
+                    (d.filename && d.filename.toLowerCase().includes('ekg'));
+
+                const isEcho = (d) => d.doc_type === 'echo' ||
+                    (d.tags && d.tags.some(t => t.toLowerCase() === 'echo')) ||
+                    (d.file_name && d.file_name.toLowerCase().includes('echo')) ||
+                    (d.filename && d.filename.toLowerCase().includes('echo')) ||
+                    (d.file_name && d.file_name.toLowerCase().includes('echocardiogram')) ||
+                    (d.filename && d.filename.toLowerCase().includes('echocardiogram'));
+
+                const isStress = (d) => d.doc_type === 'stress_test' ||
+                    (d.tags && d.tags.some(t => t.toLowerCase() === 'stress_test' || t.toLowerCase() === 'stress')) ||
+                    (d.file_name && d.file_name.toLowerCase().includes('stress')) ||
+                    (d.filename && d.filename.toLowerCase().includes('stress'));
+
+                const isCath = (d) => d.doc_type === 'cardiac_cath' ||
+                    (d.tags && d.tags.some(t => t.toLowerCase() === 'cardiac_cath' || t.toLowerCase() === 'cath')) ||
+                    (d.file_name && d.file_name.toLowerCase().includes('cath')) ||
+                    (d.filename && d.filename.toLowerCase().includes('cath'));
+
+                setEkgs(docs.filter(isEkg).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
+                setEchos(docs.filter(isEcho).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
+                setStressTests(docs.filter(isStress).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
+                setCardiacCaths(docs.filter(isCath).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
+
+                // Imaging is imaging BUT not any of the specific cardiology types
+                setImages(docs.filter(d => (d.doc_type === 'imaging' || d.mime_type?.startsWith('image/')) && !isEkg(d) && !isEcho(d) && !isStress(d) && !isCath(d)).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
+
+                // Other documents
+                setDocuments(docs.filter(d => !['imaging', 'ekg', 'echo', 'stress_test', 'cardiac_cath'].includes(d.doc_type) && !isEkg(d) && !isEcho(d) && !isStress(d) && !isCath(d)).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
+
                 setHubDocuments(docs);
             }
 
@@ -178,6 +206,8 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
         { id: 'images', label: 'Imaging', icon: Image },
         { id: 'ekg', label: 'EKG', icon: ActivitySquare },
         { id: 'echo', label: 'ECHO', icon: HeartPulse },
+        { id: 'stress', label: 'Stress Test', icon: Zap },
+        { id: 'cath', label: 'Cardiac Cath', icon: Waves },
         { id: 'referrals', label: 'Referrals', icon: ExternalLink },
         { id: 'data', label: 'PAMFOS Data', icon: Database },
     ];
@@ -521,7 +551,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                                     {ef && <span>LVEF: <strong className="text-slate-900">{ef}</strong></span>}
                                                                 </div>
                                                                 <button
-                                                                    onClick={() => window.open(`/api/documents/view/${study.id}`, '_blank')}
+                                                                    onClick={() => window.open(`/api/documents/${study.id}/file`, '_blank')}
                                                                     className="mt-2 text-[10px] text-primary-600 font-bold hover:underline flex items-center gap-1 uppercase tracking-wider"
                                                                 >
                                                                     <FileImage className="w-3 h-3" /> View Report
@@ -630,29 +660,117 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                         ))}
 
                                                         {/* Render Uploaded Documents */}
-                                                        {currentDocs.map(doc => (
-                                                            <div key={doc.id} className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md transition-all flex justify-between items-start group">
-                                                                <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 min-w-0 flex-1">
-                                                                    <div className="bg-gray-100 p-2 rounded text-gray-500">
-                                                                        {activeTab === 'images' ? <Image className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
-                                                                    </div>
-                                                                    <div className="min-w-0">
-                                                                        <div className="text-sm font-medium text-gray-900 truncate">{doc.filename}</div>
-                                                                        <div className="text-xs text-gray-400">{new Date(doc.created_at).toLocaleDateString()}</div>
-                                                                    </div>
-                                                                </a>
-                                                                <button onClick={async (e) => {
-                                                                    e.stopPropagation();
-                                                                    if (!confirm('Delete document?')) return;
-                                                                    await documentsAPI.delete(doc.id);
-                                                                    fetchAllData();
-                                                                }} className="text-gray-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                    <Trash2 className="w-4 h-4" />
-                                                                </button>
-                                                            </div>
-                                                        ))}
+                                                        {currentDocs.map(doc => {
+                                                            let docLink = doc.file_url || doc.file_path || '#';
+                                                            if (docLink !== '#' && !docLink.startsWith('http')) {
+                                                                if (docLink.startsWith('uploads/')) docLink = `/api/${docLink}`;
+                                                                else if (docLink.startsWith('/uploads/')) docLink = `/api${docLink}`;
+                                                                else if (!docLink.startsWith('/')) docLink = `/${docLink}`;
+                                                            }
+                                                            return (
+                                                                <div key={doc.id} className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md transition-all flex justify-between items-start group">
+                                                                    <a href={docLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 min-w-0 flex-1">
+                                                                        <div className="bg-gray-100 p-2 rounded text-gray-500">
+                                                                            {activeTab === 'images' ? <Image className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                                                                        </div>
+                                                                        <div className="min-w-0">
+                                                                            <div className="text-sm font-medium text-gray-900 truncate">{doc.filename || doc.file_name}</div>
+                                                                            <div className="text-xs text-gray-400">{new Date(doc.created_at).toLocaleDateString()}</div>
+                                                                        </div>
+                                                                    </a>
+                                                                    <button onClick={async (e) => {
+                                                                        e.stopPropagation();
+                                                                        if (!confirm('Delete document?')) return;
+                                                                        await documentsAPI.delete(doc.id);
+                                                                        fetchAllData();
+                                                                    }} className="text-gray-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </button>
+                                                                </div>
+                                                            );
+                                                        })}
                                                     </>
                                                 );
+                                            })()}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* EKG, ECHO, STRESS, CATH TABS */}
+                                {(activeTab === 'ekg' || activeTab === 'echo' || activeTab === 'stress' || activeTab === 'cath') && (
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <h3 className="text-sm font-bold text-gray-800">
+                                                {activeTab === 'ekg' && 'EKG Records'}
+                                                {activeTab === 'echo' && 'ECHO Records'}
+                                                {activeTab === 'stress' && 'Stress Test Records'}
+                                                {activeTab === 'cath' && 'Cardiac Cath Records'}
+                                            </h3>
+                                            <label className="btn btn-primary text-xs px-3 py-1.5 h-auto cursor-pointer">
+                                                <FilePlus className="w-3.5 h-3.5 mr-1" />Upload
+                                                <input type="file" className="hidden" onChange={async (e) => {
+                                                    const file = e.target.files[0];
+                                                    if (!file) return;
+                                                    const fd = new FormData();
+                                                    fd.append('file', file);
+                                                    fd.append('patientId', patientId);
+                                                    fd.append('docType', 'imaging');
+                                                    fd.append('tags', activeTab === 'stress' ? 'stress_test' : activeTab === 'cath' ? 'cardiac_cath' : activeTab);
+                                                    try {
+                                                        await documentsAPI.upload(fd);
+                                                        fetchAllData(); // Refresh
+                                                    } catch (err) { alert('Upload failed'); }
+                                                }} />
+                                            </label>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {(() => {
+                                                const currentDocs = activeTab === 'ekg' ? ekgs :
+                                                    activeTab === 'echo' ? echos :
+                                                        activeTab === 'stress' ? stressTests : cardiacCaths;
+
+                                                if (currentDocs.length === 0) {
+                                                    return <p className="col-span-2 text-center py-10 text-gray-400 text-sm italic">No {activeTab.toUpperCase()} records found.</p>;
+                                                }
+
+                                                return currentDocs.map(doc => {
+                                                    let docLink = doc.file_path || doc.file_url || '#';
+                                                    if (docLink !== '#' && !docLink.startsWith('http')) {
+                                                        if (docLink.startsWith('uploads/')) docLink = `/api/${docLink}`;
+                                                        else if (docLink.startsWith('/uploads/')) docLink = `/api${docLink}`;
+                                                        else if (!docLink.startsWith('/')) docLink = `/${docLink}`;
+                                                    }
+
+                                                    return (
+                                                        <div key={doc.id} className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md transition-all flex justify-between items-start group">
+                                                            <a href={docLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 min-w-0 flex-1">
+                                                                <div className="bg-gray-100 p-2 rounded text-gray-500">
+                                                                    <FileImage className="w-4 h-4" />
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <div className="text-sm font-medium text-gray-900 truncate">{doc.file_name || 'Study Result'}</div>
+                                                                    <div className="text-xs text-gray-400">{new Date(doc.created_at).toLocaleDateString()}</div>
+                                                                    {doc.tags && (
+                                                                        <div className="flex flex-wrap gap-1 mt-1">
+                                                                            {doc.tags.filter(t => t.includes(':')).map(t => (
+                                                                                <span key={t} className="px-1 bg-gray-100 text-[9px] text-gray-500 rounded">{t}</span>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </a>
+                                                            <button onClick={async (e) => {
+                                                                e.stopPropagation();
+                                                                if (!confirm('Delete document?')) return;
+                                                                await documentsAPI.delete(doc.id);
+                                                                fetchAllData();
+                                                            }} className="text-gray-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                });
                                             })()}
                                         </div>
                                     </div>

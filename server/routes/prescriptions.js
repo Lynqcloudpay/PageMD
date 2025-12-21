@@ -25,7 +25,7 @@ router.use(authenticate);
  */
 router.post('/create', requireRole('clinician'), async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
 
@@ -99,7 +99,7 @@ router.post('/create', requireRole('clinician'), async (req, res) => {
 
     // Get prescriber information
     const prescriber = req.user;
-    
+
     // Get prescriber NPI and DEA if available (should be stored in users table)
     // For now, we'll get from request body or user object
     const prescriberNpi = req.body.prescriberNpi || prescriber.npi;
@@ -224,7 +224,7 @@ router.post('/create', requireRole('clinician'), async (req, res) => {
         `, [patientId]);
 
         const currentRxcuis = currentMedsResult.rows.map(r => r.medication_rxcui);
-        
+
         if (currentRxcuis.length > 0) {
           const interactions = await rxnormService.checkDrugInteractions([
             ...currentRxcuis,
@@ -277,7 +277,7 @@ router.post('/create', requireRole('clinician'), async (req, res) => {
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error creating prescription:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to create prescription',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -292,7 +292,7 @@ router.post('/create', requireRole('clinician'), async (req, res) => {
  */
 router.post('/:id/send', requireRole('clinician'), async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
 
@@ -306,7 +306,7 @@ router.post('/:id/send', requireRole('clinician'), async (req, res) => {
       // Route to DoseSpot service
       await client.query('COMMIT');
       client.release();
-      
+
       try {
         const result = await eprescribeService.sendPrescription(id);
         return res.json({
@@ -337,8 +337,8 @@ router.post('/:id/send', requireRole('clinician'), async (req, res) => {
     // Validate prescription can be sent
     if (prescription.status !== 'draft' && prescription.status !== 'pending') {
       await client.query('ROLLBACK');
-      return res.status(400).json({ 
-        error: `Cannot send prescription with status: ${prescription.status}` 
+      return res.status(400).json({
+        error: `Cannot send prescription with status: ${prescription.status}`
       });
     }
 
@@ -387,7 +387,7 @@ router.post('/:id/send', requireRole('clinician'), async (req, res) => {
       // TODO: Implement actual Surescripts/FHIR transmission
       // For now, simulate successful transmission
       transmissionId = `TRAN-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-      
+
       // Simulate different outcomes based on transmission method
       if (transmissionMethod === 'electronic' && pharmacyInfo?.integrationEnabled) {
         transmissionStatus = 'sent';
@@ -445,7 +445,7 @@ router.post('/:id/send', requireRole('clinician'), async (req, res) => {
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error sending prescription:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to send prescription',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -465,14 +465,12 @@ router.get('/patient/:patientId', requireRole('clinician', 'nurse', 'front_desk'
 
     let query = `
       SELECT p.*,
-             u.first_name || ' ' || u.last_name as prescriber_name,
-             ph.name as pharmacy_name
+             u.first_name || ' ' || u.last_name as prescriber_name
       FROM prescriptions p
       LEFT JOIN users u ON p.prescriber_id = u.id
-      LEFT JOIN pharmacies ph ON p.pharmacy_id = ph.id
       WHERE p.patient_id = $1
     `;
-    
+
     const params = [patientId];
     let paramIndex = 2;
 
@@ -509,11 +507,9 @@ router.get('/:id', requireRole('clinician', 'nurse', 'front_desk'), async (req, 
 
     const result = await pool.query(`
       SELECT p.*,
-             u.first_name || ' ' || u.last_name as prescriber_name,
-             ph.* as pharmacy_info
+             u.first_name || ' ' || u.last_name as prescriber_name
       FROM prescriptions p
       LEFT JOIN users u ON p.prescriber_id = u.id
-      LEFT JOIN pharmacies ph ON p.pharmacy_id = ph.id
       WHERE p.id = $1
     `, [id]);
 
@@ -546,27 +542,27 @@ router.get('/:id', requireRole('clinician', 'nurse', 'front_desk'), async (req, 
  */
 function buildSigText(sigStructured) {
   const parts = [];
-  
+
   if (sigStructured.dose) {
     parts.push(sigStructured.dose);
   }
-  
+
   if (sigStructured.route) {
     parts.push(sigStructured.route.toLowerCase());
   }
-  
+
   if (sigStructured.frequency) {
     parts.push(sigStructured.frequency.toLowerCase());
   }
-  
+
   if (sigStructured.duration) {
     parts.push(`for ${sigStructured.duration}`);
   }
-  
+
   if (sigStructured.asNeeded) {
     parts.push('as needed');
   }
-  
+
   if (sigStructured.additionalInstructions) {
     parts.push(sigStructured.additionalInstructions);
   }

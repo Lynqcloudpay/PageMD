@@ -10,8 +10,8 @@
  */
 
 const express = require('express');
-const { authenticate, requireRole, logAudit } = require('../middleware/auth');
-const { requirePrivilege } = require('../middleware/authorization');
+const { authenticate, logAudit } = require('../middleware/auth');
+const { requirePermission } = require('../services/authorization');
 const rateLimit = require('express-rate-limit');
 const getEPrescribeService = require('../services/eprescribe/EPrescribeService');
 const pool = require('../db');
@@ -58,7 +58,7 @@ router.get('/status', async (req, res) => {
  * Get Single Sign-On URL for embedded prescribing UI
  * Requires: clinician or admin role
  */
-router.post('/session', requirePrivilege('prescriptions:create'), async (req, res) => {
+router.post('/session', requirePermission('meds:prescribe'), async (req, res) => {
   const client = await pool.connect();
 
   try {
@@ -123,7 +123,7 @@ router.post('/session', requirePrivilege('prescriptions:create'), async (req, re
  * Get prescriptions for a patient
  * Requires: patient access permission
  */
-router.get('/patient/:id/prescriptions', requirePrivilege('prescriptions:view'), async (req, res) => {
+router.get('/patient/:id/prescriptions', requirePermission('prescriptions:view'), async (req, res) => {
   const client = await pool.connect();
 
   try {
@@ -131,24 +131,26 @@ router.get('/patient/:id/prescriptions', requirePrivilege('prescriptions:view'),
     const userId = req.user.id;
 
     // Verify patient access (same logic as notes)
+    console.log('[DEBUG] Fetching prescriptions for patient:', patientId, 'User:', userId);
     const patientCheck = await client.query(
       `SELECT id FROM patients WHERE id = $1`,
       [patientId]
     );
 
     if (patientCheck.rows.length === 0) {
+      console.log('[DEBUG] Patient not found');
       return res.status(404).json({ error: 'Patient not found' });
     }
 
     // Get prescriptions
     const result = await client.query(
       `SELECT 
-        p.id, p.patient_id, p.prescriber_user_id, p.medication_name, p.sig,
-        p.quantity, p.days_supply, p.refills, p.status, p.vendor_message_id,
-        p.vendor_payload, p.sent_at, p.filled_at, p.created_at, p.updated_at,
+        p.id, p.patient_id, p.prescriber_id as prescriber_user_id, p.medication_name, p.sig,
+        p.quantity, p.days_supply, p.refills, p.status, p.transmission_id as vendor_message_id,
+        p.sig_structured as vendor_payload, p.sent_at, p.filled_at, p.created_at, p.updated_at,
         u.first_name || ' ' || u.last_name as prescriber_name
        FROM prescriptions p
-       LEFT JOIN users u ON p.prescriber_user_id = u.id
+       LEFT JOIN users u ON p.prescriber_id = u.id
        WHERE p.patient_id = $1
        ORDER BY p.created_at DESC
        LIMIT 100`,
@@ -178,7 +180,7 @@ router.get('/patient/:id/prescriptions', requirePrivilege('prescriptions:view'),
  * Create prescription draft
  * Requires: prescriptions:create permission
  */
-router.post('/patient/:id/prescriptions', requirePrivilege('prescriptions:create'), async (req, res) => {
+router.post('/patient/:id/prescriptions', requirePermission('meds:prescribe'), async (req, res) => {
   const client = await pool.connect();
 
   try {
@@ -291,7 +293,7 @@ router.post('/patient/:id/prescriptions', requirePrivilege('prescriptions:create
  * Send prescription
  * Requires: prescriptions:create permission (only clinicians/admins can send)
  */
-router.post('/prescriptions/:id/send', requirePrivilege('prescriptions:create'), async (req, res) => {
+router.post('/prescriptions/:id/send', requirePermission('meds:prescribe'), async (req, res) => {
   const client = await pool.connect();
 
   try {
@@ -370,7 +372,7 @@ router.post('/prescriptions/:id/send', requirePrivilege('prescriptions:create'),
  * Cancel prescription
  * Requires: prescriptions:create permission
  */
-router.post('/prescriptions/:id/cancel', requirePrivilege('prescriptions:create'), async (req, res) => {
+router.post('/prescriptions/:id/cancel', requirePermission('meds:prescribe'), async (req, res) => {
   const client = await pool.connect();
 
   try {
@@ -446,7 +448,7 @@ router.post('/prescriptions/:id/cancel', requirePrivilege('prescriptions:create'
  * Search pharmacies
  * Requires: prescriptions:view permission
  */
-router.get('/pharmacies/search', requirePrivilege('prescriptions:view'), async (req, res) => {
+router.get('/pharmacies/search', requirePermission('prescriptions:view'), async (req, res) => {
   try {
     const { query, latitude, longitude, radius } = req.query;
 
@@ -479,7 +481,7 @@ router.get('/pharmacies/search', requirePrivilege('prescriptions:view'), async (
  * Search medications
  * Requires: prescriptions:view permission
  */
-router.get('/medications/search', requirePrivilege('prescriptions:view'), async (req, res) => {
+router.get('/medications/search', requirePermission('prescriptions:view'), async (req, res) => {
   try {
     const { query } = req.query;
 

@@ -36,50 +36,42 @@ async function getUserAuthContext(userId) {
     // Determine if this user should be treated as an admin
     const isAdminUser = user.is_admin || normalizedRole === 'ADMIN';
 
-    // Get base permissions from role
-    const permsRes = await pool.query(
-      `SELECT permission_key AS key
-       FROM role_permissions
-       WHERE role = $1`,
-      [normalizedRole]
-    );
+    // Get base permissions from role - try role_privileges first (actual table name), then fall back
+    let permsRes = { rows: [] };
+    try {
+      permsRes = await pool.query(
+        `SELECT p.name AS key
+         FROM role_privileges rp
+         JOIN privileges p ON rp.privilege_id = p.id
+         JOIN roles r ON rp.role_id = r.id
+         WHERE r.name ILIKE $1`,
+        [normalizedRole]
+      );
+    } catch (err) {
+      console.warn('Could not fetch role_privileges, using defaults:', err.message);
+    }
 
-    // Get user-specific permission overrides
-    const overridesRes = await pool.query(
-      `SELECT permission_key AS key, allowed
-       FROM user_permissions
-       WHERE user_id = $1`,
-      [userId]
-    );
-
-    // Merge permissions with overrides
+    // If no permissions found from DB, provide sensible defaults based on role
     const base = new Set(permsRes.rows.map(r => r.key));
-    for (const o of overridesRes.rows) {
-      if (o.allowed) {
-        base.add(o.key);
-      } else {
-        base.delete(o.key);
-      }
+
+    // Add default permissions based on role if none found
+    if (base.size === 0) {
+      const defaultPerms = getDefaultPermissionsForRole(normalizedRole);
+      defaultPerms.forEach(p => base.add(p));
     }
 
     // Admin users get all permissions
     if (isAdminUser) {
-      const allPermsRes = await pool.query('SELECT key FROM permissions');
-      allPermsRes.rows.forEach(p => base.add(p.key));
+      try {
+        const allPermsRes = await pool.query('SELECT name AS key FROM privileges');
+        allPermsRes.rows.forEach(p => base.add(p.key));
+      } catch (err) {
+        console.warn('Could not fetch all privileges:', err.message);
+        // Add comprehensive admin permissions as fallback
+        const adminPerms = getAllAdminPermissions();
+        adminPerms.forEach(p => base.add(p));
+      }
     }
-
-    // Get scope configuration
-    const scopeRes = await pool.query(
-      `SELECT schedule_scope, patient_scope 
-       FROM role_scope 
-       WHERE role = $1`,
-      [normalizedRole]
-    );
-
-    const scope = scopeRes.rows[0] || {
-      schedule_scope: 'CLINIC',
-      patient_scope: 'CLINIC'
-    };
 
     return {
       id: user.id,
@@ -95,14 +87,86 @@ async function getUserAuthContext(userId) {
       clinicId: null, // clinic_id column may not exist in all schemas
       permissions: Array.from(base),
       scope: {
-        scheduleScope: scope.schedule_scope,
-        patientScope: scope.patient_scope
+        scheduleScope: 'CLINIC',
+        patientScope: 'CLINIC'
       }
     };
   } catch (error) {
     console.error('Error getting user auth context:', error);
     throw error;
   }
+}
+
+/**
+ * Get default permissions for a role when DB permissions are not configured
+ */
+function getDefaultPermissionsForRole(role) {
+  const commonPerms = [
+    'patients:view_list',
+    'patients:view_chart',
+    'patients:view_demographics',
+    'appointments:view',
+    'prescriptions:view'
+  ];
+
+  const clinicianPerms = [
+    ...commonPerms,
+    'patients:edit',
+    'patients:create',
+    'visits:create',
+    'visits:edit',
+    'visits:sign',
+    'orders:create',
+    'orders:edit',
+    'prescriptions:create',
+    'prescriptions:edit',
+    'meds:prescribe',
+    'referrals:create',
+    'referrals:edit',
+    'appointments:create',
+    'appointments:edit'
+  ];
+
+  const nursePerms = [
+    ...commonPerms,
+    'patients:edit',
+    'visits:create',
+    'visits:edit',
+    'orders:view',
+    'appointments:create',
+    'appointments:edit'
+  ];
+
+  switch (role) {
+    case 'ADMIN':
+      return getAllAdminPermissions();
+    case 'CLINICIAN':
+      return clinicianPerms;
+    case 'NURSE_MA':
+      return nursePerms;
+    case 'FRONT_DESK':
+      return [...commonPerms, 'appointments:create', 'appointments:edit', 'patients:create'];
+    default:
+      return commonPerms;
+  }
+}
+
+/**
+ * Get all permissions for admin users
+ */
+function getAllAdminPermissions() {
+  return [
+    'patients:view_list', 'patients:view_chart', 'patients:view_demographics',
+    'patients:edit', 'patients:create', 'patients:delete',
+    'visits:create', 'visits:edit', 'visits:sign', 'visits:delete',
+    'orders:create', 'orders:edit', 'orders:delete', 'orders:view',
+    'prescriptions:create', 'prescriptions:edit', 'prescriptions:view', 'prescriptions:delete', 'meds:prescribe',
+    'referrals:create', 'referrals:edit', 'referrals:view', 'referrals:delete',
+    'appointments:create', 'appointments:edit', 'appointments:view', 'appointments:delete',
+    'users:create', 'users:edit', 'users:view', 'users:delete',
+    'billing:view', 'billing:create', 'billing:edit',
+    'reports:view', 'settings:edit', 'admin:access'
+  ];
 }
 
 /**
@@ -201,13 +265,13 @@ async function audit(req, action, entityType, entityId, success) {
     const userAgent = req.get('user-agent') || null;
 
     await pool.query(
-      `INSERT INTO audit_log (user_id, action, entity_type, entity_id, success, ip, user_agent)
+      `INSERT INTO audit_logs (user_id, action, target_type, target_id, outcome, actor_ip, user_agent)
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [userId, action, entityType, entityId || null, success, ip, userAgent]
+      [userId, action, entityType, entityId || null, success ? 'success' : 'failure', ip, userAgent]
     );
   } catch (error) {
     // Silently fail audit logging - don't break the main request
-    console.warn('Failed to log audit:', error.message);
+    console.warn('Failed to log audit in authorization service:', error.message);
   }
 }
 

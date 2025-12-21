@@ -100,17 +100,23 @@ if (!fs.existsSync(patientPhotosDir)) {
 }
 
 // Serve uploaded files statically with CORS headers
-app.use('/uploads', (req, res, next) => {
+// Mount under both /api/uploads and /uploads for backward compatibility
+const staticMiddleware = (req, res, next) => {
   res.header('Access-Control-Allow-Origin', process.env.FRONTEND_URL || 'http://localhost:5173');
   res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type');
   res.header('Cross-Origin-Resource-Policy', 'cross-origin');
   next();
-}, express.static(uploadDir, {
+};
+
+const staticFiles = express.static(uploadDir, {
   setHeaders: (res, path) => {
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   }
-}));
+});
+
+app.use('/api/uploads', staticMiddleware, staticFiles);
+app.use('/uploads', staticMiddleware, staticFiles);
 
 // Routes
 // Apply rate limiting only to login/register in production (and not in localhost/development)

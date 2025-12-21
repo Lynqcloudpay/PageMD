@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import {
     X, Activity, Heart, Zap, Waves, Calendar, Eye,
     Maximize2, Download, History, Ruler, Info, ExternalLink,
-    ChevronRight, ChevronLeft, ZoomIn, ZoomOut, RotateCw
+    ChevronRight, ChevronLeft, ZoomIn, ZoomOut, RotateCw, Trash2
 } from 'lucide-react';
 import Modal from './ui/Modal';
+import { documentsAPI } from '../services/api';
 
 const CardiologyViewer = ({ isOpen, onClose, type, documents, patientName }) => {
     const [selectedDoc, setSelectedDoc] = useState(null);
@@ -119,8 +120,29 @@ const CardiologyViewer = ({ isOpen, onClose, type, documents, patientName }) => 
     );
 
     const docUrl = (doc) => {
-        if (!doc || !doc.file_path) return null;
-        return doc.file_path.startsWith('http') ? doc.file_path : `/${doc.file_path}`;
+        if (!doc) return null;
+        let path = doc.file_path || doc.file_url;
+        if (!path) return null;
+        if (path.startsWith('http')) return path;
+
+        // If it's an absolute path from the server (e.g., /app/uploads/...), extract the relative part
+        if (path.includes('/uploads/')) {
+            const index = path.indexOf('/uploads/');
+            path = path.substring(index); // results in /uploads/...
+        }
+
+        // Ensure we use the /api/uploads proxy
+        if (path.startsWith('/uploads/')) {
+            path = `/api${path}`;
+        } else if (path.startsWith('uploads/')) {
+            path = `/api/${path}`;
+        } else if (!path.startsWith('/') && !path.includes('/')) {
+            // If it's just a filename, assume it's in a default uploads location
+            // Checking common subdirs if we can guess, but defaulting to root uploads
+            path = `/api/uploads/${path}`;
+        }
+
+        return path.startsWith('/') ? path : `/${path}`;
     };
 
     return (
@@ -172,18 +194,38 @@ const CardiologyViewer = ({ isOpen, onClose, type, documents, patientName }) => 
                         </div>
                         <div className="flex-1 overflow-y-auto p-4 space-y-3">
                             {filteredDocs.map(doc => (
-                                <StudyCard
-                                    key={doc.id}
-                                    doc={doc}
-                                    isSelected={selectedDoc?.id === doc.id || compareDoc?.id === doc.id}
-                                    onSelect={(d) => {
-                                        if (isComparing) {
-                                            setCompareDoc(d);
-                                        } else {
-                                            setSelectedDoc(d);
-                                        }
-                                    }}
-                                />
+                                <div key={doc.id} className="relative group">
+                                    <StudyCard
+                                        doc={doc}
+                                        isSelected={selectedDoc?.id === doc.id || compareDoc?.id === doc.id}
+                                        onSelect={(d) => {
+                                            if (isComparing) {
+                                                setCompareDoc(d);
+                                            } else {
+                                                setSelectedDoc(d);
+                                            }
+                                        }}
+                                    />
+                                    <button
+                                        onClick={async (e) => {
+                                            e.stopPropagation();
+                                            if (window.confirm('Are you sure you want to delete this study? This action cannot be undone.')) {
+                                                try {
+                                                    await documentsAPI.delete(doc.id);
+                                                    window.dispatchEvent(new CustomEvent('patient-data-updated'));
+                                                    if (selectedDoc?.id === doc.id) setSelectedDoc(null);
+                                                    if (compareDoc?.id === doc.id) setCompareDoc(null);
+                                                } catch (err) {
+                                                    alert('Failed to delete study');
+                                                }
+                                            }
+                                        }}
+                                        className="absolute top-2 right-2 p-1.5 bg-white/90 text-red-500 rounded-lg shadow-sm hover:bg-red-500 hover:text-white border border-gray-100 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10"
+                                        title="Delete Study"
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
                             ))}
                         </div>
                     </div>
@@ -312,6 +354,29 @@ const CardiologyViewer = ({ isOpen, onClose, type, documents, patientName }) => 
                                     </button>
                                     <button className="w-full py-3 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all">
                                         Request Specialist Review
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            if (!selectedDoc) return;
+                                            if (window.confirm('PERMANENT DELETION: Are you sure you want to delete this cardiology study? This cannot be undone.')) {
+                                                try {
+                                                    await documentsAPI.delete(selectedDoc.id);
+                                                    window.dispatchEvent(new CustomEvent('patient-data-updated'));
+                                                    setSelectedDoc(null);
+                                                    if (compareDoc?.id === selectedDoc.id) setCompareDoc(null);
+                                                    // Force a refresh of the parent's document list
+                                                    if (onClose) {
+                                                        alert('Study deleted successfully');
+                                                        onClose();
+                                                    }
+                                                } catch (err) {
+                                                    alert('Failed to delete study');
+                                                }
+                                            }
+                                        }}
+                                        className="w-full py-2 bg-red-50 text-red-600 rounded-xl text-xs font-bold hover:bg-red-100 transition-all border border-red-100 mt-2 flex items-center justify-center gap-2"
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" /> Delete This Study
                                     </button>
                                 </div>
                             </div>
