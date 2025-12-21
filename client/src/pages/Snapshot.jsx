@@ -220,17 +220,23 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
             // Fetch additional data
             try {
-                const [familyHistResponse, socialHistResponse] = await Promise.all([
+                const [familyHistResponse, socialHistResponse, ordersResponse, referralsResponse] = await Promise.all([
                     patientsAPI.getFamilyHistory(id).catch(() => ({ data: [] })),
-                    patientsAPI.getSocialHistory(id).catch(() => ({ data: null }))
+                    patientsAPI.getSocialHistory(id).catch(() => ({ data: null })),
+                    ordersAPI.getByPatient(id).catch(() => ({ data: [] })),
+                    referralsAPI.getByPatient(id).catch(() => ({ data: [] }))
                 ]);
 
                 setFamilyHistory(familyHistResponse?.data || []);
                 setSocialHistory(socialHistResponse?.data || null);
+                setOrders(ordersResponse?.data || []);
+                setReferrals(referralsResponse?.data || []);
             } catch (error) {
                 console.error('Error fetching additional data:', error);
                 setFamilyHistory([]);
                 setSocialHistory(null);
+                setOrders([]);
+                setReferrals([]);
             }
         } catch (error) {
             console.error('Could not refresh patient data:', error);
@@ -1278,21 +1284,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     )}
                                 </div>
 
-                                {/* Open Chart - Redesigned */}
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setPatientChartTab('history');
-                                        setShowPatientChart(true);
-                                    }}
-                                    className="flex items-center justify-center gap-1 px-2.5 py-1 text-xs font-semibold text-white rounded transition-all whitespace-nowrap shadow-sm hover:shadow-md"
-                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                    onMouseEnter={(e) => (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
-                                    onMouseLeave={(e) => (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
-                                >
-                                    <Eye className="w-3 h-3" />
-                                    <span>Chart</span>
-                                </button>
+
 
                                 {/* Emergency Contact */}
                                 {(patient.emergency_contact_name || patient.emergency_contact_phone) && (
@@ -1756,40 +1748,43 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
                                 {/* Right Column - PAMFOS, Vitals, EKG, ECHO with more space */}
                                 <div className="lg:col-span-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {/* Allergies Module */}
+                                    {/* Allergies Module - Compact like Social History */}
                                     <div className="bg-white rounded-lg shadow-sm border border-red-200 hover:shadow-md transition-shadow">
                                         <div className="p-2 border-b border-gray-200 flex items-center justify-between">
-                                            <div className="flex items-center space-x-2">
-                                                <AlertCircle className="w-4 h-4 text-red-600" />
-                                                <h3 className="font-semibold text-sm text-gray-900">Allergies</h3>
+                                            <div className="flex items-center space-x-1.5">
+                                                <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+                                                <h3 className="font-semibold text-xs text-gray-900">Allergies</h3>
+                                                {allergies.length > 0 && (
+                                                    <span className="text-[10px] text-gray-500 flex-shrink-0">({allergies.length})</span>
+                                                )}
                                             </div>
                                             <button
                                                 onClick={() => {
                                                     setPatientDataManagerTab('allergies');
                                                     setShowPatientDataManager(true);
                                                 }}
-                                                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                                                className="text-[10px] text-primary-600 hover:text-primary-700 font-medium"
                                             >
                                                 Manage
                                             </button>
                                         </div>
-                                        <div className="p-2">
+                                        <div className="p-1.5">
                                             {allergies.length > 0 ? (
-                                                <div className="space-y-1.5">
+                                                <div className="space-y-0.5">
                                                     {allergies.slice(0, 3).map(allergy => (
-                                                        <div key={allergy.id} className="pb-1.5 border-b border-gray-100 last:border-b-0 last:pb-0">
-                                                            <p className="font-medium text-xs text-red-900">{allergy.allergen}</p>
+                                                        <div key={allergy.id} className="pb-0.5 border-b border-gray-100 last:border-b-0 last:pb-0">
+                                                            <p className="font-medium text-[11px] text-red-900 leading-tight">{allergy.allergen}</p>
                                                             {allergy.reaction && (
-                                                                <p className="text-xs text-gray-600">Reaction: {allergy.reaction}</p>
+                                                                <p className="text-[10px] text-gray-600 leading-tight truncate">Reaction: {allergy.reaction}</p>
                                                             )}
                                                         </div>
                                                     ))}
                                                     {allergies.length > 3 && (
-                                                        <p className="text-xs text-gray-500 text-center pt-1">+{allergies.length - 3} more</p>
+                                                        <p className="text-[10px] text-gray-500 text-center pt-0.5">+{allergies.length - 3} more</p>
                                                     )}
                                                 </div>
                                             ) : (
-                                                <p className="text-xs text-gray-500 text-center py-2">No known allergies</p>
+                                                <p className="text-[11px] text-gray-500 text-center py-2">No known allergies</p>
                                             )}
                                         </div>
                                     </div>
