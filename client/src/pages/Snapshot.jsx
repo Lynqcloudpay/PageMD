@@ -55,6 +55,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const [showPhotoModal, setShowPhotoModal] = useState(false);
     const [photoMode, setPhotoMode] = useState(null);
     const [capturedPhoto, setCapturedPhoto] = useState(null);
+    const [locallyUploadedPhoto, setLocallyUploadedPhoto] = useState(null);
     const [photoVersion, setPhotoVersion] = useState(0); // Track photo updates for cache busting
     const fileInputRef = React.useRef(null);
     const videoRef = React.useRef(null);
@@ -1084,7 +1085,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 const newPhotoUrl = uploadResponse.data.photoUrl || uploadResponse.data.patient?.photo_url;
 
                 // Update local state immediately for snappy UI using the local base64
-                // This ensures the photo shows up immediately even if there's a slight server delay/proxy lag
+                // We keep this in a separate state to prevent it from being overwritten by refreshPatientData
+                setLocallyUploadedPhoto(capturedPhoto);
+
                 setPatient(prev => ({
                     ...prev,
                     photo_url: capturedPhoto
@@ -1170,58 +1173,86 @@ const Snapshot = ({ showNotesOnly = false }) => {
         return `${url}?v=${photoVersion}`;
     }, [patient?.photo_url, photoVersion]);
 
-    // Dedicated Photo Component for the header
+    // Dedicated Photo Component for the header - Redesigned for absolute reliability
     const PatientHeaderPhoto = () => {
         const [imgError, setImgError] = useState(false);
-        const [imgLoaded, setImgLoaded] = useState(false);
+        const [loadAttempt, setLoadAttempt] = useState(0);
 
-        // Reset error state when photoUrl changes
+        // Final effective URL to use
+        const effectivePhotoUrl = useMemo(() => {
+            // Priority 1: If we just uploaded a photo, use that base64 (never fails)
+            if (locallyUploadedPhoto) return locallyUploadedPhoto;
+
+            // Priority 2: Use the memoized photoUrl from server/state
+            return photoUrl;
+        }, [locallyUploadedPhoto, photoUrl]);
+
+        // When the effective URL changes, reset the error state and try again
         useEffect(() => {
             setImgError(false);
-            setImgLoaded(false);
-        }, [photoUrl]);
+            setLoadAttempt(0);
+        }, [effectivePhotoUrl]);
+
+        const handleClick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setShowPhotoModal(true);
+        };
+
+        const handleImageError = () => {
+            console.warn(`Failed to load photo at attempt ${loadAttempt}:`, effectivePhotoUrl?.substring(0, 50));
+
+            // If it's a server URL (not base64) and we haven't reached max retries, try again
+            if (effectivePhotoUrl && !effectivePhotoUrl.startsWith('data:') && loadAttempt < 3) {
+                setTimeout(() => {
+                    setLoadAttempt(prev => prev + 1);
+                }, 1000); // Wait 1s and try again
+            } else {
+                setImgError(true);
+            }
+        };
 
         return (
-            <button
-                onClick={() => setShowPhotoModal(true)}
-                className={`w-20 h-20 rounded-full flex items-center justify-center transition-all cursor-pointer relative group overflow-hidden flex-shrink-0 ring-4 ring-white shadow-xl ${!photoUrl || imgError ? 'bg-gradient-to-br from-gray-100 to-gray-200' : 'bg-white'}`}
-                title="Click to change photo"
-            >
-                {photoUrl && !imgError ? (
-                    <>
-                        {!imgLoaded && (
-                            <div className="absolute inset-0 flex items-center justify-center overflow-hidden rounded-full">
-                                <div className="w-full h-full bg-gray-100 animate-pulse flex items-center justify-center">
-                                    <User className="w-10 h-10 text-gray-300" />
-                                </div>
-                            </div>
-                        )}
+            <div className="relative group flex-shrink-0">
+                <button
+                    onClick={handleClick}
+                    className={`
+                        w-20 h-20 rounded-full flex items-center justify-center 
+                        transition-all duration-300 cursor-pointer relative 
+                        overflow-hidden ring-4 ring-white shadow-xl
+                        ${!effectivePhotoUrl || imgError ? 'bg-gradient-to-br from-indigo-50 to-blue-100' : 'bg-white'}
+                        hover:ring-blue-100 hover:shadow-2xl hover:scale-105
+                    `}
+                    title="Change Profile Photo"
+                >
+                    {effectivePhotoUrl && !imgError ? (
                         <img
-                            src={photoUrl}
-                            alt={`${patient?.first_name} ${patient?.last_name}`}
-                            className={`w-full h-full object-cover rounded-full transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
-                            onLoad={() => setImgLoaded(true)}
-                            onError={(e) => {
-                                console.error('Failed to load image:', photoUrl);
-                                setImgError(true);
-                            }}
+                            key={`${effectivePhotoUrl}-${loadAttempt}`}
+                            src={effectivePhotoUrl}
+                            alt="Patient profile"
+                            className="w-full h-full object-cover rounded-full"
+                            onError={handleImageError}
                         />
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Camera className="w-6 h-6 text-white" />
+                    ) : (
+                        <div className="flex flex-col items-center justify-center">
+                            <User className="w-10 h-10 text-blue-300" />
+                            <div className="absolute inset-0 bg-blue-600/5 group-hover:bg-blue-600/10 transition-colors" />
                         </div>
-                    </>
-                ) : (
-                    <>
-                        <div className="flex flex-col items-center">
-                            <User className="w-10 h-10 text-gray-400" />
-                            <Plus className="w-3 h-3 text-gray-400 absolute bottom-4 right-4 bg-white rounded-full shadow-sm" />
-                        </div>
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Camera className="w-5 h-5 text-gray-600" />
-                        </div>
-                    </>
+                    )}
+
+                    {/* Hover Overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Camera className="w-6 h-6 text-white drop-shadow-md" />
+                    </div>
+                </button>
+
+                {/* Badge icon for empty states */}
+                {(!effectivePhotoUrl || imgError) && (
+                    <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-white rounded-full shadow-lg flex items-center justify-center ring-2 ring-indigo-50">
+                        <Plus className="w-4 h-4 text-blue-600 font-bold" />
+                    </div>
                 )}
-            </button>
+            </div>
         );
     };
 
