@@ -1664,6 +1664,47 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
                                 {/* Medications and Problem List - Side by side, thinner */}
                                 <div className="lg:col-span-1 space-y-4">
+                                    {/* Allergies Module - Smallest Card */}
+                                    <div className="bg-white rounded-lg shadow-sm border border-red-100 hover:shadow-md transition-shadow">
+                                        <div className="p-1.5 border-b border-gray-100 flex items-center justify-between">
+                                            <div className="flex items-center space-x-1">
+                                                <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+                                                <h3 className="font-semibold text-[11px] text-gray-900">Allergies</h3>
+                                                {allergies.length > 0 && (
+                                                    <span className="text-[10px] text-gray-500 flex-shrink-0">({allergies.length})</span>
+                                                )}
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    setPatientDataManagerTab('allergies');
+                                                    setShowPatientDataManager(true);
+                                                }}
+                                                className="text-[10px] text-primary-600 hover:text-primary-700 font-medium"
+                                            >
+                                                Manage
+                                            </button>
+                                        </div>
+                                        <div className="p-1.5">
+                                            {allergies.length > 0 ? (
+                                                <div className="space-y-1">
+                                                    {allergies.slice(0, 3).map(allergy => (
+                                                        <div key={allergy.id} className="pb-1 border-b border-gray-50 last:border-b-0 last:pb-0">
+                                                            <p className="font-medium text-[10px] text-red-900 leading-tight">{allergy.allergen}</p>
+                                                            {allergy.reaction && (
+                                                                <p className="text-[9px] text-gray-600 leading-tight truncate">Rxn: {allergy.reaction}</p>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                    {allergies.length > 3 && (
+                                                        <p className="text-[9px] text-gray-500 text-center pt-0.5">+{allergies.length - 3} more</p>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <p className="text-[10px] text-gray-500 text-center py-1.5">NKA</p>
+                                            )}
+                                        </div>
+                                    </div>
+
                                     {/* Medications Module - Taller */}
                                     <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
                                         <div className="p-2 border-b border-gray-200 flex items-center justify-between">
@@ -1759,46 +1800,6 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
                                 {/* Right Column - PAMFOS, Vitals, EKG, ECHO with more space */}
                                 <div className="lg:col-span-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {/* Allergies Module - Smallest Card */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-red-200 hover:shadow-md transition-shadow">
-                                        <div className="p-1 border-b border-gray-200 flex items-center justify-between">
-                                            <div className="flex items-center space-x-1">
-                                                <AlertCircle className="w-3 h-3 text-red-600" />
-                                                <h3 className="font-semibold text-[10px] text-gray-900">Allergies</h3>
-                                                {allergies.length > 0 && (
-                                                    <span className="text-[9px] text-gray-500 flex-shrink-0">({allergies.length})</span>
-                                                )}
-                                            </div>
-                                            <button
-                                                onClick={() => {
-                                                    setPatientDataManagerTab('allergies');
-                                                    setShowPatientDataManager(true);
-                                                }}
-                                                className="text-[9px] text-primary-600 hover:text-primary-700 font-medium"
-                                            >
-                                                Manage
-                                            </button>
-                                        </div>
-                                        <div className="p-1">
-                                            {allergies.length > 0 ? (
-                                                <div className="space-y-0.5">
-                                                    {allergies.slice(0, 2).map(allergy => (
-                                                        <div key={allergy.id} className="pb-0.5 border-b border-gray-100 last:border-b-0 last:pb-0">
-                                                            <p className="font-medium text-[10px] text-red-900 leading-tight">{allergy.allergen}</p>
-                                                            {allergy.reaction && (
-                                                                <p className="text-[9px] text-gray-600 leading-tight truncate">Reaction: {allergy.reaction}</p>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                    {allergies.length > 2 && (
-                                                        <p className="text-[9px] text-gray-500 text-center pt-0.5">+{allergies.length - 2} more</p>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <p className="text-[10px] text-gray-500 text-center py-1">No known allergies</p>
-                                            )}
-                                        </div>
-                                    </div>
 
                                     {/* Recent Vitals Module */}
                                     <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
