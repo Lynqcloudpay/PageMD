@@ -1079,8 +1079,55 @@ const VisitNote = () => {
     const removeDiagnosisFromAssessment = (index) => {
         setNoteData(prev => {
             const lines = prev.assessment.split('\n').filter(l => l.trim());
+            const deletedDiagnosis = lines[index]; // Get the diagnosis being deleted
             lines.splice(index, 1);
-            return { ...prev, assessment: lines.join('\n') };
+
+            // Update planStructured - if any orders are associated with the deleted diagnosis, move them to "Other"
+            let updatedPlanStructured = prev.planStructured || [];
+            if (deletedDiagnosis && updatedPlanStructured.length > 0) {
+                // Find if there's an entry in planStructured that matches the deleted diagnosis
+                const matchingPlanIndex = updatedPlanStructured.findIndex(item =>
+                    item.diagnosis && deletedDiagnosis.includes(item.diagnosis)
+                );
+
+                if (matchingPlanIndex !== -1) {
+                    // Get the orders from the deleted diagnosis
+                    const ordersToMove = updatedPlanStructured[matchingPlanIndex].orders;
+
+                    // Remove the deleted diagnosis entry
+                    updatedPlanStructured = updatedPlanStructured.filter((_, idx) => idx !== matchingPlanIndex);
+
+                    // If there are orders, move them to "Other" diagnosis
+                    if (ordersToMove && ordersToMove.length > 0) {
+                        const otherIndex = updatedPlanStructured.findIndex(item => item.diagnosis === 'Other');
+                        if (otherIndex !== -1) {
+                            // Append to existing "Other" diagnosis
+                            updatedPlanStructured[otherIndex].orders = [
+                                ...updatedPlanStructured[otherIndex].orders,
+                                ...ordersToMove
+                            ];
+                        } else {
+                            // Create new "Other" diagnosis entry
+                            updatedPlanStructured.push({
+                                diagnosis: 'Other',
+                                orders: ordersToMove
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Update plan text from structured data
+            const updatedPlanText = updatedPlanStructured.length > 0
+                ? formatPlanText(updatedPlanStructured)
+                : prev.plan;
+
+            return {
+                ...prev,
+                assessment: lines.join('\n'),
+                planStructured: updatedPlanStructured,
+                plan: updatedPlanText
+            };
         });
     };
 
