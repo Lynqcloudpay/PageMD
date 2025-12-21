@@ -286,16 +286,16 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
     <Modal isOpen={isOpen} onClose={handleClose} title="Integrated E-Prescribe" size="xl">
       <div className="flex flex-col h-full bg-white rounded-xl overflow-hidden">
 
-        {/* Improved Step Header */}
-        <div className="px-8 py-4 bg-gray-50 border-b border-gray-100">
-          <div className="flex items-center justify-center gap-8">
-            <div className={`flex items-center gap-2 pb-2 border-b-2 transition-all ${step === 1 ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-400'}`}>
-              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${step === 1 ? 'bg-primary-500 text-white' : 'bg-gray-200 text-gray-500'}`}>1</span>
-              <span className="text-sm font-bold">Order Entry</span>
+        {/* Compact Step Header */}
+        <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
+          <div className="flex items-center justify-center gap-4">
+            <div className={`flex items-center gap-1.5 pb-1 border-b-2 transition-all ${step === 1 ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-400'}`}>
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step === 1 ? 'bg-primary-500 text-white' : 'bg-gray-200 text-gray-500'}`}>1</span>
+              <span className="text-xs font-bold">Order Entry</span>
             </div>
-            <div className={`flex items-center gap-2 pb-2 border-b-2 transition-all ${step === 2 ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-400'}`}>
-              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${step === 2 ? 'bg-primary-500 text-white' : 'bg-gray-200 text-gray-500'}`}>2</span>
-              <span className="text-sm font-bold">Review & Sign</span>
+            <div className={`flex items-center gap-1.5 pb-1 border-b-2 transition-all ${step === 2 ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-400'}`}>
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step === 2 ? 'bg-primary-500 text-white' : 'bg-gray-200 text-gray-500'}`}>2</span>
+              <span className="text-xs font-bold">Review & Sign</span>
             </div>
           </div>
         </div>
