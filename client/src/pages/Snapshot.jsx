@@ -1658,9 +1658,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                         ) : null}
 
                         {!layoutEditMode ? (
-                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
                                 {/* Medications and Problem List - Side by side, thinner */}
-                                <div className="lg:col-span-2 grid grid-cols-2 gap-4">
+                                <div className="lg:col-span-1 space-y-4">
                                     {/* Medications Module - Taller */}
                                     <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
                                         <div className="p-2 border-b border-gray-200 flex items-center justify-between">
@@ -1681,10 +1681,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 Manage
                                             </button>
                                         </div>
-                                        <div className="p-1.5 max-h-[400px] overflow-y-auto">
+                                        <div className="p-1.5 max-h-[180px] overflow-y-auto">
                                             {medications.length > 0 ? (
                                                 <div className="space-y-0.5">
-                                                    {medications.map(med => (
+                                                    {medications.slice(0, 5).map(med => (
                                                         <div key={med.id} className="py-0.5 border-b border-gray-100 last:border-b-0">
                                                             <div className="flex items-start justify-between gap-1">
                                                                 <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap">
@@ -1700,6 +1700,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             </div>
                                                         </div>
                                                     ))}
+                                                    {medications.length > 5 && (
+                                                        <p className="text-[10px] text-gray-500 text-center pt-1">+{medications.length - 5} more</p>
+                                                    )}
                                                 </div>
                                             ) : (
                                                 <p className="text-[11px] text-gray-500 text-center py-4">No medications</p>
@@ -1727,10 +1730,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 Manage
                                             </button>
                                         </div>
-                                        <div className="p-1.5 max-h-[400px] overflow-y-auto">
+                                        <div className="p-1.5 max-h-[180px] overflow-y-auto">
                                             {problems.length > 0 ? (
                                                 <div className="space-y-0.5">
-                                                    {problems.map(prob => (
+                                                    {problems.slice(0, 5).map(prob => (
                                                         <div key={prob.id} className="py-0.5 border-b border-gray-100 last:border-b-0">
                                                             <div className="flex items-start justify-between gap-1">
                                                                 <div className="flex-1 min-w-0 flex items-center gap-1.5">
@@ -1751,8 +1754,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     </div>
                                 </div>
 
-                                {/* Right Column - Other modules arranged in 2 columns */}
-                                <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Right Column - PAMFOS, Vitals, EKG, ECHO with more space */}
+                                <div className="lg:col-span-5 grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {/* Allergies Module */}
                                     <div className="bg-white rounded-lg shadow-sm border border-red-200 hover:shadow-md transition-shadow">
                                         <div className="p-2 border-b border-gray-200 flex items-center justify-between">
