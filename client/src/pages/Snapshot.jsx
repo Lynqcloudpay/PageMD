@@ -1185,8 +1185,19 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 </div>
                             </div>
 
-                            {/* Right column reserved for future header actions (currently empty) */}
-                            <div className="flex items-center space-x-2" />
+                            {/* Right column - Chart Button */}
+                            <div className="flex items-center space-x-2">
+                                <button
+                                    onClick={() => {
+                                        setPatientChartTab('history');
+                                        setShowPatientChart(true);
+                                    }}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-blue-50 border-2 border-blue-400 hover:border-blue-500 rounded-lg transition-all shadow-sm hover:shadow-md"
+                                >
+                                    <Eye className="w-4 h-4 text-blue-600" />
+                                    <span className="text-sm font-bold text-blue-700">Open Chart</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -1285,55 +1296,39 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 </div>
 
 
-
                                 {/* Emergency Contact */}
-                                {(patient.emergency_contact_name || patient.emergency_contact_phone) && (
-                                    <div
-                                        onClick={() => handleOpenDemographics('emergency')}
-                                        className="group cursor-pointer bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-primary-300 rounded p-1 transition-all relative text-center"
-                                    >
-                                        <div className="flex items-center justify-center mb-0.5 relative">
-                                            <div className="flex items-center space-x-0.5">
-                                                <Users className="w-2.5 h-2.5 text-primary-600" />
-                                                <span className="text-[9px] font-semibold text-gray-700 uppercase tracking-wide">Emergency</span>
-                                            </div>
-                                            <Edit className="w-2 h-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity absolute right-0" />
-                                        </div>
-                                        <div className="text-[11px] font-medium text-gray-900 leading-tight line-clamp-2">
-                                            {patient.emergency_contact_name && (
-                                                <div>
-                                                    {patient.emergency_contact_name}
-                                                    {patient.emergency_contact_phone && (
-                                                        <span className="text-[9px] text-gray-600"> • {formatPhone(patient.emergency_contact_phone)}</span>
-                                                    )}
-                                                </div>
-                                            )}
-                                            {!patient.emergency_contact_name && patient.emergency_contact_phone && (
-                                                <div>{formatPhone(patient.emergency_contact_phone)}</div>
-                                            )}
-                                            {patient.emergency_contact_relationship && (
-                                                <div className="text-[9px] text-gray-600 mt-0.5 leading-tight">
-                                                    {patient.emergency_contact_relationship}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-
-
-                                {/* Chart Button - Redesigned */}
                                 <div
-                                    onClick={() => {
-                                        setPatientChartTab('history');
-                                        setShowPatientChart(true);
-                                    }}
-                                    className="group cursor-pointer bg-white hover:bg-blue-50 border-2 border-blue-400 hover:border-blue-500 rounded p-1.5 transition-all relative text-center shadow-sm hover:shadow-md"
+                                    onClick={() => handleOpenDemographics('emergency')}
+                                    className="group cursor-pointer bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-primary-300 rounded p-1 transition-all relative text-center"
                                 >
-                                    <div className="flex items-center justify-center gap-1 mb-0.5">
-                                        <Eye className="w-3.5 h-3.5 text-blue-600" />
-                                        <span className="text-xs font-bold text-blue-700 uppercase tracking-wide">Open Chart</span>
+                                    <div className="flex items-center justify-center mb-0.5 relative">
+                                        <div className="flex items-center space-x-0.5">
+                                            <Users className="w-2.5 h-2.5 text-primary-600" />
+                                            <span className="text-[9px] font-semibold text-gray-700 uppercase tracking-wide">Emergency</span>
+                                        </div>
+                                        <Edit className="w-2 h-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity absolute right-0" />
                                     </div>
-                                    <div className="text-[9px] text-gray-600 font-medium">View Full Record</div>
+                                    <div className="text-[11px] font-medium text-gray-900 leading-tight line-clamp-2">
+                                        {patient.emergency_contact_name && (
+                                            <div>
+                                                {patient.emergency_contact_name}
+                                                {patient.emergency_contact_phone && (
+                                                    <span className="text-[9px] text-gray-600"> • {formatPhone(patient.emergency_contact_phone)}</span>
+                                                )}
+                                            </div>
+                                        )}
+                                        {!patient.emergency_contact_name && patient.emergency_contact_phone && (
+                                            <div>{formatPhone(patient.emergency_contact_phone)}</div>
+                                        )}
+                                        {!patient.emergency_contact_name && !patient.emergency_contact_phone && (
+                                            <div className="text-gray-500">Not on file</div>
+                                        )}
+                                        {patient.emergency_contact_relationship && (
+                                            <div className="text-[9px] text-gray-600 mt-0.5 leading-tight">
+                                                {patient.emergency_contact_relationship}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
