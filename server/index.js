@@ -57,7 +57,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
-      connectSrc: ["'self'", "https://bemypcp.com", "http://localhost:3000", "http://localhost:5173"],
+      connectSrc: ["'self'", "https://bemypcp.com", "http://localhost:3000", "http://localhost:5173", "blob:"],
     },
   },
 }));

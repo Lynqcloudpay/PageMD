@@ -40,6 +40,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const [referrals, setReferrals] = useState([]);
     const [documents, setDocuments] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState(false);
+    const [photoLoading, setPhotoLoading] = useState(false);
     const [expandedNotes, setExpandedNotes] = useState(new Set());
     const [showPatientChart, setShowPatientChart] = useState(false);
     const [patientChartTab, setPatientChartTab] = useState('history');
@@ -199,6 +201,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const handleCreateNewVisit = async () => {
         if (!id) return;
         try {
+            setActionLoading(true);
             // Force create new visit using the updated API
             const response = await visitsAPI.findOrCreate(id, 'Office Visit', true);
             const newNote = response.data;
@@ -210,6 +213,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
         } catch (error) {
             console.error('Error creating new visit:', error);
             alert('Failed to create new visit.');
+        } finally {
+            setActionLoading(false);
         }
     };
 
@@ -1048,7 +1053,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const handleSavePhoto = async () => {
         if (!capturedPhoto || !id) return;
 
-        setLoading(true);
+        console.log('Attempting to save photo for patient:', id);
+        setPhotoLoading(true);
         try {
             const uploadResponse = await patientsAPI.uploadPhotoBase64(id, capturedPhoto);
 
@@ -1070,12 +1076,19 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
                 // Trigger global update event
                 window.dispatchEvent(new CustomEvent('patient-data-updated'));
+
+                showSuccess('Profile photo updated successfully');
+            } else {
+                console.error('Upload response missing data:', uploadResponse);
+                showError('Failed to save photo. Unexpected server response.');
             }
         } catch (error) {
             console.error('Error uploading photo:', error);
-            showError('Failed to upload photo. Please try again.');
+            const errMsg = error.response?.data?.error || error.response?.data?.message || error.message;
+            console.error('Error details:', errMsg);
+            showError(`Failed to upload photo: ${errMsg}`);
         } finally {
-            setLoading(false);
+            setPhotoLoading(false);
         }
     };
 
@@ -1083,12 +1096,15 @@ const Snapshot = ({ showNotesOnly = false }) => {
         if (!confirm('Are you sure you want to remove this patient photo?')) return;
 
         try {
+            setActionLoading(true);
             // We don't have a specific delete photo API, so we update with null
             await patientsAPI.update(id, { photoUrl: null });
             setPatient(prev => ({ ...prev, photo_url: null }));
             window.dispatchEvent(new CustomEvent('patient-data-updated'));
         } catch (error) {
             showError('Failed to remove photo.');
+        } finally {
+            setActionLoading(false);
         }
     };
 
@@ -2679,15 +2695,15 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 <div className="flex w-full gap-3">
                                     <button
                                         onClick={handleSavePhoto}
-                                        disabled={loading}
+                                        disabled={photoLoading}
                                         className="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-200"
                                     >
-                                        {loading ? (
+                                        {photoLoading ? (
                                             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                                         ) : (
                                             <CheckCircle2 className="w-5 h-5" />
                                         )}
-                                        {loading ? 'Saving...' : 'Set Profile Photo'}
+                                        {photoLoading ? 'Saving...' : 'Set Profile Photo'}
                                     </button>
                                     <button
                                         onClick={() => {
