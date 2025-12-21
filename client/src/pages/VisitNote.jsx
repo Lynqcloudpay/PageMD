@@ -1909,103 +1909,95 @@ const VisitNote = () => {
                                         <h4 className="text-sm font-semibold text-gray-800">Other / Social History</h4>
                                     </div>
                                     <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                                        <div>
-                                            <label className="text-xs text-gray-500 block mb-1">Smoking Status</label>
-                                            <select
-                                                className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                                                value={socialHistory?.smoking_status || ''}
-                                                onChange={async (e) => {
-                                                    const val = e.target.value;
-                                                    try {
-                                                        const updated = { ...socialHistory, smoking_status: val };
-                                                        await patientsAPI.saveSocialHistory(id, updated);
-                                                        setSocialHistory(prev => ({ ...prev, smoking_status: val }));
-                                                        window.dispatchEvent(new Event('patient-data-updated'));
-                                                    } catch (e) { showToast('Failed to update', 'error'); }
-                                                }}
-                                            >
-                                                <option value="">Unknown</option>
-                                                <option value="Never smoker">Never smoker</option>
-                                                <option value="Former smoker">Former smoker</option>
-                                                <option value="Current smoker">Current smoker</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-gray-500 block mb-1">Alcohol Use</label>
-                                            <select
-                                                className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                                                value={socialHistory?.alcohol_use || ''}
-                                                onChange={async (e) => {
-                                                    const val = e.target.value;
-                                                    try {
-                                                        const updated = { ...socialHistory, alcohol_use: val };
-                                                        await patientsAPI.saveSocialHistory(id, updated);
-                                                        setSocialHistory(prev => ({ ...prev, alcohol_use: val }));
-                                                        window.dispatchEvent(new Event('patient-data-updated'));
-                                                    } catch (e) { showToast('Failed to update', 'error'); }
-                                                }}
-                                            >
-                                                <option value="">Unknown</option>
-                                                <option value="None">None</option>
-                                                <option value="Social">Social</option>
-                                                <option value="Moderate">Moderate</option>
-                                                <option value="Heavy">Heavy</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-gray-500 block mb-1">Occupation</label>
-                                            <input
-                                                className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                                                value={socialHistory?.occupation || ''}
-                                                placeholder="Occupation"
-                                                onBlur={async (e) => {
-                                                    const val = e.target.value;
-                                                    try {
-                                                        const updated = { ...socialHistory, occupation: val };
-                                                        await patientsAPI.saveSocialHistory(id, updated);
-                                                        setSocialHistory(prev => ({ ...prev, occupation: val }));
-                                                        window.dispatchEvent(new Event('patient-data-updated'));
-                                                    } catch (e) { showToast('Failed to update', 'error'); }
-                                                }}
-                                                onChange={(e) => setSocialHistory(prev => ({ ...prev, occupation: e.target.value }))}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-gray-500 block mb-1">Diet</label>
-                                            <input
-                                                className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                                                value={socialHistory?.diet || ''}
-                                                placeholder="Diet details"
-                                                onBlur={async (e) => {
-                                                    const val = e.target.value;
-                                                    try {
-                                                        const updated = { ...socialHistory, diet: val };
-                                                        await patientsAPI.saveSocialHistory(id, updated);
-                                                        setSocialHistory(prev => ({ ...prev, diet: val }));
-                                                        window.dispatchEvent(new Event('patient-data-updated'));
-                                                    } catch (e) { showToast('Failed to update', 'error'); }
-                                                }}
-                                                onChange={(e) => setSocialHistory(prev => ({ ...prev, diet: e.target.value }))}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-gray-500 block mb-1">Exercise</label>
-                                            <input
-                                                className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                                                value={socialHistory?.exercise_frequency || ''}
-                                                placeholder="Frequency"
-                                                onBlur={async (e) => {
-                                                    const val = e.target.value;
-                                                    try {
-                                                        const updated = { ...socialHistory, exercise_frequency: val };
-                                                        await patientsAPI.saveSocialHistory(id, updated);
-                                                        setSocialHistory(prev => ({ ...prev, exercise_frequency: val }));
-                                                        window.dispatchEvent(new Event('patient-data-updated'));
-                                                    } catch (e) { showToast('Failed to update', 'error'); }
-                                                }}
-                                                onChange={(e) => setSocialHistory(prev => ({ ...prev, exercise_frequency: e.target.value }))}
-                                            />
-                                        </div>
+                                        {/* Helper to transform and save social history */}
+                                        {(() => {
+                                            const saveSocialHistory = async (changes) => {
+                                                try {
+                                                    const updatedState = { ...socialHistory, ...changes };
+                                                    // Map snake_case state to camelCase payload for backend
+                                                    const payload = {
+                                                        smokingStatus: updatedState.smoking_status,
+                                                        smokingPackYears: updatedState.smoking_pack_years,
+                                                        alcoholUse: updatedState.alcohol_use,
+                                                        alcoholQuantity: updatedState.alcohol_quantity,
+                                                        drugUse: updatedState.drug_use,
+                                                        exerciseFrequency: updatedState.exercise_frequency,
+                                                        diet: updatedState.diet,
+                                                        occupation: updatedState.occupation,
+                                                        livingSituation: updatedState.living_situation,
+                                                        notes: updatedState.notes
+                                                    };
+                                                    await patientsAPI.saveSocialHistory(id, payload);
+                                                    setSocialHistory(updatedState);
+                                                    window.dispatchEvent(new Event('patient-data-updated'));
+                                                } catch (e) {
+                                                    console.error('Error saving social history:', e);
+                                                    showToast('Failed to update social history', 'error');
+                                                }
+                                            };
+
+                                            return (
+                                                <>
+                                                    <div>
+                                                        <label className="text-xs text-gray-500 block mb-1">Smoking Status</label>
+                                                        <select
+                                                            className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                                            value={socialHistory?.smoking_status || ''}
+                                                            onChange={(e) => saveSocialHistory({ smoking_status: e.target.value })}
+                                                        >
+                                                            <option value="">Unknown</option>
+                                                            <option value="Never smoker">Never smoker</option>
+                                                            <option value="Former smoker">Former smoker</option>
+                                                            <option value="Current smoker">Current smoker</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs text-gray-500 block mb-1">Alcohol Use</label>
+                                                        <select
+                                                            className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                                            value={socialHistory?.alcohol_use || ''}
+                                                            onChange={(e) => saveSocialHistory({ alcohol_use: e.target.value })}
+                                                        >
+                                                            <option value="">Unknown</option>
+                                                            <option value="None">None</option>
+                                                            <option value="Social">Social</option>
+                                                            <option value="Moderate">Moderate</option>
+                                                            <option value="Heavy">Heavy</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs text-gray-500 block mb-1">Occupation</label>
+                                                        <input
+                                                            className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                                            value={socialHistory?.occupation || ''}
+                                                            placeholder="Occupation"
+                                                            onBlur={(e) => saveSocialHistory({ occupation: e.target.value })}
+                                                            onChange={(e) => setSocialHistory(prev => ({ ...prev, occupation: e.target.value }))}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs text-gray-500 block mb-1">Diet</label>
+                                                        <input
+                                                            className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                                            value={socialHistory?.diet || ''}
+                                                            placeholder="Diet details"
+                                                            onBlur={(e) => saveSocialHistory({ diet: e.target.value })}
+                                                            onChange={(e) => setSocialHistory(prev => ({ ...prev, diet: e.target.value }))}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs text-gray-500 block mb-1">Exercise</label>
+                                                        <input
+                                                            className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                                            value={socialHistory?.exercise_frequency || ''}
+                                                            placeholder="Frequency"
+                                                            onBlur={(e) => saveSocialHistory({ exercise_frequency: e.target.value })}
+                                                            onChange={(e) => setSocialHistory(prev => ({ ...prev, exercise_frequency: e.target.value }))}
+                                                        />
+                                                    </div>
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
                             </div>
