@@ -1888,51 +1888,6 @@ const VisitNote = () => {
                                     <Search className="w-3.5 h-3.5" />
                                     <span>Search ICD-10 Codes</span>
                                 </button>
-                                {/* Keep inline search as fallback */}
-                                <div className="relative mt-2">
-                                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
-                                    <input type="text" placeholder="Type to search ICD-10 codes or browse popular codes..." value={icd10Search}
-                                        onChange={(e) => {
-                                            setIcd10Search(e.target.value);
-                                            setShowIcd10Search(true);
-                                        }}
-                                        onFocus={() => {
-                                            // Show results when focused, even if empty
-                                            setShowIcd10Search(true);
-                                            // If no results yet and search is empty, load popular codes
-                                            if (icd10Results.length === 0 && icd10Search.trim().length === 0) {
-                                                codesAPI.searchICD10('').then(response => {
-                                                    if (response.data && response.data.length > 0) {
-                                                        setIcd10Results(response.data);
-                                                    }
-                                                }).catch(() => { });
-                                            }
-                                        }}
-                                        className="w-full pl-8 pr-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors"
-                                    />
-                                </div>
-                                {icd10Results.length > 0 && (
-                                    <div className="mb-2 border border-neutral-200 rounded-md bg-white shadow-lg max-h-40 overflow-y-auto">
-                                        {icd10Search.trim().length === 0 && (
-                                            <div className="p-2 bg-blue-50 border-b border-blue-200">
-                                                <p className="text-xs text-blue-800 font-medium">Popular Cardiology ICD-10 Codes ({icd10Results.length} codes)</p>
-                                            </div>
-                                        )}
-                                        {icd10Results.map((code) => (
-                                            <div key={code.code} className="p-2 border-b border-neutral-100 hover:bg-primary-50 transition-colors">
-                                                <button onClick={() => handleAddICD10(code, false)} className="w-full text-left">
-                                                    <div className="font-medium text-neutral-900 text-xs">{code.code}</div>
-                                                    <div className="text-xs text-neutral-600">{code.description}</div>
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                                {showIcd10Search && icd10Results.length === 0 && icd10Search.trim().length >= 2 && (
-                                    <div className="mb-2 border border-neutral-200 rounded-md bg-white p-3 text-center">
-                                        <p className="text-xs text-neutral-500">No codes found matching "{icd10Search}"</p>
-                                    </div>
-                                )}
                             </div>
                         )}
                         <div className="relative">
