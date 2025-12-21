@@ -57,33 +57,35 @@ router.get('/', requirePermission('patients:view_list'), async (req, res) => {
     let query = 'SELECT * FROM patients';
     const params = [];
     let paramCount = 0;
-    
+
     // All users can see all patients (CLINIC scope is now default for all roles)
     // Only filter by clinic_id if it exists in the user context
     query += ' WHERE 1=1';
-    
+
     // Filter by clinic_id if user has one (multi-tenant support)
     if (req.user.clinic_id) {
       paramCount++;
       query += ` AND clinic_id = $${paramCount}`;
       params.push(req.user.clinic_id);
     }
-    
+
     // Handle search parameter - check if search is provided and not empty
     if (search && search.trim()) {
       paramCount++;
       query += ` AND (first_name ILIKE $${paramCount} OR last_name ILIKE $${paramCount} OR mrn ILIKE $${paramCount})`;
       params.push(`%${search.trim()}%`);
     }
-    
+
     query += ` ORDER BY last_name, first_name LIMIT $${++paramCount} OFFSET $${++paramCount}`;
     params.push(parseInt(limit), parseInt(offset));
 
     const result = await pool.query(query, params);
-    
+
+    console.log(`[DEBUG] Patients search: query="${search || ''}", user="${req.user.email}", clinic="${req.user.clinic_id}", raw_count=${result.rows.length}`);
+
     // Decrypt PHI fields before sending response
     const decryptedPatients = await patientEncryptionService.decryptPatientsPHI(result.rows);
-    
+
     // Log audit
     const requestId = req.headers['x-request-id'] || crypto.randomUUID();
     await logAudit(
@@ -98,11 +100,11 @@ router.get('/', requirePermission('patients:view_list'), async (req, res) => {
       requestId,
       req.sessionId
     );
-    
+
     res.json(decryptedPatients);
   } catch (error) {
     console.error('Error fetching patients:', error);
-    
+
     // Log failed audit
     await logAudit(
       req.user?.id,
@@ -116,7 +118,7 @@ router.get('/', requirePermission('patients:view_list'), async (req, res) => {
       req.requestId,
       req.sessionId
     );
-    
+
     res.status(500).json({ error: 'Failed to fetch patients' });
   }
 });
@@ -132,12 +134,12 @@ router.get('/:id/snapshot', requirePermission('patients:view_chart'), async (req
     try {
       patient = await pool.query('SELECT * FROM patients WHERE id = $1', [id]);
       if (patient.rows.length === 0) {
-      return res.status(404).json({ error: 'Patient not found' });
-    }
+        return res.status(404).json({ error: 'Patient not found' });
+      }
       // Decrypt PHI fields
       patient.rows[0] = await patientEncryptionService.decryptPatientPHI(patient.rows[0]);
-  } catch (error) {
-    console.error('Error fetching patient:', error);
+    } catch (error) {
+      console.error('Error fetching patient:', error);
       throw new Error(`Failed to fetch patient: ${error.message}`);
     }
 
@@ -145,9 +147,9 @@ router.get('/:id/snapshot', requirePermission('patients:view_chart'), async (req
     let allergies = { rows: [] };
     try {
       allergies = await pool.query(
-      'SELECT * FROM allergies WHERE patient_id = $1 AND active = true ORDER BY created_at DESC',
-      [id]
-    );
+        'SELECT * FROM allergies WHERE patient_id = $1 AND active = true ORDER BY created_at DESC',
+        [id]
+      );
     } catch (error) {
       console.warn('Error fetching allergies (continuing):', error.message);
     }
@@ -156,9 +158,9 @@ router.get('/:id/snapshot', requirePermission('patients:view_chart'), async (req
     let medications = { rows: [] };
     try {
       medications = await pool.query(
-      'SELECT * FROM medications WHERE patient_id = $1 AND active = true ORDER BY created_at DESC',
-      [id]
-    );
+        'SELECT * FROM medications WHERE patient_id = $1 AND active = true ORDER BY created_at DESC',
+        [id]
+      );
     } catch (error) {
       console.warn('Error fetching medications (continuing):', error.message);
     }
@@ -167,9 +169,9 @@ router.get('/:id/snapshot', requirePermission('patients:view_chart'), async (req
     let problems = { rows: [] };
     try {
       problems = await pool.query(
-      'SELECT * FROM problems WHERE patient_id = $1 AND status = $2 ORDER BY created_at DESC',
-      [id, 'active']
-    );
+        'SELECT * FROM problems WHERE patient_id = $1 AND status = $2 ORDER BY created_at DESC',
+        [id, 'active']
+      );
     } catch (error) {
       console.warn('Error fetching problems (continuing):', error.message);
     }
@@ -178,7 +180,7 @@ router.get('/:id/snapshot', requirePermission('patients:view_chart'), async (req
     let visits = { rows: [] };
     try {
       visits = await pool.query(
-      `SELECT v.*, 
+        `SELECT v.*, 
               COALESCE(u.first_name, 'Unknown') as provider_first_name, 
               COALESCE(u.last_name, 'Provider') as provider_last_name
        FROM visits v
@@ -186,8 +188,8 @@ router.get('/:id/snapshot', requirePermission('patients:view_chart'), async (req
        WHERE v.patient_id = $1
        ORDER BY v.visit_date DESC
        LIMIT 3`,
-      [id]
-    );
+        [id]
+      );
     } catch (error) {
       console.warn('Error fetching visits (continuing):', error.message);
     }
@@ -197,10 +199,10 @@ router.get('/:id/snapshot', requirePermission('patients:view_chart'), async (req
     setTimeout(async () => {
       try {
         // Try to load clinical rules if it exists
-      try {
-        const { autoCreateAlerts } = require('../middleware/clinical-rules');
+        try {
+          const { autoCreateAlerts } = require('../middleware/clinical-rules');
           if (autoCreateAlerts && typeof autoCreateAlerts === 'function') {
-        await autoCreateAlerts(id);
+            await autoCreateAlerts(id);
           }
         } catch (requireError) {
           // Module doesn't exist or function not available - that's OK
@@ -216,10 +218,10 @@ router.get('/:id/snapshot', requirePermission('patients:view_chart'), async (req
     let lastVisit = { rows: [] };
     try {
       lastVisit = await pool.query(
-      `SELECT vitals FROM visits WHERE patient_id = $1 AND vitals IS NOT NULL
+        `SELECT vitals FROM visits WHERE patient_id = $1 AND vitals IS NOT NULL
        ORDER BY visit_date DESC LIMIT 1`,
-      [id]
-    );
+        [id]
+      );
     } catch (error) {
       console.warn('Error fetching last vitals (continuing):', error.message);
     }
@@ -259,7 +261,7 @@ router.get('/:id/snapshot', requirePermission('patients:view_chart'), async (req
     console.error('Error code:', error.code);
     console.error('Error detail:', error.detail);
     console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch snapshot',
       message: error.message,
       details: process.env.NODE_ENV === 'development' ? {
@@ -277,7 +279,7 @@ router.get('/:id', requirePermission('patients:view_chart'), async (req, res) =>
   try {
     const { id } = req.params;
     const result = await pool.query('SELECT * FROM patients WHERE id = $1', [id]);
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Patient not found' });
     }
@@ -303,7 +305,7 @@ router.get('/:id', requirePermission('patients:view_chart'), async (req, res) =>
     res.json(decryptedPatient);
   } catch (error) {
     console.error('Error fetching patient:', error);
-    
+
     // Log failed audit
     await logAudit(
       req.user?.id,
@@ -317,8 +319,8 @@ router.get('/:id', requirePermission('patients:view_chart'), async (req, res) =>
       req.requestId,
       req.sessionId
     );
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       error: 'Failed to fetch patient',
       details: process.env.NODE_ENV === 'development' ? {
         message: error.message,
@@ -346,7 +348,7 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
       race,
       ethnicity,
       maritalStatus,
-      
+
       // Contact
       phone,
       phoneSecondary,
@@ -360,7 +362,7 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
       communicationPreference,
       consentToText,
       consentToEmail,
-      
+
       // Address
       addressLine1,
       addressLine2,
@@ -369,12 +371,12 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
       zip,
       country,
       addressType,
-      
+
       // Employment
       employmentStatus,
       occupation,
       employerName,
-      
+
       // Emergency Contact
       emergencyContactName,
       emergencyContactPhone,
@@ -383,7 +385,7 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
       emergencyContact2Name,
       emergencyContact2Phone,
       emergencyContact2Relationship,
-      
+
       // Insurance
       insuranceProvider,
       insuranceId,
@@ -397,7 +399,7 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
       insuranceEffectiveDate,
       insuranceExpiryDate,
       insuranceNotes,
-      
+
       // Pharmacy
       pharmacyName,
       pharmacyAddress,
@@ -405,7 +407,7 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
       pharmacyNpi,
       pharmacyFax,
       pharmacyPreferred,
-      
+
       // Additional
       referralSource,
       smokingStatus,
@@ -652,7 +654,7 @@ router.put('/:id', requirePermission('patients:edit_demographics'), async (req, 
     // Log audit (non-blocking, don't fail if it errors)
     if (req.user && req.user.id) {
       try {
-    await logAudit(req.user.id, 'update_patient', 'patient', id, { fields: Object.keys(updates) }, req.ip);
+        await logAudit(req.user.id, 'update_patient', 'patient', id, { fields: Object.keys(updates) }, req.ip);
       } catch (auditError) {
         console.warn('Failed to log audit for patient update:', auditError);
       }
@@ -712,7 +714,7 @@ router.post('/:id/medications', requirePermission('meds:prescribe'), async (req,
       [id, medicationName, dosage, frequency, route, startDate, req.user.id]
     );
 
-    await logAudit(req.user.id, 'add_medication', 'medication', result.rows[0].id, { 
+    await logAudit(req.user.id, 'add_medication', 'medication', result.rows[0].id, {
       medication: medicationName,
       warnings: warnings.length > 0 ? warnings : null
     }, req.ip);
@@ -975,7 +977,7 @@ router.post('/:id/social-history', requirePermission('notes:create'), async (req
           living_situation = $9, notes = $10, updated_at = CURRENT_TIMESTAMP
          WHERE patient_id = $11 RETURNING *`,
         [smokingStatus, smokingPackYears, alcoholUse, alcoholQuantity, drugUse,
-         exerciseFrequency, diet, occupation, livingSituation, notes, id]
+          exerciseFrequency, diet, occupation, livingSituation, notes, id]
       );
       await logAudit(req.user.id, 'update_social_history', 'social_history', existing.rows[0].id, {}, req.ip);
     } else {
@@ -986,7 +988,7 @@ router.post('/:id/social-history', requirePermission('notes:create'), async (req
           drug_use, exercise_frequency, diet, occupation, living_situation, notes
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
         [id, smokingStatus, smokingPackYears, alcoholUse, alcoholQuantity, drugUse,
-         exerciseFrequency, diet, occupation, livingSituation, notes]
+          exerciseFrequency, diet, occupation, livingSituation, notes]
       );
       await logAudit(req.user.id, 'add_social_history', 'social_history', result.rows[0].id, {}, req.ip);
     }
@@ -1212,7 +1214,7 @@ router.delete('/medications/:medicationId', requirePermission('meds:prescribe'),
 router.post('/:id/photo', requirePermission('patients:edit_demographics'), upload.single('photo'), async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
@@ -1252,11 +1254,11 @@ router.post('/:id/photo/base64', requirePermission('patients:edit_demographics')
     // Convert base64 to buffer
     const base64Data = photoData.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
-    
+
     // Determine file extension from data URL
     const match = photoData.match(/^data:image\/(\w+);base64,/);
     const extension = match ? match[1] : 'jpg';
-    
+
     // Generate filename
     const filename = `patient-${id}-${Date.now()}-${Math.round(Math.random() * 1E9)}.${extension}`;
     // Ensure uploadDir exists and is correct
@@ -1265,11 +1267,11 @@ router.post('/:id/photo/base64', requirePermission('patients:edit_demographics')
       fs.mkdirSync(patientPhotosDir, { recursive: true });
     }
     const filepath = path.join(patientPhotosDir, filename);
-    
+
     // Save file
     fs.writeFileSync(filepath, buffer);
     console.log('Photo saved to:', filepath);
-    
+
     // Construct photo URL
     const photoUrl = `/uploads/patient-photos/${filename}`;
 
