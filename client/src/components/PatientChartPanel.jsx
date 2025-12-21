@@ -225,7 +225,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                 {/* Main Content Area */}
                 <div className="flex-1 flex flex-col h-full overflow-hidden bg-white relative">
                     {/* Header */}
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100/80 bg-white/90 backdrop-blur-md sticky top-0 z-20">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100/80 bg-white/90 backdrop-blur-md sticky top-0 z-20">
                         <h2 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
                             {tabs.find(t => t.id === activeTab)?.icon && React.createElement(tabs.find(t => t.id === activeTab).icon, { className: "w-5 h-5 text-gray-400" })}
                             {tabs.find(t => t.id === activeTab)?.label}
@@ -236,7 +236,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                     </div>
 
                     {/* Content Scrollable */}
-                    <div className="flex-1 overflow-y-auto p-6 scroll-smooth bg-gray-50/30">
+                    <div className="flex-1 overflow-y-auto p-4 scroll-smooth bg-gray-50/30">
                         {loading ? (
                             <div className="flex flex-col items-center justify-center h-64 space-y-3">
                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
