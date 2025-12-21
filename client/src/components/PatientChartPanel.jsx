@@ -49,6 +49,18 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
         }
     }, [isOpen, patientId, initialTab]);
 
+    // Listen for data updates
+    useEffect(() => {
+        const handleDataUpdate = () => {
+            if (isOpen && patientId) {
+                fetchAllData();
+            }
+        };
+
+        window.addEventListener('patient-data-updated', handleDataUpdate);
+        return () => window.removeEventListener('patient-data-updated', handleDataUpdate);
+    }, [isOpen, patientId]);
+
     const fetchAllData = async () => {
         setLoading(true);
         try {

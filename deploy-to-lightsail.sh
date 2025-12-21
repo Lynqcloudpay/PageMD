@@ -41,17 +41,17 @@ $SSH_CMD $USER@$HOST << EOF
     cp env.prod.example .env.prod
   fi
   
-  echo "🏗️  Building frontend on server (this may be slow)..."
-  mkdir -p static
-  cd ../client
-  if [ ! -d "node_modules" ] || [ package.json -nt node_modules ]; then
-    npm install --prefer-offline --no-audit --silent
-  fi
-  echo "🔨 Running build..."
-  VITE_API_URL=https://bemypcp.com/api npm run build
-  cp -r dist/* ../deploy/static/
-  cd ../deploy
+  echo "📦 Building frontend (using Docker container)..."
   
+  # Use Docker to build frontend to avoid host environment issues
+  # Mount the client directory to /app in the container
+  
+  docker run --rm \
+    -v "$DIR/client:/app" \
+    -w /app \
+    node:18-alpine \
+    sh -c "npm install --legacy-peer-deps && npm run build"
+    
   echo "🔄 Building API service (using BuildKit)..."
   DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build api
   

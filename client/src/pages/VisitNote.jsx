@@ -1729,6 +1729,7 @@ const VisitNote = () => {
                                         try {
                                             const res = await patientsAPI.addProblem(id, data);
                                             setPatientData(prev => ({ ...prev, problems: [res.data, ...(prev.problems || [])] }));
+                                            window.dispatchEvent(new Event('patient-data-updated'));
                                             showToast('Problem added', 'success');
                                         } catch (e) { showToast('Failed to add problem', 'error'); }
                                     }}
@@ -1737,6 +1738,7 @@ const VisitNote = () => {
                                         try {
                                             await patientsAPI.deleteProblem(itemId);
                                             setPatientData(prev => ({ ...prev, problems: prev.problems.filter(p => p.id !== itemId) }));
+                                            window.dispatchEvent(new Event('patient-data-updated'));
                                             showToast('Problem deleted', 'success');
                                         } catch (e) { showToast('Failed to delete problem', 'error'); }
                                     }}
@@ -1761,6 +1763,7 @@ const VisitNote = () => {
                                             const payload = typeof data === 'string' ? { allergen: data, severity: 'unknown' } : data;
                                             const res = await patientsAPI.addAllergy(id, payload);
                                             setPatientData(prev => ({ ...prev, allergies: [res.data, ...(prev.allergies || [])] }));
+                                            window.dispatchEvent(new Event('patient-data-updated'));
                                             showToast('Allergy added', 'success');
                                         } catch (e) { showToast('Failed to add allergy', 'error'); }
                                     }}
@@ -1769,6 +1772,7 @@ const VisitNote = () => {
                                         try {
                                             await patientsAPI.deleteAllergy(itemId);
                                             setPatientData(prev => ({ ...prev, allergies: prev.allergies.filter(a => a.id !== itemId) }));
+                                            window.dispatchEvent(new Event('patient-data-updated'));
                                             showToast('Allergy deleted', 'success');
                                         } catch (e) { showToast('Failed to delete allergy', 'error'); }
                                     }}
@@ -1793,6 +1797,7 @@ const VisitNote = () => {
                                         try {
                                             const res = await patientsAPI.addMedication(id, data);
                                             setPatientData(prev => ({ ...prev, medications: [res.data, ...(prev.medications || [])] }));
+                                            window.dispatchEvent(new Event('patient-data-updated'));
                                             showToast('Medication added', 'success');
                                         } catch (e) { showToast('Failed to add medication', 'error'); }
                                     }}
@@ -1801,6 +1806,7 @@ const VisitNote = () => {
                                         try {
                                             await patientsAPI.deleteMedication(itemId);
                                             setPatientData(prev => ({ ...prev, medications: prev.medications.filter(m => m.id !== itemId) }));
+                                            window.dispatchEvent(new Event('patient-data-updated'));
                                             showToast('Medication deleted', 'success');
                                         } catch (e) { showToast('Failed to delete medication', 'error'); }
                                     }}
@@ -1823,6 +1829,7 @@ const VisitNote = () => {
                                         try {
                                             const res = await patientsAPI.addFamilyHistory(id, data);
                                             setFamilyHistory(prev => [res.data, ...prev]);
+                                            window.dispatchEvent(new Event('patient-data-updated'));
                                             showToast('Family history added', 'success');
                                         } catch (e) { showToast('Failed to add family history', 'error'); }
                                     }}
@@ -1831,6 +1838,7 @@ const VisitNote = () => {
                                         try {
                                             await patientsAPI.deleteFamilyHistory(itemId);
                                             setFamilyHistory(prev => prev.filter(h => h.id !== itemId));
+                                            window.dispatchEvent(new Event('patient-data-updated'));
                                             showToast('Family history deleted', 'success');
                                         } catch (e) { showToast('Failed to delete family history', 'error'); }
                                     }}
@@ -1853,6 +1861,7 @@ const VisitNote = () => {
                                                     try {
                                                         await patientsAPI.saveSocialHistory(id, { ...socialHistory, smoking_status: val });
                                                         setSocialHistory(prev => ({ ...prev, smoking_status: val }));
+                                                        window.dispatchEvent(new Event('patient-data-updated'));
                                                     } catch (e) { showToast('Failed to update', 'error'); }
                                                 }}
                                             >
@@ -1872,6 +1881,7 @@ const VisitNote = () => {
                                                     try {
                                                         await patientsAPI.saveSocialHistory(id, { ...socialHistory, alcohol_use: val });
                                                         setSocialHistory(prev => ({ ...prev, alcohol_use: val }));
+                                                        window.dispatchEvent(new Event('patient-data-updated'));
                                                     } catch (e) { showToast('Failed to update', 'error'); }
                                                 }}
                                             >
@@ -1893,6 +1903,7 @@ const VisitNote = () => {
                                                     try {
                                                         await patientsAPI.saveSocialHistory(id, { ...socialHistory, occupation: val });
                                                         setSocialHistory(prev => ({ ...prev, occupation: val }));
+                                                        window.dispatchEvent(new Event('patient-data-updated'));
                                                     } catch (e) { showToast('Failed to update', 'error'); }
                                                 }}
                                                 onChange={(e) => setSocialHistory(prev => ({ ...prev, occupation: e.target.value }))}
@@ -1967,9 +1978,49 @@ const VisitNote = () => {
                             <div className="mb-2 border border-neutral-200 rounded-md bg-white p-2">
                                 <div className="space-y-1">
                                     {diagnoses.map((diag, idx) => (
-                                        <div key={idx} className="flex items-start justify-between py-1 px-2 hover:bg-neutral-50 rounded group transition-colors">
-                                            <div className="flex-1 text-xs text-neutral-900">
-                                                <span className="font-medium">{idx + 1}.</span> {diag}
+                                        <div key={idx} className="flex items-center justify-between py-1 px-2 hover:bg-neutral-50 rounded group transition-colors">
+                                            <div className="flex-1 text-xs text-neutral-900 flex items-center">
+                                                <span className="font-medium mr-2">{idx + 1}.</span>
+                                                <input
+                                                    type="text"
+                                                    value={diag}
+                                                    onChange={(e) => {
+                                                        const newName = e.target.value;
+                                                        setNoteData(prev => {
+                                                            const lines = prev.assessment.split('\n').filter(l => l.trim());
+                                                            const oldName = lines[idx];
+                                                            lines[idx] = newName;
+
+                                                            // Also update planStructured if it exists
+                                                            let updatedPlanStructured = prev.planStructured || [];
+                                                            if (oldName && updatedPlanStructured.length > 0) {
+                                                                const matchIndex = updatedPlanStructured.findIndex(item =>
+                                                                    item.diagnosis === oldName || item.diagnosis.includes(oldName) || oldName.includes(item.diagnosis)
+                                                                );
+                                                                if (matchIndex !== -1) {
+                                                                    updatedPlanStructured = [...updatedPlanStructured];
+                                                                    updatedPlanStructured[matchIndex] = {
+                                                                        ...updatedPlanStructured[matchIndex],
+                                                                        diagnosis: newName
+                                                                    };
+                                                                }
+                                                            }
+
+                                                            const updatedPlanText = updatedPlanStructured.length > 0
+                                                                ? formatPlanText(updatedPlanStructured)
+                                                                : prev.plan;
+
+                                                            return {
+                                                                ...prev,
+                                                                assessment: lines.join('\n'),
+                                                                planStructured: updatedPlanStructured,
+                                                                plan: updatedPlanText
+                                                            };
+                                                        });
+                                                    }}
+                                                    className="flex-1 bg-transparent border-none focus:ring-0 p-0 text-xs text-neutral-900 font-medium placeholder-neutral-400"
+                                                    placeholder="Diagnosis..."
+                                                />
                                             </div>
                                             <button
                                                 onClick={() => removeDiagnosisFromAssessment(idx)}
@@ -2085,12 +2136,22 @@ const VisitNote = () => {
                                     </div>
                                 </div>
                             )}
-                            {/* Always show textarea - it will display formatted plan text when signed or when there's no structured plan */}
-                            {(!noteData.planStructured || noteData.planStructured.length === 0 || isSigned) && (
-                                <textarea ref={planRef} value={isSigned && noteData.planStructured && noteData.planStructured.length > 0 ? formatPlanText(noteData.planStructured) : noteData.plan}
+                            {/* Always show textarea - sync changes to structured plan on blur */}
+                            {(!isSigned) && (
+                                <textarea ref={planRef} value={noteData.plan}
                                     onChange={(e) => {
                                         handleTextChange(e.target.value, 'plan');
                                         handleDotPhraseAutocomplete(e.target.value, 'plan', planRef);
+                                    }}
+                                    onBlur={(e) => {
+                                        // Try to parse plan text to update structured data
+                                        const parsed = parsePlanText(e.target.value);
+                                        if (parsed.length > 0) {
+                                            setNoteData(prev => ({
+                                                ...prev,
+                                                planStructured: parsed
+                                            }));
+                                        }
                                     }}
                                     onKeyDown={(e) => {
                                         if (autocompleteState.show && autocompleteState.field === 'plan') {
@@ -2125,6 +2186,11 @@ const VisitNote = () => {
                                     className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[80px]"
                                     placeholder="Plan text (auto-generated from orders)..."
                                 />
+                            )}
+                            {isSigned && (
+                                <div className="p-2 border border-neutral-200 rounded-md bg-neutral-50 text-xs">
+                                    <PlanDisplay plan={noteData.plan} />
+                                </div>
                             )}
                             {autocompleteState.show && autocompleteState.field === 'plan' && autocompleteState.suggestions.length > 0 && (
                                 <div className="absolute z-50 bg-white border border-neutral-300 rounded-md shadow-lg max-h-32 overflow-y-auto mt-0.5 w-64" style={{ top: `${autocompleteState.position.top}px` }}>
