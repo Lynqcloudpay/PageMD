@@ -1057,6 +1057,7 @@ const VisitNote = () => {
 
         setShowIcd10Search(false);
         setIcd10Search('');
+        setShowICD10Modal(false);
     };
 
     // Parse assessment to extract diagnoses - memoized to prevent infinite re-renders
@@ -2040,13 +2041,9 @@ const VisitNote = () => {
                                                 <span className="font-medium mr-2">{idx + 1}.</span>
                                                 <button
                                                     onClick={() => {
+                                                        // Use modal for editing instead of inline search
                                                         setEditingDiagnosisIndex(idx);
-                                                        setShowIcd10Search(true);
-                                                        setIcd10Search('');
-                                                        // Use a ref to focus the input if possible, or reliance on autoFocus in the conditional render
-                                                        // But the input is already rendered.
-                                                        // Let's add an ID or Ref to the search input.
-                                                        setTimeout(() => document.getElementById('icd10-quick-search')?.focus(), 50);
+                                                        setShowICD10Modal(true);
                                                     }}
                                                     className="flex-1 text-left hover:text-primary-600 hover:underline transition-colors"
                                                 >
@@ -2224,6 +2221,13 @@ const VisitNote = () => {
             </div>
 
             {/* Modals */}
+            <CodeSearchModal
+                isOpen={showICD10Modal}
+                onClose={() => { setShowICD10Modal(false); setEditingDiagnosisIndex(null); }}
+                onSelect={(code) => handleAddICD10(code)}
+                codeType="ICD10"
+                size="md"
+            />
             <OrderModal
                 isOpen={showOrderModal}
                 onClose={() => { setShowOrderModal(false); setSelectedDiagnosis(null); }}

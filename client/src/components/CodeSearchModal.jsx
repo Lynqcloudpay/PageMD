@@ -14,13 +14,14 @@ import { Search, X, Check, FileText, Loader, AlertCircle } from 'lucide-react';
 import Modal from './ui/Modal';
 import { codesAPI } from '../services/api';
 
-const CodeSearchModal = ({ 
-  isOpen, 
-  onClose, 
-  onSelect, 
+const CodeSearchModal = ({
+  isOpen,
+  onClose,
+  onSelect,
   codeType = 'ICD10', // 'ICD10' or 'CPT'
   multiSelect = false,
-  selectedCodes = [] // Array of already selected codes
+  selectedCodes = [], // Array of already selected codes
+  size = 'lg'
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState([]);
@@ -33,15 +34,15 @@ const CodeSearchModal = ({
     const searchTimer = setTimeout(async () => {
       setLoading(true);
       setError(null);
-      
+
       try {
         // If search is empty or less than 2 chars, show popular codes (first 50)
         // Otherwise, perform search
         const query = searchQuery.length >= 2 ? searchQuery : '';
-        const response = codeType === 'ICD10' 
+        const response = codeType === 'ICD10'
           ? await codesAPI.searchICD10(query)
           : await codesAPI.searchCPT(query);
-        
+
         setResults(response.data || []);
       } catch (err) {
         console.error('Code search error:', err);
@@ -95,7 +96,7 @@ const CodeSearchModal = ({
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title={`Search ${codeType} Codes`} size="lg">
+    <Modal isOpen={isOpen} onClose={handleClose} title={`Search ${codeType} Codes`} size={size}>
       <div className="space-y-4">
         {/* Search Input */}
         <div className="relative">
@@ -157,9 +158,8 @@ const CodeSearchModal = ({
                   <button
                     key={idx}
                     onClick={() => handleSelectCode(code)}
-                    className={`w-full p-3 text-left hover:bg-gray-50 transition-colors ${
-                      isSelected ? 'bg-primary-50 border-l-4 border-primary-600' : ''
-                    }`}
+                    className={`w-full p-3 text-left hover:bg-gray-50 transition-colors ${isSelected ? 'bg-primary-50 border-l-4 border-primary-600' : ''
+                      }`}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -172,11 +172,10 @@ const CodeSearchModal = ({
                         </div>
                         <p className="text-sm text-gray-600 mt-1 ml-6">{code.description}</p>
                         {code.billable !== undefined && (
-                          <span className={`inline-block mt-2 ml-6 text-xs px-2 py-0.5 rounded ${
-                            code.billable 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-gray-100 text-gray-600'
-                          }`}>
+                          <span className={`inline-block mt-2 ml-6 text-xs px-2 py-0.5 rounded ${code.billable
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-600'
+                            }`}>
                             {code.billable ? 'Billable' : 'Non-billable'}
                           </span>
                         )}
