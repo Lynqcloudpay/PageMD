@@ -11,6 +11,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import axios from 'axios';
 import {
   Pill, Search, X, AlertTriangle, Check, Building2, Phone,
   ChevronRight, MapPin, ChevronLeft, Loader, AlertCircle,
@@ -106,11 +107,47 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
       setSearching(true);
       setError(null);
       try {
+        console.log('Searching medications for:', medicationSearch);
         const response = await medicationsAPI.search(medicationSearch);
+        console.log('Medication search response:', response);
+
         const results = Array.isArray(response.data) ? response.data : (Array.isArray(response) ? response : []);
-        setMedicationResults(results);
+
+        // If backend returns no results, try RxNorm API directly
+        if (results.length === 0) {
+          console.log('No results from backend, trying RxNorm API...');
+          try {
+            const rxnormResponse = await axios.get('https://rxnav.nlm.nih.gov/REST/drugs.json', {
+              params: { name: medicationSearch }
+            });
+
+            const drugGroup = rxnormResponse.data?.drugGroup?.conceptGroup || [];
+            const rxnormResults = [];
+
+            drugGroup.forEach(group => {
+              if (group.conceptProperties) {
+                group.conceptProperties.forEach(drug => {
+                  rxnormResults.push({
+                    name: drug.name,
+                    rxcui: drug.rxcui,
+                    strength: drug.synonym || ''
+                  });
+                });
+              }
+            });
+
+            console.log('RxNorm results:', rxnormResults);
+            setMedicationResults(rxnormResults.slice(0, 20)); // Limit to 20 results
+          } catch (rxnormError) {
+            console.error('RxNorm API also failed:', rxnormError);
+            setMedicationResults([]);
+          }
+        } else {
+          setMedicationResults(results);
+        }
       } catch (err) {
         console.error('Medication search error:', err);
+        console.error('Error details:', err.response?.data || err.message);
         setMedicationResults([]);
       } finally {
         setSearching(false);
