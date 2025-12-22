@@ -124,6 +124,20 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
         </div>
     );
 
+    // Default handler for Open Chart if not provided
+    const handleOpenChart = () => {
+        if (onOpenChart) {
+            onOpenChart();
+        } else {
+            // Default behavior: navigate to snapshot
+            // Use patient.id or the URL param id
+            const targetId = patient?.id || id;
+            if (targetId) {
+                navigate(`/patient/${targetId}/snapshot`); // Navigate to snapshot which is the "Chart"
+            }
+        }
+    };
+
     return (
         <div className="bg-white border border-gray-200 shadow-sm rounded-lg mb-6 overflow-hidden">
             {/* Top Bar: Identity & Actions */}
@@ -155,7 +169,13 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                             </div>
                         ) : (
                             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                                {patient.first_name} {patient.last_name}
+                                {/* Clicking name also goes to chart as a shortcut */}
+                                <span
+                                    className="cursor-pointer hover:text-blue-800 transition-colors"
+                                    onClick={handleOpenChart}
+                                >
+                                    {patient.first_name} {patient.last_name}
+                                </span>
                                 <button
                                     onClick={handleEditClick}
                                     className="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded-full hover:bg-blue-50"
@@ -222,7 +242,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                     ) : (
                         <>
                             <button
-                                onClick={onOpenChart}
+                                onClick={handleOpenChart}
                                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm transition-all hover:shadow flex items-center gap-2"
                             >
                                 <ExternalLink size={16} />
