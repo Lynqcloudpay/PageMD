@@ -76,8 +76,8 @@ router.post('/', requirePermission('patients:view_chart'), upload.single('file')
       }
     }
 
-    // Store URL path (accessible via /api/uploads/) instead of filesystem path
-    const urlPath = `/api/uploads/${req.file.filename}`;
+    // Store URL path as /uploads/ (API base URL already includes /api prefix)
+    const urlPath = `/uploads/${req.file.filename}`;
 
     const result = await pool.query(
       `INSERT INTO documents (
@@ -117,14 +117,17 @@ router.get('/:id/file', requirePermission('patients:view_chart'), async (req, re
 
     const doc = result.rows[0];
 
-    // Handle both old filesystem paths and new URL paths
+    // Handle three possible path formats:
+    // 1. New format: /uploads/filename (preferred)
+    // 2. Old API format: /api/uploads/filename  
+    // 3. Legacy filesystem path: ./uploads/filename
     let actualPath;
-    if (doc.file_path.startsWith('/api/uploads/')) {
-      // New format: URL path - extract filename and construct filesystem path
+    if (doc.file_path.startsWith('/uploads/') || doc.file_path.startsWith('/api/uploads/')) {
+      // URL path format - extract filename and construct filesystem path
       const filename = path.basename(doc.file_path);
       actualPath = path.join(uploadDir, filename);
     } else {
-      // Old format: filesystem path
+      // Legacy filesystem path
       actualPath = doc.file_path;
     }
 

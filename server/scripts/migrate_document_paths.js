@@ -18,21 +18,28 @@ async function migrateDocumentPaths() {
     try {
         console.log('Starting document path migration...');
 
-        // Get all documents with filesystem paths
+        // Get all documents that need migration
         const result = await client.query(`
             SELECT id, file_path 
             FROM documents 
-            WHERE file_path NOT LIKE '/api/uploads/%'
+            WHERE file_path LIKE '%/%'
         `);
 
-        console.log(`Found ${result.rows.length} documents to migrate`);
+        console.log(`Found ${result.rows.length} total documents`);
 
         let migrated = 0;
         for (const doc of result.rows) {
-            // Extract filename from the old path
+            // Extract filename from any path format
             const filename = path.basename(doc.file_path);
-            const newPath = `/api/uploads/${filename}`;
+            const newPath = `/uploads/${filename}`;
 
+            // Skip if already in correct format
+            if (doc.file_path === newPath) {
+                console.log(`Skipping ${doc.id}: already in correct format`);
+                continue;
+            }
+
+            console.log(`Migrating ${doc.id}: "${doc.file_path}" -> "${newPath}"`);
             await client.query(
                 'UPDATE documents SET file_path = $1 WHERE id = $2',
                 [newPath, doc.id]
@@ -40,7 +47,7 @@ async function migrateDocumentPaths() {
             migrated++;
         }
 
-        console.log(`✅ Successfully migrated ${migrated} document paths`);
+        console.log(`✅ Successfully migrated ${migrated} document paths to /uploads/ format`);
     } catch (error) {
         console.error('Error migrating document paths:', error);
         throw error;
