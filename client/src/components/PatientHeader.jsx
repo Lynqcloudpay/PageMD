@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Phone, Mail, MapPin, Shield, Activity,
     AlertCircle, Edit2, Camera, X, Check,
     ExternalLink, Calendar
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
 import PatientHeaderPhoto from './PatientHeaderPhoto';
 
@@ -39,13 +39,34 @@ const calculateAge = (dob) => {
     }
 };
 
-const PatientHeader = ({ patient, onUpdate, onOpenChart, onOpenToday }) => {
+const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToday }) => {
     const navigate = useNavigate();
+    const { id } = useParams();
+    const [fetchedPatient, setFetchedPatient] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
     const [editForm, setEditForm] = useState({});
     const [loading, setLoading] = useState(false);
 
+    // Use passed patient or fetched patient
+    const patient = propPatient || fetchedPatient;
+
+    // Fetch patient if not provided and we have an ID
+    useEffect(() => {
+        const fetchPatient = async () => {
+            if (!propPatient && id && !fetchedPatient) {
+                try {
+                    const response = await api.get(`/patients/${id}`);
+                    setFetchedPatient(response.data);
+                } catch (error) {
+                    console.error("Failed to fetch patient for header:", error);
+                }
+            }
+        };
+        fetchPatient();
+    }, [propPatient, id, fetchedPatient]);
+
     // Safety check - prevent crash if patient is loading
+    // We can show a simple loading state or null
     if (!patient) return null;
 
     // Initialize edit form
