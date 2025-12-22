@@ -351,15 +351,14 @@ export const imagingStudies = [
     }
 ];
 
-// Search function
+// Search function - CPT codes removed from search for legal compliance
 export const searchLabTests = (query) => {
     if (!query || query.length < 2) return [];
     const lowerQuery = query.toLowerCase();
-    return labTests.filter(test => 
+    return labTests.filter(test =>
         test.name.toLowerCase().includes(lowerQuery) ||
         test.questCode.includes(query) ||
         test.labcorpCode.includes(query) ||
-        test.cpt.includes(query) ||
         test.description.toLowerCase().includes(lowerQuery)
     );
 };
@@ -367,9 +366,8 @@ export const searchLabTests = (query) => {
 export const searchImaging = (query) => {
     if (!query || query.length < 2) return [];
     const lowerQuery = query.toLowerCase();
-    return imagingStudies.filter(study => 
+    return imagingStudies.filter(study =>
         study.name.toLowerCase().includes(lowerQuery) ||
-        study.cpt.includes(query) ||
         study.description.toLowerCase().includes(lowerQuery)
     );
 };

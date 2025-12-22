@@ -3,7 +3,7 @@ import Modal from './ui/Modal';
 import { Pill, Stethoscope, Upload, Send, Search, X, ShoppingCart, Trash2, Plus, Check, ChevronRight } from 'lucide-react';
 import { searchLabTests, searchImaging } from '../data/labCodes';
 import axios from 'axios';
-import { codesAPI, referralsAPI, eprescribeAPI, medicationsAPI } from '../services/api';
+import { codesAPI, referralsAPI, eprescribeAPI, medicationsAPI, ordersCatalogAPI } from '../services/api';
 
 export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [] }) => {
     const [med, setMed] = useState('');
@@ -351,6 +351,54 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
 
         let results = [];
         const lowerQuery = query.toLowerCase();
+
+        // Use new orders catalog API for labs, imaging, procedures
+        if (['labs', 'imaging', 'procedures'].includes(activeTab)) {
+            const searchTimer = setTimeout(async () => {
+                try {
+                    const typeMap = { labs: 'LAB', imaging: 'IMAGING', procedures: 'PROCEDURE' };
+                    const response = await ordersCatalogAPI.search(query, typeMap[activeTab]);
+                    const catalogResults = (response.data || []).map(item => ({
+                        name: item.name,
+                        loinc: item.loinc_code,
+                        category: item.category,
+                        instructions: item.instructions,
+                        catalogId: item.id
+                    }));
+
+                    // Merge with local data for backward compatibility
+                    let localResults = [];
+                    if (activeTab === 'labs') {
+                        localResults = searchLabTests(lowerQuery, labVendor).slice(0, 10).map(t => ({
+                            name: t.name,
+                            questCode: t.questCode,
+                            labcorpCode: t.labcorpCode,
+                            description: t.description
+                        }));
+                    } else if (activeTab === 'imaging') {
+                        localResults = searchImaging(lowerQuery).slice(0, 10).map(s => ({
+                            name: s.name,
+                            description: s.description
+                        }));
+                    }
+
+                    // Combine: catalog first, then local (deduplicated)
+                    const seenNames = new Set(catalogResults.map(r => r.name.toLowerCase()));
+                    const combined = [...catalogResults, ...localResults.filter(r => !seenNames.has(r.name.toLowerCase()))];
+                    setSearchResults(combined.slice(0, 25));
+                } catch (err) {
+                    console.error('Catalog search error:', err);
+                    // Fallback to local data
+                    if (activeTab === 'labs') {
+                        setSearchResults(searchLabTests(lowerQuery, labVendor).slice(0, 20));
+                    } else if (activeTab === 'imaging') {
+                        setSearchResults(searchImaging(lowerQuery).slice(0, 20));
+                    }
+                }
+            }, 300);
+            return () => clearTimeout(searchTimer);
+        }
+
         switch (activeTab) {
             case 'labs':
                 results = searchLabTests(lowerQuery, labVendor).slice(0, 20);
@@ -359,24 +407,24 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                 results = searchImaging(lowerQuery).slice(0, 20);
                 break;
             case 'procedures':
+                // Procedures without CPT codes
                 const commonProcs = [
-                    { name: '93000 - EKG (12-Lead)', cpt: '93000' },
-                    { name: '94010 - Spirometry', cpt: '94010' },
-                    { name: '11100 - Skin Biopsy', cpt: '11100' },
-                    { name: '20610 - Joint Injection (Major)', cpt: '20610' },
-                    { name: '69210 - Ear Wax Removal (Cerumen)', cpt: '69210' },
-                    { name: '10060 - I&D (Simple)', cpt: '10060' },
-                    { name: '88141 - Pap Smear', cpt: '88141' },
-                    { name: '81002 - Urinalysis (Non-automated)', cpt: '81002' },
-                    { name: '81025 - Pregnancy Test (Urine)', cpt: '81025' },
-                    { name: '87880 - Rapid Strep Test', cpt: '87880' },
-                    { name: '87804 - Influenza A&B', cpt: '87804' },
-                    { name: '90471 - Immunization Admin', cpt: '90471' },
-                    { name: '99213 - Evaluation/Management', cpt: '99213' },
-                    { name: '96372 - Therapeutic Injection (IM)', cpt: '96372' },
-                    { name: 'G0439 - AWV (Subsequent)', cpt: 'G0439' }
+                    { name: 'EKG (12-Lead)' },
+                    { name: 'Spirometry' },
+                    { name: 'Skin Biopsy' },
+                    { name: 'Joint Injection (Major)' },
+                    { name: 'Ear Wax Removal (Cerumen)' },
+                    { name: 'I&D (Simple)' },
+                    { name: 'Pap Smear' },
+                    { name: 'Urinalysis (Non-automated)' },
+                    { name: 'Pregnancy Test (Urine)' },
+                    { name: 'Rapid Strep Test' },
+                    { name: 'Influenza A&B' },
+                    { name: 'Immunization Admin' },
+                    { name: 'Therapeutic Injection (IM)' },
+                    { name: 'Annual Wellness Visit' }
                 ];
-                results = commonProcs.filter(p => p.name.toLowerCase().includes(lowerQuery) || p.cpt?.includes(lowerQuery));
+                results = commonProcs.filter(p => p.name.toLowerCase().includes(lowerQuery));
                 break;
             case 'referrals':
                 const specialties = [
@@ -441,26 +489,23 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                 // Re-generate string to be safe and consistent.
 
                 if (item.type === 'labs') {
-                    const code = item.details?.questCode || item.details?.labcorpCode; // Might be missing if loaded from string
+                    // Use LOINC if available from catalog, else vendor code
+                    const loinc = item.details?.loinc || item.details?.catalogId;
+                    const code = item.details?.questCode || item.details?.labcorpCode;
                     const company = labVendor === 'quest' ? 'Quest' : 'LabCorp';
-                    // If we have details, use them. If not, use name (loaded from string)
-                    if (item.originalString && !item.details?.questCode) {
-                        orderText = item.originalString; // Preserve original if we didn't fully parse details
+                    if (item.originalString && !item.details?.questCode && !loinc) {
+                        orderText = item.originalString;
+                    } else if (loinc) {
+                        orderText = `Lab: ${item.name}`;
                     } else {
                         orderText = `Lab: ${item.name} [${company}: ${code || 'N/A'}]`;
                     }
                 } else if (item.type === 'imaging') {
-                    if (item.originalString && !item.details?.cpt) {
-                        orderText = item.originalString;
-                    } else {
-                        orderText = `Imaging: ${item.name}${item.details?.cpt ? ` [CPT: ${item.details.cpt}]` : ''}`;
-                    }
+                    // No CPT codes displayed
+                    orderText = `Imaging: ${item.name}`;
                 } else if (item.type === 'procedures') {
-                    if (item.originalString && !item.details?.cpt) {
-                        orderText = item.originalString;
-                    } else {
-                        orderText = `Procedure: ${item.name}${item.details?.cpt ? ` [CPT: ${item.details.cpt}]` : ''}`;
-                    }
+                    // No CPT codes displayed
+                    orderText = `Procedure: ${item.name}`;
                 } else if (item.type === 'referrals') {
                     orderText = `Referral: ${item.name}${item.reason ? ` - ${item.reason}` : ''}`;
                 } else if (item.type === 'medications') {
@@ -558,13 +603,14 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                 // ... logic to call onSuccess
                 // For brevity, assuming onSave is used now.
                 if (item.type === 'labs') {
+                    const loinc = item.details?.loinc;
                     const code = labVendor === 'quest' ? item.details?.questCode : item.details?.labcorpCode;
                     const company = labVendor === 'quest' ? 'Quest' : 'LabCorp';
-                    orderText = `Lab: ${item.name} [${company}: ${code || 'N/A'}]`;
+                    orderText = loinc ? `Lab: ${item.name}` : `Lab: ${item.name} [${company}: ${code || 'N/A'}]`;
                 } else if (item.type === 'imaging') {
-                    orderText = `Imaging: ${item.name}${item.details?.cpt ? ` [CPT: ${item.details.cpt}]` : ''}`;
+                    orderText = `Imaging: ${item.name}`;
                 } else if (item.type === 'procedures') {
-                    orderText = `Procedure: ${item.name}${item.details?.cpt ? ` [CPT: ${item.details.cpt}]` : ''}`;
+                    orderText = `Procedure: ${item.name}`;
                 } else if (item.type === 'referrals') {
                     orderText = `Referral: ${item.name}${item.reason ? ` - ${item.reason}` : ''}`;
                 } else if (item.type === 'medications') {
@@ -581,7 +627,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
         onClose();
     };
 
-    // Sub-component for search result item
+    // Sub-component for search result item - NO CPT CODES displayed
     const SearchResultItem = ({ item }) => (
         <button
             type="button"
@@ -591,15 +637,14 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
             <div>
                 <div className="font-medium text-gray-900 text-sm">{item.name}</div>
                 <div className="text-xs text-gray-500 mt-0.5">
-                    {activeTab === 'labs' && (
-                        <span>
-                            {labVendor === 'quest' ? `Quest: ${item.questCode}` : `LabCorp: ${item.labcorpCode}`}
-                            {item.cpt && ` • CPT: ${item.cpt}`}
-                        </span>
+                    {activeTab === 'labs' && item.loinc && (
+                        <span className="text-primary-600">LOINC: {item.loinc}</span>
                     )}
-                    {(activeTab === 'imaging' || activeTab === 'procedures') && item.cpt && (
-                        <span>CPT: {item.cpt}</span>
+                    {activeTab === 'labs' && !item.loinc && item.questCode && (
+                        <span>{labVendor === 'quest' ? `Quest: ${item.questCode}` : `LabCorp: ${item.labcorpCode}`}</span>
                     )}
+                    {item.category && <span className="ml-2 text-gray-400">{item.category}</span>}
+                    {item.description && !item.loinc && <span>{item.description}</span>}
                 </div>
             </div>
             <Plus className="w-4 h-4 text-gray-400 group-hover:text-primary-600" />
