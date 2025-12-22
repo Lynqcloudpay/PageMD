@@ -63,6 +63,11 @@ $SSH_CMD $USER@$HOST << EOF
   echo "🚀 Rolling update of services..."
   docker compose -f docker-compose.prod.yml up -d --remove-orphans
   
+  echo "🔄 Running database schema updates..."
+  # Wait for API container to be ready
+  sleep 10
+  docker compose -f docker-compose.prod.yml exec -T api node scripts/update_patients_schema.js || echo "⚠️ Schema update failed, check logs"
+  
   echo "🧹 Cleaning up old images..."
   docker image prune -f
   
