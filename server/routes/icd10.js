@@ -22,28 +22,41 @@ router.get('/search', authenticate, async (req, res) => {
         }
 
         const searchTerm = q.trim();
-        const tsQuery = searchTerm.split(/\s+/).filter(t => t.length > 0).map(t => `${t}:*`).join(' & ');
+        // Convert search terms into a TS query. 
+        // We use both prefix matching (:*) and exact word matching to improve precision.
+        const searchWords = searchTerm.split(/\s+/).filter(t => t.length > 0);
+        const tsQuery = searchWords.map(t => `${t}:*`).join(' & ');
 
         const results = await pool.query(`
             SELECT 
-                id, code, description, is_billable,
-                (code ILIKE $1 || '%') as prefix_match,
-                ts_rank_cd(to_tsvector('english', description), to_tsquery('english', $2)) as rank,
-                similarity(description, $1) as sim
-            FROM icd10_codes
-            WHERE is_active = true
+                c.id, c.code, c.description, c.is_billable,
+                (c.code = $1) as exact_code,
+                (c.code ILIKE $1 || '%') as code_prefix,
+                (c.description ILIKE $1 || '%') as description_prefix,
+                (c.description ILIKE '%' || $1 || '%') as description_contains,
+                ts_rank_cd(to_tsvector('english', c.description), to_tsquery('english', $2)) as rank,
+                similarity(c.description, $1) as sim,
+                COALESCE(u.use_count, 0) as use_count
+            FROM icd10_codes c
+            LEFT JOIN icd10_usage u ON c.id = u.icd10_id AND u.user_id = $4
+            WHERE c.is_active = true
               AND (
-                code ILIKE $1 || '%'
-                OR to_tsvector('english', description) @@ to_tsquery('english', $2)
-                OR description % $1
+                c.code ILIKE $1 || '%'
+                OR to_tsvector('english', c.description) @@ to_tsquery('english', $2)
+                OR c.description % $1
+                OR c.description ILIKE '%' || $1 || '%'
               )
             ORDER BY 
-                prefix_match DESC,
-                (code = $1) DESC,
+                exact_code DESC,
+                code_prefix DESC,
+                description_prefix DESC,
+                description_contains DESC,
                 rank DESC,
+                use_count DESC,
+                LENGTH(c.description) ASC,
                 sim DESC
             LIMIT $3
-        `, [searchTerm, tsQuery, limit]);
+        `, [searchTerm, tsQuery, limit, req.user.id]);
 
         res.json(results.rows);
     } catch (error) {
