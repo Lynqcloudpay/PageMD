@@ -9,7 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTasks } from '../context/TaskContext';
 import { format } from 'date-fns';
 import { inboxAPI, messagesAPI } from '../services/api';
-import toast from 'react-hot-toast';
+import { showError, showSuccess } from '../utils/toast';
 
 // Task categories like Epic's InBasket
 const TASK_CATEGORIES = [
@@ -87,7 +87,7 @@ const TaskManager = () => {
       setTasks([...inboxTasks, ...messageTasks].sort((a, b) => b.date - a.date));
     } catch (error) {
       console.error('Error fetching tasks:', error);
-      toast.error('Failed to load In Basket items');
+      showError('Failed to load In Basket items');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -167,10 +167,10 @@ const TaskManager = () => {
         setSelectedTask(updatedTasks.find(t => t.id === taskId));
       }
 
-      toast.success(`Task marked as ${action}`);
+      showSuccess(`Task marked as ${action}`);
     } catch (error) {
       console.error(`Error performing action ${action}:`, error);
-      toast.error(`Failed to mark task as ${action}`);
+      showError(`Failed to mark task as ${action}`);
     }
   };
 
@@ -206,7 +206,7 @@ const TaskManager = () => {
       // Fallback to MRN if patientId is somehow missing
       navigate(`/patient/${selectedTask.mrn}/snapshot`);
     } else {
-      toast.error('Patient record not found');
+      showError('Patient record not found');
     }
   };
 
@@ -251,8 +251,8 @@ const TaskManager = () => {
           <button
             onClick={() => setSelectedCategory('all')}
             className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${selectedCategory === 'all'
-                ? 'bg-paper-200 text-ink-900 font-medium'
-                : 'text-ink-600 hover:bg-paper-100'
+              ? 'bg-paper-200 text-ink-900 font-medium'
+              : 'text-ink-600 hover:bg-paper-100'
               }`}
           >
             <span className="flex items-center">
@@ -275,8 +275,8 @@ const TaskManager = () => {
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${selectedCategory === category.id
-                    ? 'bg-paper-200 text-ink-900 font-medium'
-                    : 'text-ink-600 hover:bg-paper-100'
+                  ? 'bg-paper-200 text-ink-900 font-medium'
+                  : 'text-ink-600 hover:bg-paper-100'
                   }`}
               >
                 <span className="flex items-center">
@@ -309,8 +309,8 @@ const TaskManager = () => {
                   key={filter.id}
                   onClick={() => setFilterStatus(filter.id)}
                   className={`w-full flex items-center px-3 py-1.5 rounded text-sm ${filterStatus === filter.id
-                      ? 'bg-paper-200 text-ink-900'
-                      : 'text-ink-500 hover:bg-paper-100'
+                    ? 'bg-paper-200 text-ink-900'
+                    : 'text-ink-500 hover:bg-paper-100'
                     }`}
                 >
                   <Icon className="w-3 h-3 mr-2" />
@@ -459,8 +459,8 @@ const TaskManager = () => {
                   {selectedTask.type}
                 </span>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${selectedTask.status === 'unread' ? 'bg-blue-100 text-blue-700' :
-                    selectedTask.status === 'read' ? 'bg-gray-100 text-gray-700' :
-                      'bg-green-100 text-green-700'
+                  selectedTask.status === 'read' ? 'bg-gray-100 text-gray-700' :
+                    'bg-green-100 text-green-700'
                   }`}>
                   {selectedTask.status === 'unread' ? 'Unread' :
                     selectedTask.status === 'read' ? 'Read' :
