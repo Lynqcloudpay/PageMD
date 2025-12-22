@@ -308,34 +308,41 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, initialTab]);
 
-    // Group cart by order type
+    // Group cart by diagnosis, then by type within each diagnosis
     const groupedCart = useMemo(() => {
         const typeOrder = ['labs', 'imaging', 'procedures', 'referrals', 'medications'];
-        const groups = {};
+        const byDiagnosis = {};
+
         cart.forEach(item => {
+            const dx = item.diagnosis || 'Unassigned';
+            if (!byDiagnosis[dx]) byDiagnosis[dx] = {};
             const type = item.type || 'other';
-            if (!groups[type]) groups[type] = [];
-            groups[type].push(item);
+            if (!byDiagnosis[dx][type]) byDiagnosis[dx][type] = [];
+            byDiagnosis[dx][type].push(item);
         });
-        // Return in preferred order
-        const ordered = {};
-        typeOrder.forEach(t => {
-            if (groups[t]) ordered[t] = groups[t];
+
+        // Sort types within each diagnosis
+        Object.keys(byDiagnosis).forEach(dx => {
+            const orderedTypes = {};
+            typeOrder.forEach(t => {
+                if (byDiagnosis[dx][t]) orderedTypes[t] = byDiagnosis[dx][t];
+            });
+            Object.keys(byDiagnosis[dx]).forEach(t => {
+                if (!orderedTypes[t]) orderedTypes[t] = byDiagnosis[dx][t];
+            });
+            byDiagnosis[dx] = orderedTypes;
         });
-        // Add any other types
-        Object.keys(groups).forEach(t => {
-            if (!ordered[t]) ordered[t] = groups[t];
-        });
-        return ordered;
+
+        return byDiagnosis;
     }, [cart]);
 
     const typeLabels = {
-        labs: { label: 'Labs', color: 'bg-purple-500', bgColor: 'bg-purple-50', textColor: 'text-purple-700' },
-        imaging: { label: 'Imaging', color: 'bg-blue-500', bgColor: 'bg-blue-50', textColor: 'text-blue-700' },
-        procedures: { label: 'Procedures', color: 'bg-amber-500', bgColor: 'bg-amber-50', textColor: 'text-amber-700' },
-        referrals: { label: 'Referrals', color: 'bg-orange-500', bgColor: 'bg-orange-50', textColor: 'text-orange-700' },
-        medications: { label: 'Medications', color: 'bg-green-500', bgColor: 'bg-green-50', textColor: 'text-green-700' },
-        other: { label: 'Other', color: 'bg-gray-500', bgColor: 'bg-gray-50', textColor: 'text-gray-700' }
+        labs: { label: 'L', color: 'bg-purple-500', textColor: 'text-purple-700' },
+        imaging: { label: 'I', color: 'bg-blue-500', textColor: 'text-blue-700' },
+        procedures: { label: 'P', color: 'bg-amber-500', textColor: 'text-amber-700' },
+        referrals: { label: 'R', color: 'bg-orange-500', textColor: 'text-orange-700' },
+        medications: { label: 'M', color: 'bg-green-500', textColor: 'text-green-700' },
+        other: { label: 'O', color: 'bg-gray-500', textColor: 'text-gray-700' }
     };
 
     // Unified search logic
@@ -841,7 +848,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                             </h3>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                        <div className="flex-1 overflow-y-auto p-3 space-y-2">
                             {cart.length === 0 ? (
                                 <div className="h-full flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
                                     <ShoppingCart className="w-8 h-8 mb-2 opacity-20" />
@@ -849,38 +856,35 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                 </div>
                             ) : (
                                 <div className="space-y-2">
-                                    {Object.entries(groupedCart).map(([type, items]) => {
-                                        const typeInfo = typeLabels[type] || typeLabels.other;
-                                        return (
-                                            <div key={type} className={`${typeInfo.bgColor} border border-gray-200 rounded-lg p-2`}>
-                                                <div className="flex items-center gap-2 pb-1.5 mb-1.5 border-b border-gray-200/50">
-                                                    <div className={`w-2 h-2 rounded-full ${typeInfo.color}`}></div>
-                                                    <h4 className={`text-xs font-bold ${typeInfo.textColor} uppercase tracking-wide flex-1`}>
-                                                        {typeInfo.label}
-                                                    </h4>
-                                                    <span className="text-[10px] text-gray-500 bg-white px-1.5 py-0.5 rounded">{items.length}</span>
-                                                </div>
-                                                <div className="space-y-1">
-                                                    {items.map((item) => (
-                                                        <div key={item.id} className="group flex items-center justify-between bg-white border border-gray-200 rounded px-2 py-1.5 text-xs hover:shadow-sm transition-all">
-                                                            <div className="flex-1 min-w-0">
-                                                                <div className="font-medium text-gray-800 truncate">{item.name}</div>
-                                                                {item.diagnosis && item.diagnosis !== 'Unassigned' && (
-                                                                    <div className="text-[10px] text-gray-400 truncate">Dx: {item.diagnosis.substring(0, 30)}</div>
-                                                                )}
-                                                            </div>
+                                    {Object.entries(groupedCart).map(([diagnosis, typeGroups]) => (
+                                        <div key={diagnosis} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                                            <div className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 border-b border-gray-100">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-primary-500"></div>
+                                                <h4 className="text-[10px] font-bold text-gray-600 uppercase tracking-wide flex-1 truncate">
+                                                    {diagnosis === 'Unassigned' ? 'No Diagnosis' : diagnosis.substring(0, 35)}
+                                                </h4>
+                                            </div>
+                                            <div className="p-1.5 space-y-0.5">
+                                                {Object.entries(typeGroups).map(([type, items]) => {
+                                                    const typeInfo = typeLabels[type] || typeLabels.other;
+                                                    return items.map((item) => (
+                                                        <div key={item.id} className="group flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-gray-50 transition-colors">
+                                                            <span className={`${typeInfo.color} text-white text-[8px] font-bold w-4 h-4 rounded flex items-center justify-center flex-shrink-0`}>
+                                                                {typeInfo.label}
+                                                            </span>
+                                                            <span className="text-xs text-gray-700 flex-1 truncate">{item.name}</span>
                                                             <button
                                                                 onClick={() => removeFromCart(item.id)}
-                                                                className="text-gray-300 hover:text-red-500 transition-colors ml-2 opacity-0 group-hover:opacity-100"
+                                                                className="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                                                             >
-                                                                <X className="w-3.5 h-3.5" />
+                                                                <X className="w-3 h-3" />
                                                             </button>
                                                         </div>
-                                                    ))}
-                                                </div>
+                                                    ));
+                                                })}
                                             </div>
-                                        );
-                                    })}
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                         </div>
