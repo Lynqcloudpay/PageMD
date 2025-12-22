@@ -200,7 +200,7 @@ const TaskManager = () => {
     if (!selectedTask) return;
 
     try {
-      await messagesAPI.send({
+      await messagesAPI.create({
         toUserId: taskForm.userId,
         subject: `Task: ${selectedTask.title || 'Review Item'}`,
         body: `Task assigned regarding ${selectedTask.patient} (MRN: ${selectedTask.mrn}):\n\n${taskForm.instruction}\n\nRelated Item: ${selectedTask.title}`,
