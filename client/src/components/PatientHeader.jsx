@@ -6,7 +6,6 @@ import Toast from './ui/Toast';
 import { usePatient } from '../context/PatientContext';
 import { usePatientTabs } from '../context/PatientTabsContext';
 import { patientsAPI } from '../services/api';
-import AuthedImg from './AuthedImg';
 
 const PatientHeader = () => {
     const { id } = useParams();
@@ -20,7 +19,7 @@ const PatientHeader = () => {
     const [loading, setLoading] = useState(true);
     const [showAllergyModal, setShowAllergyModal] = useState(false);
     const [showMedicationModal, setShowMedicationModal] = useState(false);
-    const [showPhotoModal, setShowPhotoModal] = useState(false);
+    // showPhotoModal removed
     const [showDemographicsModal, setShowDemographicsModal] = useState(false);
     const [demographicsField, setDemographicsField] = useState(null); // 'phone', 'email', 'address', 'insurance', 'pharmacy', 'emergency'
     const [demographicsForm, setDemographicsForm] = useState({
@@ -40,14 +39,6 @@ const PatientHeader = () => {
     });
     const [allergyForm, setAllergyForm] = useState({ allergen: '', reaction: '', severity: '', onsetDate: '' });
     const [medicationForm, setMedicationForm] = useState({ medicationName: '', dosage: '', frequency: '', route: '', startDate: '' });
-    const [photoMode, setPhotoMode] = useState(null); // 'webcam' or 'upload'
-    const [webcamStream, setWebcamStream] = useState(null);
-    const [capturedPhoto, setCapturedPhoto] = useState(null);
-    const [photoVersion, setPhotoVersion] = useState(0); // Track photo updates for cache busting
-    const [imgError, setImgError] = useState(false);
-    const [imgLoadAttempt, setImgLoadAttempt] = useState(0);
-    const videoRef = useRef(null);
-    const fileInputRef = useRef(null);
 
     const showToast = useCallback((message, type = 'success') => {
         setToast({ message, type });
@@ -501,27 +492,6 @@ const PatientHeader = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
-    // Generate photo URL with cache-busting (must be before early returns)
-    // Uses secure EMR pattern: GET /api/patients/:id/photo
-    const photoUrl = useMemo(() => {
-        if (!patient?.photo_url) return null;
-
-        let raw = String(patient.photo_url).trim();
-
-        // Base64 / blob can be used directly
-        if (raw.startsWith('data:') || raw.startsWith('blob:')) return raw;
-
-        // For server-stored photos, always use the secure endpoint that checks auth
-        // This avoids exposing direct file paths and ensures unauthorized 401/403s are handled by AuthedImg
-        return `/api/patients/${id}/photo?v=${photoVersion}`;
-    }, [patient?.photo_url, id, photoVersion]);
-
-    // Reset error state when photo URL changes
-    useEffect(() => {
-        setImgError(false);
-        setImgLoadAttempt(0);
-    }, [photoUrl]);
-
     if (loading || !patient) {
         return (
             <div className="bg-white border-b border-ink-200 shadow-sm sticky top-0 z-40 p-6">
@@ -553,42 +523,10 @@ const PatientHeader = () => {
                     <div className="flex items-center justify-between">
                         {/* Left: Photo and Basic Info */}
                         <div className="flex items-center space-x-4">
-                            {/* Patient Photo */}
-                            <button
-                                onClick={() => setShowPhotoModal(true)}
-                                className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-300 transition-all cursor-pointer relative group overflow-hidden flex-shrink-0 ring-2 ring-white shadow-md"
-                                title="Click to add/change photo"
-                            >
-                                {photoUrl && !imgError ? (
-                                    <>
-                                        <AuthedImg
-                                            src={photoUrl}
-                                            alt={patient?.first_name || 'Patient'}
-                                            className="w-full h-full object-cover rounded-full"
-                                            imgKey={`${patient.photo_url}-${photoVersion}-${imgLoadAttempt}`}
-                                            onFail={(e) => {
-                                                console.error('Error loading patient photo:', e);
-                                                if (imgLoadAttempt < 3 && !photoUrl.startsWith('data:')) {
-                                                    console.log(`Retrying photo load (attempt ${imgLoadAttempt + 1}/3)`);
-                                                    setTimeout(() => setImgLoadAttempt(prev => prev + 1), 1000);
-                                                } else {
-                                                    setImgError(true);
-                                                }
-                                            }}
-                                        />
-                                        <div className="absolute inset-0 hidden items-center justify-center bg-black bg-opacity-50 group-hover:flex transition-opacity rounded-full">
-                                            <Camera className="w-4 h-4 text-white" />
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <User className="w-8 h-8" />
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black bg-opacity-30 transition-opacity rounded-full">
-                                            <Camera className="w-4 h-4 text-white" />
-                                        </div>
-                                    </>
-                                )}
-                            </button>
+                            {/* Patient Avatar (Initials) */}
+                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white text-2xl font-bold shadow-lg ring-4 ring-white">
+                                {patient?.first_name?.[0]}{patient?.last_name?.[0]}
+                            </div>
 
                             {/* Patient Name and Info */}
                             <div className="min-w-0">

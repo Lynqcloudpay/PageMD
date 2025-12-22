@@ -21,7 +21,7 @@ import EPrescribeEnhanced from '../components/EPrescribeEnhanced';
 import Modal from '../components/ui/Modal';
 import { usePrivileges } from '../hooks/usePrivileges';
 import CardiologyViewer from '../components/CardiologyViewer';
-import AuthedImg from '../components/AuthedImg';
+// AuthedImg removed
 
 const Snapshot = ({ showNotesOnly = false }) => {
     const { id } = useParams();
@@ -1150,20 +1150,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
     }, [webcamStream]);
 
     // Generate photo URL with cache-busting (must be before early returns)
-    // Generate photo URL with cache-busting (must be before early returns)
-    // Uses secure EMR pattern: GET /api/patients/:id/photo
-    const photoUrl = useMemo(() => {
-        if (!patient?.photo_url) return null;
-
-        let raw = String(patient.photo_url).trim();
-
-        // Base64 / blob can be used directly (newly captured/uploaded)
-        if (raw.startsWith('data:') || raw.startsWith('blob:')) return raw;
-
-        // For server-stored photos, always use the secure endpoint that checks auth
-        // This avoids exposing direct file paths and ensures unauthorized 401/403s are handled by AuthedImg
-        return `/api/patients/${id}/photo?v=${photoVersion}`;
-    }, [patient?.photo_url, id, photoVersion]);
+    // Photo URL logic removed
 
 
     if (showNotesOnly) {
@@ -1356,10 +1343,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             {/* Left: Photo and Basic Info */}
                             <div className="flex items-center space-x-6">
                                 {/* Redesigned Patient Photo */}
+                                {/* Redesigned Patient Photo - Initials Avatar */}
                                 <PatientHeaderPhoto
-                                    photoUrl={photoUrl}
-                                    locallyUploadedPhoto={locallyUploadedPhoto}
-                                    onPhotoClick={() => setShowPhotoModal(true)}
+                                    firstName={patient?.first_name}
+                                    lastName={patient?.last_name}
                                 />
 
                                 {/* Patient Name and Info */}
@@ -3158,73 +3145,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
  * PatientHeaderPhoto - Displays the patient profile picture with retry logic
  * Defined outside Snapshot component to avoid unnecessary remounts
  */
-const PatientHeaderPhoto = ({ photoUrl, locallyUploadedPhoto, onPhotoClick }) => {
-    const [imgError, setImgError] = useState(false);
-    const [loadAttempt, setLoadAttempt] = useState(0);
-
-    // Final effective URL to use
-    const effectivePhotoUrl = useMemo(() => {
-        // Priority 1: If we just uploaded a photo, use that base64 (never fails)
-        if (locallyUploadedPhoto) return locallyUploadedPhoto;
-        // Priority 2: Use the memoized photoUrl from server/state
-        return photoUrl;
-    }, [locallyUploadedPhoto, photoUrl]);
-
-    // When the effective URL changes, reset the error state and try again
-    useEffect(() => {
-        setImgError(false);
-        setLoadAttempt(0);
-    }, [effectivePhotoUrl]);
-
-    const handleImageError = () => {
-        // If it's a server URL (not base64) and we haven't reached max retries, try again
-        if (effectivePhotoUrl && !effectivePhotoUrl.startsWith('data:') && loadAttempt < 3) {
-            console.warn(`[Snapshot] Retrying photo load (attempt ${loadAttempt + 1}/3):`, effectivePhotoUrl?.substring(0, 100));
-            setTimeout(() => {
-                setLoadAttempt(prev => prev + 1);
-            }, 1000);
-        } else {
-            console.error(`[Snapshot] Profile photo failed to load after retries:`, effectivePhotoUrl?.substring(0, 100));
-            setImgError(true);
-        }
-    };
-
+const PatientHeaderPhoto = ({ firstName, lastName }) => {
     return (
-        <div className="relative group flex-shrink-0">
-            <button
-                onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onPhotoClick();
-                }}
-                className={`
-                    w-20 h-20 rounded-full flex items-center justify-center 
-                    transition-all duration-300 cursor-pointer relative 
-                    overflow-hidden ring-4 ring-white shadow-xl
-                    ${!effectivePhotoUrl || imgError ? 'bg-gradient-to-br from-indigo-50 to-blue-100' : 'bg-white'}
-                    hover:ring-blue-100 hover:shadow-2xl hover:scale-105
-                `}
-                title="Change Profile Photo"
-            >
-                {effectivePhotoUrl && !imgError ? (
-                    <AuthedImg
-                        imgKey={`${effectivePhotoUrl}-${loadAttempt}`}
-                        src={effectivePhotoUrl}
-                        alt="Patient profile"
-                        className="w-full h-full object-cover rounded-full"
-                        onFail={() => handleImageError()}
-                    />
-                ) : (
-                    <div className="flex flex-col items-center justify-center">
-                        <User className="w-10 h-10 text-blue-300" />
-                        <div className="absolute inset-0 bg-blue-600/5 group-hover:bg-blue-600/10 transition-colors" />
-                    </div>
-                )}
-
-                <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Camera className="w-6 h-6 text-white drop-shadow-md" />
-                </div>
-            </button>
+        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white text-3xl font-bold shadow-xl ring-4 ring-white shrink-0 select-none">
+            {firstName?.[0]}{lastName?.[0]}
         </div>
     );
 };
