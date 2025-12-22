@@ -22,6 +22,7 @@ import Modal from '../components/ui/Modal';
 import { usePrivileges } from '../hooks/usePrivileges';
 import CardiologyViewer from '../components/CardiologyViewer';
 // AuthedImg removed
+import PatientHeader from '../components/PatientHeader';
 
 const Snapshot = ({ showNotesOnly = false }) => {
     const { id } = useParams();
@@ -1206,210 +1207,21 @@ const Snapshot = ({ showNotesOnly = false }) => {
     return (
         <div className="min-h-screen bg-neutral-50">
             <div className="w-full px-4">
-                {/* Patient Hub Header Section */}
-                <div className="bg-white border-b border-gray-200 shadow-sm mb-6">
-                    {/* Patient Info Header */}
-                    <div className="px-6 py-4 border-b border-gray-100" style={{ background: 'linear-gradient(to right, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.08), transparent)' }}>
-                        <div className="flex items-center justify-between">
-                            {/* Left: Photo and Basic Info */}
-                            <div className="flex items-center space-x-6">
-                                {/* Redesigned Patient Photo */}
-                                {/* Redesigned Patient Photo - Initials Avatar */}
-                                <PatientHeaderPhoto
-                                    firstName={patient?.first_name}
-                                    lastName={patient?.last_name}
-                                />
-
-                                {/* Patient Name and Info */}
-                                <div className="min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <h1
-                                            onClick={() => navigate(`/patient/${id}/snapshot`)}
-                                            className="text-2xl font-bold text-gray-900 cursor-pointer hover:text-primary-700 transition-colors"
-                                        >
-                                            {patient ? `${patient.first_name} ${patient.last_name}` : 'Patient Chart'}
-                                        </h1>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                if (patient) {
-                                                    setEditPatientForm({
-                                                        first_name: patient.first_name || '',
-                                                        last_name: patient.last_name || '',
-                                                        dob: patient.dob ? patient.dob.split('T')[0] : '',
-                                                        sex: patient.sex || '',
-                                                        mrn: patient.mrn || ''
-                                                    });
-                                                    setShowEditPatientModal(true);
-                                                }
-                                            }}
-                                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                                            title="Edit Patient Information"
-                                        >
-                                            <Edit className="w-4 h-4 text-gray-600" />
-                                        </button>
-                                    </div>
-                                    {patient && (
-                                        <div className="flex items-center gap-3 text-sm text-gray-600">
-                                            <span>{age !== null && `${age} years old`}</span>
-                                            <span className="text-gray-300">•</span>
-                                            <span>MRN: <span className="font-semibold text-gray-700">{patient.mrn}</span></span>
-                                            <span className="text-gray-300">•</span>
-                                            <span>DOB: {formatDOB(patient.dob)}</span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Right column - Chart Button */}
-                            <div className="flex items-center space-x-2">
-                                <button
-                                    onClick={() => {
-                                        setPatientChartTab('history');
-                                        setShowPatientChart(true);
-                                    }}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white rounded-lg transition-all shadow-md hover:shadow-lg" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')} onMouseLeave={(e) => (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
-                                >
-                                    <Eye className="w-4 h-4" />
-                                    <span>Open Chart</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Demographics Section */}
-                    {patient && (
-                        <div className="px-6 py-1.5">
-                            <div className="grid grid-cols-3 lg:grid-cols-6 gap-1.5">
-                                {/* Phone */}
-                                <div
-                                    onClick={() => handleOpenDemographics('phone')}
-                                    className="group cursor-pointer bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-primary-300 rounded p-1 transition-all relative text-center"
-                                >
-                                    <div className="flex items-center justify-center mb-0.5 relative">
-                                        <div className="flex items-center space-x-0.5">
-                                            <Phone className="w-2.5 h-2.5 text-primary-600" />
-                                            <span className="text-[9px] font-semibold text-gray-700 uppercase tracking-wide">Phone</span>
-                                        </div>
-                                        <Edit className="w-2 h-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity absolute right-0" />
-                                    </div>
-                                    <div className="text-[11px] font-medium text-gray-900 leading-tight">{formatPhone(patient.phone) || 'Not provided'}</div>
-                                </div>
-
-                                {/* Email */}
-                                <div
-                                    onClick={() => handleOpenDemographics('email')}
-                                    className="group cursor-pointer bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-primary-300 rounded p-1 transition-all relative text-center"
-                                >
-                                    <div className="flex items-center justify-center mb-0.5 relative">
-                                        <div className="flex items-center space-x-0.5">
-                                            <Mail className="w-2.5 h-2.5 text-primary-600" />
-                                            <span className="text-[9px] font-semibold text-gray-700 uppercase tracking-wide">Email</span>
-                                        </div>
-                                        <Edit className="w-2 h-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity absolute right-0" />
-                                    </div>
-                                    <div className="text-[11px] font-medium text-gray-900 leading-tight">{patient.email || 'Not provided'}</div>
-                                </div>
-
-                                {/* Address */}
-                                <div
-                                    onClick={() => handleOpenDemographics('address')}
-                                    className="group cursor-pointer bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-primary-300 rounded p-1 transition-all relative text-center"
-                                >
-                                    <div className="flex items-center justify-center mb-0.5 relative">
-                                        <div className="flex items-center space-x-0.5">
-                                            <MapPin className="w-2.5 h-2.5 text-primary-600" />
-                                            <span className="text-[9px] font-semibold text-gray-700 uppercase tracking-wide">Address</span>
-                                        </div>
-                                        <Edit className="w-2 h-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity absolute right-0" />
-                                    </div>
-                                    <div className="text-[11px] font-medium text-gray-900 leading-tight line-clamp-2">{formatAddress(patient)}</div>
-                                </div>
-
-                                {/* Insurance */}
-                                <div
-                                    onClick={() => handleOpenDemographics('insurance')}
-                                    className="group cursor-pointer bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-primary-300 rounded p-1 transition-all relative text-center"
-                                >
-                                    <div className="flex items-center justify-center mb-0.5 relative">
-                                        <div className="flex items-center space-x-0.5">
-                                            <CreditCard className="w-2.5 h-2.5 text-primary-600" />
-                                            <span className="text-[9px] font-semibold text-gray-700 uppercase tracking-wide">Insurance</span>
-                                        </div>
-                                        <Edit className="w-2 h-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity absolute right-0" />
-                                    </div>
-                                    <div className="text-[11px] font-medium text-gray-900 leading-tight">{patient.insurance_provider || 'Not on file'}</div>
-                                    {patient.insurance_id && (
-                                        <div className="text-[9px] text-gray-600 mt-0.5 leading-tight">
-                                            Policy: {patient.insurance_id}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Pharmacy */}
-                                <div
-                                    onClick={() => handleOpenDemographics('pharmacy')}
-                                    className="group cursor-pointer bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-primary-300 rounded p-1 transition-all relative text-center"
-                                >
-                                    <div className="flex items-center justify-center mb-0.5 relative">
-                                        <div className="flex items-center space-x-0.5">
-                                            <Building2 className="w-2.5 h-2.5 text-primary-600" />
-                                            <span className="text-[9px] font-semibold text-gray-700 uppercase tracking-wide">Pharmacy</span>
-                                        </div>
-                                        <Edit className="w-2 h-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity absolute right-0" />
-                                    </div>
-                                    <div className="text-[11px] font-medium text-gray-900 leading-tight">{patient.pharmacy_name || 'Not on file'}</div>
-                                    {patient.pharmacy_phone && (
-                                        <div className="text-[9px] text-gray-600 mt-0.5 leading-tight">
-                                            {formatPhone(patient.pharmacy_phone)}
-                                        </div>
-                                    )}
-                                    {patient.pharmacy_address && (
-                                        <div className="text-[9px] text-gray-600 mt-0.5 leading-tight">
-                                            {patient.pharmacy_address}
-                                        </div>
-                                    )}
-                                </div>
-
-
-                                {/* Emergency Contact */}
-                                <div
-                                    onClick={() => handleOpenDemographics('emergency')}
-                                    className="group cursor-pointer bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-primary-300 rounded p-1 transition-all relative text-center"
-                                >
-                                    <div className="flex items-center justify-center mb-0.5 relative">
-                                        <div className="flex items-center space-x-0.5">
-                                            <Users className="w-2.5 h-2.5 text-primary-600" />
-                                            <span className="text-[9px] font-semibold text-gray-700 uppercase tracking-wide">Emergency</span>
-                                        </div>
-                                        <Edit className="w-2 h-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity absolute right-0" />
-                                    </div>
-                                    <div className="text-[11px] font-medium text-gray-900 leading-tight line-clamp-2">
-                                        {patient.emergency_contact_name && (
-                                            <div>
-                                                {patient.emergency_contact_name}
-                                                {patient.emergency_contact_phone && (
-                                                    <span className="text-[9px] text-gray-600"> • {formatPhone(patient.emergency_contact_phone)}</span>
-                                                )}
-                                            </div>
-                                        )}
-                                        {!patient.emergency_contact_name && patient.emergency_contact_phone && (
-                                            <div>{formatPhone(patient.emergency_contact_phone)}</div>
-                                        )}
-                                        {!patient.emergency_contact_name && !patient.emergency_contact_phone && (
-                                            <div className="text-gray-500">Not on file</div>
-                                        )}
-                                        {patient.emergency_contact_relationship && (
-                                            <div className="text-[9px] text-gray-600 mt-0.5 leading-tight">
-                                                {patient.emergency_contact_relationship}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
+                <PatientHeader
+                    patient={patient}
+                    onUpdate={refreshPatientData}
+                    onOpenChart={() => {
+                        setPatientChartTab('hub');
+                        setShowPatientChart(true);
+                    }}
+                    onOpenToday={() => {
+                        if (todayDraftVisit) {
+                            navigate(`/patient/${id}/visit/${todayDraftVisit.id}`);
+                        } else {
+                            handleCreateNewVisit();
+                        }
+                    }}
+                />
 
                 {/* Quick Navigation Bar */}
                 <div className="px-6 py-2 bg-gray-50 border-b border-gray-200 mb-4">
