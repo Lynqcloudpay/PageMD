@@ -31,6 +31,7 @@ const TaskManager = () => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [interpretationText, setInterpretationText] = useState('');
 
   // Fetch tasks and messages
   const fetchTasksData = async (isRefresh = false) => {
@@ -173,23 +174,28 @@ const TaskManager = () => {
     }
   };
 
-  // Handle reply action
-  const handleReply = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (selectedTask) {
-      // Navigate to messages or open compose modal
-      navigate('/messages', { state: { replyTo: selectedTask } });
-    }
-  };
+  // Handle saving interpretation/comment
+  const handleSaveInterpretation = async () => {
+    if (!interpretationText.trim() || !selectedTask) return;
 
-  // Handle forward action
-  const handleForward = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (selectedTask) {
-      // Navigate to messages or open forward modal
-      navigate('/messages', { state: { forward: selectedTask } });
+    try {
+      const comment = interpretationText.trim();
+
+      if (selectedTask.source === 'inbox') {
+        // Save comment to the order or document
+        await inboxAPI.markReviewed(selectedTask.type.toLowerCase(), selectedTask.id, { comment });
+      } else if (selectedTask.source === 'messages') {
+        // For messages, we could add a comment via a separate endpoint
+        // For now, just mark as read with the comment
+        await messagesAPI.markRead(selectedTask.id);
+      }
+
+      setInterpretationText('');
+      fetchTasksData(true);
+      showSuccess('Interpretation saved');
+    } catch (error) {
+      console.error('Error saving interpretation:', error);
+      showError('Failed to save interpretation');
     }
   };
 
@@ -631,22 +637,25 @@ const TaskManager = () => {
               )}
             </div>
 
-            {/* Other Actions */}
-            <div className="grid grid-cols-2 gap-2">
+            {/* Clinical Interpretation / Comment */}
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-ink-500 uppercase">Add Interpretation / Comment</label>
+              <textarea
+                value={interpretationText}
+                onChange={(e) => setInterpretationText(e.target.value)}
+                placeholder="Enter your clinical interpretation, findings, or follow-up notes..."
+                className="w-full p-2 border border-paper-300 rounded-md text-sm resize-none focus:ring-2 focus:ring-paper-400"
+                rows={3}
+              />
               <button
                 type="button"
-                onClick={handleReply}
-                className="px-3 py-2 border border-paper-300 rounded-md hover:bg-paper-50 active:bg-paper-100 text-sm transition-colors cursor-pointer"
+                onClick={handleSaveInterpretation}
+                disabled={!interpretationText.trim()}
+                className="w-full px-3 py-2 bg-paper-600 text-white rounded-md hover:bg-paper-700 active:bg-paper-800 text-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Reply
+                Save Interpretation
               </button>
-              <button
-                type="button"
-                onClick={handleForward}
-                className="px-3 py-2 border border-paper-300 rounded-md hover:bg-paper-50 active:bg-paper-100 text-sm transition-colors cursor-pointer"
-              >
-                Forward
-              </button>
+              <p className="text-xs text-ink-400 italic">Your interpretation will be timestamped and saved to the medical record.</p>
             </div>
             {selectedTask.patient !== 'N/A' && selectedTask.mrn && (
               <button

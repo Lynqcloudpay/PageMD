@@ -76,6 +76,9 @@ router.post('/', requirePermission('patients:view_chart'), upload.single('file')
       }
     }
 
+    // Store URL path (accessible via /api/uploads/) instead of filesystem path
+    const urlPath = `/api/uploads/${req.file.filename}`;
+
     const result = await pool.query(
       `INSERT INTO documents (
         patient_id, visit_id, uploader_id, doc_type, filename, file_path, mime_type, file_size, tags
@@ -86,7 +89,7 @@ router.post('/', requirePermission('patients:view_chart'), upload.single('file')
         req.user.id,
         docType || 'other',
         req.file.originalname,
-        req.file.path,
+        urlPath, // Store URL path instead of filesystem path
         req.file.mimetype,
         req.file.size,
         tags ? tags.split(',') : [],
@@ -113,13 +116,25 @@ router.get('/:id/file', requirePermission('patients:view_chart'), async (req, re
     }
 
     const doc = result.rows[0];
-    if (!fs.existsSync(doc.file_path)) {
-      return res.status(404).json({ error: 'File not found' });
+
+    // Handle both old filesystem paths and new URL paths
+    let actualPath;
+    if (doc.file_path.startsWith('/api/uploads/')) {
+      // New format: URL path - extract filename and construct filesystem path
+      const filename = path.basename(doc.file_path);
+      actualPath = path.join(uploadDir, filename);
+    } else {
+      // Old format: filesystem path
+      actualPath = doc.file_path;
+    }
+
+    if (!fs.existsSync(actualPath)) {
+      return res.status(404).json({ error: 'File not found on disk' });
     }
 
     res.setHeader('Content-Type', doc.mime_type || 'application/octet-stream');
     res.setHeader('Content-Disposition', `inline; filename="${doc.filename}"`);
-    res.sendFile(path.resolve(doc.file_path));
+    res.sendFile(path.resolve(actualPath));
   } catch (error) {
     console.error('Error fetching document file:', error);
     res.status(500).json({ error: 'Failed to fetch document' });
