@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Phone, Mail, MapPin, Shield, Activity,
     AlertCircle, Edit2, Camera, X, Check,
-    ExternalLink, Calendar
+    ExternalLink, Calendar, FileText, Upload, Pill
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
@@ -129,14 +129,26 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
         if (onOpenChart) {
             onOpenChart();
         } else {
-            // Default behavior: navigate to snapshot
-            // Use patient.id or the URL param id
+            // Default behavior: navigate to snapshot AND open chart
             const targetId = patient?.id || id;
             if (targetId) {
-                navigate(`/patient/${targetId}/snapshot`); // Navigate to snapshot which is the "Chart"
+                navigate(`/patient/${targetId}/snapshot?tab=history`);
             }
         }
     };
+
+    // Navigation helper
+    const handleNav = (tab, action) => {
+        const targetId = patient?.id || id;
+        if (!targetId) return;
+
+        if (tab) {
+            navigate(`/patient/${targetId}/snapshot?tab=${tab}`);
+        } else if (action) {
+            navigate(`/patient/${targetId}/snapshot?action=${action}`);
+        }
+    };
+
 
     return (
         <div className="bg-white border border-gray-200 shadow-sm rounded-lg mb-6 overflow-hidden">
@@ -337,6 +349,47 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                 </div>
 
             </div>
+            {/* Quick Actions Bar - Visible Everywhere */}
+            {!isEditing && (
+                <div className="px-6 py-2 bg-gray-50 border-t border-gray-200 flex items-center gap-4 overflow-x-auto">
+                    <button
+                        onClick={() => handleNav('documents')}
+                        className="flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-blue-600 transition-colors whitespace-nowrap"
+                    >
+                        <FileText size={14} />
+                        Documents
+                    </button>
+                    <button
+                        onClick={() => handleNav(null, 'upload')}
+                        className="flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-blue-600 transition-colors whitespace-nowrap"
+                    >
+                        <Upload size={14} />
+                        Upload
+                    </button>
+                    <div className="w-px h-4 bg-gray-300"></div>
+                    <button
+                        onClick={() => handleNav(null, 'eprescribe')}
+                        className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors whitespace-nowrap"
+                    >
+                        <Pill size={14} />
+                        e-Prescribe
+                    </button>
+                    <button
+                        onClick={() => handleNav('prescriptions')}
+                        className="flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-blue-600 transition-colors whitespace-nowrap"
+                    >
+                        <Pill size={14} className="text-gray-400" />
+                        Rx Log
+                    </button>
+                    <button
+                        onClick={() => handleNav('referrals')}
+                        className="flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-blue-600 transition-colors whitespace-nowrap"
+                    >
+                        <ExternalLink size={14} />
+                        Referrals
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

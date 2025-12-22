@@ -140,6 +140,24 @@ const Snapshot = ({ showNotesOnly = false }) => {
     });
     const [cardiacCathFile, setCardiacCathFile] = useState(null);
 
+    // Handle URL parameters for navigation from other pages
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const tab = params.get('tab');
+        const action = params.get('action');
+
+        if (tab) {
+            setPatientChartTab(tab);
+            setShowPatientChart(true);
+        }
+
+        if (action === 'eprescribe') {
+            setShowEPrescribeEnhanced(true);
+        } else if (action === 'upload') {
+            setShowDocumentUploadModal(true);
+        }
+    }, [location.search]);
+
     // Cardiology Viewer States
     const [showCardiologyViewer, setShowCardiologyViewer] = useState(false);
     const [cardiologyViewerType, setCardiologyViewerType] = useState(null); // 'EKG', 'ECHO', 'STRESS', 'CATH'
