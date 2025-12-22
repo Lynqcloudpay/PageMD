@@ -978,17 +978,35 @@ const Snapshot = ({ showNotesOnly = false }) => {
         return parts.length > 0 ? parts.join(', ') : 'Not provided';
     };
 
-    // Calculate age from DOB
+    // Calculate age from DOB using robust string parsing (avoids timezone shifts)
     const calculateAge = (dob) => {
         if (!dob) return null;
-        const birthDate = new Date(dob);
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getUTCFullYear();
-        const monthDiff = today.getMonth() - birthDate.getUTCMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getUTCDate())) {
-            age--;
+        try {
+            const datePart = dob.split('T')[0];
+            const [year, month, day] = datePart.split('-').map(num => parseInt(num));
+            const today = new Date();
+            let age = today.getFullYear() - year;
+            const m = (today.getMonth() + 1) - month;
+            if (m < 0 || (m === 0 && today.getDate() < day)) {
+                age--;
+            }
+            return age;
+        } catch (e) {
+            console.error('Error calculating age:', e);
+            return null;
         }
-        return age;
+    };
+
+    // Format DOB using robust string parsing
+    const formatDOB = (dob) => {
+        if (!dob) return 'N/A';
+        try {
+            const datePart = dob.split('T')[0];
+            const [year, month, day] = datePart.split('-');
+            return `${parseInt(month)}/${parseInt(day)}/${year}`;
+        } catch (e) {
+            return 'N/A';
+        }
     };
 
 
@@ -1237,7 +1255,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             <span className="text-gray-300">•</span>
                                             <span>MRN: <span className="font-semibold text-gray-700">{patient.mrn}</span></span>
                                             <span className="text-gray-300">•</span>
-                                            <span>DOB: {patient.dob ? new Date(patient.dob).toLocaleDateString(undefined, { timeZone: 'UTC' }) : 'N/A'}</span>
+                                            <span>DOB: {formatDOB(patient.dob)}</span>
                                         </div>
                                     )}
                                 </div>
