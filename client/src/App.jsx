@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom'
 import PatientHeader from './components/PatientHeader'
+import PatientNoteLayout from './components/PatientNoteLayout'
 import Snapshot from './pages/Snapshot'
 import VisitNote from './pages/VisitNote'
 import Schedule from './pages/Schedule'
@@ -190,8 +191,9 @@ function App() {
                                             <ProtectedRoute>
                                                 <ErrorBoundary>
                                                     <Layout>
-                                                        <PatientHeader />
-                                                        <VisitNote />
+                                                        <PatientNoteLayout>
+                                                            <VisitNote />
+                                                        </PatientNoteLayout>
                                                     </Layout>
                                                 </ErrorBoundary>
                                             </ProtectedRoute>
@@ -200,8 +202,9 @@ function App() {
                                             <ProtectedRoute>
                                                 <ErrorBoundary>
                                                     <Layout>
-                                                        <PatientHeader />
-                                                        <VisitNote />
+                                                        <PatientNoteLayout>
+                                                            <VisitNote />
+                                                        </PatientNoteLayout>
                                                     </Layout>
                                                 </ErrorBoundary>
                                             </ProtectedRoute>

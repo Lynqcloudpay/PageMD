@@ -39,7 +39,7 @@ const calculateAge = (dob) => {
     }
 };
 
-const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToday }) => {
+const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToday, onAction }) => {
     const navigate = useNavigate();
     const { id } = useParams();
     const [fetchedPatient, setFetchedPatient] = useState(null);
@@ -65,24 +65,60 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
         fetchPatient();
     }, [propPatient, id, fetchedPatient]);
 
-    // Safety check - prevent crash if patient is loading
-    // We can show a simple loading state or null
+    // Safety check
     if (!patient) return null;
 
-    // Initialize edit form
+    // Initialize edit form with comprehensive fields
     const handleEditClick = () => {
         setEditForm({
-            first_name: patient.first_name,
-            last_name: patient.last_name,
-            dob: patient.dob ? patient.dob.split('T')[0] : '', // Keep YYYY-MM-DD for input type="date"
-            gender: patient.gender,
-            mrn: patient.mrn,
-            phone: patient.phone,
-            email: patient.email,
-            address_street: patient.address_street,
-            insurance_provider: patient.insurance_provider,
-            pharmacy_name: patient.pharmacy_name,
-            emergency_contact_name: patient.emergency_contact_name
+            // Personal
+            first_name: patient.first_name || '',
+            middle_name: patient.middle_name || '',
+            last_name: patient.last_name || '',
+            suffix: patient.suffix || '',
+            preferred_name: patient.preferred_name || '',
+            dob: patient.dob ? patient.dob.split('T')[0] : '',
+            sex: patient.sex || '',
+            gender_identity: patient.gender_identity || '',
+            marital_status: patient.marital_status || '',
+            race: patient.race || '',
+            ethnicity: patient.ethnicity || '',
+            mrn: patient.mrn || '',
+
+            // Contact
+            phone: patient.phone || '',
+            phone_cell: patient.phone_cell || '',
+            phone_work: patient.phone_work || '',
+            email: patient.email || '',
+            preferred_language: patient.preferred_language || 'English',
+
+            // Address
+            address_street: patient.address_street || '',
+            address_line2: patient.address_line2 || '',
+            city: patient.city || '',
+            state: patient.state || '',
+            zip: patient.zip || '',
+
+            // Employment
+            employment_status: patient.employment_status || '',
+            occupation: patient.occupation || '',
+            employer: patient.employer || '',
+
+            // Insurance
+            insurance_provider: patient.insurance_provider || '',
+            insurance_id: patient.insurance_id || '',
+            insurance_group: patient.insurance_group || '',
+            insurance_plan_name: patient.insurance_plan_name || '',
+            insurance_subscriber: patient.insurance_subscriber || '',
+
+            // Pharmacy
+            pharmacy_name: patient.pharmacy_name || '',
+            pharmacy_phone: patient.pharmacy_phone || '',
+
+            // Emergency
+            emergency_contact_name: patient.emergency_contact_name || '',
+            emergency_contact_phone: patient.emergency_contact_phone || '',
+            emergency_contact_relationship: patient.emergency_contact_relationship || ''
         });
         setIsEditing(true);
     };
@@ -91,7 +127,14 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
         setLoading(true);
         try {
             await api.put(`/patients/${patient.id}`, editForm);
-            onUpdate(); // Refresh parent
+            onUpdate?.(); // Refresh parent if callback provided
+
+            // If we fetched locally, we should update strict state too
+            if (fetchedPatient) {
+                const response = await api.get(`/patients/${patient.id}`);
+                setFetchedPatient(response.data);
+            }
+
             setIsEditing(false);
         } catch (err) {
             console.error("Failed to update patient", err);
@@ -101,7 +144,42 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
         }
     };
 
-    // Helper for grid items
+    // Helper to render form fields
+    const renderField = (label, key, type = "text", options = null, width = "w-full") => (
+        <div className="mb-2">
+            <label className="block text-[10px] uppercase text-gray-500 font-bold mb-1">{label}</label>
+            {options ? (
+                <select
+                    className={`border border-gray-300 rounded px-2 py-1 text-xs ${width} focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                    value={editForm[key]}
+                    onChange={e => setEditForm({ ...editForm, [key]: e.target.value })}
+                >
+                    <option value="">Select...</option>
+                    {options.map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                </select>
+            ) : (
+                <input
+                    type={type}
+                    className={`border border-gray-300 rounded px-2 py-1 text-xs ${width} focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                    value={editForm[key]}
+                    onChange={e => setEditForm({ ...editForm, [key]: e.target.value })}
+                />
+            )}
+        </div>
+    );
+
+    // US States
+    const usStates = [
+        'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+        'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+        'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+        'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+        'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
+    ];
+
+    // Helper for grid items (View Mode)
     const InfoItem = ({ icon: Icon, label, value, subValue, onClick }) => (
         <div
             className={`flex items-start gap-2 p-2 rounded-md transition-colors ${onClick ? 'hover:bg-gray-50 cursor-pointer' : ''}`}
@@ -124,12 +202,11 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
         </div>
     );
 
-    // Default handler for Open Chart if not provided
+    // Default handler for Open Chart
     const handleOpenChart = () => {
         if (onOpenChart) {
             onOpenChart();
         } else {
-            // Default behavior: navigate to snapshot AND open chart
             const targetId = patient?.id || id;
             if (targetId) {
                 navigate(`/patient/${targetId}/snapshot?tab=history`);
@@ -137,19 +214,118 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
         }
     };
 
-    // Navigation helper
-    const handleNav = (tab, action) => {
-        const targetId = patient?.id || id;
-        if (!targetId) return;
-
-        if (tab) {
-            navigate(`/patient/${targetId}/snapshot?tab=${tab}`);
-        } else if (action) {
-            navigate(`/patient/${targetId}/snapshot?action=${action}`);
-        }
-    };
 
 
+    if (isEditing) {
+        return (
+            <div className="bg-white border border-blue-200 shadow-md rounded-lg mb-6 overflow-hidden ring-2 ring-blue-100">
+                <div className="bg-blue-50 px-4 py-3 border-b border-blue-100 flex justify-between items-center">
+                    <h3 className="font-bold text-blue-800 flex items-center gap-2">
+                        <Edit2 size={16} />
+                        Update Patient Demographics
+                    </h3>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setIsEditing(false)}
+                            className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded hover:bg-gray-50"
+                            disabled={loading}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            disabled={loading}
+                            className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 shadow-sm flex items-center gap-1.5"
+                        >
+                            {loading ? 'Saving...' : <><Check size={14} /> Save Changes</>}
+                        </button>
+                    </div>
+                </div>
+
+                <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {/* Identity Section */}
+                    <div className="space-y-1">
+                        <h4 className="font-semibold text-gray-800 border-b pb-1 mb-2 text-sm">Identity</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                            {renderField("First Name", "first_name")}
+                            {renderField("Last Name", "last_name")}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            {renderField("Middle Name", "middle_name")}
+                            {renderField("Suffix", "suffix", "text", ["Jr", "Sr", "II", "III", "IV"])}
+                        </div>
+                        {renderField("Preferred Name", "preferred_name")}
+                        <div className="grid grid-cols-2 gap-2">
+                            {renderField("DOB", "dob", "date")}
+                            {renderField("Sex", "sex", "text", ["M", "F", "Other"])}
+                        </div>
+                        {renderField("Gender Identity", "gender_identity", "text", ["Male", "Female", "Non-binary", "Transgender Male", "Transgender Female"])}
+                        {renderField("Marital Status", "marital_status", "text", ["Single", "Married", "Divorced", "Widowed", "Partnered"])}
+                    </div>
+
+                    {/* Contact & Address */}
+                    <div className="space-y-1">
+                        <h4 className="font-semibold text-gray-800 border-b pb-1 mb-2 text-sm">Contact & Address</h4>
+                        {renderField("Primary Phone", "phone", "tel")}
+                        <div className="grid grid-cols-2 gap-2">
+                            {renderField("Cell Phone", "phone_cell", "tel")}
+                            {renderField("Work Phone", "phone_work", "tel")}
+                        </div>
+                        {renderField("Email", "email", "email")}
+
+                        <div className="pt-2 border-t border-dashed mt-2">
+                            {renderField("Street Address", "address_street")}
+                            {renderField("Apt / Suite", "address_line2")}
+                            <div className="grid grid-cols-3 gap-2">
+                                {renderField("City", "city")}
+                                {renderField("State", "state", "text", usStates)}
+                                {renderField("Zip", "zip")}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Insurance & Employment */}
+                    <div className="space-y-1">
+                        <h4 className="font-semibold text-gray-800 border-b pb-1 mb-2 text-sm">Insurance & Employment</h4>
+                        {renderField("Primary Insurance", "insurance_provider")}
+                        <div className="grid grid-cols-2 gap-2">
+                            {renderField("Member ID", "insurance_id")}
+                            {renderField("Group No.", "insurance_group")}
+                        </div>
+                        {renderField("Plan Name", "insurance_plan_name")}
+                        {renderField("Subscriber Name", "insurance_subscriber")}
+
+                        <div className="pt-2 border-t border-dashed mt-2">
+                            {renderField("Employment Status", "employment_status", "text", ["Employed", "Unemployed", "Retired", "Student", "Disabled"])}
+                            {renderField("Occupation", "occupation")}
+                            {renderField("Employer", "employer")}
+                        </div>
+                    </div>
+
+                    {/* Medical & Emergency */}
+                    <div className="space-y-1">
+                        <h4 className="font-semibold text-gray-800 border-b pb-1 mb-2 text-sm">Emergency & Pharmacy</h4>
+                        {renderField("Emergency Contact", "emergency_contact_name")}
+                        <div className="grid grid-cols-2 gap-2">
+                            {renderField("Phone", "emergency_contact_phone", "tel")}
+                            {renderField("Relation", "emergency_contact_relationship")}
+                        </div>
+
+                        <div className="pt-2 border-t border-dashed mt-2">
+                            {renderField("Pharmacy Name", "pharmacy_name")}
+                            {renderField("Pharmacy Phone", "pharmacy_phone", "tel")}
+                        </div>
+
+                        <div className="pt-2 border-t border-dashed mt-2">
+                            {renderField("MRN (Internal)", "mrn")}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // View Mode
     return (
         <div className="bg-white border border-gray-200 shadow-sm rounded-lg mb-6 overflow-hidden">
             {/* Top Bar: Identity & Actions */}
@@ -166,230 +342,76 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
 
                     {/* Name & Key Stats */}
                     <div>
-                        {isEditing ? (
-                            <div className="flex gap-2 mb-2">
-                                <input
-                                    className="border rounded px-2 py-1 text-lg font-bold w-32"
-                                    value={editForm.first_name}
-                                    onChange={e => setEditForm({ ...editForm, first_name: e.target.value })}
-                                />
-                                <input
-                                    className="border rounded px-2 py-1 text-lg font-bold w-32"
-                                    value={editForm.last_name}
-                                    onChange={e => setEditForm({ ...editForm, last_name: e.target.value })}
-                                />
-                            </div>
-                        ) : (
-                            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                                {/* Clicking name also goes to chart as a shortcut */}
-                                <span
-                                    className="cursor-pointer hover:text-blue-800 transition-colors"
-                                    onClick={handleOpenChart}
-                                >
-                                    {patient.first_name} {patient.last_name}
-                                </span>
-                                <button
-                                    onClick={handleEditClick}
-                                    className="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded-full hover:bg-blue-50"
-                                    title="Edit Patient"
-                                >
-                                    <Edit2 size={14} />
-                                </button>
-                            </h1>
-                        )}
+                        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                            {/* Clicking name also goes to chart as a shortcut */}
+                            <span
+                                className="cursor-pointer hover:text-blue-800 transition-colors"
+                                onClick={() => navigate(`/patient/${patient?.id || id}/snapshot`)}
+                            >
+                                {patient.first_name} {patient.last_name}
+                            </span>
+                            <button
+                                onClick={handleEditClick}
+                                className="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded-full hover:bg-blue-50"
+                                title="Edit Patient"
+                            >
+                                <Edit2 size={14} />
+                            </button>
+                        </h1>
 
                         <div className="flex items-center gap-3 text-sm text-gray-600 mt-1">
-                            {isEditing ? (
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="date"
-                                        className="border rounded px-2 py-1 text-xs"
-                                        value={editForm.dob}
-                                        onChange={e => setEditForm({ ...editForm, dob: e.target.value })}
-                                    />
-                                    <input
-                                        placeholder="MRN"
-                                        className="border rounded px-2 py-1 text-xs w-24"
-                                        value={editForm.mrn}
-                                        onChange={e => setEditForm({ ...editForm, mrn: e.target.value })}
-                                    />
-                                </div>
-                            ) : (
-                                <>
-                                    <span className="font-medium text-gray-900">{calculateAge(patient.dob)} years old</span>
-                                    <span className="text-gray-300">|</span>
-                                    <span className="flex items-center gap-1">
-                                        <span className="text-xs uppercase tracking-wide text-gray-500">DOB</span>
-                                        {formatDate(patient.dob)}
-                                    </span>
-                                    <span className="text-gray-300">|</span>
-                                    <span className="font-mono text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded text-xs">
-                                        {patient.mrn}
-                                    </span>
-                                </>
-                            )}
+                            <span className="font-medium text-gray-900">{calculateAge(patient.dob)} years old</span>
+                            <span className="text-gray-300">|</span>
+                            <span className="flex items-center gap-1">
+                                <span className="text-xs uppercase tracking-wide text-gray-500">DOB</span>
+                                {formatDate(patient.dob)}
+                            </span>
+                            <span className="text-gray-300">|</span>
+                            <span className="font-mono text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded text-xs">
+                                {patient.mrn}
+                            </span>
                         </div>
                     </div>
                 </div>
 
                 {/* Primary Actions */}
                 <div className="flex items-center gap-2">
-                    {isEditing ? (
-                        <>
-                            <button
-                                onClick={() => setIsEditing(false)}
-                                className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                                disabled={loading}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleSave}
-                                disabled={loading}
-                                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-2 shadow-sm"
-                            >
-                                {loading ? 'Saving...' : <><Check size={16} /> Save Changes</>}
-                            </button>
-                        </>
-                    ) : (
-                        <>
-                            <button
-                                onClick={handleOpenChart}
-                                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm transition-all hover:shadow flex items-center gap-2"
-                            >
-                                <ExternalLink size={16} />
-                                Open Chart
-                            </button>
-                        </>
-                    )}
+                    <button
+                        onClick={handleOpenChart}
+                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm transition-all hover:shadow flex items-center gap-2"
+                    >
+                        <ExternalLink size={16} />
+                        Open Chart
+                    </button>
                 </div>
             </div>
 
             {/* Detail Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-px bg-gray-100">
-
                 {/* Contact */}
                 <div className="bg-white p-2">
-                    {isEditing ? (
-                        <div className="space-y-2 p-1">
-                            <input
-                                className="w-full text-xs border rounded p-1"
-                                placeholder="Phone"
-                                value={editForm.phone}
-                                onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
-                            />
-                            <input
-                                className="w-full text-xs border rounded p-1"
-                                placeholder="Email"
-                                value={editForm.email}
-                                onChange={e => setEditForm({ ...editForm, email: e.target.value })}
-                            />
-                        </div>
-                    ) : (
-                        <>
-                            <InfoItem icon={Phone} label="Contact" value={patient.phone} subValue={patient.email} />
-                        </>
-                    )}
+                    <InfoItem icon={Phone} label="Contact" value={patient.phone} subValue={patient.email} />
                 </div>
-
                 {/* Address */}
                 <div className="bg-white p-2">
-                    {isEditing ? (
-                        <textarea
-                            className="w-full text-xs border rounded p-1 h-full resize-none"
-                            placeholder="Street Address"
-                            value={editForm.address_street}
-                            onChange={e => setEditForm({ ...editForm, address_street: e.target.value })}
-                        />
-                    ) : (
-                        <InfoItem icon={MapPin} label="Address" value={patient.address_street} />
-                    )}
+                    <InfoItem icon={MapPin} label="Address" value={patient.address_street} />
                 </div>
-
                 {/* Insurance */}
                 <div className="bg-white p-2">
-                    {isEditing ? (
-                        <input
-                            className="w-full text-xs border rounded p-1"
-                            placeholder="Insurance Provider"
-                            value={editForm.insurance_provider}
-                            onChange={e => setEditForm({ ...editForm, insurance_provider: e.target.value })}
-                        />
-                    ) : (
-                        <InfoItem icon={Shield} label="Insurance" value={patient.insurance_provider || 'Self Pay'} />
-                    )}
+                    <InfoItem icon={Shield} label="Insurance" value={patient.insurance_provider || 'Self Pay'} />
                 </div>
-
                 {/* Pharmacy */}
                 <div className="bg-white p-2">
-                    {isEditing ? (
-                        <input
-                            className="w-full text-xs border rounded p-1"
-                            placeholder="Pharmacy Name"
-                            value={editForm.pharmacy_name}
-                            onChange={e => setEditForm({ ...editForm, pharmacy_name: e.target.value })}
-                        />
-                    ) : (
-                        <InfoItem icon={Activity} label="Pharmacy" value={patient.pharmacy_name} />
-                    )}
+                    <InfoItem icon={Activity} label="Pharmacy" value={patient.pharmacy_name} />
                 </div>
-
                 {/* Emergency */}
                 <div className="bg-white p-2">
-                    {isEditing ? (
-                        <input
-                            className="w-full text-xs border rounded p-1"
-                            placeholder="Emergency Contact"
-                            value={editForm.emergency_contact_name}
-                            onChange={e => setEditForm({ ...editForm, emergency_contact_name: e.target.value })}
-                        />
-                    ) : (
-                        <InfoItem icon={AlertCircle} label="Emergency" value={patient.emergency_contact_name} />
-                    )}
+                    <InfoItem icon={AlertCircle} label="Emergency" value={patient.emergency_contact_name} />
                 </div>
-
             </div>
+
             {/* Quick Actions Bar - Visible Everywhere */}
-            {!isEditing && (
-                <div className="px-6 py-2 bg-gray-50 border-t border-gray-200 flex items-center gap-4 overflow-x-auto">
-                    <button
-                        onClick={() => handleNav('documents')}
-                        className="flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-blue-600 transition-colors whitespace-nowrap"
-                    >
-                        <FileText size={14} />
-                        Documents
-                    </button>
-                    <button
-                        onClick={() => handleNav(null, 'upload')}
-                        className="flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-blue-600 transition-colors whitespace-nowrap"
-                    >
-                        <Upload size={14} />
-                        Upload
-                    </button>
-                    <div className="w-px h-4 bg-gray-300"></div>
-                    <button
-                        onClick={() => handleNav(null, 'eprescribe')}
-                        className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors whitespace-nowrap"
-                    >
-                        <Pill size={14} />
-                        e-Prescribe
-                    </button>
-                    <button
-                        onClick={() => handleNav('prescriptions')}
-                        className="flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-blue-600 transition-colors whitespace-nowrap"
-                    >
-                        <Pill size={14} className="text-gray-400" />
-                        Rx Log
-                    </button>
-                    <button
-                        onClick={() => handleNav('referrals')}
-                        className="flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-blue-600 transition-colors whitespace-nowrap"
-                    >
-                        <ExternalLink size={14} />
-                        Referrals
-                    </button>
-                </div>
-            )}
+
         </div>
     );
 };
