@@ -22,8 +22,6 @@ router.get('/search', authenticate, async (req, res) => {
         }
 
         const searchTerm = q.trim();
-        // Convert search terms into a TS query. 
-        // We use both prefix matching (:*) and exact word matching to improve precision.
         const searchWords = searchTerm.split(/\s+/).filter(t => t.length > 0);
         const tsQuery = searchWords.map(t => `${t}:*`).join(' & ');
 
@@ -44,13 +42,13 @@ router.get('/search', authenticate, async (req, res) => {
                 c.code ILIKE $1 || '%'
                 OR to_tsvector('english', c.description) @@ to_tsquery('english', $2)
                 OR c.description % $1
-                OR c.description ILIKE '%' || $1 || '%'
               )
             ORDER BY 
                 exact_code DESC,
                 code_prefix DESC,
-                description_prefix DESC,
-                description_contains DESC,
+                (c.is_billable AND c.description ILIKE $1 || '%') DESC,
+                (c.is_billable AND c.description ILIKE '%' || $1 || '%') DESC,
+                (c.is_billable AND ts_rank_cd(to_tsvector('english', c.description), to_tsquery('english', $2)) > 0.05) DESC,
                 rank DESC,
                 use_count DESC,
                 LENGTH(c.description) ASC,

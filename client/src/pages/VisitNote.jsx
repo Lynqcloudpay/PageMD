@@ -2064,22 +2064,26 @@ const VisitNote = () => {
                                     />
                                 </div>
 
-                                {/* Clean results dropdown - only shows when searching */}
                                 {showIcd10Search && icd10Results.length > 0 && icd10Search.trim().length >= 2 && (
-                                    <div className="mt-1 border border-neutral-200 rounded-md bg-white shadow-lg max-h-60 overflow-y-auto">
+                                    <div className="absolute z-[60] mt-1 w-full border border-neutral-200 rounded-lg bg-white shadow-2xl max-h-80 overflow-y-auto py-1">
                                         {icd10Results.map((code) => (
                                             <button
-                                                key={code.code}
+                                                key={code.id || code.code}
                                                 onClick={() => {
                                                     handleAddICD10(code, false);
                                                     setIcd10Search('');
                                                     setIcd10Results([]);
                                                     setShowIcd10Search(false);
                                                 }}
-                                                className="w-full text-left p-2 border-b border-neutral-100 hover:bg-primary-50 transition-colors"
+                                                className="w-full text-left px-3 py-2 border-b border-neutral-50 last:border-0 hover:bg-primary-50 transition-colors group"
                                             >
-                                                <div className="font-medium text-neutral-900 text-xs">{code.code}</div>
-                                                <div className="text-xs text-neutral-600">{code.description}</div>
+                                                <div className="flex items-center justify-between mb-0.5">
+                                                    <span className="font-bold text-primary-700 text-xs group-hover:text-primary-800 tracking-tight">{code.code}</span>
+                                                    {!code.is_billable && (
+                                                        <span className="text-[9px] font-bold bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded border border-amber-100 uppercase tracking-tighter">Non-Billable</span>
+                                                    )}
+                                                </div>
+                                                <div className="text-xs text-neutral-700 leading-tight line-clamp-2">{code.description}</div>
                                             </button>
                                         ))}
                                     </div>
