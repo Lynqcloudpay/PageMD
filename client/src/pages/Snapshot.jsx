@@ -3220,14 +3220,14 @@ const PatientHeaderPhoto = ({ photoUrl, locallyUploadedPhoto, onPhotoClick }) =>
                         src={effectivePhotoUrl}
                         alt="Patient profile"
                         className="w-full h-full object-cover rounded-full"
-                        crossOrigin="anonymous"
                         onError={(e) => {
                             console.error('[Snapshot] Image load error:', {
                                 src: e.target.src,
                                 attempt: loadAttempt,
                                 naturalWidth: e.target.naturalWidth,
                                 naturalHeight: e.target.naturalHeight,
-                                complete: e.target.complete
+                                complete: e.target.complete,
+                                error: e.type
                             });
                             handleImageError();
                         }}
