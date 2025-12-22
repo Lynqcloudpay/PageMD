@@ -114,6 +114,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
             // Pharmacy
             pharmacy_name: patient.pharmacy_name || '',
             pharmacy_phone: patient.pharmacy_phone || '',
+            pharmacy_address: patient.pharmacy_address || '',
 
             // Emergency
             emergency_contact_name: patient.emergency_contact_name || '',
@@ -187,24 +188,21 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
     ];
 
     // Helper for grid items (View Mode)
-    const InfoItem = ({ icon: Icon, label, value, subValue, onClick }) => (
+    const InfoItem = ({ icon: Icon, label, children, onClick }) => (
         <div
-            className={`flex items-start gap-2 p-2 rounded-md transition-colors ${onClick ? 'hover:bg-gray-50 cursor-pointer' : ''}`}
+            className={`flex items-start gap-2 p-2 rounded-md transition-colors h-full ${onClick ? 'hover:bg-gray-50 cursor-pointer' : ''}`}
             onClick={onClick}
         >
-            <div className="mt-0.5 text-gray-400">
+            <div className="mt-0.5 text-gray-400 flex-shrink-0">
                 <Icon size={14} />
             </div>
             <div className="min-w-0 flex-1">
-                <div className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 mb-0.5">
+                <div className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 mb-1">
                     {label}
                 </div>
-                <div className="text-xs font-medium text-gray-900 truncate" title={value}>
-                    {value || <span className="text-gray-400 italic">Not set</span>}
+                <div className="text-xs text-gray-900">
+                    {children}
                 </div>
-                {subValue && (
-                    <div className="text-[10px] text-gray-500 truncate">{subValue}</div>
-                )}
             </div>
         </div>
     );
@@ -321,6 +319,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                         <div className="pt-2 border-t border-dashed mt-2">
                             {renderField("Pharmacy Name", "pharmacy_name")}
                             {renderField("Pharmacy Phone", "pharmacy_phone", "tel")}
+                            {renderField("Pharmacy Address", "pharmacy_address")}
                         </div>
 
                         <div className="pt-2 border-t border-dashed mt-2">
@@ -394,31 +393,59 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
             </div>
 
             {/* Detail Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-px bg-gray-100">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-px bg-gray-200">
                 {/* Contact */}
                 <div className="bg-white p-2">
-                    <InfoItem icon={Phone} label="Contact" value={patient.phone} subValue={patient.email} />
+                    <InfoItem icon={Phone} label="Contact">
+                        <div className="font-medium">{patient.phone || <span className="text-gray-400 italic">No phone</span>}</div>
+                        {patient.email && <div className="text-gray-600 truncate">{patient.email}</div>}
+                        {patient.phone_cell && <div className="text-gray-500 text-[10px]">Cell: {patient.phone_cell}</div>}
+                    </InfoItem>
                 </div>
                 {/* Address */}
                 <div className="bg-white p-2">
-                    <InfoItem
-                        icon={MapPin}
-                        label="Address"
-                        value={patient.address_line1}
-                        subValue={patient.city ? `${patient.city}, ${patient.state} ${patient.zip}` : ''}
-                    />
+                    <InfoItem icon={MapPin} label="Address">
+                        <div className="font-medium">{patient.address_line1 || <span className="text-gray-400 italic">Not set</span>}</div>
+                        {patient.city && <div>{patient.city}, {patient.state} {patient.zip}</div>}
+                    </InfoItem>
                 </div>
                 {/* Insurance */}
                 <div className="bg-white p-2">
-                    <InfoItem icon={Shield} label="Insurance" value={patient.insurance_provider || 'Self Pay'} />
+                    <InfoItem icon={Shield} label="Insurance">
+                        <div className="font-medium">{patient.insurance_provider || <span className="text-gray-400 italic">Self Pay</span>}</div>
+                        {patient.insurance_provider && (
+                            <div className="space-y-0.5 mt-0.5 text-[11px] text-gray-600">
+                                {patient.insurance_id && <div>ID: <span className="font-mono text-gray-800">{patient.insurance_id}</span></div>}
+                                {patient.insurance_group_number && <div>Grp: {patient.insurance_group_number}</div>}
+                                {patient.insurance_plan_name && <div>Plan: {patient.insurance_plan_name}</div>}
+                                {patient.insurance_subscriber_name && <div>Sub: {patient.insurance_subscriber_name}</div>}
+                            </div>
+                        )}
+                    </InfoItem>
                 </div>
                 {/* Pharmacy */}
                 <div className="bg-white p-2">
-                    <InfoItem icon={Activity} label="Pharmacy" value={patient.pharmacy_name} />
+                    <InfoItem icon={Activity} label="Pharmacy">
+                        <div className="font-medium">{patient.pharmacy_name || <span className="text-gray-400 italic">Not set</span>}</div>
+                        {patient.pharmacy_name && (
+                            <div className="space-y-0.5 mt-0.5 text-[11px] text-gray-600">
+                                {patient.pharmacy_phone && <div>Ph: {patient.pharmacy_phone}</div>}
+                                {patient.pharmacy_address && <div className="leading-tight">{patient.pharmacy_address}</div>}
+                            </div>
+                        )}
+                    </InfoItem>
                 </div>
                 {/* Emergency */}
                 <div className="bg-white p-2">
-                    <InfoItem icon={AlertCircle} label="Emergency" value={patient.emergency_contact_name} />
+                    <InfoItem icon={AlertCircle} label="Emergency">
+                        <div className="font-medium">{patient.emergency_contact_name || <span className="text-gray-400 italic">Not set</span>}</div>
+                        {patient.emergency_contact_name && (
+                            <div className="space-y-0.5 mt-0.5 text-[11px] text-gray-600">
+                                {patient.emergency_contact_relationship && <div>Rel: {patient.emergency_contact_relationship}</div>}
+                                {patient.emergency_contact_phone && <div>Ph: {patient.emergency_contact_phone}</div>}
+                            </div>
+                        )}
+                    </InfoItem>
                 </div>
             </div>
 
