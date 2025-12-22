@@ -14,18 +14,22 @@ const encryptionService = require('./encryptionService');
 // Check if encryption is enabled
 // In development, encryption is disabled by default for ease of use
 // In production, it should be enabled
-const ENCRYPTION_ENABLED = process.env.ENABLE_PHI_ENCRYPTION === 'true' || 
-                           process.env.NODE_ENV === 'production';
+const ENCRYPTION_ENABLED = process.env.ENABLE_PHI_ENCRYPTION === 'true' ||
+  process.env.NODE_ENV === 'production';
 
 // Fields that contain PHI and should be encrypted
+// NOTE: Date fields (dob, insurance_subscriber_dob) are NOT included because
+// encryption produces strings that can't be stored in DATE columns.
+// To encrypt dates, the columns would need to be changed to TEXT type.
 const PHI_FIELDS = [
   'first_name', 'last_name', 'middle_name', 'name_suffix', 'preferred_name',
-  'dob', 'date_of_birth',
+  // 'dob', 'date_of_birth' - Excluded: DATE columns can't store encrypted strings
   'phone', 'phone_secondary', 'phone_cell', 'phone_work',
   'email', 'email_secondary',
   'address_line1', 'address_line2', 'city', 'state', 'zip', 'country',
   'ssn', 'social_security_number',
-  'insurance_id', 'insurance_subscriber_name', 'insurance_subscriber_dob',
+  'insurance_id', 'insurance_subscriber_name',
+  // 'insurance_subscriber_dob' - Excluded: DATE column
   'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_address',
   'pharmacy_address', 'pharmacy_phone'
 ];
@@ -60,7 +64,7 @@ async function encryptPatientPHI(patient) {
   // Encrypt each PHI field
   for (const field of PHI_FIELDS) {
     const value = patient[field];
-    
+
     if (value !== null && value !== undefined && value !== '') {
       try {
         const encryptedData = await encryptionService.encryptFieldToBase64(String(value));
@@ -70,7 +74,7 @@ async function encryptPatientPHI(patient) {
         console.error(`Error encrypting field ${field}:`, error);
         // Check if encryption is enabled - if not, allow plaintext
         const encryptionEnabled = process.env.ENABLE_PHI_ENCRYPTION === 'true';
-        
+
         if (encryptionEnabled && process.env.NODE_ENV === 'production') {
           // Only fail hard if encryption is explicitly enabled in production
           throw new Error(`Failed to encrypt PHI field: ${field}`);
@@ -106,7 +110,7 @@ async function decryptPatientPHI(patient) {
   // Decrypt each PHI field
   for (const field of PHI_FIELDS) {
     const encryptedValue = patient[field];
-    
+
     // Only attempt decryption if:
     // 1. Field has a value
     // 2. Encryption metadata exists for this field (indicating it was encrypted)
@@ -115,10 +119,10 @@ async function decryptPatientPHI(patient) {
       try {
         // Check if value looks encrypted (base64 string, typically longer)
         // Plaintext names/addresses are usually shorter and don't look like base64
-        const isLikelyEncrypted = typeof encryptedValue === 'string' && 
-                                   encryptedValue.length > 20 && 
-                                   /^[A-Za-z0-9+/=]+$/.test(encryptedValue);
-        
+        const isLikelyEncrypted = typeof encryptedValue === 'string' &&
+          encryptedValue.length > 20 &&
+          /^[A-Za-z0-9+/=]+$/.test(encryptedValue);
+
         if (isLikelyEncrypted) {
           const decryptedValue = await encryptionService.decryptFieldFromBase64(
             encryptedValue,
