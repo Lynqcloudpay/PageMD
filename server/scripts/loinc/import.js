@@ -28,13 +28,10 @@ async function importLoinc() {
     const stats = fs.statSync(filePath);
     console.log(`📂 Starting LOINC import from ${filePath} (Version: ${version}) - ${stats.size} bytes`);
 
-    const fileStream = fs.createReadStream(filePath);
-    fileStream.on('error', err => console.error('Stream Error:', err));
-    const rl = readline.createInterface({
-        input: fileStream,
-        crlfDelay: Infinity
-    });
-    console.log('Readline interface created, entering loop...');
+    // Read the entire file first to get lines
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+    const lines = fileContent.split('\n');
+    console.log(`Total lines in file: ${lines.length}`);
 
     let count = 0;
     let headers = null;
@@ -46,9 +43,9 @@ async function importLoinc() {
     try {
         await client.query('BEGIN');
 
-        let lineCount = 0;
-        for await (const line of rl) {
-            lineCount++;
+        for (let lineCount = 0; lineCount < lines.length; lineCount++) {
+            const line = lines[lineCount];
+            if (!line.trim()) continue;  // Skip empty lines
 
             // Robust CSV parser (handles commas within quotes)
             const cleanParts = [];
@@ -67,9 +64,9 @@ async function importLoinc() {
             }
             cleanParts.push(current.trim().replace(/^"|"$/g, ''));
 
-            if (lineCount === 1) {
+            if (lineCount === 0) {
                 headers = cleanParts.map(h => h.toUpperCase().trim());
-                console.log('✅ Headers detected:', headers.slice(0, 10).join(', '));
+                console.log('✅ Headers detected:', headers.slice(0, 5).join(', '));
                 continue;
             }
 
@@ -97,7 +94,7 @@ async function importLoinc() {
             if (batch.length >= batchSize) {
                 await upsertBatch(client, batch);
                 count += batch.length;
-                if (count % 5000 === 0) {
+                if (count % 10000 === 0) {
                     console.log(`...processed ${count} codes`);
                 }
                 batch = [];
@@ -147,4 +144,3 @@ async function upsertBatch(client, rows) {
 }
 
 importLoinc();
-
