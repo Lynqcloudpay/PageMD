@@ -141,16 +141,14 @@ const TaskManager = () => {
     try {
       if (task.source === 'messages') {
         if (action === 'read') {
-          await messagesAPI.markAsRead(taskId);
+          await messagesAPI.markRead(taskId);
         } else if (action === 'complete') {
           await messagesAPI.updateTaskStatus(taskId, 'completed');
         }
       } else if (task.source === 'inbox') {
-        // For inbox (labs/docs), we might need a specific "mark reviewed" endpoint
-        // Assuming inboxAPI has a markReviewed or we use the general order update
-        // await inboxAPI.markReviewed(taskId); 
-        // For now, let's just update local state if no direct API exists yet
-        // but typically this should be an API call
+        if (action === 'read' || action === 'complete') {
+          await inboxAPI.markReviewed(task.type.toLowerCase(), taskId, { comment: 'Reviewed from In Basket' });
+        }
       }
 
       const updatedTasks = tasks.map(t => {
@@ -482,16 +480,101 @@ const TaskManager = () => {
               </div>
             )}
 
-            {/* Task Details */}
+            {/* Task Details / Document Preview */}
             <div className="space-y-4">
-              {selectedTask.details && Object.entries(selectedTask.details).map(([key, value]) => (
-                <div key={key}>
-                  <h4 className="text-xs font-semibold text-ink-500 uppercase mb-1">
-                    {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                  </h4>
-                  <p className="text-sm text-ink-700 whitespace-pre-wrap">{value}</p>
+              {/* If it's a message, show the body prominently */}
+              {selectedTask.details?.body && (
+                <div className="bg-white border border-paper-200 rounded-lg p-3">
+                  <h4 className="text-xs font-semibold text-ink-400 uppercase mb-2">Message Body</h4>
+                  <p className="text-sm text-ink-800 whitespace-pre-wrap leading-relaxed">
+                    {selectedTask.details.body}
+                  </p>
                 </div>
-              ))}
+              )}
+
+              {/* Lab Results Table if present */}
+              {selectedTask.details?.results && Array.isArray(selectedTask.details.results) && (
+                <div className="border border-paper-200 rounded-lg overflow-hidden">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-paper-50">
+                      <tr>
+                        <th className="px-3 py-2 font-semibold">Test</th>
+                        <th className="px-3 py-2 font-semibold text-right">Value</th>
+                        <th className="px-3 py-2 font-semibold text-center">Flag</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-paper-100">
+                      {selectedTask.details.results.map((r, i) => (
+                        <tr key={i}>
+                          <td className="px-3 py-2 font-medium">{r.test || r.name}</td>
+                          <td className="px-3 py-2 text-right">{r.value || r.result} {r.unit}</td>
+                          <td className="px-3 py-2 text-center text-red-600 font-bold">{r.flag && r.flag !== 'Normal' ? r.flag : ''}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* General Details Mapping */}
+              {selectedTask.details && Object.entries(selectedTask.details)
+                .filter(([key]) => !['body', 'results', 'subject', 'alert', 'summary', 'comments'].includes(key))
+                .map(([key, value]) => {
+                  if (typeof value === 'object') return null;
+                  return (
+                    <div key={key}>
+                      <h4 className="text-xs font-semibold text-ink-500 uppercase mb-1">
+                        {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                      </h4>
+                      <p className="text-sm text-ink-700 whitespace-pre-wrap">{String(value)}</p>
+                    </div>
+                  );
+                })}
+
+              {/* Comments Section */}
+              {selectedTask.details?.comments && (
+                <div className="mt-4">
+                  <h4 className="text-xs font-semibold text-ink-500 uppercase mb-1">Previous Comments</h4>
+                  <p className="text-sm text-ink-700 italic border-l-4 border-paper-200 pl-3 py-1 bg-paper-50 rounded">
+                    {selectedTask.details.comments}
+                  </p>
+                </div>
+              )}
+
+              {/* Document Preview */}
+              {selectedTask.docData?.file_path && (
+                <div className="mt-4 border border-paper-200 rounded-lg overflow-hidden">
+                  <div className="bg-paper-100 px-3 py-2 text-xs font-semibold text-ink-500 border-b border-paper-200 flex justify-between items-center">
+                    <span className="flex items-center">
+                      <FileText className="w-3 h-3 mr-1" />
+                      Document Preview
+                    </span>
+                    <a
+                      href={selectedTask.docData.file_path.startsWith('http') ? selectedTask.docData.file_path : `${import.meta.env.VITE_API_URL || ''}${selectedTask.docData.file_path}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-paper-600 hover:underline"
+                    >
+                      Open Full
+                    </a>
+                  </div>
+                  <div className="aspect-[4/5] bg-paper-50 flex items-center justify-center relative min-h-[400px]">
+                    {selectedTask.docData.mime_type?.startsWith('image/') ? (
+                      <img
+                        src={selectedTask.docData.file_path.startsWith('http') ? selectedTask.docData.file_path : `${import.meta.env.VITE_API_URL || ''}${selectedTask.docData.file_path}`}
+                        alt="Document"
+                        className="max-w-full max-h-full object-contain"
+                      />
+                    ) : (
+                      <iframe
+                        src={selectedTask.docData.file_path.startsWith('http') ? selectedTask.docData.file_path : `${import.meta.env.VITE_API_URL || ''}${selectedTask.docData.file_path}#toolbar=0`}
+                        className="w-full h-full border-none"
+                        title="PDF Preview"
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Alert for critical results */}

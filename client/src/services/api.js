@@ -156,6 +156,7 @@ export const labsAPI = {
 export const inboxAPI = {
   getAll: (params) => api.get('/inbox', { params }),
   getLabTrend: (patientId, testName) => api.get(`/inbox/lab-trend/${patientId}/${encodeURIComponent(testName)}`),
+  markReviewed: (type, id, data) => api.put(`/inbox/${type}/${id}/reviewed`, data),
 };
 
 // Appointments

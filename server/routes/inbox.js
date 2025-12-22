@@ -101,6 +101,7 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
       JOIN patients p ON o.patient_id = p.id
       LEFT JOIN users u ON o.ordered_by = u.id
       WHERE o.order_type = 'lab'
+      AND (o.status NOT IN ('pending', 'ordered', 'sent') OR o.result_value IS NOT NULL)
     `;
 
     if (status === 'unreviewed') {
@@ -177,6 +178,7 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
       JOIN patients p ON o.patient_id = p.id
       LEFT JOIN users u ON o.ordered_by = u.id
       WHERE o.order_type = 'imaging'
+      AND (o.status NOT IN ('pending', 'ordered', 'sent') OR o.result_value IS NOT NULL)
     `;
 
     if (status === 'unreviewed') {
@@ -338,6 +340,79 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
   } catch (error) {
     console.error('Error fetching inbox items:', error);
     res.status(500).json({ error: 'Failed to fetch inbox items' });
+  }
+});
+
+// Mark item as reviewed
+router.put('/:type/:id/reviewed', requireRole('clinician', 'nurse', 'admin'), async (req, res) => {
+  try {
+    const { type, id } = req.params;
+    const { comment } = req.body;
+
+    let result;
+    if (type === 'lab' || type === 'imaging') {
+      // Handling for orders
+      const currentOrder = await pool.query('SELECT comments FROM orders WHERE id = $1', [id]);
+      let existingComments = currentOrder.rows[0]?.comments || [];
+      if (typeof existingComments === 'string') {
+        try { existingComments = JSON.parse(existingComments); } catch (e) { existingComments = []; }
+      }
+
+      const newComment = {
+        comment: comment?.trim() || 'Reviewed',
+        timestamp: new Date().toISOString(),
+        userId: req.user.id,
+        userName: `${req.user.first_name} ${req.user.last_name}`
+      };
+
+      const updatedComments = [...existingComments, newComment];
+
+      result = await pool.query(
+        `UPDATE orders 
+         SET reviewed = true, 
+             reviewed_at = CURRENT_TIMESTAMP, 
+             reviewed_by = $1,
+             comments = $2,
+             status = 'reviewed'
+         WHERE id = $3 RETURNING *`,
+        [req.user.id, JSON.stringify(updatedComments), id]
+      );
+    } else {
+      // Handling for documents
+      const currentDoc = await pool.query('SELECT comments FROM documents WHERE id = $1', [id]);
+      let existingComments = currentDoc.rows[0]?.comments || [];
+      if (typeof existingComments === 'string') {
+        try { existingComments = JSON.parse(existingComments); } catch (e) { existingComments = []; }
+      }
+
+      const newComment = {
+        comment: comment?.trim() || 'Reviewed',
+        timestamp: new Date().toISOString(),
+        userId: req.user.id,
+        userName: `${req.user.first_name} ${req.user.last_name}`
+      };
+
+      const updatedComments = [...existingComments, newComment];
+
+      result = await pool.query(
+        `UPDATE documents 
+         SET reviewed = true, 
+             reviewed_at = CURRENT_TIMESTAMP, 
+             reviewed_by = $1,
+             comments = $2
+         WHERE id = $3 RETURNING *`,
+        [req.user.id, JSON.stringify(updatedComments), id]
+      );
+    }
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error marking as reviewed:', error);
+    res.status(500).json({ error: 'Failed to mark as reviewed' });
   }
 });
 
