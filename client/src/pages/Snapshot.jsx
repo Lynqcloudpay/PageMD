@@ -3220,7 +3220,17 @@ const PatientHeaderPhoto = ({ photoUrl, locallyUploadedPhoto, onPhotoClick }) =>
                         src={effectivePhotoUrl}
                         alt="Patient profile"
                         className="w-full h-full object-cover rounded-full"
-                        onError={handleImageError}
+                        crossOrigin="anonymous"
+                        onError={(e) => {
+                            console.error('[Snapshot] Image load error:', {
+                                src: e.target.src,
+                                attempt: loadAttempt,
+                                naturalWidth: e.target.naturalWidth,
+                                naturalHeight: e.target.naturalHeight,
+                                complete: e.target.complete
+                            });
+                            handleImageError();
+                        }}
                     />
                 ) : (
                     <div className="flex flex-col items-center justify-center">
