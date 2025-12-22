@@ -1,6 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { User, FileText, Pill, Stethoscope, Upload, Send, ChevronDown, ChevronUp, Search, Menu, AlertCircle, X, Plus, Save, Camera, FileImage, Phone, Mail, MapPin, CreditCard, Building2, Users, Edit } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+    User, Phone, Mail, MapPin, CreditCard, Building2, Users,
+    Edit, Camera, X, Check, ChevronDown, ChevronUp,
+    Pill, FileText, Send, Upload, AlertCircle
+} from 'lucide-react';
 import { PrescriptionModal, OrderModal, ReferralModal, UploadModal } from './ActionModals';
 import Toast from './ui/Toast';
 import { usePatient } from '../context/PatientContext';
@@ -11,460 +15,79 @@ const PatientHeader = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { getPatient } = usePatient();
-    const { addTab, updateTabPath } = usePatientTabs();
-    const [isExpanded, setIsExpanded] = useState(false);
-    const [activeModal, setActiveModal] = useState(null);
-    const [toast, setToast] = useState(null);
+    const { addTab } = usePatientTabs();
+
     const [patient, setPatient] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [showAllergyModal, setShowAllergyModal] = useState(false);
-    const [showMedicationModal, setShowMedicationModal] = useState(false);
-    const [showPhotoModal, setShowPhotoModal] = useState(false);
-    const [photoMode, setPhotoMode] = useState(null);
-    const [photoVersion, setPhotoVersion] = useState(0);
-    const [showDemographicsModal, setShowDemographicsModal] = useState(false);
-    const [demographicsField, setDemographicsField] = useState(null); // 'phone', 'email', 'address', 'insurance', 'pharmacy', 'emergency'
-    const [demographicsForm, setDemographicsForm] = useState({
-        phone: '',
-        email: '',
-        address_line1: '',
-        city: '',
-        state: '',
-        zip: '',
-        insurance_provider: '',
-        insurance_id: '',
-        pharmacy_name: '',
-        pharmacy_phone: '',
-        emergency_contact_name: '',
-        emergency_contact_phone: '',
-        emergency_contact_relationship: ''
-    });
-    const [allergyForm, setAllergyForm] = useState({ allergen: '', reaction: '', severity: '', onsetDate: '' });
-    const [medicationForm, setMedicationForm] = useState({ medicationName: '', dosage: '', frequency: '', route: '', startDate: '' });
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [toast, setToast] = useState(null);
+
+    // Edit state
+    const [editMode, setEditMode] = useState(null); // 'phone', 'email', 'address', 'insurance', 'pharmacy', 'emergency'
+    const [editForm, setEditForm] = useState({});
+    const [saving, setSaving] = useState(false);
+
+    // Photo state
+    const [showPhotoUpload, setShowPhotoUpload] = useState(false);
+    const [photoPreview, setPhotoPreview] = useState(null);
+    const [photoFile, setPhotoFile] = useState(null);
+
+    // Modals
+    const [activeModal, setActiveModal] = useState(null);
 
     const showToast = useCallback((message, type = 'success') => {
         setToast({ message, type });
         setTimeout(() => setToast(null), 3000);
     }, []);
 
-    // Format phone number to (xxx) xxx-xxxx
-    const formatPhone = (phone) => {
-        if (!phone) return null;
-        // Remove all non-digits
-        const cleaned = phone.replace(/\D/g, '');
-        // Format to (xxx) xxx-xxxx
-        if (cleaned.length === 10) {
-            return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
-        }
-        // Return original if not 10 digits
-        return phone;
-    };
-
-    // Format phone number input as user types
-    const formatPhoneInput = (value) => {
-        // Remove all non-digits
-        const cleaned = value.replace(/\D/g, '');
-        // Limit to 10 digits
-        const limited = cleaned.slice(0, 10);
-        // Format to (xxx) xxx-xxxx
-        if (limited.length === 0) return '';
-        if (limited.length <= 3) return `(${limited}`;
-        if (limited.length <= 6) return `(${limited.slice(0, 3)}) ${limited.slice(3)}`;
-        return `(${limited.slice(0, 3)}) ${limited.slice(3, 6)}-${limited.slice(6)}`;
-    };
-
-    // Format full address for display
-    const formatAddress = (patient) => {
-        if (!patient) return 'Not provided';
-        const parts = [];
-        if (patient.address_line1) parts.push(patient.address_line1);
-        if (patient.city) parts.push(patient.city);
-        if (patient.state) parts.push(patient.state);
-        if (patient.zip) parts.push(patient.zip);
-        return parts.length > 0 ? parts.join(', ') : 'Not provided';
-    };
-
-    const handleAddAllergy = async () => {
-        if (!allergyForm.allergen.trim()) {
-            showToast('Please enter an allergen', 'error');
-            return;
-        }
-
-        try {
-            await patientsAPI.addAllergy(id, {
-                allergen: allergyForm.allergen.trim(),
-                reaction: allergyForm.reaction.trim() || null,
-                severity: allergyForm.severity || null,
-                onsetDate: allergyForm.onsetDate || null
-            });
-
-            // Refresh patient data
-            await refreshPatientData();
-
-            setAllergyForm({ allergen: '', reaction: '', severity: '', onsetDate: '' });
-            setShowAllergyModal(false);
-            showToast('Allergy added successfully');
-        } catch (error) {
-            console.error('Error adding allergy:', error);
-            showToast('Failed to add allergy', 'error');
-        }
-    };
-
-    const handleAddMedication = async () => {
-        if (!medicationForm.medicationName.trim()) {
-            showToast('Please enter a medication name', 'error');
-            return;
-        }
-
-        try {
-            await patientsAPI.addMedication(id, {
-                medicationName: medicationForm.medicationName.trim(),
-                dosage: medicationForm.dosage.trim() || null,
-                frequency: medicationForm.frequency.trim() || null,
-                route: medicationForm.route.trim() || null,
-                startDate: medicationForm.startDate || null
-            });
-
-            // Refresh patient data
-            await refreshPatientData();
-
-            setMedicationForm({ medicationName: '', dosage: '', frequency: '', route: '', startDate: '' });
-            setShowMedicationModal(false);
-            showToast('Medication added successfully');
-        } catch (error) {
-            console.error('Error adding medication:', error);
-            showToast('Failed to add medication', 'error');
-        }
-    };
-
-    const refreshPatientData = async () => {
-        if (!id) return;
-        try {
-            const response = await patientsAPI.get(id);
-            const apiPatient = response.data;
-
-            const calculateAge = (dob) => {
-                if (!dob) return null;
-                const birthDate = new Date(dob);
-                const today = new Date();
-                let age = today.getFullYear() - birthDate.getFullYear();
-                const monthDiff = today.getMonth() - birthDate.getMonth();
-                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-                    age--;
-                }
-                return age;
-            };
-
-            // Check if photo_url has changed
-            const previousPhotoUrl = patient?.photo_url;
-            const newPhotoUrl = apiPatient.photo_url || null;
-            const photoChanged = previousPhotoUrl !== newPhotoUrl;
-
-            const patientData = {
-                id: apiPatient.id,
-                name: `${apiPatient.first_name} ${apiPatient.last_name}`,
-                first_name: apiPatient.first_name,
-                last_name: apiPatient.last_name,
-                mrn: apiPatient.mrn,
-                dob: apiPatient.dob,
-                age: calculateAge(apiPatient.dob),
-                sex: apiPatient.sex,
-                photo_url: newPhotoUrl,
-                phone: apiPatient.phone || null,
-                email: apiPatient.email || null,
-                address_line1: apiPatient.address_line1 || null,
-                city: apiPatient.city || null,
-                state: apiPatient.state || null,
-                zip: apiPatient.zip || null,
-                insurance_provider: apiPatient.insurance_provider || null,
-                insurance_id: apiPatient.insurance_id || null,
-                pharmacy_name: apiPatient.pharmacy_name || null,
-                pharmacy_phone: apiPatient.pharmacy_phone || null,
-                emergency_contact_name: apiPatient.emergency_contact_name || null,
-                emergency_contact_phone: apiPatient.emergency_contact_phone || null,
-                emergency_contact_relationship: apiPatient.emergency_contact_relationship || null
-            };
-            setPatient(patientData);
-
-            // Increment photo version if photo URL changed
-            if (photoChanged) {
-                setPhotoVersion(prev => prev + 1);
-            }
-        } catch (error) {
-            console.error('Error refreshing patient data:', error);
-        }
-    };
-
-    const handleOpenDemographics = (field) => {
-        setDemographicsField(field);
-        // Pre-fill form with current patient data
-        // Format phone numbers for display in the form
-        const currentPhone = patient?.phone ? formatPhone(patient.phone) : '';
-        const currentPharmacyPhone = patient?.pharmacy_phone ? formatPhone(patient.pharmacy_phone) : '';
-        const currentEmergencyPhone = patient?.emergency_contact_phone ? formatPhone(patient.emergency_contact_phone) : '';
-
-        setDemographicsForm({
-            phone: currentPhone,
-            email: patient?.email || '',
-            address_line1: patient?.address_line1 || '',
-            city: patient?.city || '',
-            state: patient?.state || '',
-            zip: patient?.zip || '',
-            insurance_provider: patient?.insurance_provider || '',
-            insurance_id: patient?.insurance_id || '',
-            pharmacy_name: patient?.pharmacy_name || '',
-            pharmacy_phone: currentPharmacyPhone,
-            emergency_contact_name: patient?.emergency_contact_name || '',
-            emergency_contact_phone: currentEmergencyPhone,
-            emergency_contact_relationship: patient?.emergency_contact_relationship || ''
-        });
-        setShowDemographicsModal(true);
-    };
-
-    const handleSaveDemographics = async () => {
-        if (!id) return;
-
-        try {
-            const updateData = {};
-
-            // Only update the field being edited
-            // Convert to camelCase for API compatibility
-            switch (demographicsField) {
-                case 'phone':
-                    // Remove formatting and save as digits only
-                    const cleanedPhone = demographicsForm.phone ? demographicsForm.phone.replace(/\D/g, '') : null;
-                    updateData.phone = cleanedPhone || null;
-                    break;
-                case 'email':
-                    updateData.email = demographicsForm.email || null;
-                    break;
-                case 'address':
-                    updateData.addressLine1 = demographicsForm.address_line1 || null;
-                    updateData.city = demographicsForm.city || null;
-                    updateData.state = demographicsForm.state || null;
-                    updateData.zip = demographicsForm.zip || null;
-                    break;
-                case 'insurance':
-                    updateData.insuranceProvider = demographicsForm.insurance_provider || null;
-                    updateData.insuranceId = demographicsForm.insurance_id || null;
-                    break;
-                case 'pharmacy':
-                    updateData.pharmacyName = demographicsForm.pharmacy_name || null;
-                    // Remove formatting and save as digits only
-                    const cleanedPharmacyPhone = demographicsForm.pharmacy_phone ? demographicsForm.pharmacy_phone.replace(/\D/g, '') : null;
-                    updateData.pharmacyPhone = cleanedPharmacyPhone || null;
-                    break;
-                case 'emergency':
-                    updateData.emergencyContactName = demographicsForm.emergency_contact_name || null;
-                    // Remove formatting and save as digits only
-                    const cleanedEmergencyPhone = demographicsForm.emergency_contact_phone ? demographicsForm.emergency_contact_phone.replace(/\D/g, '') : null;
-                    updateData.emergencyContactPhone = cleanedEmergencyPhone || null;
-                    updateData.emergencyContactRelationship = demographicsForm.emergency_contact_relationship || null;
-                    break;
-            }
-
-            console.log('Updating patient with data:', updateData);
-            await patientsAPI.update(id, updateData);
-            await refreshPatientData();
-            setShowDemographicsModal(false);
-            setDemographicsField(null);
-            showToast('Patient information updated successfully');
-        } catch (error) {
-            console.error('Error updating patient demographics:', error);
-            console.error('Error response:', error.response?.data);
-            const errorMessage = error.response?.data?.error || error.message || 'Failed to update patient information';
-            showToast(errorMessage, 'error');
-        }
-    };
-
-
-
-    const handleFileUpload = (e) => {
-        console.log('handleFileUpload called', e.target.files);
-        const file = e.target.files?.[0];
-        if (file) {
-            console.log('File selected:', file.name, file.type, file.size);
-            // Validate file type
-            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-            if (!allowedTypes.includes(file.type)) {
-                showToast('Please select a valid image file (JPEG, PNG, GIF, or WebP)', 'error');
-                e.target.value = ''; // Reset file input
-                return;
-            }
-
-            // Validate file size (5MB max)
-            if (file.size > 5 * 1024 * 1024) {
-                showToast('File size must be less than 5MB', 'error');
-                e.target.value = ''; // Reset file input
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                console.log('File read complete, setting captured photo');
-                setCapturedPhoto(reader.result);
-                // Removed photoMode set as we only support upload now
-            };
-            reader.onerror = () => {
-                console.error('Error reading file');
-                showToast('Error reading file. Please try again.', 'error');
-                e.target.value = ''; // Reset file input
-            };
-            reader.readAsDataURL(file);
-        } else {
-            console.log('No file selected');
-        }
-    };
-
-    const handleSavePhoto = async () => {
-        if (!capturedPhoto || !id) {
-            showToast('No photo to save', 'error');
-            return;
-        }
-
-        try {
-            console.log('Saving photo for patient:', id);
-            const uploadResponse = await patientsAPI.uploadPhotoBase64(id, capturedPhoto);
-            console.log('Photo upload response:', uploadResponse);
-
-            // Update patient state with new photo_url immediately
-            if (uploadResponse.data?.photoUrl || uploadResponse.data?.patient?.photo_url) {
-                const newPhotoUrl = uploadResponse.data?.photoUrl || uploadResponse.data?.patient?.photo_url;
-                setPatient(prev => ({
-                    ...prev,
-                    photo_url: newPhotoUrl
-                }));
-                // Increment photo version to force cache bust
-                setPhotoVersion(prev => prev + 1);
-            }
-
-            // Refresh patient data to get updated photo_url (but don't await to avoid blocking UI)
-            refreshPatientData().catch(err => console.error('Error refreshing patient data:', err));
-
-            setShowPhotoModal(false);
-            setPhotoMode(null);
-            setCapturedPhoto(null);
-            showToast('Photo uploaded successfully');
-        } catch (error) {
-            console.error('Error uploading photo:', error);
-            console.error('Error details:', error.response?.data || error.message);
-            showToast(error.response?.data?.error || 'Failed to upload photo. Please try again.', 'error');
-        }
-    };
-
-
-
+    // Fetch patient data
     useEffect(() => {
         const fetchPatient = async () => {
             if (!id) return;
-
-            setLoading(true);
             try {
-                // Fetch full patient data
-                const response = await patientsAPI.get(id);
-                const apiPatient = response.data;
-
-                // Calculate age
-                const calculateAge = (dob) => {
-                    if (!dob) return null;
-                    const birthDate = new Date(dob);
-                    const today = new Date();
-                    let age = today.getFullYear() - birthDate.getFullYear();
-                    const monthDiff = today.getMonth() - birthDate.getMonth();
-                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-                        age--;
-                    }
-                    return age;
-                };
-
-                const patientData = {
-                    id: apiPatient.id,
-                    name: `${apiPatient.first_name} ${apiPatient.last_name}`,
-                    first_name: apiPatient.first_name,
-                    last_name: apiPatient.last_name,
-                    mrn: apiPatient.mrn,
-                    dob: apiPatient.dob,
-                    age: calculateAge(apiPatient.dob),
-                    sex: apiPatient.sex,
-                    photo_url: apiPatient.photo_url || null,
-                    phone: apiPatient.phone || null,
-                    email: apiPatient.email || null,
-                    address_line1: apiPatient.address_line1 || null,
-                    city: apiPatient.city || null,
-                    state: apiPatient.state || null,
-                    zip: apiPatient.zip || null,
-                    insurance_provider: apiPatient.insurance_provider || null,
-                    insurance_id: apiPatient.insurance_id || null,
-                    pharmacy_name: apiPatient.pharmacy_name || null,
-                    pharmacy_phone: apiPatient.pharmacy_phone || null,
-                    emergency_contact_name: apiPatient.emergency_contact_name || null,
-                    emergency_contact_phone: apiPatient.emergency_contact_phone || null,
-                    emergency_contact_relationship: apiPatient.emergency_contact_relationship || null
-                };
-
-                setPatient(patientData);
-                // Add to tabs
-                addTab(patientData);
-                // Update tab path based on current route
-                const currentPath = window.location.pathname;
-                updateTabPath(apiPatient.id, currentPath);
-            } catch (error) {
-                // Fallback to local storage
-                const localPatient = getPatient(id);
-                if (localPatient) {
-                    setPatient({
-                        id: localPatient.id,
-                        name: localPatient.name,
-                        mrn: localPatient.mrn,
-                        dob: localPatient.dob,
-                        age: localPatient.age || (new Date().getFullYear() - new Date(localPatient.dob).getFullYear()),
-                        sex: localPatient.sex,
-                        photoUrl: localPatient.photoUrl || null,
-                        allergies: localPatient.allergies || [],
-                        medications: localPatient.medications || [],
-                        lastVisit: null
-                    });
-                } else {
-                    // Default fallback
-                    setPatient({
-                        id: id,
-                        name: "Patient",
-                        mrn: "N/A",
-                        dob: "",
-                        age: null,
-                        sex: "",
-                        first_name: "",
-                        last_name: "",
-                        photo_url: null,
-                        phone: null,
-                        email: null,
-                        address_line1: null,
-                        city: null,
-                        state: null,
-                        zip: null,
-                        insurance_provider: null,
-                        insurance_id: null,
-                        pharmacy_name: null,
-                        pharmacy_phone: null
-                    });
+                setLoading(true);
+                // Try context first
+                let patientData = getPatient(id);
+                if (!patientData) {
+                    const response = await patientsAPI.getById(id);
+                    patientData = response.data;
                 }
+
+                // Normalize field names
+                const normalized = {
+                    ...patientData,
+                    firstName: patientData.firstName || patientData.first_name,
+                    lastName: patientData.lastName || patientData.last_name,
+                    dob: patientData.dob || patientData.date_of_birth,
+                    phone: patientData.phone,
+                    email: patientData.email,
+                    addressLine1: patientData.addressLine1 || patientData.address_line1,
+                    city: patientData.city,
+                    state: patientData.state,
+                    zip: patientData.zip,
+                    insuranceProvider: patientData.insuranceProvider || patientData.insurance_provider,
+                    insuranceId: patientData.insuranceId || patientData.insurance_id,
+                    pharmacyName: patientData.pharmacyName || patientData.pharmacy_name,
+                    pharmacyPhone: patientData.pharmacyPhone || patientData.pharmacy_phone,
+                    emergencyContactName: patientData.emergencyContactName || patientData.emergency_contact_name,
+                    emergencyContactPhone: patientData.emergencyContactPhone || patientData.emergency_contact_phone,
+                    emergencyContactRelationship: patientData.emergencyContactRelationship || patientData.emergency_contact_relationship,
+                    photoUrl: patientData.photoUrl || patientData.photo_url
+                };
+
+                setPatient(normalized);
+                addTab(id, `${normalized.firstName} ${normalized.lastName}`, `/patient/${id}`);
+            } catch (error) {
+                console.error('Error fetching patient:', error);
+                showToast('Failed to load patient', 'error');
             } finally {
                 setLoading(false);
             }
         };
-
         fetchPatient();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id]);
+    }, [id, getPatient, addTab, showToast]);
 
-    if (loading || !patient) {
-        return (
-            <div className="bg-white border-b border-ink-200 shadow-sm sticky top-0 z-40 p-6">
-                <div className="text-center text-ink-500">Loading patient...</div>
-            </div>
-        );
-    }
-
+    // Calculate age
     const calculateAge = (dob) => {
         if (!dob) return null;
         const birthDate = new Date(dob);
@@ -477,779 +100,494 @@ const PatientHeader = () => {
         return age;
     };
 
-    const age = patient ? calculateAge(patient.dob) : null;
+    // Format phone number
+    const formatPhone = (phone) => {
+        if (!phone) return '—';
+        const cleaned = phone.replace(/\D/g, '');
+        if (cleaned.length === 10) {
+            return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+        }
+        return phone;
+    };
+
+    // Start editing
+    const startEdit = (field) => {
+        const form = {};
+        switch (field) {
+            case 'phone':
+                form.phone = patient.phone || '';
+                break;
+            case 'email':
+                form.email = patient.email || '';
+                break;
+            case 'address':
+                form.addressLine1 = patient.addressLine1 || '';
+                form.city = patient.city || '';
+                form.state = patient.state || '';
+                form.zip = patient.zip || '';
+                break;
+            case 'insurance':
+                form.insuranceProvider = patient.insuranceProvider || '';
+                form.insuranceId = patient.insuranceId || '';
+                break;
+            case 'pharmacy':
+                form.pharmacyName = patient.pharmacyName || '';
+                form.pharmacyPhone = patient.pharmacyPhone || '';
+                break;
+            case 'emergency':
+                form.emergencyContactName = patient.emergencyContactName || '';
+                form.emergencyContactPhone = patient.emergencyContactPhone || '';
+                form.emergencyContactRelationship = patient.emergencyContactRelationship || '';
+                break;
+        }
+        setEditForm(form);
+        setEditMode(field);
+    };
+
+    // Save edit
+    const saveEdit = async () => {
+        if (!id || !editMode) return;
+        setSaving(true);
+
+        try {
+            // Clean phone numbers
+            const cleanPhone = (val) => val ? val.replace(/\D/g, '') : null;
+
+            const updateData = { ...editForm };
+            if (updateData.phone) updateData.phone = cleanPhone(updateData.phone);
+            if (updateData.pharmacyPhone) updateData.pharmacyPhone = cleanPhone(updateData.pharmacyPhone);
+            if (updateData.emergencyContactPhone) updateData.emergencyContactPhone = cleanPhone(updateData.emergencyContactPhone);
+
+            await patientsAPI.update(id, updateData);
+
+            // Update local state
+            setPatient(prev => ({ ...prev, ...editForm }));
+            setEditMode(null);
+            showToast('Updated successfully');
+        } catch (error) {
+            console.error('Error updating patient:', error);
+            showToast(error.response?.data?.error || 'Failed to update', 'error');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Handle photo upload
+    const handlePhotoSelect = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('Photo must be under 5MB', 'error');
+            return;
+        }
+
+        setPhotoFile(file);
+        const reader = new FileReader();
+        reader.onloadend = () => setPhotoPreview(reader.result);
+        reader.readAsDataURL(file);
+        setShowPhotoUpload(true);
+    };
+
+    const savePhoto = async () => {
+        if (!photoFile || !id) return;
+        setSaving(true);
+
+        try {
+            const formData = new FormData();
+            formData.append('photo', photoFile);
+
+            const response = await patientsAPI.uploadPhoto(id, formData);
+            const newUrl = response.data?.photoUrl || response.data?.photo_url;
+
+            if (newUrl) {
+                setPatient(prev => ({ ...prev, photoUrl: newUrl }));
+            }
+
+            setShowPhotoUpload(false);
+            setPhotoPreview(null);
+            setPhotoFile(null);
+            showToast('Photo updated');
+        } catch (error) {
+            console.error('Error uploading photo:', error);
+            showToast('Failed to upload photo', 'error');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (loading || !patient) {
+        return (
+            <div className="bg-white border-b border-gray-200 px-6 py-4">
+                <div className="animate-pulse flex items-center gap-4">
+                    <div className="w-14 h-14 bg-gray-200 rounded-full"></div>
+                    <div className="space-y-2">
+                        <div className="h-5 bg-gray-200 rounded w-48"></div>
+                        <div className="h-4 bg-gray-100 rounded w-32"></div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    const age = calculateAge(patient.dob);
+    const initials = `${patient.firstName?.[0] || ''}${patient.lastName?.[0] || ''}`.toUpperCase();
+
+    // Editable info card component
+    const InfoCard = ({ icon: Icon, label, value, field, color = 'gray' }) => {
+        const isEditing = editMode === field;
+
+        return (
+            <div className={`group relative flex items-start gap-2 p-2 rounded-lg transition-colors ${isEditing ? 'bg-primary-50 ring-1 ring-primary-200' : 'hover:bg-gray-50'}`}>
+                <div className={`p-1.5 rounded-md bg-${color}-50`}>
+                    <Icon className={`w-3.5 h-3.5 text-${color}-500`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <div className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">{label}</div>
+                    {isEditing ? (
+                        <div className="space-y-1.5 mt-1">
+                            {field === 'phone' && (
+                                <input
+                                    type="tel"
+                                    value={editForm.phone}
+                                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                                    className="w-full text-sm border border-gray-200 rounded px-2 py-1 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                    placeholder="(555) 555-5555"
+                                    autoFocus
+                                />
+                            )}
+                            {field === 'email' && (
+                                <input
+                                    type="email"
+                                    value={editForm.email}
+                                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                                    className="w-full text-sm border border-gray-200 rounded px-2 py-1 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                    placeholder="email@example.com"
+                                    autoFocus
+                                />
+                            )}
+                            {field === 'address' && (
+                                <>
+                                    <input
+                                        type="text"
+                                        value={editForm.addressLine1}
+                                        onChange={(e) => setEditForm({ ...editForm, addressLine1: e.target.value })}
+                                        className="w-full text-sm border border-gray-200 rounded px-2 py-1 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                        placeholder="Street address"
+                                        autoFocus
+                                    />
+                                    <div className="flex gap-1">
+                                        <input
+                                            type="text"
+                                            value={editForm.city}
+                                            onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                                            className="flex-1 text-sm border border-gray-200 rounded px-2 py-1"
+                                            placeholder="City"
+                                        />
+                                        <input
+                                            type="text"
+                                            value={editForm.state}
+                                            onChange={(e) => setEditForm({ ...editForm, state: e.target.value })}
+                                            className="w-14 text-sm border border-gray-200 rounded px-2 py-1"
+                                            placeholder="ST"
+                                        />
+                                        <input
+                                            type="text"
+                                            value={editForm.zip}
+                                            onChange={(e) => setEditForm({ ...editForm, zip: e.target.value })}
+                                            className="w-20 text-sm border border-gray-200 rounded px-2 py-1"
+                                            placeholder="ZIP"
+                                        />
+                                    </div>
+                                </>
+                            )}
+                            {field === 'insurance' && (
+                                <>
+                                    <input
+                                        type="text"
+                                        value={editForm.insuranceProvider}
+                                        onChange={(e) => setEditForm({ ...editForm, insuranceProvider: e.target.value })}
+                                        className="w-full text-sm border border-gray-200 rounded px-2 py-1 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                        placeholder="Insurance provider"
+                                        autoFocus
+                                    />
+                                    <input
+                                        type="text"
+                                        value={editForm.insuranceId}
+                                        onChange={(e) => setEditForm({ ...editForm, insuranceId: e.target.value })}
+                                        className="w-full text-sm border border-gray-200 rounded px-2 py-1"
+                                        placeholder="Member ID"
+                                    />
+                                </>
+                            )}
+                            {field === 'pharmacy' && (
+                                <>
+                                    <input
+                                        type="text"
+                                        value={editForm.pharmacyName}
+                                        onChange={(e) => setEditForm({ ...editForm, pharmacyName: e.target.value })}
+                                        className="w-full text-sm border border-gray-200 rounded px-2 py-1 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                        placeholder="Pharmacy name"
+                                        autoFocus
+                                    />
+                                    <input
+                                        type="tel"
+                                        value={editForm.pharmacyPhone}
+                                        onChange={(e) => setEditForm({ ...editForm, pharmacyPhone: e.target.value })}
+                                        className="w-full text-sm border border-gray-200 rounded px-2 py-1"
+                                        placeholder="Phone"
+                                    />
+                                </>
+                            )}
+                            {field === 'emergency' && (
+                                <>
+                                    <input
+                                        type="text"
+                                        value={editForm.emergencyContactName}
+                                        onChange={(e) => setEditForm({ ...editForm, emergencyContactName: e.target.value })}
+                                        className="w-full text-sm border border-gray-200 rounded px-2 py-1 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                        placeholder="Contact name"
+                                        autoFocus
+                                    />
+                                    <div className="flex gap-1">
+                                        <input
+                                            type="tel"
+                                            value={editForm.emergencyContactPhone}
+                                            onChange={(e) => setEditForm({ ...editForm, emergencyContactPhone: e.target.value })}
+                                            className="flex-1 text-sm border border-gray-200 rounded px-2 py-1"
+                                            placeholder="Phone"
+                                        />
+                                        <input
+                                            type="text"
+                                            value={editForm.emergencyContactRelationship}
+                                            onChange={(e) => setEditForm({ ...editForm, emergencyContactRelationship: e.target.value })}
+                                            className="w-24 text-sm border border-gray-200 rounded px-2 py-1"
+                                            placeholder="Relation"
+                                        />
+                                    </div>
+                                </>
+                            )}
+                            <div className="flex gap-1 pt-1">
+                                <button
+                                    onClick={saveEdit}
+                                    disabled={saving}
+                                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-primary-600 hover:bg-primary-700 rounded disabled:opacity-50"
+                                >
+                                    <Check className="w-3 h-3" />
+                                    Save
+                                </button>
+                                <button
+                                    onClick={() => setEditMode(null)}
+                                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded"
+                                >
+                                    <X className="w-3 h-3" />
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-1">
+                            <span className="text-sm text-gray-700 truncate">{value || '—'}</span>
+                            <button
+                                onClick={() => startEdit(field)}
+                                className="opacity-0 group-hover:opacity-100 p-0.5 text-gray-400 hover:text-primary-600 transition-opacity"
+                            >
+                                <Edit className="w-3 h-3" />
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    };
 
     return (
         <>
             <div className="bg-white border-b border-gray-200 shadow-sm">
-                {/* Patient Hub Header Section */}
-                {/* Patient Info Header */}
-                <div className="px-6 py-4 bg-gradient-to-r from-primary-50 to-white border-b border-gray-100">
-                    <div className="flex items-center justify-between">
-                        {/* Left: Photo and Basic Info */}
-                        <div className="flex items-center space-x-4">
-                            {/* Patient Avatar (Initials) */}
-                            {/* Redesigned Patient Avatar */}
+                {/* Main Header Row */}
+                <div className="px-6 py-3 flex items-center justify-between">
+                    {/* Left: Avatar + Name */}
+                    <div className="flex items-center gap-4">
+                        {/* Avatar */}
+                        <div className="relative group">
                             <div
-                                onClick={() => setShowPhotoModal(true)}
-                                className="w-16 h-16 rounded-full bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-100 flex items-center justify-center shadow-sm ring-4 ring-white cursor-pointer hover:ring-teal-100 transition-all active:scale-95"
-                                title="Click to update photo"
+                                onClick={() => document.getElementById('photo-input').click()}
+                                className="w-14 h-14 rounded-full bg-gradient-to-br from-primary-100 to-primary-50 border-2 border-white shadow-md flex items-center justify-center cursor-pointer overflow-hidden hover:ring-2 hover:ring-primary-200 transition-all"
                             >
-                                {patient?.photoUrl ? (
-                                    <img src={patient.photoUrl} alt="Patient" className="w-full h-full rounded-full object-cover" />
+                                {patient.photoUrl ? (
+                                    <img
+                                        src={`${patient.photoUrl}?v=${Date.now()}`}
+                                        alt=""
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => { e.target.style.display = 'none'; }}
+                                    />
                                 ) : (
-                                    <User className="w-8 h-8 text-teal-300" />
+                                    <span className="text-lg font-bold text-primary-600">{initials}</span>
                                 )}
                             </div>
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                onClick={() => document.getElementById('photo-input').click()}>
+                                <Camera className="w-5 h-5 text-white" />
+                            </div>
+                            <input
+                                id="photo-input"
+                                type="file"
+                                accept="image/*"
+                                onChange={handlePhotoSelect}
+                                className="hidden"
+                            />
+                        </div>
 
-                            {/* Patient Name and Info */}
-                            <div className="min-w-0">
-                                <Link
-                                    to={`/patient/${id}/snapshot`}
-                                    className="text-2xl font-bold text-gray-900 cursor-pointer hover:text-primary-700 transition-colors mb-1 block"
-                                >
-                                    {patient ? `${patient.first_name} ${patient.last_name}` : 'Patient Chart'}
-                                </Link>
-                                {patient && (
-                                    <div className="flex items-center gap-3 text-sm text-gray-600">
-                                        <span>{age !== null && `${age} years old`}</span>
-                                        <span className="text-gray-300">•</span>
-                                        <span>MRN: <span className="font-semibold text-gray-700">{patient.mrn}</span></span>
-                                        <span className="text-gray-300">•</span>
-                                        <span>DOB: {patient.dob ? new Date(patient.dob).toLocaleDateString() : 'N/A'}</span>
-                                    </div>
-                                )}
+                        {/* Name & Basic Info */}
+                        <div>
+                            <h1 className="text-xl font-bold text-gray-900">
+                                {patient.firstName} {patient.lastName}
+                            </h1>
+                            <div className="flex items-center gap-3 text-sm text-gray-500">
+                                <span className="font-medium text-gray-700">{age}y {patient.sex?.charAt(0) || ''}</span>
+                                <span>•</span>
+                                <span>DOB: {patient.dob ? new Date(patient.dob).toLocaleDateString() : '—'}</span>
+                                <span>•</span>
+                                <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">MRN: {patient.mrn}</span>
                             </div>
                         </div>
+                    </div>
 
-                        {/* Right: Actions */}
-                        <div className="flex items-center space-x-1 flex-shrink-0">
-                            <button onClick={() => setActiveModal('rx')} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="e-Prescribe">
-                                <Pill className="w-5 h-5" />
-                            </button>
-                            <button onClick={() => setActiveModal('order')} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Orders">
-                                <Stethoscope className="w-5 h-5" />
-                            </button>
-                            <button onClick={() => setActiveModal('upload')} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Upload Document">
-                                <Upload className="w-5 h-5" />
-                            </button>
-                            <button onClick={() => setActiveModal('refer')} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Refer">
-                                <Send className="w-5 h-5" />
-                            </button>
-                        </div>
+                    {/* Right: Quick Actions */}
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setActiveModal('order')}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                            <FileText className="w-4 h-4" />
+                            Order
+                        </button>
+                        <button
+                            onClick={() => setActiveModal('prescription')}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                            <Pill className="w-4 h-4" />
+                            Rx
+                        </button>
+                        <button
+                            onClick={() => setActiveModal('referral')}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                            <Send className="w-4 h-4" />
+                            Refer
+                        </button>
+                        <button
+                            onClick={() => setActiveModal('upload')}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                            <Upload className="w-4 h-4" />
+                            Upload
+                        </button>
+
+                        {/* Expand/Collapse */}
+                        <button
+                            onClick={() => setIsExpanded(!isExpanded)}
+                            className="ml-2 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                            {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                        </button>
                     </div>
                 </div>
 
-                {/* Demographics Section */}
-                {patient && (
-                    <div className="px-6 py-1.5">
-                        <div className="grid grid-cols-3 lg:grid-cols-6 gap-1.5">
-                            {/* Phone */}
-                            <div
-                                onClick={() => handleOpenDemographics('phone')}
-                                className="group cursor-pointer bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-primary-300 rounded p-1 transition-all relative text-center"
-                            >
-                                <div className="flex items-center justify-center mb-0.5 relative">
-                                    <div className="flex items-center space-x-0.5">
-                                        <Phone className="w-2.5 h-2.5 text-primary-600" />
-                                        <span className="text-[9px] font-semibold text-gray-700 uppercase tracking-wide">Phone</span>
-                                    </div>
-                                    <Edit className="w-2 h-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity absolute right-0" />
-                                </div>
-                                <div className="text-[11px] font-medium text-gray-900 leading-tight">{formatPhone(patient.phone) || 'Not provided'}</div>
-                            </div>
-
-                            {/* Email */}
-                            <div
-                                onClick={() => handleOpenDemographics('email')}
-                                className="group cursor-pointer bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-primary-300 rounded p-1 transition-all relative text-center"
-                            >
-                                <div className="flex items-center justify-center mb-0.5 relative">
-                                    <div className="flex items-center space-x-0.5">
-                                        <Mail className="w-2.5 h-2.5 text-primary-600" />
-                                        <span className="text-[9px] font-semibold text-gray-700 uppercase tracking-wide">Email</span>
-                                    </div>
-                                    <Edit className="w-2 h-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity absolute right-0" />
-                                </div>
-                                <div className="text-[11px] font-medium text-gray-900 leading-tight">{patient.email || 'Not provided'}</div>
-                            </div>
-
-                            {/* Address */}
-                            <div
-                                onClick={() => handleOpenDemographics('address')}
-                                className="group cursor-pointer bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-primary-300 rounded p-1 transition-all relative text-center"
-                            >
-                                <div className="flex items-center justify-center mb-0.5 relative">
-                                    <div className="flex items-center space-x-0.5">
-                                        <MapPin className="w-2.5 h-2.5 text-primary-600" />
-                                        <span className="text-[9px] font-semibold text-gray-700 uppercase tracking-wide">Address</span>
-                                    </div>
-                                    <Edit className="w-2 h-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity absolute right-0" />
-                                </div>
-                                <div className="text-[11px] font-medium text-gray-900 leading-tight line-clamp-2">{formatAddress(patient)}</div>
-                            </div>
-
-                            {/* Insurance */}
-                            <div
-                                onClick={() => handleOpenDemographics('insurance')}
-                                className="group cursor-pointer bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-primary-300 rounded p-1 transition-all relative text-center"
-                            >
-                                <div className="flex items-center justify-center mb-0.5 relative">
-                                    <div className="flex items-center space-x-0.5">
-                                        <CreditCard className="w-2.5 h-2.5 text-primary-600" />
-                                        <span className="text-[9px] font-semibold text-gray-700 uppercase tracking-wide">Insurance</span>
-                                    </div>
-                                    <Edit className="w-2 h-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity absolute right-0" />
-                                </div>
-                                <div className="text-[11px] font-medium text-gray-900 leading-tight">{patient.insurance_provider || 'Not on file'}</div>
-                                {patient.insurance_id && (
-                                    <div className="text-[9px] text-gray-600 mt-0.5 leading-tight">
-                                        Policy: {patient.insurance_id}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Pharmacy */}
-                            <div
-                                onClick={() => handleOpenDemographics('pharmacy')}
-                                className="group cursor-pointer bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-primary-300 rounded p-1 transition-all relative text-center"
-                            >
-                                <div className="flex items-center justify-center mb-0.5 relative">
-                                    <div className="flex items-center space-x-0.5">
-                                        <Building2 className="w-2.5 h-2.5 text-primary-600" />
-                                        <span className="text-[9px] font-semibold text-gray-700 uppercase tracking-wide">Pharmacy</span>
-                                    </div>
-                                    <Edit className="w-2 h-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity absolute right-0" />
-                                </div>
-                                <div className="text-[11px] font-medium text-gray-900 leading-tight">{patient.pharmacy_name || 'Not on file'}</div>
-                                {patient.pharmacy_phone && (
-                                    <div className="text-[9px] text-gray-600 mt-0.5 leading-tight">
-                                        {formatPhone(patient.pharmacy_phone)}
-                                    </div>
-                                )}
-                                {patient.pharmacy_address && (
-                                    <div className="text-[9px] text-gray-600 mt-0.5 leading-tight">
-                                        {patient.pharmacy_address}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Emergency Contact */}
-                            {(patient.emergency_contact_name || patient.emergency_contact_phone) && (
-                                <div
-                                    onClick={() => handleOpenDemographics('emergency')}
-                                    className="group cursor-pointer bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-primary-300 rounded p-1 transition-all relative text-center"
-                                >
-                                    <div className="flex items-center justify-center mb-0.5 relative">
-                                        <div className="flex items-center space-x-0.5">
-                                            <Users className="w-2.5 h-2.5 text-primary-600" />
-                                            <span className="text-[9px] font-semibold text-gray-700 uppercase tracking-wide">Emergency</span>
-                                        </div>
-                                        <Edit className="w-2 h-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity absolute right-0" />
-                                    </div>
-                                    <div className="text-[11px] font-medium text-gray-900 leading-tight line-clamp-2">
-                                        {patient.emergency_contact_name && (
-                                            <div>
-                                                {patient.emergency_contact_name}
-                                                {patient.emergency_contact_phone && (
-                                                    <span className="text-[9px] text-gray-600"> • {formatPhone(patient.emergency_contact_phone)}</span>
-                                                )}
-                                            </div>
-                                        )}
-                                        {!patient.emergency_contact_name && patient.emergency_contact_phone && (
-                                            <div>{formatPhone(patient.emergency_contact_phone)}</div>
-                                        )}
-                                        {patient.emergency_contact_relationship && (
-                                            <div className="text-[9px] text-gray-600 mt-0.5 leading-tight">
-                                                {patient.emergency_contact_relationship}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
+                {/* Expandable Details */}
+                {isExpanded && (
+                    <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
+                        <div className="grid grid-cols-3 gap-x-6 gap-y-2">
+                            <InfoCard icon={Phone} label="Phone" value={formatPhone(patient.phone)} field="phone" color="blue" />
+                            <InfoCard icon={Mail} label="Email" value={patient.email} field="email" color="purple" />
+                            <InfoCard
+                                icon={MapPin}
+                                label="Address"
+                                value={[patient.addressLine1, patient.city, patient.state, patient.zip].filter(Boolean).join(', ') || '—'}
+                                field="address"
+                                color="green"
+                            />
+                            <InfoCard
+                                icon={CreditCard}
+                                label="Insurance"
+                                value={patient.insuranceProvider ? `${patient.insuranceProvider}${patient.insuranceId ? ` • ${patient.insuranceId}` : ''}` : '—'}
+                                field="insurance"
+                                color="amber"
+                            />
+                            <InfoCard
+                                icon={Building2}
+                                label="Pharmacy"
+                                value={patient.pharmacyName ? `${patient.pharmacyName}${patient.pharmacyPhone ? ` • ${formatPhone(patient.pharmacyPhone)}` : ''}` : '—'}
+                                field="pharmacy"
+                                color="teal"
+                            />
+                            <InfoCard
+                                icon={Users}
+                                label="Emergency Contact"
+                                value={patient.emergencyContactName ? `${patient.emergencyContactName}${patient.emergencyContactRelationship ? ` (${patient.emergencyContactRelationship})` : ''}` : '—'}
+                                field="emergency"
+                                color="red"
+                            />
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* Modals */}
-            <PrescriptionModal isOpen={activeModal === 'rx'} onClose={() => setActiveModal(null)} onSuccess={(diagnosis, text) => showToast('Prescription added', 'success')} />
-            <OrderModal isOpen={activeModal === 'order'} onClose={() => setActiveModal(null)} onSuccess={(diagnosis, text) => showToast('Order added', 'success')} />
-            <ReferralModal isOpen={activeModal === 'refer'} onClose={() => setActiveModal(null)} onSuccess={(diagnosis, text) => showToast('Referral added', 'success')} />
-            <UploadModal isOpen={activeModal === 'upload'} onClose={() => setActiveModal(null)} onSuccess={showToast} />
-
-            {/* Allergy Modal */}
-            {showAllergyModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" onClick={() => setShowAllergyModal(false)}>
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-ink-900 flex items-center space-x-2">
-                                <AlertCircle className="w-5 h-5 text-red-600" />
-                                <span>Add Allergy</span>
-                            </h3>
-                            <button
-                                onClick={() => {
-                                    setShowAllergyModal(false);
-                                    setAllergyForm({ allergen: '', reaction: '', severity: '', onsetDate: '' });
-                                }}
-                                className="p-1 hover:bg-paper-100 rounded text-ink-500"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-ink-700 mb-1">Allergen *</label>
-                                <input
-                                    type="text"
-                                    value={allergyForm.allergen}
-                                    onChange={(e) => setAllergyForm({ ...allergyForm, allergen: e.target.value })}
-                                    className="w-full px-3 py-2 border border-paper-300 rounded-md focus:ring-2 focus:ring-paper-400 focus:border-transparent"
-                                    placeholder="e.g., Penicillin, Latex, Peanuts"
-                                    autoFocus
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-ink-700 mb-1">Reaction</label>
-                                <input
-                                    type="text"
-                                    value={allergyForm.reaction}
-                                    onChange={(e) => setAllergyForm({ ...allergyForm, reaction: e.target.value })}
-                                    className="w-full px-3 py-2 border border-paper-300 rounded-md focus:ring-2 focus:ring-paper-400 focus:border-transparent"
-                                    placeholder="e.g., Hives, Anaphylaxis, Rash"
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-ink-700 mb-1">Severity</label>
-                                    <select
-                                        value={allergyForm.severity}
-                                        onChange={(e) => setAllergyForm({ ...allergyForm, severity: e.target.value })}
-                                        className="w-full px-3 py-2 border border-paper-300 rounded-md focus:ring-2 focus:ring-paper-400 focus:border-transparent"
-                                    >
-                                        <option value="">Select...</option>
-                                        <option value="mild">Mild</option>
-                                        <option value="moderate">Moderate</option>
-                                        <option value="severe">Severe</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-ink-700 mb-1">Onset Date</label>
-                                    <input
-                                        type="date"
-                                        value={allergyForm.onsetDate}
-                                        onChange={(e) => setAllergyForm({ ...allergyForm, onsetDate: e.target.value })}
-                                        className="w-full px-3 py-2 border border-paper-300 rounded-md focus:ring-2 focus:ring-paper-400 focus:border-transparent"
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex space-x-3 pt-2">
-                                <button
-                                    onClick={handleAddAllergy}
-                                    disabled={!allergyForm.allergen.trim()}
-                                    className="flex-1 px-4 py-2 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
-                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                    onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
-                                    onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
-                                >
-                                    <Save className="w-4 h-4" />
-                                    <span>Add Allergy</span>
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setShowAllergyModal(false);
-                                        setAllergyForm({ allergen: '', reaction: '', severity: '', onsetDate: '' });
-                                    }}
-                                    className="px-4 py-2 bg-paper-100 text-ink-700 rounded-md hover:bg-paper-200"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Medication Modal */}
-            {showMedicationModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" onClick={() => setShowMedicationModal(false)}>
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-ink-900 flex items-center space-x-2">
-                                <Pill className="w-5 h-5 text-paper-700" />
-                                <span>Add Medication</span>
-                            </h3>
-                            <button
-                                onClick={() => {
-                                    setShowMedicationModal(false);
-                                    setMedicationForm({ medicationName: '', dosage: '', frequency: '', route: '', startDate: '' });
-                                }}
-                                className="p-1 hover:bg-paper-100 rounded text-ink-500"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-ink-700 mb-1">Medication Name *</label>
-                                <input
-                                    type="text"
-                                    value={medicationForm.medicationName}
-                                    onChange={(e) => setMedicationForm({ ...medicationForm, medicationName: e.target.value })}
-                                    className="w-full px-3 py-2 border border-paper-300 rounded-md focus:ring-2 focus:ring-paper-400 focus:border-transparent"
-                                    placeholder="e.g., Metformin, Lisinopril"
-                                    autoFocus
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-ink-700 mb-1">Dosage</label>
-                                    <input
-                                        type="text"
-                                        value={medicationForm.dosage}
-                                        onChange={(e) => setMedicationForm({ ...medicationForm, dosage: e.target.value })}
-                                        className="w-full px-3 py-2 border border-paper-300 rounded-md focus:ring-2 focus:ring-paper-400 focus:border-transparent"
-                                        placeholder="e.g., 10mg, 500mg"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-ink-700 mb-1">Frequency</label>
-                                    <input
-                                        type="text"
-                                        value={medicationForm.frequency}
-                                        onChange={(e) => setMedicationForm({ ...medicationForm, frequency: e.target.value })}
-                                        className="w-full px-3 py-2 border border-paper-300 rounded-md focus:ring-2 focus:ring-paper-400 focus:border-transparent"
-                                        placeholder="e.g., Once daily, BID"
-                                    />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-ink-700 mb-1">Route</label>
-                                    <input
-                                        type="text"
-                                        value={medicationForm.route}
-                                        onChange={(e) => setMedicationForm({ ...medicationForm, route: e.target.value })}
-                                        className="w-full px-3 py-2 border border-paper-300 rounded-md focus:ring-2 focus:ring-paper-400 focus:border-transparent"
-                                        placeholder="e.g., PO, IV, Topical"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-ink-700 mb-1">Start Date</label>
-                                    <input
-                                        type="date"
-                                        value={medicationForm.startDate}
-                                        onChange={(e) => setMedicationForm({ ...medicationForm, startDate: e.target.value })}
-                                        className="w-full px-3 py-2 border border-paper-300 rounded-md focus:ring-2 focus:ring-paper-400 focus:border-transparent"
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex space-x-3 pt-2">
-                                <button
-                                    onClick={handleAddMedication}
-                                    disabled={!medicationForm.medicationName.trim()}
-                                    className="flex-1 px-4 py-2 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
-                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                    onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
-                                    onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
-                                >
-                                    <Save className="w-4 h-4" />
-                                    <span>Add Medication</span>
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setShowMedicationModal(false);
-                                        setMedicationForm({ medicationName: '', dosage: '', frequency: '', route: '', startDate: '' });
-                                    }}
-                                    className="px-4 py-2 bg-paper-100 text-ink-700 rounded-md hover:bg-paper-200"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-
-
-
-
-
-
-
-
-            {/* Photo Modal */}
-            {showPhotoModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" onClick={() => {
-                    setShowPhotoModal(false);
-                    setCapturedPhoto(null);
-                }}>
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-ink-900 flex items-center space-x-2">
-                                <Camera className="w-5 h-5 text-paper-700" />
-                                <span className="text-ink-900 font-bold">Add Patient Photo</span>
-                            </h3>
-                            <button
-                                onClick={() => {
-                                    setShowPhotoModal(false);
-                                    setCapturedPhoto(null);
-                                }}
-                                className="p-1 hover:bg-paper-100 rounded text-ink-500 transition-colors"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        {/* File input - always present but hidden */}
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                            onChange={handleFileUpload}
-                            className="hidden"
-                        />
-
-                        {!capturedPhoto ? (
-                            <div className="flex flex-col items-center justify-center space-y-4 py-8">
-                                <div className="p-4 bg-paper-50 rounded-full">
-                                    <FileImage className="w-12 h-12 text-paper-400" />
-                                </div>
-                                <div className="text-center">
-                                    <p className="text-ink-900 font-medium mb-1">Upload a photo</p>
-                                    <p className="text-ink-500 text-sm">JPEG, PNG, GIF, or WebP</p>
-                                </div>
-                                <button
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="px-6 py-2.5 text-white rounded-md transition-all duration-200 hover:shadow-lg hover:translat-y-[-1px] font-medium"
-                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                                >
-                                    Select Image
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                <div className="relative bg-black rounded-lg overflow-hidden border border-paper-200" style={{ aspectRatio: '4/3' }}>
-                                    <img src={capturedPhoto} alt="Uploaded" className="w-full h-full object-contain" />
-                                </div>
-                                <div className="flex space-x-3">
-                                    <button
-                                        onClick={handleSavePhoto}
-                                        className="flex-1 px-4 py-2 text-white rounded-md flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md font-medium"
-                                        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                                    >
-                                        <Save className="w-4 h-4" />
-                                        <span>Save Photo</span>
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setCapturedPhoto(null);
-                                            setTimeout(() => {
-                                                fileInputRef.current?.click();
-                                            }, 100);
-                                        }}
-                                        className="px-4 py-2 bg-paper-100 text-ink-700 rounded-md hover:bg-paper-200 font-medium border border-paper-200"
-                                    >
-                                        Change
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setShowPhotoModal(false);
-                                            setCapturedPhoto(null);
-                                        }}
-                                        className="px-4 py-2 bg-paper-100 text-ink-700 rounded-md hover:bg-paper-200 font-medium border border-paper-200"
-                                    >
-                                        Cancel
-                                    </button>
-                                </div>
+            {/* Photo Upload Modal */}
+            {showPhotoUpload && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowPhotoUpload(false)}>
+                    <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Update Photo</h3>
+                        {photoPreview && (
+                            <div className="mb-4 flex justify-center">
+                                <img src={photoPreview} alt="Preview" className="w-32 h-32 rounded-full object-cover border-4 border-gray-100" />
                             </div>
                         )}
-                    </div>
-                </div>
-            )}
-
-            {/* Demographics Modal */}
-            {showDemographicsModal && demographicsField && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" onClick={() => {
-                    setShowDemographicsModal(false);
-                    setDemographicsField(null);
-                }}>
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                                {demographicsField === 'phone' && 'Edit Phone'}
-                                {demographicsField === 'email' && 'Edit Email'}
-                                {demographicsField === 'address' && 'Edit Address'}
-                                {demographicsField === 'insurance' && 'Edit Insurance'}
-                                {demographicsField === 'pharmacy' && 'Edit Pharmacy'}
-                                {demographicsField === 'emergency' && 'Edit Emergency Contact'}
-                            </h3>
+                        <div className="flex gap-2">
                             <button
-                                onClick={() => {
-                                    setShowDemographicsModal(false);
-                                    setDemographicsField(null);
-                                }}
-                                className="p-1 hover:bg-gray-100 rounded text-gray-500"
+                                onClick={savePhoto}
+                                disabled={saving}
+                                className="flex-1 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50"
                             >
-                                <X className="w-5 h-5" />
+                                {saving ? 'Saving...' : 'Save Photo'}
                             </button>
-                        </div>
-
-                        <div className="space-y-4">
-                            {/* Phone */}
-                            {demographicsField === 'phone' && (
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                                    <input
-                                        type="tel"
-                                        value={demographicsForm.phone}
-                                        onChange={(e) => {
-                                            const formatted = formatPhoneInput(e.target.value);
-                                            setDemographicsForm({ ...demographicsForm, phone: formatted });
-                                        }}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                        placeholder="(555) 123-4567"
-                                        maxLength={14}
-                                        autoFocus
-                                    />
-                                </div>
-                            )}
-
-                            {/* Email */}
-                            {demographicsField === 'email' && (
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                                    <input
-                                        type="email"
-                                        value={demographicsForm.email}
-                                        onChange={(e) => setDemographicsForm({ ...demographicsForm, email: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                        placeholder="patient@example.com"
-                                        autoFocus
-                                    />
-                                </div>
-                            )}
-
-                            {/* Address */}
-                            {demographicsField === 'address' && (
-                                <div className="space-y-3">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
-                                        <input
-                                            type="text"
-                                            value={demographicsForm.address_line1}
-                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, address_line1: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                            placeholder="123 Main St"
-                                            autoFocus
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                                            <input
-                                                type="text"
-                                                value={demographicsForm.city}
-                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, city: e.target.value })}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                                placeholder="City"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                                            <input
-                                                type="text"
-                                                value={demographicsForm.state}
-                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, state: e.target.value })}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                                placeholder="State"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
-                                        <input
-                                            type="text"
-                                            value={demographicsForm.zip}
-                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, zip: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                            placeholder="12345"
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Insurance */}
-                            {demographicsField === 'insurance' && (
-                                <div className="space-y-3">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Insurance Provider</label>
-                                        <input
-                                            type="text"
-                                            value={demographicsForm.insurance_provider}
-                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, insurance_provider: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                            placeholder="Insurance Company Name"
-                                            autoFocus
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Policy/Group Number</label>
-                                        <input
-                                            type="text"
-                                            value={demographicsForm.insurance_id}
-                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, insurance_id: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                            placeholder="Policy or Group Number"
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Pharmacy */}
-                            {demographicsField === 'pharmacy' && (
-                                <div className="space-y-3">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Pharmacy Name</label>
-                                        <input
-                                            type="text"
-                                            value={demographicsForm.pharmacy_name}
-                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, pharmacy_name: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                            placeholder="Pharmacy Name"
-                                            autoFocus
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Pharmacy Phone</label>
-                                        <input
-                                            type="tel"
-                                            value={demographicsForm.pharmacy_phone}
-                                            onChange={(e) => {
-                                                const formatted = formatPhoneInput(e.target.value);
-                                                setDemographicsForm({ ...demographicsForm, pharmacy_phone: formatted });
-                                            }}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                            placeholder="(555) 123-4567"
-                                            maxLength={14}
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Emergency Contact */}
-                            {demographicsField === 'emergency' && (
-                                <div className="space-y-3">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
-                                        <input
-                                            type="text"
-                                            value={demographicsForm.emergency_contact_name}
-                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, emergency_contact_name: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                            placeholder="Full Name"
-                                            autoFocus
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                                        <input
-                                            type="tel"
-                                            value={demographicsForm.emergency_contact_phone}
-                                            onChange={(e) => {
-                                                const formatted = formatPhoneInput(e.target.value);
-                                                setDemographicsForm({ ...demographicsForm, emergency_contact_phone: formatted });
-                                            }}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                            placeholder="(555) 123-4567"
-                                            maxLength={14}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Relationship</label>
-                                        <input
-                                            type="text"
-                                            value={demographicsForm.emergency_contact_relationship}
-                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, emergency_contact_relationship: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                            placeholder="e.g., Spouse, Parent, Friend"
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="flex space-x-3 pt-2">
-                                <button
-                                    onClick={handleSaveDemographics}
-                                    className="flex-1 px-4 py-2 text-white rounded-md flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
-                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                                >
-                                    <Save className="w-4 h-4" />
-                                    <span>Save</span>
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        // Clear the field
-                                        const clearedForm = { ...demographicsForm };
-                                        switch (demographicsField) {
-                                            case 'phone':
-                                                clearedForm.phone = '';
-                                                break;
-                                            case 'email':
-                                                clearedForm.email = '';
-                                                break;
-                                            case 'address':
-                                                clearedForm.address_line1 = '';
-                                                clearedForm.city = '';
-                                                clearedForm.state = '';
-                                                clearedForm.zip = '';
-                                                break;
-                                            case 'insurance':
-                                                clearedForm.insurance_provider = '';
-                                                clearedForm.insurance_id = '';
-                                                break;
-                                            case 'pharmacy':
-                                                clearedForm.pharmacy_name = '';
-                                                clearedForm.pharmacy_phone = '';
-                                                break;
-                                            case 'emergency':
-                                                clearedForm.emergency_contact_name = '';
-                                                clearedForm.emergency_contact_phone = '';
-                                                clearedForm.emergency_contact_relationship = '';
-                                                break;
-                                        }
-                                        setDemographicsForm(clearedForm);
-                                    }}
-                                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                                >
-                                    Clear
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setShowDemographicsModal(false);
-                                        setDemographicsField(null);
-                                    }}
-                                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
+                            <button
+                                onClick={() => { setShowPhotoUpload(false); setPhotoPreview(null); setPhotoFile(null); }}
+                                className="px-4 py-2 text-gray-600 font-medium rounded-lg hover:bg-gray-100"
+                            >
+                                Cancel
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
 
             {/* Toast */}
-            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+            {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}
+
+            {/* Modals */}
+            <OrderModal
+                isOpen={activeModal === 'order'}
+                onClose={() => setActiveModal(null)}
+                onSuccess={() => { setActiveModal(null); showToast('Order added'); }}
+                patientId={id}
+            />
+            <PrescriptionModal
+                isOpen={activeModal === 'prescription'}
+                onClose={() => setActiveModal(null)}
+                onSuccess={() => { setActiveModal(null); showToast('Prescription added'); }}
+            />
+            <ReferralModal
+                isOpen={activeModal === 'referral'}
+                onClose={() => setActiveModal(null)}
+                onSuccess={() => { setActiveModal(null); showToast('Referral created'); }}
+            />
+            <UploadModal
+                isOpen={activeModal === 'upload'}
+                onClose={() => setActiveModal(null)}
+                patientId={id}
+                onSuccess={() => { setActiveModal(null); showToast('Document uploaded'); }}
+            />
         </>
     );
 };
