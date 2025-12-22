@@ -620,10 +620,6 @@ const VisitNote = () => {
                         // If no note_draft, ensure we have empty state
                         console.log('No note_draft found in visit');
                     }
-                    // Fetch visit orders from new catalog system
-                    ordersCatalogAPI.getVisitOrders(visit.id)
-                        .then(res => setVisitOrders(res.data))
-                        .catch(err => console.error('Failed to fetch visit orders:', err));
 
                     setLoading(false);
 

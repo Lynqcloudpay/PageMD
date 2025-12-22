@@ -224,6 +224,10 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
     const [searchingMed, setSearchingMed] = useState(false);
     const [medResults, setMedResults] = useState([]);
 
+    // Memoize diagnoses to prevent reset on parent re-renders
+    const diagnosesString = useMemo(() => JSON.stringify(diagnoses), [diagnoses]);
+    const existingOrdersString = useMemo(() => JSON.stringify(existingOrders), [existingOrders]);
+
     useEffect(() => {
         if (isOpen) {
             setSearchQuery('');
@@ -292,7 +296,8 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
             }
             setCart(initialCart);
         }
-    }, [isOpen, initialTab, diagnoses, existingOrders]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen, initialTab, diagnosesString, existingOrdersString]);
 
     // Group cart by diagnosis
     const groupedCart = useMemo(() => {
@@ -489,16 +494,11 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                 // Re-generate string to be safe and consistent.
 
                 if (item.type === 'labs') {
-                    // Use LOINC if available from catalog, else vendor code
-                    const loinc = item.details?.loinc || item.details?.catalogId;
-                    const code = item.details?.questCode || item.details?.labcorpCode;
-                    const company = labVendor === 'quest' ? 'Quest' : 'LabCorp';
-                    if (item.originalString && !item.details?.questCode && !loinc) {
+                    // Just display lab name - no vendor codes
+                    if (item.originalString) {
                         orderText = item.originalString;
-                    } else if (loinc) {
-                        orderText = `Lab: ${item.name}`;
                     } else {
-                        orderText = `Lab: ${item.name} [${company}: ${code || 'N/A'}]`;
+                        orderText = `Lab: ${item.name}`;
                     }
                 } else if (item.type === 'imaging') {
                     // No CPT codes displayed
@@ -603,10 +603,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                 // ... logic to call onSuccess
                 // For brevity, assuming onSave is used now.
                 if (item.type === 'labs') {
-                    const loinc = item.details?.loinc;
-                    const code = labVendor === 'quest' ? item.details?.questCode : item.details?.labcorpCode;
-                    const company = labVendor === 'quest' ? 'Quest' : 'LabCorp';
-                    orderText = loinc ? `Lab: ${item.name}` : `Lab: ${item.name} [${company}: ${code || 'N/A'}]`;
+                    orderText = `Lab: ${item.name}`;
                 } else if (item.type === 'imaging') {
                     orderText = `Imaging: ${item.name}`;
                 } else if (item.type === 'procedures') {
@@ -640,11 +637,8 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                     {activeTab === 'labs' && item.loinc && (
                         <span className="text-primary-600">LOINC: {item.loinc}</span>
                     )}
-                    {activeTab === 'labs' && !item.loinc && item.questCode && (
-                        <span>{labVendor === 'quest' ? `Quest: ${item.questCode}` : `LabCorp: ${item.labcorpCode}`}</span>
-                    )}
-                    {item.category && <span className="ml-2 text-gray-400">{item.category}</span>}
-                    {item.description && !item.loinc && <span>{item.description}</span>}
+                    {item.category && <span className="text-gray-400">{item.category}</span>}
+                    {item.description && <span>{item.description}</span>}
                 </div>
             </div>
             <Plus className="w-4 h-4 text-gray-400 group-hover:text-primary-600" />
@@ -696,23 +690,6 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                     {/* Left Column: Search & Browse */}
                     <div className="w-1/2 flex flex-col border-r border-gray-200 bg-white">
                         <div className="p-4 border-b border-gray-100">
-                            {/* Vendor Toggle for Labs */}
-                            {activeTab === 'labs' && (
-                                <div className="flex rounded-md shadow-sm mb-3">
-                                    <button
-                                        onClick={() => setLabVendor('quest')}
-                                        className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-l-md border ${labVendor === 'quest' ? 'bg-primary-50 text-primary-700 border-primary-200' : 'bg-white text-gray-700 border-gray-200'}`}
-                                    >
-                                        Quest
-                                    </button>
-                                    <button
-                                        onClick={() => setLabVendor('labcorp')}
-                                        className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-r-md border-t border-b border-r ${labVendor === 'labcorp' ? 'bg-primary-50 text-primary-700 border-primary-200' : 'bg-white text-gray-700 border-gray-200'}`}
-                                    >
-                                        LabCorp
-                                    </button>
-                                </div>
-                            )}
 
                             {/* Search Input */}
                             <div className="relative">
