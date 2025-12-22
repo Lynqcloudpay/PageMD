@@ -751,32 +751,53 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                             const isImage = ['imaging', 'ekg', 'echo', 'stress_test', 'cardiac_cath'].includes(doc.doc_type) || doc.mime_type?.includes('image');
 
                                                             return (
-                                                                <div key={doc.id} className="group bg-white border border-gray-100 rounded-xl p-3 hover:shadow-md hover:border-primary-100 transition-all flex justify-between items-start">
-                                                                    <a href={docLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 min-w-0 flex-1">
-                                                                        <div className={`p-2 rounded-lg ${isImage ? 'bg-indigo-50 text-indigo-500' : 'bg-amber-50 text-amber-500'}`}>
-                                                                            {isImage ? <Image className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
-                                                                        </div>
-                                                                        <div className="min-w-0">
-                                                                            <div className="text-sm font-bold text-gray-900 truncate tracking-tight">{doc.filename || doc.file_name}</div>
-                                                                            <div className="flex items-center gap-2 mt-0.5">
-                                                                                <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-1 py-0.5 rounded uppercase tracking-tighter">{doc.doc_type}</span>
-                                                                                <span className="text-[10px] text-gray-400 font-medium">{format(new Date(doc.created_at), 'MMM d, yyyy')}</span>
+                                                                <div key={doc.id} className="group bg-white border border-gray-100 rounded-xl p-3 hover:shadow-md hover:border-primary-100 transition-all">
+                                                                    <div className="flex justify-between items-start">
+                                                                        <a href={docLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 min-w-0 flex-1">
+                                                                            <div className={`p-2 rounded-lg ${isImage ? 'bg-indigo-50 text-indigo-500' : 'bg-amber-50 text-amber-500'}`}>
+                                                                                {isImage ? <Image className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                                                                            </div>
+                                                                            <div className="min-w-0">
+                                                                                <div className="text-sm font-bold text-gray-900 truncate tracking-tight">{doc.filename || doc.file_name}</div>
+                                                                                <div className="flex items-center gap-2 mt-0.5">
+                                                                                    <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-1 py-0.5 rounded uppercase tracking-tighter">{doc.doc_type}</span>
+                                                                                    <span className="text-[10px] text-gray-400 font-medium">{format(new Date(doc.created_at), 'MMM d, yyyy')}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </a>
+                                                                        <button
+                                                                            onClick={async (e) => {
+                                                                                e.preventDefault();
+                                                                                e.stopPropagation();
+                                                                                if (!confirm('Delete document?')) return;
+                                                                                await documentsAPI.delete(doc.id);
+                                                                                fetchAllData();
+                                                                            }}
+                                                                            className="text-gray-300 hover:text-rose-500 p-1.5 opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-50 rounded-lg"
+                                                                            title="Delete Document"
+                                                                        >
+                                                                            <Trash2 className="w-4 h-4" />
+                                                                        </button>
+                                                                    </div>
+                                                                    {/* Display Comments/Interpretations */}
+                                                                    {doc.comments && Array.isArray(doc.comments) && doc.comments.length > 0 && (
+                                                                        <div className="mt-3 px-3 py-2 bg-yellow-50 rounded-md border border-yellow-100 text-xs">
+                                                                            <div className="font-semibold text-yellow-800 mb-1 flex items-center gap-1.5 border-b border-yellow-100/50 pb-1">
+                                                                                <FileText className="w-3 h-3" /> Note/Interpretation:
+                                                                            </div>
+                                                                            <div className="space-y-1.5 pt-1">
+                                                                                {doc.comments.map((c, idx) => (
+                                                                                    <div key={idx} className="text-gray-700">
+                                                                                        <div className="flex justify-between items-baseline mb-0.5">
+                                                                                            <span className="font-bold text-gray-900">{c.userName || 'Clinician'}</span>
+                                                                                            <span className="text-gray-400 text-[10px]">{new Date(c.timestamp).toLocaleDateString()}</span>
+                                                                                        </div>
+                                                                                        <div className="text-gray-800 leading-relaxed">{c.comment}</div>
+                                                                                    </div>
+                                                                                ))}
                                                                             </div>
                                                                         </div>
-                                                                    </a>
-                                                                    <button
-                                                                        onClick={async (e) => {
-                                                                            e.preventDefault();
-                                                                            e.stopPropagation();
-                                                                            if (!confirm('Delete document?')) return;
-                                                                            await documentsAPI.delete(doc.id);
-                                                                            fetchAllData();
-                                                                        }}
-                                                                        className="text-gray-300 hover:text-rose-500 p-1.5 opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-50 rounded-lg"
-                                                                        title="Delete Document"
-                                                                    >
-                                                                        <Trash2 className="w-4 h-4" />
-                                                                    </button>
+                                                                    )}
                                                                 </div>
                                                             );
                                                         });
@@ -894,26 +915,30 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
             </div>
 
             {/* Keeping the existing logic for DoseSpot modal if needed */}
-            {eprescribeEnabled && showDoseSpotModal && (
-                <DoseSpotPrescribe
-                    patientId={patientId}
-                    isOpen={showDoseSpotModal}
-                    onClose={() => {
-                        setShowDoseSpotModal(false);
-                        fetchAllData(); // Refresh after closing
-                    }}
-                />
-            )}
+            {
+                eprescribeEnabled && showDoseSpotModal && (
+                    <DoseSpotPrescribe
+                        patientId={patientId}
+                        isOpen={showDoseSpotModal}
+                        onClose={() => {
+                            setShowDoseSpotModal(false);
+                            fetchAllData(); // Refresh after closing
+                        }}
+                    />
+                )
+            }
 
             {/* Visit Chart View Modal */}
-            {selectedVisitForView && (
-                <VisitChartView
-                    visitId={selectedVisitForView.visitId}
-                    patientId={selectedVisitForView.patientId}
-                    onClose={() => setSelectedVisitForView(null)}
-                />
-            )}
-        </div>
+            {
+                selectedVisitForView && (
+                    <VisitChartView
+                        visitId={selectedVisitForView.visitId}
+                        patientId={selectedVisitForView.patientId}
+                        onClose={() => setSelectedVisitForView(null)}
+                    />
+                )
+            }
+        </div >
     );
 };
 

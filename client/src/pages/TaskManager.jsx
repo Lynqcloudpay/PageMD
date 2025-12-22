@@ -8,7 +8,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useTasks } from '../context/TaskContext';
 import { format } from 'date-fns';
-import { inboxAPI, messagesAPI } from '../services/api';
+import { inboxAPI, messagesAPI, usersAPI } from '../services/api';
 import { showError, showSuccess } from '../utils/toast';
 
 // Task categories like Epic's InBasket
@@ -33,16 +33,26 @@ const TaskManager = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [interpretationText, setInterpretationText] = useState('');
 
+  // Custom Task / To Do State
+  const [users, setUsers] = useState([]);
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [taskForm, setTaskForm] = useState({ userId: '', instruction: '' });
+
   // Fetch tasks and messages
   const fetchTasksData = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
 
     try {
-      const [inboxRes, messagesRes] = await Promise.all([
+      const [inboxRes, messagesRes, usersRes] = await Promise.all([
         inboxAPI.getAll({ limit: 50 }),
-        messagesAPI.get()
+        messagesAPI.get(),
+        usersAPI.getAll()
       ]);
+
+      if (usersRes?.data) {
+        setUsers(usersRes.data);
+      }
 
       const inboxTasks = (inboxRes.data || []).map(item => ({
         id: item.id,
@@ -148,54 +158,52 @@ const TaskManager = () => {
           await messagesAPI.updateTaskStatus(taskId, 'completed');
         }
       } else if (task.source === 'inbox') {
-        if (action === 'read' || action === 'complete') {
-          await inboxAPI.markReviewed(task.type.toLowerCase(), taskId, { comment: 'Reviewed from In Basket' });
+        if (action === 'save-comment') {
+          // Save comment only, do not mark as reviewed, keep in list
+          await inboxAPI.saveComment(task.type.toLowerCase(), taskId, { comment: interpretationText || 'Viewed' });
+          showSuccess('Note saved to patient chart');
+          fetchTasksData(); // Refresh to update view
+        } else if (action === 'complete') {
+          // Mark as reviewed, removes from list (as it moves to reviewed status)
+          await inboxAPI.markReviewed(task.type.toLowerCase(), taskId, { comment: interpretationText || 'Completed' });
+          showSuccess('Item signed off');
+          setSelectedTask(null);
+          setInterpretationText('');
+          fetchTasksData();
         }
+      } else {
+        fetchTasksData();
       }
-
-      const updatedTasks = tasks.map(t => {
-        if (t.id === taskId) {
-          if (action === 'read') return { ...t, status: 'read' };
-          if (action === 'complete') return { ...t, status: 'completed' };
-          if (action === 'unread') return { ...t, status: 'unread' };
-        }
-        return t;
-      });
-      setTasks(updatedTasks);
-
-      if (selectedTask && selectedTask.id === taskId) {
-        setSelectedTask(updatedTasks.find(t => t.id === taskId));
-      }
-
-      showSuccess(`Task marked as ${action}`);
     } catch (error) {
       console.error(`Error performing action ${action}:`, error);
-      showError(`Failed to mark task as ${action}`);
+      showError(`Failed to update item`);
     }
   };
 
-  // Handle saving interpretation/comment
-  const handleSaveInterpretation = async () => {
-    if (!interpretationText.trim() || !selectedTask) return;
+  const handleCreateTask = async (e) => {
+    e.preventDefault();
+    if (!taskForm.userId || !taskForm.instruction) {
+      showError('Please select a user and enter instructions');
+      return;
+    }
+
+    if (!selectedTask) return;
 
     try {
-      const comment = interpretationText.trim();
-
-      if (selectedTask.source === 'inbox') {
-        // Save comment to the order or document
-        await inboxAPI.markReviewed(selectedTask.type.toLowerCase(), selectedTask.id, { comment });
-      } else if (selectedTask.source === 'messages') {
-        // For messages, we could add a comment via a separate endpoint
-        // For now, just mark as read with the comment
-        await messagesAPI.markRead(selectedTask.id);
-      }
-
-      setInterpretationText('');
-      fetchTasksData(true);
-      showSuccess('Interpretation saved');
+      await messagesAPI.send({
+        toUserId: taskForm.userId,
+        subject: `Task: ${selectedTask.title || 'Review Item'}`,
+        body: `Task assigned regarding ${selectedTask.patient} (MRN: ${selectedTask.mrn}):\n\n${taskForm.instruction}\n\nRelated Item: ${selectedTask.title}`,
+        messageType: 'task',
+        priority: 'normal',
+        patientId: selectedTask.patientId
+      });
+      showSuccess('Task assigned successfully');
+      setShowTaskForm(false);
+      setTaskForm({ userId: '', instruction: '' });
     } catch (error) {
-      console.error('Error saving interpretation:', error);
-      showError('Failed to save interpretation');
+      console.error('Error assigning task:', error);
+      showError('Failed to assign task');
     }
   };
 
@@ -599,64 +607,97 @@ const TaskManager = () => {
           </div>
 
           {/* Actions */}
-          <div className="p-4 border-t border-paper-200 space-y-2">
-            {/* Status Actions */}
-            <div className="grid grid-cols-2 gap-2">
-              {selectedTask.status !== 'read' && (
-                <button
-                  type="button"
-                  onClick={(e) => handleTaskAction(selectedTask.id, 'read', e)}
-                  className="px-3 py-2 text-white rounded-md flex items-center justify-center space-x-1 text-sm transition-all duration-200 hover:shadow-md cursor-pointer"
-                  style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  <span>Mark Read</span>
-                </button>
-              )}
-              {selectedTask.status !== 'completed' && (
-                <button
-                  type="button"
-                  onClick={(e) => handleTaskAction(selectedTask.id, 'complete', e)}
-                  className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 active:bg-green-800 flex items-center justify-center space-x-1 text-sm transition-colors cursor-pointer"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  <span>Complete</span>
-                </button>
-              )}
-              {(selectedTask.status === 'read' || selectedTask.status === 'completed') && (
-                <button
-                  type="button"
-                  onClick={(e) => handleTaskAction(selectedTask.id, 'unread', e)}
-                  className="px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 active:bg-gray-800 flex items-center justify-center space-x-1 text-sm transition-colors cursor-pointer"
-                >
-                  <Clock className="w-4 h-4" />
-                  <span>Mark Unread</span>
-                </button>
-              )}
-            </div>
-
-            {/* Clinical Interpretation / Comment */}
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold text-ink-500 uppercase">Add Interpretation / Comment</label>
+          {/* Actions */}
+          <div className="p-4 border-t border-paper-200 mt-auto bg-gray-50/50">
+            {/* Clinical Interpretation / Comment - Always visible */}
+            <div className="space-y-2 mb-3">
+              <label className="block text-xs font-semibold text-ink-500 uppercase flex justify-between">
+                <span>Add Interpretation / Comment</span>
+                <span className="text-gray-400 font-normal normal-case">Visible in Patient Chart</span>
+              </label>
               <textarea
                 value={interpretationText}
                 onChange={(e) => setInterpretationText(e.target.value)}
-                placeholder="Enter your clinical interpretation, findings, or follow-up notes..."
-                className="w-full p-2 border border-paper-300 rounded-md text-sm resize-none focus:ring-2 focus:ring-paper-400"
+                placeholder="Enter clinical interpretation, findings, or notes..."
+                className="w-full p-3 border border-paper-300 rounded-md text-sm resize-none focus:ring-2 focus:ring-primary-400 focus:border-transparent shadow-sm"
                 rows={3}
               />
+            </div>
+
+            {/* Task Assignment Form (Toggle) */}
+            {showTaskForm && (
+              <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md animate-fade-in-up">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs font-bold text-yellow-800 uppercase">Assign Task</span>
+                  <button onClick={() => setShowTaskForm(false)} className="text-yellow-600 hover:text-yellow-800"><X className="w-3 h-3" /></button>
+                </div>
+                <div className="space-y-2">
+                  <select
+                    className="w-full text-sm border-gray-300 rounded-md p-1.5 bg-white"
+                    value={taskForm.userId}
+                    onChange={(e) => setTaskForm({ ...taskForm, userId: e.target.value })}
+                  >
+                    <option value="">Select Staff...</option>
+                    <option value={user?.id}>Me (Personal Task)</option>
+                    {users.filter(u => u.id !== user?.id).map(u => (
+                      <option key={u.id} value={u.id}>{u.first_name} {u.last_name}</option>
+                    ))}
+                  </select>
+                  <textarea
+                    className="w-full text-sm border-gray-300 rounded-md p-2"
+                    placeholder="Task instructions..."
+                    rows={2}
+                    value={taskForm.instruction}
+                    onChange={(e) => setTaskForm({ ...taskForm, instruction: e.target.value })}
+                  />
+                  <button
+                    onClick={handleCreateTask}
+                    className="w-full py-1.5 bg-yellow-600 text-white text-xs font-bold rounded hover:bg-yellow-700 shadow-sm"
+                  >
+                    Assign Task
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-3 gap-2 mb-3">
               <button
                 type="button"
-                onClick={handleSaveInterpretation}
-                disabled={!interpretationText.trim()}
-                className="w-full px-3 py-2 bg-paper-600 text-white rounded-md hover:bg-paper-700 active:bg-paper-800 text-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={(e) => handleTaskAction(selectedTask.id, 'save-comment', e)}
+                className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md flex items-center justify-center space-x-1 text-sm font-medium transition-colors shadow-sm"
+                title="Save comment (keeps item in inbox)"
               >
-                Save Interpretation
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Save</span>
+                </div>
               </button>
-              <p className="text-xs text-ink-400 italic">Your interpretation will be timestamped and saved to the medical record.</p>
+
+              <button
+                type="button"
+                onClick={() => setShowTaskForm(!showTaskForm)}
+                className={`px-3 py-2 rounded-md flex items-center justify-center space-x-1 text-sm font-medium transition-colors border ${showTaskForm ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-4 h-4" />
+                  <span>To Do</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => handleTaskAction(selectedTask.id, 'complete', e)}
+                className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md flex items-center justify-center space-x-1 text-sm font-medium transition-colors shadow-sm"
+                title="Sign off and remove from feed"
+              >
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Complete</span>
+                </div>
+              </button>
             </div>
+
             {selectedTask.patient !== 'N/A' && selectedTask.mrn && (
               <button
                 type="button"

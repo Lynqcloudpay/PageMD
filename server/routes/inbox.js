@@ -426,5 +426,81 @@ router.put('/:type/:id/reviewed', requireRole('clinician', 'nurse', 'admin'), as
   }
 });
 
+// Save comment only (without marking as reviewed)
+router.put('/:type/:id/comment', requireRole('clinician', 'nurse', 'admin'), async (req, res) => {
+  try {
+    const { type, id } = req.params;
+    const { comment } = req.body;
+
+    let result;
+
+    // First, try to find if this is an order or document
+    const orderCheck = await pool.query('SELECT id FROM orders WHERE id = $1', [id]);
+    const isOrder = orderCheck.rows.length > 0;
+
+    if (isOrder) {
+      // Handling for orders
+      const currentOrder = await pool.query('SELECT comments FROM orders WHERE id = $1', [id]);
+      let existingComments = currentOrder.rows[0]?.comments || [];
+      if (typeof existingComments === 'string') {
+        try { existingComments = JSON.parse(existingComments); } catch (e) { existingComments = []; }
+      }
+
+      const newComment = {
+        comment: comment?.trim() || 'Note saved',
+        timestamp: new Date().toISOString(),
+        userId: req.user.id,
+        userName: `${req.user.first_name} ${req.user.last_name}`
+      };
+
+      const updatedComments = [...existingComments, newComment];
+
+      result = await pool.query(
+        `UPDATE orders 
+         SET comments = $1
+         WHERE id = $2 RETURNING *`,
+        [JSON.stringify(updatedComments), id]
+      );
+    } else {
+      // Handling for documents
+      const currentDoc = await pool.query('SELECT comments FROM documents WHERE id = $1', [id]);
+
+      if (currentDoc.rows.length === 0) {
+        return res.status(404).json({ error: 'Item not found in orders or documents' });
+      }
+
+      let existingComments = currentDoc.rows[0]?.comments || [];
+      if (typeof existingComments === 'string') {
+        try { existingComments = JSON.parse(existingComments); } catch (e) { existingComments = []; }
+      }
+
+      const newComment = {
+        comment: comment?.trim() || 'Note saved',
+        timestamp: new Date().toISOString(),
+        userId: req.user.id,
+        userName: `${req.user.first_name} ${req.user.last_name}`
+      };
+
+      const updatedComments = [...existingComments, newComment];
+
+      result = await pool.query(
+        `UPDATE documents 
+         SET comments = $1
+         WHERE id = $2 RETURNING *`,
+        [JSON.stringify(updatedComments), id]
+      );
+    }
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Failed to update item' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error saving comment:', error);
+    res.status(500).json({ error: 'Failed to save comment' });
+  }
+});
+
 module.exports = router;
 
