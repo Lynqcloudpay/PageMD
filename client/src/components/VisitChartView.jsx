@@ -366,61 +366,83 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
         }
     };
 
-    const handlePrint = async () => {
+    const handlePrint = () => {
         const visitChartView = document.getElementById('visit-chart-view');
         if (!visitChartView) {
             alert('Error: Could not find content to print');
             return;
         }
 
-        // Temporarily hide buttons in the original
-        const buttons = visitChartView.querySelectorAll('button');
-        const originalDisplay = [];
-        buttons.forEach((btn, index) => {
-            originalDisplay[index] = btn.style.display;
-            btn.style.display = 'none';
+        // Open a new window for printing
+        const printWindow = window.open('', '', 'height=800,width=1000');
+        if (!printWindow) {
+            alert('Please allow popups for this site to print.');
+            return;
+        }
+
+        const content = visitChartView.innerHTML;
+
+        // Construct the full HTML document for the new window
+        printWindow.document.write('<html><head><title>Visit Note</title>');
+
+        // Copy styles from the current document
+        // We look for all style tags and link tags with rel="stylesheet"
+        const styles = document.querySelectorAll('style, link[rel="stylesheet"]');
+        styles.forEach(style => {
+            printWindow.document.write(style.outerHTML);
         });
 
-        try {
-            // Get visit date for filename
-            const visitDateStr = visit?.visit_date
-                ? format(new Date(visit.visit_date), 'MMMM_d_yyyy')
-                : format(new Date(), 'MMMM_d_yyyy');
+        // Add custom print styles
+        printWindow.document.write(`
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+                
+                body {
+                    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                    padding: 20px;
+                    background-color: white;
+                    color: black;
+                }
+                
+                /* Ensure background colors are printed */
+                * {
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                }
 
-            // Simple, reliable PDF configuration
-            const opt = {
-                margin: 0.75, // Slightly larger margin for better appearance
-                filename: `Visit_Note_${patient?.first_name || 'Patient'}_${patient?.last_name || ''}_${visitDateStr}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: {
-                    scale: 1.5, // Fixed scale that works well
-                    useCORS: true,
-                    logging: false,
-                    backgroundColor: '#ffffff',
-                    letterRendering: false, // Disable letter rendering to avoid weird text breaks
-                    allowTaint: false
-                },
-                jsPDF: {
-                    unit: 'in',
-                    format: 'letter',
-                    orientation: 'portrait',
-                    compress: false // Disable compression for better quality
-                },
-                pagebreak: { mode: ['avoid-all', 'css'] }
-            };
+                /* Hide any buttons if they were cloned */
+                button, .no-print {
+                    display: none !important;
+                }
 
-            // Generate PDF directly from the visible element
-            await html2pdf().set(opt).from(visitChartView).save();
+                /* Layout adjustments for print */
+                .print-container {
+                    max-width: 100%;
+                    width: 100%;
+                    margin: 0;
+                }
+                
+                @page {
+                    size: letter portrait;
+                    margin: 0.5in;
+                }
+            </style>
+        `);
 
-        } catch (error) {
-            console.error('Error generating PDF:', error);
-            alert('Error generating PDF: ' + error.message);
-        } finally {
-            // Restore button visibility
-            buttons.forEach((btn, index) => {
-                btn.style.display = originalDisplay[index] || '';
-            });
-        }
+        printWindow.document.write('</head><body class="print-container">');
+        printWindow.document.write(content);
+        printWindow.document.write('</body></html>');
+
+        printWindow.document.close();
+        printWindow.focus();
+
+        // Wait for styles/images to load then print
+        // Using a small timeout is often safer than just onload for dynamic content
+        setTimeout(() => {
+            printWindow.print();
+            // Optional: Close the window after printing (user preference usually varies)
+            // printWindow.close();
+        }, 500);
     };
 
     const handleAddAddendum = async () => {
@@ -1291,9 +1313,9 @@ const BillingModal = ({ patientId, visitId, isOpen, onClose }) => {
                                         </div>
                                         <div className="text-sm text-gray-600">
                                             Status: <span className={`font-medium ${claim.status === 'paid' ? 'text-green-600' :
-                                                    claim.status === 'denied' ? 'text-red-600' :
-                                                        claim.status === 'submitted' ? 'text-blue-600' :
-                                                            'text-gray-600'
+                                                claim.status === 'denied' ? 'text-red-600' :
+                                                    claim.status === 'submitted' ? 'text-blue-600' :
+                                                        'text-gray-600'
                                                 }`}>{claim.status}</span>
                                         </div>
                                     </div>
