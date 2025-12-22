@@ -983,9 +983,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
         if (!dob) return null;
         const birthDate = new Date(dob);
         const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        let age = today.getFullYear() - birthDate.getUTCFullYear();
+        const monthDiff = today.getMonth() - birthDate.getUTCMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getUTCDate())) {
             age--;
         }
         return age;
@@ -1237,7 +1237,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             <span className="text-gray-300">•</span>
                                             <span>MRN: <span className="font-semibold text-gray-700">{patient.mrn}</span></span>
                                             <span className="text-gray-300">•</span>
-                                            <span>DOB: {patient.dob ? new Date(patient.dob).toLocaleDateString() : 'N/A'}</span>
+                                            <span>DOB: {patient.dob ? new Date(patient.dob).toLocaleDateString(undefined, { timeZone: 'UTC' }) : 'N/A'}</span>
                                         </div>
                                     )}
                                 </div>
