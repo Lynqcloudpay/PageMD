@@ -228,6 +228,9 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
     const diagnosesString = useMemo(() => JSON.stringify(diagnoses), [diagnoses]);
     const existingOrdersString = useMemo(() => JSON.stringify(existingOrders), [existingOrders]);
 
+    // Track if modal has been initialized to prevent resets
+    const initializedRef = React.useRef(false);
+
     useEffect(() => {
         if (isOpen) {
             setSearchQuery('');
@@ -295,9 +298,15 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                 });
             }
             setCart(initialCart);
+            initializedRef.current = true;
+        }
+
+        // Reset initialized flag when modal closes
+        if (!isOpen) {
+            initializedRef.current = false;
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isOpen, initialTab, diagnosesString, existingOrdersString]);
+    }, [isOpen, initialTab]);
 
     // Group cart by diagnosis
     const groupedCart = useMemo(() => {
@@ -527,42 +536,14 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
 
             onSave(newPlanStructured);
 
-            // Save all new orders to the database for tracking in Patient Chart
+            // Save specialized items to their dedicated APIs for tracking
             if (patientId) {
                 cart.forEach(async (item) => {
                     // Skip items that were loaded from existing strings (already saved)
                     if (item.originalString) return;
 
                     try {
-                        // 1. Create a general order record for all types (Labs, Imaging, Meds, Referrals, Procedures)
-                        // This ensures they show up in the orders search and specific logs
-                        let orderType = 'lab';
-                        if (item.type === 'imaging') orderType = 'imaging';
-                        if (item.type === 'medications') orderType = 'prescription';
-                        if (item.type === 'referrals') orderType = 'referral';
-                        if (item.type === 'procedures') orderType = 'procedure';
-
-                        const orderPayload = {
-                            name: item.name,
-                            ...(item.details || {}),
-                            sig: item.sig,
-                            dispense: item.dispense,
-                            reason: item.reason,
-                            diagnosis: item.diagnosis
-                        };
-
-                        await ordersAPI.create({
-                            patientId,
-                            visitId,
-                            orderType,
-                            orderPayload,
-                            // Resolve diagnosis to object format required by backend
-                            diagnosisObjects: [
-                                { problem_name: item.diagnosis || 'General' }
-                            ]
-                        });
-
-                        // 2. Also call dedicated APIs for specialized tracking if needed
+                        // Save referrals to dedicated API
                         if (item.type === 'referrals') {
                             await referralsAPI.create({
                                 patientId,
@@ -578,6 +559,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                             });
                         }
 
+                        // Save medications to e-prescribe drafts
                         if (item.type === 'medications') {
                             await eprescribeAPI.createDraft(patientId, {
                                 medicationName: item.name,
@@ -589,7 +571,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                             });
                         }
                     } catch (error) {
-                        console.error(`Error saving ${item.type} order:`, error);
+                        console.error(`Error saving ${item.type}:`, error);
                     }
                 });
 
@@ -847,66 +829,38 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                     <p className="text-sm">Your cart is empty</p>
                                 </div>
                             ) : (
-                                Object.entries(groupedCart).map(([diagnosis, items]) => (
-                                    <div key={diagnosis} className="space-y-3">
-                                        <div className="flex items-center gap-2 pb-1 border-b border-gray-200">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-primary-500"></div>
-                                            <h4 className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider">
-                                                {diagnosis === 'Unassigned' ? 'Unassigned Diagnosis' : diagnosis}
-                                            </h4>
-                                            <span className="text-[10px] text-gray-300 font-normal">({items.length})</span>
-                                        </div>
-                                        <div className="space-y-3">
-                                            {items.map((item) => (
-                                                <div key={item.id} className="bg-white border border-gray-200 rounded-lg shadow-sm p-3 group hover:shadow-md transition-all">
-                                                    <div className="flex justify-between items-start mb-2">
-                                                        <div className="flex-1">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${item.type === 'labs' ? 'bg-purple-100 text-purple-700' :
-                                                                    item.type === 'imaging' ? 'bg-blue-100 text-blue-700' :
-                                                                        item.type === 'medications' ? 'bg-green-100 text-green-700' :
-                                                                            'bg-orange-100 text-orange-700'
-                                                                    }`}>{item.type}</span>
-                                                                <span className="font-medium text-gray-900 text-sm">{item.name}</span>
-                                                            </div>
-                                                            {item.type === 'medications' && (
-                                                                <div className="text-xs text-gray-500 mt-0.5 ml-1">
-                                                                    {item.sig} • #{item.dispense}
-                                                                </div>
-                                                            )}
-                                                            {item.type === 'referrals' && item.reason && (
-                                                                <div className="text-xs text-gray-500 mt-0.5 ml-1">
-                                                                    Reason: {item.reason}
-                                                                </div>
-                                                            )}
-                                                        </div>
+                                <div className="space-y-3">
+                                    {Object.entries(groupedCart).map(([diagnosis, items]) => (
+                                        <div key={diagnosis} className="bg-white border border-gray-200 rounded-lg p-2">
+                                            <div className="flex items-center gap-2 pb-1.5 mb-1.5 border-b border-gray-100">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-primary-500"></div>
+                                                <h4 className="text-[10px] font-bold text-gray-600 uppercase tracking-wide flex-1 truncate">
+                                                    {diagnosis === 'Unassigned' ? 'No Diagnosis' : diagnosis.substring(0, 40)}
+                                                </h4>
+                                                <span className="text-[10px] text-gray-400">({items.length})</span>
+                                            </div>
+                                            <div className="flex flex-wrap gap-1">
+                                                {items.map((item) => (
+                                                    <div key={item.id} className="group inline-flex items-center gap-1 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded px-2 py-1 text-xs transition-colors">
+                                                        <span className={`w-1.5 h-1.5 rounded-full ${item.type === 'labs' ? 'bg-purple-500' :
+                                                            item.type === 'imaging' ? 'bg-blue-500' :
+                                                                item.type === 'medications' ? 'bg-green-500' :
+                                                                    item.type === 'procedures' ? 'bg-amber-500' :
+                                                                        'bg-orange-500'
+                                                            }`}></span>
+                                                        <span className="text-gray-700 max-w-[120px] truncate" title={item.name}>{item.name}</span>
                                                         <button
                                                             onClick={() => removeFromCart(item.id)}
-                                                            className="text-gray-300 hover:text-red-500 transition-colors p-1"
+                                                            className="text-gray-300 hover:text-red-500 transition-colors ml-0.5"
                                                         >
-                                                            <Trash2 className="w-4 h-4" />
+                                                            <X className="w-3 h-3" />
                                                         </button>
                                                     </div>
-
-                                                    <div className="flex items-center gap-2 mt-2 bg-gray-50 p-2 rounded text-xs border border-gray-100">
-                                                        <span className="text-gray-400 font-medium whitespace-nowrap">Dx:</span>
-                                                        <select
-                                                            value={item.diagnosis}
-                                                            onChange={(e) => updateCartItemDx(item.id, e.target.value)}
-                                                            className="w-full bg-transparent border-0 focus:ring-0 text-gray-700 py-0 px-0 cursor-pointer"
-                                                        >
-                                                            <option value="">-- Unassigned --</option>
-                                                            {diagnoses.map((dx, idx) => (
-                                                                <option key={idx} value={dx}>{dx}</option>
-                                                            ))}
-                                                            <option value="General">General / Routine</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))
+                                    ))}
+                                </div>
                             )}
                         </div>
 
