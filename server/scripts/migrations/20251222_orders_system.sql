@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS orders_catalog (
     category TEXT,
     specialty_tags TEXT[] DEFAULT '{}',
     synonyms TEXT[] DEFAULT '{}',
-    loinc_code TEXT REFERENCES loinc_codes(loinc_code),
+    loinc_code TEXT,
     loinc_component TEXT,
     loinc_system TEXT,
     loinc_method TEXT,
