@@ -13,16 +13,15 @@ const config = process.env.DATABASE_URL
 
 const pool = new Pool(config);
 
-async function checkColumns() {
+async function listTables() {
     const client = await pool.connect();
-    const tableName = process.argv[2] || 'patients';
     try {
         const res = await client.query(`
-      SELECT column_name, data_type 
-      FROM information_schema.columns 
-      WHERE table_name = $1
-      ORDER BY column_name;
-    `, [tableName]);
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = 'public'
+            ORDER BY table_name;
+        `);
         console.table(res.rows);
     } catch (err) {
         console.error(err);
@@ -32,4 +31,4 @@ async function checkColumns() {
     }
 }
 
-checkColumns();
+listTables();

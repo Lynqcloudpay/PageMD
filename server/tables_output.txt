@@ -1,0 +1,46 @@
+┌─────────┬───────────────────────────────┐
+│ (index) │ table_name                    │
+├─────────┼───────────────────────────────┤
+│ 0       │ 'allergies'                   │
+│ 1       │ 'appointments'                │
+│ 2       │ 'audit_logs'                  │
+│ 3       │ 'cancellation_followup_notes' │
+│ 4       │ 'cancellation_followups'      │
+│ 5       │ 'claims'                      │
+│ 6       │ 'clinical_alerts'             │
+│ 7       │ 'documents'                   │
+│ 8       │ 'encryption_keys'             │
+│ 9       │ 'eprescribe_id_map'           │
+│ 10      │ 'family_history'              │
+│ 11      │ 'fee_schedule'                │
+│ 12      │ 'icd10_codes'                 │
+│ 13      │ 'icd10_favorites'             │
+│ 14      │ 'icd10_specialty_tags'        │
+│ 15      │ 'icd10_usage'                 │
+│ 16      │ 'insurance_plans'             │
+│ 17      │ 'lab_reference_ranges'        │
+│ 18      │ 'login_attempts'              │
+│ 19      │ 'medications'                 │
+│ 20      │ 'messages'                    │
+│ 21      │ 'note_history'                │
+│ 22      │ 'order_diagnoses'             │
+│ 23      │ 'orders'                      │
+│ 24      │ 'ordersets'                   │
+│ 25      │ 'password_reset_tokens'       │
+│ 26      │ 'patient_history'             │
+│ 27      │ 'patients'                    │
+│ 28      │ 'pharmacies'                  │
+│ 29      │ 'prescriptions'               │
+│ 30      │ 'privileges'                  │
+│ 31      │ 'problems'                    │
+│ 32      │ 'referral_diagnoses'          │
+│ 33      │ 'referrals'                   │
+│ 34      │ 'role_privileges'             │
+│ 35      │ 'roles'                       │
+│ 36      │ 'sessions'                    │
+│ 37      │ 'social_history'              │
+│ 38      │ 'user_mfa'                    │
+│ 39      │ 'users'                       │
+│ 40      │ 'visit_history'               │
+│ 41      │ 'visits'                      │
+└─────────┴───────────────────────────────┘

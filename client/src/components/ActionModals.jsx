@@ -3,7 +3,7 @@ import Modal from './ui/Modal';
 import { Pill, Stethoscope, Upload, Send, Search, X, ShoppingCart, Trash2, Plus, Check, ChevronRight } from 'lucide-react';
 import { searchLabTests, searchImaging } from '../data/labCodes';
 import axios from 'axios';
-import { codesAPI, referralsAPI, eprescribeAPI, medicationsAPI, ordersCatalogAPI } from '../services/api';
+import { codesAPI, referralsAPI, eprescribeAPI, medicationsAPI, ordersCatalogAPI, ordersetsAPI } from '../services/api';
 
 export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [] }) => {
     const [med, setMed] = useState('');
@@ -223,6 +223,10 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
     const [currentMed, setCurrentMed] = useState({ name: '', sig: '', dispense: '' });
     const [searchingMed, setSearchingMed] = useState(false);
     const [medResults, setMedResults] = useState([]);
+    const [orderSets, setOrderSets] = useState([]);
+    const [loadingOrderSets, setLoadingOrderSets] = useState(false);
+    const [showSaveOrderSetModal, setShowSaveOrderSetModal] = useState(false);
+    const [newOrderSetName, setNewOrderSetName] = useState('');
 
     // Memoize diagnoses to prevent reset on parent re-renders
     const diagnosesString = useMemo(() => JSON.stringify(diagnoses), [diagnoses]);
@@ -230,6 +234,105 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
 
     // Track if modal has been initialized to prevent resets
     const initializedRef = React.useRef(false);
+
+    useEffect(() => {
+        if (isOpen && activeTab === 'ordersets') {
+            fetchOrderSets();
+        }
+    }, [isOpen, activeTab]);
+
+    const fetchOrderSets = async () => {
+        setLoadingOrderSets(true);
+        try {
+            const response = await ordersetsAPI.getAll();
+            setOrderSets(response.data || []);
+        } catch (error) {
+            console.error('Error fetching order sets:', error);
+        } finally {
+            setLoadingOrderSets(false);
+        }
+    };
+
+    const applyOrderSet = (orderSet) => {
+        if (!selectedDiagnosis && diagnoses.length > 1) {
+            alert('Please select a diagnosis first to link these orders');
+            return;
+        }
+
+        const diagnosis = selectedDiagnosis || diagnoses[0] || 'Unassigned';
+        const newItems = orderSet.orders.map(order => {
+            let type = 'other';
+            // Map server types to frontend cart types
+            if (order.type === 'lab') type = 'labs';
+            else if (order.type === 'imaging') type = 'imaging';
+            else if (order.type === 'procedure') type = 'procedures';
+            else if (order.type === 'referral') type = 'referrals';
+            else if (order.type === 'rx' || order.type === 'prescription') type = 'medications';
+
+            return {
+                id: Date.now() + Math.random(),
+                type: type,
+                name: order.payload.name || order.payload.medicationName || order.payload.recipientName || 'Unlabeled Order',
+                details: order.payload,
+                diagnosis: diagnosis,
+                sig: order.payload.sig || '',
+                dispense: order.payload.dispense || order.payload.quantity || '',
+                reason: order.payload.reason || ''
+            };
+        });
+
+        setCart([...cart, ...newItems]);
+    };
+
+    const saveCurrentAsOrderSet = async () => {
+        if (!newOrderSetName.trim()) {
+            alert('Please enter a name for the order set');
+            return;
+        }
+
+        if (cart.length === 0) {
+            alert('Your cart is empty. Add some orders first.');
+            return;
+        }
+
+        try {
+            const ordersToSave = cart.map(item => {
+                let type = 'other';
+                if (item.type === 'labs') type = 'lab';
+                else if (item.type === 'imaging') type = 'imaging';
+                else if (item.type === 'procedures') type = 'procedure';
+                else if (item.type === 'referrals') type = 'referral';
+                else if (item.type === 'medications') type = 'prescription';
+
+                return {
+                    type,
+                    payload: item.details || {
+                        name: item.name,
+                        sig: item.sig,
+                        dispense: item.dispense,
+                        reason: item.reason
+                    }
+                };
+            });
+
+            await ordersetsAPI.create({
+                name: newOrderSetName,
+                orders: ordersToSave,
+                specialty: 'general',
+                category: 'user-defined'
+            });
+
+            alert('Order set saved successfully!');
+            setShowSaveOrderSetModal(false);
+            setNewOrderSetName('');
+            if (activeTab === 'ordersets') {
+                fetchOrderSets();
+            }
+        } catch (error) {
+            console.error('Error saving order set:', error);
+            alert('Failed to save order set');
+        }
+    };
 
     useEffect(() => {
         if (isOpen) {
@@ -659,8 +762,8 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                 {/* Tabs */}
                 <div className="flex border-b border-gray-200 bg-gray-50">
                     <div className="flex-1 flex overflow-x-auto">
-                        {['Labs', 'Imaging', 'Procedures', 'Referrals', 'Medications'].map(tab => {
-                            const id = tab.toLowerCase();
+                        {['Labs', 'Imaging', 'Procedures', 'Referrals', 'Medications', 'Order Sets'].map(tab => {
+                            const id = tab.toLowerCase().replace(' ', '');
                             return (
                                 <button
                                     key={id}
@@ -713,9 +816,64 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                             </div>
                         </div>
 
-                        {/* Search Results */}
+                        {/* Search Results / Browse Content */}
                         <div className="flex-1 overflow-y-auto">
-                            {activeTab === 'medications' ? (
+                            {activeTab === 'ordersets' ? (
+                                <div className="p-4 space-y-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">My Order Sets</h3>
+                                        <button
+                                            onClick={fetchOrderSets}
+                                            className="text-primary-600 hover:text-primary-700 p-1"
+                                            title="Refresh"
+                                        >
+                                            <RotateCcw className="w-4 h-4" />
+                                        </button>
+                                    </div>
+
+                                    {loadingOrderSets ? (
+                                        <div className="text-center py-8">
+                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto"></div>
+                                            <p className="text-gray-500 text-xs mt-2">Loading sets...</p>
+                                        </div>
+                                    ) : orderSets.length > 0 ? (
+                                        <div className="space-y-3">
+                                            {orderSets.map(set => (
+                                                <div key={set.id} className="border border-gray-200 rounded-lg bg-white overflow-hidden hover:border-primary-300 transition-colors shadow-sm">
+                                                    <div className="p-3 bg-gray-50/50 flex justify-between items-start">
+                                                        <div>
+                                                            <h4 className="font-bold text-gray-900 text-sm">{set.name}</h4>
+                                                            <p className="text-[10px] text-gray-500 line-clamp-1">{set.description || 'No description'}</p>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => applyOrderSet(set)}
+                                                            className="px-2 py-1 bg-primary-600 text-white text-[10px] font-bold rounded hover:bg-primary-700 shadow-sm"
+                                                        >
+                                                            Add Set
+                                                        </button>
+                                                    </div>
+                                                    <div className="p-2 border-t border-gray-100 flex flex-wrap gap-1">
+                                                        {set.orders.slice(0, 5).map((order, i) => (
+                                                            <span key={i} className="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200">
+                                                                {order.type.toUpperCase()}: {(order.payload.name || order.payload.medicationName || '...').substring(0, 15)}
+                                                            </span>
+                                                        ))}
+                                                        {set.orders.length > 5 && (
+                                                            <span className="text-[9px] text-gray-400 px-1.5 py-0.5">+{set.orders.length - 5} more</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-8 border-2 border-dashed border-gray-100 rounded-lg">
+                                            <ClipboardList className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                                            <p className="text-gray-500 text-sm">No order sets found.</p>
+                                            <p className="text-gray-400 text-xs mt-1">Add items to your cart and click "Save as Set" to create one.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : activeTab === 'medications' ? (
                                 <div className="p-4 space-y-4">
                                     <div className="bg-blue-50 p-3 rounded-md text-sm text-blue-700">
                                         Manual documentation of prescriptions. For e-prescribing, use the <strong>EPrescribe</strong> button.
@@ -890,21 +1048,61 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                         </div>
 
                         {/* Footer Actions */}
-                        <div className="p-4 bg-white border-t border-gray-200 flex justify-end gap-3">
-                            <button
-                                onClick={onClose}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleBatchSubmit}
-                                disabled={cart.length === 0}
-                                className="px-6 py-2 text-sm font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-md shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
-                            >
-                                <Check className="w-4 h-4" />
-                                Sign & Submit ({cart.length})
-                            </button>
+                        <div className="p-4 bg-white border-t border-gray-200 flex flex-col gap-3">
+                            {showSaveOrderSetModal ? (
+                                <div className="space-y-2 animate-in fade-in duration-200">
+                                    <label className="block text-xs font-bold text-gray-500 uppercase">Save current cart as order set</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="Enter set name (e.g. Hypertension Protocol)"
+                                            className="flex-1 p-2 text-sm border border-primary-300 rounded-md focus:ring-1 focus:ring-primary-500"
+                                            value={newOrderSetName}
+                                            onChange={e => setNewOrderSetName(e.target.value)}
+                                            autoFocus
+                                        />
+                                        <button
+                                            onClick={saveCurrentAsOrderSet}
+                                            className="px-4 py-2 bg-primary-600 text-white text-xs font-bold rounded-md hover:bg-primary-700"
+                                        >
+                                            Save Set
+                                        </button>
+                                        <button
+                                            onClick={() => setShowSaveOrderSetModal(false)}
+                                            className="px-2 py-2 text-gray-400 hover:text-gray-600"
+                                        >
+                                            <X className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex justify-between items-center w-full">
+                                    <button
+                                        onClick={() => setShowSaveOrderSetModal(true)}
+                                        disabled={cart.length === 0}
+                                        className="text-primary-600 text-xs font-bold flex items-center gap-1 hover:underline disabled:opacity-30 disabled:grayscale"
+                                    >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        Save as Set
+                                    </button>
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={onClose}
+                                            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleBatchSubmit}
+                                            disabled={cart.length === 0}
+                                            className="px-6 py-2 text-sm font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-md shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                                        >
+                                            <Check className="w-4 h-4" />
+                                            Sign & Submit ({cart.length})
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

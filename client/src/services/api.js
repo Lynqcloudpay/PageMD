@@ -415,5 +415,15 @@ export const settingsAPI = {
   updateFeature: (key, data) => api.put(`/settings/features/${key}`, data),
 };
 
+// Order Sets
+export const ordersetsAPI = {
+  getAll: (params) => api.get('/ordersets', { params }),
+  get: (id) => api.get(`/ordersets/${id}`),
+  create: (data) => api.post('/ordersets', data),
+  update: (id, data) => api.put(`/ordersets/${id}`, data),
+  delete: (id) => api.delete(`/ordersets/${id}`),
+  getByDiagnosis: (diagnosis) => api.get(`/ordersets/diagnosis/${encodeURIComponent(diagnosis)}`),
+};
+
 export default api;
 
