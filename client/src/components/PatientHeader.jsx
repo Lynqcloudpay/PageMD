@@ -6,6 +6,7 @@ import Toast from './ui/Toast';
 import { usePatient } from '../context/PatientContext';
 import { usePatientTabs } from '../context/PatientTabsContext';
 import { patientsAPI } from '../services/api';
+import AuthedImg from './AuthedImg';
 
 const PatientHeader = () => {
     const { id } = useParams();
@@ -589,13 +590,13 @@ const PatientHeader = () => {
                             >
                                 {photoUrl && !imgError ? (
                                     <>
-                                        <img
+                                        <AuthedImg
                                             src={photoUrl}
                                             alt={patient?.first_name || 'Patient'}
                                             className="w-full h-full object-cover rounded-full"
-                                            key={`${patient.photo_url}-${photoVersion}-${imgLoadAttempt}`}
-                                            onError={(e) => {
-                                                console.error('Error loading patient photo:', e.target.src);
+                                            imgKey={`${patient.photo_url}-${photoVersion}-${imgLoadAttempt}`}
+                                            onFail={(e) => {
+                                                console.error('Error loading patient photo:', e);
                                                 if (imgLoadAttempt < 3 && !photoUrl.startsWith('data:')) {
                                                     console.log(`Retrying photo load (attempt ${imgLoadAttempt + 1}/3)`);
                                                     setTimeout(() => setImgLoadAttempt(prev => prev + 1), 1000);

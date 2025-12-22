@@ -21,6 +21,7 @@ import EPrescribeEnhanced from '../components/EPrescribeEnhanced';
 import Modal from '../components/ui/Modal';
 import { usePrivileges } from '../hooks/usePrivileges';
 import CardiologyViewer from '../components/CardiologyViewer';
+import AuthedImg from '../components/AuthedImg';
 
 const Snapshot = ({ showNotesOnly = false }) => {
     const { id } = useParams();
@@ -3229,22 +3230,12 @@ const PatientHeaderPhoto = ({ photoUrl, locallyUploadedPhoto, onPhotoClick }) =>
                 title="Change Profile Photo"
             >
                 {effectivePhotoUrl && !imgError ? (
-                    <img
-                        key={`${effectivePhotoUrl}-${loadAttempt}`}
+                    <AuthedImg
+                        imgKey={`${effectivePhotoUrl}-${loadAttempt}`}
                         src={effectivePhotoUrl}
                         alt="Patient profile"
                         className="w-full h-full object-cover rounded-full"
-                        onError={(e) => {
-                            console.error('[Snapshot] Image load error:', {
-                                src: e.target.src,
-                                attempt: loadAttempt,
-                                naturalWidth: e.target.naturalWidth,
-                                naturalHeight: e.target.naturalHeight,
-                                complete: e.target.complete,
-                                error: e.type
-                            });
-                            handleImageError();
-                        }}
+                        onFail={() => handleImageError()}
                     />
                 ) : (
                     <div className="flex flex-col items-center justify-center">
