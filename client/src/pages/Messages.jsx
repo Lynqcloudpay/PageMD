@@ -156,6 +156,32 @@ const Messages = () => {
     }
   };
 
+  // Handle compose new message
+  const handleCompose = async () => {
+    if (!composeData.to || !composeData.body) {
+      showError('Recipient and message are required');
+      return;
+    }
+
+    try {
+      await messagesAPI.create({
+        toUserId: composeData.to,
+        subject: composeData.subject || 'New Message',
+        body: composeData.body,
+        patientId: composeData.patientId,
+        messageType: 'message',
+        priority: 'normal'
+      });
+      setShowCompose(false);
+      setComposeData({ to: '', subject: '', body: '', patientId: null });
+      fetchConversations();
+      showSuccess('Message sent');
+    } catch (error) {
+      console.error('Error composing message:', error);
+      showError('Failed to send message');
+    }
+  };
+
   // Toggle star
   const toggleStar = (convId, e) => {
     e.stopPropagation();

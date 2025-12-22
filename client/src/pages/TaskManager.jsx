@@ -57,6 +57,7 @@ const TaskManager = () => {
         date: new Date(item.createdAt),
         from: item.orderedBy || item.uploader || 'System',
         critical: item.orderData?.critical === true,
+        docData: item.docData || null, // Include full document data for preview
         details: {
           summary: item.description,
           comments: Array.isArray(item.comments) ? item.comments.map(c => c.comment).join('\n') : item.comment,
