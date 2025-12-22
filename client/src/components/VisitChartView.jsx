@@ -78,23 +78,23 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     const parseNoteText = (text) => {
         if (!text || !text.trim()) return { chiefComplaint: '', hpi: '', assessment: '', plan: '', rosNotes: '', peNotes: '' };
         const decodedText = decodeHtmlEntities(text);
-        
+
         // Parse Chief Complaint
         const chiefComplaintMatch = decodedText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):)/is);
         const chiefComplaint = chiefComplaintMatch ? decodeHtmlEntities(chiefComplaintMatch[1].trim()) : '';
-        
+
         // Parse HPI
         const hpiMatch = decodedText.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment|Plan):)/is);
         const hpi = hpiMatch ? decodeHtmlEntities(hpiMatch[1].trim()) : '';
-        
+
         // Parse ROS
         const rosMatch = decodedText.match(/(?:ROS|Review of Systems):\s*(.+?)(?:\n\n|\n(?:PE|Physical|Assessment|Plan):)/is);
         const rosNotes = rosMatch ? decodeHtmlEntities(rosMatch[1].trim()) : '';
-        
+
         // Parse Physical Exam
         const peMatch = decodedText.match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):)/is);
         const peNotes = peMatch ? decodeHtmlEntities(peMatch[1].trim()) : '';
-        
+
         // Parse Assessment - capture ALL content from Assessment: until Plan: or end
         // Use [\s\S] to match everything including newlines, and make it non-greedy but stop at Plan:
         let assessment = '';
@@ -115,24 +115,46 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                 assessment = assessmentContent;
             }
         }
-        
-        // Parse Plan - capture ALL content from Plan: until end
+
+        // Parse Plan - capture ALL content from Plan: until Care Plan: or Follow Up: or end
         let plan = '';
         const planIndex = decodedText.search(/(?:Plan|P):\s*/i);
         if (planIndex !== -1) {
             const afterPlan = decodedText.substring(planIndex);
-            // Remove the "Plan:" or "P:" header and take everything until end
-            const planContent = afterPlan.replace(/(?:Plan|P):\s*/i, '').trim();
-            plan = planContent;
+            // Replace Plan header
+            let planContent = afterPlan.replace(/(?:Plan|P):\s*/i, '');
+
+            // Look for Care Plan
+            const carePlanIndex = planContent.search(/\n\n(?:Care Plan|CP):|\n(?:Care Plan|CP):/i);
+            if (carePlanIndex !== -1) {
+                planContent = planContent.substring(0, carePlanIndex);
+            } else {
+                // Look for Follow Up if no Care Plan
+                const followUpIndex = planContent.search(/\n\n(?:Follow Up|FU):|\n(?:Follow Up|FU):/i);
+                if (followUpIndex !== -1) {
+                    planContent = planContent.substring(0, followUpIndex);
+                }
+            }
+            plan = planContent.trim();
         }
-        
+
+        // Parse Care Plan
+        const carePlanMatch = decodedText.match(/(?:Care Plan|CP):\s*(.+?)(?:\n\n|\n(?:Follow Up|FU):|$)/is);
+        const carePlan = carePlanMatch ? decodeHtmlEntities(carePlanMatch[1].trim()) : '';
+
+        // Parse Follow Up
+        const followUpMatch = decodedText.match(/(?:Follow Up|FU):\s*(.+?)(?:\n\n|$)/is);
+        const followUp = followUpMatch ? decodeHtmlEntities(followUpMatch[1].trim()) : '';
+
         return {
             chiefComplaint: chiefComplaint,
             hpi: hpi,
             rosNotes: rosNotes,
             peNotes: peNotes,
             assessment: decodeHtmlEntities(assessment),
-            plan: decodeHtmlEntities(plan)
+            plan: decodeHtmlEntities(plan),
+            carePlan: carePlan,
+            followUp: followUp
         };
     };
 
@@ -161,11 +183,11 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                 currentOrders.push(line);
             }
         }
-        
+
         if (currentDiagnosis) {
             structured.push({ diagnosis: currentDiagnosis, orders: currentOrders });
         }
-        
+
         return structured;
     };
 
@@ -221,7 +243,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                     return { data: null };
                 })
             ]);
-            
+
             setPatient(patientRes.data);
             setVisit(visitRes.data);
             const allergiesData = allergiesRes.data || [];
@@ -229,23 +251,23 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
             const problemsData = problemsRes.data || [];
             const familyHistoryData = familyHistoryRes.data || [];
             const socialHistoryData = socialHistoryRes.data;
-            
+
             setAllergies(allergiesData);
             setMedications(medicationsData);
             setProblems(problemsData);
             setFamilyHistory(familyHistoryData);
             setSocialHistory(socialHistoryData);
-            
+
             // Load addendums
             if (visitRes.data.addendums) {
-                const addendumsData = Array.isArray(visitRes.data.addendums) 
-                    ? visitRes.data.addendums 
+                const addendumsData = Array.isArray(visitRes.data.addendums)
+                    ? visitRes.data.addendums
                     : JSON.parse(visitRes.data.addendums || '[]');
                 setAddendums(addendumsData);
             } else {
                 setAddendums([]);
             }
-            
+
             // Load fee schedule for superbill
             try {
                 const feeScheduleRes = await billingAPI.getFeeSchedule();
@@ -253,7 +275,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
             } catch (error) {
                 console.error('Error fetching fee schedule:', error);
             }
-            
+
             // Parse vitals - handle both JSONB (object) and string formats
             console.log('Raw vitals from visit:', visitRes.data.vitals);
             if (visitRes.data.vitals) {
@@ -276,12 +298,12 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                         if (typeof value === 'string') {
                             // Decode HTML entities (especially &#x2F; for forward slash)
                             value = value.replace(/&#x2F;/g, '/')
-                                         .replace(/&#47;/g, '/')
-                                         .replace(/&amp;/g, '&')
-                                         .replace(/&lt;/g, '<')
-                                         .replace(/&gt;/g, '>')
-                                         .replace(/&quot;/g, '"')
-                                         .replace(/&#39;/g, "'");
+                                .replace(/&#47;/g, '/')
+                                .replace(/&amp;/g, '&')
+                                .replace(/&lt;/g, '<')
+                                .replace(/&gt;/g, '>')
+                                .replace(/&quot;/g, '"')
+                                .replace(/&#39;/g, "'");
                         }
                         decodedVitals[key] = value;
                     });
@@ -301,6 +323,8 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                 hpi: '',
                 assessment: '',
                 plan: '',
+                carePlan: '',
+                followUp: '',
                 rosNotes: '',
                 peNotes: '',
                 planStructured: []
@@ -314,6 +338,8 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                     hpi: parsed.hpi || '',
                     assessment: parsed.assessment || '',
                     plan: parsed.plan || '',
+                    carePlan: parsed.carePlan || '',
+                    followUp: parsed.followUp || '',
                     rosNotes: parsed.rosNotes || '',
                     peNotes: parsed.peNotes || '',
                     planStructured: planStructured.length > 0 ? planStructured : []
@@ -346,7 +372,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
             alert('Error: Could not find content to print');
             return;
         }
-        
+
         // Temporarily hide buttons in the original
         const buttons = visitChartView.querySelectorAll('button');
         const originalDisplay = [];
@@ -354,19 +380,19 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
             originalDisplay[index] = btn.style.display;
             btn.style.display = 'none';
         });
-        
+
         try {
             // Get visit date for filename
-            const visitDateStr = visit?.visit_date 
-                ? format(new Date(visit.visit_date), 'MMMM_d_yyyy') 
+            const visitDateStr = visit?.visit_date
+                ? format(new Date(visit.visit_date), 'MMMM_d_yyyy')
                 : format(new Date(), 'MMMM_d_yyyy');
-            
+
             // Simple, reliable PDF configuration
             const opt = {
                 margin: 0.75, // Slightly larger margin for better appearance
                 filename: `Visit_Note_${patient?.first_name || 'Patient'}_${patient?.last_name || ''}_${visitDateStr}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { 
+                html2canvas: {
                     scale: 1.5, // Fixed scale that works well
                     useCORS: true,
                     logging: false,
@@ -374,18 +400,18 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                     letterRendering: false, // Disable letter rendering to avoid weird text breaks
                     allowTaint: false
                 },
-                jsPDF: { 
-                    unit: 'in', 
-                    format: 'letter', 
+                jsPDF: {
+                    unit: 'in',
+                    format: 'letter',
                     orientation: 'portrait',
                     compress: false // Disable compression for better quality
                 },
                 pagebreak: { mode: ['avoid-all', 'css'] }
             };
-            
+
             // Generate PDF directly from the visible element
             await html2pdf().set(opt).from(visitChartView).save();
-            
+
         } catch (error) {
             console.error('Error generating PDF:', error);
             alert('Error generating PDF: ' + error.message);
@@ -402,15 +428,15 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
             alert('Please enter addendum text');
             return;
         }
-        
+
         try {
             await visitsAPI.addAddendum(visitId, addendumText);
             // Refresh visit data
             const visitRes = await visitsAPI.get(visitId);
             const visitData = visitRes.data;
             if (visitData.addendums) {
-                const addendumsData = Array.isArray(visitData.addendums) 
-                    ? visitData.addendums 
+                const addendumsData = Array.isArray(visitData.addendums)
+                    ? visitData.addendums
                     : JSON.parse(visitData.addendums || '[]');
                 setAddendums(addendumsData);
             }
@@ -432,7 +458,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
             alert('Please select at least one procedure code');
             return;
         }
-        
+
         try {
             // Calculate total amount
             let total = 0;
@@ -442,7 +468,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                     total += parseFloat(feeItem.fee_amount);
                 }
             });
-            
+
             // Create claim
             await billingAPI.createClaim({
                 visitId: visitId,
@@ -450,7 +476,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                 procedureCodes: selectedProcedureCodes,
                 totalAmount: total
             });
-            
+
             setShowSuperbillModal(false);
             setSelectedDiagnosisCodes([]);
             setSelectedProcedureCodes([]);
@@ -637,15 +663,15 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                         <div className="flex items-center gap-2">
                             {isSigned && (
                                 <>
-                                    <button 
-                                        onClick={() => setShowAddendumModal(true)} 
+                                    <button
+                                        onClick={() => setShowAddendumModal(true)}
                                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-deep-gray bg-white/80 hover:bg-white border border-deep-gray/10 hover:border-strong-azure/30 rounded-lg transition-all duration-200 hover:shadow-sm"
                                         title="Add Addendum"
                                     >
                                         <FilePlus className="w-3.5 h-3.5" />
                                         <span>Addendum</span>
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={() => {
                                             // Pre-populate diagnosis codes from problems
                                             const diagnosisCodes = problems
@@ -653,7 +679,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                                 .map(p => ({ code: p.icd10_code, description: p.problem_name }));
                                             setSelectedDiagnosisCodes(diagnosisCodes);
                                             setShowSuperbillModal(true);
-                                        }} 
+                                        }}
                                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-deep-gray bg-white/80 hover:bg-white border border-deep-gray/10 hover:border-strong-azure/30 rounded-lg transition-all duration-200 hover:shadow-sm"
                                         title="Create Superbill"
                                     >
@@ -662,24 +688,24 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                     </button>
                                 </>
                             )}
-                            <button 
-                                onClick={() => setShowBillingModal(true)} 
+                            <button
+                                onClick={() => setShowBillingModal(true)}
                                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-deep-gray bg-white/80 hover:bg-white border border-deep-gray/10 hover:border-strong-azure/30 rounded-lg transition-all duration-200 hover:shadow-sm"
                                 title="View Billing"
                             >
                                 <DollarSign className="w-3.5 h-3.5" />
                                 <span>Billing</span>
                             </button>
-                            <button 
-                                onClick={handlePrint} 
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-deep-gray bg-white/80 hover:bg-white border border-deep-gray/10 hover:border-strong-azure/30 rounded-lg transition-all duration-200 hover:shadow-sm" 
+                            <button
+                                onClick={handlePrint}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-deep-gray bg-white/80 hover:bg-white border border-deep-gray/10 hover:border-strong-azure/30 rounded-lg transition-all duration-200 hover:shadow-sm"
                                 title="Print"
                             >
                                 <Printer className="w-3.5 h-3.5" />
                                 <span>Print</span>
                             </button>
-                            <button 
-                                onClick={onClose} 
+                            <button
+                                onClick={onClose}
                                 className="flex items-center justify-center w-8 h-8 text-deep-gray/70 hover:text-deep-gray hover:bg-deep-gray/5 rounded-lg transition-all duration-200"
                                 title="Close"
                             >
@@ -698,9 +724,9 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                     <div className="flex items-center gap-1 flex-1">
                                         {/* Bigger Logo without container */}
                                         <div className="flex-shrink-0">
-                                            <img 
-                                                src="/clinic-logo.png" 
-                                                alt="myPCP Clinic Logo" 
+                                            <img
+                                                src="/clinic-logo.png"
+                                                alt="myPCP Clinic Logo"
                                                 className="w-36 h-36 object-contain"
                                                 onError={(e) => {
                                                     e.target.style.display = 'none';
@@ -758,7 +784,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                             <span><span className="font-semibold">Sex:</span> {patient.sex || 'N/A'}</span>
                                         </div>
                                     </div>
-                                    
+
                                     {/* Patient Demographics Grid - Bigger */}
                                     <div className="flex-1 grid grid-cols-3 md:grid-cols-6 gap-x-4 gap-y-2">
                                         {/* Phone */}
@@ -840,7 +866,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                         {/* Modular Note Sections - Clinical Flow Order - All sections always visible */}
                         <div className="space-y-4 bg-white rounded-xl p-6 shadow-sm">
                             {/* Chief Complaint - Always show */}
-                            {renderSection('chiefComplaint', true, 'Chief Complaint', 
+                            {renderSection('chiefComplaint', true, 'Chief Complaint',
                                 noteData.chiefComplaint ? (
                                     <p className="text-xs text-gray-800 leading-relaxed">{noteData.chiefComplaint}</p>
                                 ) : (
@@ -999,6 +1025,18 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                 ) : (
                                     <p className="text-xs text-gray-500 italic">No plan recorded</p>
                                 )
+                            )}
+
+                            {renderSection('carePlan', true, 'Care Plan',
+                                noteData.carePlan ? (
+                                    <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{noteData.carePlan}</p>
+                                ) : null
+                            )}
+
+                            {renderSection('followUp', true, 'Follow Up',
+                                noteData.followUp ? (
+                                    <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{noteData.followUp}</p>
+                                ) : null
                             )}
                         </div>
 
@@ -1252,12 +1290,11 @@ const BillingModal = ({ patientId, visitId, isOpen, onClose }) => {
                                             {claim.visit_type || 'Visit'} - {claim.visit_date ? format(new Date(claim.visit_date), 'MM/dd/yyyy') : ''}
                                         </div>
                                         <div className="text-sm text-gray-600">
-                                            Status: <span className={`font-medium ${
-                                                claim.status === 'paid' ? 'text-green-600' :
-                                                claim.status === 'denied' ? 'text-red-600' :
-                                                claim.status === 'submitted' ? 'text-blue-600' :
-                                                'text-gray-600'
-                                            }`}>{claim.status}</span>
+                                            Status: <span className={`font-medium ${claim.status === 'paid' ? 'text-green-600' :
+                                                    claim.status === 'denied' ? 'text-red-600' :
+                                                        claim.status === 'submitted' ? 'text-blue-600' :
+                                                            'text-gray-600'
+                                                }`}>{claim.status}</span>
                                         </div>
                                     </div>
                                     <div className="text-right">
@@ -1266,7 +1303,7 @@ const BillingModal = ({ patientId, visitId, isOpen, onClose }) => {
                                 </div>
                                 {claim.diagnosis_codes && (
                                     <div className="text-xs text-gray-600 mt-2">
-                                        <span className="font-medium">Diagnosis:</span> {Array.isArray(claim.diagnosis_codes) 
+                                        <span className="font-medium">Diagnosis:</span> {Array.isArray(claim.diagnosis_codes)
                                             ? claim.diagnosis_codes.map(d => d.code).join(', ')
                                             : JSON.parse(claim.diagnosis_codes || '[]').map(d => d.code).join(', ')}
                                     </div>

@@ -222,7 +222,9 @@ const VisitNote = () => {
         peNotes: '',
         assessment: '',
         plan: '',
-        planStructured: [] // Array of {diagnosis: string, orders: string[]}
+        planStructured: [], // Array of {diagnosis: string, orders: string[]}
+        carePlan: '', // Free text Care Plan section
+        followUp: '' // Follow Up section
     });
 
     // Vitals
@@ -343,7 +345,7 @@ const VisitNote = () => {
     const parseNoteText = (text) => {
         if (!text || !text.trim()) {
             // console.log('parseNoteText: Empty or whitespace text');
-            return { chiefComplaint: '', hpi: '', assessment: '', plan: '', rosNotes: '', peNotes: '' };
+            return { chiefComplaint: '', hpi: '', assessment: '', plan: '', rosNotes: '', peNotes: '', carePlan: '', followUp: '' };
         }
         const decodedText = decodeHtmlEntities(text);
         // console.log('parseNoteText: Decoded text length:', decodedText.length, 'Preview:', decodedText.substring(0, 100));
@@ -354,7 +356,9 @@ const VisitNote = () => {
         const rosMatch = decodedText.match(/(?:ROS|Review of Systems):\s*(.+?)(?:\n\n|\n(?:PE|Physical|Assessment|Plan):|$)/is);
         const peMatch = decodedText.match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):|$)/is);
         const assessmentMatch = decodedText.match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):|$)/is);
-        const planMatch = decodedText.match(/(?:Plan|P):\s*(.+?)(?:\n\n|$)/is);
+        const planMatch = decodedText.match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n(?:Care Plan|CP|Follow Up|FU):|$)/is);
+        const carePlanMatch = decodedText.match(/(?:Care Plan|CP):\s*(.+?)(?:\n\n|\n(?:Follow Up|FU):|$)/is);
+        const followUpMatch = decodedText.match(/(?:Follow Up|FU):\s*(.+?)(?:\n\n|$)/is);
 
         const result = {
             chiefComplaint: chiefComplaintMatch ? decodeHtmlEntities(chiefComplaintMatch[1].trim()) : '',
@@ -362,7 +366,9 @@ const VisitNote = () => {
             rosNotes: rosMatch ? decodeHtmlEntities(rosMatch[1].trim()) : '',
             peNotes: peMatch ? decodeHtmlEntities(peMatch[1].trim()) : '',
             assessment: assessmentMatch ? decodeHtmlEntities(assessmentMatch[1].trim()) : '',
-            plan: planMatch ? decodeHtmlEntities(planMatch[1].trim()) : ''
+            plan: planMatch ? decodeHtmlEntities(planMatch[1].trim()) : '',
+            carePlan: carePlanMatch ? decodeHtmlEntities(carePlanMatch[1].trim()) : '',
+            followUp: followUpMatch ? decodeHtmlEntities(followUpMatch[1].trim()) : ''
         };
 
         /*
@@ -459,6 +465,9 @@ const VisitNote = () => {
             planText = noteData.plan;
         }
         if (planText) sections.push(`Plan: ${planText}`);
+
+        if (noteData.carePlan) sections.push(`Care Plan: ${noteData.carePlan}`);
+        if (noteData.followUp) sections.push(`Follow Up: ${noteData.followUp}`);
 
         const combined = sections.join('\n\n');
         console.log('Combined note sections length:', combined.length);
@@ -593,7 +602,9 @@ const VisitNote = () => {
                             plan: parsed.plan || prev.plan || '',
                             rosNotes: parsed.rosNotes || prev.rosNotes || '',
                             peNotes: parsed.peNotes || prev.peNotes || '',
-                            planStructured: planStructured.length > 0 ? planStructured : (prev.planStructured || [])
+                            planStructured: planStructured.length > 0 ? planStructured : (prev.planStructured || []),
+                            carePlan: parsed.carePlan || prev.carePlan || '',
+                            followUp: parsed.followUp || prev.followUp || ''
                         }));
                         if ((visit.locked || visit.note_signed_by || visit.note_signed_at) && parsed) {
                             setTimeout(() => generateAISummary(parsed, visit), 100);
@@ -2239,6 +2250,50 @@ const VisitNote = () => {
                                 )}
                             </div>
                         )}
+                    </Section>
+
+                    {/* Care Plan */}
+                    <Section title="Care Plan" defaultOpen={true}>
+                        <div className="relative">
+                            <textarea
+                                value={noteData.carePlan || ''}
+                                onChange={(e) => setNoteData({ ...noteData, carePlan: e.target.value })}
+                                placeholder="Summary of what needs to be done in preparation for the next visit..."
+                                className="w-full text-xs p-2 border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-h-[80px]"
+                                disabled={isSigned}
+                            />
+                        </div>
+                    </Section>
+
+                    {/* Follow Up */}
+                    <Section title="Follow Up" defaultOpen={true}>
+                        <div className="relative">
+                            <textarea
+                                value={noteData.followUp || ''}
+                                onChange={(e) => setNoteData({ ...noteData, followUp: e.target.value })}
+                                placeholder="Follow up instructions..."
+                                className="w-full text-xs p-2 border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-h-[60px]"
+                                disabled={isSigned}
+                            />
+                            {!isSigned && (
+                                <div className="mt-2 text-xs">
+                                    <label className="block text-neutral-600 font-medium mb-1">Quick Select:</label>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {['1 Week', '2 Weeks', '1 Month', '3 Months', '6 Months', '1 Year', 'PRN'].map((duration) => (
+                                            <button
+                                                key={duration}
+                                                onClick={() => {
+                                                    setNoteData({ ...noteData, followUp: duration });
+                                                }}
+                                                className="px-2.5 py-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-200 rounded text-xs transition-colors"
+                                            >
+                                                {duration}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </Section>
 
                     {/* Bottom Action Buttons */}

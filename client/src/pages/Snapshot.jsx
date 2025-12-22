@@ -53,14 +53,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const [selectedVisitForView, setSelectedVisitForView] = useState(null);
     const [noteFilter, setNoteFilter] = useState('all');
     const [visitHistoryExpanded, setVisitHistoryExpanded] = useState(true);
-    const [showPhotoModal, setShowPhotoModal] = useState(false);
-    const [photoMode, setPhotoMode] = useState(null);
-    const [capturedPhoto, setCapturedPhoto] = useState(null);
-    const [locallyUploadedPhoto, setLocallyUploadedPhoto] = useState(null);
-    const [photoVersion, setPhotoVersion] = useState(Date.now()); // Initialize with current timestamp for cache busting
-    const fileInputRef = React.useRef(null);
-    const videoRef = React.useRef(null);
-    const [webcamStream, setWebcamStream] = useState(null);
+    // Photo state removed
     const [showDemographicsModal, setShowDemographicsModal] = useState(false);
     const [demographicsField, setDemographicsField] = useState(null); // 'phone', 'email', 'address', 'insurance', 'pharmacy', 'emergency'
     const [demographicsForm, setDemographicsForm] = useState({
@@ -487,8 +480,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     const formattedNotes = response.data.map(visit => {
                         const noteText = visit.note_draft || "";
                         const hpiMatch = noteText.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):)/is);
-                        const planMatch = noteText.match(/(?:Plan|P):\s*(.+?)(?:\n\n|$)/is);
+                        const planMatch = noteText.match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n(?:Care Plan|CP|Follow Up|FU):|$)/is);
                         const assessmentMatch = noteText.match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):)/is);
+                        const carePlanMatch = noteText.match(/(?:Care Plan|CP):\s*(.+?)(?:\n\n|\n(?:Follow Up|FU):|$)/is);
+                        const followUpMatch = noteText.match(/(?:Follow Up|FU):\s*(.+?)(?:\n\n|$)/is);
                         // Extract chief complaint
                         const ccMatch = noteText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
                         const chiefComplaint = ccMatch ? ccMatch[1].trim() : null;
@@ -526,6 +521,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             summary: hpiMatch ? hpiMatch[1].trim().substring(0, 200) : (noteText.substring(0, 200) || "No note available"),
                             plan: planMatch ? planMatch[1].trim() : extractPlan(noteText),
                             assessment: assessmentMatch ? assessmentMatch[1].trim() : "",
+                            carePlan: carePlanMatch ? carePlanMatch[1].trim() : "",
+                            followUp: followUpMatch ? followUpMatch[1].trim() : "",
                             chiefComplaint: chiefComplaint,
                             signed: visit.locked || !!visit.note_signed_by,
                             visitDate: visit.visit_date,
@@ -995,42 +992,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
     };
 
     // Photo upload functions
-    const startWebcam = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            setWebcamStream(stream);
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-            }
-        } catch (error) {
-            console.error('Error accessing webcam:', error);
-        }
-    };
-
-    const stopWebcam = () => {
-        if (webcamStream) {
-            webcamStream.getTracks().forEach(track => track.stop());
-            setWebcamStream(null);
-        }
-    };
-
-    const capturePhoto = () => {
-        if (videoRef.current) {
-            const canvas = document.createElement('canvas');
-            canvas.width = videoRef.current.videoWidth;
-            canvas.height = videoRef.current.videoHeight;
-            const ctx = canvas.getContext('2d');
-
-            // Mirror if using front camera
-            ctx.translate(canvas.width, 0);
-            ctx.scale(-1, 1);
-
-            ctx.drawImage(videoRef.current, 0, 0);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-            setCapturedPhoto(dataUrl);
-            stopWebcam();
-        }
-    };
+    // Webcam functions removed
+    const startWebcam = () => { };
+    const stopWebcam = () => { };
+    const capturePhoto = () => { };
 
     const handleFileUpload = (e) => {
         const file = e.target.files?.[0];
@@ -1143,11 +1108,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
         }
     };
 
-    React.useEffect(() => {
-        return () => {
-            stopWebcam();
-        };
-    }, [webcamStream]);
+    // Webcam cleanup removed
 
     // Generate photo URL with cache-busting (must be before early returns)
     // Photo URL logic removed
@@ -1286,6 +1247,18 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         <div className="p-2 bg-paper-50 rounded border-l-2 border-paper-400">
                                                             <p className="text-xs font-semibold text-ink-700 mb-1">Plan:</p>
                                                             <p className="text-xs text-ink-600 whitespace-pre-wrap">{note.plan}</p>
+                                                        </div>
+                                                    )}
+                                                    {note.carePlan && (
+                                                        <div className="p-2 bg-paper-50 rounded border-l-2 border-primary-400">
+                                                            <p className="text-xs font-semibold text-ink-700 mb-1">Care Plan:</p>
+                                                            <p className="text-xs text-ink-600 whitespace-pre-wrap">{note.carePlan}</p>
+                                                        </div>
+                                                    )}
+                                                    {note.followUp && (
+                                                        <div className="p-2 bg-paper-50 rounded border-l-2 border-green-400">
+                                                            <p className="text-xs font-semibold text-ink-700 mb-1">Follow Up:</p>
+                                                            <p className="text-xs text-ink-600 whitespace-pre-wrap">{note.followUp}</p>
                                                         </div>
                                                     )}
                                                     <div className="flex justify-end pt-2">
@@ -3147,8 +3120,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
  */
 const PatientHeaderPhoto = ({ firstName, lastName }) => {
     return (
-        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white text-3xl font-bold shadow-xl ring-4 ring-white shrink-0 select-none">
-            {firstName?.[0]}{lastName?.[0]}
+        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center text-primary-300 shadow-md ring-4 ring-white shrink-0 select-none border border-white/50 relative overflow-hidden group">
+            <div className="absolute inset-0 bg-white/40 backdrop-blur-sm z-0"></div>
+            <div className="w-full h-full absolute top-0 left-0 bg-gradient-to-tr from-white/0 to-white/40 opacity-50 z-10"></div>
+            <User className="w-10 h-10 relative z-20 text-primary-300 opacity-80" strokeWidth={1.5} />
         </div>
     );
 };

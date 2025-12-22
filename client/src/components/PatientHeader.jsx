@@ -19,7 +19,9 @@ const PatientHeader = () => {
     const [loading, setLoading] = useState(true);
     const [showAllergyModal, setShowAllergyModal] = useState(false);
     const [showMedicationModal, setShowMedicationModal] = useState(false);
-    // showPhotoModal removed
+    const [showPhotoModal, setShowPhotoModal] = useState(false);
+    const [photoMode, setPhotoMode] = useState(null);
+    const [photoVersion, setPhotoVersion] = useState(0);
     const [showDemographicsModal, setShowDemographicsModal] = useState(false);
     const [demographicsField, setDemographicsField] = useState(null); // 'phone', 'email', 'address', 'insurance', 'pharmacy', 'emergency'
     const [demographicsForm, setDemographicsForm] = useState({
@@ -275,39 +277,7 @@ const PatientHeader = () => {
         }
     };
 
-    // Webcam functions
-    const startWebcam = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            setWebcamStream(stream);
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-            }
-        } catch (error) {
-            console.error('Error accessing webcam:', error);
-            showToast('Could not access webcam. Please check permissions.', 'error');
-        }
-    };
 
-    const stopWebcam = () => {
-        if (webcamStream) {
-            webcamStream.getTracks().forEach(track => track.stop());
-            setWebcamStream(null);
-        }
-    };
-
-    const capturePhoto = () => {
-        if (videoRef.current) {
-            const canvas = document.createElement('canvas');
-            canvas.width = videoRef.current.videoWidth;
-            canvas.height = videoRef.current.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(videoRef.current, 0, 0);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-            setCapturedPhoto(dataUrl);
-            stopWebcam();
-        }
-    };
 
     const handleFileUpload = (e) => {
         console.log('handleFileUpload called', e.target.files);
@@ -333,7 +303,7 @@ const PatientHeader = () => {
             reader.onloadend = () => {
                 console.log('File read complete, setting captured photo');
                 setCapturedPhoto(reader.result);
-                setPhotoMode('upload'); // Ensure photoMode is set
+                // Removed photoMode set as we only support upload now
             };
             reader.onerror = () => {
                 console.error('Error reading file');
@@ -382,12 +352,7 @@ const PatientHeader = () => {
         }
     };
 
-    // Cleanup webcam on unmount
-    useEffect(() => {
-        return () => {
-            stopWebcam();
-        };
-    }, [webcamStream]);
+
 
     useEffect(() => {
         const fetchPatient = async () => {
@@ -524,8 +489,17 @@ const PatientHeader = () => {
                         {/* Left: Photo and Basic Info */}
                         <div className="flex items-center space-x-4">
                             {/* Patient Avatar (Initials) */}
-                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white text-2xl font-bold shadow-lg ring-4 ring-white">
-                                {patient?.first_name?.[0]}{patient?.last_name?.[0]}
+                            {/* Redesigned Patient Avatar */}
+                            <div
+                                onClick={() => setShowPhotoModal(true)}
+                                className="w-16 h-16 rounded-full bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-100 flex items-center justify-center shadow-sm ring-4 ring-white cursor-pointer hover:ring-teal-100 transition-all active:scale-95"
+                                title="Click to update photo"
+                            >
+                                {patient?.photoUrl ? (
+                                    <img src={patient.photoUrl} alt="Patient" className="w-full h-full rounded-full object-cover" />
+                                ) : (
+                                    <User className="w-8 h-8 text-teal-300" />
+                                )}
                             </div>
 
                             {/* Patient Name and Info */}
@@ -899,34 +873,38 @@ const PatientHeader = () => {
                 </div>
             )}
 
+
+
+
+
+
+
+
+
             {/* Photo Modal */}
             {showPhotoModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" onClick={() => {
                     setShowPhotoModal(false);
-                    setPhotoMode(null);
-                    stopWebcam();
                     setCapturedPhoto(null);
                 }}>
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6" onClick={(e) => e.stopPropagation()}>
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-semibold text-ink-900 flex items-center space-x-2">
                                 <Camera className="w-5 h-5 text-paper-700" />
-                                <span>Add Patient Photo</span>
+                                <span className="text-ink-900 font-bold">Add Patient Photo</span>
                             </h3>
                             <button
                                 onClick={() => {
                                     setShowPhotoModal(false);
-                                    setPhotoMode(null);
-                                    stopWebcam();
                                     setCapturedPhoto(null);
                                 }}
-                                className="p-1 hover:bg-paper-100 rounded text-ink-500"
+                                className="p-1 hover:bg-paper-100 rounded text-ink-500 transition-colors"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
-                        {/* Hidden file input - always present */}
+                        {/* File input - always present but hidden */}
                         <input
                             ref={fileInputRef}
                             type="file"
@@ -935,165 +913,62 @@ const PatientHeader = () => {
                             className="hidden"
                         />
 
-                        {!photoMode ? (
+                        {!capturedPhoto ? (
+                            <div className="flex flex-col items-center justify-center space-y-4 py-8">
+                                <div className="p-4 bg-paper-50 rounded-full">
+                                    <FileImage className="w-12 h-12 text-paper-400" />
+                                </div>
+                                <div className="text-center">
+                                    <p className="text-ink-900 font-medium mb-1">Upload a photo</p>
+                                    <p className="text-ink-500 text-sm">JPEG, PNG, GIF, or WebP</p>
+                                </div>
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="px-6 py-2.5 text-white rounded-md transition-all duration-200 hover:shadow-lg hover:translat-y-[-1px] font-medium"
+                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
+                                >
+                                    Select Image
+                                </button>
+                            </div>
+                        ) : (
                             <div className="space-y-4">
-                                <p className="text-sm text-ink-600 mb-4">Choose how you want to add the photo:</p>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="relative bg-black rounded-lg overflow-hidden border border-paper-200" style={{ aspectRatio: '4/3' }}>
+                                    <img src={capturedPhoto} alt="Uploaded" className="w-full h-full object-contain" />
+                                </div>
+                                <div className="flex space-x-3">
                                     <button
-                                        onClick={async () => {
-                                            setPhotoMode('webcam');
-                                            await startWebcam();
-                                        }}
-                                        className="flex flex-col items-center justify-center p-6 border-2 border-paper-300 rounded-lg hover:border-paper-500 hover:bg-paper-50 transition-colors"
+                                        onClick={handleSavePhoto}
+                                        className="flex-1 px-4 py-2 text-white rounded-md flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md font-medium"
+                                        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                                     >
-                                        <Camera className="w-12 h-12 text-paper-700 mb-2" />
-                                        <span className="font-medium text-ink-900">Use Webcam</span>
+                                        <Save className="w-4 h-4" />
+                                        <span>Save Photo</span>
                                     </button>
                                     <button
                                         onClick={() => {
-                                            setPhotoMode('upload');
+                                            setCapturedPhoto(null);
                                             setTimeout(() => {
                                                 fileInputRef.current?.click();
                                             }, 100);
                                         }}
-                                        className="flex flex-col items-center justify-center p-6 border-2 border-paper-300 rounded-lg hover:border-paper-500 hover:bg-paper-50 transition-colors"
+                                        className="px-4 py-2 bg-paper-100 text-ink-700 rounded-md hover:bg-paper-200 font-medium border border-paper-200"
                                     >
-                                        <FileImage className="w-12 h-12 text-paper-700 mb-2" />
-                                        <span className="font-medium text-ink-900">Upload Photo</span>
+                                        Change
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setShowPhotoModal(false);
+                                            setCapturedPhoto(null);
+                                        }}
+                                        className="px-4 py-2 bg-paper-100 text-ink-700 rounded-md hover:bg-paper-200 font-medium border border-paper-200"
+                                    >
+                                        Cancel
                                     </button>
                                 </div>
-                            </div>
-                        ) : photoMode === 'webcam' ? (
-                            <div className="space-y-4">
-                                {!capturedPhoto ? (
-                                    <>
-                                        <div className="relative bg-black rounded-lg overflow-hidden" style={{ aspectRatio: '4/3' }}>
-                                            <video
-                                                ref={videoRef}
-                                                autoPlay
-                                                playsInline
-                                                className="w-full h-full object-cover"
-                                            />
-                                        </div>
-                                        <div className="flex space-x-3">
-                                            <button
-                                                onClick={capturePhoto}
-                                                className="flex-1 px-4 py-2 text-white rounded-md flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
-                                                style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                                            >
-                                                <Camera className="w-4 h-4" />
-                                                <span>Capture Photo</span>
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    stopWebcam();
-                                                    setPhotoMode(null);
-                                                }}
-                                                className="px-4 py-2 bg-paper-100 text-ink-700 rounded-md hover:bg-paper-200"
-                                            >
-                                                Cancel
-                                            </button>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="relative bg-black rounded-lg overflow-hidden" style={{ aspectRatio: '4/3' }}>
-                                            <img src={capturedPhoto} alt="Captured" className="w-full h-full object-contain" />
-                                        </div>
-                                        <div className="flex space-x-3">
-                                            <button
-                                                onClick={handleSavePhoto}
-                                                className="flex-1 px-4 py-2 text-white rounded-md flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
-                                                style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                                            >
-                                                <Save className="w-4 h-4" />
-                                                <span>Save Photo</span>
-                                            </button>
-                                            <button
-                                                onClick={async () => {
-                                                    setCapturedPhoto(null);
-                                                    await startWebcam();
-                                                }}
-                                                className="px-4 py-2 bg-paper-100 text-ink-700 rounded-md hover:bg-paper-200"
-                                            >
-                                                Retake
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setPhotoMode(null);
-                                                    setCapturedPhoto(null);
-                                                    stopWebcam();
-                                                }}
-                                                className="px-4 py-2 bg-paper-100 text-ink-700 rounded-md hover:bg-paper-200"
-                                            >
-                                                Cancel
-                                            </button>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                {capturedPhoto ? (
-                                    <>
-                                        <div className="relative bg-black rounded-lg overflow-hidden" style={{ aspectRatio: '4/3' }}>
-                                            <img src={capturedPhoto} alt="Uploaded" className="w-full h-full object-contain" />
-                                        </div>
-                                        <div className="flex space-x-3">
-                                            <button
-                                                onClick={handleSavePhoto}
-                                                className="flex-1 px-4 py-2 text-white rounded-md flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
-                                                style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                                            >
-                                                <Save className="w-4 h-4" />
-                                                <span>Save Photo</span>
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setCapturedPhoto(null);
-                                                    setTimeout(() => {
-                                                        fileInputRef.current?.click();
-                                                    }, 100);
-                                                }}
-                                                className="px-4 py-2 bg-paper-100 text-ink-700 rounded-md hover:bg-paper-200"
-                                            >
-                                                Choose Different
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setPhotoMode(null);
-                                                    setCapturedPhoto(null);
-                                                }}
-                                                className="px-4 py-2 bg-paper-100 text-ink-700 rounded-md hover:bg-paper-200"
-                                            >
-                                                Cancel
-                                            </button>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div className="text-center py-8">
-                                        <p className="text-ink-600 mb-4">No file selected</p>
-                                        <button
-                                            onClick={() => {
-                                                setTimeout(() => {
-                                                    fileInputRef.current?.click();
-                                                }, 100);
-                                            }}
-                                            className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md"
-                                            style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                            onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                                            onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                                        >
-                                            Choose File
-                                        </button>
-                                    </div>
-                                )}
                             </div>
                         )}
                     </div>

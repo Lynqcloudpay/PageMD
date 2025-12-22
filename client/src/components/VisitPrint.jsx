@@ -41,17 +41,17 @@ const VisitPrint = ({ visitId, patientId, onClose }) => {
 
             // Fetch orders for selected visits
             const ordersRes = await ordersAPI.getByPatient(patientId);
-            const visitOrders = ordersRes.data.filter(o => 
+            const visitOrders = ordersRes.data.filter(o =>
                 selectedVisits.includes(o.visit_id)
             );
             setOrders(visitOrders);
 
             // Fetch documents for selected visits
             const docsRes = await documentsAPI.getByPatient(patientId);
-            const visitDocs = docsRes.data.filter(d => 
+            const visitDocs = docsRes.data.filter(d =>
                 selectedVisits.includes(d.visit_id)
             );
-            setDocuments(docsRes.data.filter(d => 
+            setDocuments(docsRes.data.filter(d =>
                 selectedVisits.includes(d.visit_id)
             ));
         } catch (error) {
@@ -70,13 +70,13 @@ const VisitPrint = ({ visitId, patientId, onClose }) => {
     const fetchOrdersAndDocs = async () => {
         try {
             const ordersRes = await ordersAPI.getByPatient(patientId);
-            const visitOrders = ordersRes.data.filter(o => 
+            const visitOrders = ordersRes.data.filter(o =>
                 selectedVisits.includes(o.visit_id)
             );
             setOrders(visitOrders);
 
             const docsRes = await documentsAPI.getByPatient(patientId);
-            const visitDocs = docsRes.data.filter(d => 
+            const visitDocs = docsRes.data.filter(d =>
                 selectedVisits.includes(d.visit_id)
             );
             setDocuments(visitDocs);
@@ -102,35 +102,43 @@ const VisitPrint = ({ visitId, patientId, onClose }) => {
 
     const parseNoteText = (noteText) => {
         if (!noteText) return { hpi: '', assessment: '', plan: '', ros: '', pe: '', vitals: '' };
-        
+
         const sections = {
             hpi: '',
             assessment: '',
             plan: '',
             ros: '',
             pe: '',
-            vitals: ''
+            vitals: '',
+            carePlan: '',
+            followUp: ''
         };
-        
+
         // Extract sections
         const hpiMatch = noteText.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:Vitals|ROS|Review|PE|Physical|Assessment|Plan):)/is);
         if (hpiMatch) sections.hpi = hpiMatch[1].trim();
-        
+
         const vitalsMatch = noteText.match(/Vitals:\s*(.+?)(?:\n\n|\n(?:HPI|ROS|Review|PE|Physical|Assessment|Plan):)/is);
         if (vitalsMatch) sections.vitals = vitalsMatch[1].trim();
-        
+
         const rosMatch = noteText.match(/(?:ROS|Review of Systems):\s*(.+?)(?:\n\n|\n(?:PE|Physical|Assessment|Plan):)/is);
         if (rosMatch) sections.ros = rosMatch[1].trim();
-        
+
         const peMatch = noteText.match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):)/is);
         if (peMatch) sections.pe = peMatch[1].trim();
-        
+
         const assessmentMatch = noteText.match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):)/is);
         if (assessmentMatch) sections.assessment = assessmentMatch[1].trim();
-        
-        const planMatch = noteText.match(/(?:Plan|P):\s*(.+?)(?:\n\n|$)/is);
+
+        const planMatch = noteText.match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n(?:Care Plan|CP|Follow Up|FU):|$)/is);
         if (planMatch) sections.plan = planMatch[1].trim();
-        
+
+        const carePlanMatch = noteText.match(/(?:Care Plan|CP):\s*(.+?)(?:\n\n|\n(?:Follow Up|FU):|$)/is);
+        if (carePlanMatch) sections.carePlan = carePlanMatch[1].trim();
+
+        const followUpMatch = noteText.match(/(?:Follow Up|FU):\s*(.+?)(?:\n\n|$)/is);
+        if (followUpMatch) sections.followUp = followUpMatch[1].trim();
+
         return sections;
     };
 
@@ -257,6 +265,26 @@ const VisitPrint = ({ visitId, patientId, onClose }) => {
                                 </div>
                             )}
 
+                            {/* Care Plan */}
+                            {noteSections.carePlan && (
+                                <div className="mb-4">
+                                    <h3 className="font-bold text-ink-900 mb-2">Care Plan</h3>
+                                    <p className="text-ink-700 whitespace-pre-wrap">
+                                        {noteSections.carePlan.replace(/&#x2F;/g, '/').replace(/&#47;/g, '/').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')}
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Follow Up */}
+                            {noteSections.followUp && (
+                                <div className="mb-4">
+                                    <h3 className="font-bold text-ink-900 mb-2">Follow Up</h3>
+                                    <p className="text-ink-700 whitespace-pre-wrap">
+                                        {noteSections.followUp.replace(/&#x2F;/g, '/').replace(/&#47;/g, '/').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')}
+                                    </p>
+                                </div>
+                            )}
+
                             {/* Orders for this visit */}
                             {orders.filter(o => o.visit_id === visit.id).length > 0 && (
                                 <div className="mb-4">
@@ -265,11 +293,11 @@ const VisitPrint = ({ visitId, patientId, onClose }) => {
                                         {orders.filter(o => o.visit_id === visit.id).map((order, oIdx) => (
                                             <li key={oIdx}>
                                                 <strong className="capitalize">{order.order_type}:</strong>{' '}
-                                                {order.order_payload?.test_name || 
-                                                 order.order_payload?.study_name || 
-                                                 order.order_payload?.testName ||
-                                                 order.order_payload?.procedureName ||
-                                                 'Order'}
+                                                {order.order_payload?.test_name ||
+                                                    order.order_payload?.study_name ||
+                                                    order.order_payload?.testName ||
+                                                    order.order_payload?.procedureName ||
+                                                    'Order'}
                                                 {order.status && ` (${order.status})`}
                                             </li>
                                         ))}
@@ -333,9 +361,8 @@ const VisitPrint = ({ visitId, patientId, onClose }) => {
                                     return (
                                         <label
                                             key={visit.id}
-                                            className={`flex items-center space-x-2 p-2 hover:bg-paper-50 rounded cursor-pointer ${
-                                                isCurrent ? 'bg-blue-50' : ''
-                                            }`}
+                                            className={`flex items-center space-x-2 p-2 hover:bg-paper-50 rounded cursor-pointer ${isCurrent ? 'bg-blue-50' : ''
+                                                }`}
                                         >
                                             {isSelected ? (
                                                 <CheckSquare className="w-5 h-5 text-paper-700" />
