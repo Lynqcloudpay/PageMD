@@ -12,10 +12,12 @@ import CodeSearchModal from '../components/CodeSearchModal';
 import VisitPrint from '../components/VisitPrint';
 import PatientChartPanel from '../components/PatientChartPanel';
 import PatientDataManager from '../components/PatientDataManager';
-import { visitsAPI, codesAPI, patientsAPI, icd10API } from '../services/api';
 import DiagnosisPicker from '../components/DiagnosisPicker';
+import OrderPicker from '../components/OrderPicker';
+import OrderDetailsModal from '../components/OrderDetailsModal';
 import { usePrivileges } from '../hooks/usePrivileges';
 import { useAuth } from '../context/AuthContext';
+import { ordersCatalogAPI, visitsAPI, codesAPI, patientsAPI, icd10API } from '../services/api';
 import { format } from 'date-fns';
 import { hpiDotPhrases } from '../data/hpiDotPhrases';
 import { ProblemInput, MedicationInput, AllergyInput, FamilyHistoryInput } from '../components/PAMFOSInputs';
@@ -170,6 +172,10 @@ const VisitNote = () => {
     const [orderModalTab, setOrderModalTab] = useState('labs');
     const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
     const [showEPrescribeEnhanced, setShowEPrescribeEnhanced] = useState(false);
+    const [showOrderPicker, setShowOrderPicker] = useState(false);
+    const [orderPickerType, setOrderPickerType] = useState(null);
+    const [selectedCatalogItem, setSelectedCatalogItem] = useState(null);
+    const [showOrderDetails, setShowOrderDetails] = useState(false);
     const [showICD10Modal, setShowICD10Modal] = useState(false);
     const [showReferralModal, setShowReferralModal] = useState(false);
     const { hasPrivilege } = usePrivileges();
@@ -2208,11 +2214,12 @@ const VisitNote = () => {
                                 {hasPrivilege('order_labs') && (
                                     <button
                                         onClick={() => {
-                                            setOrderModalTab('labs');
-                                            setShowOrderModal(true);
+                                            setOrderPickerType(null); // All types
+                                            setShowOrderPicker(true);
                                         }}
-                                        className="px-2.5 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors"
+                                        className="px-2.5 py-1.5 text-xs font-bold bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-primary-200 transition-all active:scale-95 flex items-center gap-1.5"
                                     >
+                                        <Plus className="w-3.5 h-3.5" />
                                         Add Order
                                     </button>
                                 )}
@@ -2359,17 +2366,52 @@ const VisitNote = () => {
                     </div>
                 </div>
             )}
-            <OrderModal
-                isOpen={showOrderModal}
-                onClose={() => { setShowOrderModal(false); setSelectedDiagnosis(null); }}
-                initialTab={orderModalTab}
-                diagnoses={diagnoses}
-                selectedDiagnosis={selectedDiagnosis}
-                existingOrders={noteData.planStructured}
-                onSave={handleUpdatePlan}
-                patientId={id}
-                visitId={currentVisitId || urlVisitId}
-            />
+            {showOrderPicker && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-ink-950/60 backdrop-blur-md" onClick={() => setShowOrderPicker(false)}>
+                    <div onClick={(e) => e.stopPropagation()} className="w-full max-w-xl">
+                        <OrderPicker
+                            type={orderPickerType}
+                            onClose={() => setShowOrderPicker(false)}
+                            onSelect={(item) => {
+                                setSelectedCatalogItem(item);
+                                setShowOrderPicker(false);
+                                setShowOrderDetails(true);
+                            }}
+                            visitId={currentVisitId || urlVisitId}
+                            patientId={id}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {showOrderDetails && selectedCatalogItem && (
+                <div className="fixed inset-0 z-[71] flex items-center justify-center p-4 bg-ink-950/60 backdrop-blur-md" onClick={() => setShowOrderDetails(false)}>
+                    <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg">
+                        <OrderDetailsModal
+                            order={selectedCatalogItem}
+                            initialDiagnoses={noteData.planStructured}
+                            onClose={() => setShowOrderDetails(false)}
+                            onSave={async (details) => {
+                                try {
+                                    const res = await ordersCatalogAPI.createVisitOrder(currentVisitId || urlVisitId, {
+                                        catalog_id: selectedCatalogItem.id,
+                                        patient_id: id,
+                                        ...details
+                                    });
+                                    // Add to plan structured for UI display
+                                    const diagLabel = details.diagnosis_icd10_ids[0] || 'General';
+                                    addOrderToPlan(diagLabel, `${selectedCatalogItem.name} (${res.priority})${details.order_details.notes ? ': ' + details.order_details.notes : ''}`);
+                                    setShowOrderDetails(false);
+                                    showToast('Order created successfully', 'success');
+                                } catch (err) {
+                                    console.error('Failed to create order', err);
+                                    showToast('Failed to create order', 'error');
+                                }
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
             <EPrescribeEnhanced
                 isOpen={showEPrescribeEnhanced}
                 onClose={() => setShowEPrescribeEnhanced(false)}

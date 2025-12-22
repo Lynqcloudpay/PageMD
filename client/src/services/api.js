@@ -250,6 +250,18 @@ export const icd10API = {
   getRecent: (limit = 20) => api.get('/icd10/recent', { params: { limit } }),
 };
 
+export const ordersCatalogAPI = {
+  search: (q, type, limit = 20) => api.get('/orders-catalog/search', { params: { q, type, limit } }),
+  getFavorites: () => api.get('/orders-catalog/favorites'),
+  addFavorite: (catalog_id) => api.post('/orders-catalog/favorites', { catalog_id }),
+  removeFavorite: (catalog_id) => api.delete(`/orders-catalog/favorites/${catalog_id}`),
+  trackUsage: (catalog_id) => api.post('/orders-catalog/track', { catalog_id }),
+  getRecent: (type, limit = 10) => api.get('/orders-catalog/recent', { params: { type, limit } }),
+  createVisitOrder: (visitId, data) => api.post(`/orders-catalog/visit/${visitId}`, data),
+  getVisitOrders: (visitId) => api.get(`/orders-catalog/visit/${visitId}`),
+  updateInstance: (id, data) => api.patch(`/orders-catalog/instance/${id}`, data),
+};
+
 export const codesAPI = {
   searchICD10: async (search) => {
     if (!search || search.length < 2) {

@@ -143,6 +143,7 @@ app.use('/api/labs', labRoutes);
 
 app.use('/api/icd10-hierarchy', icd10HierarchyRoutes);
 app.use('/api/ordersets', ordersetRoutes);
+app.use('/api/orders-catalog', require('./routes/orders_catalog'));
 const icd10Routes = require('./routes/icd10');
 app.use('/api/icd10', icd10Routes);
 
