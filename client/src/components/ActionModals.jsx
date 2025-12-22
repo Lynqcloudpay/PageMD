@@ -308,16 +308,35 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, initialTab]);
 
-    // Group cart by diagnosis
+    // Group cart by order type
     const groupedCart = useMemo(() => {
+        const typeOrder = ['labs', 'imaging', 'procedures', 'referrals', 'medications'];
         const groups = {};
         cart.forEach(item => {
-            const dx = item.diagnosis || 'Unassigned';
-            if (!groups[dx]) groups[dx] = [];
-            groups[dx].push(item);
+            const type = item.type || 'other';
+            if (!groups[type]) groups[type] = [];
+            groups[type].push(item);
         });
-        return groups;
+        // Return in preferred order
+        const ordered = {};
+        typeOrder.forEach(t => {
+            if (groups[t]) ordered[t] = groups[t];
+        });
+        // Add any other types
+        Object.keys(groups).forEach(t => {
+            if (!ordered[t]) ordered[t] = groups[t];
+        });
+        return ordered;
     }, [cart]);
+
+    const typeLabels = {
+        labs: { label: 'Labs', color: 'bg-purple-500', bgColor: 'bg-purple-50', textColor: 'text-purple-700' },
+        imaging: { label: 'Imaging', color: 'bg-blue-500', bgColor: 'bg-blue-50', textColor: 'text-blue-700' },
+        procedures: { label: 'Procedures', color: 'bg-amber-500', bgColor: 'bg-amber-50', textColor: 'text-amber-700' },
+        referrals: { label: 'Referrals', color: 'bg-orange-500', bgColor: 'bg-orange-50', textColor: 'text-orange-700' },
+        medications: { label: 'Medications', color: 'bg-green-500', bgColor: 'bg-green-50', textColor: 'text-green-700' },
+        other: { label: 'Other', color: 'bg-gray-500', bgColor: 'bg-gray-50', textColor: 'text-gray-700' }
+    };
 
     // Unified search logic
     useEffect(() => {
@@ -829,37 +848,39 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                     <p className="text-sm">Your cart is empty</p>
                                 </div>
                             ) : (
-                                <div className="space-y-3">
-                                    {Object.entries(groupedCart).map(([diagnosis, items]) => (
-                                        <div key={diagnosis} className="bg-white border border-gray-200 rounded-lg p-2">
-                                            <div className="flex items-center gap-2 pb-1.5 mb-1.5 border-b border-gray-100">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-primary-500"></div>
-                                                <h4 className="text-[10px] font-bold text-gray-600 uppercase tracking-wide flex-1 truncate">
-                                                    {diagnosis === 'Unassigned' ? 'No Diagnosis' : diagnosis.substring(0, 40)}
-                                                </h4>
-                                                <span className="text-[10px] text-gray-400">({items.length})</span>
+                                <div className="space-y-2">
+                                    {Object.entries(groupedCart).map(([type, items]) => {
+                                        const typeInfo = typeLabels[type] || typeLabels.other;
+                                        return (
+                                            <div key={type} className={`${typeInfo.bgColor} border border-gray-200 rounded-lg p-2`}>
+                                                <div className="flex items-center gap-2 pb-1.5 mb-1.5 border-b border-gray-200/50">
+                                                    <div className={`w-2 h-2 rounded-full ${typeInfo.color}`}></div>
+                                                    <h4 className={`text-xs font-bold ${typeInfo.textColor} uppercase tracking-wide flex-1`}>
+                                                        {typeInfo.label}
+                                                    </h4>
+                                                    <span className="text-[10px] text-gray-500 bg-white px-1.5 py-0.5 rounded">{items.length}</span>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    {items.map((item) => (
+                                                        <div key={item.id} className="group flex items-center justify-between bg-white border border-gray-200 rounded px-2 py-1.5 text-xs hover:shadow-sm transition-all">
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="font-medium text-gray-800 truncate">{item.name}</div>
+                                                                {item.diagnosis && item.diagnosis !== 'Unassigned' && (
+                                                                    <div className="text-[10px] text-gray-400 truncate">Dx: {item.diagnosis.substring(0, 30)}</div>
+                                                                )}
+                                                            </div>
+                                                            <button
+                                                                onClick={() => removeFromCart(item.id)}
+                                                                className="text-gray-300 hover:text-red-500 transition-colors ml-2 opacity-0 group-hover:opacity-100"
+                                                            >
+                                                                <X className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
-                                            <div className="flex flex-wrap gap-1">
-                                                {items.map((item) => (
-                                                    <div key={item.id} className="group inline-flex items-center gap-1 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded px-2 py-1 text-xs transition-colors">
-                                                        <span className={`w-1.5 h-1.5 rounded-full ${item.type === 'labs' ? 'bg-purple-500' :
-                                                            item.type === 'imaging' ? 'bg-blue-500' :
-                                                                item.type === 'medications' ? 'bg-green-500' :
-                                                                    item.type === 'procedures' ? 'bg-amber-500' :
-                                                                        'bg-orange-500'
-                                                            }`}></span>
-                                                        <span className="text-gray-700 max-w-[120px] truncate" title={item.name}>{item.name}</span>
-                                                        <button
-                                                            onClick={() => removeFromCart(item.id)}
-                                                            className="text-gray-300 hover:text-red-500 transition-colors ml-0.5"
-                                                        >
-                                                            <X className="w-3 h-3" />
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
