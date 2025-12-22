@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import tokenManager from "../services/tokenManager";
+import { useAuth } from "../context/AuthContext";
 
 function AuthedImg({
     src,
@@ -9,6 +10,7 @@ function AuthedImg({
     onFail,
     ...props
 }) {
+    const { user, loading } = useAuth();
     const [blobUrl, setBlobUrl] = useState(null);
 
     const isDirect = useMemo(() => {
@@ -19,6 +21,8 @@ function AuthedImg({
     useEffect(() => {
         let cancelled = false;
         let createdUrl = null;
+
+        if (loading) return; // Wait for auth to settle
 
         async function run() {
             // Reset only if we are taking a new src that isn't direct
@@ -64,7 +68,7 @@ function AuthedImg({
             cancelled = true;
             if (createdUrl) URL.revokeObjectURL(createdUrl);
         };
-    }, [src, isDirect]);
+    }, [src, isDirect, user, loading]);
 
     if (!src) return null;
 

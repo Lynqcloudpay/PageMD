@@ -333,6 +333,45 @@ router.get('/:id', requirePermission('patients:view_chart'), async (req, res) =>
   }
 });
 
+// Get patient photo securely - Standard EMR pattern
+router.get('/:id/photo', requirePermission('patients:view_chart'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 1. Get photo URL from DB
+    const result = await pool.query('SELECT photo_url FROM patients WHERE id = $1', [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Patient not found' });
+    }
+
+    const photoUrl = result.rows[0].photo_url;
+
+    if (!photoUrl) {
+      return res.status(404).json({ error: 'No photo set' });
+    }
+
+    // 2. Resolve file path
+    // photoUrl is like "/api/uploads/patient-photos/filename.jpg"
+    const filename = path.basename(photoUrl);
+    const filepath = path.join(process.env.UPLOAD_DIR || './uploads', 'patient-photos', filename);
+
+    console.log(`[PHOTO-GET] Serving photo for patient ${id}: ${filepath}`);
+
+    // 3. Verify existence
+    if (!fs.existsSync(filepath)) {
+      console.error(`[PHOTO-GET] File missing on disk: ${filepath}`);
+      return res.status(404).json({ error: 'Photo file not found on server' });
+    }
+
+    // 4. Serve file
+    res.sendFile(path.resolve(filepath));
+  } catch (error) {
+    console.error('[PHOTO-GET] Error serving photo:', error);
+    res.status(500).json({ error: 'Failed to serve photo' });
+  }
+});
+
 // Create patient - requires patient:create permission
 router.post('/', requirePermission('patients:edit_demographics'), async (req, res) => {
   try {

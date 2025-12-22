@@ -502,6 +502,7 @@ const PatientHeader = () => {
     }, [id]);
 
     // Generate photo URL with cache-busting (must be before early returns)
+    // Uses secure EMR pattern: GET /api/patients/:id/photo
     const photoUrl = useMemo(() => {
         if (!patient?.photo_url) return null;
 
@@ -510,40 +511,10 @@ const PatientHeader = () => {
         // Base64 / blob can be used directly
         if (raw.startsWith('data:') || raw.startsWith('blob:')) return raw;
 
-        // If backend gave an absolute URL (localhost, old domain, http, etc),
-        // strip it down to just the pathname so we always use current origin (bemypcp.com)
-        try {
-            if (/^https?:\/\//i.test(raw)) {
-                const u = new URL(raw);
-                raw = u.pathname; // drop origin + query entirely
-            }
-        } catch {
-            // ignore parse errors and continue
-        }
-
-        // Now normalize into your API static route
-        if (raw.startsWith('/api/uploads/')) {
-            // already correct
-        } else if (raw.startsWith('/uploads/')) {
-            raw = `/api${raw}`;
-        } else if (raw.startsWith('uploads/')) {
-            raw = `/api/${raw}`;
-        } else if (!raw.startsWith('/')) {
-            // filename only
-            raw = `/api/uploads/patient-photos/${raw}`;
-        }
-
-        // Build an absolute URL on the *current* site origin (HTTPS),
-        // and add/replace v cache param safely (no double ?v=?v=)
-        try {
-            const u = new URL(raw, window.location.origin);
-            u.searchParams.set('v', String(photoVersion));
-            return u.toString();
-        } catch (e) {
-            console.error('Error constructing photo URL:', e);
-            return raw;
-        }
-    }, [patient?.photo_url, photoVersion]);
+        // For server-stored photos, always use the secure endpoint that checks auth
+        // This avoids exposing direct file paths and ensures unauthorized 401/403s are handled by AuthedImg
+        return `/api/patients/${id}/photo?v=${photoVersion}`;
+    }, [patient?.photo_url, id, photoVersion]);
 
     // Reset error state when photo URL changes
     useEffect(() => {
