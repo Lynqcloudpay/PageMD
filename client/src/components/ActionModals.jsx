@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Modal from './ui/Modal';
-import { Pill, Stethoscope, Upload, Send, Search, X, ShoppingCart, Trash2, Plus, Check, ChevronRight } from 'lucide-react';
+import { Pill, Stethoscope, Upload, Send, Search, X, ShoppingCart, Trash2, Plus, Check, ChevronRight, RotateCcw } from 'lucide-react';
 import { searchLabTests, searchImaging } from '../data/labCodes';
 import axios from 'axios';
 import { codesAPI, referralsAPI, eprescribeAPI, medicationsAPI, ordersCatalogAPI, ordersetsAPI } from '../services/api';
@@ -303,6 +303,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                 else if (item.type === 'procedures') type = 'procedure';
                 else if (item.type === 'referrals') type = 'referral';
                 else if (item.type === 'medications') type = 'prescription';
+                else type = 'procedure'; // Map unknown/other to generic procedure for backend compatibility
 
                 return {
                     type,
@@ -358,31 +359,39 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                             let dispense = '';
                             let reason = '';
 
-                            if (orderStr.startsWith('Lab: ')) {
+                            if (orderStr.startsWith('Lab: ') || orderStr.startsWith('Lab ')) {
                                 type = 'labs';
-                                name = orderStr.substring(5).split('[')[0].trim();
-                            } else if (orderStr.startsWith('Imaging: ')) {
+                                name = orderStr.includes(': ') ? orderStr.substring(5).split('[')[0].trim() : orderStr.substring(4).trim();
+                            } else if (orderStr.startsWith('Imaging: ') || orderStr.startsWith('Imaging ')) {
                                 type = 'imaging';
-                                name = orderStr.substring(9).split('[')[0].trim();
-                            } else if (orderStr.startsWith('Procedure: ')) {
+                                name = orderStr.includes(': ') ? orderStr.substring(9).split('[')[0].trim() : orderStr.substring(8).trim();
+                            } else if (orderStr.startsWith('Procedure: ') || orderStr.startsWith('Procedure ')) {
                                 type = 'procedures';
-                                name = orderStr.substring(11).split('[')[0].trim();
-                            } else if (orderStr.startsWith('Referral: ')) {
+                                name = orderStr.includes(': ') ? orderStr.substring(11).split('[')[0].trim() : orderStr.substring(10).trim();
+                            } else if (orderStr.startsWith('Referral: ') || orderStr.startsWith('Referral ')) {
                                 type = 'referrals';
-                                const parts = orderStr.substring(10).split(' - ');
+                                const prefix = orderStr.includes(': ') ? 'Referral: ' : 'Referral ';
+                                const parts = orderStr.substring(prefix.length).split(' - ');
                                 name = parts[0].trim();
                                 if (parts.length > 1) reason = parts[1].trim();
-                            } else if (orderStr.startsWith('Prescription: ')) {
+                            } else if (orderStr.startsWith('Prescription: ') || orderStr.startsWith('Prescription ')) {
                                 type = 'medications';
+                                const prefix = orderStr.includes(': ') ? 'Prescription: ' : 'Prescription ';
                                 // Prescription: Name - Sig, Dispense: #
-                                const match = orderStr.match(/Prescription: (.*?) - (.*?), Dispense: (.*)/);
+                                const match = orderStr.match(/(?:Prescription: |Prescription )(.*?) - (.*?), Dispense: (.*)/);
                                 if (match) {
                                     name = match[1].trim();
                                     sig = match[2].trim();
                                     dispense = match[3].trim();
                                 } else {
-                                    name = orderStr.substring(14).trim();
+                                    name = orderStr.substring(prefix.length).trim();
                                 }
+                            } else if (orderStr === 'Lab' || orderStr === 'Imaging' || orderStr === 'Procedure') {
+                                // Handle edge case where only the header was captured
+                                if (orderStr === 'Lab') type = 'labs';
+                                else if (orderStr === 'Imaging') type = 'imaging';
+                                else if (orderStr === 'Procedure') type = 'procedures';
+                                name = `Unspecified ${orderStr}`;
                             }
 
                             initialCart.push({
