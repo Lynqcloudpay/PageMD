@@ -46,6 +46,22 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
         pharmacyPhone: ''
     });
 
+    // Document Folder/Search State
+    const [docSearchTerm, setDocSearchTerm] = useState('');
+    const [selectedDocFolder, setSelectedDocFolder] = useState('all');
+
+    const documentCategories = [
+        { id: 'all', label: 'All Documents', icon: FileText, types: [] },
+        { id: 'demographics', label: 'Demographics', icon: UserCircle, types: ['insurance', 'identification'] },
+        { id: 'clinical', label: 'Clinical Notes', icon: FilePlus, types: ['consult', 'clinical_note', 'visit_note'] },
+        { id: 'labs', label: 'Lab Results', icon: FlaskConical, types: ['lab'] },
+        { id: 'imaging', label: 'Imaging & Studies', icon: Image, types: ['imaging', 'ekg', 'echo', 'stress_test', 'cardiac_cath'] },
+        { id: 'referrals', label: 'Referrals', icon: ExternalLink, types: ['referral'] },
+        { id: 'payments', label: 'Payments', icon: CreditCard, types: ['superbill', 'payment'] },
+        { id: 'legal', label: 'Legal & Consent', icon: CheckCircle2, types: ['consent'] },
+        { id: 'other', label: 'Other', icon: Database, types: ['other'] },
+    ];
+
     useEffect(() => {
         if (isOpen && patientId) {
             setActiveTab(initialTab === 'history' ? 'overview' : initialTab); // Default to overview
@@ -610,88 +626,163 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                     </div>
                                 )}
 
-                                {/* DOCUMENTS & IMAGING (Reuse logic for both tabs) */}
+                                {/* DOCUMENTS & IMAGING (New Folder-Based Design) */}
                                 {(activeTab === 'documents' || activeTab === 'images') && (
-                                    <div className="space-y-4">
-                                        <div className="flex justify-between items-center">
-                                            <h3 className="text-sm font-bold text-gray-800">{activeTab === 'images' ? 'Imaging Results' : 'Patient Documents'}</h3>
-                                            <label className="btn btn-primary text-xs px-3 py-1.5 h-auto cursor-pointer">
-                                                <FilePlus className="w-3.5 h-3.5 mr-1" />Upload
-                                                <input type="file" className="hidden" onChange={async (e) => {
-                                                    const file = e.target.files[0];
-                                                    if (!file) return;
-                                                    const fd = new FormData();
-                                                    fd.append('file', file);
-                                                    fd.append('patientId', patientId);
-                                                    fd.append('docType', activeTab === 'images' ? 'imaging' : 'other');
-                                                    try {
-                                                        await documentsAPI.upload(fd);
-                                                        fetchAllData(); // Refresh
-                                                    } catch (err) { alert('Upload failed'); }
-                                                }} />
-                                            </label>
+                                    <div className="flex flex-col h-full overflow-hidden">
+                                        <div className="flex flex-col md:flex-row gap-4 mb-4 items-start md:items-center justify-between">
+                                            {/* Search Bar */}
+                                            <div className="relative w-full md:w-72">
+                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search documents..."
+                                                    className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none"
+                                                    value={docSearchTerm}
+                                                    onChange={(e) => setDocSearchTerm(e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="flex items-center gap-2 w-full md:w-auto">
+                                                <label className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-lg cursor-pointer transition-all shadow-sm">
+                                                    <FilePlus className="w-4 h-4" />
+                                                    <span>Upload to {documentCategories.find(c => c.id === selectedDocFolder)?.label || 'Folder'}</span>
+                                                    <input
+                                                        type="file"
+                                                        className="hidden"
+                                                        onChange={async (e) => {
+                                                            const file = e.target.files[0];
+                                                            if (!file) return;
+                                                            const fd = new FormData();
+                                                            fd.append('file', file);
+                                                            fd.append('patientId', patientId);
+
+                                                            // Determine docType based on active tab or folder
+                                                            let docType = 'other';
+                                                            if (activeTab === 'images') docType = 'imaging';
+                                                            else if (selectedDocFolder !== 'all') {
+                                                                const cat = documentCategories.find(c => c.id === selectedDocFolder);
+                                                                if (cat && cat.types.length > 0) docType = cat.types[0];
+                                                            }
+
+                                                            fd.append('docType', docType);
+                                                            try {
+                                                                await documentsAPI.upload(fd);
+                                                                fetchAllData();
+                                                                setDocSearchTerm('');
+                                                            } catch (err) { alert('Upload failed'); }
+                                                        }}
+                                                    />
+                                                </label>
+                                            </div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            {(() => {
-                                                const currentDocs = activeTab === 'images' ? images : documents;
-                                                const currentOrders = activeTab === 'images' ? imagingOrders : [];
+                                        <div className="flex flex-1 overflow-hidden border border-gray-200 rounded-xl bg-white shadow-sm font-sans">
+                                            {/* Folder Sidebar */}
+                                            <div className="w-48 bg-gray-50/50 border-r border-gray-100 flex-shrink-0 flex flex-col pt-3">
+                                                <div className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Categories</div>
+                                                <div className="flex-1 overflow-y-auto px-2 space-y-0.5">
+                                                    {documentCategories.map(cat => {
+                                                        const CatIcon = cat.icon;
+                                                        const isSelected = selectedDocFolder === cat.id;
+                                                        return (
+                                                            <button
+                                                                key={cat.id}
+                                                                onClick={() => setSelectedDocFolder(cat.id)}
+                                                                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-bold transition-all
+                                                                    ${isSelected
+                                                                        ? 'bg-blue-600 text-white shadow-md'
+                                                                        : 'text-gray-500 hover:bg-gray-100'
+                                                                    }`}
+                                                            >
+                                                                <CatIcon className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
+                                                                <span className="truncate">{cat.label}</span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
 
-                                                if (currentDocs.length === 0 && currentOrders.length === 0) {
-                                                    return <p className="col-span-2 text-center py-10 text-gray-400 text-sm italic">No {activeTab} found.</p>;
-                                                }
+                                            {/* Document List */}
+                                            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 bg-white">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3">
+                                                    {(() => {
+                                                        const category = documentCategories.find(c => c.id === selectedDocFolder);
 
-                                                return (
-                                                    <>
-                                                        {/* Render Orders first (Pending Requests) */}
-                                                        {currentOrders.map(order => (
-                                                            <div key={order.id} className="bg-blue-50 border border-blue-100 rounded-lg p-3 flex justify-between items-start">
-                                                                <div className="flex items-center gap-3 min-w-0 flex-1">
-                                                                    <div className="bg-blue-100 p-2 rounded text-blue-500">
-                                                                        <Clock className="w-4 h-4" />
+                                                        // Filter logic
+                                                        const filteredDocs = hubDocuments.filter(doc => {
+                                                            // Folder filter
+                                                            if (selectedDocFolder !== 'all') {
+                                                                if (!category?.types.includes(doc.doc_type)) return false;
+                                                            } else if (activeTab === 'images') {
+                                                                // If in images tab but "all" folder, still filter for images
+                                                                if (!['imaging', 'ekg', 'echo', 'stress_test', 'cardiac_cath'].includes(doc.doc_type)) return false;
+                                                            }
+
+                                                            // Search term filter
+                                                            if (docSearchTerm.trim()) {
+                                                                const term = docSearchTerm.toLowerCase();
+                                                                const name = (doc.filename || doc.file_name || '').toLowerCase();
+                                                                const type = (doc.doc_type || '').toLowerCase();
+                                                                return name.includes(term) || type.includes(term);
+                                                            }
+                                                            return true;
+                                                        });
+
+                                                        if (filteredDocs.length === 0) {
+                                                            return (
+                                                                <div className="col-span-full flex flex-col items-center justify-center py-16 text-gray-400">
+                                                                    <div className="p-4 bg-gray-50 rounded-full mb-3">
+                                                                        <Search className="w-8 h-8 text-gray-200" />
                                                                     </div>
-                                                                    <div className="min-w-0">
-                                                                        <div className="text-sm font-medium text-blue-900 truncate">{order.order_payload?.name || 'Imaging Order'}</div>
-                                                                        <div className="text-[10px] text-blue-400 uppercase font-bold">Ordered: {new Date(order.created_at).toLocaleDateString()}</div>
-                                                                    </div>
+                                                                    <p className="text-sm font-medium">No documents found in this view</p>
+                                                                    <button onClick={() => { setDocSearchTerm(''); setSelectedDocFolder('all'); }} className="mt-2 text-xs text-primary-600 hover:underline">Clear all filters</button>
                                                                 </div>
-                                                                {getStatusBadge(order.status)}
-                                                            </div>
-                                                        ))}
+                                                            );
+                                                        }
 
-                                                        {/* Render Uploaded Documents */}
-                                                        {currentDocs.map(doc => {
+                                                        return filteredDocs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map(doc => {
                                                             let docLink = doc.file_url || doc.file_path || '#';
                                                             if (docLink !== '#' && !docLink.startsWith('http')) {
                                                                 if (docLink.startsWith('uploads/')) docLink = `/api/${docLink}`;
                                                                 else if (docLink.startsWith('/uploads/')) docLink = `/api${docLink}`;
                                                                 else if (!docLink.startsWith('/')) docLink = `/${docLink}`;
                                                             }
+
+                                                            const isImage = ['imaging', 'ekg', 'echo', 'stress_test', 'cardiac_cath'].includes(doc.doc_type) || doc.mime_type?.includes('image');
+
                                                             return (
-                                                                <div key={doc.id} className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md transition-all flex justify-between items-start group">
+                                                                <div key={doc.id} className="group bg-white border border-gray-100 rounded-xl p-3 hover:shadow-md hover:border-primary-100 transition-all flex justify-between items-start">
                                                                     <a href={docLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 min-w-0 flex-1">
-                                                                        <div className="bg-gray-100 p-2 rounded text-gray-500">
-                                                                            {activeTab === 'images' ? <Image className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                                                                        <div className={`p-2 rounded-lg ${isImage ? 'bg-indigo-50 text-indigo-500' : 'bg-amber-50 text-amber-500'}`}>
+                                                                            {isImage ? <Image className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
                                                                         </div>
                                                                         <div className="min-w-0">
-                                                                            <div className="text-sm font-medium text-gray-900 truncate">{doc.filename || doc.file_name}</div>
-                                                                            <div className="text-xs text-gray-400">{new Date(doc.created_at).toLocaleDateString()}</div>
+                                                                            <div className="text-sm font-bold text-gray-900 truncate tracking-tight">{doc.filename || doc.file_name}</div>
+                                                                            <div className="flex items-center gap-2 mt-0.5">
+                                                                                <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-1 py-0.5 rounded uppercase tracking-tighter">{doc.doc_type}</span>
+                                                                                <span className="text-[10px] text-gray-400 font-medium">{format(new Date(doc.created_at), 'MMM d, yyyy')}</span>
+                                                                            </div>
                                                                         </div>
                                                                     </a>
-                                                                    <button onClick={async (e) => {
-                                                                        e.stopPropagation();
-                                                                        if (!confirm('Delete document?')) return;
-                                                                        await documentsAPI.delete(doc.id);
-                                                                        fetchAllData();
-                                                                    }} className="text-gray-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <button
+                                                                        onClick={async (e) => {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                            if (!confirm('Delete document?')) return;
+                                                                            await documentsAPI.delete(doc.id);
+                                                                            fetchAllData();
+                                                                        }}
+                                                                        className="text-gray-300 hover:text-rose-500 p-1.5 opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-50 rounded-lg"
+                                                                        title="Delete Document"
+                                                                    >
                                                                         <Trash2 className="w-4 h-4" />
                                                                     </button>
                                                                 </div>
                                                             );
-                                                        })}
-                                                    </>
-                                                );
-                                            })()}
+                                                        });
+                                                    })()}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
