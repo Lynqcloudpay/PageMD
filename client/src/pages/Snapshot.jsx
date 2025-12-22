@@ -1084,14 +1084,22 @@ const Snapshot = ({ showNotesOnly = false }) => {
             if (uploadResponse.data) {
                 const newPhotoUrl = uploadResponse.data.photoUrl || uploadResponse.data.patient?.photo_url;
 
-                // Update local state immediately for snappy UI using the local base64
-                // We keep this in a separate state to prevent it from being overwritten by refreshPatientData
+                // Keep base64 for instant UI (PatientHeaderPhoto will prefer this)
                 setLocallyUploadedPhoto(capturedPhoto);
 
-                setPatient(prev => ({
-                    ...prev,
-                    photo_url: capturedPhoto
-                }));
+                // Also set patient.photo_url to the server value (so next refresh/path is correct)
+                if (newPhotoUrl) {
+                    setPatient(prev => ({
+                        ...prev,
+                        photo_url: newPhotoUrl
+                    }));
+                } else {
+                    // Fallback to base64 if server didn't return URL
+                    setPatient(prev => ({
+                        ...prev,
+                        photo_url: capturedPhoto
+                    }));
+                }
 
                 // Force version update to bust cache
                 setPhotoVersion(Date.now());
@@ -1144,33 +1152,35 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const photoUrl = useMemo(() => {
         if (!patient?.photo_url) return null;
 
-        let path = patient.photo_url;
+        let raw = String(patient.photo_url).trim();
 
-        // If it's already a data URL (base64) or a blob, return it as is
-        if (path.startsWith('data:') || path.startsWith('blob:')) {
-            return path;
+        // Base64 / blob can be used directly
+        if (raw.startsWith('data:') || raw.startsWith('blob:')) return raw;
+
+        // If backend gave an absolute URL (localhost, old domain, http, etc),
+        // strip it down to just the pathname so we always use current origin (bemypcp.com)
+        try {
+            if (/^https?:\/\//i.test(raw)) {
+                const u = new URL(raw);
+                raw = u.pathname; // drop origin + query entirely
+            }
+        } catch {
+            // ignore parse errors and continue
         }
 
-        // Handle absolute paths by finding the /uploads/ marker
-        if (path.includes('/uploads/')) {
-            const index = path.indexOf('/uploads/');
-            path = path.substring(index); // results in /uploads/...
+        // Now normalize into your API static route
+        if (raw.startsWith('/uploads/')) raw = `/api${raw}`;
+        else if (raw.startsWith('uploads/')) raw = `/api/${raw}`;
+        else if (!raw.startsWith('/')) {
+            // filename only
+            raw = `/api/uploads/patient-photos/${raw}`;
         }
 
-        // Apply /api prefix to any path that looks like it's in uploads
-        if (path.startsWith('/uploads/')) {
-            path = `/api${path}`;
-        } else if (path.startsWith('uploads/')) {
-            path = `/api/${path}`;
-        } else if (!path.startsWith('/') && !path.includes('/')) {
-            // It's just a filename. For patient photos, they are usually in patient-photos/
-            path = `/api/uploads/patient-photos/${path}`;
-        }
-
-        const url = path.startsWith('http')
-            ? path
-            : path.startsWith('/') ? path : `/${path}`;
-        return `${url}?v=${photoVersion}`;
+        // Build an absolute URL on the *current* site origin (HTTPS),
+        // and add/replace v cache param safely (no double ?v=?v=)
+        const u = new URL(raw, window.location.origin);
+        u.searchParams.set('v', String(photoVersion));
+        return u.toString();
     }, [patient?.photo_url, photoVersion]);
 
 
