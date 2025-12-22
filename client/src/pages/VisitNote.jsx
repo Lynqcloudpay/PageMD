@@ -2346,12 +2346,17 @@ const VisitNote = () => {
             {/* Modals */}
             {/* Premium Diagnosis Picker Modal */}
             {showICD10Modal && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-ink-950/40 backdrop-blur-sm">
-                    <DiagnosisPicker
-                        onSelect={(code) => handleAddICD10(code)}
-                        onClose={() => { setShowICD10Modal(false); setEditingDiagnosisIndex(null); }}
-                        existingDiagnoses={diagnoses}
-                    />
+                <div
+                    className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-ink-950/40 backdrop-blur-sm"
+                    onClick={() => { setShowICD10Modal(false); setEditingDiagnosisIndex(null); }}
+                >
+                    <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl">
+                        <DiagnosisPicker
+                            onSelect={(code) => handleAddICD10(code)}
+                            onClose={() => { setShowICD10Modal(false); setEditingDiagnosisIndex(null); }}
+                            existingDiagnoses={diagnoses}
+                        />
+                    </div>
                 </div>
             )}
             <OrderModal

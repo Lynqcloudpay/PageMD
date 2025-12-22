@@ -200,18 +200,21 @@ const DiagnosisPicker = ({ onSelect, onClose, existingDiagnoses = [] }) => {
 
     return (
         <div
-            className="flex flex-col bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden max-w-2xl w-full mx-auto"
+            className="flex flex-col bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden max-w-2xl w-full mx-auto outline-none"
             onKeyDown={handleKeyDown}
+            tabIndex={0}
+            autoFocus
         >
             {/* Search Header */}
-            <div className="p-4 bg-gray-50 border-b border-gray-200">
-                <div className="relative group">
+            <div className="p-4 bg-gray-50 border-b border-gray-200 flex items-center gap-3">
+                <div className="relative group flex-1">
                     <Search className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${loading ? 'text-primary-500' : 'text-gray-400 group-focus-within:text-primary-500'}`} />
                     <input
                         ref={inputRef}
                         type="text"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
+                        onKeyDown={handleKeyDown}
                         placeholder="Search ICD-10 by code or description..."
                         className="w-full pl-12 pr-10 py-3 bg-white border border-gray-200 rounded-xl text-md focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all shadow-sm"
                     />
@@ -227,6 +230,13 @@ const DiagnosisPicker = ({ onSelect, onClose, existingDiagnoses = [] }) => {
                         </button>
                     )}
                 </div>
+                <button
+                    onClick={onClose}
+                    className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-400 hover:text-gray-600"
+                    title="Close (Esc)"
+                >
+                    <X className="w-6 h-6" />
+                </button>
             </div>
 
             {/* Tabs */}
