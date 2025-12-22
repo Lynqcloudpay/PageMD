@@ -25,14 +25,16 @@ async function importLoinc() {
         console.error(`❌ Error: File not found at ${filePath}`);
         process.exit(1);
     }
-
-    console.log(`📂 Starting LOINC import from ${filePath} (Version: ${version})`);
+    const stats = fs.statSync(filePath);
+    console.log(`📂 Starting LOINC import from ${filePath} (Version: ${version}) - ${stats.size} bytes`);
 
     const fileStream = fs.createReadStream(filePath);
+    fileStream.on('error', err => console.error('Stream Error:', err));
     const rl = readline.createInterface({
         input: fileStream,
         crlfDelay: Infinity
     });
+    console.log('Readline interface created, entering loop...');
 
     let count = 0;
     let headers = null;
