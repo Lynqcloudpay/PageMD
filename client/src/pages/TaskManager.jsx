@@ -51,7 +51,17 @@ const TaskManager = () => {
       ]);
 
       if (usersRes?.data) {
-        setUsers(usersRes.data);
+        // Handle different response structures (array, paginated object, etc.)
+        if (Array.isArray(usersRes.data)) {
+          setUsers(usersRes.data);
+        } else if (usersRes.data.users && Array.isArray(usersRes.data.users)) {
+          setUsers(usersRes.data.users);
+        } else if (usersRes.data.data && Array.isArray(usersRes.data.data)) {
+          setUsers(usersRes.data.data);
+        } else {
+          console.warn('Users API returned unexpected format:', usersRes.data);
+          setUsers([]);
+        }
       }
 
       const inboxTasks = (inboxRes.data || []).map(item => ({
@@ -639,7 +649,7 @@ const TaskManager = () => {
                   >
                     <option value="">Select Staff...</option>
                     <option value={user?.id}>Me (Personal Task)</option>
-                    {users.filter(u => u.id !== user?.id).map(u => (
+                    {(Array.isArray(users) ? users : []).filter(u => u.id !== user?.id).map(u => (
                       <option key={u.id} value={u.id}>{u.first_name} {u.last_name}</option>
                     ))}
                   </select>
