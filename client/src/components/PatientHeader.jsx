@@ -43,6 +43,8 @@ const PatientHeader = () => {
     const [webcamStream, setWebcamStream] = useState(null);
     const [capturedPhoto, setCapturedPhoto] = useState(null);
     const [photoVersion, setPhotoVersion] = useState(0); // Track photo updates for cache busting
+    const [imgError, setImgError] = useState(false);
+    const [imgLoadAttempt, setImgLoadAttempt] = useState(0);
     const videoRef = useRef(null);
     const fileInputRef = useRef(null);
 
@@ -101,10 +103,10 @@ const PatientHeader = () => {
                 severity: allergyForm.severity || null,
                 onsetDate: allergyForm.onsetDate || null
             });
-            
+
             // Refresh patient data
             await refreshPatientData();
-            
+
             setAllergyForm({ allergen: '', reaction: '', severity: '', onsetDate: '' });
             setShowAllergyModal(false);
             showToast('Allergy added successfully');
@@ -128,10 +130,10 @@ const PatientHeader = () => {
                 route: medicationForm.route.trim() || null,
                 startDate: medicationForm.startDate || null
             });
-            
+
             // Refresh patient data
             await refreshPatientData();
-            
+
             setMedicationForm({ medicationName: '', dosage: '', frequency: '', route: '', startDate: '' });
             setShowMedicationModal(false);
             showToast('Medication added successfully');
@@ -146,7 +148,7 @@ const PatientHeader = () => {
         try {
             const response = await patientsAPI.get(id);
             const apiPatient = response.data;
-            
+
             const calculateAge = (dob) => {
                 if (!dob) return null;
                 const birthDate = new Date(dob);
@@ -158,12 +160,12 @@ const PatientHeader = () => {
                 }
                 return age;
             };
-            
+
             // Check if photo_url has changed
             const previousPhotoUrl = patient?.photo_url;
             const newPhotoUrl = apiPatient.photo_url || null;
             const photoChanged = previousPhotoUrl !== newPhotoUrl;
-            
+
             const patientData = {
                 id: apiPatient.id,
                 name: `${apiPatient.first_name} ${apiPatient.last_name}`,
@@ -189,7 +191,7 @@ const PatientHeader = () => {
                 emergency_contact_relationship: apiPatient.emergency_contact_relationship || null
             };
             setPatient(patientData);
-            
+
             // Increment photo version if photo URL changed
             if (photoChanged) {
                 setPhotoVersion(prev => prev + 1);
@@ -206,7 +208,7 @@ const PatientHeader = () => {
         const currentPhone = patient?.phone ? formatPhone(patient.phone) : '';
         const currentPharmacyPhone = patient?.pharmacy_phone ? formatPhone(patient.pharmacy_phone) : '';
         const currentEmergencyPhone = patient?.emergency_contact_phone ? formatPhone(patient.emergency_contact_phone) : '';
-        
+
         setDemographicsForm({
             phone: currentPhone,
             email: patient?.email || '',
@@ -227,10 +229,10 @@ const PatientHeader = () => {
 
     const handleSaveDemographics = async () => {
         if (!id) return;
-        
+
         try {
             const updateData = {};
-            
+
             // Only update the field being edited
             // Convert to camelCase for API compatibility
             switch (demographicsField) {
@@ -266,7 +268,7 @@ const PatientHeader = () => {
                     updateData.emergencyContactRelationship = demographicsForm.emergency_contact_relationship || null;
                     break;
             }
-            
+
             console.log('Updating patient with data:', updateData);
             await patientsAPI.update(id, updateData);
             await refreshPatientData();
@@ -327,14 +329,14 @@ const PatientHeader = () => {
                 e.target.value = ''; // Reset file input
                 return;
             }
-            
+
             // Validate file size (5MB max)
             if (file.size > 5 * 1024 * 1024) {
                 showToast('File size must be less than 5MB', 'error');
                 e.target.value = ''; // Reset file input
                 return;
             }
-            
+
             const reader = new FileReader();
             reader.onloadend = () => {
                 console.log('File read complete, setting captured photo');
@@ -362,7 +364,7 @@ const PatientHeader = () => {
             console.log('Saving photo for patient:', id);
             const uploadResponse = await patientsAPI.uploadPhotoBase64(id, capturedPhoto);
             console.log('Photo upload response:', uploadResponse);
-            
+
             // Update patient state with new photo_url immediately
             if (uploadResponse.data?.photoUrl || uploadResponse.data?.patient?.photo_url) {
                 const newPhotoUrl = uploadResponse.data?.photoUrl || uploadResponse.data?.patient?.photo_url;
@@ -373,10 +375,10 @@ const PatientHeader = () => {
                 // Increment photo version to force cache bust
                 setPhotoVersion(prev => prev + 1);
             }
-            
+
             // Refresh patient data to get updated photo_url (but don't await to avoid blocking UI)
             refreshPatientData().catch(err => console.error('Error refreshing patient data:', err));
-            
+
             setShowPhotoModal(false);
             setPhotoMode(null);
             setCapturedPhoto(null);
@@ -398,13 +400,13 @@ const PatientHeader = () => {
     useEffect(() => {
         const fetchPatient = async () => {
             if (!id) return;
-            
+
             setLoading(true);
             try {
                 // Fetch full patient data
                 const response = await patientsAPI.get(id);
                 const apiPatient = response.data;
-                
+
                 // Calculate age
                 const calculateAge = (dob) => {
                     if (!dob) return null;
@@ -417,16 +419,16 @@ const PatientHeader = () => {
                     }
                     return age;
                 };
-                    
-                    const patientData = {
-                        id: apiPatient.id,
-                        name: `${apiPatient.first_name} ${apiPatient.last_name}`,
+
+                const patientData = {
+                    id: apiPatient.id,
+                    name: `${apiPatient.first_name} ${apiPatient.last_name}`,
                     first_name: apiPatient.first_name,
                     last_name: apiPatient.last_name,
-                        mrn: apiPatient.mrn,
-                        dob: apiPatient.dob,
+                    mrn: apiPatient.mrn,
+                    dob: apiPatient.dob,
                     age: calculateAge(apiPatient.dob),
-                        sex: apiPatient.sex,
+                    sex: apiPatient.sex,
                     photo_url: apiPatient.photo_url || null,
                     phone: apiPatient.phone || null,
                     email: apiPatient.email || null,
@@ -442,13 +444,13 @@ const PatientHeader = () => {
                     emergency_contact_phone: apiPatient.emergency_contact_phone || null,
                     emergency_contact_relationship: apiPatient.emergency_contact_relationship || null
                 };
-                
-                    setPatient(patientData);
-                    // Add to tabs
-                    addTab(patientData);
-                    // Update tab path based on current route
-                    const currentPath = window.location.pathname;
-                    updateTabPath(apiPatient.id, currentPath);
+
+                setPatient(patientData);
+                // Add to tabs
+                addTab(patientData);
+                // Update tab path based on current route
+                const currentPath = window.location.pathname;
+                updateTabPath(apiPatient.id, currentPath);
             } catch (error) {
                 // Fallback to local storage
                 const localPatient = getPatient(id);
@@ -501,11 +503,52 @@ const PatientHeader = () => {
     // Generate photo URL with cache-busting (must be before early returns)
     const photoUrl = useMemo(() => {
         if (!patient?.photo_url) return null;
-        const baseUrl = patient.photo_url.startsWith('http') 
-            ? patient.photo_url 
-            : `http://localhost:3000${patient.photo_url}`;
-        return `${baseUrl}?v=${photoVersion}`;
+
+        let raw = String(patient.photo_url).trim();
+
+        // Base64 / blob can be used directly
+        if (raw.startsWith('data:') || raw.startsWith('blob:')) return raw;
+
+        // If backend gave an absolute URL (localhost, old domain, http, etc),
+        // strip it down to just the pathname so we always use current origin (bemypcp.com)
+        try {
+            if (/^https?:\/\//i.test(raw)) {
+                const u = new URL(raw);
+                raw = u.pathname; // drop origin + query entirely
+            }
+        } catch {
+            // ignore parse errors and continue
+        }
+
+        // Now normalize into your API static route
+        if (raw.startsWith('/api/uploads/')) {
+            // already correct
+        } else if (raw.startsWith('/uploads/')) {
+            raw = `/api${raw}`;
+        } else if (raw.startsWith('uploads/')) {
+            raw = `/api/${raw}`;
+        } else if (!raw.startsWith('/')) {
+            // filename only
+            raw = `/api/uploads/patient-photos/${raw}`;
+        }
+
+        // Build an absolute URL on the *current* site origin (HTTPS),
+        // and add/replace v cache param safely (no double ?v=?v=)
+        try {
+            const u = new URL(raw, window.location.origin);
+            u.searchParams.set('v', String(photoVersion));
+            return u.toString();
+        } catch (e) {
+            console.error('Error constructing photo URL:', e);
+            return raw;
+        }
     }, [patient?.photo_url, photoVersion]);
+
+    // Reset error state when photo URL changes
+    useEffect(() => {
+        setImgError(false);
+        setImgLoadAttempt(0);
+    }, [photoUrl]);
 
     if (loading || !patient) {
         return (
@@ -544,19 +587,21 @@ const PatientHeader = () => {
                                 className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-300 transition-all cursor-pointer relative group overflow-hidden flex-shrink-0 ring-2 ring-white shadow-md"
                                 title="Click to add/change photo"
                             >
-                                {photoUrl ? (
+                                {photoUrl && !imgError ? (
                                     <>
-                                        <img 
+                                        <img
                                             src={photoUrl}
                                             alt={patient?.first_name || 'Patient'}
                                             className="w-full h-full object-cover rounded-full"
-                                            key={`${patient.photo_url}-${photoVersion}`}
+                                            key={`${patient.photo_url}-${photoVersion}-${imgLoadAttempt}`}
                                             onError={(e) => {
-                                                console.error('Error loading patient photo:', patient.photo_url);
-                                                e.target.style.display = 'none';
-                                            }}
-                                            onLoad={(e) => {
-                                                e.target.style.display = 'block';
+                                                console.error('Error loading patient photo:', e.target.src);
+                                                if (imgLoadAttempt < 3 && !photoUrl.startsWith('data:')) {
+                                                    console.log(`Retrying photo load (attempt ${imgLoadAttempt + 1}/3)`);
+                                                    setTimeout(() => setImgLoadAttempt(prev => prev + 1), 1000);
+                                                } else {
+                                                    setImgError(true);
+                                                }
                                             }}
                                         />
                                         <div className="absolute inset-0 hidden items-center justify-center bg-black bg-opacity-50 group-hover:flex transition-opacity rounded-full">
@@ -572,10 +617,10 @@ const PatientHeader = () => {
                                     </>
                                 )}
                             </button>
-                            
+
                             {/* Patient Name and Info */}
                             <div className="min-w-0">
-                                <Link 
+                                <Link
                                     to={`/patient/${id}/snapshot`}
                                     className="text-2xl font-bold text-gray-900 cursor-pointer hover:text-primary-700 transition-colors mb-1 block"
                                 >
@@ -592,7 +637,7 @@ const PatientHeader = () => {
                                 )}
                             </div>
                         </div>
-                        
+
                         {/* Right: Actions */}
                         <div className="flex items-center space-x-1 flex-shrink-0">
                             <button onClick={() => setActiveModal('rx')} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="e-Prescribe">
@@ -610,13 +655,13 @@ const PatientHeader = () => {
                         </div>
                     </div>
                 </div>
-                
+
                 {/* Demographics Section */}
                 {patient && (
                     <div className="px-6 py-1.5">
                         <div className="grid grid-cols-3 lg:grid-cols-6 gap-1.5">
                             {/* Phone */}
-                            <div 
+                            <div
                                 onClick={() => handleOpenDemographics('phone')}
                                 className="group cursor-pointer bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-primary-300 rounded p-1 transition-all relative text-center"
                             >
@@ -631,7 +676,7 @@ const PatientHeader = () => {
                             </div>
 
                             {/* Email */}
-                            <div 
+                            <div
                                 onClick={() => handleOpenDemographics('email')}
                                 className="group cursor-pointer bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-primary-300 rounded p-1 transition-all relative text-center"
                             >
@@ -646,7 +691,7 @@ const PatientHeader = () => {
                             </div>
 
                             {/* Address */}
-                            <div 
+                            <div
                                 onClick={() => handleOpenDemographics('address')}
                                 className="group cursor-pointer bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-primary-300 rounded p-1 transition-all relative text-center"
                             >
@@ -661,7 +706,7 @@ const PatientHeader = () => {
                             </div>
 
                             {/* Insurance */}
-                            <div 
+                            <div
                                 onClick={() => handleOpenDemographics('insurance')}
                                 className="group cursor-pointer bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-primary-300 rounded p-1 transition-all relative text-center"
                             >
@@ -681,7 +726,7 @@ const PatientHeader = () => {
                             </div>
 
                             {/* Pharmacy */}
-                            <div 
+                            <div
                                 onClick={() => handleOpenDemographics('pharmacy')}
                                 className="group cursor-pointer bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-primary-300 rounded p-1 transition-all relative text-center"
                             >
@@ -707,7 +752,7 @@ const PatientHeader = () => {
 
                             {/* Emergency Contact */}
                             {(patient.emergency_contact_name || patient.emergency_contact_phone) && (
-                                <div 
+                                <div
                                     onClick={() => handleOpenDemographics('emergency')}
                                     className="group cursor-pointer bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-primary-300 rounded p-1 transition-all relative text-center"
                                 >
@@ -768,7 +813,7 @@ const PatientHeader = () => {
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
-                        
+
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-ink-700 mb-1">Allergen *</label>
@@ -861,7 +906,7 @@ const PatientHeader = () => {
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
-                        
+
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-ink-700 mb-1">Medication Name *</label>
@@ -979,7 +1024,7 @@ const PatientHeader = () => {
                             onChange={handleFileUpload}
                             className="hidden"
                         />
-                        
+
                         {!photoMode ? (
                             <div className="space-y-4">
                                 <p className="text-sm text-ink-600 mb-4">Choose how you want to add the photo:</p>
@@ -1171,7 +1216,7 @@ const PatientHeader = () => {
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
-                        
+
                         <div className="space-y-4">
                             {/* Phone */}
                             {demographicsField === 'phone' && (
