@@ -9,29 +9,23 @@ router.get('/search', authenticate, async (req, res) => {
     try {
         const { q, limit = 20 } = req.query;
         if (!q || q.trim().length < 2) {
-            // Return top usage codes if search is empty/short
-            const topCodes = await pool.query(`
-                SELECT c.id, c.code, c.description, c.is_billable
-                FROM icd10_codes c
-                LEFT JOIN icd10_usage u ON c.id = u.icd10_id AND u.user_id = $1
-                WHERE c.is_active = true
-                ORDER BY u.use_count DESC NULLS LAST, c.code ASC
-                LIMIT $2
-            `, [req.user.id, limit]);
-            return res.json(topCodes.rows);
+            // Return nothing for very short queries to avoid "weird" suggestions
+            // and reduce lag on first click.
+            return res.json([]);
         }
 
         const searchTerm = q.trim();
         const searchWords = searchTerm.split(/\s+/).filter(t => t.length > 0);
-        // Using a more resilient approach for TS query - escape single quotes and join with &
         const tsQuery = searchWords.map(t => `${t.replace(/'/g, "''")}:*`).join(' & ');
+        const isLongQuery = searchWords.length >= 3 || searchTerm.length > 15;
 
         const results = await pool.query(`
             SELECT 
                 c.id, c.code, c.description, c.is_billable,
                 (c.code = $1) as exact_match,
+                (c.description ILIKE $1 || '%') as phrase_start,
                 CASE 
-                    WHEN (c.code ~ '^[OPZ]') AND NOT ($1 ~* '(pregnancy|neonatal|newborn|history|screening)') THEN 1
+                    WHEN (c.code ~ '^[OPZ]') AND NOT ($1 ~* '(pregnancy|neonatal|newborn|history|screening)') THEN 2
                     ELSE 0
                 END as specialty_penalty,
                 ts_rank_cd(to_tsvector('english', c.description), to_tsquery('english', $2)) as rank,
@@ -43,24 +37,25 @@ router.get('/search', authenticate, async (req, res) => {
               AND (
                 c.code ILIKE $1 || '%'
                 OR to_tsvector('english', c.description) @@ to_tsquery('english', $2)
-                OR c.description % $1
                 OR c.description ILIKE '%' || $1 || '%'
               )
             ORDER BY 
                 (c.code = $1) DESC,
                 (c.code ILIKE $1 || '%') DESC,
+                -- If it's a long/specific query, rank (relevance) is the #1 priority
+                (CASE WHEN $5 = true THEN rank ELSE 0 END) DESC,
                 specialty_penalty ASC,
-                (c.is_billable AND c.description ILIKE $1 || '%') DESC,
-                (c.description ILIKE $1 || '%') DESC,
-                (c.is_billable AND c.description ILIKE '%' || $1 || '%') DESC,
+                phrase_start DESC,
+                (c.is_billable AND rank > 0.05) DESC,
                 (c.description ILIKE '%' || $1 || '%') DESC,
-                (CASE WHEN LENGTH(c.description) < 40 THEN 0 ELSE 1 END) ASC,
-                (CASE WHEN c.description ILIKE '%unspecified%' OR c.description ILIKE '%essential%' THEN 0 ELSE 1 END) ASC,
-                LENGTH(c.description) ASC,
+                -- Only favor shortness for very brief queries
+                (CASE WHEN $5 = false AND LENGTH(c.description) < 40 THEN 0 ELSE 1 END) ASC,
+                (CASE WHEN $5 = false AND (c.description ILIKE '%unspecified%' OR c.description ILIKE '%essential%') THEN 0 ELSE 1 END) ASC,
                 rank DESC,
-                sim DESC
+                use_count DESC,
+                LENGTH(c.description) ASC
             LIMIT $3
-        `, [searchTerm, tsQuery, limit, req.user.id]);
+        `, [searchTerm, tsQuery, limit, req.user.id, isLongQuery]);
 
         res.json(results.rows);
     } catch (error) {
