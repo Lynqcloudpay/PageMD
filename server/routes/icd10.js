@@ -16,8 +16,8 @@ router.get('/search', authenticate, async (req, res) => {
 
         const searchTerm = q.trim();
         const searchWords = searchTerm.split(/\s+/).filter(t => t.length > 0);
-        // Add a regex for whole-word matching to improve precision
-        const wholeWordRegex = searchWords.map(w => `\\y${w}\\y`).join('.*');
+        // Better whole-word regex: match the word itself or follows a space/parenthesis
+        const wholeWordRegex = searchWords.map(w => `(\\m|\\()${w}(\\M|\\))`).join('.*');
         const tsQuery = searchWords.map(t => `${t.replace(/'/g, "''")}:*`).join(' & ');
 
         const results = await pool.query(`
@@ -34,19 +34,20 @@ router.get('/search', authenticate, async (req, res) => {
               )
             ORDER BY 
                 (c.code = $1) DESC,
-                -- 1. Priority: Whole word match + Billable (e.g. "Hypertension" -> I10)
-                (c.description ~* $5 AND c.is_billable) DESC,
-                -- 2. Priority: Standard diagnoses (Essential, Unspecified, etc)
-                (c.description ~* '\\y(unspecified|essential|primary|uncomplicated)\\y' AND c.is_billable) DESC,
-                -- 3. Priority: Starts with the term
-                (c.description ILIKE $1 || '%') DESC,
-                -- 4. Priority: Full-text rank for specificity
+                -- 1. Direct Match: The most common clinical term (Essential/Primary/Unspecified/Uncomplicated)
+                (c.is_billable AND c.description ~* $5 AND c.description ~* '\\y(unspecified|essential|primary|uncomplicated)\\y') DESC,
+                -- 2. Good Match: Term as whole word + Billable
+                (c.is_billable AND c.description ~* $5) DESC,
+                -- 3. Favor Billable over non-billable for the same level of match
+                (c.is_billable AND c.description ILIKE $1 || '%') DESC,
+                -- 4. Favor shorter descriptions for general terms
+                (CASE WHEN LENGTH($1) < 15 AND LENGTH(c.description) < 40 THEN 0 ELSE 1 END) ASC,
+                -- 5. Full-text rank for general relevance
                 ts_rank_cd(to_tsvector('english', c.description), to_tsquery('english', $2)) DESC,
-                -- 5. Demote specialty folders heavily unless searched
+                -- 6. Demote specialty/complicating chapters
                 (CASE WHEN c.code ~ '^[OPZ]' AND NOT ($1 ~* '(pregnancy|neonatal|newborn|history|screening)') THEN 1 ELSE 0 END) ASC,
-                -- 6. Demote complications unless explicitly searched (with, due to, secondary)
+                -- 7. Demote specific complications unless explicitly searched
                 (CASE WHEN c.description ~* '\\y(with|due to|secondary)\\y' AND NOT ($1 ~* '(with|due|secondary)') THEN 1 ELSE 0 END) ASC,
-                -- 7. Favor shorter descriptions
                 LENGTH(c.description) ASC,
                 c.is_billable DESC,
                 c.code ASC

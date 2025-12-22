@@ -47,20 +47,14 @@ router.get('/patient/:patientId', async (req, res) => {
       }
     }));
 
-    // Get user's favorites if logged in
+    // Get user's favorites if logged in (disabled until table is standardized)
     let favoriteIds = new Set();
+    /*
     if (req.user?.id) {
-      try {
-        const favoritesResult = await pool.query(
-          'SELECT favorite_id FROM favorites WHERE user_id = $1 AND favorite_type = $2',
-          [req.user.id, 'order']
-        );
-        favoriteIds = new Set(favoritesResult.rows.map(row => String(row.favorite_id)));
-      } catch (favError) {
-        console.warn('Error fetching favorites:', favError);
-      }
+       // favoriteIds check removed temporarily to prevent SQL errors
     }
-    
+    */
+
     // Add isFavorite flag to each order
     const ordersWithFavorites = orders.map(order => ({
       ...order,
@@ -78,7 +72,7 @@ router.get('/patient/:patientId', async (req, res) => {
 router.get('/visit/:visitId', async (req, res) => {
   try {
     const { visitId } = req.params;
-    
+
     // Get orders
     const ordersResult = await pool.query(
       `SELECT o.*, u.first_name as ordered_by_first_name, u.last_name as ordered_by_last_name
@@ -101,7 +95,7 @@ router.get('/visit/:visitId', async (req, res) => {
 
     // Get patient ID from first order (all orders should have same patient)
     const patientId = ordersResult.rows.length > 0 ? ordersResult.rows[0].patient_id : null;
-    
+
     // Get patient's active problems as fallback diagnoses for orders without diagnoses
     let fallbackDiagnoses = [];
     if (patientId) {
@@ -135,7 +129,7 @@ router.get('/visit/:visitId', async (req, res) => {
           name: d.problem_name || d.name,
           icd10Code: d.icd10_code
         }));
-        
+
         // If order has no diagnoses, use fallback diagnoses from patient's active problems
         if (diagnoses.length === 0 && fallbackDiagnoses.length > 0) {
           diagnoses = fallbackDiagnoses.map(d => ({
@@ -174,7 +168,7 @@ router.get('/visit/:visitId', async (req, res) => {
           JOIN problems pr ON od.problem_id = pr.id
           WHERE od.order_id = $1 AND od.order_type = $2
         `, [referral.id, 'referral']);
-        
+
         diagnoses = diagnosesResult.rows.map(d => ({
           id: d.id,
           name: d.problem_name || d.name,
@@ -217,7 +211,7 @@ router.get('/visit/:visitId', async (req, res) => {
 // Create order - IMPROVED VERSION
 router.post('/', requirePermission('orders:create'), async (req, res) => {
   const client = await pool.connect();
-  
+
   // --- helpers ---
   const normalizeOrderType = (t) => {
     if (!t) return t;
@@ -290,18 +284,18 @@ router.post('/', requirePermission('orders:create'), async (req, res) => {
 
     // Validate required fields
     if (!patientId) {
-      await client.query('ROLLBACK').catch(() => {});
+      await client.query('ROLLBACK').catch(() => { });
       return res.status(400).json({ error: 'Patient ID is required' });
     }
 
     if (!orderType) {
-      await client.query('ROLLBACK').catch(() => {});
+      await client.query('ROLLBACK').catch(() => { });
       return res.status(400).json({ error: 'Order type is required' });
     }
 
     const allowedOrderTypes = ['lab', 'imaging', 'prescription', 'referral', 'procedure'];
     if (!allowedOrderTypes.includes(orderType)) {
-      await client.query('ROLLBACK').catch(() => {});
+      await client.query('ROLLBACK').catch(() => { });
       return res.status(400).json({
         error: `Invalid order type: ${orderTypeRaw}. Must be one of: ${allowedOrderTypes.join(', ')}`
       });
@@ -309,14 +303,14 @@ router.post('/', requirePermission('orders:create'), async (req, res) => {
 
     // ✅ IMPORTANT FIX: allow diagnosisObjects as satisfying diagnosis requirement
     if ((diagnosisIds.length === 0) && (diagnosisObjects.length === 0)) {
-      await client.query('ROLLBACK').catch(() => {});
+      await client.query('ROLLBACK').catch(() => { });
       return res.status(400).json({
         error: 'At least one diagnosis is required (diagnosisIds or diagnosisObjects).'
       });
     }
 
     if (!req.user?.id) {
-      await client.query('ROLLBACK').catch(() => {});
+      await client.query('ROLLBACK').catch(() => { });
       return res.status(401).json({ error: 'User authentication required' });
     }
 
@@ -377,7 +371,7 @@ router.post('/', requirePermission('orders:create'), async (req, res) => {
 
     // ✅ If still nothing, throw the same error but now you'll know WHY
     if (problemIds.size === 0) {
-      await client.query('ROLLBACK').catch(() => {});
+      await client.query('ROLLBACK').catch(() => { });
       return res.status(400).json({
         error: 'At least one valid diagnosis is required. The provided diagnosis IDs are invalid or do not exist in the database.',
         details: process.env.NODE_ENV === 'development'
@@ -410,7 +404,7 @@ router.post('/', requirePermission('orders:create'), async (req, res) => {
     // Non-blocking audit
     try {
       await logAudit(req.user.id, 'create_order', 'order', order.id, { orderType, diagnosisCount: problemIds.size }, req.ip);
-    } catch {}
+    } catch { }
 
     return res.status(201).json({
       ...order,
@@ -421,7 +415,7 @@ router.post('/', requirePermission('orders:create'), async (req, res) => {
       }))
     });
   } catch (error) {
-    await client.query('ROLLBACK').catch(() => {});
+    await client.query('ROLLBACK').catch(() => { });
     console.error('Error creating order:', error);
     return res.status(500).json({
       error: 'Failed to create order',
@@ -466,7 +460,7 @@ router.put('/:id', requirePermission('orders:create'), async (req, res) => {
       updates.push(`reviewed = $${paramIndex}`);
       values.push(reviewed);
       paramIndex++;
-      
+
       if (reviewed) {
         updates.push(`reviewed_at = CURRENT_TIMESTAMP`);
         updates.push(`reviewed_by = $${paramIndex}`);
@@ -480,9 +474,9 @@ router.put('/:id', requirePermission('orders:create'), async (req, res) => {
       // IMPORTANT: Always preserve all previous comments for legal record keeping
       const currentOrder = await pool.query('SELECT comments FROM orders WHERE id = $1', [id]);
       let existingComments = currentOrder.rows[0]?.comments || [];
-      
+
       console.log('Current order comments before update:', existingComments);
-      
+
       // Parse existing comments if they're stored as a string
       if (typeof existingComments === 'string') {
         try {
@@ -493,32 +487,32 @@ router.put('/:id', requirePermission('orders:create'), async (req, res) => {
           existingComments = [];
         }
       }
-      
+
       // Ensure existingComments is an array
       if (!Array.isArray(existingComments)) {
         console.warn('Existing comments is not an array, resetting:', existingComments);
         existingComments = [];
       }
-      
+
       console.log('Existing comments count:', existingComments.length);
-      
+
       const newComment = {
         comment: comment.trim(),
         timestamp: new Date().toISOString(),
         userId: req.user.id,
         userName: `${req.user.first_name} ${req.user.last_name}` || 'Unknown'
       };
-      
+
       // Append new comment to existing comments (never delete previous comments)
       const updatedComments = [...existingComments, newComment];
-      
+
       console.log('Updated comments count:', updatedComments.length);
       console.log('All comments:', JSON.stringify(updatedComments, null, 2));
-      
+
       updates.push(`comments = $${paramIndex}`);
       values.push(JSON.stringify(updatedComments));
       paramIndex++;
-      
+
       // Also update the legacy comment field for backward compatibility (keep most recent)
       updates.push(`comment = $${paramIndex}`);
       values.push(comment.trim());
@@ -561,17 +555,17 @@ router.post('/:id/favorite', async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
-    
+
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });
     }
-    
+
     // Check if already favorited
     const existing = await pool.query(
       'SELECT id FROM favorites WHERE user_id = $1 AND favorite_type = $2 AND favorite_id = $3',
       [userId, 'order', id]
     );
-    
+
     if (existing.rows.length > 0) {
       // Remove favorite
       await pool.query(
@@ -596,34 +590,34 @@ router.post('/:id/favorite', async (req, res) => {
 // Delete order
 router.delete('/:id', requirePermission('orders:create'), async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     const { id } = req.params;
-    
+
     // Check if order exists
     const existingOrder = await client.query('SELECT id, visit_id FROM orders WHERE id = $1', [id]);
-    
+
     if (existingOrder.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Order not found' });
     }
-    
+
     const order = existingOrder.rows[0];
-    
+
     // Delete order_diagnoses first (foreign key constraint)
     await client.query('DELETE FROM order_diagnoses WHERE order_id = $1', [id]);
-    
+
     // Delete the order
     await client.query('DELETE FROM orders WHERE id = $1 RETURNING *', [id]);
-    
+
     await client.query('COMMIT');
     await logAudit(req.user.id, 'delete_order', 'order', id, { visitId: order.visit_id }, req.ip);
-    
+
     res.json({ message: 'Order deleted successfully' });
   } catch (error) {
-    await client.query('ROLLBACK').catch(() => {});
+    await client.query('ROLLBACK').catch(() => { });
     console.error('Error deleting order:', error);
     res.status(500).json({ error: 'Failed to delete order' });
   } finally {
