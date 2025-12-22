@@ -1,5 +1,9 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 require('dotenv').config();
+
+// Override DATE parser (OID 1082) to return date as string (YYYY-MM-DD)
+// This prevents timezone-related date shifting (e.g. DOB shifting back one day)
+types.setTypeParser(1082, (stringValue) => stringValue);
 
 // Use DATABASE_URL if available (production), otherwise use individual env vars
 const pool = process.env.DATABASE_URL
