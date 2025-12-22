@@ -45,14 +45,21 @@ CREATE TABLE IF NOT EXISTS orders_catalog (
 CREATE INDEX IF NOT EXISTS idx_orders_catalog_type ON orders_catalog(type);
 CREATE INDEX IF NOT EXISTS idx_orders_catalog_loinc ON orders_catalog(loinc_code);
 CREATE INDEX IF NOT EXISTS idx_orders_catalog_vendor ON orders_catalog(vendor, vendor_code);
--- GIN Index for Search
-CREATE INDEX IF NOT EXISTS idx_orders_catalog_search ON orders_catalog USING GIN (
-    to_tsvector('english', 
+-- Create an immutable function for search vector concatenation
+CREATE OR REPLACE FUNCTION orders_catalog_search_vector(name text, synonyms text[], category text, instructions text)
+RETURNS tsvector AS $$
+BEGIN
+    RETURN to_tsvector('english', 
         name || ' ' || 
         array_to_string(synonyms, ' ') || ' ' || 
         COALESCE(category, '') || ' ' || 
         COALESCE(instructions, '')
-    )
+    );
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+CREATE INDEX IF NOT EXISTS idx_orders_catalog_search ON orders_catalog USING GIN (
+    orders_catalog_search_vector(name, synonyms, category, instructions)
 );
 
 -- 3. Usage Tracking
