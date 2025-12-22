@@ -23,7 +23,8 @@ router.get('/search', authenticate, async (req, res) => {
 
         const searchTerm = q.trim();
         const searchWords = searchTerm.split(/\s+/).filter(t => t.length > 0);
-        const tsQuery = searchWords.map(t => `${t}:*`).join(' & ');
+        // Using a more resilient approach for TS query - escape single quotes and join with &
+        const tsQuery = searchWords.map(t => `${t.replace(/'/g, "''")}:*`).join(' & ');
 
         const results = await pool.query(`
             SELECT 
@@ -32,7 +33,6 @@ router.get('/search', authenticate, async (req, res) => {
                 (c.code ILIKE $1 || '%') as code_prefix,
                 (c.description ILIKE $1 || '%') as desc_prefix,
                 (c.description ILIKE '%' || $1 || '%') as desc_contains,
-                -- Penalize 'complicating' or 'specialty' chapters unless explicitly searched
                 CASE 
                     WHEN (c.code ~ '^[OPZ]') AND NOT ($1 ~* '(pregnancy|neonatal|newborn|history|screening)') THEN 1
                     ELSE 0
@@ -47,18 +47,20 @@ router.get('/search', authenticate, async (req, res) => {
                 c.code ILIKE $1 || '%'
                 OR to_tsvector('english', c.description) @@ to_tsquery('english', $2)
                 OR c.description % $1
+                OR c.description ILIKE '%' || $1 || '%'
               )
             ORDER BY 
                 exact_code DESC,
                 code_prefix DESC,
                 specialty_penalty ASC,
                 (c.is_billable AND desc_prefix) DESC,
-                -- Strong preference for SHORTER, more general names
-                (CASE WHEN LENGTH(c.description) < 30 THEN 0 ELSE 1 END) ASC,
+                (desc_prefix) DESC,
+                (c.is_billable AND desc_contains) DESC,
+                (desc_contains) DESC,
+                (CASE WHEN LENGTH(c.description) < 40 THEN 0 ELSE 1 END) ASC,
                 (CASE WHEN c.description ILIKE '%unspecified%' OR c.description ILIKE '%essential%' THEN 0 ELSE 1 END) ASC,
                 LENGTH(c.description) ASC,
                 rank DESC,
-                use_count DESC,
                 sim DESC
             LIMIT $3
         `, [searchTerm, tsQuery, limit, req.user.id]);
