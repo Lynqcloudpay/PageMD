@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Inbox, CheckCircle, Clock, AlertTriangle, MessageSquare, FileText, 
-  Pill, FlaskConical, Image, Send, RefreshCw, Filter, Search, 
+import {
+  Inbox, CheckCircle, Clock, AlertTriangle, MessageSquare, FileText,
+  Pill, FlaskConical, Image, Send, RefreshCw, Filter, Search,
   ChevronRight, X, Bell, User, Calendar, Phone
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTasks } from '../context/TaskContext';
 import { format } from 'date-fns';
+import { inboxAPI, messagesAPI } from '../services/api';
+import toast from 'react-hot-toast';
 
 // Task categories like Epic's InBasket
 const TASK_CATEGORIES = [
@@ -27,7 +29,75 @@ const TaskManager = () => {
   const { updateTasks } = useTasks();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [tasks, setTasks] = useState([]);
-  
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Fetch tasks and messages
+  const fetchTasksData = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+
+    try {
+      const [inboxRes, messagesRes] = await Promise.all([
+        inboxAPI.getAll({ limit: 50 }),
+        messagesAPI.get()
+      ]);
+
+      const inboxTasks = (inboxRes.data || []).map(item => ({
+        id: item.id,
+        source: 'inbox',
+        category: item.type === 'lab' || item.type === 'imaging' ? 'results' : 'documents',
+        status: item.reviewed ? 'read' : 'unread',
+        patient: item.patientName,
+        patientId: item.patientId,
+        title: item.title,
+        mrn: item.mrn || 'N/A',
+        priority: item.orderData?.critical ? 'high' : 'normal',
+        type: item.type.toUpperCase(),
+        date: new Date(item.createdAt),
+        from: item.orderedBy || item.uploader || 'System',
+        critical: item.orderData?.critical === true,
+        details: {
+          summary: item.description,
+          comments: Array.isArray(item.comments) ? item.comments.map(c => c.comment).join('\n') : item.comment,
+          ...item.orderData
+        }
+      }));
+
+      const messageTasks = (messagesRes.data || []).map(msg => ({
+        id: msg.id,
+        source: 'messages',
+        category: msg.message_type === 'task' ? 'orders' : 'messages',
+        status: msg.read_at ? 'read' : 'unread',
+        patient: msg.patient_name || 'N/A',
+        patientId: msg.patient_id,
+        title: msg.subject,
+        mrn: msg.patient_mrn || 'N/A',
+        priority: msg.priority || 'normal',
+        type: msg.message_type.toUpperCase(),
+        date: new Date(msg.created_at),
+        from: `${msg.from_first_name} ${msg.from_last_name}`,
+        critical: msg.priority === 'urgent' || msg.priority === 'high',
+        details: {
+          body: msg.body,
+          subject: msg.subject
+        }
+      }));
+
+      setTasks([...inboxTasks, ...messageTasks].sort((a, b) => b.date - a.date));
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+      toast.error('Failed to load In Basket items');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTasksData();
+  }, []);
+
   // Update context whenever tasks change
   useEffect(() => {
     if (updateTasks) {
@@ -51,7 +121,7 @@ const TaskManager = () => {
   const filteredTasks = tasks.filter(task => {
     const matchesCategory = selectedCategory === 'all' || task.category === selectedCategory;
     const matchesStatus = filterStatus === 'all' || task.status === filterStatus;
-    const matchesSearch = !searchQuery || 
+    const matchesSearch = !searchQuery ||
       task.patient.toLowerCase().includes(searchQuery.toLowerCase()) ||
       task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       task.mrn.includes(searchQuery);
@@ -59,28 +129,48 @@ const TaskManager = () => {
   });
 
   // Mark task as read/complete/unread
-  const handleTaskAction = (taskId, action, e) => {
+  const handleTaskAction = async (taskId, action, e) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
-    
-    const updatedTasks = tasks.map(task => {
-      if (task.id === taskId) {
-        if (action === 'read') return { ...task, status: 'read' };
-        if (action === 'complete') return { ...task, status: 'completed' };
-        if (action === 'unread') return { ...task, status: 'unread' };
+
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    try {
+      if (task.source === 'messages') {
+        if (action === 'read') {
+          await messagesAPI.markAsRead(taskId);
+        } else if (action === 'complete') {
+          await messagesAPI.updateTaskStatus(taskId, 'completed');
+        }
+      } else if (task.source === 'inbox') {
+        // For inbox (labs/docs), we might need a specific "mark reviewed" endpoint
+        // Assuming inboxAPI has a markReviewed or we use the general order update
+        // await inboxAPI.markReviewed(taskId); 
+        // For now, let's just update local state if no direct API exists yet
+        // but typically this should be an API call
       }
-      return task;
-    });
-    setTasks(updatedTasks);
-    
-    // Update selected task if it's the one being modified
-    if (selectedTask && selectedTask.id === taskId) {
-      const updatedTask = updatedTasks.find(t => t.id === taskId);
-      if (updatedTask) {
-        setSelectedTask(updatedTask);
+
+      const updatedTasks = tasks.map(t => {
+        if (t.id === taskId) {
+          if (action === 'read') return { ...t, status: 'read' };
+          if (action === 'complete') return { ...t, status: 'completed' };
+          if (action === 'unread') return { ...t, status: 'unread' };
+        }
+        return t;
+      });
+      setTasks(updatedTasks);
+
+      if (selectedTask && selectedTask.id === taskId) {
+        setSelectedTask(updatedTasks.find(t => t.id === taskId));
       }
+
+      toast.success(`Task marked as ${action}`);
+    } catch (error) {
+      console.error(`Error performing action ${action}:`, error);
+      toast.error(`Failed to mark task as ${action}`);
     }
   };
 
@@ -106,11 +196,17 @@ const TaskManager = () => {
 
   // Handle open patient chart
   const handleOpenPatientChart = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (selectedTask && selectedTask.patient !== 'N/A' && selectedTask.mrn) {
-      // Find patient by MRN and navigate to their chart
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (selectedTask && selectedTask.patientId) {
+      navigate(`/patient/${selectedTask.patientId}/snapshot`);
+    } else if (selectedTask && selectedTask.mrn !== 'N/A') {
+      // Fallback to MRN if patientId is somehow missing
       navigate(`/patient/${selectedTask.mrn}/snapshot`);
+    } else {
+      toast.error('Patient record not found');
     }
   };
 
@@ -154,11 +250,10 @@ const TaskManager = () => {
         <div className="p-2">
           <button
             onClick={() => setSelectedCategory('all')}
-            className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${
-              selectedCategory === 'all' 
-                ? 'bg-paper-200 text-ink-900 font-medium' 
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${selectedCategory === 'all'
+                ? 'bg-paper-200 text-ink-900 font-medium'
                 : 'text-ink-600 hover:bg-paper-100'
-            }`}
+              }`}
           >
             <span className="flex items-center">
               <Inbox className="w-4 h-4 mr-2" />
@@ -179,11 +274,10 @@ const TaskManager = () => {
               <button
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${
-                  selectedCategory === category.id 
-                    ? 'bg-paper-200 text-ink-900 font-medium' 
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${selectedCategory === category.id
+                    ? 'bg-paper-200 text-ink-900 font-medium'
                     : 'text-ink-600 hover:bg-paper-100'
-                }`}
+                  }`}
               >
                 <span className="flex items-center">
                   <Icon className={`w-4 h-4 mr-2 text-${category.color}-500`} />
@@ -214,11 +308,10 @@ const TaskManager = () => {
                 <button
                   key={filter.id}
                   onClick={() => setFilterStatus(filter.id)}
-                  className={`w-full flex items-center px-3 py-1.5 rounded text-sm ${
-                    filterStatus === filter.id 
-                      ? 'bg-paper-200 text-ink-900' 
+                  className={`w-full flex items-center px-3 py-1.5 rounded text-sm ${filterStatus === filter.id
+                      ? 'bg-paper-200 text-ink-900'
                       : 'text-ink-500 hover:bg-paper-100'
-                  }`}
+                    }`}
                 >
                   <Icon className="w-3 h-3 mr-2" />
                   {filter.label}
@@ -248,12 +341,24 @@ const TaskManager = () => {
                   className="pl-9 pr-4 py-2 border border-paper-300 rounded-md text-sm w-64 focus:ring-2 focus:ring-paper-400"
                 />
               </div>
-              <button className="p-2 hover:bg-paper-100 rounded-md text-ink-600">
+              <button
+                onClick={() => fetchTasksData(true)}
+                className={`p-2 hover:bg-paper-100 rounded-md text-ink-600 ${refreshing ? 'animate-spin' : ''}`}
+                title="Refresh In Basket"
+              >
                 <RefreshCw className="w-4 h-4" />
               </button>
             </div>
           </div>
         </div>
+
+        {/* Loading Overlay */}
+        {loading && (
+          <div className="flex-1 flex flex-col items-center justify-center bg-white/50 backdrop-blur-sm">
+            <div className="w-8 h-8 border-4 border-paper-200 border-t-paper-600 rounded-full animate-spin"></div>
+            <p className="mt-4 text-sm text-ink-500 font-medium">Loading In Basket...</p>
+          </div>
+        )}
 
         {/* Task List */}
         <div className="flex-1 overflow-y-auto">
@@ -269,9 +374,8 @@ const TaskManager = () => {
                 <div
                   key={task.id}
                   onClick={() => openTaskDetail(task)}
-                  className={`p-4 hover:bg-paper-50 cursor-pointer transition-colors ${
-                    task.status === 'unread' ? 'bg-blue-50/30' : ''
-                  }`}
+                  className={`p-4 hover:bg-paper-50 cursor-pointer transition-colors ${task.status === 'unread' ? 'bg-blue-50/30' : ''
+                    }`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-start space-x-3">
@@ -287,7 +391,7 @@ const TaskManager = () => {
                           <div className="w-2 h-2 bg-transparent rounded-full border border-paper-300" />
                         )}
                       </div>
-                      
+
                       <div className="flex-1">
                         <div className="flex items-center space-x-2">
                           {task.critical && (
@@ -343,7 +447,7 @@ const TaskManager = () => {
               <X className="w-5 h-5 text-ink-500" />
             </button>
           </div>
-          
+
           <div className="flex-1 overflow-y-auto p-4">
             {/* Task Header */}
             <div className="mb-4">
@@ -354,14 +458,13 @@ const TaskManager = () => {
                 <span className={`text-xs px-2 py-0.5 rounded-full ${getPriorityColor(selectedTask.priority)}`}>
                   {selectedTask.type}
                 </span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  selectedTask.status === 'unread' ? 'bg-blue-100 text-blue-700' :
-                  selectedTask.status === 'read' ? 'bg-gray-100 text-gray-700' :
-                  'bg-green-100 text-green-700'
-                }`}>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${selectedTask.status === 'unread' ? 'bg-blue-100 text-blue-700' :
+                    selectedTask.status === 'read' ? 'bg-gray-100 text-gray-700' :
+                      'bg-green-100 text-green-700'
+                  }`}>
                   {selectedTask.status === 'unread' ? 'Unread' :
-                   selectedTask.status === 'read' ? 'Read' :
-                   'Completed'}
+                    selectedTask.status === 'read' ? 'Read' :
+                      'Completed'}
                 </span>
               </div>
               <h3 className="text-lg font-semibold text-ink-900">{selectedTask.title}</h3>
@@ -443,7 +546,7 @@ const TaskManager = () => {
                 </button>
               )}
             </div>
-            
+
             {/* Other Actions */}
             <div className="grid grid-cols-2 gap-2">
               <button

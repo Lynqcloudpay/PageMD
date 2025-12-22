@@ -9,7 +9,7 @@ router.use(authenticate);
 router.get('/lab-trend/:patientId/:testName', requireRole('clinician', 'nurse', 'admin'), async (req, res) => {
   try {
     const { patientId, testName } = req.params;
-    
+
     // Get all lab orders for this patient
     const labQuery = `
       SELECT o.*, 
@@ -18,21 +18,21 @@ router.get('/lab-trend/:patientId/:testName', requireRole('clinician', 'nurse', 
       WHERE o.patient_id = $1 AND o.order_type = 'lab'
       ORDER BY o.created_at DESC
     `;
-    
+
     const labs = await pool.query(labQuery, [patientId]);
-    
+
     // Extract values for the specific test from all labs
     const trendData = [];
     labs.rows.forEach(lab => {
       const payload = typeof lab.order_payload === 'string' ? JSON.parse(lab.order_payload) : lab.order_payload;
       if (!payload?.results) return;
-      
+
       // Check if this lab contains the test we're looking for
       const results = payload.results;
       let testValue = null;
       let testUnit = null;
       let isAbnormal = false;
-      
+
       if (Array.isArray(results)) {
         const testResult = results.find(r => {
           const name = (r.test || r.name || '').toLowerCase();
@@ -49,7 +49,7 @@ router.get('/lab-trend/:patientId/:testName', requireRole('clinician', 'nurse', 
           const formattedKey = key.replace(/([A-Z])/g, ' $1').toLowerCase();
           return formattedKey.includes(testName.toLowerCase()) || testName.toLowerCase().includes(formattedKey);
         });
-        
+
         if (testKey) {
           const testResult = results[testKey];
           const isObject = typeof testResult === 'object' && testResult !== null;
@@ -58,7 +58,7 @@ router.get('/lab-trend/:patientId/:testName', requireRole('clinician', 'nurse', 
           isAbnormal = isObject && testResult.flag && testResult.flag.toLowerCase() !== 'normal';
         }
       }
-      
+
       if (testValue !== null && testValue !== undefined && testValue !== '') {
         trendData.push({
           date: lab.order_date,
@@ -69,10 +69,10 @@ router.get('/lab-trend/:patientId/:testName', requireRole('clinician', 'nurse', 
         });
       }
     });
-    
+
     // Sort by date (oldest first for trend)
     trendData.sort((a, b) => new Date(a.date) - new Date(b.date));
-    
+
     res.json(trendData);
   } catch (error) {
     console.error('Error fetching lab trend:', error);
@@ -84,7 +84,7 @@ router.get('/lab-trend/:patientId/:testName', requireRole('clinician', 'nurse', 
 router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => {
   try {
     const { type, status, limit = 100 } = req.query;
-    
+
     const allItems = [];
 
     // Get all labs (from orders where order_type = 'lab')
@@ -93,6 +93,7 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
              o.comments as comments,
              p.first_name as patient_first_name,
              p.last_name as patient_last_name,
+             p.mrn as patient_mrn,
              p.id as patient_id,
              u.first_name as ordered_by_first_name,
              u.last_name as ordered_by_last_name
@@ -101,15 +102,15 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
       LEFT JOIN users u ON o.ordered_by = u.id
       WHERE o.order_type = 'lab'
     `;
-    
+
     if (status === 'unreviewed') {
       labQuery += ` AND (o.reviewed IS NULL OR o.reviewed = false)`;
     } else if (status === 'reviewed') {
       labQuery += ` AND o.reviewed = true`;
     }
-    
+
     labQuery += ` ORDER BY o.created_at DESC LIMIT $1`;
-    
+
     const labs = await pool.query(labQuery, [parseInt(limit)]);
     labs.rows.forEach(lab => {
       const payload = typeof lab.order_payload === 'string' ? JSON.parse(lab.order_payload) : lab.order_payload;
@@ -118,6 +119,7 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
         type: 'lab',
         patientId: lab.patient_id,
         patientName: `${lab.patient_first_name} ${lab.patient_last_name}`,
+        mrn: lab.patient_mrn,
         visitId: lab.visit_id,
         title: payload?.test_name || payload?.testName || 'Lab Order',
         description: payload?.description || '',
@@ -155,8 +157,8 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
           }
         })(),
         createdAt: lab.created_at,
-        orderedBy: lab.ordered_by_first_name && lab.ordered_by_last_name 
-          ? `${lab.ordered_by_first_name} ${lab.ordered_by_last_name}` 
+        orderedBy: lab.ordered_by_first_name && lab.ordered_by_last_name
+          ? `${lab.ordered_by_first_name} ${lab.ordered_by_last_name}`
           : 'Unknown',
         orderData: payload
       });
@@ -167,6 +169,7 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
       SELECT o.*, 
              p.first_name as patient_first_name,
              p.last_name as patient_last_name,
+             p.mrn as patient_mrn,
              p.id as patient_id,
              u.first_name as ordered_by_first_name,
              u.last_name as ordered_by_last_name
@@ -175,15 +178,15 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
       LEFT JOIN users u ON o.ordered_by = u.id
       WHERE o.order_type = 'imaging'
     `;
-    
+
     if (status === 'unreviewed') {
       imagingQuery += ` AND (o.reviewed IS NULL OR o.reviewed = false)`;
     } else if (status === 'reviewed') {
       imagingQuery += ` AND o.reviewed = true`;
     }
-    
+
     imagingQuery += ` ORDER BY o.created_at DESC LIMIT $1`;
-    
+
     const imaging = await pool.query(imagingQuery, [parseInt(limit)]);
     imaging.rows.forEach(img => {
       const payload = typeof img.order_payload === 'string' ? JSON.parse(img.order_payload) : img.order_payload;
@@ -192,6 +195,7 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
         type: 'imaging',
         patientId: img.patient_id,
         patientName: `${img.patient_first_name} ${img.patient_last_name}`,
+        mrn: img.patient_mrn,
         visitId: img.visit_id,
         title: payload?.study_name || payload?.studyName || 'Imaging Study',
         description: payload?.description || '',
@@ -229,8 +233,8 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
           }
         })(),
         createdAt: img.created_at,
-        orderedBy: img.ordered_by_first_name && img.ordered_by_last_name 
-          ? `${img.ordered_by_first_name} ${img.ordered_by_last_name}` 
+        orderedBy: img.ordered_by_first_name && img.ordered_by_last_name
+          ? `${img.ordered_by_first_name} ${img.ordered_by_last_name}`
           : 'Unknown',
         orderData: payload
       });
@@ -241,6 +245,7 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
       SELECT d.*, 
              p.first_name as patient_first_name,
              p.last_name as patient_last_name,
+             p.mrn as patient_mrn,
              p.id as patient_id,
              u.first_name as uploader_first_name,
              u.last_name as uploader_last_name
@@ -249,21 +254,21 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
       LEFT JOIN users u ON d.uploader_id = u.id
       WHERE 1=1
     `;
-    
+
     if (type === 'imaging') {
       docQuery += ` AND d.doc_type = 'imaging'`;
     } else if (type === 'document') {
       docQuery += ` AND d.doc_type != 'imaging'`;
     }
-    
+
     if (status === 'unreviewed') {
       docQuery += ` AND (d.reviewed IS NULL OR d.reviewed = false)`;
     } else if (status === 'reviewed') {
       docQuery += ` AND d.reviewed = true`;
     }
-    
+
     docQuery += ` ORDER BY d.created_at DESC LIMIT $1`;
-    
+
     const documents = await pool.query(docQuery, [parseInt(limit)]);
     documents.rows.forEach(doc => {
       allItems.push({
@@ -271,6 +276,7 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
         type: doc.doc_type === 'imaging' ? 'imaging' : 'document',
         patientId: doc.patient_id,
         patientName: `${doc.patient_first_name} ${doc.patient_last_name}`,
+        mrn: doc.patient_mrn,
         title: doc.filename,
         description: doc.doc_type || 'Document',
         status: 'completed',
@@ -307,8 +313,8 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
           }
         })(),
         createdAt: doc.created_at,
-        uploader: doc.uploader_first_name && doc.uploader_last_name 
-          ? `${doc.uploader_first_name} ${doc.uploader_last_name}` 
+        uploader: doc.uploader_first_name && doc.uploader_last_name
+          ? `${doc.uploader_first_name} ${doc.uploader_last_name}`
           : 'Unknown',
         docData: doc
       });
