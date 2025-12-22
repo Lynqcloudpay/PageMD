@@ -39,11 +39,14 @@ const calculateAge = (dob) => {
     }
 };
 
-const PatientHeader = ({ patient, onUpdate, onOpenChart, onOpenToday }) => {
+const PatientHeader = ({ patient, onUpdate }) => {
     const navigate = useNavigate();
     const [isEditing, setIsEditing] = useState(false);
     const [editForm, setEditForm] = useState({});
     const [loading, setLoading] = useState(false);
+
+    // Safety check - prevent crash if patient is loading
+    if (!patient) return null;
 
     // Initialize edit form
     const handleEditClick = () => {
@@ -176,9 +179,9 @@ const PatientHeader = ({ patient, onUpdate, onOpenChart, onOpenToday }) => {
                     </div>
                 </div>
 
-                {/* Primary Actions */}
+                {/* Primary Actions - Only in Edit Mode */}
                 <div className="flex items-center gap-2">
-                    {isEditing ? (
+                    {isEditing && (
                         <>
                             <button
                                 onClick={() => setIsEditing(false)}
@@ -193,22 +196,6 @@ const PatientHeader = ({ patient, onUpdate, onOpenChart, onOpenToday }) => {
                                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-2 shadow-sm"
                             >
                                 {loading ? 'Saving...' : <><Check size={16} /> Save Changes</>}
-                            </button>
-                        </>
-                    ) : (
-                        <>
-                            <button
-                                onClick={onOpenToday}
-                                className="px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-transparent rounded-lg hover:bg-blue-100 transition-colors"
-                            >
-                                Open Today's Visit
-                            </button>
-                            <button
-                                onClick={onOpenChart}
-                                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm transition-all hover:shadow flex items-center gap-2"
-                            >
-                                <ExternalLink size={16} />
-                                Open Chart
                             </button>
                         </>
                     )}
