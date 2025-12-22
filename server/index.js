@@ -143,6 +143,8 @@ app.use('/api/labs', labRoutes);
 
 app.use('/api/icd10-hierarchy', icd10HierarchyRoutes);
 app.use('/api/ordersets', ordersetRoutes);
+const icd10Routes = require('./routes/icd10');
+app.use('/api/icd10', icd10Routes);
 
 // FHIR R4 API endpoints - OpenEMR style
 app.use('/fhir', fhirRoutes);

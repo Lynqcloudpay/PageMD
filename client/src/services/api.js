@@ -241,6 +241,15 @@ export const alertsAPI = {
 };
 
 // Codes (ICD-10, CPT)
+export const icd10API = {
+  search: (q, limit = 20) => api.get('/icd10/search', { params: { q, limit } }),
+  getFavorites: () => api.get('/icd10/favorites'),
+  addFavorite: (icd10_id) => api.post('/icd10/favorites', { icd10_id }),
+  removeFavorite: (icd10_id) => api.delete(`/icd10/favorites/${icd10_id}`),
+  trackUsage: (icd10_id) => api.post('/icd10/track', { icd10_id }),
+  getRecent: (limit = 20) => api.get('/icd10/recent', { params: { limit } }),
+};
+
 export const codesAPI = {
   searchICD10: async (search) => {
     if (!search || search.length < 2) {

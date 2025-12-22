@@ -12,7 +12,8 @@ import CodeSearchModal from '../components/CodeSearchModal';
 import VisitPrint from '../components/VisitPrint';
 import PatientChartPanel from '../components/PatientChartPanel';
 import PatientDataManager from '../components/PatientDataManager';
-import { visitsAPI, codesAPI, patientsAPI } from '../services/api';
+import { visitsAPI, codesAPI, patientsAPI, icd10API } from '../services/api';
+import DiagnosisPicker from '../components/DiagnosisPicker';
 import { usePrivileges } from '../hooks/usePrivileges';
 import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
@@ -999,17 +1000,14 @@ const VisitNote = () => {
         }
     };
 
-    // ICD-10 search - show popular codes when empty, search when 2+ characters
+    // ICD-10 search - show top codes when empty, search when 2+ characters
     useEffect(() => {
         const timeout = setTimeout(async () => {
             try {
-                // If search is empty or less than 2 chars, show popular codes (first 50)
-                // Otherwise, perform search
-                const query = icd10Search.trim().length >= 2 ? icd10Search : '';
-                const response = await codesAPI.searchICD10(query);
+                const query = icd10Search.trim();
+                const response = await icd10API.search(query);
                 setIcd10Results(response.data || []);
-                // Auto-show results if we have codes and search box is focused or has content
-                if (response.data && response.data.length > 0) {
+                if (response.data && response.data.length > 0 && query.length > 0) {
                     setShowIcd10Search(true);
                 }
             } catch (error) {
@@ -1019,19 +1017,19 @@ const VisitNote = () => {
         return () => clearTimeout(timeout);
     }, [icd10Search]);
 
-    // Load popular codes on mount
+    // Load initial codes on mount
     useEffect(() => {
-        const loadPopularCodes = async () => {
+        const loadInitialCodes = async () => {
             try {
-                const response = await codesAPI.searchICD10('');
+                const response = await icd10API.search('');
                 if (response.data && response.data.length > 0) {
                     setIcd10Results(response.data);
                 }
             } catch (error) {
-                console.error('Error loading popular ICD-10 codes:', error);
+                console.error('Error loading ICD-10 codes:', error);
             }
         };
-        loadPopularCodes();
+        loadInitialCodes();
     }, []);
 
     const handleAddICD10 = async (code, addToProblem = false) => {
@@ -2342,13 +2340,16 @@ const VisitNote = () => {
             </div>
 
             {/* Modals */}
-            <CodeSearchModal
-                isOpen={showICD10Modal}
-                onClose={() => { setShowICD10Modal(false); setEditingDiagnosisIndex(null); }}
-                onSelect={(code) => handleAddICD10(code)}
-                codeType="ICD10"
-                size="md"
-            />
+            {/* Premium Diagnosis Picker Modal */}
+            {showICD10Modal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-ink-950/40 backdrop-blur-sm">
+                    <DiagnosisPicker
+                        onSelect={(code) => handleAddICD10(code)}
+                        onClose={() => { setShowICD10Modal(false); setEditingDiagnosisIndex(null); }}
+                        existingDiagnoses={diagnoses}
+                    />
+                </div>
+            )}
             <OrderModal
                 isOpen={showOrderModal}
                 onClose={() => { setShowOrderModal(false); setSelectedDiagnosis(null); }}
