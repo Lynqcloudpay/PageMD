@@ -16,20 +16,12 @@ router.get('/search', authenticate, async (req, res) => {
 
         const searchTerm = q.trim();
         const searchWords = searchTerm.split(/\s+/).filter(t => t.length > 0);
+        // Sanitize and escape for to_tsquery
         const tsQuery = searchWords.map(t => `${t.replace(/'/g, "''")}:*`).join(' & ');
-        const isLongQuery = searchWords.length >= 3 || searchTerm.length > 15;
 
         const results = await pool.query(`
             SELECT 
                 c.id, c.code, c.description, c.is_billable,
-                (c.code = $1) as exact_match,
-                (c.description ILIKE $1 || '%') as phrase_start,
-                CASE 
-                    WHEN (c.code ~ '^[OPZ]') AND NOT ($1 ~* '(pregnancy|neonatal|newborn|history|screening)') THEN 2
-                    ELSE 0
-                END as specialty_penalty,
-                ts_rank_cd(to_tsvector('english', c.description), to_tsquery('english', $2)) as rank,
-                similarity(c.description, $1) as sim,
                 COALESCE(u.use_count, 0) as use_count
             FROM icd10_codes c
             LEFT JOIN icd10_usage u ON c.id = u.icd10_id AND u.user_id = $4
@@ -42,20 +34,17 @@ router.get('/search', authenticate, async (req, res) => {
             ORDER BY 
                 (c.code = $1) DESC,
                 (c.code ILIKE $1 || '%') DESC,
-                -- If it's a long/specific query, rank (relevance) is the #1 priority
-                (CASE WHEN $5 = true THEN rank ELSE 0 END) DESC,
-                specialty_penalty ASC,
-                phrase_start DESC,
-                (c.is_billable AND rank > 0.05) DESC,
+                (c.description ILIKE $1 || '%') DESC,
+                (c.is_billable AND to_tsvector('english', c.description) @@ to_tsquery('english', $2)) DESC,
+                ts_rank_cd(to_tsvector('english', c.description), to_tsquery('english', $2)) DESC,
+                (c.is_billable) DESC,
                 (c.description ILIKE '%' || $1 || '%') DESC,
-                -- Only favor shortness for very brief queries
-                (CASE WHEN $5 = false AND LENGTH(c.description) < 40 THEN 0 ELSE 1 END) ASC,
-                (CASE WHEN $5 = false AND (c.description ILIKE '%unspecified%' OR c.description ILIKE '%essential%') THEN 0 ELSE 1 END) ASC,
-                rank DESC,
-                use_count DESC,
-                LENGTH(c.description) ASC
+                -- Demote O, P, Z codes unless they are the direct target
+                (CASE WHEN c.code ~ '^[OPZ]' AND NOT ($1 ~* '(pregnancy|neonatal|newborn|history|screening)') THEN 1 ELSE 0 END) ASC,
+                LENGTH(c.description) ASC,
+                c.code ASC
             LIMIT $3
-        `, [searchTerm, tsQuery, limit, req.user.id, isLongQuery]);
+        `, [searchTerm, tsQuery, limit, req.user.id]);
 
         res.json(results.rows);
     } catch (error) {
