@@ -65,9 +65,12 @@ async function importLoinc() {
             cleanParts.push(current.trim().replace(/^"|"$/g, ''));
 
             if (!headers) {
-                console.log('RAW Header Line:', line);
+                if (!line.includes('LOINC_NUM')) {
+                    console.log('Skipping leading line:', line.substring(0, 50));
+                    continue;
+                }
                 headers = cleanParts.map(h => h.toUpperCase().trim());
-                console.log('Detected Headers:', headers);
+                console.log('Detected Headers count:', headers.length);
                 continue;
             }
 
@@ -76,13 +79,8 @@ async function importLoinc() {
                 record[h] = cleanParts[i] || null;
             });
 
-            if (count === 0) {
-                console.log('First Record Example:', record);
-                console.log('Checking for LOINC_NUM:', record['LOINC_NUM']);
-            }
-
-            const loinc_code = record.LOINC_NUM || record['"LOINC_NUM"'];
-            if (!loinc_code) continue;
+            const loinc_code = record.LOINC_NUM || record.loinc_num;
+            if (!loinc_code || loinc_code === 'LOINC_NUM') continue;
 
             batch.push([
                 loinc_code,
