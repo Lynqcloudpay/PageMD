@@ -75,11 +75,11 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
             first_name: patient.first_name || '',
             middle_name: patient.middle_name || '',
             last_name: patient.last_name || '',
-            suffix: patient.suffix || '',
+            name_suffix: patient.name_suffix || '',
             preferred_name: patient.preferred_name || '',
             dob: patient.dob ? patient.dob.split('T')[0] : '',
             sex: patient.sex || '',
-            gender_identity: patient.gender_identity || '',
+            gender: patient.gender || '',
             marital_status: patient.marital_status || '',
             race: patient.race || '',
             ethnicity: patient.ethnicity || '',
@@ -93,7 +93,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
             preferred_language: patient.preferred_language || 'English',
 
             // Address
-            address_street: patient.address_street || '',
+            address_line1: patient.address_line1 || '',
             address_line2: patient.address_line2 || '',
             city: patient.city || '',
             state: patient.state || '',
@@ -102,14 +102,14 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
             // Employment
             employment_status: patient.employment_status || '',
             occupation: patient.occupation || '',
-            employer: patient.employer || '',
+            employer_name: patient.employer_name || '',
 
             // Insurance
             insurance_provider: patient.insurance_provider || '',
             insurance_id: patient.insurance_id || '',
-            insurance_group: patient.insurance_group || '',
+            insurance_group_number: patient.insurance_group_number || '',
             insurance_plan_name: patient.insurance_plan_name || '',
-            insurance_subscriber: patient.insurance_subscriber || '',
+            insurance_subscriber_name: patient.insurance_subscriber_name || '',
 
             // Pharmacy
             pharmacy_name: patient.pharmacy_name || '',
@@ -126,7 +126,14 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
     const handleSave = async () => {
         setLoading(true);
         try {
-            await api.put(`/patients/${patient.id}`, editForm);
+            // Convert snake_case to camelCase for API
+            const payload = {};
+            Object.keys(editForm).forEach(key => {
+                const camelKey = key.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+                payload[camelKey] = editForm[key];
+            });
+
+            await api.put(`/patients/${patient.id}`, payload);
             onUpdate?.(); // Refresh parent if callback provided
 
             // If we fetched locally, we should update strict state too
@@ -252,14 +259,14 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                             {renderField("Middle Name", "middle_name")}
-                            {renderField("Suffix", "suffix", "text", ["Jr", "Sr", "II", "III", "IV"])}
+                            {renderField("Suffix", "name_suffix", "text", ["Jr", "Sr", "II", "III", "IV"])}
                         </div>
                         {renderField("Preferred Name", "preferred_name")}
                         <div className="grid grid-cols-2 gap-2">
                             {renderField("DOB", "dob", "date")}
                             {renderField("Sex", "sex", "text", ["M", "F", "Other"])}
                         </div>
-                        {renderField("Gender Identity", "gender_identity", "text", ["Male", "Female", "Non-binary", "Transgender Male", "Transgender Female"])}
+                        {renderField("Gender Identity", "gender", "text", ["Male", "Female", "Non-binary", "Transgender Male", "Transgender Female"])}
                         {renderField("Marital Status", "marital_status", "text", ["Single", "Married", "Divorced", "Widowed", "Partnered"])}
                     </div>
 
@@ -274,7 +281,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                         {renderField("Email", "email", "email")}
 
                         <div className="pt-2 border-t border-dashed mt-2">
-                            {renderField("Street Address", "address_street")}
+                            {renderField("Street Address", "address_line1")}
                             {renderField("Apt / Suite", "address_line2")}
                             <div className="grid grid-cols-3 gap-2">
                                 {renderField("City", "city")}
@@ -290,15 +297,15 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                         {renderField("Primary Insurance", "insurance_provider")}
                         <div className="grid grid-cols-2 gap-2">
                             {renderField("Member ID", "insurance_id")}
-                            {renderField("Group No.", "insurance_group")}
+                            {renderField("Group No.", "insurance_group_number")}
                         </div>
                         {renderField("Plan Name", "insurance_plan_name")}
-                        {renderField("Subscriber Name", "insurance_subscriber")}
+                        {renderField("Subscriber Name", "insurance_subscriber_name")}
 
                         <div className="pt-2 border-t border-dashed mt-2">
                             {renderField("Employment Status", "employment_status", "text", ["Employed", "Unemployed", "Retired", "Student", "Disabled"])}
                             {renderField("Occupation", "occupation")}
-                            {renderField("Employer", "employer")}
+                            {renderField("Employer", "employer_name")}
                         </div>
                     </div>
 
