@@ -620,6 +620,11 @@ const VisitNote = () => {
                         // If no note_draft, ensure we have empty state
                         console.log('No note_draft found in visit');
                     }
+                    // Fetch visit orders from new catalog system
+                    ordersCatalogAPI.getVisitOrders(visit.id)
+                        .then(res => setVisitOrders(res.data))
+                        .catch(err => console.error('Failed to fetch visit orders:', err));
+
                     setLoading(false);
 
                     // Mark that initial save should happen after autoSave is defined
@@ -2214,12 +2219,11 @@ const VisitNote = () => {
                                 {hasPrivilege('order_labs') && (
                                     <button
                                         onClick={() => {
-                                            setOrderPickerType(null); // All types
-                                            setShowOrderPicker(true);
+                                            setOrderModalTab('labs');
+                                            setShowOrderModal(true);
                                         }}
-                                        className="px-2.5 py-1.5 text-xs font-bold bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-primary-200 transition-all active:scale-95 flex items-center gap-1.5"
+                                        className="px-2.5 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors"
                                     >
-                                        <Plus className="w-3.5 h-3.5" />
                                         Add Order
                                     </button>
                                 )}
@@ -2366,52 +2370,17 @@ const VisitNote = () => {
                     </div>
                 </div>
             )}
-            {showOrderPicker && (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-ink-950/60 backdrop-blur-md" onClick={() => setShowOrderPicker(false)}>
-                    <div onClick={(e) => e.stopPropagation()} className="w-full max-w-xl">
-                        <OrderPicker
-                            type={orderPickerType}
-                            onClose={() => setShowOrderPicker(false)}
-                            onSelect={(item) => {
-                                setSelectedCatalogItem(item);
-                                setShowOrderPicker(false);
-                                setShowOrderDetails(true);
-                            }}
-                            visitId={currentVisitId || urlVisitId}
-                            patientId={id}
-                        />
-                    </div>
-                </div>
-            )}
-
-            {showOrderDetails && selectedCatalogItem && (
-                <div className="fixed inset-0 z-[71] flex items-center justify-center p-4 bg-ink-950/60 backdrop-blur-md" onClick={() => setShowOrderDetails(false)}>
-                    <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg">
-                        <OrderDetailsModal
-                            order={selectedCatalogItem}
-                            initialDiagnoses={noteData.planStructured}
-                            onClose={() => setShowOrderDetails(false)}
-                            onSave={async (details) => {
-                                try {
-                                    const res = await ordersCatalogAPI.createVisitOrder(currentVisitId || urlVisitId, {
-                                        catalog_id: selectedCatalogItem.id,
-                                        patient_id: id,
-                                        ...details
-                                    });
-                                    // Add to plan structured for UI display
-                                    const diagLabel = details.diagnosis_icd10_ids[0] || 'General';
-                                    addOrderToPlan(diagLabel, `${selectedCatalogItem.name} (${res.priority})${details.order_details.notes ? ': ' + details.order_details.notes : ''}`);
-                                    setShowOrderDetails(false);
-                                    showToast('Order created successfully', 'success');
-                                } catch (err) {
-                                    console.error('Failed to create order', err);
-                                    showToast('Failed to create order', 'error');
-                                }
-                            }}
-                        />
-                    </div>
-                </div>
-            )}
+            <OrderModal
+                isOpen={showOrderModal}
+                onClose={() => { setShowOrderModal(false); setSelectedDiagnosis(null); }}
+                initialTab={orderModalTab}
+                diagnoses={diagnoses}
+                selectedDiagnosis={selectedDiagnosis}
+                existingOrders={noteData.planStructured}
+                onSave={handleUpdatePlan}
+                patientId={id}
+                visitId={currentVisitId || urlVisitId}
+            />
             <EPrescribeEnhanced
                 isOpen={showEPrescribeEnhanced}
                 onClose={() => setShowEPrescribeEnhanced(false)}
