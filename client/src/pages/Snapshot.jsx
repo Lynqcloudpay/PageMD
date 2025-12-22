@@ -1169,9 +1169,13 @@ const Snapshot = ({ showNotesOnly = false }) => {
         }
 
         // Now normalize into your API static route
-        if (raw.startsWith('/uploads/')) raw = `/api${raw}`;
-        else if (raw.startsWith('uploads/')) raw = `/api/${raw}`;
-        else if (!raw.startsWith('/')) {
+        if (raw.startsWith('/api/uploads/')) {
+            // already correct
+        } else if (raw.startsWith('/uploads/')) {
+            raw = `/api${raw}`;
+        } else if (raw.startsWith('uploads/')) {
+            raw = `/api/${raw}`;
+        } else if (!raw.startsWith('/')) {
             // filename only
             raw = `/api/uploads/patient-photos/${raw}`;
         }

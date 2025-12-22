@@ -23,6 +23,17 @@ const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
+// Create uploads directory if it doesn't exist
+const fs = require('fs');
+const uploadDir = process.env.UPLOAD_DIR || './uploads';
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+const patientPhotosDir = path.join(uploadDir, 'patient-photos');
+if (!fs.existsSync(patientPhotosDir)) {
+  fs.mkdirSync(patientPhotosDir, { recursive: true });
+}
+
 // CORS must come FIRST - before any redirects or security middleware
 // This allows preflight OPTIONS requests to work properly
 app.use(cors({
@@ -70,36 +81,6 @@ const { redactRequestForLogging, validateURLParams } = require('./middleware/phi
 app.use(redactRequestForLogging);
 app.use(validateURLParams);
 
-// Session timeout middleware (for authenticated routes)
-app.use('/api', sessionTimeout);
-
-// Rate limiting - exclude certain endpoints from general rate limiting
-// Apply rate limiting only in production (and not in localhost/development)
-const isProduction = process.env.NODE_ENV === 'production' && process.env.DB_HOST !== 'localhost' && !process.env.DISABLE_RATE_LIMIT;
-if (isProduction) {
-  app.use('/api', (req, res, next) => {
-    // Skip rate limiting for /auth/me in production
-    if (req.path === '/auth/me') {
-      return next();
-    }
-    return apiLimiter(req, res, next);
-  });
-} else {
-  // Skip rate limiting entirely in development/localhost
-  console.log('⚠️  Rate limiting disabled (development/localhost mode)');
-}
-
-// Create uploads directory if it doesn't exist
-const fs = require('fs');
-const uploadDir = process.env.UPLOAD_DIR || './uploads';
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-const patientPhotosDir = path.join(uploadDir, 'patient-photos');
-if (!fs.existsSync(patientPhotosDir)) {
-  fs.mkdirSync(patientPhotosDir, { recursive: true });
-}
-
 // Serve uploaded files statically with CORS headers
 // Mount under both /api/uploads and /uploads for backward compatibility
 const staticMiddleware = (req, res, next) => {
@@ -120,19 +101,38 @@ const staticFiles = express.static(uploadDir, {
 app.use('/api/uploads', staticMiddleware, staticFiles);
 app.use('/uploads', staticMiddleware, staticFiles);
 
-// Routes
-// Apply rate limiting only to login/register in production (and not in localhost/development)
+// Session timeout middleware (for authenticated routes)
+app.use('/api', sessionTimeout);
+
+// Rate limiting - exclude certain endpoints from general rate limiting
+// Apply rate limiting only in production (and not in localhost/development)
+const isProduction = process.env.NODE_ENV === 'production' && process.env.DB_HOST !== 'localhost' && !process.env.DISABLE_RATE_LIMIT;
+if (isProduction) {
+  app.use('/api', (req, res, next) => {
+    // Skip rate limiting for /auth/me in production
+    if (req.path === '/auth/me') {
+      return next();
+    }
+    return apiLimiter(req, res, next);
+  });
+} else {
+  // Skip rate limiting entirely in development/localhost
+  console.log('⚠️  Rate limiting disabled (development/localhost mode)');
+}
+
+// Mount Auth Routes separately to apply specific auth limiting
 if (isProduction) {
   app.use('/api/auth', (req, res, next) => {
     if (req.path === '/me') {
-      return next(); // Skip rate limiting for /me endpoint
+      return next();
     }
     return authLimiter(req, res, next);
   }, authRoutes);
 } else {
-  // Skip rate limiting for auth routes in development/localhost
   app.use('/api/auth', authRoutes);
 }
+
+// Mount Core API Routes
 app.use('/api/patients', patientRoutes);
 app.use('/api/visits', visitRoutes);
 app.use('/api/orders', orderRoutes);
@@ -140,6 +140,7 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/referrals', referralRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/labs', labRoutes);
+
 app.use('/api/icd10-hierarchy', icd10HierarchyRoutes);
 app.use('/api/ordersets', ordersetRoutes);
 
