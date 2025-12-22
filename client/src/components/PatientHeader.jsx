@@ -401,7 +401,12 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                 </div>
                 {/* Address */}
                 <div className="bg-white p-2">
-                    <InfoItem icon={MapPin} label="Address" value={patient.address_street} />
+                    <InfoItem
+                        icon={MapPin}
+                        label="Address"
+                        value={patient.address_line1}
+                        subValue={patient.city ? `${patient.city}, ${patient.state} ${patient.zip}` : ''}
+                    />
                 </div>
                 {/* Insurance */}
                 <div className="bg-white p-2">
