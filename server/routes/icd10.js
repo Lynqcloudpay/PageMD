@@ -30,8 +30,13 @@ router.get('/search', authenticate, async (req, res) => {
                 c.id, c.code, c.description, c.is_billable,
                 (c.code = $1) as exact_code,
                 (c.code ILIKE $1 || '%') as code_prefix,
-                (c.description ILIKE $1 || '%') as description_prefix,
-                (c.description ILIKE '%' || $1 || '%') as description_contains,
+                (c.description ILIKE $1 || '%') as desc_prefix,
+                (c.description ILIKE '%' || $1 || '%') as desc_contains,
+                -- Penalize 'complicating' or 'specialty' chapters unless explicitly searched
+                CASE 
+                    WHEN (c.code ~ '^[OPZ]') AND NOT ($1 ~* '(pregnancy|neonatal|newborn|history|screening)') THEN 1
+                    ELSE 0
+                END as specialty_penalty,
                 ts_rank_cd(to_tsvector('english', c.description), to_tsquery('english', $2)) as rank,
                 similarity(c.description, $1) as sim,
                 COALESCE(u.use_count, 0) as use_count
@@ -46,12 +51,14 @@ router.get('/search', authenticate, async (req, res) => {
             ORDER BY 
                 exact_code DESC,
                 code_prefix DESC,
-                (c.is_billable AND c.description ILIKE $1 || '%') DESC,
-                (c.is_billable AND c.description ILIKE '%' || $1 || '%') DESC,
-                (c.is_billable AND ts_rank_cd(to_tsvector('english', c.description), to_tsquery('english', $2)) > 0.05) DESC,
+                specialty_penalty ASC,
+                (c.is_billable AND desc_prefix) DESC,
+                -- Strong preference for SHORTER, more general names
+                (CASE WHEN LENGTH(c.description) < 30 THEN 0 ELSE 1 END) ASC,
+                (CASE WHEN c.description ILIKE '%unspecified%' OR c.description ILIKE '%essential%' THEN 0 ELSE 1 END) ASC,
+                LENGTH(c.description) ASC,
                 rank DESC,
                 use_count DESC,
-                LENGTH(c.description) ASC,
                 sim DESC
             LIMIT $3
         `, [searchTerm, tsQuery, limit, req.user.id]);
