@@ -140,6 +140,16 @@ const Snapshot = ({ showNotesOnly = false }) => {
     });
     const [cardiacCathFile, setCardiacCathFile] = useState(null);
 
+    // Helper to get authenticated file link
+    const getAuthenticatedLink = (doc) => {
+        if (!doc.file_path) return '#';
+        if (doc.file_path.startsWith('http')) return doc.file_path;
+
+        const token = localStorage.getItem('token');
+        const baseUrl = `/api/documents/${doc.id}/file`;
+        return token ? `${baseUrl}?token=${token}` : baseUrl;
+    };
+
     // Handle URL parameters for navigation from other pages
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -1823,7 +1833,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             <span className="font-bold text-red-900 text-[11px] truncate">{doc.file_name || 'EKG'}</span>
                                                             <div className="flex items-center space-x-2">
                                                                 <span className="text-red-500 text-[10px] whitespace-nowrap">{new Date(doc.created_at).toLocaleDateString()}</span>
-                                                                <a href={doc.file_path ? (doc.file_path.startsWith('http') ? doc.file_path : `/api/documents/${doc.id}/file`) : '#'} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-red-200 rounded text-red-600">
+                                                                <a href={getAuthenticatedLink(doc)} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-red-200 rounded text-red-600">
                                                                     <Eye className="w-3 h-3" />
                                                                 </a>
                                                             </div>
@@ -1866,7 +1876,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             <span className="font-bold text-indigo-900 text-[11px] truncate">{doc.file_name || 'Echo Study'}</span>
                                                             <div className="flex items-center space-x-2">
                                                                 <span className="text-indigo-500 text-[10px] whitespace-nowrap">{new Date(doc.created_at).toLocaleDateString()}</span>
-                                                                <a href={doc.file_path ? (doc.file_path.startsWith('http') ? doc.file_path : `/api/documents/${doc.id}/file`) : '#'} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-indigo-200 rounded text-indigo-600">
+                                                                <a href={getAuthenticatedLink(doc)} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-indigo-200 rounded text-indigo-600">
                                                                     <Eye className="w-3 h-3" />
                                                                 </a>
                                                             </div>

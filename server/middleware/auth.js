@@ -4,7 +4,12 @@ const { getUserAuthContext } = require('../services/authorization');
 
 const authenticate = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
+    let token = req.headers.authorization?.split(' ')[1];
+
+    // Fallback to query parameter token (for direct file downloads/views)
+    if (!token && req.query.token) {
+      token = req.query.token;
+    }
 
     if (!token) {
       return res.status(401).json({ error: 'No token provided' });
@@ -28,7 +33,7 @@ const authenticate = async (req, res, next) => {
       LEFT JOIN roles r ON u.role_id = r.id
       WHERE u.id = $1
     `, [decoded.userId]);
-    
+
     console.log('[AUTH] User query result:', result.rows.length > 0 ? `Found user ${result.rows[0].email}` : 'No user found');
 
     if (result.rows.length === 0) {
@@ -48,12 +53,12 @@ const authenticate = async (req, res, next) => {
       if (!authContext) {
         return res.status(401).json({ error: 'Failed to load authorization context' });
       }
-      
+
       // Merge auth context with user data
       // CRITICAL: Preserve is_admin from database query (it's the source of truth)
       // authContext might normalize it or not include it, so we always use the DB value
       const dbIsAdmin = user.is_admin === true || user.is_admin === 'true' || String(user.is_admin) === 'true';
-      
+
       req.user = {
         ...user,
         ...authContext,
@@ -63,7 +68,7 @@ const authenticate = async (req, res, next) => {
         role_name: user.role_name || authContext?.role_name || user.role || 'User', // Preserve original role name
         role: user.role_name || authContext?.role_name || user.role || 'User' // Also set role for compatibility
       };
-      
+
       // Debug log in development
       if (process.env.DEBUG_AUTH === 'true') {
         console.log('[AUTH] User merged:', {
@@ -127,10 +132,10 @@ const requireRole = (...roles) => {
       return false;
     };
 
-    const isAdmin = checkAdminFlag(req.user.is_admin) || 
-                    checkAdminFlag(req.user.isAdmin) ||
-                    userRole === 'admin' ||
-                    userRole === 'superadmin';
+    const isAdmin = checkAdminFlag(req.user.is_admin) ||
+      checkAdminFlag(req.user.isAdmin) ||
+      userRole === 'admin' ||
+      userRole === 'superadmin';
 
     // Debug logging
     console.log('[requireRole]', {
@@ -160,7 +165,7 @@ const requireRole = (...roles) => {
       'pa': 'clinician',
       'physician assistant': 'clinician'
     };
-    
+
     const mappedUserRole = roleAliases[userRole] || userRole;
 
     // Check if user role matches (either directly or via alias)
