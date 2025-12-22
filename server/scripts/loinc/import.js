@@ -45,12 +45,25 @@ async function importLoinc() {
         await client.query('BEGIN');
 
         for await (const line of rl) {
-            // Very basic CSV parser (handles commas within quotes simply)
-            const parts = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
-            const cleanParts = parts.map(p => p.startsWith('"') && p.endsWith('"') ? p.slice(1, -1) : p);
+            // Robust CSV parser for LOINC (handles commas within quotes and empty fields)
+            const cleanParts = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    cleanParts.push(current.trim().replace(/^"|"$/g, ''));
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            cleanParts.push(current.trim().replace(/^"|"$/g, ''));
 
             if (!headers) {
-                headers = cleanParts.map(h => h.toUpperCase().replace(/\s+/g, '_'));
+                headers = cleanParts.map(h => h.toUpperCase());
                 continue;
             }
 
@@ -59,8 +72,6 @@ async function importLoinc() {
                 record[h] = cleanParts[i] || null;
             });
 
-            // Map LOINC headers to our schema
-            // Standard LOINC CSV headers: LOINC_NUM, COMPONENT, PROPERTY, TIME_ASPCT, SYSTEM, SCALE_TYP, METHOD_TYP, LONG_COMMON_NAME, STATUS, VersionFirstReleased
             const loinc_code = record.LOINC_NUM;
             if (!loinc_code) continue;
 
@@ -80,7 +91,7 @@ async function importLoinc() {
             if (batch.length >= batchSize) {
                 await upsertBatch(client, batch);
                 count += batch.length;
-                console.log(`...processed ${count} codes`);
+                if (count % 5000 === 0) console.log(`...processed ${count} codes`);
                 batch = [];
             }
         }
