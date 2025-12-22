@@ -29,10 +29,7 @@ router.get('/search', authenticate, async (req, res) => {
         const results = await pool.query(`
             SELECT 
                 c.id, c.code, c.description, c.is_billable,
-                (c.code = $1) as exact_code,
-                (c.code ILIKE $1 || '%') as code_prefix,
-                (c.description ILIKE $1 || '%') as desc_prefix,
-                (c.description ILIKE '%' || $1 || '%') as desc_contains,
+                (c.code = $1) as exact_match,
                 CASE 
                     WHEN (c.code ~ '^[OPZ]') AND NOT ($1 ~* '(pregnancy|neonatal|newborn|history|screening)') THEN 1
                     ELSE 0
@@ -50,13 +47,13 @@ router.get('/search', authenticate, async (req, res) => {
                 OR c.description ILIKE '%' || $1 || '%'
               )
             ORDER BY 
-                exact_code DESC,
-                code_prefix DESC,
+                (c.code = $1) DESC,
+                (c.code ILIKE $1 || '%') DESC,
                 specialty_penalty ASC,
-                (c.is_billable AND desc_prefix) DESC,
-                (desc_prefix) DESC,
-                (c.is_billable AND desc_contains) DESC,
-                (desc_contains) DESC,
+                (c.is_billable AND c.description ILIKE $1 || '%') DESC,
+                (c.description ILIKE $1 || '%') DESC,
+                (c.is_billable AND c.description ILIKE '%' || $1 || '%') DESC,
+                (c.description ILIKE '%' || $1 || '%') DESC,
                 (CASE WHEN LENGTH(c.description) < 40 THEN 0 ELSE 1 END) ASC,
                 (CASE WHEN c.description ILIKE '%unspecified%' OR c.description ILIKE '%essential%' THEN 0 ELSE 1 END) ASC,
                 LENGTH(c.description) ASC,
