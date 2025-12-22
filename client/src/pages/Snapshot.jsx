@@ -1833,9 +1833,6 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             <span className="font-bold text-red-900 text-[11px] truncate">{doc.file_name || 'EKG'}</span>
                                                             <div className="flex items-center space-x-2">
                                                                 <span className="text-red-500 text-[10px] whitespace-nowrap">{new Date(doc.created_at).toLocaleDateString()}</span>
-                                                                <a href={getAuthenticatedLink(doc)} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-red-200 rounded text-red-600">
-                                                                    <Eye className="w-3 h-3" />
-                                                                </a>
                                                             </div>
                                                         </div>
                                                         {(rhythm || rate) && (
@@ -1876,9 +1873,6 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             <span className="font-bold text-indigo-900 text-[11px] truncate">{doc.file_name || 'Echo Study'}</span>
                                                             <div className="flex items-center space-x-2">
                                                                 <span className="text-indigo-500 text-[10px] whitespace-nowrap">{new Date(doc.created_at).toLocaleDateString()}</span>
-                                                                <a href={getAuthenticatedLink(doc)} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-indigo-200 rounded text-indigo-600">
-                                                                    <Eye className="w-3 h-3" />
-                                                                </a>
                                                             </div>
                                                         </div>
                                                         {(ef || la || lv) && (
