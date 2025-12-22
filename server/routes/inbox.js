@@ -350,8 +350,13 @@ router.put('/:type/:id/reviewed', requireRole('clinician', 'nurse', 'admin'), as
     const { comment } = req.body;
 
     let result;
-    if (type === 'lab' || type === 'imaging') {
-      // Handling for orders
+
+    // First, try to find if this is an order or document
+    const orderCheck = await pool.query('SELECT id FROM orders WHERE id = $1', [id]);
+    const isOrder = orderCheck.rows.length > 0;
+
+    if (isOrder) {
+      // Handling for orders (labs, imaging orders)
       const currentOrder = await pool.query('SELECT comments FROM orders WHERE id = $1', [id]);
       let existingComments = currentOrder.rows[0]?.comments || [];
       if (typeof existingComments === 'string') {
@@ -378,8 +383,13 @@ router.put('/:type/:id/reviewed', requireRole('clinician', 'nurse', 'admin'), as
         [req.user.id, JSON.stringify(updatedComments), id]
       );
     } else {
-      // Handling for documents
+      // Handling for documents (uploaded imaging reports, etc.)
       const currentDoc = await pool.query('SELECT comments FROM documents WHERE id = $1', [id]);
+
+      if (currentDoc.rows.length === 0) {
+        return res.status(404).json({ error: 'Item not found in orders or documents' });
+      }
+
       let existingComments = currentDoc.rows[0]?.comments || [];
       if (typeof existingComments === 'string') {
         try { existingComments = JSON.parse(existingComments); } catch (e) { existingComments = []; }
@@ -406,7 +416,7 @@ router.put('/:type/:id/reviewed', requireRole('clinician', 'nurse', 'admin'), as
     }
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Item not found' });
+      return res.status(404).json({ error: 'Failed to update item' });
     }
 
     res.json(result.rows[0]);
