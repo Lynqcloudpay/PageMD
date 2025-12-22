@@ -43,80 +43,81 @@ async function importLoinc() {
 
     const client = await pool.connect();
 
-    let lineCount = 0;
-    rl.on('line', async (line) => {
-        lineCount++;
-        // Robust CSV parser for LOINC (handles commas within quotes and empty fields)
-        const cleanParts = [];
-        let current = '';
-        let inQuotes = false;
-        for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-            if (char === '"') {
-                inQuotes = !inQuotes;
-            } else if (char === ',' && !inQuotes) {
-                cleanParts.push(current.trim().replace(/^"|"$/g, ''));
-                current = '';
-            } else {
-                current += char;
+    try {
+        await client.query('BEGIN');
+
+        let lineCount = 0;
+        for await (const line of rl) {
+            lineCount++;
+
+            // Robust CSV parser (handles commas within quotes)
+            const cleanParts = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    cleanParts.push(current.trim().replace(/^"|"$/g, ''));
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            cleanParts.push(current.trim().replace(/^"|"$/g, ''));
+
+            if (lineCount === 1) {
+                headers = cleanParts.map(h => h.toUpperCase().trim());
+                console.log('✅ Headers detected:', headers.slice(0, 10).join(', '));
+                continue;
+            }
+
+            const record = {};
+            headers.forEach((h, i) => {
+                record[h] = cleanParts[i] || null;
+            });
+
+            const loinc_code = record.LOINC_NUM;
+            if (!loinc_code || loinc_code === 'LOINC_NUM') continue;
+
+            batch.push([
+                loinc_code,
+                record.COMPONENT,
+                record.PROPERTY,
+                record.TIME_ASPCT,
+                record.SYSTEM,
+                record.SCALE_TYP,
+                record.METHOD_TYP,
+                record.LONG_COMMON_NAME,
+                record.STATUS,
+                version
+            ]);
+
+            if (batch.length >= batchSize) {
+                await upsertBatch(client, batch);
+                count += batch.length;
+                if (count % 5000 === 0) {
+                    console.log(`...processed ${count} codes`);
+                }
+                batch = [];
             }
         }
-        cleanParts.push(current.trim().replace(/^"|"$/g, ''));
 
-        if (!headers) {
-            if (!line.includes('LOINC_NUM')) {
-                if (lineCount < 5) console.log(`Skipping line ${lineCount}: ${line.substring(0, 50)}`);
-                return;
-            }
-            headers = cleanParts.map(h => h.toUpperCase().trim());
-            console.log('✅ Headers detected:', headers.slice(0, 5).join(', '));
-            return;
-        }
-
-        const record = {};
-        headers.forEach((h, i) => { record[h] = cleanParts[i] || null; });
-
-        const loinc_code = record.LOINC_NUM;
-        if (!loinc_code || loinc_code === 'LOINC_NUM') return;
-
-        batch.push([
-            loinc_code,
-            record.COMPONENT,
-            record.PROPERTY,
-            record.TIME_ASPCT,
-            record.SYSTEM,
-            record.SCALE_TYP,
-            record.METHOD_TYP,
-            record.LONG_COMMON_NAME,
-            record.STATUS,
-            version
-        ]);
-
-        if (batch.length >= batchSize) {
-            const currentBatch = [...batch];
-            batch = [];
-            rl.pause();
-            try {
-                await upsertBatch(client, currentBatch);
-                count += currentBatch.length;
-                if (count % 5000 === 0) console.log(`...processed ${count} codes`);
-            } catch (err) {
-                console.error('Batch error:', err);
-            }
-            rl.resume();
-        }
-    });
-
-    rl.on('close', async () => {
         if (batch.length > 0) {
             await upsertBatch(client, batch);
             count += batch.length;
         }
+
         await client.query('COMMIT');
         console.log(`✅ LOINC Import complete. Total: ${count} records.`);
-        client.release();
+    } catch (err) {
+        if (client) await client.query('ROLLBACK');
+        console.error('❌ Import failed:', err);
+    } finally {
+        if (client) client.release();
         await pool.end();
-    });
+    }
 }
 
 async function upsertBatch(client, rows) {
@@ -137,7 +138,6 @@ async function upsertBatch(client, rows) {
             version = EXCLUDED.version
     `;
 
-    // Transpose rows for UNNEST
     const columns = [[], [], [], [], [], [], [], [], [], []];
     rows.forEach(row => {
         row.forEach((val, i) => columns[i].push(val));
@@ -147,3 +147,4 @@ async function upsertBatch(client, rows) {
 }
 
 importLoinc();
+
