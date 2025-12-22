@@ -65,6 +65,7 @@ async function importLoinc() {
             cleanParts.push(current.trim().replace(/^"|"$/g, ''));
 
             if (!headers) {
+                console.log('RAW Header Line:', line);
                 headers = cleanParts.map(h => h.toUpperCase().trim());
                 console.log('Detected Headers:', headers);
                 continue;
