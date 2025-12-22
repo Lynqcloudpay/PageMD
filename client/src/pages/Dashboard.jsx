@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Calendar, Users, FileText, AlertCircle, TrendingUp, Activity, Clock, User,
-  ArrowRight, Plus, MessageSquare, ClipboardList, Zap, BarChart3,
-  Video, Bell, CheckCircle2, XCircle, AlertTriangle
+import {
+    Calendar, Users, FileText, AlertCircle, TrendingUp, Activity, Clock, User,
+    ArrowRight, Plus, MessageSquare, ClipboardList, Zap, BarChart3,
+    Video, Bell, CheckCircle2, XCircle, AlertTriangle
 } from 'lucide-react';
 import { reportsAPI, appointmentsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -54,12 +54,12 @@ const Dashboard = () => {
             try {
                 const today = format(new Date(), 'yyyy-MM-dd');
                 const params = { date: today };
-                
+
                 // If SELF scope, only show user's own appointments
                 if (scope.scheduleScope === 'SELF') {
                     params.providerId = user.id;
                 }
-                
+
                 const response = await appointmentsAPI.get(params);
                 setTodayAppointments(response.data || []);
             } catch (error) {
@@ -100,22 +100,22 @@ const Dashboard = () => {
             trend: '+5',
             link: '/schedule',
         },
-        {
-            title: 'In Basket',
-            value: stats?.pendingOrders || 0,
-            icon: ClipboardList,
-            color: 'warning',
-            trend: '3 new',
-            link: '/tasks',
-        },
-        {
-            title: 'Messages',
-            value: stats?.unreadMessages || 0,
-            icon: MessageSquare,
-            color: 'primary',
-            trend: '2 urgent',
-            link: '/messages',
-        },
+        // {
+        //     title: 'In Basket',
+        //     value: stats?.pendingOrders || 0,
+        //     icon: ClipboardList,
+        //     color: 'warning',
+        //     trend: '3 new',
+        //     link: '/tasks',
+        // },
+        // {
+        //     title: 'Messages',
+        //     value: stats?.unreadMessages || 0,
+        //     icon: MessageSquare,
+        //     color: 'primary',
+        //     trend: '2 urgent',
+        //     link: '/messages',
+        // },
     ];
 
     const quickActions = [
@@ -138,9 +138,7 @@ const Dashboard = () => {
                     </p>
                 </div>
                 <div className="flex items-center space-x-2">
-                    <Button variant="outline" icon={BarChart3} onClick={() => navigate('/analytics')}>
-                        View Analytics
-                    </Button>
+
                     <Button variant="primary" icon={Plus} onClick={() => navigate('/patients')}>
                         New Patient
                     </Button>
@@ -157,11 +155,11 @@ const Dashboard = () => {
                         warning: 'bg-yellow-100 text-yellow-700',
                         error: 'bg-red-100 text-red-700',
                     };
-                    
+
                     return (
-                        <Card 
-                            key={idx} 
-                            hover 
+                        <Card
+                            key={idx}
+                            hover
                             onClick={() => stat.link && navigate(stat.link)}
                             className="cursor-pointer group"
                         >
@@ -319,7 +317,7 @@ const Dashboard = () => {
                                             <p className="text-sm font-medium text-warning-900 dark:text-warning-100">
                                                 {stats.pendingNotes} unsigned notes
                                             </p>
-                                            <button 
+                                            <button
                                                 onClick={() => navigate('/pending-notes')}
                                                 className="text-xs text-warning-700 dark:text-warning-300 hover:underline mt-1"
                                             >
@@ -328,23 +326,8 @@ const Dashboard = () => {
                                         </div>
                                     </div>
                                 )}
-                                {stats?.unreadMessages > 0 && (
-                                    <div className="flex items-start space-x-3 p-3 bg-primary-50 dark:bg-primary-900/10 rounded-lg border border-primary-200 dark:border-primary-800">
-                                        <MessageSquare className="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
-                                        <div className="flex-1">
-                                            <p className="text-sm font-medium text-primary-900 dark:text-primary-100">
-                                                {stats.unreadMessages} unread messages
-                                            </p>
-                                            <button 
-                                                onClick={() => navigate('/messages')}
-                                                className="text-xs text-primary-700 dark:text-primary-300 hover:underline mt-1"
-                                            >
-                                                View messages →
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                                {(!stats?.pendingNotes && !stats?.unreadMessages) && (
+
+                                {(!stats?.pendingNotes) && (
                                     <div className="text-center py-4">
                                         <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-success-500" />
                                         <p className="text-sm text-neutral-500 dark:text-neutral-400">All caught up!</p>

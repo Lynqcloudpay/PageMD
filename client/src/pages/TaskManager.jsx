@@ -68,7 +68,7 @@ const TaskManager = () => {
         id: item.id,
         source: 'inbox',
         category: item.type === 'lab' || item.type === 'imaging' ? 'results' : 'documents',
-        status: item.reviewed ? 'read' : 'unread',
+        status: item.reviewed ? 'completed' : 'unread',
         patient: item.patientName,
         patientId: item.patientId,
         title: item.title,
@@ -90,7 +90,7 @@ const TaskManager = () => {
         id: msg.id,
         source: 'messages',
         category: msg.message_type === 'task' ? 'orders' : 'messages',
-        status: msg.read_at ? 'read' : 'unread',
+        status: msg.task_status === 'completed' ? 'completed' : (msg.read_at ? 'read' : 'unread'),
         patient: msg.patient_name || 'N/A',
         patientId: msg.patient_id,
         title: msg.subject,
@@ -128,7 +128,7 @@ const TaskManager = () => {
   }, [tasks, updateTasks]);
   const [selectedTask, setSelectedTask] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('unread');
   const [showTaskDetail, setShowTaskDetail] = useState(false);
 
   // Count tasks by category

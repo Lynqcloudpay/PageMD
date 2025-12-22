@@ -391,15 +391,29 @@ const Snapshot = ({ showNotesOnly = false }) => {
                         .map(v => {
                             const vData = typeof v.vitals === 'string' ? JSON.parse(v.vitals) : v.vitals;
                             let bpValue = vData.bp || vData.blood_pressure || 'N/A';
-                            if (bpValue !== 'N/A' && typeof bpValue === 'string') {
-                                bpValue = bpValue.replace(/&#x2F;/g, '/').replace(/&#47;/g, '/');
-                            }
+                            // Helper to clean potentially double-encoded values
+                            const cleanValue = (val) => {
+                                if (!val || val === 'N/A') return 'N/A';
+                                if (typeof val !== 'string') return val;
+                                let str = val;
+                                let prev = '';
+                                let i = 0;
+                                while (str !== prev && i < 5) {
+                                    prev = str;
+                                    str = str.replace(/&amp;/g, '&')
+                                        .replace(/&#x2F;/g, '/')
+                                        .replace(/&#47;/g, '/');
+                                    i++;
+                                }
+                                return str;
+                            };
+
                             return {
                                 date: new Date(v.visit_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }),
-                                bp: bpValue,
-                                hr: vData.hr || vData.heart_rate || vData.pulse || 'N/A',
-                                temp: vData.temp || vData.temperature || 'N/A',
-                                rr: vData.rr || vData.respiratory_rate || vData.resp || 'N/A',
+                                bp: cleanValue(bpValue),
+                                hr: cleanValue(vData.hr || vData.heart_rate || vData.pulse || 'N/A'),
+                                temp: cleanValue(vData.temp || vData.temperature || 'N/A'),
+                                rr: cleanValue(vData.rr || vData.respiratory_rate || vData.resp || 'N/A'),
                                 spo2: vData.spo2 || vData.oxygen_saturation || vData.o2sat || 'N/A',
                                 weight: vData.weight || 'N/A'
                             };
@@ -1762,19 +1776,19 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     <div className="grid grid-cols-2 gap-y-2">
                                                         <div className="flex flex-col">
                                                             <span className="text-[9px] text-gray-500 font-bold uppercase">BP</span>
-                                                            <span className="text-sm font-black text-blue-900">{vital.bp?.replace(/&#x2F;/g, '/') || 'N/A'}</span>
+                                                            <span className="text-sm font-medium text-blue-900">{vital.bp || 'N/A'}</span>
                                                         </div>
                                                         <div className="flex flex-col">
                                                             <span className="text-[9px] text-gray-500 font-bold uppercase">HR</span>
-                                                            <span className="text-sm font-black text-blue-900">{vital.hr || 'N/A'} <span className="text-[10px] font-medium text-gray-400">bpm</span></span>
+                                                            <span className="text-sm font-medium text-blue-900">{vital.hr || 'N/A'} <span className="text-[10px] font-medium text-gray-400">bpm</span></span>
                                                         </div>
                                                         <div className="flex flex-col">
                                                             <span className="text-[9px] text-gray-500 font-bold uppercase">SpO2</span>
-                                                            <span className="text-sm font-black text-blue-900">{vital.spo2 || 'N/A'}%</span>
+                                                            <span className="text-sm font-medium text-blue-900">{vital.spo2 || 'N/A'}%</span>
                                                         </div>
                                                         <div className="flex flex-col">
                                                             <span className="text-[9px] text-gray-500 font-bold uppercase">Temp</span>
-                                                            <span className="text-sm font-black text-blue-900">{vital.temp || 'N/A'}°F</span>
+                                                            <span className="text-sm font-medium text-blue-900">{vital.temp || 'N/A'}°F</span>
                                                         </div>
                                                     </div>
                                                     <p className="text-[9px] text-gray-400 font-bold mt-2 text-right">{new Date(vital.date).toLocaleDateString()} {vital.time}</p>
@@ -1809,7 +1823,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             <span className="font-bold text-red-900 text-[11px] truncate">{doc.file_name || 'EKG'}</span>
                                                             <div className="flex items-center space-x-2">
                                                                 <span className="text-red-500 text-[10px] whitespace-nowrap">{new Date(doc.created_at).toLocaleDateString()}</span>
-                                                                <a href={doc.file_path ? (doc.file_path.startsWith('http') ? doc.file_path : `/${doc.file_path}`) : '#'} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-red-200 rounded text-red-600">
+                                                                <a href={doc.file_path ? (doc.file_path.startsWith('http') ? doc.file_path : `/api/documents/${doc.id}/file`) : '#'} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-red-200 rounded text-red-600">
                                                                     <Eye className="w-3 h-3" />
                                                                 </a>
                                                             </div>
@@ -1852,7 +1866,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             <span className="font-bold text-indigo-900 text-[11px] truncate">{doc.file_name || 'Echo Study'}</span>
                                                             <div className="flex items-center space-x-2">
                                                                 <span className="text-indigo-500 text-[10px] whitespace-nowrap">{new Date(doc.created_at).toLocaleDateString()}</span>
-                                                                <a href={doc.file_path ? (doc.file_path.startsWith('http') ? doc.file_path : `/${doc.file_path}`) : '#'} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-indigo-200 rounded text-indigo-600">
+                                                                <a href={doc.file_path ? (doc.file_path.startsWith('http') ? doc.file_path : `/api/documents/${doc.id}/file`) : '#'} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-indigo-200 rounded text-indigo-600">
                                                                     <Eye className="w-3 h-3" />
                                                                 </a>
                                                             </div>

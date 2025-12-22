@@ -1,308 +1,506 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Video, VideoOff, Mic, MicOff, Phone, PhoneOff, 
+import {
+  Video, VideoOff, Mic, MicOff, Phone, PhoneOff,
   Monitor, MessageSquare, Users, Settings, Maximize2,
-  Clock, User, Calendar, FileText, Camera
+  Clock, User, Calendar, FileText, Camera, ChevronRight,
+  Shield, Signal, Wifi, Battery, X, MoreVertical, Layout
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { appointmentsAPI, patientsAPI } from '../services/api';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
 
-// Note: In production, this would integrate with a WebRTC service like Twilio, Zoom, or Doxy.me
+// Mock WebRTC hook for local preview
+const useMediaStream = (active) => {
+  const [stream, setStream] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!active) {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        setStream(null);
+      }
+      return;
+    }
+
+    const startStream = async () => {
+      try {
+        const mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true
+        });
+        setStream(mediaStream);
+      } catch (err) {
+        console.error("Failed to access media devices:", err);
+        setError(err);
+      }
+    };
+
+    startStream();
+
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [active]);
+
+  return { stream, error };
+};
+
 const Telehealth = () => {
-  const [isInCall, setIsInCall] = useState(false);
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeCall, setActiveCall] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState('notes'); // 'notes', 'chat', 'info'
+
+  // Call State
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [noteDraft, setNoteDraft] = useState('');
   const [chatMessages, setChatMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const [showChat, setShowChat] = useState(false);
-  const [callDuration, setCallDuration] = useState(0);
-  const [waitingRoom, setWaitingRoom] = useState([]);
-  const [selectedPatient, setSelectedPatient] = useState(null);
-  
-  const localVideoRef = useRef(null);
-  const remoteVideoRef = useRef(null);
 
-  // Timer for call duration
+  const localVideoRef = useRef(null);
+  const { stream } = useMediaStream(!!activeCall && !isVideoOff);
+
+  // Fetch appointments on mount
+  useEffect(() => {
+    const fetchSchedule = async () => {
+      try {
+        const today = format(new Date(), 'yyyy-MM-dd');
+        const response = await appointmentsAPI.get({ date: today });
+        // Filter for telehealth appointments only
+        const telehealthAppts = (response.data || []).filter(appt => {
+          const type = (appt.type || '').toLowerCase();
+          return type.includes('telehealth') || type.includes('video') || type.includes('virtual');
+        });
+
+        // For demo purposes, we'll mark some as 'Ready' if they are close to now
+        const enhancedAppts = telehealthAppts.map(appt => ({
+          ...appt,
+          status: Math.random() > 0.5 ? 'ready' : 'scheduled' // Mock status
+        }));
+        setAppointments(enhancedAppts);
+      } catch (err) {
+        console.error("Failed to load appointments", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSchedule();
+  }, []);
+
+  // Update local video stream ref
+  useEffect(() => {
+    if (localVideoRef.current && stream) {
+      localVideoRef.current.srcObject = stream;
+    }
+  }, [stream, activeCall]);
+
+  // Call timer
   useEffect(() => {
     let interval;
-    if (isInCall) {
-      interval = setInterval(() => {
-        setCallDuration(prev => prev + 1);
-      }, 1000);
+    if (activeCall) {
+      interval = setInterval(() => setDuration(d => d + 1), 1000);
     }
     return () => clearInterval(interval);
-  }, [isInCall]);
+  }, [activeCall]);
 
-  const formatDuration = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  const handleStartCall = (patient) => {
+    setActiveCall(patient);
+    setDuration(0);
+    // Add system message
+    setChatMessages([{
+      id: 'sys-1',
+      sender: 'system',
+      text: 'Secure connection established. Session is encrypted.',
+      time: new Date()
+    }]);
   };
 
-  const startCall = (patient) => {
-    setSelectedPatient(patient);
-    setIsInCall(true);
-    setCallDuration(0);
-    // In production: Initialize WebRTC connection
+  const handleEndCall = () => {
+    if (window.confirm("End this telehealth session?")) {
+      setActiveCall(null);
+      setDuration(0);
+      setChatMessages([]);
+      setNoteDraft('');
+    }
   };
 
-  const endCall = () => {
-    setIsInCall(false);
-    setSelectedPatient(null);
-    setCallDuration(0);
-    setIsMuted(false);
-    setIsVideoOff(false);
-    setIsScreenSharing(false);
-    // In production: Close WebRTC connection
-  };
-
-  const sendMessage = () => {
+  const handleSendMessage = (e) => {
+    e.preventDefault();
     if (!newMessage.trim()) return;
-    setChatMessages([...chatMessages, {
-      id: Date.now(),
-      from: 'provider',
+    setChatMessages(prev => [...prev, {
+      id: Date.now().toString(),
+      sender: 'me',
       text: newMessage,
       time: new Date()
     }]);
     setNewMessage('');
   };
 
-  return (
-    <div className="h-full flex bg-gray-900">
-      {/* Sidebar - Waiting Room */}
-      <div className="w-80 bg-white border-r border-paper-200 flex flex-col">
-        <div className="p-4 border-b border-paper-200">
-          <h2 className="text-lg font-bold text-ink-900 flex items-center">
-            <Video className="w-5 h-5 mr-2 text-paper-600" />
-            Telehealth
-          </h2>
-          <p className="text-sm text-ink-500 mt-1">
-            {waitingRoom.length} patient(s) waiting
-          </p>
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  // --- RENDERERS ---
+
+  if (activeCall) {
+    return (
+      <div className="flex h-[calc(100vh-64px)] bg-gray-950 overflow-hidden relative">
+        {/* Main Video Stage */}
+        <div className={`flex-1 flex flex-col relative transition-all duration-300 ${isSidebarOpen ? 'mr-0' : 'mr-0'}`}>
+
+          {/* Header Overlay */}
+          <div className="absolute top-0 left-0 right-0 p-4 z-10 flex justify-between items-start pointer-events-none">
+            <div className="bg-gray-900/80 backdrop-blur-md text-white px-4 py-2 rounded-lg border border-white/10 shadow-lg pointer-events-auto flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+              <span className="font-mono text-lg font-medium tracking-wider">{formatTime(duration)}</span>
+              <div className="h-4 w-px bg-white/20 mx-1"></div>
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4 text-gray-400" />
+                <span className="font-medium text-gray-200">{activeCall.patientName || activeCall.name}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pointer-events-auto">
+              <div className="bg-gray-900/80 backdrop-blur-md px-3 py-1.5 rounded-md border border-white/10 text-xs text-gray-400 flex items-center gap-2">
+                <Shield className="w-3 h-3 text-green-400" />
+                Encrypted
+              </div>
+              <div className="bg-gray-900/80 backdrop-blur-md px-3 py-1.5 rounded-md border border-white/10 text-xs text-gray-400 flex items-center gap-2">
+                <Signal className="w-3 h-3 text-green-400" />
+                HD
+              </div>
+            </div>
+          </div>
+
+          {/* Remote Video (Center mockup) */}
+          <div className="flex-1 flex items-center justify-center p-4">
+            <div className="relative w-full h-full max-h-screen bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-white/5 group">
+              {/* Placeholder for remote video */}
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-gray-800 to-gray-900">
+                <div className="text-center">
+                  <div className="w-32 h-32 rounded-full bg-gray-700 mx-auto mb-6 flex items-center justify-center shadow-inner">
+                    <span className="text-4xl font-light text-gray-400">
+                      {(activeCall.patientName?.[0] || 'P')}
+                    </span>
+                  </div>
+                  <h2 className="text-2xl text-white font-light tracking-tight mb-2">
+                    Waiting for {activeCall.patientName || "Patient"}...
+                  </h2>
+                  <p className="text-gray-500">Secure link sent. Connecting...</p>
+                </div>
+              </div>
+
+              {/* Local Video (PIP) */}
+              <div className="absolute bottom-6 right-6 w-64 aspect-video bg-black rounded-xl overflow-hidden border border-white/10 shadow-2xl transition-transform hover:scale-105 cursor-move z-20">
+                {!isVideoOff ? (
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover transform scale-x-[-1]"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                    <VideoOff className="w-8 h-8 text-gray-500" />
+                  </div>
+                )}
+                <div className="absolute bottom-2 left-2 text-[10px] font-medium text-white/50 bg-black/50 px-1.5 rounded">You</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Control Bar */}
+          <div className="h-24 bg-gray-900 border-t border-white/5 flex items-center justify-center gap-6 px-8 z-20">
+            <button
+              onClick={() => setIsMuted(!isMuted)}
+              className={`p-4 rounded-full transition-all duration-200 ${isMuted ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30' : 'bg-gray-800 text-white hover:bg-gray-700'}`}
+            >
+              {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+            </button>
+
+            <button
+              onClick={() => setIsVideoOff(!isVideoOff)}
+              className={`p-4 rounded-full transition-all duration-200 ${isVideoOff ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30' : 'bg-gray-800 text-white hover:bg-gray-700'}`}
+            >
+              {isVideoOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
+            </button>
+
+            <button
+              onClick={handleEndCall}
+              className="p-4 rounded-full bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-900/20 transform hover:scale-105 transition-all duration-200 flex items-center gap-2 px-8"
+            >
+              <PhoneOff className="w-6 h-6" />
+              <span className="font-semibold">End Call</span>
+            </button>
+
+            <button className="p-4 rounded-full bg-gray-800 text-white hover:bg-gray-700 transition-all duration-200">
+              <Monitor className="w-6 h-6" />
+            </button>
+
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className={`p-4 rounded-full transition-all duration-200 ${isSidebarOpen ? 'bg-blue-600/20 text-blue-500' : 'bg-gray-800 text-white hover:bg-gray-700'}`}
+            >
+              <Layout className="w-6 h-6" />
+            </button>
+          </div>
         </div>
 
-        {/* Waiting Room List */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-3">
-            <h3 className="text-xs font-semibold text-ink-500 uppercase mb-2">Waiting Room</h3>
-            {waitingRoom.length === 0 ? (
-              <p className="text-sm text-ink-400 text-center py-4">No patients waiting</p>
-            ) : (
-              <div className="space-y-2">
-                {waitingRoom.map(patient => (
-                  <div 
-                    key={patient.id}
-                    className="p-3 bg-paper-50 rounded-lg border border-paper-200"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="font-medium text-ink-900">{patient.name}</p>
-                        <p className="text-xs text-ink-500">{patient.reason}</p>
-                        <div className="flex items-center space-x-2 mt-1 text-xs text-ink-400">
-                          <Calendar className="w-3 h-3" />
-                          <span>{patient.appointmentTime}</span>
+        {/* Sidebar Panel */}
+        {isSidebarOpen && (
+          <div className="w-96 bg-gray-900 border-l border-white/5 flex flex-col shadow-2xl z-30 animate-slide-in-right">
+            {/* Tabs */}
+            <div className="flex border-b border-white/5">
+              {['notes', 'chat', 'info'].map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`flex-1 py-4 text-sm font-medium transition-colors relative ${activeTab === tab ? 'text-blue-400' : 'text-gray-500 hover:text-gray-300'
+                    }`}
+                >
+                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {activeTab === tab && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab Content */}
+            <div className="flex-1 overflow-y-auto bg-gray-800/50">
+              {activeTab === 'notes' && (
+                <div className="p-4 h-full flex flex-col">
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                    Session Notes
+                  </label>
+                  <textarea
+                    value={noteDraft}
+                    onChange={(e) => setNoteDraft(e.target.value)}
+                    placeholder="Type clinical notes here..."
+                    className="flex-1 w-full bg-gray-900/50 border border-white/10 rounded-lg p-4 text-gray-300 placeholder-gray-600 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 resize-none font-sans leading-relaxed"
+                  />
+                  <div className="mt-4 flex justify-end">
+                    <Button size="sm">Save to EMR</Button>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'chat' && (
+                <div className="flex flex-col h-full">
+                  <div className="flex-1 p-4 space-y-4 overflow-y-auto">
+                    {chatMessages.map(msg => (
+                      <div key={msg.id} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm ${msg.sender === 'system' ? 'w-full text-center bg-transparent text-gray-500 text-xs italic' :
+                          msg.sender === 'me' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-700 text-gray-200 rounded-bl-none'
+                          }`}>
+                          {msg.text}
                         </div>
-                        <div className="flex items-center space-x-2 mt-1 text-xs text-orange-600">
-                          <Clock className="w-3 h-3" />
-                          <span>Waiting {Math.round((Date.now() - patient.waitingSince.getTime()) / 60000)} min</span>
+                      </div>
+                    ))}
+                  </div>
+                  <form onSubmit={handleSendMessage} className="p-4 border-t border-white/5 bg-gray-900">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        placeholder="Type a message..."
+                        className="flex-1 bg-gray-800 border-transparent rounded-full px-4 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                      <button type="submit" className="p-2 bg-blue-600 rounded-full text-white hover:bg-blue-700">
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {activeTab === 'info' && (
+                <div className="p-6 space-y-6">
+                  <div className="text-center">
+                    <div className="w-20 h-20 rounded-full bg-gray-700 mx-auto mb-3 flex items-center justify-center text-2xl font-bold text-gray-400">
+                      {(activeCall.patientName?.[0] || 'P')}
+                    </div>
+                    <h3 className="text-lg font-medium text-white">{activeCall.patientName}</h3>
+                    <p className="text-sm text-gray-500">DOB: {activeCall.patientDob || 'N/A'}</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase">Reason for Visit</label>
+                      <p className="text-gray-300 text-sm mt-1">{activeCall.chiefComplaint || activeCall.reason || 'Follow-up'}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase">Vitals (Last Visit)</label>
+                      <div className="grid grid-cols-2 gap-2 mt-1">
+                        <div className="bg-gray-800 p-2 rounded text-center">
+                          <div className="text-xs text-gray-500">BP</div>
+                          <div className="text-sm text-white">120/80</div>
+                        </div>
+                        <div className="bg-gray-800 p-2 rounded text-center">
+                          <div className="text-xs text-gray-500">HR</div>
+                          <div className="text-sm text-white">72</div>
                         </div>
                       </div>
                     </div>
-                    <button
-                      onClick={() => startCall(patient)}
-                      disabled={isInCall}
-                      className="mt-2 w-full px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50 flex items-center justify-center"
-                    >
-                      <Video className="w-4 h-4 mr-1" />
-                      Start Visit
-                    </button>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Upcoming Appointments */}
-          <div className="p-3 border-t border-paper-200">
-            <h3 className="text-xs font-semibold text-ink-500 uppercase mb-2">Upcoming Today</h3>
-            <div className="space-y-2">
-              <p className="text-sm text-ink-400 text-center py-4">No upcoming appointments</p>
+                </div>
+              )}
             </div>
           </div>
-        </div>
+        )}
+      </div>
+    );
+  }
 
-        {/* Quick Actions */}
-        <div className="p-4 border-t border-paper-200">
-          <button className="w-full px-4 py-2 border border-paper-300 rounded-md hover:bg-paper-50 text-sm flex items-center justify-center">
-            <Settings className="w-4 h-4 mr-2" />
-            Audio/Video Settings
-          </button>
+  // --- DASHBOARD VIEW ---
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-8 space-y-8 animate-fade-in text-deep-gray">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-deep-gray tracking-tight">Telehealth Center</h1>
+          <p className="text-deep-gray/70 mt-1 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+            System Operational • Ready for visits
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <Button variant="outline" icon={Settings}>Device Settings</Button>
+          <Button variant="primary" icon={Wifi}>Test Connection</Button>
         </div>
       </div>
 
-      {/* Main Video Area */}
-      <div className="flex-1 flex flex-col">
-        {isInCall ? (
-          <>
-            {/* Video Container */}
-            <div className="flex-1 relative bg-gray-900">
-              {/* Remote Video (Patient) */}
-              <div className="absolute inset-4 bg-gray-800 rounded-lg flex items-center justify-center">
-                {isVideoOff ? (
-                  <div className="text-center">
-                    <div className="w-24 h-24 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <User className="w-12 h-12 text-gray-500" />
-                    </div>
-                    <p className="text-gray-400">{selectedPatient?.name}</p>
-                    <p className="text-gray-500 text-sm">Camera is off</p>
-                  </div>
-                ) : (
-                  <div className="text-center">
-                    <div className="w-32 h-32 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#3B82F6' }}>
-                      <User className="w-16 h-16 text-white" />
-                    </div>
-                    <p className="text-white text-lg">{selectedPatient?.name}</p>
-                    <p className="text-gray-400 text-sm">Connected</p>
-                  </div>
-                )}
-              </div>
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-              {/* Local Video (Self) */}
-              <div className="absolute bottom-8 right-8 w-48 h-36 bg-gray-700 rounded-lg border-2 border-gray-600 overflow-hidden">
-                <div className="w-full h-full flex items-center justify-center">
-                  {isVideoOff ? (
-                    <VideoOff className="w-8 h-8 text-gray-500" />
-                  ) : (
-                    <div className="bg-paper-600 w-full h-full flex items-center justify-center">
-                      <Camera className="w-8 h-8 text-white" />
+        {/* Left Col: Upcoming Schedule */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="border-t-4 border-t-strong-azure overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-white">
+              <h2 className="text-lg font-bold text-deep-gray flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-strong-azure" />
+                Today's Schedule
+              </h2>
+              <span className="text-xs font-semibold bg-blue-50 text-blue-600 px-3 py-1 rounded-full">
+                {appointments.length} Appointments
+              </span>
+            </div>
+
+            <div className="divide-y divide-gray-50">
+              {loading ? (
+                <div className="p-12 text-center text-gray-400">Loading schedule...</div>
+              ) : appointments.length === 0 ? (
+                <div className="p-12 text-center">
+                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Calendar className="w-8 h-8 text-gray-300" />
+                  </div>
+                  <h3 className="text-gray-900 font-medium">No appointments today</h3>
+                  <p className="text-gray-500 text-sm mt-1">Scheduled telehealth visits will appear here.</p>
+                </div>
+              ) : (
+                appointments.map(appt => (
+                  <div key={appt.id} className="p-6 hover:bg-gray-50 transition-colors group">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-6">
+                        <div className="text-center min-w-[60px]">
+                          <div className="text-lg font-bold text-deep-gray">{appt.time}</div>
+                          <div className="text-xs text-gray-500 uppercase font-medium">{parseInt(appt.time) >= 12 ? 'PM' : 'AM'}</div>
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-deep-gray text-lg group-hover:text-strong-azure transition-colors">
+                            {appt.patientName || appt.name}
+                          </h3>
+                          <p className="text-sm text-gray-500 flex items-center gap-2 mt-1">
+                            <span className="bg-gray-100 px-2 py-0.5 rounded text-xs font-medium text-gray-600">
+                              {appt.type || 'Follow-up'}
+                            </span>
+                            <span>•</span>
+                            <span className="truncate max-w-[200px]">{appt.reason || 'Routine Checkup'}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        {appt.status === 'ready' ? (
+                          <span className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-50 text-green-600 text-xs font-bold border border-green-100">
+                            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                            Checked In
+                          </span>
+                        ) : (
+                          <span className="hidden md:inline-flex px-3 py-1 rounded-full bg-gray-100 text-gray-500 text-xs font-bold">
+                            Scheduled
+                          </span>
+                        )}
+
+                        <Button
+                          size="sm"
+                          className={appt.status === 'ready' ? 'bg-green-600 hover:bg-green-700 text-white shadow-md shadow-green-200' : ''}
+                          onClick={() => handleStartCall(appt)}
+                          icon={Video}
+                        >
+                          Start Visit
+                        </Button>
+                      </div>
                     </div>
-                  )}
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
+        </div>
+
+        {/* Right Col: Waiting Room & Quick Actions */}
+        <div className="space-y-6">
+          <Card className="bg-gradient-to-br from-indigo-600 to-blue-700 text-white border-0 shadow-xl overflow-hidden relative">
+            <div className="absolute top-0 right-0 p-32 bg-white opacity-5 rounded-full transform translate-x-1/2 -translate-y-1/2"></div>
+            <div className="p-6 relative z-10">
+              <h3 className="text-lg font-bold flex items-center gap-2 mb-4">
+                <Users className="w-5 h-5 text-white/80" />
+                Virtual Waiting Room
+              </h3>
+              <div className="text-4xl font-bold mb-1">
+                {appointments.filter(a => a.status === 'ready').length}
+              </div>
+              <p className="text-indigo-100 text-sm mb-6">Patients currently in waiting room</p>
+
+              <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm border border-white/10">
+                <div className="flex items-center justify-between text-sm mb-2">
+                  <span className="text-indigo-200">Average Wait Time</span>
+                  <span className="font-bold">4m 12s</span>
+                </div>
+                <div className="w-full bg-black/20 rounded-full h-1.5 overflow-hidden">
+                  <div className="w-[30%] h-full bg-green-400 rounded-full"></div>
                 </div>
               </div>
+            </div>
+          </Card>
 
-              {/* Call Info Overlay */}
-              <div className="absolute top-4 left-4 bg-black bg-opacity-50 rounded-lg px-4 py-2">
-                <p className="text-white font-medium">{selectedPatient?.name}</p>
-                <p className="text-gray-300 text-sm flex items-center">
-                  <Clock className="w-3 h-3 mr-1" />
-                  {formatDuration(callDuration)}
-                </p>
-              </div>
+          <Card>
+            <div className="p-4 border-b border-gray-100 font-bold text-deep-gray">Quick Invite</div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-gray-500">Send an immediate telehealth link to a patient via SMS or Email.</p>
+              <input
+                type="text"
+                placeholder="Enter phone number or email..."
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-strong-azure/50 focus:border-strong-azure outline-none transition-all"
+              />
+              <Button variant="outline" className="w-full justify-center">Send Invite</Button>
+            </div>
+          </Card>
+        </div>
 
-              {/* Recording Indicator */}
-              <div className="absolute top-4 right-4 bg-red-600 rounded-full px-3 py-1 flex items-center">
-                <div className="w-2 h-2 bg-white rounded-full animate-pulse mr-2" />
-                <span className="text-white text-xs font-medium">REC</span>
-              </div>
-            </div>
-
-            {/* Controls */}
-            <div className="bg-gray-800 p-4">
-              <div className="flex items-center justify-center space-x-4">
-                <button
-                  onClick={() => setIsMuted(!isMuted)}
-                  className={`p-4 rounded-full ${isMuted ? 'bg-red-600' : 'bg-gray-600'} hover:bg-opacity-80 transition-colors`}
-                >
-                  {isMuted ? <MicOff className="w-6 h-6 text-white" /> : <Mic className="w-6 h-6 text-white" />}
-                </button>
-                <button
-                  onClick={() => setIsVideoOff(!isVideoOff)}
-                  className={`p-4 rounded-full ${isVideoOff ? 'bg-red-600' : 'bg-gray-600'} hover:bg-opacity-80 transition-colors`}
-                >
-                  {isVideoOff ? <VideoOff className="w-6 h-6 text-white" /> : <Video className="w-6 h-6 text-white" />}
-                </button>
-                <button
-                  onClick={() => setIsScreenSharing(!isScreenSharing)}
-                  className={`p-4 rounded-full ${isScreenSharing ? '' : 'bg-gray-600'} hover:bg-opacity-80 transition-colors`}
-                  style={isScreenSharing ? { background: '#3B82F6' } : {}}
-                >
-                  <Monitor className="w-6 h-6 text-white" />
-                </button>
-                <button
-                  onClick={() => setShowChat(!showChat)}
-                  className={`p-4 rounded-full ${showChat ? '' : 'bg-gray-600'} hover:bg-opacity-80 transition-colors`}
-                  style={showChat ? { background: '#3B82F6' } : {}}
-                >
-                  <MessageSquare className="w-6 h-6 text-white" />
-                </button>
-                <button
-                  onClick={endCall}
-                  className="p-4 rounded-full bg-red-600 hover:bg-red-700 transition-colors"
-                >
-                  <PhoneOff className="w-6 h-6 text-white" />
-                </button>
-              </div>
-              <p className="text-center text-gray-400 text-xs mt-2">
-                Press Esc to minimize • Space to toggle mute
-              </p>
-            </div>
-          </>
-        ) : (
-          /* No Active Call */
-          <div className="flex-1 flex items-center justify-center bg-white">
-            <div className="text-center">
-              <Video className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h2 className="text-xl font-bold text-primary-900 mb-2">Ready for Telehealth</h2>
-              <p className="text-gray-600 mb-6">Select a patient from the waiting room to start a video visit</p>
-              <div className="flex items-center justify-center space-x-4">
-                <button className="px-4 py-2 text-white rounded-lg flex items-center transition-all duration-200 hover:shadow-md" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'} onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}>
-                  <Settings className="w-4 h-4 mr-2" />
-                  Test Audio/Video
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Chat Panel */}
-        {showChat && isInCall && (
-          <div className="absolute right-0 top-0 bottom-20 w-80 bg-white shadow-xl flex flex-col">
-            <div className="p-3 border-b border-paper-200 flex items-center justify-between">
-              <h3 className="font-semibold text-ink-900">Chat</h3>
-              <button onClick={() => setShowChat(false)} className="p-1 hover:bg-paper-100 rounded">
-                <Maximize2 className="w-4 h-4 text-ink-500" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
-              {chatMessages.map(msg => (
-                <div 
-                  key={msg.id}
-                  className={`p-2 rounded-lg max-w-[80%] ${
-                    msg.from === 'provider' 
-                      ? 'bg-paper-100 ml-auto' 
-                      : 'bg-blue-50'
-                  }`}
-                >
-                  <p className="text-sm text-ink-800">{msg.text}</p>
-                  <p className="text-xs text-ink-400 mt-1">
-                    {format(msg.time, 'h:mm a')}
-                  </p>
-                </div>
-              ))}
-            </div>
-            <div className="p-3 border-t border-paper-200">
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                  placeholder="Type a message..."
-                  className="flex-1 px-3 py-2 border border-paper-300 rounded-lg text-sm"
-                />
-                <button
-                  onClick={sendMessage}
-                  className="px-3 py-2 text-white rounded-lg transition-all duration-200 hover:shadow-md"
-                  style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                >
-                  Send
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

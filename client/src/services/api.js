@@ -145,6 +145,7 @@ export const messagesAPI = {
   get: (params) => api.get('/messages', { params }),
   create: (data) => api.post('/messages', data),
   markRead: (id) => api.put(`/messages/${id}/read`),
+  updateTaskStatus: (id, status) => api.put(`/messages/${id}/task`, { taskStatus: status }),
 };
 
 // Labs

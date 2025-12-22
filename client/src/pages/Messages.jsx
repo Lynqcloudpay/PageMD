@@ -354,7 +354,7 @@ const Messages = () => {
                   className={`flex ${msg.from === 'provider' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div className={`max-w-lg rounded-lg p-3 ${msg.from === 'provider'
-                    ? 'text-white'
+                    ? 'bg-blue-600 text-white'
                     : 'bg-white border border-deep-gray/20'
                     }`}>
                     <p className={`text-sm ${msg.from === 'provider' ? 'text-white' : 'text-ink-700'}`}>

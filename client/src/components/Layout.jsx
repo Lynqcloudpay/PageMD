@@ -27,7 +27,7 @@ const Layout = ({ children }) => {
     const [loading, setLoading] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const { unreadCount: tasksCount } = useTasks();
-    const [messagesCount, setMessagesCount] = useState(0);
+
     const [pendingNotesCount, setPendingNotesCount] = useState(0);
     const [pendingCancellationsCount, setPendingCancellationsCount] = useState(0);
 
@@ -37,23 +37,7 @@ const Layout = ({ children }) => {
 
     // Fetch unread counts
     useEffect(() => {
-        // Fetch messages count
-        const fetchMessagesCount = async () => {
-            try {
-                const response = await messagesAPI.get({ unread: true });
-                if (response && response.data) {
-                    const unreadCount = Array.isArray(response.data)
-                        ? response.data.filter(m => !m.read_at).length
-                        : 0;
-                    setMessagesCount(unreadCount);
-                } else {
-                    setMessagesCount(0);
-                }
-            } catch (error) {
-                console.error('Error fetching messages count:', error);
-                setMessagesCount(0);
-            }
-        };
+
 
         // Fetch pending notes count
         const fetchPendingNotesCount = async () => {
@@ -85,13 +69,13 @@ const Layout = ({ children }) => {
         };
 
         // Initial fetch
-        fetchMessagesCount();
+
         fetchPendingNotesCount();
         fetchPendingCancellationsCount();
 
         // Refresh counts periodically (every 30 seconds)
         const interval = setInterval(() => {
-            fetchMessagesCount();
+
             fetchPendingNotesCount();
             fetchPendingCancellationsCount();
         }, 30000);
@@ -102,14 +86,14 @@ const Layout = ({ children }) => {
     // Use permissions instead of role checks
     const { can, getScope } = usePermissions();
     const scope = getScope();
-    
+
     // Check permissions for navigation items
     const canViewSchedule = can('schedule:view');
     const canManageUsers = can('users:manage');
     const canViewPatients = can('patients:view_list');
     const canViewBilling = can('billing:view');
     const canViewReports = can('reports:view');
-    
+
     // Show "My Schedule" if user has schedule:view and scope is SELF (clinicians)
     const showMySchedule = canViewSchedule && scope.scheduleScope === 'SELF';
 
@@ -127,8 +111,6 @@ const Layout = ({ children }) => {
         ...(canViewPatients ? [
             { path: '/patients', icon: Users, label: 'Patients', badge: null }
         ] : []),
-        { path: '/tasks', icon: ClipboardList, label: 'In Basket', badge: tasksCount > 0 ? tasksCount : null },
-        { path: '/messages', icon: MessageSquare, label: 'Messages', badge: messagesCount > 0 ? messagesCount : null },
         { path: '/pending-notes', icon: Clock, label: 'Pending Notes', badge: pendingNotesCount > 0 ? pendingNotesCount : null },
         // Billing - requires billing:view permission
         ...(canViewBilling ? [
@@ -137,10 +119,7 @@ const Layout = ({ children }) => {
         { path: '/telehealth', icon: Video, label: 'Telehealth', badge: null },
         // Admin items - requires users:manage or reports:view
         ...(canManageUsers ? [
-            { path: '/analytics', icon: BarChart3, label: 'Analytics', badge: null },
             { path: '/users', icon: Shield, label: 'User Management', badge: null }
-        ] : canViewReports ? [
-            { path: '/analytics', icon: BarChart3, label: 'Analytics', badge: null }
         ] : []),
     ];
 
