@@ -23,11 +23,7 @@ router.get('/search', authenticate, async (req, res) => {
         const results = await pool.query(`
             SELECT 
                 c.id, c.code, c.description, c.is_billable,
-                COALESCE(u.use_count, 0) as use_count,
-                -- Clinical relevance boosters
-                (c.code = $1) as exact_code,
-                (c.description ~* $5) as whole_word_match,
-                (c.description ~* '\\y(unspecified|essential|primary|uncomplicated)\\y') as is_standard_diag
+                COALESCE(u.use_count, 0) as use_count
             FROM icd10_codes c
             LEFT JOIN icd10_usage u ON c.id = u.icd10_id AND u.user_id = $4
             WHERE c.is_active = true
@@ -37,11 +33,11 @@ router.get('/search', authenticate, async (req, res) => {
                 OR c.description ILIKE '%' || $1 || '%'
               )
             ORDER BY 
-                exact_code DESC,
+                (c.code = $1) DESC,
                 -- 1. Priority: Whole word match + Billable (e.g. "Hypertension" -> I10)
-                (whole_word_match AND c.is_billable) DESC,
+                (c.description ~* $5 AND c.is_billable) DESC,
                 -- 2. Priority: Standard diagnoses (Essential, Unspecified, etc)
-                (is_standard_diag AND c.is_billable) DESC,
+                (c.description ~* '\\y(unspecified|essential|primary|uncomplicated)\\y' AND c.is_billable) DESC,
                 -- 3. Priority: Starts with the term
                 (c.description ILIKE $1 || '%') DESC,
                 -- 4. Priority: Full-text rank for specificity
