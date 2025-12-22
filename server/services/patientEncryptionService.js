@@ -12,10 +12,9 @@
 const encryptionService = require('./encryptionService');
 
 // Check if encryption is enabled
-// In development, encryption is disabled by default for ease of use
-// In production, it should be enabled
-const ENCRYPTION_ENABLED = process.env.ENABLE_PHI_ENCRYPTION === 'true' ||
-  process.env.NODE_ENV === 'production';
+// Encryption is now DISABLED by default - must explicitly set ENABLE_PHI_ENCRYPTION=true
+// This prevents data corruption when KMS isn't properly configured
+const ENCRYPTION_ENABLED = process.env.ENABLE_PHI_ENCRYPTION === 'true';
 
 // Fields that contain PHI and should be encrypted
 // NOTE: Date fields (dob, insurance_subscriber_dob) are NOT included because
