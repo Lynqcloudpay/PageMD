@@ -647,7 +647,8 @@ router.put('/:id', requirePermission('patients:edit_demographics'), async (req, 
     for (const field of allowedFields) {
       const camelField = field.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
       if (updates[camelField] !== undefined) {
-        changedFields[field] = updates[camelField];
+        // Convert empty strings to null to prevent DB errors (especially for dates/enums)
+        changedFields[field] = updates[camelField] === '' ? null : updates[camelField];
       }
     }
 
