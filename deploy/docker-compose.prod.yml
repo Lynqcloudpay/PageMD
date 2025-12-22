@@ -59,6 +59,9 @@ services:
       GCP_KMS_KEY_NAME: ${GCP_KMS_KEY_NAME:-}
       GCP_PROJECT_ID: ${GCP_PROJECT_ID:-}
       AZURE_KEY_VAULT_URL: ${AZURE_KEY_VAULT_URL:-}
+      # For local KMS (small clinic EMR)
+      KMS_PROVIDER: ${KMS_PROVIDER:-local}
+      DB_HOST: db
       # E-Prescribing (DoseSpot)
       EPRESCRIBE_PROVIDER: ${EPRESCRIBE_PROVIDER:-internal}
       DOSESPOT_BASE_URL: ${DOSESPOT_BASE_URL:-}

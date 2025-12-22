@@ -110,14 +110,16 @@ const getKMSClient = () => {
       }
     };
   } else {
-    // Local/Development: Use app secret (NOT for production)
-    // Allow local KMS on localhost even in production mode (for local testing)
-    const isLocalhost = process.env.DB_HOST === 'localhost' ||
+    // Local/Development: Use app secret (NOT for production enterprise, but OK for small clinics)
+    // Allow local KMS on localhost, Docker container hostnames, or explicit override
+    const isLocalOrDocker = process.env.DB_HOST === 'localhost' ||
       process.env.DB_HOST === '127.0.0.1' ||
-      !process.env.DB_HOST;
+      process.env.DB_HOST === 'db' ||  // Docker service name
+      !process.env.DB_HOST ||
+      process.env.ALLOW_LOCAL_KMS === 'true';
 
-    if (process.env.NODE_ENV === 'production' && kmsProvider === 'local' && !isLocalhost) {
-      throw new Error('KMS_PROVIDER=local is not allowed in production. Use AWS KMS, GCP KMS, or Azure Key Vault.');
+    if (process.env.NODE_ENV === 'production' && kmsProvider === 'local' && !isLocalOrDocker) {
+      throw new Error('KMS_PROVIDER=local is not allowed in production. Use AWS KMS, GCP KMS, or Azure Key Vault, or set ALLOW_LOCAL_KMS=true.');
     }
     const appSecret = process.env.JWT_SECRET || 'dev-secret-key-change-in-production';
     kmsClient = {
