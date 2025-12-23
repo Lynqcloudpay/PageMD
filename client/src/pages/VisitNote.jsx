@@ -491,11 +491,16 @@ const VisitNote = () => {
             patientsAPI.getSnapshot(id)
                 .then(async response => {
                     const data = response.data;
+                    console.log('VisitNote: Patient snapshot fetched:', data);
                     if (data && (!data.medications || data.medications.length === 0)) {
+                        console.log('VisitNote: Snapshot missing meds, fetching fallback...');
                         try {
                             const medsRes = await patientsAPI.getMedications(id);
+                            console.log('VisitNote: Fallback medications fetched:', medsRes.data);
                             data.medications = medsRes.data || [];
-                        } catch (e) { }
+                        } catch (e) {
+                            console.warn('Medication fallback failed:', e);
+                        }
                     }
                     setPatientData(data);
                 })
@@ -516,14 +521,18 @@ const VisitNote = () => {
 
             // Listen for patient data updates
             const handlePatientDataUpdate = () => {
+                console.log('VisitNote: patient-data-updated event received, refreshing snapshot...');
                 fetchSocialHistory();
                 // Also refresh snapshot data as it might have changed
                 patientsAPI.getSnapshot(id)
                     .then(async response => {
                         const data = response.data;
+                        console.log('VisitNote: Refreshed snapshot fetched:', data);
                         if (data && (!data.medications || data.medications.length === 0)) {
+                            console.log('VisitNote: Refreshed snapshot missing meds, fetching fallback...');
                             try {
                                 const medsRes = await patientsAPI.getMedications(id);
+                                console.log('VisitNote: Refreshed fallback medications:', medsRes.data);
                                 data.medications = medsRes.data || [];
                             } catch (e) { }
                         }

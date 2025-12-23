@@ -309,13 +309,19 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
             fetchOrderSets();
         }
         if (isOpen && activeTab === 'medications' && patientId) {
-            if (initialMedications) {
+            console.log('OrderModal: Medications tab active. initialMedications:', initialMedications);
+            if (initialMedications && initialMedications.length > 0) {
+                console.log('OrderModal: Using initialMedications from props:', initialMedications.length, 'items');
                 setActiveMedications(initialMedications);
                 setLoadingActiveMeds(false);
             } else {
+                console.log('OrderModal: No initialMedications or empty, fetching from API...');
                 setLoadingActiveMeds(true);
                 patientsAPI.getMedications(patientId)
-                    .then(res => setActiveMedications(res.data || []))
+                    .then(res => {
+                        console.log('OrderModal: API medications response:', res.data);
+                        setActiveMedications(res.data || []);
+                    })
                     .catch(err => console.error('Error fetching active meds:', err))
                     .finally(() => setLoadingActiveMeds(false));
             }
@@ -1175,7 +1181,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                     ) : activeMedications.length > 0 && (
                                         <div className="space-y-2 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
                                             <h4 className="text-xs font-bold text-gray-500 uppercase">Current Medications</h4>
-                                            {activeMedications.filter(m => m.active !== false && m.status !== 'discontinued').map(med => (
+                                            {activeMedications.map(med => (
                                                 <div key={med.id} className="bg-white p-2 rounded border border-gray-200 shadow-sm">
                                                     <div className="flex justify-between items-start mb-2">
                                                         <div>
