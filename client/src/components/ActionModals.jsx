@@ -234,8 +234,16 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
     const [loadingOrderSets, setLoadingOrderSets] = useState(false);
     const [showSaveOrderSetModal, setShowSaveOrderSetModal] = useState(false);
     const [newOrderSetName, setNewOrderSetName] = useState('');
+
     const [activeMedications, setActiveMedications] = useState([]);
     const [loadingActiveMeds, setLoadingActiveMeds] = useState(false);
+
+    // E-Prescribe Integration State
+    const [rxMode, setRxMode] = useState('manual'); // 'manual' or 'electronic'
+    const [selectedPharmacy, setSelectedPharmacy] = useState(null);
+    const [pharmacySearch, setPharmacySearch] = useState('');
+    const [pharmacyResults, setPharmacyResults] = useState([]);
+    const [searchingPharmacies, setSearchingPharmacies] = useState(false);
 
     // Step 1: Diagnosis Selection State
     const [newICD10Search, setNewICD10Search] = useState('');
@@ -668,9 +676,13 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
             // Use item values if present, otherwise fallback to state
             reason: item.reason || (activeTab === 'referrals' ? referralReason : ''),
             sig: item.sig || (activeTab === 'medications' ? currentMed.sig : ''),
+            reason: item.reason || (activeTab === 'referrals' ? referralReason : ''),
+            sig: item.sig || (activeTab === 'medications' ? currentMed.sig : ''),
             dispense: item.dispense || (activeTab === 'medications' ? currentMed.dispense : ''),
             refills: item.refills || (activeTab === 'medications' ? currentMed.refills : ''),
-            note: item.note || (activeTab === 'medications' ? currentMed.note : '')
+            note: item.note || (activeTab === 'medications' ? currentMed.note : ''),
+            pharmacy: activeTab === 'medications' && rxMode === 'electronic' ? selectedPharmacy : null,
+            rxMode: activeTab === 'medications' ? rxMode : 'manual'
         };
 
         setCart([...cart, newItem]);
@@ -1095,10 +1107,82 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                     )}
                                 </div>
                             ) : activeTab === 'medications' ? (
+
                                 <div className="p-4 space-y-4">
-                                    <div className="bg-blue-50 p-3 rounded-md text-sm text-blue-700">
-                                        Manual documentation of prescriptions. For e-prescribing, use the <strong>EPrescribe</strong> button.
+                                    <div className="flex p-1 bg-gray-100 rounded-lg mb-4">
+                                        <button
+                                            onClick={() => setRxMode('manual')}
+                                            className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${rxMode === 'manual' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                        >
+                                            Manual / Print
+                                        </button>
+                                        <button
+                                            onClick={() => setRxMode('electronic')}
+                                            className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${rxMode === 'electronic' ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                        >
+                                            E-Prescribe
+                                        </button>
                                     </div>
+
+                                    {rxMode === 'electronic' && (
+                                        <div className="mb-4 space-y-2 p-3 bg-blue-50/50 border border-blue-100 rounded-lg animate-in fade-in slide-in-from-top-2">
+                                            <label className="block text-xs font-bold text-blue-700 uppercase flex justify-between">
+                                                <span>Target Pharmacy</span>
+                                                <span className="text-blue-400 font-normal">Required for E-Rx</span>
+                                            </label>
+                                            {!selectedPharmacy ? (
+                                                <div className="relative">
+                                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-blue-400" />
+                                                    <input
+                                                        className="w-full pl-8 p-2 text-sm border border-blue-200 rounded focus:ring-1 focus:ring-blue-500 bg-white"
+                                                        placeholder="Search Pharmacy (e.g. CVS Miami)..."
+                                                        value={pharmacySearch}
+                                                        onChange={(e) => {
+                                                            setPharmacySearch(e.target.value);
+                                                            if (e.target.value.length > 2) {
+                                                                setSearchingPharmacies(true);
+                                                                // Mock search for now or use actual API if available in context
+                                                                // Assuming eprescribeAPI.searchPharmacies exists or similar
+                                                                eprescribeAPI.searchPharmacies(e.target.value)
+                                                                    .then(res => setPharmacyResults(res.data || []))
+                                                                    .catch(() => setPharmacyResults([]))
+                                                                    .finally(() => setSearchingPharmacies(false));
+                                                            }
+                                                        }}
+                                                    />
+                                                    {searchingPharmacies && <div className="absolute right-3 top-2.5 w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>}
+                                                    {pharmacyResults.length > 0 && (
+                                                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-y-auto">
+                                                            {pharmacyResults.map(ph => (
+                                                                <button
+                                                                    key={ph.id}
+                                                                    onClick={() => {
+                                                                        setSelectedPharmacy(ph);
+                                                                        setPharmacyResults([]);
+                                                                        setPharmacySearch('');
+                                                                    }}
+                                                                    className="w-full text-left p-2 text-xs hover:bg-gray-50 border-b border-gray-50 last:border-0"
+                                                                >
+                                                                    <div className="font-bold text-gray-800">{ph.name}</div>
+                                                                    <div className="text-gray-500">{ph.addressLine1}, {ph.city}</div>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center justify-between bg-white p-2 border border-blue-200 rounded text-sm text-blue-800 shadow-sm">
+                                                    <div>
+                                                        <span className="font-bold block">{selectedPharmacy.name}</span>
+                                                        <span className="text-xs text-blue-600 block">{selectedPharmacy.addressLine1}, {selectedPharmacy.city}</span>
+                                                    </div>
+                                                    <button onClick={() => setSelectedPharmacy(null)} className="text-gray-400 hover:text-red-500 p-1">
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
 
                                     {/* Active Medications Section */}
                                     {loadingActiveMeds ? (
