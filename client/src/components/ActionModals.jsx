@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Modal from './ui/Modal';
-import { Pill, Stethoscope, Upload, Send, Search, X, ShoppingCart, Trash2, Plus, Check, ChevronRight, RotateCcw, ClipboardList, Link } from 'lucide-react';
+import { Pill, Stethoscope, Upload, Send, Search, X, ShoppingCart, Trash2, Plus, Check, ChevronRight, RotateCcw, ClipboardList, Link, ChevronDown } from 'lucide-react';
 import { searchLabTests, searchImaging } from '../data/labCodes';
 import axios from 'axios';
 import { codesAPI, referralsAPI, eprescribeAPI, medicationsAPI, ordersCatalogAPI, ordersetsAPI, patientsAPI } from '../services/api';
