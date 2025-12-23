@@ -3,7 +3,7 @@ import Modal from './ui/Modal';
 import { Pill, Stethoscope, Upload, Send, Search, X, ShoppingCart, Trash2, Plus, Check, ChevronRight, RotateCcw, ClipboardList } from 'lucide-react';
 import { searchLabTests, searchImaging } from '../data/labCodes';
 import axios from 'axios';
-import { codesAPI, referralsAPI, eprescribeAPI, medicationsAPI, ordersCatalogAPI, ordersetsAPI } from '../services/api';
+import { codesAPI, referralsAPI, eprescribeAPI, medicationsAPI, ordersCatalogAPI, ordersetsAPI, patientsAPI } from '../services/api';
 
 export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [] }) => {
     const [med, setMed] = useState('');
@@ -227,6 +227,8 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
     const [loadingOrderSets, setLoadingOrderSets] = useState(false);
     const [showSaveOrderSetModal, setShowSaveOrderSetModal] = useState(false);
     const [newOrderSetName, setNewOrderSetName] = useState('');
+    const [activeMedications, setActiveMedications] = useState([]);
+    const [loadingActiveMeds, setLoadingActiveMeds] = useState(false);
 
     // Memoize diagnoses to prevent reset on parent re-renders
     const diagnosesString = useMemo(() => JSON.stringify(diagnoses), [diagnoses]);
@@ -239,7 +241,14 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
         if (isOpen && activeTab === 'ordersets') {
             fetchOrderSets();
         }
-    }, [isOpen, activeTab]);
+        if (isOpen && activeTab === 'medications' && patientId) {
+            setLoadingActiveMeds(true);
+            patientsAPI.getMedications(patientId)
+                .then(res => setActiveMedications(res.data || []))
+                .catch(err => console.error('Error fetching active meds:', err))
+                .finally(() => setLoadingActiveMeds(false));
+        }
+    }, [isOpen, activeTab, patientId]);
 
     const fetchOrderSets = async () => {
         setLoadingOrderSets(true);
@@ -656,7 +665,11 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                 } else if (item.type === 'referrals') {
                     orderText = `Referral: ${item.name}${item.reason ? ` - ${item.reason}` : ''}`;
                 } else if (item.type === 'medications') {
-                    orderText = `Prescription: ${item.name} - ${item.sig}, Dispense: ${item.dispense}`;
+                    if (item.originalString) {
+                        orderText = item.originalString;
+                    } else {
+                        orderText = `Prescription: ${item.name} - ${item.sig}, Dispense: ${item.dispense}`;
+                    }
                 } else {
                     orderText = item.name;
                 }
@@ -677,8 +690,8 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
             // Save specialized items to their dedicated APIs for tracking
             if (patientId) {
                 cart.forEach(async (item) => {
-                    // Skip items that were loaded from existing strings (already saved)
-                    if (item.originalString) return;
+                    // Skip items that were loaded from existing strings (already saved) unless they have a specific action
+                    if (item.originalString && !item.action) return;
 
                     try {
                         // Save referrals to dedicated API
@@ -699,6 +712,27 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
 
                         // Save medications to e-prescribe drafts
                         if (item.type === 'medications') {
+                            // Handle Specific Actions
+                            if (item.action === 'stop') {
+                                if (item.medicationId) {
+                                    /* 
+                                     * Note: We use patientsAPI.updateMedication which typically expects just the changed fields.
+                                     * Check your backend implementation of PUT /patients/medications/:id
+                                     */
+                                    try {
+                                        await patientsAPI.updateMedication(item.medicationId, { active: false, status: 'discontinued', endDate: new Date().toISOString() });
+                                    } catch (err) {
+                                        console.error('Failed to stop medication:', err);
+                                    }
+                                }
+                                return; // Done for stop
+                            }
+
+                            if (item.action === 'continue') {
+                                return; // Just document in plan, no API changes needed
+                            }
+
+                            // For 'new' (no action) or 'refill' -> Create Draft
                             await eprescribeAPI.createDraft(patientId, {
                                 medicationName: item.name,
                                 medicationDisplay: item.name,
@@ -707,6 +741,30 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                 diagnosis: item.diagnosis || 'General',
                                 dateWritten: new Date().toISOString()
                             });
+
+                            // Remove from active list if it's a refill? No, keep it.
+                            // Add to patient medication list (PAMFOS) ONLY if it's a NEW medication
+                            if (!item.action) {
+                                try {
+                                    await medicationsAPI.add(patientId, {
+                                        medicationName: item.name,
+                                        dosage: '',
+                                        frequency: item.sig || 'As directed',
+                                        route: '',
+                                        startDate: new Date().toISOString(),
+                                        active: true
+                                    });
+                                } catch (e) {
+                                    await patientsAPI.addMedication(patientId, {
+                                        medicationName: item.name,
+                                        dosage: '',
+                                        frequency: item.sig || 'As directed',
+                                        route: '',
+                                        startDate: new Date().toISOString(),
+                                        active: true
+                                    });
+                                }
+                            }
                         }
                     } catch (error) {
                         console.error(`Error saving ${item.type}:`, error);
@@ -887,6 +945,74 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                     <div className="bg-blue-50 p-3 rounded-md text-sm text-blue-700">
                                         Manual documentation of prescriptions. For e-prescribing, use the <strong>EPrescribe</strong> button.
                                     </div>
+
+                                    {/* Active Medications Section */}
+                                    {loadingActiveMeds ? (
+                                        <div className="flex justify-center p-4">
+                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500"></div>
+                                        </div>
+                                    ) : activeMedications.length > 0 && (
+                                        <div className="space-y-2 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                            <h4 className="text-xs font-bold text-gray-500 uppercase">Current Medications</h4>
+                                            {activeMedications.filter(m => m.active).map(med => (
+                                                <div key={med.id} className="bg-white p-2 rounded border border-gray-200 shadow-sm">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <div>
+                                                            <div className="font-bold text-sm text-gray-800">{med.medication_name}</div>
+                                                            <div className="text-xs text-gray-500">{med.dosage} {med.frequency}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => addToCart({
+                                                                name: med.medication_name,
+                                                                sig: med.frequency,
+                                                                dispense: '',
+                                                                type: 'medications',
+                                                                diagnosis: selectedDiagnosis,
+                                                                originalString: `Prescription: ${med.medication_name} - ${med.frequency} (Continue)`,
+                                                                action: 'continue',
+                                                                medicationId: med.id
+                                                            })}
+                                                            className="flex-1 py-1 px-2 text-[10px] font-bold bg-green-50 text-green-700 border border-green-200 rounded hover:bg-green-100"
+                                                        >
+                                                            Continue
+                                                        </button>
+                                                        <button
+                                                            onClick={() => addToCart({
+                                                                name: med.medication_name,
+                                                                sig: med.frequency,
+                                                                dispense: '30',
+                                                                type: 'medications',
+                                                                diagnosis: selectedDiagnosis,
+                                                                originalString: `Prescription: ${med.medication_name} - ${med.frequency} (Refill)`,
+                                                                action: 'refill',
+                                                                medicationId: med.id
+                                                            })}
+                                                            className="flex-1 py-1 px-2 text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100"
+                                                        >
+                                                            Refill
+                                                        </button>
+                                                        <button
+                                                            onClick={() => addToCart({
+                                                                name: med.medication_name,
+                                                                sig: 'DISCONTINUE',
+                                                                dispense: '',
+                                                                type: 'medications',
+                                                                diagnosis: selectedDiagnosis,
+                                                                originalString: `Discontinue: ${med.medication_name}`,
+                                                                action: 'stop',
+                                                                medicationId: med.id
+                                                            })}
+                                                            className="flex-1 py-1 px-2 text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 rounded hover:bg-red-100"
+                                                        >
+                                                            Stop
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
 
                                     {!currentMed.name ? (
                                         <div className="space-y-4">

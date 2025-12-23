@@ -258,9 +258,19 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
 
       setSuccess('Prescription processed successfully');
       const summary = `${selectedMedication.name} ${sigStructured.dose} - ${buildSigText()}`;
+
+      const structuredMedData = {
+        medicationName: selectedMedication.name,
+        dosage: sigStructured.dose,
+        frequency: sigStructured.frequency,
+        route: sigStructured.route,
+        startDate: new Date().toISOString(),
+        active: true
+      };
+
       setTimeout(() => {
         onClose();
-        onSuccess?.(selectedDiagnosis, summary);
+        onSuccess?.(selectedDiagnosis, summary, structuredMedData);
       }, 1500);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to submit prescription');

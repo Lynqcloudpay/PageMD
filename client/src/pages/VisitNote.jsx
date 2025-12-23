@@ -849,6 +849,56 @@ const VisitNote = () => {
                 // Then sign the note (vitals should already be saved, but include them as backup)
                 console.log('Signing note with vitals:', vitalsToSave);
                 await visitsAPI.sign(visitId, noteDraft, vitalsToSave);
+
+                // Sync assessments to problem list
+                try {
+                    if (diagnoses && diagnoses.length > 0) {
+                        console.log('Syncing diagnoses to problem list:', diagnoses);
+
+                        // Get current active problems to check for duplicates
+                        // We use the latest patientData or fetch if needed, but patientData should be reasonably fresh
+                        // For safety, let's look at patientData?.problems
+                        const currentProblems = patientData?.problems || [];
+
+                        let problemsAdded = 0;
+                        for (const diag of diagnoses) {
+                            // Parse "Code - Description" or just Description
+                            // match: ["Code - Description", "Code", "Description"]
+                            const match = diag.match(/^([A-Z][0-9.]+)\s*-\s*(.+)$/);
+                            let icd10Code = null;
+                            let problemName = diag;
+
+                            if (match) {
+                                icd10Code = match[1];
+                                problemName = match[2];
+                            }
+
+                            // Check duplicate by code or name
+                            const exists = currentProblems.some(p =>
+                                (icd10Code && p.icd10_code === icd10Code) ||
+                                (p.problem_name && p.problem_name.toLowerCase() === problemName.toLowerCase())
+                            );
+
+                            if (!exists) {
+                                await patientsAPI.addProblem(id, {
+                                    problemName,
+                                    icd10Code,
+                                    onsetDate: new Date().toISOString(),
+                                    status: 'active'
+                                });
+                                problemsAdded++;
+                            }
+                        }
+                        if (problemsAdded > 0) {
+                            window.dispatchEvent(new Event('patient-data-updated'));
+                            showToast(`Synced ${problemsAdded} problem(s) to chart`, 'success');
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error syncing problems:', err);
+                    // Don't fail the sign process for this
+                }
+
                 showToast('Note signed successfully', 'success');
                 // Reload visit data to get signed status
                 const response = await visitsAPI.get(visitId);
@@ -2380,9 +2430,21 @@ const VisitNote = () => {
             <EPrescribeEnhanced
                 isOpen={showEPrescribeEnhanced}
                 onClose={() => setShowEPrescribeEnhanced(false)}
-                onSuccess={(diagnosis, prescriptionText) => {
+                onSuccess={async (diagnosis, prescriptionText, medData) => {
                     addOrderToPlan(diagnosis, prescriptionText);
                     showToast('Prescription added to plan', 'success');
+
+                    // Sync to patient medication list
+                    if (medData) {
+                        try {
+                            await patientsAPI.addMedication(id, medData);
+                            showToast('Medication added to patient list', 'success');
+                            window.dispatchEvent(new Event('patient-data-updated'));
+                        } catch (err) {
+                            console.error('Failed to sync medication:', err);
+                            showToast('Failed to sync medication to list', 'error');
+                        }
+                    }
                 }}
                 patientId={id}
                 patientName={patientData ? `${patientData.first_name || ''} ${patientData.last_name || ''}`.trim() : ''}
