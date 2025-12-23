@@ -249,6 +249,23 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
     const [newICD10Search, setNewICD10Search] = useState('');
     const [newICD10Results, setNewICD10Results] = useState([]);
 
+    // ICD-10 Search Effect for Group Editor
+    useEffect(() => {
+        const timeout = setTimeout(async () => {
+            if (groupDxSearch.length >= 2) {
+                try {
+                    const response = await icd10API.search(groupDxSearch);
+                    setGroupDxResults(response.data || []);
+                } catch (error) {
+                    setGroupDxResults([]);
+                }
+            } else {
+                setGroupDxResults([]);
+            }
+        }, 300);
+        return () => clearTimeout(timeout);
+    }, [groupDxSearch]);
+
     // ICD-10 Search Effect
     useEffect(() => {
         const timeout = setTimeout(async () => {
@@ -568,7 +585,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                 } finally {
                     setSearchingMed(false);
                 }
-            }, 500);
+            }, 300);
             return () => clearTimeout(searchTimer);
         }
 
@@ -699,53 +716,39 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
         setCart(cart.map(item => item.id === id ? { ...item, diagnosis: dx } : item));
     };
 
-    const handleBatchSubmit = () => {
+    const updateGroupDiagnosis = (oldDx, newDx) => {
+        setCart(cart.map(item => item.diagnosis === oldDx ? { ...item, diagnosis: newDx } : item));
+        setEditingGroupDx(null);
+    };
+
+    const handleBatchSubmit = async () => {
         if (onSave) {
             // Group cart items by diagnosis to reconstruct structured plan
             const newPlanStructured = [];
             const grouped = {};
-
-            // Initialize groups with diagnoses that have existing orders or new ones
-            // We want to preserve the order of diagnoses if possible, or just append
 
             cart.forEach(item => {
                 const dx = item.diagnosis || 'Unassigned';
                 if (!grouped[dx]) grouped[dx] = [];
 
                 let orderText = '';
-                // If we parsed it from existing, we might have originalString. 
-                // However, user might have EDITED it (though we don't support inline edit yet, just delete/add).
-                // Re-generate string to be safe and consistent.
-
                 if (item.type === 'labs') {
-                    // Just display lab name - no vendor codes
-                    if (item.originalString) {
-                        orderText = item.originalString;
-                    } else {
-                        orderText = `Lab: ${item.name}`;
-                    }
+                    orderText = item.originalString || `Lab: ${item.name}`;
                 } else if (item.type === 'imaging') {
-                    // No CPT codes displayed
                     orderText = `Imaging: ${item.name}`;
                 } else if (item.type === 'procedures') {
-                    // No CPT codes displayed
                     orderText = `Procedure: ${item.name}`;
                 } else if (item.type === 'referrals') {
                     orderText = `Referral: ${item.name}${item.reason ? ` - ${item.reason}` : ''}`;
                 } else if (item.type === 'medications') {
-                    if (item.originalString) {
-                        orderText = item.originalString;
-                    } else {
-                        orderText = `Prescription: ${item.name} - ${item.sig}, Dispense: ${item.dispense}`;
-                    }
+                    orderText = item.originalString || `Prescription: ${item.name} - ${item.sig}, Dispense: ${item.dispense}`;
                 } else {
                     orderText = item.name;
                 }
-
                 grouped[dx].push(orderText);
             });
 
-            // Convert to array format expected by planStructured
+            // Create structured plan list
             Object.keys(grouped).forEach(dx => {
                 newPlanStructured.push({
                     diagnosis: dx,
@@ -757,12 +760,11 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
 
             // Save specialized items to their dedicated APIs for tracking
             if (patientId) {
-                cart.forEach(async (item) => {
-                    // Skip items that were loaded from existing strings (already saved) unless they have a specific action
-                    if (item.originalString && !item.action) return;
+                // Use for...of to handle async properly and wait for completion
+                for (const item of cart) {
+                    if (item.originalString && !item.action) continue;
 
                     try {
-                        // Save referrals to dedicated API
                         if (item.type === 'referrals') {
                             await referralsAPI.create({
                                 patientId,
@@ -772,35 +774,19 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                 reason: item.reason || item.diagnosis || 'General Referral',
                                 status: 'sent',
                                 notes: `Linked to: ${item.diagnosis || 'General'}`,
-                                diagnosisObjects: [
-                                    { problem_name: item.diagnosis || 'General' }
-                                ]
+                                diagnosisObjects: [{ problem_name: item.diagnosis || 'General' }]
                             });
                         }
 
-                        // Save medications to e-prescribe drafts
                         if (item.type === 'medications') {
-                            // Handle Specific Actions
-                            if (item.action === 'stop') {
-                                if (item.medicationId) {
-                                    /* 
-                                     * Note: We use patientsAPI.updateMedication which typically expects just the changed fields.
-                                     * Check your backend implementation of PUT /patients/medications/:id
-                                     */
-                                    try {
-                                        await patientsAPI.updateMedication(item.medicationId, { active: false, status: 'discontinued', endDate: new Date().toISOString() });
-                                    } catch (err) {
-                                        console.error('Failed to stop medication:', err);
-                                    }
-                                }
-                                return; // Done for stop
+                            if (item.action === 'stop' && item.medicationId) {
+                                await patientsAPI.updateMedication(item.medicationId, { active: false, status: 'discontinued', endDate: new Date().toISOString() });
+                                continue;
                             }
 
-                            if (item.action === 'continue') {
-                                return; // Just document in plan, no API changes needed
-                            }
+                            if (item.action === 'continue') continue;
 
-                            // For 'new' (no action) or 'refill' -> Create Draft
+                            // Create Draft for E-Rx
                             await eprescribeAPI.createDraft(patientId, {
                                 medicationName: item.name,
                                 medicationDisplay: item.name,
@@ -810,19 +796,9 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                 dateWritten: new Date().toISOString()
                             });
 
-                            // Remove from active list if it's a refill? No, keep it.
-                            // Add to patient medication list (PAMFOS) ONLY if it's a NEW medication
-                            if (!item.action) {
+                            // Always add to patient medication list if it's new or refill
+                            if (!item.action || item.action === 'refill') {
                                 try {
-                                    await medicationsAPI.add(patientId, {
-                                        medicationName: item.name,
-                                        dosage: '',
-                                        frequency: item.sig || 'As directed',
-                                        route: '',
-                                        startDate: new Date().toISOString(),
-                                        active: true
-                                    });
-                                } catch (e) {
                                     await patientsAPI.addMedication(patientId, {
                                         medicationName: item.name,
                                         dosage: '',
@@ -831,15 +807,17 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                         startDate: new Date().toISOString(),
                                         active: true
                                     });
+                                } catch (e) {
+                                    console.error('Failed to sync medication to patient list:', e);
                                 }
                             }
                         }
                     } catch (error) {
                         console.error(`Error saving ${item.type}:`, error);
                     }
-                });
+                }
 
-                // Trigger refresh in chart/snapshot
+                // Trigger refresh in chart/snapshot AFTER all saves are done
                 window.dispatchEvent(new CustomEvent('patient-data-updated'));
             }
         } else {
@@ -1452,11 +1430,6 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                                 onChange={(e) => {
                                                                     const val = e.target.value;
                                                                     setGroupDxSearch(val);
-                                                                    if (val.length > 2) {
-                                                                        icd10API.search(val).then(res => setGroupDxResults(res.data || [])).catch(err => console.error(err));
-                                                                    } else {
-                                                                        setGroupDxResults([]);
-                                                                    }
                                                                 }}
                                                                 autoFocus
                                                                 onClick={(e) => e.stopPropagation()}

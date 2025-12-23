@@ -489,8 +489,15 @@ const VisitNote = () => {
         if (id) {
             // Fetch Patient Snapshot (Demographics, Problems, Meds, Allergies)
             patientsAPI.getSnapshot(id)
-                .then(response => {
-                    setPatientData(response.data);
+                .then(async response => {
+                    const data = response.data;
+                    if (data && (!data.medications || data.medications.length === 0)) {
+                        try {
+                            const medsRes = await patientsAPI.getMedications(id);
+                            data.medications = medsRes.data || [];
+                        } catch (e) { }
+                    }
+                    setPatientData(data);
                 })
                 .catch(error => console.error('Error fetching patient snapshot:', error));
 
@@ -512,7 +519,16 @@ const VisitNote = () => {
                 fetchSocialHistory();
                 // Also refresh snapshot data as it might have changed
                 patientsAPI.getSnapshot(id)
-                    .then(response => setPatientData(response.data))
+                    .then(async response => {
+                        const data = response.data;
+                        if (data && (!data.medications || data.medications.length === 0)) {
+                            try {
+                                const medsRes = await patientsAPI.getMedications(id);
+                                data.medications = medsRes.data || [];
+                            } catch (e) { }
+                        }
+                        setPatientData(data);
+                    })
                     .catch(error => console.error('Error fetching patient snapshot:', error));
             };
 
