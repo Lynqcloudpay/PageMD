@@ -1004,7 +1004,7 @@ router.post('/:id/social-history', requirePermission('notes:create'), async (req
     const { id } = req.params;
     const {
       smokingStatus, smokingPackYears, alcoholUse, alcoholQuantity,
-      drugUse, exerciseFrequency, diet, occupation, livingSituation, notes
+      drugUse, exerciseFrequency, diet, occupation, livingSituation, maritalStatus, notes
     } = req.body;
 
     // Sanitize numeric values
@@ -1023,10 +1023,10 @@ router.post('/:id/social-history', requirePermission('notes:create'), async (req
         `UPDATE social_history SET
           smoking_status = $1, smoking_pack_years = $2, alcohol_use = $3, alcohol_quantity = $4,
           drug_use = $5, exercise_frequency = $6, diet = $7, occupation = $8,
-          living_situation = $9, notes = $10, updated_at = CURRENT_TIMESTAMP
-         WHERE patient_id = $11 RETURNING *`,
+          living_situation = $9, marital_status = $10, notes = $11, updated_at = CURRENT_TIMESTAMP
+         WHERE patient_id = $12 RETURNING *`,
         [smokingStatus, sanitizedPackYears, alcoholUse, alcoholQuantity, drugUse,
-          exerciseFrequency, diet, occupation, livingSituation, notes, id]
+          exerciseFrequency, diet, occupation, livingSituation, maritalStatus, notes, id]
       );
       await logAudit(req.user.id, 'update_social_history', 'social_history', existing.rows[0].id, {}, req.ip);
     } else {
@@ -1034,10 +1034,10 @@ router.post('/:id/social-history', requirePermission('notes:create'), async (req
       result = await pool.query(
         `INSERT INTO social_history (
           patient_id, smoking_status, smoking_pack_years, alcohol_use, alcohol_quantity,
-          drug_use, exercise_frequency, diet, occupation, living_situation, notes
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+          drug_use, exercise_frequency, diet, occupation, living_situation, marital_status, notes
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
         [id, smokingStatus, sanitizedPackYears, alcoholUse, alcoholQuantity, drugUse,
-          exerciseFrequency, diet, occupation, livingSituation, notes]
+          exerciseFrequency, diet, occupation, livingSituation, maritalStatus, notes]
       );
       await logAudit(req.user.id, 'add_social_history', 'social_history', result.rows[0].id, {}, req.ip);
     }

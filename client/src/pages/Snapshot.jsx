@@ -14,7 +14,6 @@ import { showError, showSuccess } from '../utils/toast';
 // import 'react-grid-layout/css/styles.css';
 // import 'react-resizable/css/styles.css';
 import PatientChartPanel from '../components/PatientChartPanel';
-import PatientDataManager from '../components/PatientDataManager';
 import VisitFoldersModal from '../components/VisitFoldersModal';
 import VisitChartView from '../components/VisitChartView';
 import EPrescribeEnhanced from '../components/EPrescribeEnhanced';
@@ -46,10 +45,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
     const [expandedNotes, setExpandedNotes] = useState(new Set());
     const [showPatientChart, setShowPatientChart] = useState(false);
-    const [patientChartTab, setPatientChartTab] = useState('history');
-    const [patientChartDataTab, setPatientChartDataTab] = useState('problems');
-    const [showPatientDataManager, setShowPatientDataManager] = useState(false);
-    const [patientDataManagerTab, setPatientDataManagerTab] = useState('problems');
+    const [patientChartTab, setPatientChartTab] = useState('overview');
+
     const [showVisitFoldersModal, setShowVisitFoldersModal] = useState(false);
     const [selectedVisitForView, setSelectedVisitForView] = useState(null);
     const [noteFilter, setNoteFilter] = useState('all');
@@ -243,13 +240,22 @@ const Snapshot = ({ showNotesOnly = false }) => {
     };
 
     // Function to refresh all patient data
-    const refreshPatientData = async () => {
+    const refreshPatientData = useCallback(async () => {
         if (!id) return;
 
         setLoading(true);
         try {
             // Refresh today's draft visit
-            await fetchTodayDraft();
+            try {
+                console.log('Fetching today\'s draft for patient:', id);
+                const response = await visitsAPI.getTodayDraft(id);
+                const note = response.data?.note || null;
+                setTodayDraftVisit(note);
+            } catch (error) {
+                console.error('Error fetching today\'s draft visit:', error);
+                setTodayDraftVisit(null);
+            }
+
             // Fetch patient snapshot (includes basic info)
             const snapshotResponse = await patientsAPI.getSnapshot(id);
             const snapshot = snapshotResponse.data;
@@ -331,7 +337,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [id]);
 
     // Fetch all patient data
     useEffect(() => {
@@ -1606,8 +1612,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </div>
                                             <button
                                                 onClick={() => {
-                                                    setPatientDataManagerTab('allergies');
-                                                    setShowPatientDataManager(true);
+                                                    setPatientChartTab('allergies');
+                                                    setShowPatientChart(true);
                                                 }}
                                                 className="text-[9px] text-primary-600 hover:text-primary-700 font-bold"
                                             >
@@ -1644,8 +1650,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </div>
                                             <button
                                                 onClick={() => {
-                                                    setPatientDataManagerTab('family');
-                                                    setShowPatientDataManager(true);
+                                                    setPatientChartTab('family');
+                                                    setShowPatientChart(true);
                                                 }}
                                                 className="text-[9px] text-primary-600 hover:text-primary-700 font-bold"
                                             >
@@ -1680,8 +1686,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </div>
                                             <button
                                                 onClick={() => {
-                                                    setPatientDataManagerTab('social');
-                                                    setShowPatientDataManager(true);
+                                                    setPatientChartTab('social');
+                                                    setShowPatientChart(true);
                                                 }}
                                                 className="text-[9px] text-primary-600 hover:text-primary-700 font-bold"
                                             >
@@ -1727,7 +1733,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 <h3 className="font-bold text-sm text-gray-900">Medications</h3>
                                                 {medications.filter(m => m.active !== false).length > 0 && <span className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{medications.filter(m => m.active !== false).length}</span>}
                                             </div>
-                                            <button onClick={() => { setPatientDataManagerTab('medications'); setShowPatientDataManager(true); }} className="text-[10px] text-emerald-600 hover:text-emerald-700 font-bold uppercase tracking-wider">Manage</button>
+                                            <button onClick={() => { setPatientChartTab('medications'); setShowPatientChart(true); }} className="text-[10px] text-emerald-600 hover:text-emerald-700 font-bold uppercase tracking-wider">Manage</button>
                                         </div>
                                         <div className="p-2 max-h-[200px] overflow-y-auto">
                                             {medications.filter(m => m.active !== false).length > 0 ? (
@@ -1753,7 +1759,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 <h3 className="font-bold text-sm text-gray-900">Problem List</h3>
                                                 {problems.length > 0 && <span className="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{problems.length}</span>}
                                             </div>
-                                            <button onClick={() => { setPatientDataManagerTab('problems'); setShowPatientDataManager(true); }} className="text-[10px] text-orange-600 hover:text-orange-700 font-bold uppercase tracking-wider">Manage</button>
+                                            <button onClick={() => { setPatientChartTab('problems'); setShowPatientChart(true); }} className="text-[10px] text-orange-600 hover:text-orange-700 font-bold uppercase tracking-wider">Manage</button>
                                         </div>
                                         <div className="p-2 max-h-[200px] overflow-y-auto">
                                             {problems.length > 0 ? (
@@ -2233,32 +2239,12 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
                 {/* Unified Patient Chart Panel */}
                 <PatientChartPanel
-                    patientId={id}
                     isOpen={showPatientChart}
                     onClose={() => setShowPatientChart(false)}
+                    patientId={id}
                     initialTab={patientChartTab}
-                    initialDataTab={patientChartDataTab}
-                    onOpenDataManager={(tab) => {
-                        setShowPatientChart(false);
-                        setPatientDataManagerTab(tab);
-                        setShowPatientDataManager(true);
-                    }}
                 />
 
-                {/* Patient Data Manager - Opens separately, not stacked */}
-                <PatientDataManager
-                    patientId={id}
-                    isOpen={showPatientDataManager}
-                    initialTab={patientDataManagerTab}
-                    onClose={() => setShowPatientDataManager(false)}
-                    onUpdate={refreshPatientData}
-                    onBack={() => {
-                        setShowPatientDataManager(false);
-                        setShowPatientChart(true);
-                        setPatientChartTab('data');
-                        setPatientChartDataTab(patientDataManagerTab);
-                    }}
-                />
 
                 {/* Visit Folders Modal */}
                 <VisitFoldersModal

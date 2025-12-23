@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     X, FileText, Image, FlaskConical, Pill, ExternalLink,
-    Database, CreditCard, Calendar, Clock, CheckCircle2,
+    Database, CreditCard, Clock, CheckCircle2,
     XCircle, UserCircle, FileImage, Trash2, Plus, Activity,
-    LayoutDashboard, ChevronRight, Search, FilePlus, ChevronDown, HeartPulse, ActivitySquare, Zap, Waves
+    LayoutDashboard, ChevronRight, Search, FilePlus, ChevronDown, HeartPulse, ActivitySquare, Zap, Waves,
+    Edit2, RotateCcw, Calendar, AlertCircle, Users
 } from 'lucide-react';
 import { visitsAPI, documentsAPI, ordersAPI, referralsAPI, patientsAPI, eprescribeAPI } from '../services/api';
 import { format } from 'date-fns';
 import DoseSpotPrescribe from './DoseSpotPrescribe';
 import VisitChartView from './VisitChartView';
 
-const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview', initialDataTab = 'problems', onOpenDataManager }) => {
+const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview' }) => {
     const [activeTab, setActiveTab] = useState(initialTab);
     const [loading, setLoading] = useState(false);
 
@@ -45,6 +46,33 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
         pharmacyAddress: '',
         pharmacyPhone: ''
     });
+
+    const [problems, setProblems] = useState([]);
+    const [medications, setMedications] = useState([]);
+    const [allergies, setAllergies] = useState([]);
+    const [familyHistory, setFamilyHistory] = useState([]);
+    const [socialHistory, setSocialHistory] = useState(null);
+
+    // Form States
+    const [showAddMedForm, setShowAddMedForm] = useState(false);
+    const [medForm, setMedForm] = useState({ medicationName: '', dosage: '', frequency: '', route: '', startDate: format(new Date(), 'yyyy-MM-dd') });
+
+    const [showAddProbForm, setShowAddProbForm] = useState(false);
+    const [probForm, setProbForm] = useState({ problemName: '', icd10Code: '', onsetDate: format(new Date(), 'yyyy-MM-dd'), status: 'active' });
+
+    const [showAddAllergyForm, setShowAddAllergyForm] = useState(false);
+    const [allergyForm, setAllergyForm] = useState({ allergen: '', reaction: '', severity: 'Moderate' });
+
+    const [showAddFamilyForm, setShowAddFamilyForm] = useState(false);
+    const [familyForm, setFamilyForm] = useState({ relationship: '', condition: '', onsetAge: '' });
+
+    const [showEditSocialForm, setShowEditSocialForm] = useState(false);
+    const [socialForm, setSocialForm] = useState({
+        smoking_status: '', alcohol_use: '', drug_use: '',
+        occupation: '', exercise_frequency: '', marital_status: ''
+    });
+
+
 
     // Document Folder/Search State
     const [docSearchTerm, setDocSearchTerm] = useState('');
@@ -163,8 +191,27 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
 
             // Process Active Medications
             if (activeMedsRes?.status === 'fulfilled') {
-                setActiveMedications(activeMedsRes.value.data || []);
+                const meds = activeMedsRes.value.data || [];
+                setMedications(meds);
+                setActiveMedications(meds.filter(m => m.active !== false));
             }
+
+            // Fetch Problems & others
+            try {
+                const [probRes, allergiesRes, famRes, socRes] = await Promise.all([
+                    patientsAPI.getProblems(patientId),
+                    patientsAPI.getAllergies(patientId),
+                    patientsAPI.getFamilyHistory(patientId),
+                    patientsAPI.getSocialHistory(patientId)
+                ]);
+                setProblems(probRes.data || []);
+                setAllergies(allergiesRes.data || []);
+                setFamilyHistory(famRes.data || []);
+                setSocialHistory(socRes.data || null);
+            } catch (e) {
+                console.warn('Failed to fetch additional patient data', e);
+            }
+
 
             // Process Documents
             if (docsRes.status === 'fulfilled') {
@@ -216,7 +263,11 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
     const tabs = [
         { id: 'overview', label: 'Overview', icon: LayoutDashboard },
         { id: 'history', label: 'Visit History', icon: FileText },
-        { id: 'prescriptions', label: 'Medications', icon: Pill },
+        { id: 'problems', label: 'Problems', icon: Activity },
+        { id: 'medications', label: 'Medications', icon: Pill },
+        { id: 'allergies', label: 'Allergies', icon: AlertCircle },
+        { id: 'family', label: 'Family History', icon: Users },
+        { id: 'social', label: 'Social History', icon: UserCircle },
         { id: 'labs', label: 'Labs / Studies', icon: FlaskConical },
         { id: 'documents', label: 'Documents', icon: FileImage },
         { id: 'images', label: 'Imaging', icon: Image },
@@ -224,8 +275,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
         { id: 'echo', label: 'ECHO', icon: HeartPulse },
         { id: 'stress', label: 'Stress Test', icon: Zap },
         { id: 'cath', label: 'Cardiac Cath', icon: Waves },
-        { id: 'referrals', label: 'Referrals', icon: ExternalLink },
-        { id: 'data', label: 'PAMFOS Data', icon: Database },
+        { id: 'referrals', label: 'Referrals', icon: ExternalLink }
     ];
 
     const getStatusBadge = (status) => {
@@ -242,6 +292,173 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                 {status || 'Pending'}
             </span>
         );
+    };
+
+    const handleUpdateMedication = async (medId, data) => {
+        try {
+            await patientsAPI.updateMedication(medId, data);
+            window.dispatchEvent(new CustomEvent('patient-data-updated'));
+            fetchAllData();
+        } catch (error) {
+            console.error('Error updating medication:', error);
+            alert('Failed to update medication status');
+        }
+    };
+
+    const handleDeleteMedication = async (medId) => {
+        if (!confirm('Permanently delete this medication record?')) return;
+        try {
+            await patientsAPI.deleteMedication(medId);
+            window.dispatchEvent(new CustomEvent('patient-data-updated'));
+            fetchAllData();
+        } catch (error) {
+            console.error('Error deleting medication:', error);
+            alert('Failed to delete medication');
+        }
+    };
+
+    const handleDeleteProblem = async (probId) => {
+        if (!confirm('Permanently delete this problem record?')) return;
+        try {
+            await patientsAPI.deleteProblem(probId);
+            window.dispatchEvent(new CustomEvent('patient-data-updated'));
+            fetchAllData();
+        } catch (error) {
+            console.error('Error deleting problem:', error);
+            alert('Failed to delete problem');
+        }
+    };
+
+    const handleDeleteAllergy = async (id) => {
+        if (!confirm('Permanently delete this allergy?')) return;
+        try {
+            await patientsAPI.deleteAllergy(id);
+            window.dispatchEvent(new CustomEvent('patient-data-updated'));
+            fetchAllData();
+        } catch (error) {
+            console.error('Delete allergy error:', error);
+            alert('Failed to delete allergy');
+        }
+    };
+
+    const handleDeleteFamilyHistory = async (id) => {
+        if (!confirm('Permanently delete this family history record?')) return;
+        try {
+            await patientsAPI.deleteFamilyHistory(id);
+            window.dispatchEvent(new CustomEvent('patient-data-updated'));
+            fetchAllData();
+        } catch (error) {
+            console.error('Delete fam error:', error);
+            alert('Failed to delete family history');
+        }
+    };
+
+    const handleUpdateSocialHistory = async (data) => {
+        try {
+            await patientsAPI.updateSocialHistory(patientId, data);
+            window.dispatchEvent(new CustomEvent('patient-data-updated'));
+            fetchAllData();
+        } catch (error) {
+            console.error('Update social error:', error);
+            alert('Failed to update social history');
+        }
+    };
+
+    const handleQuickAddMed = async (e) => {
+        e.preventDefault();
+        try {
+            await patientsAPI.addMedication(patientId, {
+                ...medForm,
+                active: true,
+                status: 'active'
+            });
+            setShowAddMedForm(false);
+            setMedForm({ medicationName: '', dosage: '', frequency: '', route: '', startDate: format(new Date(), 'yyyy-MM-dd') });
+            window.dispatchEvent(new CustomEvent('patient-data-updated'));
+            fetchAllData();
+        } catch (error) {
+            console.error('Add med error:', error);
+            alert('Failed to add medication');
+        }
+    };
+
+    const handleQuickAddProb = async (e) => {
+        e.preventDefault();
+        try {
+            await patientsAPI.addProblem(patientId, {
+                problem_name: probForm.problemName,
+                icd10_code: probForm.icd10Code,
+                onset_date: probForm.onsetDate,
+                status: probForm.status
+            });
+            setShowAddProbForm(false);
+            setProbForm({ problemName: '', icd10Code: '', onsetDate: format(new Date(), 'yyyy-MM-dd'), status: 'active' });
+            window.dispatchEvent(new CustomEvent('patient-data-updated'));
+            fetchAllData();
+        } catch (error) {
+            console.error('Add prob error:', error);
+            alert('Failed to add problem');
+        }
+    };
+
+    const handleQuickAddAllergy = async (e) => {
+        e.preventDefault();
+        try {
+            await patientsAPI.addAllergy(patientId, allergyForm);
+            setShowAddAllergyForm(false);
+            setAllergyForm({ allergen: '', reaction: '', severity: 'Moderate' });
+            window.dispatchEvent(new CustomEvent('patient-data-updated'));
+            fetchAllData();
+        } catch (error) {
+            console.error('Add allergy error:', error);
+            alert('Failed to add allergy');
+        }
+    };
+
+    const handleQuickAddFamilyHx = async (e) => {
+        e.preventDefault();
+        try {
+            await patientsAPI.addFamilyHistory(patientId, {
+                relationship: familyForm.relationship,
+                condition: familyForm.condition,
+                ageAtDiagnosis: familyForm.onsetAge || null,
+                notes: ''
+            });
+            setShowAddFamilyForm(false);
+            setFamilyForm({ relationship: '', condition: '', onsetAge: '' });
+            window.dispatchEvent(new CustomEvent('patient-data-updated'));
+            fetchAllData();
+        } catch (error) {
+            console.error('Add family hx error:', error);
+            alert('Failed to add family history');
+        }
+    };
+
+    const handleQuickUpdateSocial = async (e) => {
+        e.preventDefault();
+        try {
+            // Transform snake_case form fields to camelCase for API
+            const payload = {
+                smokingStatus: socialForm.smoking_status || '',
+                smokingPackYears: socialForm.smoking_pack_years || null,
+                alcoholUse: socialForm.alcohol_use || '',
+                alcoholQuantity: socialForm.alcohol_quantity || null,
+                drugUse: socialForm.drug_use || '',
+                exerciseFrequency: socialForm.exercise_frequency || '',
+                diet: socialForm.diet || '',
+                occupation: socialForm.occupation || '',
+                livingSituation: socialForm.living_situation || '',
+                maritalStatus: socialForm.marital_status || '',
+                notes: socialForm.notes || ''
+            };
+            await patientsAPI.saveSocialHistory(patientId, payload);
+            setShowEditSocialForm(false);
+            window.dispatchEvent(new CustomEvent('patient-data-updated'));
+            fetchAllData();
+        } catch (error) {
+            console.error('Update social error:', error);
+            alert('Failed to update social history');
+        }
     };
 
     if (!isOpen) return null;
@@ -317,6 +534,78 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                             </div>
                         ) : (
                             <div className="animate-fade-in-up">
+                                {/* PROBLEMS TAB */}
+                                {activeTab === 'problems' && (
+                                    <div className="space-y-6">
+                                        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                            <div className="flex items-center gap-3">
+                                                <div className="bg-orange-100 p-2 rounded-lg"><Activity className="w-5 h-5 text-orange-600" /></div>
+                                                <div>
+                                                    <span className="text-sm font-bold text-gray-900">Problem List</span>
+                                                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Active medical conditions</p>
+                                                </div>
+                                            </div>
+                                            <button onClick={() => setShowAddProbForm(!showAddProbForm)} className="flex items-center gap-2 px-3 py-1.5 bg-primary-600 text-white text-xs font-bold rounded-lg hover:bg-primary-700 transition-all shadow-sm">
+                                                <Plus className="w-3.5 h-3.5" />{showAddProbForm ? 'Cancel' : 'Add Problem'}
+                                            </button>
+                                        </div>
+
+                                        {showAddProbForm && (
+                                            <form onSubmit={handleQuickAddProb} className="bg-orange-50/50 p-4 rounded-xl border border-orange-100 space-y-3 animate-fade-in">
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div className="col-span-2">
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Problem Name</label>
+                                                        <input required type="text" value={probForm.problemName} onChange={e => setProbForm({ ...probForm, problemName: e.target.value })} className="w-full px-3 py-2 text-sm border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none" placeholder="e.g. Type 2 Diabetes" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">ICD-10 Code</label>
+                                                        <input type="text" value={probForm.icd10Code} onChange={e => setProbForm({ ...probForm, icd10Code: e.target.value })} className="w-full px-3 py-2 text-sm border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none" placeholder="e.g. E11.9" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Onset Date</label>
+                                                        <input type="date" value={probForm.onsetDate} onChange={e => setProbForm({ ...probForm, onsetDate: e.target.value })} className="w-full px-3 py-2 text-sm border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none" />
+                                                    </div>
+                                                </div>
+                                                <div className="flex justify-end pt-2">
+                                                    <button type="submit" className="px-4 py-2 bg-orange-600 text-white text-xs font-bold rounded-lg hover:bg-orange-700 shadow-sm transition-all">Save Problem</button>
+                                                </div>
+                                            </form>
+                                        )}
+
+
+                                        <div className="space-y-2">
+                                            {problems.length === 0 ? (
+                                                <div className="text-center py-8 bg-gray-50/50 rounded-xl border-2 border-dashed border-gray-100 text-gray-400 text-sm italic">
+                                                    No problems recorded for this patient.
+                                                </div>
+                                            ) : (
+                                                problems.map((prob) => (
+                                                    <div key={prob.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all group flex items-start justify-between">
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-bold text-gray-900">{prob.problem_name}</span>
+                                                                {prob.icd10_code && <span className="text-xs font-mono text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{prob.icd10_code}</span>}
+                                                            </div>
+                                                            <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-400 font-medium">
+                                                                <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Onset: {prob.onset_date ? new Date(prob.onset_date).toLocaleDateString() : 'Unknown'}</span>
+                                                                <span className={`px-1.5 py-0.5 rounded uppercase tracking-tighter border font-bold ${prob.status === 'active' ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-gray-50 text-gray-400 border-gray-100'}`}>
+                                                                    {prob.status || 'Active'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => handleDeleteProblem(prob.id)}
+                                                            className="opacity-0 group-hover:opacity-100 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* OVERVIEW TAB */}
                                 {activeTab === 'overview' && (
                                     <div className="grid grid-cols-1 gap-6">
@@ -480,65 +769,378 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                     </div>
                                 )}
 
-                                {/* PRESCRIPTIONS TAB */}
-                                {activeTab === 'prescriptions' && (
-                                    <div className="space-y-4">
-                                        <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
-                                            <div className="flex items-center gap-2">
-                                                <div className="bg-blue-100 p-1.5 rounded-md"><Pill className="w-4 h-4 text-blue-600" /></div>
-                                                <span className="text-sm font-semibold text-gray-700">All Medications</span>
+                                {/* MEDICATIONS TAB */}
+                                {activeTab === 'medications' && (
+                                    <div className="space-y-6">
+                                        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                            <div className="flex items-center gap-3">
+                                                <div className="bg-emerald-100 p-2 rounded-lg"><Pill className="w-5 h-5 text-emerald-600" /></div>
+                                                <div>
+                                                    <span className="text-sm font-bold text-gray-900">Current Medications</span>
+                                                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Active prescriptions & home meds</p>
+                                                </div>
                                             </div>
-                                            {eprescribeEnabled && (
-                                                <button onClick={() => setShowDoseSpotModal(true)} className="btn btn-primary text-xs px-3 py-1.5 h-auto">
-                                                    <Plus className="w-3.5 h-3.5 mr-1" />New Rx
+                                            <div className="flex items-center gap-2">
+                                                {eprescribeEnabled && (
+                                                    <button onClick={() => setShowDoseSpotModal(true)} className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-sm">
+                                                        <Plus className="w-3.5 h-3.5" />New Rx
+                                                    </button>
+                                                )}
+                                                <button onClick={() => setShowAddMedForm(!showAddMedForm)} className="px-3 py-1.5 bg-gray-100 text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-200 transition-all border border-gray-200">
+                                                    {showAddMedForm ? 'Cancel' : 'Add Home Med'}
                                                 </button>
+                                            </div>
+                                        </div>
+
+                                        {showAddMedForm && (
+                                            <form onSubmit={handleQuickAddMed} className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 space-y-3 animate-fade-in">
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div className="col-span-2">
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Medication Name</label>
+                                                        <input required type="text" value={medForm.medicationName} onChange={e => setMedForm({ ...medForm, medicationName: e.target.value })} className="w-full px-3 py-2 text-sm border border-emerald-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="e.g. Lisartan 50mg" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Dosage</label>
+                                                        <input type="text" value={medForm.dosage} onChange={e => setMedForm({ ...medForm, dosage: e.target.value })} className="w-full px-3 py-2 text-sm border border-emerald-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="e.g. 50mg" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Frequency</label>
+                                                        <input type="text" value={medForm.frequency} onChange={e => setMedForm({ ...medForm, frequency: e.target.value })} className="w-full px-3 py-2 text-sm border border-emerald-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="e.g. Once daily" />
+                                                    </div>
+                                                </div>
+                                                <div className="flex justify-end pt-2">
+                                                    <button type="submit" className="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 shadow-sm transition-all">Save Medication</button>
+                                                </div>
+                                            </form>
+                                        )}
+
+
+                                        {/* ACTIVE MEDICATIONS */}
+                                        <div className="space-y-2">
+                                            {medications.filter(m => m.active !== false).length === 0 ? (
+                                                <div className="text-center py-8 bg-gray-50/50 rounded-xl border-2 border-dashed border-gray-100 text-gray-400 text-sm italic">
+                                                    No active medications found.
+                                                </div>
+                                            ) : (
+                                                medications.filter(m => m.active !== false).map((med) => (
+                                                    <div key={med.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all group flex items-start justify-between">
+                                                        <div className="flex-1">
+                                                            <div className="font-bold text-gray-900 group-hover:text-primary-600 transition-colors">{med.medication_name}</div>
+                                                            <div className="text-sm text-gray-600 mt-0.5">
+                                                                {med.dosage && <span className="font-medium">{med.dosage} </span>}
+                                                                {med.frequency && <span>{med.frequency} </span>}
+                                                                {med.route && <span className="text-gray-400 italic">({med.route})</span>}
+                                                            </div>
+                                                            <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-400 font-medium">
+                                                                <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Started: {med.start_date ? new Date(med.start_date).toLocaleDateString() : 'Unknown'}</span>
+                                                                <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded uppercase tracking-tighter border border-emerald-100 font-bold">Active</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <button
+                                                                onClick={() => handleUpdateMedication(med.id, { active: false, status: 'discontinued' })}
+                                                                className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                                                                title="Discontinue"
+                                                            >
+                                                                <XCircle className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteMedication(med.id)}
+                                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))
                                             )}
                                         </div>
 
-                                        <div className="grid grid-cols-1 gap-3">
-                                            {(() => {
-                                                const homeMeds = activeMedications.map(med => ({
-                                                    id: med.id,
-                                                    medication_name: med.medication_name || med.name || med.medication,
-                                                    sig: med.sig || med.dosage || med.instructions || (med.frequency ? `${med.dosage || ''} ${med.frequency}` : ''),
-                                                    created_at: med.created_at,
-                                                    source: 'home'
-                                                }));
-                                                const allMeds = [...homeMeds, ...eprescribePrescriptions, ...prescriptions];
-
-                                                if (allMeds.length === 0) {
-                                                    return <div className="text-center py-10 text-gray-400 text-sm">No medications found.</div>;
-                                                }
-
-                                                return allMeds.map((rx, idx) => {
-                                                    const name = rx.medication_name || rx.order_payload?.medication_name || rx.order_payload?.medication || rx.order_payload?.name || 'Unknown Med';
-                                                    const sig = rx.sig || rx.order_payload?.sig || rx.order_payload?.instructions || '';
-                                                    const date = rx.created_at || rx.sent_at ? new Date(rx.created_at || rx.sent_at).toLocaleDateString() : 'N/A';
-
-                                                    return (
-                                                        <div key={rx.id || `med-${idx}`} className="bg-white border border-gray-200 rounded-lg p-3 hover:border-primary-200 hover:shadow-sm transition-all">
-                                                            <div className="flex justify-between items-start">
-                                                                <div>
-                                                                    <div className="font-bold text-gray-900 text-sm">{name}</div>
-                                                                    <div className="text-xs text-gray-500 mt-1">{sig}</div>
-                                                                    {rx.order_payload?.dispense && <div className="text-xs text-gray-400 mt-0.5">Qty: {rx.order_payload.dispense}</div>}
-                                                                </div>
-                                                                <div className="text-right flex flex-col items-end gap-1">
-                                                                    {rx.source === 'home' ? (
-                                                                        <span className="px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wide font-bold bg-blue-100 text-blue-800">Home Med</span>
-                                                                    ) : (
-                                                                        getStatusBadge(rx.status)
-                                                                    )}
-                                                                    <span className="text-[10px] text-gray-400">{date}</span>
-                                                                </div>
+                                        {/* MEDICATION HISTORY */}
+                                        <div className="pt-6 border-t border-gray-100">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <div className="w-2 h-2 rounded-full bg-gray-300"></div>
+                                                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Medication History ({medications.filter(m => m.active === false).length})</h4>
+                                            </div>
+                                            <div className="grid grid-cols-1 gap-2">
+                                                {medications.filter(m => m.active === false).map((med) => (
+                                                    <div key={med.id} className="bg-gray-50 p-3 rounded-lg border border-gray-100 flex items-center justify-between opacity-70 hover:opacity-100 grayscale hover:grayscale-0 transition-all">
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="text-sm font-bold text-gray-700 truncate">{med.medication_name}</div>
+                                                            <div className="text-[10px] text-gray-500 flex items-center gap-2">
+                                                                <span>{med.dosage} {med.frequency}</span>
+                                                                <span className="bg-gray-200 px-1 py-0.25 rounded text-[9px] uppercase font-bold text-gray-600 border border-gray-200">{med.status || 'Inactive'}</span>
                                                             </div>
                                                         </div>
-                                                    );
-                                                });
-                                            })()}
+                                                        <div className="flex items-center gap-1">
+                                                            <button
+                                                                onClick={() => handleUpdateMedication(med.id, { active: true, status: 'active' })}
+                                                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                                                                title="Re-activate"
+                                                            >
+                                                                <RotateCcw className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteMedication(med.id)}
+                                                                className="p-1.5 text-red-400 hover:text-red-600 transition-colors"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {medications.filter(m => m.active === false).length === 0 && (
+                                                    <div className="text-center py-4 text-[10px] text-gray-400 italic">No medication history on file</div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 )}
+
+                                {/* ALLERGIES TAB */}
+                                {activeTab === 'allergies' && (
+                                    <div className="space-y-6">
+                                        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm text-red-600 font-bold">
+                                            <div className="flex items-center gap-3">
+                                                <div className="bg-red-100 p-2 rounded-lg"><AlertCircle className="w-5 h-5" /></div>
+                                                <div>
+                                                    <span className="text-sm font-bold text-gray-900">Allergies</span>
+                                                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold italic">Critical warnings</p>
+                                                </div>
+                                            </div>
+                                            <button onClick={() => setShowAddAllergyForm(!showAddAllergyForm)} className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-all shadow-sm">
+                                                <Plus className="w-3.5 h-3.5" />{showAddAllergyForm ? 'Cancel' : 'Add Allergy'}
+                                            </button>
+                                        </div>
+
+                                        {showAddAllergyForm && (
+                                            <form onSubmit={handleQuickAddAllergy} className="bg-red-50/50 p-4 rounded-xl border border-red-100 space-y-3 animate-fade-in">
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div className="col-span-2">
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Allergen</label>
+                                                        <input required type="text" value={allergyForm.allergen} onChange={e => setAllergyForm({ ...allergyForm, allergen: e.target.value })} className="w-full px-3 py-2 text-sm border border-red-200 rounded-lg focus:ring-2 focus:ring-red-500 outline-none" placeholder="e.g. Penicillin" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Reaction</label>
+                                                        <input type="text" value={allergyForm.reaction} onChange={e => setAllergyForm({ ...allergyForm, reaction: e.target.value })} className="w-full px-3 py-2 text-sm border border-red-200 rounded-lg focus:ring-2 focus:ring-red-500 outline-none" placeholder="e.g. Hives" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Severity</label>
+                                                        <select value={allergyForm.severity} onChange={e => setAllergyForm({ ...allergyForm, severity: e.target.value })} className="w-full px-3 py-2 text-sm border border-red-200 rounded-lg focus:ring-2 focus:ring-red-500 outline-none bg-white">
+                                                            <option>Mild</option>
+                                                            <option>Moderate</option>
+                                                            <option>Severe</option>
+                                                            <option>Critical</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div className="flex justify-end pt-2">
+                                                    <button type="submit" className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 shadow-sm transition-all">Save Allergy</button>
+                                                </div>
+                                            </form>
+                                        )}
+
+                                        <div className="space-y-2">
+                                            {allergies.length === 0 ? (
+                                                <div className="text-center py-8 bg-gray-50/50 rounded-xl border-2 border-dashed border-gray-100 text-gray-400 text-sm italic">NKDA (No Known Drug Allergies)</div>
+                                            ) : (
+                                                allergies.map(all => (
+                                                    <div key={all.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:border-red-100 transition-all group flex items-start justify-between">
+                                                        <div>
+                                                            <div className="font-bold text-gray-900">{all.allergen}</div>
+                                                            <div className="text-sm text-red-600 font-medium mt-0.5">{all.reaction || 'Reaction unknown'}</div>
+                                                            <div className="text-[10px] text-gray-400 mt-2 uppercase tracking-wide font-bold">{all.severity || 'Moderate'} Severity</div>
+                                                        </div>
+                                                        <button onClick={() => handleDeleteAllergy(all.id)} className="opacity-0 group-hover:opacity-100 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 className="w-4 h-4" /></button>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* FAMILY HISTORY TAB */}
+                                {activeTab === 'family' && (
+                                    <div className="space-y-6">
+                                        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                            <div className="flex items-center gap-3">
+                                                <div className="bg-purple-100 p-2 rounded-lg"><Users className="w-5 h-5 text-purple-600" /></div>
+                                                <div>
+                                                    <span className="text-sm font-bold text-gray-900">Family History</span>
+                                                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Genetic & Hereditary markers</p>
+                                                </div>
+                                            </div>
+                                            <button onClick={() => setShowAddFamilyForm(!showAddFamilyForm)} className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 text-white text-xs font-bold rounded-lg hover:bg-purple-700 transition-all shadow-sm">
+                                                <Plus className="w-3.5 h-3.5" />{showAddFamilyForm ? 'Cancel' : 'Add Entry'}
+                                            </button>
+                                        </div>
+
+                                        {showAddFamilyForm && (
+                                            <form onSubmit={handleQuickAddFamilyHx} className="bg-purple-50/50 p-4 rounded-xl border border-purple-100 space-y-3 animate-fade-in">
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Relationship</label>
+                                                        <input required type="text" value={familyForm.relationship} onChange={e => setFamilyForm({ ...familyForm, relationship: e.target.value })} className="w-full px-3 py-2 text-sm border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" placeholder="e.g. Mother" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Condition</label>
+                                                        <input required type="text" value={familyForm.condition} onChange={e => setFamilyForm({ ...familyForm, condition: e.target.value })} className="w-full px-3 py-2 text-sm border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" placeholder="e.g. Hypertension" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Age of Onset</label>
+                                                        <input type="text" value={familyForm.onsetAge} onChange={e => setFamilyForm({ ...familyForm, onsetAge: e.target.value })} className="w-full px-3 py-2 text-sm border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" placeholder="e.g. 45" />
+                                                    </div>
+                                                </div>
+                                                <div className="flex justify-end pt-2">
+                                                    <button type="submit" className="px-4 py-2 bg-purple-600 text-white text-xs font-bold rounded-lg hover:bg-purple-700 shadow-sm transition-all">Save Record</button>
+                                                </div>
+                                            </form>
+                                        )}
+
+                                        <div className="space-y-2">
+                                            {familyHistory.length === 0 ? (
+                                                <div className="text-center py-8 bg-gray-50/50 rounded-xl border-2 border-dashed border-gray-100 text-gray-400 text-sm italic">No family history on file</div>
+                                            ) : (
+                                                familyHistory.map(fam => (
+                                                    <div key={fam.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all group flex items-start justify-between">
+                                                        <div>
+                                                            <div className="font-bold text-gray-900 flex items-center gap-2">
+                                                                {fam.relationship}
+                                                                <span className="text-xs font-normal text-gray-500">— {fam.condition}</span>
+                                                            </div>
+                                                            {fam.age_at_diagnosis && <div className="text-[10px] text-gray-400 mt-1 uppercase font-bold tracking-tight">Age of Onset: {fam.age_at_diagnosis} yr</div>}
+                                                        </div>
+                                                        <button onClick={() => handleDeleteFamilyHistory(fam.id)} className="opacity-0 group-hover:opacity-100 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 className="w-4 h-4" /></button>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* SOCIAL HISTORY TAB */}
+                                {activeTab === 'social' && (
+                                    <div className="space-y-6">
+                                        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                            <div className="flex items-center gap-3">
+                                                <div className="bg-orange-100 p-2 rounded-lg"><UserCircle className="w-5 h-5 text-orange-600" /></div>
+                                                <div>
+                                                    <span className="text-sm font-bold text-gray-900">Social History</span>
+                                                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Lifestyle & Environmental factors</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    if (!showEditSocialForm) {
+                                                        setSocialForm({
+                                                            smoking_status: socialHistory?.smoking_status || '',
+                                                            alcohol_use: socialHistory?.alcohol_use || '',
+                                                            drug_use: socialHistory?.drug_use || '',
+                                                            occupation: socialHistory?.occupation || '',
+                                                            exercise_frequency: socialHistory?.exercise_frequency || '',
+                                                            marital_status: socialHistory?.marital_status || ''
+                                                        });
+                                                    }
+                                                    setShowEditSocialForm(!showEditSocialForm);
+                                                }}
+                                                className="px-3 py-1.5 bg-gray-100 text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-200 transition-all border border-gray-200 shadow-sm"
+                                            >
+                                                {showEditSocialForm ? 'Cancel' : 'Update Social History'}
+                                            </button>
+                                        </div>
+
+                                        {showEditSocialForm && (
+                                            <form onSubmit={handleQuickUpdateSocial} className="bg-orange-50/50 p-4 rounded-xl border border-orange-100 space-y-4 animate-fade-in mb-4">
+                                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Smoking Status</label>
+                                                        <select value={socialForm.smoking_status} onChange={e => setSocialForm({ ...socialForm, smoking_status: e.target.value })} className="w-full px-3 py-2 text-sm border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none bg-white">
+                                                            <option value="">Select...</option>
+                                                            <option>Never Smoked</option>
+                                                            <option>Former Smoker</option>
+                                                            <option>Current Every Day Smoker</option>
+                                                            <option>Current Some Day Smoker</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Alcohol Use</label>
+                                                        <input type="text" value={socialForm.alcohol_use} onChange={e => setSocialForm({ ...socialForm, alcohol_use: e.target.value })} className="w-full px-3 py-2 text-sm border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none" placeholder="e.g. Socially" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Drug Use</label>
+                                                        <input type="text" value={socialForm.drug_use} onChange={e => setSocialForm({ ...socialForm, drug_use: e.target.value })} className="w-full px-3 py-2 text-sm border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none" placeholder="e.g. None" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Occupation</label>
+                                                        <input type="text" value={socialForm.occupation} onChange={e => setSocialForm({ ...socialForm, occupation: e.target.value })} className="w-full px-3 py-2 text-sm border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none" placeholder="e.g. Engineer" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Exercise</label>
+                                                        <input type="text" value={socialForm.exercise_frequency} onChange={e => setSocialForm({ ...socialForm, exercise_frequency: e.target.value })} className="w-full px-3 py-2 text-sm border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none" placeholder="e.g. 3x a week" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Marital Status</label>
+                                                        <select value={socialForm.marital_status} onChange={e => setSocialForm({ ...socialForm, marital_status: e.target.value })} className="w-full px-3 py-2 text-sm border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none bg-white">
+                                                            <option value="">Select...</option>
+                                                            <option>Single</option>
+                                                            <option>Married</option>
+                                                            <option>Divorced</option>
+                                                            <option>Widowed</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div className="flex justify-end pt-2">
+                                                    <button type="submit" className="px-4 py-2 bg-orange-600 text-white text-xs font-bold rounded-lg hover:bg-orange-700 shadow-sm transition-all">Save Social History</button>
+                                                </div>
+                                            </form>
+                                        )}
+
+                                        {socialHistory ? (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                                    <h5 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Substance Use</h5>
+                                                    <div className="space-y-3">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-xs text-gray-500 font-medium">Smoking Status</span>
+                                                            <span className="text-xs font-bold text-gray-900">{socialHistory.smoking_status || 'Unknown'}</span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-xs text-gray-500 font-medium">Alcohol Use</span>
+                                                            <span className="text-xs font-bold text-gray-900">{socialHistory.alcohol_use || 'None'}</span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-xs text-gray-500 font-medium">Drug Use</span>
+                                                            <span className="text-xs font-bold text-gray-900">{socialHistory.drug_use || 'None'}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                                    <h5 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Lifestyle</h5>
+                                                    <div className="space-y-3">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-xs text-gray-500 font-medium">Occupation</span>
+                                                            <span className="text-xs font-bold text-gray-900">{socialHistory.occupation || 'N/A'}</span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-xs text-gray-500 font-medium">Exercise</span>
+                                                            <span className="text-xs font-bold text-gray-900">{socialHistory.exercise_frequency || 'None'}</span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-xs text-gray-500 font-medium">Marital Status</span>
+                                                            <span className="text-xs font-bold text-gray-900">{socialHistory.marital_status || 'Unknown'}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                                <p className="text-sm text-gray-400 italic">No social history recorded</p>
+                                                <button onClick={() => onOpenDataManager?.('social')} className="mt-2 text-xs text-primary-600 font-bold hover:underline">Add Social History</button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
 
                                 {/* LABS TAB */}
                                 {activeTab === 'labs' && (

@@ -11,7 +11,7 @@ import { OrderModal, PrescriptionModal, ReferralModal } from '../components/Acti
 import CodeSearchModal from '../components/CodeSearchModal';
 import VisitPrint from '../components/VisitPrint';
 import PatientChartPanel from '../components/PatientChartPanel';
-import PatientDataManager from '../components/PatientDataManager';
+
 import DiagnosisPicker from '../components/DiagnosisPicker';
 import OrderPicker from '../components/OrderPicker';
 import OrderDetailsModal from '../components/OrderDetailsModal';
@@ -519,6 +519,12 @@ const VisitNote = () => {
             // Listen for patient data updates
             const handlePatientDataUpdate = () => {
                 fetchSocialHistory();
+
+                // Refresh Family History
+                patientsAPI.getFamilyHistory(id)
+                    .then(response => setFamilyHistory(response.data || []))
+                    .catch(error => console.error('Error refreshing family history:', error));
+
                 // Also refresh snapshot data as it might have changed
                 patientsAPI.getSnapshot(id)
                     .then(async response => {

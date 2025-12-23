@@ -700,8 +700,6 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
             // Use item values if present, otherwise fallback to state
             reason: item.reason || (activeTab === 'referrals' ? referralReason : ''),
             sig: item.sig || (activeTab === 'medications' ? currentMed.sig : ''),
-            reason: item.reason || (activeTab === 'referrals' ? referralReason : ''),
-            sig: item.sig || (activeTab === 'medications' ? currentMed.sig : ''),
             dispense: item.dispense || (activeTab === 'medications' ? currentMed.dispense : ''),
             refills: item.refills || (activeTab === 'medications' ? currentMed.refills : ''),
             note: item.note || (activeTab === 'medications' ? currentMed.note : ''),
@@ -793,17 +791,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
 
                             if (item.action === 'continue') continue;
 
-                            // Create Draft for E-Rx
-                            await eprescribeAPI.createDraft(patientId, {
-                                medicationName: item.name,
-                                medicationDisplay: item.name,
-                                sig: item.sig || 'As directed',
-                                quantity: parseInt(item.dispense) || 30,
-                                diagnosis: item.diagnosis || 'General',
-                                dateWritten: new Date().toISOString()
-                            });
-
-                            // Always add to patient medication list if it's new or refill
+                            // 1. ALWAYS add to patient medication record first (Mother Database)
                             if (!item.action || item.action === 'refill') {
                                 try {
                                     console.log(`[OrderModal] Pushing NEW medication to patient record: ${item.name}`);
@@ -816,14 +804,31 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                         active: true,
                                         status: 'active'
                                     });
-                                    console.log(`[OrderModal] Successfully added medication: ${item.name}`, medRes.data);
+                                    console.log(`[OrderModal] Successfully added medication to record: ${item.name}`, medRes.data);
                                 } catch (e) {
-                                    console.error(`[OrderModal] Failed to sync medication ${item.name} to patient list:`, e);
+                                    console.error(`[OrderModal] Failed to sync medication ${item.name} to record:`, e);
                                     if (e.response?.data?.error) {
                                         alert(`Warning: Could not add ${item.name} to patient current medications list. Reason: ${e.response.data.error}`);
                                     }
                                 }
                             }
+
+                            // 2. Separately handle E-Rx Draft (don't let failure here block the record save)
+                            try {
+                                console.log(`[OrderModal] Attempting E-Rx draft creation for: ${item.name}`);
+                                await eprescribeAPI.createDraft(patientId, {
+                                    medicationName: item.name,
+                                    medicationDisplay: item.name,
+                                    sig: item.sig || 'As directed',
+                                    quantity: parseInt(item.dispense) || 30,
+                                    diagnosis: item.diagnosis || 'General',
+                                    dateWritten: new Date().toISOString()
+                                });
+                                console.log(`[OrderModal] E-Rx draft created successfully for: ${item.name}`);
+                            } catch (erxError) {
+                                console.warn('[OrderModal] E-Rx draft creation failed (skipping):', erxError);
+                            }
+
                         }
                     } catch (error) {
                         console.error(`Error saving ${item.type}:`, error);
