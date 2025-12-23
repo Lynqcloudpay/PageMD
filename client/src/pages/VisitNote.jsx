@@ -2472,30 +2472,7 @@ const VisitNote = () => {
                 patientId={id}
                 visitId={currentVisitId || urlVisitId}
             />
-            <EPrescribeEnhanced
-                isOpen={showEPrescribeEnhanced}
-                onClose={() => setShowEPrescribeEnhanced(false)}
-                onSuccess={async (diagnosis, prescriptionText, medData) => {
-                    addOrderToPlan(diagnosis, prescriptionText);
-                    showToast('Prescription added to plan', 'success');
 
-                    // Sync to patient medication list
-                    if (medData) {
-                        try {
-                            await patientsAPI.addMedication(id, medData);
-                            showToast('Medication added to patient list', 'success');
-                            window.dispatchEvent(new Event('patient-data-updated'));
-                        } catch (err) {
-                            console.error('Failed to sync medication:', err);
-                            showToast('Failed to sync medication to list', 'error');
-                        }
-                    }
-                }}
-                patientId={id}
-                patientName={patientData ? `${patientData.first_name || ''} ${patientData.last_name || ''}`.trim() : ''}
-                visitId={currentVisitId || urlVisitId}
-                diagnoses={diagnoses}
-            />
             {showPrintModal && <VisitPrint visitId={currentVisitId || urlVisitId} patientId={id} onClose={() => setShowPrintModal(false)} />}
 
             {/* Unified Patient Chart Panel */}
