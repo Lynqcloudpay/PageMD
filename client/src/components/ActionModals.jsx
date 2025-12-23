@@ -254,7 +254,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
         const timeout = setTimeout(async () => {
             if (newICD10Search.length >= 2) {
                 try {
-                    const response = await codesAPI.searchICD10(newICD10Search);
+                    const response = await icd10API.search(newICD10Search);
                     setNewICD10Results(response.data || []);
                 } catch (error) {
                     setNewICD10Results([]);
@@ -1453,7 +1453,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                                     const val = e.target.value;
                                                                     setGroupDxSearch(val);
                                                                     if (val.length > 2) {
-                                                                        codesAPI.searchICD10(val).then(setGroupDxResults).catch(err => console.error(err));
+                                                                        icd10API.search(val).then(res => setGroupDxResults(res.data || [])).catch(err => console.error(err));
                                                                     } else {
                                                                         setGroupDxResults([]);
                                                                     }

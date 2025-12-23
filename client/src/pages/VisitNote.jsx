@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import Toast from '../components/ui/Toast';
 import { OrderModal, PrescriptionModal, ReferralModal } from '../components/ActionModals';
-import EPrescribeEnhanced from '../components/EPrescribeEnhanced';
+
 import CodeSearchModal from '../components/CodeSearchModal';
 import VisitPrint from '../components/VisitPrint';
 import PatientChartPanel from '../components/PatientChartPanel';
@@ -171,7 +171,7 @@ const VisitNote = () => {
     const [showOrderModal, setShowOrderModal] = useState(false);
     const [orderModalTab, setOrderModalTab] = useState('labs');
     const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
-    const [showEPrescribeEnhanced, setShowEPrescribeEnhanced] = useState(false);
+
     const [showOrderPicker, setShowOrderPicker] = useState(false);
     const [orderPickerType, setOrderPickerType] = useState(null);
     const [selectedCatalogItem, setSelectedCatalogItem] = useState(null);
@@ -2330,29 +2330,15 @@ const VisitNote = () => {
                                         Add Order
                                     </button>
                                 )}
-                                {hasPrivilege('e_prescribe') && (
-                                    <>
-                                        <button
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                setShowEPrescribeEnhanced(true);
-                                            }}
-                                            className="px-2.5 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors"
-                                        >
-                                            e-Prescribe
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setOrderModalTab('medications');
-                                                setShowOrderModal(true);
-                                            }}
-                                            className="px-2.5 py-1.5 text-xs font-medium bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-md border border-neutral-300 transition-colors"
-                                        >
-                                            Manual Rx
-                                        </button>
-                                    </>
-                                )}
+                                <button
+                                    onClick={() => {
+                                        setOrderModalTab('medications');
+                                        setShowOrderModal(true);
+                                    }}
+                                    className="px-2.5 py-1.5 text-xs font-medium bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-md border border-neutral-300 transition-colors"
+                                >
+                                    Manual Rx
+                                </button>
                                 {hasPrivilege('create_referrals') && (
                                     <button
                                         onClick={() => {
@@ -2455,24 +2441,26 @@ const VisitNote = () => {
                         </div>
                     )}
                 </div>
-            </div>
+            </div >
 
             {/* Modals */}
             {/* Premium Diagnosis Picker Modal */}
-            {showICD10Modal && (
-                <div
-                    className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-ink-950/40 backdrop-blur-sm"
-                    onClick={() => { setShowICD10Modal(false); setEditingDiagnosisIndex(null); }}
-                >
-                    <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl">
-                        <DiagnosisPicker
-                            onSelect={(code) => handleAddICD10(code)}
-                            onClose={() => { setShowICD10Modal(false); setEditingDiagnosisIndex(null); }}
-                            existingDiagnoses={diagnoses}
-                        />
+            {
+                showICD10Modal && (
+                    <div
+                        className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-ink-950/40 backdrop-blur-sm"
+                        onClick={() => { setShowICD10Modal(false); setEditingDiagnosisIndex(null); }}
+                    >
+                        <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl">
+                            <DiagnosisPicker
+                                onSelect={(code) => handleAddICD10(code)}
+                                onClose={() => { setShowICD10Modal(false); setEditingDiagnosisIndex(null); }}
+                                existingDiagnoses={diagnoses}
+                            />
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
             <OrderModal
                 isOpen={showOrderModal}
                 onClose={() => { setShowOrderModal(false); setSelectedDiagnosis(null); }}
@@ -2521,68 +2509,70 @@ const VisitNote = () => {
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
             {/* Dot Phrase Modal */}
-            {showDotPhraseModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => {
-                    setShowDotPhraseModal(false);
-                    setDotPhraseSearch('');
-                    setActiveTextArea(null);
-                }}>
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-                        <div className="p-4 border-b border-neutral-200 flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-ink-900 flex items-center space-x-2">
-                                <Zap className="w-5 h-5 text-primary-600" />
-                                <span>Dot Phrases</span>
-                                {activeTextArea && <span className="text-sm font-normal text-ink-500">(Inserting into {activeTextArea.toUpperCase()})</span>}
-                            </h3>
-                            <button onClick={() => { setShowDotPhraseModal(false); setDotPhraseSearch(''); setActiveTextArea(null); }} className="p-1 hover:bg-primary-100 rounded">
-                                <X className="w-5 h-5 text-ink-500" />
-                            </button>
-                        </div>
-                        <div className="p-4 border-b border-neutral-200">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-neutral-400" />
-                                <input type="text" value={dotPhraseSearch} onChange={(e) => setDotPhraseSearch(e.target.value)}
-                                    placeholder="Search dot phrases..." className="w-full pl-11 pr-4 py-2.5 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" autoFocus />
+            {
+                showDotPhraseModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => {
+                        setShowDotPhraseModal(false);
+                        setDotPhraseSearch('');
+                        setActiveTextArea(null);
+                    }}>
+                        <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                            <div className="p-4 border-b border-neutral-200 flex items-center justify-between">
+                                <h3 className="text-lg font-semibold text-ink-900 flex items-center space-x-2">
+                                    <Zap className="w-5 h-5 text-primary-600" />
+                                    <span>Dot Phrases</span>
+                                    {activeTextArea && <span className="text-sm font-normal text-ink-500">(Inserting into {activeTextArea.toUpperCase()})</span>}
+                                </h3>
+                                <button onClick={() => { setShowDotPhraseModal(false); setDotPhraseSearch(''); setActiveTextArea(null); }} className="p-1 hover:bg-primary-100 rounded">
+                                    <X className="w-5 h-5 text-ink-500" />
+                                </button>
+                            </div>
+                            <div className="p-4 border-b border-neutral-200">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                                    <input type="text" value={dotPhraseSearch} onChange={(e) => setDotPhraseSearch(e.target.value)}
+                                        placeholder="Search dot phrases..." className="w-full pl-11 pr-4 py-2.5 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" autoFocus />
+                                </div>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4">
+                                {filteredDotPhrases.length === 0 ? (
+                                    <div className="text-center text-ink-500 py-8">
+                                        {dotPhraseSearch.trim() ? `No dot phrases found matching "${dotPhraseSearch}"` : 'Start typing to search dot phrases...'}
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {filteredDotPhrases.map((item, index) => {
+                                            const template = hpiDotPhrases[item.key];
+                                            return (
+                                                <button key={`${item.key}-${index}`} onClick={() => handleDotPhrase(item.key)}
+                                                    className="w-full text-left p-3 border border-neutral-200 rounded-md hover:bg-primary-50 hover:border-neutral-300 transition-colors">
+                                                    <div className="font-medium text-ink-900 mb-1">{item.key}</div>
+                                                    <div className="text-sm text-ink-600 space-y-1 max-h-24 overflow-hidden">
+                                                        {template.split(/[.\n]/).filter(s => s.trim()).slice(0, 4).map((sentence, idx) => (
+                                                            <div key={idx} className="flex items-start">
+                                                                <span className="text-ink-400 mr-2">•</span>
+                                                                <span className="flex-1">{sentence.trim()}</span>
+                                                            </div>
+                                                        ))}
+                                                        {template.split(/[.\n]/).filter(s => s.trim()).length > 4 && <div className="text-ink-400 italic">...</div>}
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-4">
-                            {filteredDotPhrases.length === 0 ? (
-                                <div className="text-center text-ink-500 py-8">
-                                    {dotPhraseSearch.trim() ? `No dot phrases found matching "${dotPhraseSearch}"` : 'Start typing to search dot phrases...'}
-                                </div>
-                            ) : (
-                                <div className="space-y-2">
-                                    {filteredDotPhrases.map((item, index) => {
-                                        const template = hpiDotPhrases[item.key];
-                                        return (
-                                            <button key={`${item.key}-${index}`} onClick={() => handleDotPhrase(item.key)}
-                                                className="w-full text-left p-3 border border-neutral-200 rounded-md hover:bg-primary-50 hover:border-neutral-300 transition-colors">
-                                                <div className="font-medium text-ink-900 mb-1">{item.key}</div>
-                                                <div className="text-sm text-ink-600 space-y-1 max-h-24 overflow-hidden">
-                                                    {template.split(/[.\n]/).filter(s => s.trim()).slice(0, 4).map((sentence, idx) => (
-                                                        <div key={idx} className="flex items-start">
-                                                            <span className="text-ink-400 mr-2">•</span>
-                                                            <span className="flex-1">{sentence.trim()}</span>
-                                                        </div>
-                                                    ))}
-                                                    {template.split(/[.\n]/).filter(s => s.trim()).length > 4 && <div className="text-ink-400 italic">...</div>}
-                                                </div>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
             <PatientChartPanel
                 patientId={id}
                 isOpen={showPatientChart}
                 onClose={() => setShowPatientChart(false)}
                 initialTab={patientChartTab}
             />
-        </div>
+        </div >
     );
 };
 
