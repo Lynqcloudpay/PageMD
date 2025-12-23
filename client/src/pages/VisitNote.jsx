@@ -633,7 +633,6 @@ const VisitNote = () => {
                     // Set visitData to empty object so component can still render
                     setVisitData({});
                 });
-        } else {
             // No visit ID in URL - this shouldn't happen normally, but ensure we don't stay in loading state
             setLoading(false);
             setVisitData({});
@@ -642,6 +641,59 @@ const VisitNote = () => {
         // Return cleanup function if it was set
         return cleanup || (() => { });
     }, [urlVisitId, id, navigate]);
+
+    // Local Storage Backup Logic
+    useEffect(() => {
+        if (!id || !currentVisitId || currentVisitId === 'new' || loading || isSigned) return;
+
+        const backupKey = `paper_emr_backup_${id}_${currentVisitId}`;
+        const timeout = setTimeout(() => {
+            const backupData = {
+                noteData,
+                vitals,
+                timestamp: Date.now()
+            };
+            localStorage.setItem(backupKey, JSON.stringify(backupData));
+            // console.log('Saved local backup');
+        }, 1000); // 1-second debounce for local backup
+
+        return () => clearTimeout(timeout);
+    }, [noteData, vitals, id, currentVisitId, loading, isSigned]);
+
+    // Check for backup on load (modified part of loading effect is tricky via multi-replace, so we do it separately or handle it here if possible)
+    // Actually, checking on load needs to be inside the existing useEffect or a new one that runs once currentVisitId is set and we have server data.
+    // Let's add a separate effect that checks for restoration once we have visitData
+    useEffect(() => {
+        if (!loading && visitData && currentVisitId && currentVisitId !== 'new' && !isSigned) {
+            const backupKey = `paper_emr_backup_${id}_${currentVisitId}`;
+            const saved = localStorage.getItem(backupKey);
+            if (saved) {
+                try {
+                    const localBackup = JSON.parse(saved);
+                    const serverTime = new Date(visitData.updated_at || 0).getTime();
+                    const localTime = localBackup.timestamp || 0;
+
+                    // If local backup is newer than server data (by at least 2 seconds to avoid clock skew issues), or if server data is basically empty
+                    const isNewer = localTime > serverTime + 2000;
+
+                    // Simple check on note content length to see if server is "empty"
+                    const serverNoteLength = (visitData.note_draft || '').length;
+                    const localNoteLength = (localBackup.noteData?.plan || '').length + (localBackup.noteData?.assessment || '').length;
+
+                    if (isNewer || (serverNoteLength < 10 && localNoteLength > 20)) {
+                        console.log('Restoring from local backup', localBackup);
+                        setNoteData(localBackup.noteData);
+                        if (localBackup.vitals) {
+                            setVitals(localBackup.vitals);
+                        }
+                        showToast('Restored unsaved work from local backup', 'info');
+                    }
+                } catch (e) {
+                    console.error('Error parsing local backup', e);
+                }
+            }
+        }
+    }, [loading, visitData, currentVisitId, id, isSigned]);
 
     // Auto-save function (can be called with or without user action)
     const autoSave = useCallback(async (showToastMessage = false) => {
@@ -900,6 +952,11 @@ const VisitNote = () => {
                 }
 
                 showToast('Note signed successfully', 'success');
+                // Clear local backup on sign
+                if (id && visitId) {
+                    localStorage.removeItem(`paper_emr_backup_${id}_${visitId}`);
+                }
+
                 // Reload visit data to get signed status
                 const response = await visitsAPI.get(visitId);
                 const visit = response.data;

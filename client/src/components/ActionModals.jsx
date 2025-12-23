@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Modal from './ui/Modal';
-import { Pill, Stethoscope, Upload, Send, Search, X, ShoppingCart, Trash2, Plus, Check, ChevronRight, RotateCcw, ClipboardList } from 'lucide-react';
+import { Pill, Stethoscope, Upload, Send, Search, X, ShoppingCart, Trash2, Plus, Check, ChevronRight, RotateCcw, ClipboardList, Link } from 'lucide-react';
 import { searchLabTests, searchImaging } from '../data/labCodes';
 import axios from 'axios';
 import { codesAPI, referralsAPI, eprescribeAPI, medicationsAPI, ordersCatalogAPI, ordersetsAPI, patientsAPI } from '../services/api';
@@ -605,16 +605,16 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
 
     const addToCart = (item) => {
         const newItem = {
+            ...item,
             id: Date.now() + Math.random(),
             type: activeTab,
             name: item.name,
             details: item,
             diagnosis: selectedDiagnosis,
-            // Referral specific
-            reason: activeTab === 'referrals' ? referralReason : '',
-            // Med specific
-            sig: activeTab === 'medications' ? currentMed.sig : '',
-            dispense: activeTab === 'medications' ? currentMed.dispense : ''
+            // Use item values if present, otherwise fallback to state
+            reason: item.reason || (activeTab === 'referrals' ? referralReason : ''),
+            sig: item.sig || (activeTab === 'medications' ? currentMed.sig : ''),
+            dispense: item.dispense || (activeTab === 'medications' ? currentMed.dispense : '')
         };
 
         setCart([...cart, newItem]);
@@ -970,7 +970,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                                 dispense: '',
                                                                 type: 'medications',
                                                                 diagnosis: selectedDiagnosis,
-                                                                originalString: `Prescription: ${med.medication_name} - ${med.frequency} (Continue)`,
+                                                                originalString: `Continue: ${med.medication_name} ${med.frequency}`,
                                                                 action: 'continue',
                                                                 medicationId: med.id
                                                             })}
@@ -985,7 +985,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                                 dispense: '30',
                                                                 type: 'medications',
                                                                 diagnosis: selectedDiagnosis,
-                                                                originalString: `Prescription: ${med.medication_name} - ${med.frequency} (Refill)`,
+                                                                originalString: `Refill: ${med.medication_name} ${med.frequency}, Qty: 30`,
                                                                 action: 'refill',
                                                                 medicationId: med.id
                                                             })}
@@ -1166,6 +1166,24 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                                 {typeInfo.label}
                                                             </span>
                                                             <span className="text-xs text-gray-700 flex-1 truncate">{item.name}</span>
+
+                                                            {/* Diagnosis Re-linker */}
+                                                            {diagnoses.length > 0 && (
+                                                                <div className="relative flex items-center justify-center w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <Link className="w-3 h-3 text-gray-400 hover:text-primary-600" />
+                                                                    <select
+                                                                        value={item.diagnosis || ''}
+                                                                        onChange={(e) => updateCartItemDx(item.id, e.target.value)}
+                                                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                                                        title="Move to another diagnosis"
+                                                                    >
+                                                                        {diagnoses.map(dx => (
+                                                                            <option key={dx} value={dx}>{dx}</option>
+                                                                        ))}
+                                                                    </select>
+                                                                </div>
+                                                            )}
+
                                                             <button
                                                                 onClick={() => removeFromCart(item.id)}
                                                                 className="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
