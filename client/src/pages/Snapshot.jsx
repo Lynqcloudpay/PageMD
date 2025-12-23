@@ -1725,12 +1725,12 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             <div className="flex items-center space-x-1.5">
                                                 <Pill className="w-4 h-4 text-emerald-600" />
                                                 <h3 className="font-bold text-sm text-gray-900">Medications</h3>
-                                                {medications.length > 0 && <span className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{medications.length}</span>}
+                                                {medications.filter(m => m.active !== false).length > 0 && <span className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{medications.filter(m => m.active !== false).length}</span>}
                                             </div>
                                             <button onClick={() => { setPatientDataManagerTab('medications'); setShowPatientDataManager(true); }} className="text-[10px] text-emerald-600 hover:text-emerald-700 font-bold uppercase tracking-wider">Manage</button>
                                         </div>
                                         <div className="p-2 max-h-[200px] overflow-y-auto">
-                                            {medications.length > 0 ? (
+                                            {medications.filter(m => m.active !== false).length > 0 ? (
                                                 <div className="space-y-1.5">
                                                     {medications.filter(m => m.active !== false).slice(0, 10).map(med => (
                                                         <div key={med.id} className="pb-1 border-b border-gray-50 last:border-b-0">

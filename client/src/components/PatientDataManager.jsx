@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Edit2, Trash2, AlertCircle, Pill, ClipboardList, Users, Heart, Save, ArrowLeft } from 'lucide-react';
+import { X, Plus, Edit2, Trash2, AlertCircle, Pill, ClipboardList, Users, Heart, Save, ArrowLeft, Calendar, XCircle, RotateCcw, Search, Loader2 } from 'lucide-react';
 import { patientsAPI, medicationsAPI } from '../services/api';
 import axios from 'axios';
 import Toast from './ui/Toast';
 import { format } from 'date-fns';
-import { Search, Loader2 } from 'lucide-react';
 
 const PatientDataManager = ({ patientId, isOpen, onClose, initialTab = 'problems', onUpdate, onBack }) => {
     const [activeTab, setActiveTab] = useState(initialTab);
@@ -38,6 +37,15 @@ const PatientDataManager = ({ patientId, isOpen, onClose, initialTab = 'problems
             fetchAllData();
         }
     }, [isOpen, patientId, initialTab]);
+
+    const fetchMedications = async () => {
+        try {
+            const res = await patientsAPI.getMedications(patientId);
+            setMedications(Array.isArray(res.data) ? res.data : []);
+        } catch (error) {
+            console.error('Fetch medications error:', error);
+        }
+    };
 
     const fetchAllData = async () => {
         setLoading(true);
@@ -87,6 +95,7 @@ const PatientDataManager = ({ patientId, isOpen, onClose, initialTab = 'problems
         if (onUpdate) {
             onUpdate();
         }
+        window.dispatchEvent(new CustomEvent('patient-data-updated'));
     };
 
     // Problems
@@ -134,33 +143,41 @@ const PatientDataManager = ({ patientId, isOpen, onClose, initialTab = 'problems
     // Medications
     const handleAddMedication = async () => {
         try {
+            console.log(`[PatientDataManager] Adding medication for ${patientId}:`, medicationForm);
             const response = await patientsAPI.addMedication(patientId, {
-                medicationName: medicationForm.medicationName,
-                dosage: medicationForm.dosage,
-                frequency: medicationForm.frequency,
-                route: medicationForm.route,
-                startDate: medicationForm.startDate || null
+                ...medicationForm,
+                startDate: medicationForm.startDate || new Date().toISOString().split('T')[0]
             });
-            setMedications([response.data, ...medications]);
+
+            // Re-fetch to ensure sync and proper status
+            await fetchMedications();
+
+            setEditing(null);
             setMedicationForm({ medicationName: '', dosage: '', frequency: '', route: '', startDate: '', active: true });
             setSearchQuery('');
             showToast('Medication added successfully');
             triggerUpdate();
         } catch (error) {
+            console.error('Add med error:', error);
             showToast('Failed to add medication', 'error');
         }
     };
 
-    const handleUpdateMedication = async (id) => {
+    const handleUpdateMedication = async (id, customData = null) => {
         try {
-            const response = await patientsAPI.updateMedication(id, medicationForm);
-            setMedications(medications.map(m => m.id === id ? response.data : m));
+            const dataToUse = customData || medicationForm;
+            const response = await patientsAPI.updateMedication(id, dataToUse);
+
+            // Re-fetch all to ensure we have the latest status from DB
+            await fetchMedications();
+
             setEditing(null);
             setMedicationForm({ medicationName: '', dosage: '', frequency: '', route: '', startDate: '', active: true });
             setSearchQuery('');
             showToast('Medication updated successfully');
             triggerUpdate();
         } catch (error) {
+            console.error('Update med error:', error);
             showToast('Failed to update medication', 'error');
         }
     };
@@ -686,54 +703,114 @@ const PatientDataManager = ({ patientId, isOpen, onClose, initialTab = 'problems
                                         </div>
                                     )}
 
-                                    <div className="space-y-2">
-                                        {medications.length === 0 ? (
-                                            <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
-                                                No medications recorded
+                                    <div className="space-y-6">
+                                        {/* Active Medications Section */}
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse"></div>
+                                                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Current Medications ({medications.filter(m => m.active !== false).length})</h4>
                                             </div>
-                                        ) : (
-                                            medications.map((med) => (
-                                                <div key={med.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex items-start justify-between">
-                                                    <div className="flex-1">
-                                                        <div className="font-semibold text-gray-900">{med.medication_name}</div>
-                                                        <div className="text-sm text-gray-600">
-                                                            {med.dosage && `${med.dosage} `}
-                                                            {med.frequency && `${med.frequency} `}
-                                                            {med.route && `(${med.route})`}
+                                            <div className="space-y-2">
+                                                {medications.filter(m => m.active !== false).length === 0 ? (
+                                                    <div className="text-center py-6 text-gray-400 bg-gray-50/50 rounded-lg border border-dashed border-gray-200 text-xs italic">
+                                                        No active medications
+                                                    </div>
+                                                ) : (
+                                                    medications.filter(m => m.active !== false).map((med) => (
+                                                        <div key={med.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 flex items-start justify-between group">
+                                                            <div className="flex-1">
+                                                                <div className="font-bold text-gray-900 flex items-center gap-2">
+                                                                    {med.medication_name}
+                                                                    <span className="px-1.5 py-0.5 rounded-full bg-emerald-50 text-[10px] text-emerald-600 font-bold border border-emerald-100 uppercase">Active</span>
+                                                                </div>
+                                                                <div className="text-sm text-gray-600 mt-0.5">
+                                                                    {med.dosage && <span className="font-medium">{med.dosage} </span>}
+                                                                    {med.frequency && <span>{med.frequency} </span>}
+                                                                    {med.route && <span className="text-gray-400 italic">({med.route})</span>}
+                                                                </div>
+                                                                <div className="text-[10px] text-gray-400 mt-2 flex items-center gap-1.5 font-medium">
+                                                                    <Calendar className="w-3 h-3" />
+                                                                    {med.start_date ? `Started: ${format(new Date(med.start_date), 'MMM d, yyyy')}` : 'Start date unknown'}
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setEditing(`medication-${med.id}`);
+                                                                        setMedicationForm({
+                                                                            medicationName: med.medication_name,
+                                                                            dosage: med.dosage || '',
+                                                                            frequency: med.frequency || '',
+                                                                            route: med.route || '',
+                                                                            startDate: med.start_date ? format(new Date(med.start_date), 'yyyy-MM-dd') : '',
+                                                                            active: med.active
+                                                                        });
+                                                                        setSearchQuery(med.medication_name);
+                                                                    }}
+                                                                    className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                                                                    title="Edit Medication"
+                                                                >
+                                                                    <Edit2 className="w-4 h-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleUpdateMedication(med.id, { active: false, status: 'discontinued' })}
+                                                                    className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                                                                    title="Discontinue"
+                                                                >
+                                                                    <XCircle className="w-4 h-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteMedication(med.id)}
+                                                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                                    title="Delete Record"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
                                                         </div>
-                                                        <div className="text-xs text-gray-500 mt-1">
-                                                            {med.active ? <span className="text-green-600">Active</span> : <span className="text-gray-600">Inactive</span>}
-                                                            {med.start_date && ` • Started: ${format(new Date(med.start_date), 'MMM d, yyyy')}`}
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Inactive/Past Medications Section */}
+                                        <div className="pt-4 border-t border-gray-100">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <div className="w-2 h-2 rounded-full bg-gray-300"></div>
+                                                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Medication History ({medications.filter(m => m.active === false).length})</h4>
+                                            </div>
+                                            <div className="space-y-2">
+                                                {medications.filter(m => m.active === false).map((med) => (
+                                                    <div key={med.id} className="bg-gray-50/80 p-3 rounded-lg border border-gray-200 flex items-center justify-between grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all">
+                                                        <div className="flex-1">
+                                                            <div className="text-sm font-bold text-gray-700">{med.medication_name}</div>
+                                                            <div className="text-[11px] text-gray-500 flex items-center gap-2 mt-0.5">
+                                                                <span>{med.dosage} {med.frequency}</span>
+                                                                <span className="px-1 py-0 rounded bg-gray-200 text-[9px] text-gray-600 font-bold uppercase">{med.status || 'Inactive'}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex space-x-1">
+                                                            <button
+                                                                onClick={() => handleUpdateMedication(med.id, { active: true, status: 'active' })}
+                                                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                                                                title="Re-activate"
+                                                            >
+                                                                <RotateCcw className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteMedication(med.id)}
+                                                                className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
                                                         </div>
                                                     </div>
-                                                    <div className="flex space-x-2">
-                                                        <button
-                                                            onClick={() => {
-                                                                setEditing(`medication-${med.id}`);
-                                                                setMedicationForm({
-                                                                    medicationName: med.medication_name,
-                                                                    dosage: med.dosage || '',
-                                                                    frequency: med.frequency || '',
-                                                                    route: med.route || '',
-                                                                    startDate: med.start_date ? format(new Date(med.start_date), 'yyyy-MM-dd') : '',
-                                                                    active: med.active
-                                                                });
-                                                                setSearchQuery(med.medication_name);
-                                                            }}
-                                                            className="p-1.5 text-gray-600 hover:bg-gray-200 rounded"
-                                                        >
-                                                            <Edit2 className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteMedication(med.id)}
-                                                            className="p-1.5 text-red-600 hover:bg-red-50 rounded"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))
-                                        )}
+                                                ))}
+                                                {medications.filter(m => m.active === false).length === 0 && (
+                                                    <div className="text-center py-4 text-gray-400 text-[10px] italic">No medication history</div>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             )}

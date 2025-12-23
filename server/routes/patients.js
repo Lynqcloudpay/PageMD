@@ -739,27 +739,26 @@ router.post('/:id/medications', requirePermission('meds:prescribe'), async (req,
     const { id } = req.params;
     const { medicationName, dosage, frequency, route, startDate } = req.body;
 
+    console.log(`[API] Adding medication for patient ${id}:`, medicationName);
+
     // Clinical decision support - OpenEMR style
     const { performClinicalChecks } = require('../middleware/clinical');
     const warnings = await performClinicalChecks(id, medicationName);
 
-    // If high severity warnings exist, return them but don't block (clinician decision)
+    // If high severity warnings exist, log them but don't block
     if (warnings.some(w => w.severity === 'high')) {
-      return res.status(400).json({
-        error: 'Clinical warnings detected',
-        warnings: warnings,
-        message: 'Please review warnings before adding this medication'
-      });
+      console.warn(`[CLINICAL] High severity warnings for ${medicationName}:`, warnings);
     }
 
     const result = await pool.query(
-      `INSERT INTO medications (patient_id, medication_name, dosage, frequency, route, start_date, prescriber_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [id, medicationName, dosage, frequency, route, startDate, req.user.id]
+      `INSERT INTO medications (patient_id, medication_name, dosage, frequency, route, start_date, prescriber_id, active, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [id, medicationName, dosage, frequency, route, startDate || new Date().toISOString(), req.user.id, true, 'active']
     );
 
     await logAudit(req.user.id, 'add_medication', 'medication', result.rows[0].id, {
       medication: medicationName,
+      status: 'active',
       warnings: warnings.length > 0 ? warnings : null
     }, req.ip);
 

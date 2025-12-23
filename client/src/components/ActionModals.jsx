@@ -806,16 +806,22 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                             // Always add to patient medication list if it's new or refill
                             if (!item.action || item.action === 'refill') {
                                 try {
-                                    await patientsAPI.addMedication(patientId, {
+                                    console.log(`[OrderModal] Pushing NEW medication to patient record: ${item.name}`);
+                                    const medRes = await patientsAPI.addMedication(patientId, {
                                         medicationName: item.name,
-                                        dosage: '',
+                                        dosage: item.dispense || '',
                                         frequency: item.sig || 'As directed',
                                         route: '',
                                         startDate: new Date().toISOString(),
-                                        active: true
+                                        active: true,
+                                        status: 'active'
                                     });
+                                    console.log(`[OrderModal] Successfully added medication: ${item.name}`, medRes.data);
                                 } catch (e) {
-                                    console.error('Failed to sync medication to patient list:', e);
+                                    console.error(`[OrderModal] Failed to sync medication ${item.name} to patient list:`, e);
+                                    if (e.response?.data?.error) {
+                                        alert(`Warning: Could not add ${item.name} to patient current medications list. Reason: ${e.response.data.error}`);
+                                    }
                                 }
                             }
                         }
@@ -825,7 +831,11 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                 }
 
                 // Trigger refresh in chart/snapshot AFTER all saves are done
+                console.log('[OrderModal] Dispatching patient-data-updated event');
                 window.dispatchEvent(new CustomEvent('patient-data-updated'));
+
+                if (onSuccess) onSuccess();
+                onClose();
             }
         } else {
             // Fallback for older usage
