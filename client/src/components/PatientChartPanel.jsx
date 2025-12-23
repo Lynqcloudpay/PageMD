@@ -452,7 +452,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                 notes: socialForm.notes || ''
             };
             await patientsAPI.saveSocialHistory(patientId, payload);
-            setShowEditSocialForm(false);
+            // Keep form open - just trigger refresh
             window.dispatchEvent(new CustomEvent('patient-data-updated'));
             fetchAllData();
         } catch (error) {

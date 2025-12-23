@@ -1709,10 +1709,28 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             <span className="font-bold text-gray-900">{socialHistory.alcohol_use}</span>
                                                         </div>
                                                     )}
+                                                    {socialHistory.drug_use && (
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-500">Drugs:</span>
+                                                            <span className="font-bold text-gray-900">{socialHistory.drug_use}</span>
+                                                        </div>
+                                                    )}
+                                                    {socialHistory.occupation && (
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-500">Occupation:</span>
+                                                            <span className="font-bold text-gray-900">{socialHistory.occupation}</span>
+                                                        </div>
+                                                    )}
                                                     {socialHistory.exercise_frequency && (
                                                         <div className="flex justify-between">
                                                             <span className="text-gray-500">Exercise:</span>
                                                             <span className="font-bold text-gray-900">{socialHistory.exercise_frequency}</span>
+                                                        </div>
+                                                    )}
+                                                    {socialHistory.marital_status && (
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-500">Marital:</span>
+                                                            <span className="font-bold text-gray-900">{socialHistory.marital_status}</span>
                                                         </div>
                                                     )}
                                                 </div>
