@@ -227,7 +227,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
     const [groupDxResults, setGroupDxResults] = useState([]);
     const [labVendor, setLabVendor] = useState('quest');
     const [referralReason, setReferralReason] = useState('');
-    const [currentMed, setCurrentMed] = useState({ name: '', sig: '', dispense: '' });
+    const [currentMed, setCurrentMed] = useState({ name: '', sig: '', dispense: '', refills: '0', note: '' });
     const [searchingMed, setSearchingMed] = useState(false);
     const [medResults, setMedResults] = useState([]);
     const [orderSets, setOrderSets] = useState([]);
@@ -668,13 +668,15 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
             // Use item values if present, otherwise fallback to state
             reason: item.reason || (activeTab === 'referrals' ? referralReason : ''),
             sig: item.sig || (activeTab === 'medications' ? currentMed.sig : ''),
-            dispense: item.dispense || (activeTab === 'medications' ? currentMed.dispense : '')
+            dispense: item.dispense || (activeTab === 'medications' ? currentMed.dispense : ''),
+            refills: item.refills || (activeTab === 'medications' ? currentMed.refills : ''),
+            note: item.note || (activeTab === 'medications' ? currentMed.note : '')
         };
 
         setCart([...cart, newItem]);
         setSearchQuery('');
         setReferralReason('');
-        setCurrentMed({ name: '', sig: '', dispense: '' });
+        setCurrentMed({ name: '', sig: '', dispense: '', refills: '0', note: '' });
     };
 
     const removeFromCart = (id) => {
@@ -1214,24 +1216,45 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                 <button onClick={() => setCurrentMed({ ...currentMed, name: '' })} className="p-1 hover:bg-white rounded-full transition-colors"><X className="w-4 h-4" /></button>
                                             </div>
 
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div>
+                                            <div className="grid grid-cols-12 gap-3">
+                                                <div className="col-span-8">
                                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sig / Instructions</label>
                                                     <input
-                                                        className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                                                        className="w-full p-2 border border-gray-300 rounded-md text-sm outline-none focus:ring-1 focus:ring-primary-500"
                                                         value={currentMed.sig}
                                                         onChange={e => setCurrentMed({ ...currentMed, sig: e.target.value })}
                                                         placeholder="e.g. 1 tab PO daily"
                                                         autoFocus
                                                     />
                                                 </div>
-                                                <div>
-                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Dispense Qty</label>
+                                                <div className="col-span-2">
+                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Dispense</label>
                                                     <input
-                                                        className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                                                        className="w-full p-2 border border-gray-300 rounded-md text-sm outline-none focus:ring-1 focus:ring-primary-500"
                                                         value={currentMed.dispense}
                                                         onChange={e => setCurrentMed({ ...currentMed, dispense: e.target.value })}
-                                                        placeholder="e.g. 30"
+                                                        placeholder="#"
+                                                    />
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Refills</label>
+                                                    <select
+                                                        className="w-full p-2 border border-gray-300 rounded-md text-sm outline-none focus:ring-1 focus:ring-primary-500 bg-white"
+                                                        value={currentMed.refills}
+                                                        onChange={e => setCurrentMed({ ...currentMed, refills: e.target.value })}
+                                                    >
+                                                        {[0, 1, 2, 3, 4, 5, 11, 'PRN'].map(r => (
+                                                            <option key={r} value={r}>{r}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div className="col-span-12">
+                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Note to Pharmacy</label>
+                                                    <input
+                                                        className="w-full p-2 border border-gray-300 rounded-md text-sm outline-none focus:ring-1 focus:ring-primary-500"
+                                                        value={currentMed.note}
+                                                        onChange={e => setCurrentMed({ ...currentMed, note: e.target.value })}
+                                                        placeholder="Optional notes..."
                                                     />
                                                 </div>
                                             </div>
