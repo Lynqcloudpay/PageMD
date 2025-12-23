@@ -969,7 +969,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                                 sig: med.frequency,
                                                                 dispense: '',
                                                                 type: 'medications',
-                                                                diagnosis: selectedDiagnosis,
+                                                                diagnosis: med.diagnosis || selectedDiagnosis,
                                                                 originalString: `Continue: ${med.medication_name} ${med.frequency}`,
                                                                 action: 'continue',
                                                                 medicationId: med.id
@@ -984,7 +984,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                                 sig: med.frequency,
                                                                 dispense: '30',
                                                                 type: 'medications',
-                                                                diagnosis: selectedDiagnosis,
+                                                                diagnosis: med.diagnosis || selectedDiagnosis,
                                                                 originalString: `Refill: ${med.medication_name} ${med.frequency}, Qty: 30`,
                                                                 action: 'refill',
                                                                 medicationId: med.id
@@ -999,7 +999,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                                 sig: 'DISCONTINUE',
                                                                 dispense: '',
                                                                 type: 'medications',
-                                                                diagnosis: selectedDiagnosis,
+                                                                diagnosis: med.diagnosis || selectedDiagnosis,
                                                                 originalString: `Discontinue: ${med.medication_name}`,
                                                                 action: 'stop',
                                                                 medicationId: med.id
