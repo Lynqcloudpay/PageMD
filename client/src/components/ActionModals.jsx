@@ -220,6 +220,11 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
     const [selectedDiagnosis, setSelectedDiagnosis] = useState('');
     const [isDiagnosisDropdownOpen, setIsDiagnosisDropdownOpen] = useState(false);
     const [isAddingNewDiagnosis, setIsAddingNewDiagnosis] = useState(false);
+
+    // State for editing cart group diagnoses
+    const [editingGroupDx, setEditingGroupDx] = useState(null);
+    const [groupDxSearch, setGroupDxSearch] = useState('');
+    const [groupDxResults, setGroupDxResults] = useState([]);
     const [labVendor, setLabVendor] = useState('quest');
     const [referralReason, setReferralReason] = useState('');
     const [currentMed, setCurrentMed] = useState({ name: '', sig: '', dispense: '' });
@@ -1296,53 +1301,123 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                 </div>
                             ) : (
                                 <div className="space-y-2">
-                                    {Object.entries(groupedCart).map(([diagnosis, typeGroups]) => (
-                                        <div key={diagnosis} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                                            <div className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 border-b border-gray-100">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-primary-500"></div>
-                                                <h4 className="text-[10px] font-bold text-gray-600 uppercase tracking-wide flex-1 truncate">
-                                                    {diagnosis === 'Unassigned' ? 'No Diagnosis' : diagnosis.substring(0, 35)}
-                                                </h4>
-                                            </div>
-                                            <div className="p-1.5 space-y-0.5">
-                                                {Object.entries(typeGroups).map(([type, items]) => {
-                                                    const typeInfo = typeLabels[type] || typeLabels.other;
-                                                    return items.map((item) => (
-                                                        <div key={item.id} className="group flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-gray-50 transition-colors">
-                                                            <span className={`${typeInfo.color} text-white text-[8px] font-bold w-4 h-4 rounded flex items-center justify-center flex-shrink-0`}>
-                                                                {typeInfo.label}
-                                                            </span>
-                                                            <span className="text-xs text-gray-700 flex-1 truncate">{item.name}</span>
+                                    {Object.entries(groupedCart).map(([diagnosis, typeGroups]) => {
+                                        const isEditing = editingGroupDx === diagnosis;
+                                        return (
+                                            <div key={diagnosis} className="bg-white border border-gray-200 rounded-lg overflow-visible relative"> {/* Changed overflow-hidden to overflow-visible for dropdown */}
+                                                <div
+                                                    className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors"
+                                                    onClick={() => {
+                                                        setEditingGroupDx(isEditing ? null : diagnosis);
+                                                        setGroupDxSearch('');
+                                                        setGroupDxResults([]);
+                                                    }}
+                                                >
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-primary-500"></div>
+                                                    <h4 className="text-[10px] font-bold text-gray-600 uppercase tracking-wide flex-1 truncate">
+                                                        {diagnosis === 'Unassigned' ? 'No Diagnosis' : diagnosis.substring(0, 35)}
+                                                    </h4>
+                                                    <ChevronDown className={`w-3 h-3 text-gray-400 transition-transform ${isEditing ? 'rotate-180' : ''}`} />
+                                                </div>
 
-                                                            {/* Diagnosis Re-linker */}
-                                                            {availableDiagnoses.length > 0 && (
-                                                                <div className="relative flex items-center justify-center w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                    <Link className="w-3 h-3 text-gray-400 hover:text-primary-600" />
-                                                                    <select
-                                                                        value={item.diagnosis || ''}
-                                                                        onChange={(e) => updateCartItemDx(item.id, e.target.value)}
-                                                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                                                        title="Move to another diagnosis"
-                                                                    >
-                                                                        {availableDiagnoses.map(dx => (
-                                                                            <option key={dx} value={dx}>{dx}</option>
-                                                                        ))}
-                                                                    </select>
+                                                {isEditing && (
+                                                    <div className="absolute top-9 left-0 right-0 z-30 bg-white border border-gray-200 shadow-xl rounded-b-lg p-2 animate-in fade-in zoom-in-95 duration-100 origin-top">
+                                                        <div className="max-h-32 overflow-y-auto mb-2 space-y-1">
+                                                            <label className="text-[10px] uppercase font-bold text-gray-400 px-1">Switch to existing:</label>
+                                                            {availableDiagnoses.filter(d => d !== diagnosis).map(dx => (
+                                                                <button
+                                                                    key={dx}
+                                                                    onClick={() => updateGroupDiagnosis(diagnosis, dx)}
+                                                                    className="block w-full text-left text-xs p-1.5 rounded hover:bg-blue-50 text-gray-700 truncate"
+                                                                >
+                                                                    {dx}
+                                                                </button>
+                                                            ))}
+                                                            {availableDiagnoses.length === 0 && <p className="text-xs text-gray-300 italic px-1">No other diagnoses</p>}
+                                                        </div>
+
+                                                        <div className="pt-2 border-t border-gray-100 bg-gray-50 p-2 -mx-2 -mb-2 rounded-b-lg">
+                                                            <label className="text-[10px] uppercase font-bold text-primary-600 mb-1 block">Or Add New Diagnosis:</label>
+                                                            <input
+                                                                placeholder="Search ICD-10 (e.g. Hypertension)..."
+                                                                className="w-full text-xs p-1.5 border border-primary-200 rounded focus:ring-1 focus:ring-primary-500 mb-1"
+                                                                value={groupDxSearch}
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value;
+                                                                    setGroupDxSearch(val);
+                                                                    if (val.length > 2) {
+                                                                        codesAPI.searchICD10(val).then(setGroupDxResults).catch(err => console.error(err));
+                                                                    } else {
+                                                                        setGroupDxResults([]);
+                                                                    }
+                                                                }}
+                                                                autoFocus
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            />
+                                                            {groupDxResults.length > 0 && (
+                                                                <div className="max-h-40 overflow-y-auto border border-gray-200 rounded bg-white mt-1 shadow-inner">
+                                                                    {groupDxResults.map(res => (
+                                                                        <button
+                                                                            key={res.code}
+                                                                            onClick={() => updateGroupDiagnosis(diagnosis, `${res.code} - ${res.description}`)}
+                                                                            className="block w-full text-left text-xs p-1.5 hover:bg-primary-50 border-b border-gray-50 last:border-0"
+                                                                        >
+                                                                            <span className="font-bold text-primary-700">{res.code}</span> <span className="text-gray-600">{res.description}</span>
+                                                                        </button>
+                                                                    ))}
                                                                 </div>
                                                             )}
-
-                                                            <button
-                                                                onClick={() => removeFromCart(item.id)}
-                                                                className="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                                                            >
-                                                                <X className="w-3 h-3" />
-                                                            </button>
+                                                            {!groupDxResults.length && groupDxSearch.length > 2 && (
+                                                                <button
+                                                                    onClick={() => updateGroupDiagnosis(diagnosis, groupDxSearch)}
+                                                                    className="mt-1 w-full text-center text-[10px] font-bold text-white bg-primary-600 py-1 rounded hover:bg-primary-700"
+                                                                >
+                                                                    Use "{groupDxSearch}"
+                                                                </button>
+                                                            )}
                                                         </div>
-                                                    ));
-                                                })}
+                                                    </div>
+                                                )}
+                                                <div className="p-1.5 space-y-0.5">
+                                                    {Object.entries(typeGroups).map(([type, items]) => {
+                                                        const typeInfo = typeLabels[type] || typeLabels.other;
+                                                        return items.map((item) => (
+                                                            <div key={item.id} className="group flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-gray-50 transition-colors">
+                                                                <span className={`${typeInfo.color} text-white text-[8px] font-bold w-4 h-4 rounded flex items-center justify-center flex-shrink-0`}>
+                                                                    {typeInfo.label}
+                                                                </span>
+                                                                <span className="text-xs text-gray-700 flex-1 truncate">{item.name}</span>
+
+                                                                {/* Diagnosis Re-linker */}
+                                                                {availableDiagnoses.length > 0 && (
+                                                                    <div className="relative flex items-center justify-center w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                        <Link className="w-3 h-3 text-gray-400 hover:text-primary-600" />
+                                                                        <select
+                                                                            value={item.diagnosis || ''}
+                                                                            onChange={(e) => updateCartItemDx(item.id, e.target.value)}
+                                                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                                                            title="Move to another diagnosis"
+                                                                        >
+                                                                            {availableDiagnoses.map(dx => (
+                                                                                <option key={dx} value={dx}>{dx}</option>
+                                                                            ))}
+                                                                        </select>
+                                                                    </div>
+                                                                )}
+
+                                                                <button
+                                                                    onClick={() => removeFromCart(item.id)}
+                                                                    className="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                                                >
+                                                                    <X className="w-3 h-3" />
+                                                                </button>
+                                                            </div>
+                                                        ));
+                                                    })}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
