@@ -686,7 +686,7 @@ const VisitNote = () => {
                         if (localBackup.vitals) {
                             setVitals(localBackup.vitals);
                         }
-                        showToast('Restored unsaved work from local backup', 'info');
+                        // showToast('Restored unsaved work from local backup', 'info');
                     }
                 } catch (e) {
                     console.error('Error parsing local backup', e);

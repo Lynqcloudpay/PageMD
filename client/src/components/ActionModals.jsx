@@ -230,8 +230,43 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
     const [activeMedications, setActiveMedications] = useState([]);
     const [loadingActiveMeds, setLoadingActiveMeds] = useState(false);
 
+    // Step 1: Diagnosis Selection State
+    const [newICD10Search, setNewICD10Search] = useState('');
+    const [newICD10Results, setNewICD10Results] = useState([]);
+
+    // ICD-10 Search Effect
+    useEffect(() => {
+        const timeout = setTimeout(async () => {
+            if (newICD10Search.length >= 2) {
+                try {
+                    const response = await codesAPI.searchICD10(newICD10Search);
+                    setNewICD10Results(response.data || []);
+                } catch (error) {
+                    setNewICD10Results([]);
+                }
+            } else {
+                setNewICD10Results([]);
+            }
+        }, 300);
+        return () => clearTimeout(timeout);
+    }, [newICD10Search]);
+
     // Memoize diagnoses to prevent reset on parent re-renders
     const diagnosesString = useMemo(() => JSON.stringify(diagnoses), [diagnoses]);
+
+    // Aggregate all available diagnoses including existing ones, the currently selected one (if new), and any attached to cart items
+    const availableDiagnoses = useMemo(() => {
+        const set = new Set(diagnoses);
+        if (selectedDiagnosis && selectedDiagnosis !== 'new' && selectedDiagnosis !== 'Unassigned') {
+            set.add(selectedDiagnosis);
+        }
+        cart.forEach(item => {
+            if (item.diagnosis && item.diagnosis !== 'Unassigned') {
+                set.add(item.diagnosis);
+            }
+        });
+        return Array.from(set);
+    }, [diagnoses, selectedDiagnosis, cart]);
     const existingOrdersString = useMemo(() => JSON.stringify(existingOrders), [existingOrders]);
 
     // Track if modal has been initialized to prevent resets
@@ -349,9 +384,12 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
             setSearchQuery('');
             setSearchResults([]);
             setActiveTab(initialTab);
-            // Always start at diagnosis selection if diagnoses exist
-            setOrderStep(diagnoses.length > 0 ? 1 : 2);
-            setSelectedDiagnosis(diagnoses.length === 1 ? diagnoses[0] : '');
+            setSearchResults([]);
+            setActiveTab(initialTab);
+            // Default to step 1, unless diagnoses are completely absent - but user wants to add them now.
+            // Actually, simply always showing step 1 allows the user to click "Add New"
+            setOrderStep(1);
+            setSelectedDiagnosis('');
 
             // Populate cart from existing orders
             const initialCart = [];
@@ -825,441 +863,544 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Order Entry" size="xl">
-            <div className="flex flex-col h-[600px] overflow-hidden">
-                {/* Tabs */}
-                <div className="flex border-b border-gray-200 bg-gray-50">
-                    <div className="flex-1 flex overflow-x-auto">
-                        {['Labs', 'Imaging', 'Procedures', 'Referrals', 'Medications', 'Order Sets'].map(tab => {
-                            const id = tab.toLowerCase().replace(' ', '');
-                            return (
-                                <button
-                                    key={id}
-                                    onClick={() => setActiveTab(id)}
-                                    className={`px-6 py-3 text-sm font-medium transition-colors border-r border-gray-200 whitespace-nowrap ${activeTab === id
-                                        ? 'bg-white text-primary-600 border-t-2 border-t-primary-600'
-                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                                        }`}
-                                >
-                                    {tab}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
+            {orderStep === 1 ? (
+                <div className="p-6 h-[600px] overflow-y-auto">
+                    <h3 className="text-lg font-bold text-gray-800 mb-2">Select Diagnosis</h3>
+                    <p className="text-sm text-gray-500 mb-6">Select the primary diagnosis for these orders. You can change this later.</p>
 
-                {/* Diagnosis Selector - Compact dropdown at top */}
-                {diagnoses.length > 0 && (
-                    <div className="p-3 bg-blue-50 border-b border-blue-200">
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Select Diagnosis for Orders:</label>
-                        <select
-                            value={selectedDiagnosis}
-                            onChange={(e) => setSelectedDiagnosis(e.target.value)}
-                            className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                        >
-                            <option value="">-- Select Diagnosis --</option>
-                            {diagnoses.map((dx, idx) => (
-                                <option key={idx} value={dx}>{dx}</option>
-                            ))}
-                        </select>
-                    </div>
-                )}
+                    <div className="space-y-3 max-w-2xl mx-auto">
+                        {diagnoses.map((dx, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => {
+                                    setSelectedDiagnosis(dx);
+                                    setOrderStep(2);
+                                }}
+                                className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-primary-500 hover:bg-primary-50 transition-all group flex justify-between items-center bg-white shadow-sm"
+                            >
+                                <span className="font-bold text-gray-800 text-lg">{dx}</span>
+                                <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-primary-500" />
+                            </button>
+                        ))}
 
-                <div className="flex-1 flex overflow-hidden">
-                    {/* Left Column: Search & Browse */}
-                    <div className="w-1/2 flex flex-col border-r border-gray-200 bg-white">
-                        <div className="p-4 border-b border-gray-100">
-
-                            {/* Search Input */}
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                <input
-                                    type="text"
-                                    placeholder={`Search ${activeTab}...`}
-                                    className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    autoFocus
-                                />
+                        <div className="pt-4 border-t border-gray-100 mt-4">
+                            <div className="mb-4">
+                                <label className="flex items-center gap-2 p-4 rounded-xl border border-dashed border-gray-300 hover:border-primary-500 hover:bg-gray-50 cursor-pointer transition-colors select-none">
+                                    <input
+                                        type="radio"
+                                        checked={selectedDiagnosis === 'new'}
+                                        onChange={() => setSelectedDiagnosis('new')}
+                                        className="w-4 h-4 text-primary-600"
+                                    />
+                                    <span className="font-medium text-gray-700">Add New Diagnosis</span>
+                                </label>
                             </div>
-                        </div>
 
-                        {/* Search Results / Browse Content */}
-                        <div className="flex-1 overflow-y-auto">
-                            {activeTab === 'ordersets' ? (
-                                <div className="p-4 space-y-4">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">My Order Sets</h3>
-                                        <button
-                                            onClick={fetchOrderSets}
-                                            className="text-primary-600 hover:text-primary-700 p-1"
-                                            title="Refresh"
-                                        >
-                                            <RotateCcw className="w-4 h-4" />
-                                        </button>
-                                    </div>
-
-                                    {loadingOrderSets ? (
-                                        <div className="text-center py-8">
-                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto"></div>
-                                            <p className="text-gray-500 text-xs mt-2">Loading sets...</p>
-                                        </div>
-                                    ) : orderSets.length > 0 ? (
-                                        <div className="space-y-3">
-                                            {orderSets.map(set => (
-                                                <div key={set.id} className="border border-gray-200 rounded-lg bg-white overflow-hidden hover:border-primary-300 transition-colors shadow-sm">
-                                                    <div className="p-3 bg-gray-50/50 flex justify-between items-start">
-                                                        <div>
-                                                            <h4 className="font-bold text-gray-900 text-sm">{set.name}</h4>
-                                                            <p className="text-[10px] text-gray-500 line-clamp-1">{set.description || 'No description'}</p>
-                                                        </div>
-                                                        <button
-                                                            onClick={() => applyOrderSet(set)}
-                                                            className="px-2 py-1 bg-primary-600 text-white text-[10px] font-bold rounded hover:bg-primary-700 shadow-sm"
-                                                        >
-                                                            Add Set
-                                                        </button>
-                                                    </div>
-                                                    <div className="p-2 border-t border-gray-100 flex flex-wrap gap-1">
-                                                        {set.orders.slice(0, 5).map((order, i) => (
-                                                            <span key={i} className="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200">
-                                                                {order.type.toUpperCase()}: {(order.payload.name || order.payload.medicationName || '...').substring(0, 15)}
-                                                            </span>
-                                                        ))}
-                                                        {set.orders.length > 5 && (
-                                                            <span className="text-[9px] text-gray-400 px-1.5 py-0.5">+{set.orders.length - 5} more</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="text-center py-8 border-2 border-dashed border-gray-100 rounded-lg">
-                                            <ClipboardList className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                                            <p className="text-gray-500 text-sm">No order sets found.</p>
-                                            <p className="text-gray-400 text-xs mt-1">Add items to your cart and click "Save as Set" to create one.</p>
-                                        </div>
-                                    )}
-                                </div>
-                            ) : activeTab === 'medications' ? (
-                                <div className="p-4 space-y-4">
-                                    <div className="bg-blue-50 p-3 rounded-md text-sm text-blue-700">
-                                        Manual documentation of prescriptions. For e-prescribing, use the <strong>EPrescribe</strong> button.
-                                    </div>
-
-                                    {/* Active Medications Section */}
-                                    {loadingActiveMeds ? (
-                                        <div className="flex justify-center p-4">
-                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500"></div>
-                                        </div>
-                                    ) : activeMedications.length > 0 && (
-                                        <div className="space-y-2 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
-                                            <h4 className="text-xs font-bold text-gray-500 uppercase">Current Medications</h4>
-                                            {activeMedications.filter(m => m.active).map(med => (
-                                                <div key={med.id} className="bg-white p-2 rounded border border-gray-200 shadow-sm">
-                                                    <div className="flex justify-between items-start mb-2">
-                                                        <div>
-                                                            <div className="font-bold text-sm text-gray-800">{med.medication_name}</div>
-                                                            <div className="text-xs text-gray-500">{med.dosage} {med.frequency}</div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => addToCart({
-                                                                name: med.medication_name,
-                                                                sig: med.frequency,
-                                                                dispense: '',
-                                                                type: 'medications',
-                                                                diagnosis: med.diagnosis || selectedDiagnosis,
-                                                                originalString: `Continue: ${med.medication_name} ${med.frequency}`,
-                                                                action: 'continue',
-                                                                medicationId: med.id
-                                                            })}
-                                                            className="flex-1 py-1 px-2 text-[10px] font-bold bg-green-50 text-green-700 border border-green-200 rounded hover:bg-green-100"
-                                                        >
-                                                            Continue
-                                                        </button>
-                                                        <button
-                                                            onClick={() => addToCart({
-                                                                name: med.medication_name,
-                                                                sig: med.frequency,
-                                                                dispense: '30',
-                                                                type: 'medications',
-                                                                diagnosis: med.diagnosis || selectedDiagnosis,
-                                                                originalString: `Refill: ${med.medication_name} ${med.frequency}, Qty: 30`,
-                                                                action: 'refill',
-                                                                medicationId: med.id
-                                                            })}
-                                                            className="flex-1 py-1 px-2 text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100"
-                                                        >
-                                                            Refill
-                                                        </button>
-                                                        <button
-                                                            onClick={() => addToCart({
-                                                                name: med.medication_name,
-                                                                sig: 'DISCONTINUE',
-                                                                dispense: '',
-                                                                type: 'medications',
-                                                                diagnosis: med.diagnosis || selectedDiagnosis,
-                                                                originalString: `Discontinue: ${med.medication_name}`,
-                                                                action: 'stop',
-                                                                medicationId: med.id
-                                                            })}
-                                                            className="flex-1 py-1 px-2 text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 rounded hover:bg-red-100"
-                                                        >
-                                                            Stop
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {!currentMed.name ? (
-                                        <div className="space-y-4">
-                                            <div className="relative">
-                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                                <input
-                                                    className="w-full pl-9 pr-4 py-2 bg-white border border-gray-300 rounded-md text-sm outline-none focus:ring-2 focus:ring-primary-500"
-                                                    placeholder="Search medication name..."
-                                                    value={searchQuery}
-                                                    onChange={e => setSearchQuery(e.target.value)}
-                                                />
-                                                {searchingMed && <div className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin rounded-full h-4 w-4 border-b-2 border-primary-500"></div>}
-                                            </div>
-
-                                            <div className="space-y-1 max-h-[300px] overflow-y-auto">
-                                                {medResults.length > 0 ? (
-                                                    medResults.map((m, i) => (
-                                                        <button
-                                                            key={i}
-                                                            onClick={() => setCurrentMed({ ...currentMed, name: m.name })}
-                                                            className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-primary-50 border border-transparent hover:border-primary-100 transition-all text-left group"
-                                                        >
-                                                            <Pill className="w-4 h-4 text-primary-400 group-hover:text-primary-600" />
-                                                            <div>
-                                                                <p className="text-sm font-semibold text-gray-900 leading-tight">{m.name}</p>
-                                                                {m.strength && <p className="text-[10px] text-gray-500">{m.strength}</p>}
-                                                            </div>
-                                                        </button>
-                                                    ))
-                                                ) : searchQuery.length > 2 && !searchingMed ? (
-                                                    <div className="p-4 text-center border-2 border-dashed border-gray-100 rounded-lg">
-                                                        <p className="text-sm text-gray-400 mb-2">No matching medications found</p>
-                                                        <button
-                                                            onClick={() => setCurrentMed({ ...currentMed, name: searchQuery })}
-                                                            className="text-primary-600 text-xs font-bold uppercase tracking-wider hover:underline"
-                                                        >
-                                                            Use "{searchQuery}" as custom input
-                                                        </button>
-                                                    </div>
-                                                ) : null}
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4 animate-in slide-in-from-top-2">
-                                            <div className="p-3 bg-primary-50 border border-primary-100 rounded-lg flex justify-between items-center text-primary-900">
-                                                <span className="font-bold text-sm truncate">{currentMed.name}</span>
-                                                <button onClick={() => setCurrentMed({ ...currentMed, name: '' })} className="p-1 hover:bg-white rounded-full transition-colors"><X className="w-4 h-4" /></button>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div>
-                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sig / Instructions</label>
-                                                    <input
-                                                        className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                                                        value={currentMed.sig}
-                                                        onChange={e => setCurrentMed({ ...currentMed, sig: e.target.value })}
-                                                        placeholder="e.g. 1 tab PO daily"
-                                                        autoFocus
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Dispense Qty</label>
-                                                    <input
-                                                        className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                                                        value={currentMed.dispense}
-                                                        onChange={e => setCurrentMed({ ...currentMed, dispense: e.target.value })}
-                                                        placeholder="e.g. 30"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <button
-                                                disabled={!currentMed.sig}
-                                                onClick={() => {
-                                                    addToCart({ name: currentMed.name });
-                                                }}
-                                                className="w-full py-2.5 bg-primary-600 text-white rounded-md text-sm font-bold shadow-md hover:bg-primary-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-                                            >
-                                                <Plus className="w-4 h-4" /> Add to Plan
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            ) : searchResults.length > 0 ? (
-                                <div className="divide-y divide-gray-100">
-                                    {searchResults.map((item, idx) => (
-                                        <SearchResultItem key={idx} item={item} />
-                                    ))}
-                                </div>
-                            ) : searchQuery.length > 2 ? (
-                                <div className="p-8 text-center">
-                                    <p className="text-gray-500 text-sm">No results found.</p>
-                                    <button
-                                        onClick={() => addToCart({ name: searchQuery })}
-                                        className="mt-2 text-primary-600 text-sm hover:underline"
-                                    >
-                                        Add "{searchQuery}" as custom order
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="p-8 text-center text-gray-400 text-sm">
-                                    Start typing to search {activeTab}...
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Referral Extras */}
-                        {activeTab === 'referrals' && (
-                            <div className="p-4 border-t border-gray-200 bg-gray-50">
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Referral Reason (optional)</label>
-                                <input
-                                    className="w-full p-2 border border-gray-300 rounded-md text-sm mb-2"
-                                    placeholder="e.g. Evaluate and Treat"
-                                    value={referralReason}
-                                    onChange={e => setReferralReason(e.target.value)}
-                                />
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Right Column: Cart */}
-                    <div className="w-1/2 flex flex-col bg-gray-50/50">
-                        <div className="p-4 bg-white border-b border-gray-200">
-                            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                                <ShoppingCart className="w-4 h-4 text-primary-600" />
-                                Pending Orders ({cart.length})
-                            </h3>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                            {cart.length === 0 ? (
-                                <div className="h-full flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
-                                    <ShoppingCart className="w-8 h-8 mb-2 opacity-20" />
-                                    <p className="text-sm">Your cart is empty</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-2">
-                                    {Object.entries(groupedCart).map(([diagnosis, typeGroups]) => (
-                                        <div key={diagnosis} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                                            <div className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 border-b border-gray-100">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-primary-500"></div>
-                                                <h4 className="text-[10px] font-bold text-gray-600 uppercase tracking-wide flex-1 truncate">
-                                                    {diagnosis === 'Unassigned' ? 'No Diagnosis' : diagnosis.substring(0, 35)}
-                                                </h4>
-                                            </div>
-                                            <div className="p-1.5 space-y-0.5">
-                                                {Object.entries(typeGroups).map(([type, items]) => {
-                                                    const typeInfo = typeLabels[type] || typeLabels.other;
-                                                    return items.map((item) => (
-                                                        <div key={item.id} className="group flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-gray-50 transition-colors">
-                                                            <span className={`${typeInfo.color} text-white text-[8px] font-bold w-4 h-4 rounded flex items-center justify-center flex-shrink-0`}>
-                                                                {typeInfo.label}
-                                                            </span>
-                                                            <span className="text-xs text-gray-700 flex-1 truncate">{item.name}</span>
-
-                                                            {/* Diagnosis Re-linker */}
-                                                            {diagnoses.length > 0 && (
-                                                                <div className="relative flex items-center justify-center w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                    <Link className="w-3 h-3 text-gray-400 hover:text-primary-600" />
-                                                                    <select
-                                                                        value={item.diagnosis || ''}
-                                                                        onChange={(e) => updateCartItemDx(item.id, e.target.value)}
-                                                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                                                        title="Move to another diagnosis"
-                                                                    >
-                                                                        {diagnoses.map(dx => (
-                                                                            <option key={dx} value={dx}>{dx}</option>
-                                                                        ))}
-                                                                    </select>
-                                                                </div>
-                                                            )}
-
-                                                            <button
-                                                                onClick={() => removeFromCart(item.id)}
-                                                                className="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                                                            >
-                                                                <X className="w-3 h-3" />
-                                                            </button>
-                                                        </div>
-                                                    ));
-                                                })}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Footer Actions */}
-                        <div className="p-4 bg-white border-t border-gray-200 flex flex-col gap-3">
-                            {showSaveOrderSetModal ? (
-                                <div className="space-y-2 animate-in fade-in duration-200">
-                                    <label className="block text-xs font-bold text-gray-500 uppercase">Save current cart as order set</label>
-                                    <div className="flex gap-2">
+                            {(selectedDiagnosis === 'new' || diagnoses.length === 0) && (
+                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 animate-in fade-in slide-in-from-top-2">
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Search ICD-10 Code</label>
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                                         <input
                                             type="text"
-                                            placeholder="Enter set name (e.g. Hypertension Protocol)"
-                                            className="flex-1 p-2 text-sm border border-primary-300 rounded-md focus:ring-1 focus:ring-primary-500"
-                                            value={newOrderSetName}
-                                            onChange={e => setNewOrderSetName(e.target.value)}
+                                            className="w-full pl-9 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                                            placeholder="Type code or description (e.g. I10, Hypertension)..."
+                                            value={newICD10Search}
+                                            onChange={e => {
+                                                setNewICD10Search(e.target.value);
+                                                setSelectedDiagnosis('new');
+                                            }}
                                             autoFocus
                                         />
-                                        <button
-                                            onClick={saveCurrentAsOrderSet}
-                                            className="px-4 py-2 bg-primary-600 text-white text-xs font-bold rounded-md hover:bg-primary-700"
-                                        >
-                                            Save Set
-                                        </button>
-                                        <button
-                                            onClick={() => setShowSaveOrderSetModal(false)}
-                                            className="px-2 py-2 text-gray-400 hover:text-gray-600"
-                                        >
-                                            <X className="w-5 h-5" />
-                                        </button>
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="flex justify-between items-center w-full">
-                                    <button
-                                        onClick={() => setShowSaveOrderSetModal(true)}
-                                        disabled={cart.length === 0}
-                                        className="text-primary-600 text-xs font-bold flex items-center gap-1 hover:underline disabled:opacity-30 disabled:grayscale"
-                                    >
-                                        <Plus className="w-3.5 h-3.5" />
-                                        Save as Set
-                                    </button>
-                                    <div className="flex gap-3">
+
+                                    {newICD10Results.length > 0 && (
+                                        <div className="mt-2 bg-white rounded-lg border border-gray-200 shadow-lg max-h-60 overflow-y-auto">
+                                            {newICD10Results.map((result, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => {
+                                                        const dxString = `${result.code} - ${result.description}`;
+                                                        setSelectedDiagnosis(dxString);
+                                                        setOrderStep(2);
+                                                        setNewICD10Search('');
+                                                        setNewICD10Results([]);
+                                                    }}
+                                                    className="w-full text-left p-3 hover:bg-primary-50 border-b border-gray-100 last:border-0 transition-colors"
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-primary-700 text-sm bg-primary-50 px-2 py-0.5 rounded">{result.code}</span>
+                                                        <span className="text-gray-700 text-sm">{result.description}</span>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {!newICD10Results.length && newICD10Search.length > 2 && (
                                         <button
-                                            onClick={onClose}
-                                            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                                            onClick={() => {
+                                                setSelectedDiagnosis(newICD10Search);
+                                                setOrderStep(2);
+                                                setNewICD10Search('');
+                                            }}
+                                            className="mt-3 w-full py-2 bg-primary-600 text-white rounded-lg font-bold hover:bg-primary-700 shadow-sm transition-colors"
                                         >
-                                            Cancel
+                                            Use "{newICD10Search}"
                                         </button>
-                                        <button
-                                            onClick={handleBatchSubmit}
-                                            disabled={cart.length === 0}
-                                            className="px-6 py-2 text-sm font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-md shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
-                                        >
-                                            <Check className="w-4 h-4" />
-                                            Sign & Submit ({cart.length})
-                                        </button>
-                                    </div>
+                                    )}
                                 </div>
                             )}
                         </div>
+
+                        <button
+                            onClick={() => {
+                                setSelectedDiagnosis('Unassigned');
+                                setOrderStep(2);
+                            }}
+                            className="w-full text-center py-4 text-gray-400 hover:text-gray-600 text-sm font-medium transition-colors"
+                        >
+                            Skip / No Diagnosis
+                        </button>
                     </div>
                 </div>
-            </div>
+            ) : (
+                <div className="flex flex-col h-[600px] overflow-hidden">
+                    {/* Tabs */}
+                    <div className="flex border-b border-gray-200 bg-gray-50">
+                        <div className="flex-1 flex overflow-x-auto">
+                            {['Labs', 'Imaging', 'Procedures', 'Referrals', 'Medications', 'Order Sets'].map(tab => {
+                                const id = tab.toLowerCase().replace(' ', '');
+                                return (
+                                    <button
+                                        key={id}
+                                        onClick={() => setActiveTab(id)}
+                                        className={`px-6 py-3 text-sm font-medium transition-colors border-r border-gray-200 whitespace-nowrap ${activeTab === id
+                                            ? 'bg-white text-primary-600 border-t-2 border-t-primary-600'
+                                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                            }`}
+                                    >
+                                        {tab}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Diagnosis Selector - Compact dropdown at top */}
+                    {diagnoses.length > 0 && (
+                        <div className="p-3 bg-blue-50 border-b border-blue-200">
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Select Diagnosis for Orders:</label>
+                            <select
+                                value={selectedDiagnosis}
+                                onChange={(e) => setSelectedDiagnosis(e.target.value)}
+                                className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                            >
+                                <option value="">-- Select Diagnosis --</option>
+                                {diagnoses.map((dx, idx) => (
+                                    <option key={idx} value={dx}>{dx}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
+                    <div className="flex-1 flex overflow-hidden">
+                        {/* Left Column: Search & Browse */}
+                        <div className="w-1/2 flex flex-col border-r border-gray-200 bg-white">
+                            <div className="p-4 border-b border-gray-100">
+
+                                {/* Search Input */}
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                    <input
+                                        type="text"
+                                        placeholder={`Search ${activeTab}...`}
+                                        className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        autoFocus
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Search Results / Browse Content */}
+                            <div className="flex-1 overflow-y-auto">
+                                {activeTab === 'ordersets' ? (
+                                    <div className="p-4 space-y-4">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">My Order Sets</h3>
+                                            <button
+                                                onClick={fetchOrderSets}
+                                                className="text-primary-600 hover:text-primary-700 p-1"
+                                                title="Refresh"
+                                            >
+                                                <RotateCcw className="w-4 h-4" />
+                                            </button>
+                                        </div>
+
+                                        {loadingOrderSets ? (
+                                            <div className="text-center py-8">
+                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto"></div>
+                                                <p className="text-gray-500 text-xs mt-2">Loading sets...</p>
+                                            </div>
+                                        ) : orderSets.length > 0 ? (
+                                            <div className="space-y-3">
+                                                {orderSets.map(set => (
+                                                    <div key={set.id} className="border border-gray-200 rounded-lg bg-white overflow-hidden hover:border-primary-300 transition-colors shadow-sm">
+                                                        <div className="p-3 bg-gray-50/50 flex justify-between items-start">
+                                                            <div>
+                                                                <h4 className="font-bold text-gray-900 text-sm">{set.name}</h4>
+                                                                <p className="text-[10px] text-gray-500 line-clamp-1">{set.description || 'No description'}</p>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => applyOrderSet(set)}
+                                                                className="px-2 py-1 bg-primary-600 text-white text-[10px] font-bold rounded hover:bg-primary-700 shadow-sm"
+                                                            >
+                                                                Add Set
+                                                            </button>
+                                                        </div>
+                                                        <div className="p-2 border-t border-gray-100 flex flex-wrap gap-1">
+                                                            {set.orders.slice(0, 5).map((order, i) => (
+                                                                <span key={i} className="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200">
+                                                                    {order.type.toUpperCase()}: {(order.payload.name || order.payload.medicationName || '...').substring(0, 15)}
+                                                                </span>
+                                                            ))}
+                                                            {set.orders.length > 5 && (
+                                                                <span className="text-[9px] text-gray-400 px-1.5 py-0.5">+{set.orders.length - 5} more</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-8 border-2 border-dashed border-gray-100 rounded-lg">
+                                                <ClipboardList className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                                                <p className="text-gray-500 text-sm">No order sets found.</p>
+                                                <p className="text-gray-400 text-xs mt-1">Add items to your cart and click "Save as Set" to create one.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : activeTab === 'medications' ? (
+                                    <div className="p-4 space-y-4">
+                                        <div className="bg-blue-50 p-3 rounded-md text-sm text-blue-700">
+                                            Manual documentation of prescriptions. For e-prescribing, use the <strong>EPrescribe</strong> button.
+                                        </div>
+
+                                        {/* Active Medications Section */}
+                                        {loadingActiveMeds ? (
+                                            <div className="flex justify-center p-4">
+                                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500"></div>
+                                            </div>
+                                        ) : activeMedications.length > 0 && (
+                                            <div className="space-y-2 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                                <h4 className="text-xs font-bold text-gray-500 uppercase">Current Medications</h4>
+                                                {activeMedications.filter(m => m.active).map(med => (
+                                                    <div key={med.id} className="bg-white p-2 rounded border border-gray-200 shadow-sm">
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <div>
+                                                                <div className="font-bold text-sm text-gray-800">{med.medication_name}</div>
+                                                                <div className="text-xs text-gray-500">{med.dosage} {med.frequency}</div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => addToCart({
+                                                                    name: med.medication_name,
+                                                                    sig: med.frequency,
+                                                                    dispense: '',
+                                                                    type: 'medications',
+                                                                    diagnosis: med.diagnosis || selectedDiagnosis,
+                                                                    originalString: `Continue: ${med.medication_name} ${med.frequency}`,
+                                                                    action: 'continue',
+                                                                    medicationId: med.id
+                                                                })}
+                                                                className="flex-1 py-1 px-2 text-[10px] font-bold bg-green-50 text-green-700 border border-green-200 rounded hover:bg-green-100"
+                                                            >
+                                                                Continue
+                                                            </button>
+                                                            <button
+                                                                onClick={() => addToCart({
+                                                                    name: med.medication_name,
+                                                                    sig: med.frequency,
+                                                                    dispense: '30',
+                                                                    type: 'medications',
+                                                                    diagnosis: med.diagnosis || selectedDiagnosis,
+                                                                    originalString: `Refill: ${med.medication_name} ${med.frequency}, Qty: 30`,
+                                                                    action: 'refill',
+                                                                    medicationId: med.id
+                                                                })}
+                                                                className="flex-1 py-1 px-2 text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100"
+                                                            >
+                                                                Refill
+                                                            </button>
+                                                            <button
+                                                                onClick={() => addToCart({
+                                                                    name: med.medication_name,
+                                                                    sig: 'DISCONTINUE',
+                                                                    dispense: '',
+                                                                    type: 'medications',
+                                                                    diagnosis: med.diagnosis || selectedDiagnosis,
+                                                                    originalString: `Discontinue: ${med.medication_name}`,
+                                                                    action: 'stop',
+                                                                    medicationId: med.id
+                                                                })}
+                                                                className="flex-1 py-1 px-2 text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 rounded hover:bg-red-100"
+                                                            >
+                                                                Stop
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {!currentMed.name ? (
+                                            <div className="space-y-4">
+                                                <div className="relative">
+                                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                                    <input
+                                                        className="w-full pl-9 pr-4 py-2 bg-white border border-gray-300 rounded-md text-sm outline-none focus:ring-2 focus:ring-primary-500"
+                                                        placeholder="Search medication name..."
+                                                        value={searchQuery}
+                                                        onChange={e => setSearchQuery(e.target.value)}
+                                                    />
+                                                    {searchingMed && <div className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin rounded-full h-4 w-4 border-b-2 border-primary-500"></div>}
+                                                </div>
+
+                                                <div className="space-y-1 max-h-[300px] overflow-y-auto">
+                                                    {medResults.length > 0 ? (
+                                                        medResults.map((m, i) => (
+                                                            <button
+                                                                key={i}
+                                                                onClick={() => setCurrentMed({ ...currentMed, name: m.name })}
+                                                                className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-primary-50 border border-transparent hover:border-primary-100 transition-all text-left group"
+                                                            >
+                                                                <Pill className="w-4 h-4 text-primary-400 group-hover:text-primary-600" />
+                                                                <div>
+                                                                    <p className="text-sm font-semibold text-gray-900 leading-tight">{m.name}</p>
+                                                                    {m.strength && <p className="text-[10px] text-gray-500">{m.strength}</p>}
+                                                                </div>
+                                                            </button>
+                                                        ))
+                                                    ) : searchQuery.length > 2 && !searchingMed ? (
+                                                        <div className="p-4 text-center border-2 border-dashed border-gray-100 rounded-lg">
+                                                            <p className="text-sm text-gray-400 mb-2">No matching medications found</p>
+                                                            <button
+                                                                onClick={() => setCurrentMed({ ...currentMed, name: searchQuery })}
+                                                                className="text-primary-600 text-xs font-bold uppercase tracking-wider hover:underline"
+                                                            >
+                                                                Use "{searchQuery}" as custom input
+                                                            </button>
+                                                        </div>
+                                                    ) : null}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4 animate-in slide-in-from-top-2">
+                                                <div className="p-3 bg-primary-50 border border-primary-100 rounded-lg flex justify-between items-center text-primary-900">
+                                                    <span className="font-bold text-sm truncate">{currentMed.name}</span>
+                                                    <button onClick={() => setCurrentMed({ ...currentMed, name: '' })} className="p-1 hover:bg-white rounded-full transition-colors"><X className="w-4 h-4" /></button>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sig / Instructions</label>
+                                                        <input
+                                                            className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                                                            value={currentMed.sig}
+                                                            onChange={e => setCurrentMed({ ...currentMed, sig: e.target.value })}
+                                                            placeholder="e.g. 1 tab PO daily"
+                                                            autoFocus
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Dispense Qty</label>
+                                                        <input
+                                                            className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                                                            value={currentMed.dispense}
+                                                            onChange={e => setCurrentMed({ ...currentMed, dispense: e.target.value })}
+                                                            placeholder="e.g. 30"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    disabled={!currentMed.sig}
+                                                    onClick={() => {
+                                                        addToCart({ name: currentMed.name });
+                                                    }}
+                                                    className="w-full py-2.5 bg-primary-600 text-white rounded-md text-sm font-bold shadow-md hover:bg-primary-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                                                >
+                                                    <Plus className="w-4 h-4" /> Add to Plan
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : searchResults.length > 0 ? (
+                                    <div className="divide-y divide-gray-100">
+                                        {searchResults.map((item, idx) => (
+                                            <SearchResultItem key={idx} item={item} />
+                                        ))}
+                                    </div>
+                                ) : searchQuery.length > 2 ? (
+                                    <div className="p-8 text-center">
+                                        <p className="text-gray-500 text-sm">No results found.</p>
+                                        <button
+                                            onClick={() => addToCart({ name: searchQuery })}
+                                            className="mt-2 text-primary-600 text-sm hover:underline"
+                                        >
+                                            Add "{searchQuery}" as custom order
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="p-8 text-center text-gray-400 text-sm">
+                                        Start typing to search {activeTab}...
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Referral Extras */}
+                            {activeTab === 'referrals' && (
+                                <div className="p-4 border-t border-gray-200 bg-gray-50">
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Referral Reason (optional)</label>
+                                    <input
+                                        className="w-full p-2 border border-gray-300 rounded-md text-sm mb-2"
+                                        placeholder="e.g. Evaluate and Treat"
+                                        value={referralReason}
+                                        onChange={e => setReferralReason(e.target.value)}
+                                    />
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Right Column: Cart */}
+                        <div className="w-1/2 flex flex-col bg-gray-50/50">
+                            <div className="p-4 bg-white border-b border-gray-200">
+                                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                                    <ShoppingCart className="w-4 h-4 text-primary-600" />
+                                    Pending Orders ({cart.length})
+                                </h3>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                                {cart.length === 0 ? (
+                                    <div className="h-full flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
+                                        <ShoppingCart className="w-8 h-8 mb-2 opacity-20" />
+                                        <p className="text-sm">Your cart is empty</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {Object.entries(groupedCart).map(([diagnosis, typeGroups]) => (
+                                            <div key={diagnosis} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                                                <div className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 border-b border-gray-100">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-primary-500"></div>
+                                                    <h4 className="text-[10px] font-bold text-gray-600 uppercase tracking-wide flex-1 truncate">
+                                                        {diagnosis === 'Unassigned' ? 'No Diagnosis' : diagnosis.substring(0, 35)}
+                                                    </h4>
+                                                </div>
+                                                <div className="p-1.5 space-y-0.5">
+                                                    {Object.entries(typeGroups).map(([type, items]) => {
+                                                        const typeInfo = typeLabels[type] || typeLabels.other;
+                                                        return items.map((item) => (
+                                                            <div key={item.id} className="group flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-gray-50 transition-colors">
+                                                                <span className={`${typeInfo.color} text-white text-[8px] font-bold w-4 h-4 rounded flex items-center justify-center flex-shrink-0`}>
+                                                                    {typeInfo.label}
+                                                                </span>
+                                                                <span className="text-xs text-gray-700 flex-1 truncate">{item.name}</span>
+
+                                                                {/* Diagnosis Re-linker */}
+                                                                {availableDiagnoses.length > 0 && (
+                                                                    <div className="relative flex items-center justify-center w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                        <Link className="w-3 h-3 text-gray-400 hover:text-primary-600" />
+                                                                        <select
+                                                                            value={item.diagnosis || ''}
+                                                                            onChange={(e) => updateCartItemDx(item.id, e.target.value)}
+                                                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                                                            title="Move to another diagnosis"
+                                                                        >
+                                                                            {availableDiagnoses.map(dx => (
+                                                                                <option key={dx} value={dx}>{dx}</option>
+                                                                            ))}
+                                                                        </select>
+                                                                    </div>
+                                                                )}
+
+                                                                <button
+                                                                    onClick={() => removeFromCart(item.id)}
+                                                                    className="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                                                >
+                                                                    <X className="w-3 h-3" />
+                                                                </button>
+                                                            </div>
+                                                        ));
+                                                    })}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Footer Actions */}
+                            <div className="p-4 bg-white border-t border-gray-200 flex flex-col gap-3">
+                                {showSaveOrderSetModal ? (
+                                    <div className="space-y-2 animate-in fade-in duration-200">
+                                        <label className="block text-xs font-bold text-gray-500 uppercase">Save current cart as order set</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                placeholder="Enter set name (e.g. Hypertension Protocol)"
+                                                className="flex-1 p-2 text-sm border border-primary-300 rounded-md focus:ring-1 focus:ring-primary-500"
+                                                value={newOrderSetName}
+                                                onChange={e => setNewOrderSetName(e.target.value)}
+                                                autoFocus
+                                            />
+                                            <button
+                                                onClick={saveCurrentAsOrderSet}
+                                                className="px-4 py-2 bg-primary-600 text-white text-xs font-bold rounded-md hover:bg-primary-700"
+                                            >
+                                                Save Set
+                                            </button>
+                                            <button
+                                                onClick={() => setShowSaveOrderSetModal(false)}
+                                                className="px-2 py-2 text-gray-400 hover:text-gray-600"
+                                            >
+                                                <X className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex justify-between items-center w-full">
+                                        <button
+                                            onClick={() => setShowSaveOrderSetModal(true)}
+                                            disabled={cart.length === 0}
+                                            className="text-primary-600 text-xs font-bold flex items-center gap-1 hover:underline disabled:opacity-30 disabled:grayscale"
+                                        >
+                                            <Plus className="w-3.5 h-3.5" />
+                                            Save as Set
+                                        </button>
+                                        <div className="flex gap-3">
+                                            <button
+                                                onClick={onClose}
+                                                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={handleBatchSubmit}
+                                                disabled={cart.length === 0}
+                                                className="px-6 py-2 text-sm font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-md shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                                            >
+                                                <Check className="w-4 h-4" />
+                                                Sign & Submit ({cart.length})
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </Modal >
     );
 };
