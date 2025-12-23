@@ -2487,6 +2487,7 @@ const VisitNote = () => {
                 onSave={handleUpdatePlan}
                 patientId={id}
                 visitId={currentVisitId || urlVisitId}
+                initialMedications={patientData?.medications}
             />
 
             {showPrintModal && <VisitPrint visitId={currentVisitId || urlVisitId} patientId={id} onClose={() => setShowPrintModal(false)} />}

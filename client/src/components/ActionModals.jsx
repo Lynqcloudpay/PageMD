@@ -211,7 +211,7 @@ export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [] }
     );
 };
 
-export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'labs', diagnoses = [], existingOrders = [], patientId = null, visitId = null }) => {
+export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'labs', diagnoses = [], existingOrders = [], patientId = null, visitId = null, initialMedications = null }) => {
     const [activeTab, setActiveTab] = useState(initialTab);
     const [cart, setCart] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
@@ -309,13 +309,18 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
             fetchOrderSets();
         }
         if (isOpen && activeTab === 'medications' && patientId) {
-            setLoadingActiveMeds(true);
-            patientsAPI.getMedications(patientId)
-                .then(res => setActiveMedications(res.data || []))
-                .catch(err => console.error('Error fetching active meds:', err))
-                .finally(() => setLoadingActiveMeds(false));
+            if (initialMedications) {
+                setActiveMedications(initialMedications);
+                setLoadingActiveMeds(false);
+            } else {
+                setLoadingActiveMeds(true);
+                patientsAPI.getMedications(patientId)
+                    .then(res => setActiveMedications(res.data || []))
+                    .catch(err => console.error('Error fetching active meds:', err))
+                    .finally(() => setLoadingActiveMeds(false));
+            }
         }
-    }, [isOpen, activeTab, patientId]);
+    }, [isOpen, activeTab, patientId, initialMedications]);
 
     const fetchOrderSets = async () => {
         setLoadingOrderSets(true);
@@ -1170,7 +1175,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                     ) : activeMedications.length > 0 && (
                                         <div className="space-y-2 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
                                             <h4 className="text-xs font-bold text-gray-500 uppercase">Current Medications</h4>
-                                            {activeMedications.filter(m => m.active).map(med => (
+                                            {activeMedications.filter(m => m.active !== false && m.status !== 'discontinued').map(med => (
                                                 <div key={med.id} className="bg-white p-2 rounded border border-gray-200 shadow-sm">
                                                     <div className="flex justify-between items-start mb-2">
                                                         <div>
