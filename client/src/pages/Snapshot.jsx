@@ -1732,7 +1732,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         <div className="p-2 max-h-[200px] overflow-y-auto">
                                             {medications.length > 0 ? (
                                                 <div className="space-y-1.5">
-                                                    {medications.slice(0, 10).map(med => (
+                                                    {medications.filter(m => m.active !== false).slice(0, 10).map(med => (
                                                         <div key={med.id} className="pb-1 border-b border-gray-50 last:border-b-0">
                                                             <p className="font-bold text-xs text-gray-900 truncate">{med.medication_name}</p>
                                                             <p className="text-[10px] text-gray-600">{med.dosage} {med.frequency}</p>

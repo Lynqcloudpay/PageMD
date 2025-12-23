@@ -1176,7 +1176,7 @@ router.delete('/allergies/:allergyId', requirePermission('patients:view_chart'),
 router.put('/medications/:medicationId', requirePermission('meds:prescribe'), async (req, res) => {
   try {
     const { medicationId } = req.params;
-    const { medicationName, dosage, frequency, route, startDate, endDate, active } = req.body;
+    const { medicationName, dosage, frequency, route, startDate, endDate, active, status } = req.body;
 
     const updates = [];
     const values = [];
@@ -1215,6 +1215,11 @@ router.put('/medications/:medicationId', requirePermission('meds:prescribe'), as
     if (active !== undefined) {
       updates.push(`active = $${paramIndex}`);
       values.push(active);
+      paramIndex++;
+    }
+    if (status !== undefined) {
+      updates.push(`status = $${paramIndex}`);
+      values.push(status);
       paramIndex++;
     }
 
