@@ -2337,7 +2337,7 @@ const VisitNote = () => {
                                     }}
                                     className="px-2.5 py-1.5 text-xs font-medium bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-md border border-neutral-300 transition-colors"
                                 >
-                                    Manual Rx
+                                    Prescribe Rx
                                 </button>
                                 {hasPrivilege('create_referrals') && (
                                     <button

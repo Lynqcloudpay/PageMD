@@ -3,7 +3,7 @@ import Modal from './ui/Modal';
 import { Pill, Stethoscope, Upload, Send, Search, X, ShoppingCart, Trash2, Plus, Check, ChevronRight, RotateCcw, ClipboardList, Link, ChevronDown } from 'lucide-react';
 import { searchLabTests, searchImaging } from '../data/labCodes';
 import axios from 'axios';
-import { codesAPI, referralsAPI, eprescribeAPI, medicationsAPI, ordersCatalogAPI, ordersetsAPI, patientsAPI } from '../services/api';
+import { codesAPI, referralsAPI, eprescribeAPI, medicationsAPI, ordersCatalogAPI, ordersetsAPI, patientsAPI, icd10API } from '../services/api';
 
 export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [] }) => {
     const [med, setMed] = useState('');
@@ -1114,7 +1114,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                             onClick={() => setRxMode('manual')}
                                             className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${rxMode === 'manual' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                                         >
-                                            Manual / Print
+                                            Prescribe Rx
                                         </button>
                                         <button
                                             onClick={() => setRxMode('electronic')}
