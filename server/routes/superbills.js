@@ -289,7 +289,9 @@ router.put('/:id', requirePermission('billing:edit'), async (req, res) => {
             facility_location_id, insurance_policy_id,
             authorization_number,
             accident_related_employment, accident_related_auto, accident_related_other,
-            accident_state, accident_date
+            accident_state, accident_date,
+            insurance_provider_override, insurance_id_override,
+            billing_notes, denial_reason, claim_status
         } = req.body;
 
         // Check if finalized
@@ -317,9 +319,14 @@ router.put('/:id', requirePermission('billing:edit'), async (req, res) => {
         accident_related_other = COALESCE($13, accident_related_other),
         accident_state = COALESCE($14, accident_state),
         accident_date = COALESCE($15, accident_date),
-        updated_by = $16,
+        insurance_provider_override = COALESCE($16, insurance_provider_override),
+        insurance_id_override = COALESCE($17, insurance_id_override),
+        billing_notes = COALESCE($18, billing_notes),
+        denial_reason = COALESCE($19, denial_reason),
+        claim_status = COALESCE($20, claim_status),
+        updated_by = $21,
         updated_at = NOW()
-      WHERE id = $17
+      WHERE id = $22
       RETURNING *
     `, [
             status, service_date_from, service_date_to,
@@ -329,6 +336,8 @@ router.put('/:id', requirePermission('billing:edit'), async (req, res) => {
             authorization_number,
             accident_related_employment, accident_related_auto, accident_related_other,
             accident_state, accident_date,
+            insurance_provider_override, insurance_id_override,
+            billing_notes, denial_reason, claim_status,
             req.user.id, id
         ]);
 
@@ -633,6 +642,50 @@ router.post('/:id/void', requirePermission('billing:edit'), async (req, res) => 
         res.status(500).json({ error: 'Failed to void' });
     }
 });
+
+/**
+ * POST /api/superbills/:id/ready
+ */
+router.post('/:id/ready', requirePermission('charting:edit'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.id;
+        const check = await pool.query('SELECT status FROM superbills WHERE id = $1', [id]);
+        if (check.rows.length === 0) return res.status(404).json({ error: 'Superbill not found' });
+        if (check.rows[0].status !== 'DRAFT') {
+            return res.status(400).json({ error: 'Only DRAFT superbills can be marked READY' });
+        }
+        const result = await pool.query(
+            "UPDATE superbills SET status = 'READY', ready_at = NOW(), ready_by = $2, updated_at = NOW() WHERE id = $1 RETURNING *",
+            [id, userId]
+        );
+        await logAudit(userId, 'mark_ready', 'superbill', id, {}, req.ip);
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error marking ready:', error);
+        res.status(500).json({ error: 'Failed to mark ready' });
+    }
+});
+
+router.post('/:id/unready', requirePermission('charting:edit'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const check = await pool.query('SELECT status FROM superbills WHERE id = $1', [id]);
+        if (check.rows.length === 0) return res.status(404).json({ error: 'Superbill not found' });
+        if (check.rows[0].status !== 'READY') {
+            return res.status(400).json({ error: 'Only READY superbills can be returned to DRAFT' });
+        }
+        const result = await pool.query(
+            "UPDATE superbills SET status = 'DRAFT', ready_at = NULL, ready_by = NULL, updated_at = NOW() WHERE id = $1 RETURNING *",
+            [id]
+        );
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error unmarking:', error);
+        res.status(500).json({ error: 'Failed to unmark' });
+    }
+});
+
 
 /**
  * GET /api/superbills/:id/print
