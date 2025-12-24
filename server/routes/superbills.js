@@ -230,6 +230,7 @@ router.get('/:id', requirePermission('billing:view'), async (req, res) => {
         const superbillResult = await pool.query(`
       SELECT s.*, 
              p.first_name as patient_first_name, p.last_name as patient_last_name, p.mrn, p.dob,
+             p.insurance_provider as patient_insurance_provider, p.insurance_id as patient_insurance_id,
              render.first_name as rendering_first_name, render.last_name as rendering_last_name, render.npi as rendering_npi,
              bill.first_name as billing_first_name, bill.last_name as billing_last_name, bill.npi as billing_npi,
              loc.name as location_name, loc.address_line1 as location_address,

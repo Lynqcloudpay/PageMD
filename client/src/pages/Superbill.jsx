@@ -124,6 +124,26 @@ const Superbill = () => {
     };
 
     const handleUpdateLine = async (lineId, updates) => {
+        // Validate diagnosis pointers if being updated
+        if ('diagnosis_pointers' in updates) {
+            const pointers = updates.diagnosis_pointers;
+            if (pointers && pointers.trim()) {
+                // Parse pointers (support both numbers and letters)
+                const ptrArray = pointers.split(',').map(p => p.trim().toUpperCase());
+                const maxDx = sb.diagnoses.length;
+
+                for (const ptr of ptrArray) {
+                    // Convert letter to number if needed (A=1, B=2, etc.)
+                    let ptrNum = ptr.match(/^[A-Z]$/) ? ptr.charCodeAt(0) - 64 : parseInt(ptr);
+
+                    if (isNaN(ptrNum) || ptrNum < 1 || ptrNum > maxDx) {
+                        alert(`Invalid diagnosis pointer: "${ptr}". You have ${maxDx} diagnoses (valid: 1-${maxDx} or A-${String.fromCharCode(64 + maxDx)})`);
+                        return; // Don't save invalid pointers
+                    }
+                }
+            }
+        }
+
         try {
             await superbillsAPI.updateLine(superbillId, lineId, updates);
             setSb(prev => ({
@@ -393,6 +413,35 @@ const Superbill = () => {
                                 </div>
                             </div>
                         </Card>
+
+                        {/* Insurance Card */}
+                        <Card title="Insurance Information" icon={<Shield className="w-4 h-4" />}>
+                            <div className="space-y-2">
+                                {sb.patient_insurance_provider || sb.patient_insurance_id ? (
+                                    <>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase">Payer</label>
+                                            <div className="text-sm font-medium text-slate-700">{sb.patient_insurance_provider || 'Not specified'}</div>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase">Member ID</label>
+                                            <div className="text-sm font-medium text-slate-700">{sb.patient_insurance_id || 'Not specified'}</div>
+                                        </div>
+                                        {sb.authorization_number && (
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-400 uppercase">Authorization #</label>
+                                                <div className="text-sm font-medium text-slate-700">{sb.authorization_number}</div>
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <div className="text-xs text-slate-400 italic text-center py-2">
+                                        No insurance on file
+                                        <div className="text-[10px] mt-1">(Self-pay or update patient chart)</div>
+                                    </div>
+                                )}
+                            </div>
+                        </Card>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start h-full">
@@ -495,7 +544,10 @@ const Superbill = () => {
                                             <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase text-[10px]">
                                                 <th className="px-4 py-3 text-left">CPT</th>
                                                 <th className="px-4 py-3 text-left">Description</th>
-                                                <th className="px-4 py-3 text-left">Mod</th>
+                                                <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase w-24">Mod 1</th>
+                                                <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase w-24">Mod 2</th>
+                                                <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase w-24">Mod 3</th>
+                                                <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase w-24">Mod 4</th>
                                                 <th className="px-4 py-3 text-right">Units</th>
                                                 <th className="px-4 py-3 text-right">Charge</th>
                                                 <th className="px-4 py-3 text-center">Pointer</th>
