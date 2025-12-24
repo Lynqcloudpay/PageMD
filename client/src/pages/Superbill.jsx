@@ -4,7 +4,7 @@ import {
     Save, CheckCircle, Printer, FileDown, Trash2, Plus,
     Search, Shield, Building, User, Calendar, Info,
     ChevronRight, AlertTriangle, X, FileText, ArrowLeft, RefreshCw,
-    Send, Lock
+    Send, Lock, TrendingUp
 } from 'lucide-react';
 import { superbillsAPI, codesAPI, authAPI, settingsAPI } from '../services/api';
 import { format } from 'date-fns';
@@ -97,6 +97,14 @@ const Superbill = () => {
 
     const handleAddLine = async (code) => {
         try {
+            // WARN if no fee found
+            if (!code.fee_amount || parseFloat(code.fee_amount) === 0) {
+                if (!window.confirm(`⚠️ Warning: No fee found for CPT ${code.code}\n\nCharge will be set to $0.00.\n\nYou'll need to:\n- Add this code to your fee schedule, OR\n- Manually enter the charge\n\nContinue?`)) {
+                    setShowCPTModal(false);
+                    return;
+                }
+            }
+
             await superbillsAPI.addLine(superbillId, {
                 cpt_code: code.code,
                 description: code.description,
@@ -105,15 +113,41 @@ const Superbill = () => {
                 service_date: sb.service_date_from
             });
             fetchData();
+            setShowCPTModal(false);
         } catch (error) {
+            console.error('Add line error:', error);
             alert(error.response?.data?.error || 'Failed to add line item');
         }
     };
 
     const handleRemoveDiagnosis = async (diagId) => {
-        if (window.confirm('Remove this diagnosis?')) {
-            await superbillsAPI.deleteDiagnosis(superbillId, diagId);
-            fetchData();
+        // Find the diagnosis being deleted
+        const diag = sb.diagnoses.find(d => d.id === diagId);
+        if (!diag) return;
+
+        const sequence = diag.sequence; // 1, 2, 3...
+        const letter = String.fromCharCode(64 + sequence); // A, B, C...
+
+        // Check if any procedure references this pointer
+        const referencedBy = sb.lines.filter(l => {
+            const pointers = (l.diagnosis_pointers || '').toUpperCase();
+            return pointers.includes(String(sequence)) || pointers.includes(letter);
+        });
+
+        if (referencedBy.length > 0) {
+            const cptList = referencedBy.map(l => l.cpt_code).join(', ');
+            alert(`❌ Cannot delete diagnosis ${letter} (${diag.icd10_code})\n\nThe following procedures reference it:\n${cptList}\n\nRemove the diagnosis pointers first.`);
+            return;
+        }
+
+        if (window.confirm(`Remove diagnosis ${letter} (${diag.icd10_code})?`)) {
+            try {
+                await superbillsAPI.deleteDiagnosis(superbillId, diagId);
+                fetchData();
+            } catch (error) {
+                console.error('Delete error:', error);
+                alert(error.response?.data?.error || 'Failed to remove diagnosis');
+            }
         }
     };
 
@@ -159,6 +193,37 @@ const Superbill = () => {
             }
         } catch (error) {
             console.error('Error updating line:', error);
+            alert(error.response?.data?.error || 'Failed to update line item');
+        }
+    };
+
+    const handleMarkReady = async () => {
+        if (!window.confirm('Mark this superbill as READY for billing?\n\nThis signals to the billing team that clinical work is complete.')) {
+            return;
+        }
+
+        try {
+            const response = await superbillsAPI.markReady(superbillId);
+            setSb(response.data);
+            alert('✅ Superbill marked as READY for billing');
+        } catch (error) {
+            console.error('Mark ready error:', error);
+            alert(error.response?.data?.error || 'Failed to mark ready');
+        }
+    };
+
+    const handleUnmarkReady = async () => {
+        if (!window.confirm('Return this superbill to DRAFT status?')) {
+            return;
+        }
+
+        try {
+            const response = await superbillsAPI.unmarkReady(superbillId);
+            setSb(response.data);
+            alert('Superbill returned to DRAFT');
+        } catch (error) {
+            console.error('Unmark error:', error);
+            alert(error.response?.data?.error || 'Failed to unmark');
         }
     };
 
@@ -284,17 +349,43 @@ const Superbill = () => {
                     >
                         <FileText className="w-4 h-4" /> {showClinicalNote ? 'Hide Note' : 'Show Note'}
                     </button>
-                    {!isLocked && (
-                        <button
-                            onClick={handleSync}
-                            disabled={isSyncing}
-                            className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-all shadow-sm disabled:opacity-50"
-                        >
-                            <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} /> Sync
-                        </button>
-                    )}
-                    {!isLocked && (
+                    {sb.status === 'DRAFT' && (
                         <>
+                            <button
+                                onClick={handleSync}
+                                disabled={isSyncing}
+                                className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-all shadow-sm disabled:opacity-50"
+                            >
+                                <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} /> Sync
+                            </button>
+                            <button
+                                onClick={handleMarkReady}
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all shadow-sm"
+                            >
+                                <Send className="w-4 h-4" /> Mark Ready for Billing
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    if (window.confirm('Void this superbill?')) {
+                                        await superbillsAPI.void(superbillId);
+                                        fetchData();
+                                    }
+                                }}
+                                className="flex items-center gap-2 px-4 py-2 bg-white border border-red-200 hover:bg-red-50 text-red-600 rounded-lg font-medium transition-all shadow-sm"
+                            >
+                                <X className="w-4 h-4" /> Void
+                            </button>
+                        </>
+                    )}
+
+                    {sb.status === 'READY' && (
+                        <>
+                            <button
+                                onClick={handleUnmarkReady}
+                                className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-all shadow-sm"
+                            >
+                                <ArrowLeft className="w-4 h-4" /> Return to Draft
+                            </button>
                             <button
                                 onClick={handleFinalize}
                                 className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-all shadow-sm"
@@ -313,6 +404,18 @@ const Superbill = () => {
                                 <X className="w-4 h-4" /> Void
                             </button>
                         </>
+                    )}
+
+                    {sb.status === 'FINALIZED' && (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 border border-green-200 rounded-lg font-medium">
+                            <Lock className="w-4 h-4" /> Finalized
+                        </div>
+                    )}
+
+                    {sb.status === 'VOID' && (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 border border-red-200 rounded-lg font-medium">
+                            <X className="w-4 h-4" /> Voided
+                        </div>
                     )}
                     <button
                         onClick={handlePrint}
@@ -436,28 +539,93 @@ const Superbill = () => {
 
                         {/* Insurance Card */}
                         <Card title="Insurance Information" icon={<Shield className="w-4 h-4" />}>
-                            <div className="space-y-2">
-                                {sb.patient_insurance_provider || sb.patient_insurance_id ? (
-                                    <>
-                                        <div>
-                                            <label className="text-[10px] font-bold text-slate-400 uppercase">Payer</label>
-                                            <div className="text-sm font-medium text-slate-700">{sb.patient_insurance_provider || 'Not specified'}</div>
-                                        </div>
-                                        <div>
-                                            <label className="text-[10px] font-bold text-slate-400 uppercase">Member ID</label>
-                                            <div className="text-sm font-medium text-slate-700">{sb.patient_insurance_id || 'Not specified'}</div>
-                                        </div>
-                                        {sb.authorization_number && (
-                                            <div>
-                                                <label className="text-[10px] font-bold text-slate-400 uppercase">Authorization #</label>
-                                                <div className="text-sm font-medium text-slate-700">{sb.authorization_number}</div>
-                                            </div>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase">Insurance Payer / Override</label>
+                                    <input
+                                        type="text"
+                                        value={sb.insurance_provider_override || sb.patient_insurance_provider || ''}
+                                        placeholder={sb.patient_insurance_provider || "Enter payer name"}
+                                        disabled={isLocked}
+                                        onChange={(e) => handleUpdateSb({ insurance_provider_override: e.target.value })}
+                                        className="w-full bg-transparent border-b border-slate-200 py-1 font-medium focus:border-blue-500 outline-none text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase">Member ID / Override</label>
+                                    <input
+                                        type="text"
+                                        value={sb.insurance_id_override || sb.patient_insurance_id || ''}
+                                        placeholder={sb.patient_insurance_id || "Enter ID"}
+                                        disabled={isLocked}
+                                        onChange={(e) => handleUpdateSb({ insurance_id_override: e.target.value })}
+                                        className="w-full bg-transparent border-b border-slate-200 py-1 font-medium focus:border-blue-500 outline-none text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase">Prior Authorization #</label>
+                                    <input
+                                        type="text"
+                                        value={sb.authorization_number || ''}
+                                        placeholder="Enter auth number"
+                                        disabled={isLocked}
+                                        onChange={(e) => handleUpdateSb({ authorization_number: e.target.value })}
+                                        className="w-full bg-transparent border-b border-slate-200 py-1 font-medium focus:border-blue-500 outline-none text-sm"
+                                    />
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
+
+                    {/* Section 1.5: Billing & Performance Tracking (Internal Only) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Card title="Internal Billing Notes" icon={<FileText className="w-4 h-4" />}>
+                            <textarea
+                                value={sb.billing_notes || ''}
+                                disabled={isLocked && user?.role !== 'admin'}
+                                onChange={(e) => handleUpdateSb({ billing_notes: e.target.value })}
+                                placeholder="Confidential billing context, denial history, or follow-up notes..."
+                                className="w-full h-24 bg-slate-50 border border-slate-200 rounded p-2 text-sm outline-none focus:border-blue-500 resize-none"
+                            />
+                        </Card>
+
+                        <Card title="Claim Lifecycle Tracking" icon={<TrendingUp className="w-4 h-4" />}>
+                            <div className="grid grid-cols-2 gap-4 text-xs">
+                                <div>
+                                    <label className="font-bold text-slate-400 uppercase block mb-1">Claim Status</label>
+                                    <select
+                                        value={sb.claim_status || 'PENDING'}
+                                        disabled={isLocked && user?.role !== 'admin'}
+                                        onChange={(e) => handleUpdateSb({ claim_status: e.target.value })}
+                                        className="w-full border-b border-slate-200 py-1 font-medium bg-transparent outline-none"
+                                    >
+                                        <option value="PENDING">Pending Submission</option>
+                                        <option value="SUBMITTED">Submitted to Payer</option>
+                                        <option value="PAID">Paid in Full</option>
+                                        <option value="DENIED">Denied / Rejected</option>
+                                        <option value="ADJUSTED">Adjusted</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="font-bold text-slate-400 uppercase block mb-1">Payment Response</label>
+                                    <div className="font-medium text-slate-700 py-1">
+                                        {sb.paid_at ? (
+                                            <span className="text-green-600">Paid ${sb.paid_amount} ({format(new Date(sb.paid_at), 'MM/dd/yyyy')})</span>
+                                        ) : (
+                                            <span className="text-slate-400 italic">Not yet posted</span>
                                         )}
-                                    </>
-                                ) : (
-                                    <div className="text-xs text-slate-400 italic text-center py-2">
-                                        No insurance on file
-                                        <div className="text-[10px] mt-1">(Self-pay or update patient chart)</div>
+                                    </div>
+                                </div>
+                                {sb.claim_status === 'DENIED' && (
+                                    <div className="col-span-2">
+                                        <label className="font-bold text-red-400 uppercase block mb-1">Denial Reason / Code</label>
+                                        <input
+                                            type="text"
+                                            value={sb.denial_reason || ''}
+                                            onChange={(e) => handleUpdateSb({ denial_reason: e.target.value })}
+                                            className="w-full border-b border-red-200 py-1 bg-transparent text-red-600 font-medium outline-none"
+                                            placeholder="Example: CO-16 (Claim lacks info)"
+                                        />
                                     </div>
                                 )}
                             </div>
