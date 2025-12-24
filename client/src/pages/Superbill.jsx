@@ -418,7 +418,12 @@ const Superbill = () => {
                                                     {String.fromCharCode(65 + idx)}
                                                 </span>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-bold text-slate-800">{diag.icd10_code}</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-sm font-bold text-slate-800">{diag.icd10_code}</p>
+                                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase ${diag.source === 'NOTE' ? 'bg-blue-50 text-blue-600 border-blue-100' : diag.source === 'ORDER' ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
+                                                            {diag.source || 'MANUAL'}
+                                                        </span>
+                                                    </div>
                                                     <p className="text-xs text-slate-500 truncate">{diag.description}</p>
                                                 </div>
                                                 {!isLocked && (
