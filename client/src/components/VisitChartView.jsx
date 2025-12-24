@@ -21,11 +21,8 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     const [addendums, setAddendums] = useState([]);
     const [showAddendumModal, setShowAddendumModal] = useState(false);
     const [addendumText, setAddendumText] = useState('');
-    const [showSuperbillModal, setShowSuperbillModal] = useState(false);
     const [showBillingModal, setShowBillingModal] = useState(false);
     const [feeSchedule, setFeeSchedule] = useState([]);
-    const [selectedDiagnosisCodes, setSelectedDiagnosisCodes] = useState([]);
-    const [selectedProcedureCodes, setSelectedProcedureCodes] = useState([]);
 
     useEffect(() => {
         if (visitId && patientId) {
@@ -380,7 +377,6 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
         try {
             const response = await superbillsAPI.fromVisit(visitId);
             const sbId = response.data.id;
-            setShowSuperbillModal(false);
             onClose(); // Close the modal
             navigate(`/patient/${patientId}/superbill/${sbId}`);
         } catch (error) {
@@ -424,21 +420,15 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                         <h2 className="text-xl font-bold text-deep-gray">Visit Chart View</h2>
                         <div className="flex items-center gap-2">
                             {isSigned && (
-                                <>
-                                    <button onClick={() => setShowAddendumModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-deep-gray bg-white/80 hover:bg-white border border-deep-gray/10 rounded-lg">
-                                        <FilePlus className="w-3.5 h-3.5" />
-                                        <span>Addendum</span>
-                                    </button>
-                                    <button onClick={() => {
-                                        const diagnosisCodes = problems.filter(p => p.icd10_code).map(p => ({ code: p.icd10_code, description: p.problem_name }));
-                                        setSelectedDiagnosisCodes(diagnosisCodes);
-                                        setShowSuperbillModal(true);
-                                    }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-deep-gray bg-white/80 hover:bg-white border border-deep-gray/10 rounded-lg">
-                                        <Receipt className="w-3.5 h-3.5" />
-                                        <span>Superbill</span>
-                                    </button>
-                                </>
+                                <button onClick={() => setShowAddendumModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-deep-gray bg-white/80 hover:bg-white border border-deep-gray/10 rounded-lg">
+                                    <FilePlus className="w-3.5 h-3.5" />
+                                    <span>Addendum</span>
+                                </button>
                             )}
+                            <button onClick={handleCreateSuperbill} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-deep-gray bg-white/80 hover:bg-white border border-deep-gray/10 rounded-lg">
+                                <Receipt className="w-3.5 h-3.5" />
+                                <span>Superbill</span>
+                            </button>
                             <button onClick={() => setShowBillingModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-deep-gray bg-white/80 hover:bg-white border border-deep-gray/10 rounded-lg">
                                 <DollarSign className="w-3.5 h-3.5" />
                                 <span>Billing</span>
@@ -575,26 +565,6 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                         <div className="flex items-center justify-between mb-4"><h3 className="text-lg font-semibold">Add Addendum</h3><button onClick={() => setShowAddendumModal(false)}><X className="w-5 h-5" /></button></div>
                         <textarea value={addendumText} onChange={(e) => setAddendumText(e.target.value)} className="w-full h-32 border rounded p-2" placeholder="Enter addendum text..." />
                         <div className="flex justify-end gap-2 mt-4"><button onClick={() => setShowAddendumModal(false)} className="px-4 py-2 border rounded">Cancel</button><button onClick={handleAddAddendum} className="px-4 py-2 bg-blue-600 text-white rounded">Add</button></div>
-                    </div>
-                </div>
-            )}
-
-            {showSuperbillModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto p-4" onClick={() => setShowSuperbillModal(false)}>
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl p-6" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-4"><h3 className="text-lg font-semibold">Create Superbill</h3><button onClick={() => setShowSuperbillModal(false)}><X className="w-5 h-5" /></button></div>
-                        {/* Simplified Superbill Logic for brevity - restore full logic if needed, but this is the critical fix */}
-                        <div className="space-y-4">
-                            <div>
-                                <h4 className="font-medium">Diagnoses</h4>
-                                <div className="max-h-40 overflow-auto border p-2">{problems.map((p, i) => <label key={i} className="block"><input type="checkbox" checked={selectedDiagnosisCodes.some(d => d.code === p.icd10_code)} onChange={(e) => e.target.checked ? setSelectedDiagnosisCodes([...selectedDiagnosisCodes, { code: p.icd10_code, description: p.problem_name }]) : setSelectedDiagnosisCodes(selectedDiagnosisCodes.filter(d => d.code !== p.icd10_code))} /> {p.icd10_code} - {p.problem_name}</label>)}</div>
-                            </div>
-                            <div>
-                                <h4 className="font-medium">Procedures</h4>
-                                <div className="max-h-60 overflow-auto border p-2">{feeSchedule.filter(f => f.code_type === 'CPT').slice(0, 50).map((f, i) => <label key={i} className="block flex justify-between"><span className="flex gap-2"><input type="checkbox" checked={selectedProcedureCodes.some(p => p.code === f.code)} onChange={(e) => e.target.checked ? setSelectedProcedureCodes([...selectedProcedureCodes, { code: f.code, description: f.description, amount: f.fee_amount }]) : setSelectedProcedureCodes(selectedProcedureCodes.filter(p => p.code !== f.code))} /> {f.code} - {f.description}</span><span>${f.fee_amount}</span></label>)}</div>
-                            </div>
-                            <div className="flex justify-end gap-2"><button onClick={() => setShowSuperbillModal(false)} className="px-4 py-2 border rounded">Cancel</button><button onClick={handleCreateSuperbill} className="px-4 py-2 bg-green-600 text-white rounded">Create</button></div>
-                        </div>
                     </div>
                 </div>
             )}

@@ -663,22 +663,8 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Create Superbill" size="xl">
             <div className="space-y-6">
-                {/* Step Indicator */}
-                <div className="flex items-center justify-center space-x-4 mb-6">
-                    <div className={`flex items-center ${step >= 1 ? 'text-primary-600' : 'text-gray-400'}`}>
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'text-white' : 'bg-gray-200'}`} style={step >= 1 ? { background: '#3B82F6' } : {}}>
-                            1
-                        </div>
-                        <span className="ml-2 text-sm font-medium">Patient & Visit</span>
-                    </div>
-                    <div className="w-12 h-0.5" style={step >= 2 ? { background: '#3B82F6' } : { background: '#E5E7EB' }}></div>
-                    <div className={`flex items-center ${step >= 2 ? 'text-strong-azure' : 'text-gray-400'}`}>
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? 'text-white' : 'bg-gray-200'}`} style={step >= 2 ? { background: '#3B82F6' } : {}}>
-                            2
-                        </div>
-                        <span className="ml-2 text-sm font-medium">Codes & Charges</span>
-                    </div>
-                </div>
+                {/* Step Indicator Removed - Direct Creation */}
+                <div className="mb-4 text-sm text-gray-500">Select a patient and visit to initialize the superbill.</div>
 
                 {step === 1 && (
                     <div className="space-y-4">
@@ -783,17 +769,18 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
                                     >
                                         <option value="">Select a visit</option>
                                         {visits
-                                            .filter(v => v.note_signed_at || v.locked)
+                                            .sort((a, b) => new Date(b.visit_date) - new Date(a.visit_date))
                                             .map(visit => (
                                                 <option key={visit.id} value={visit.id}>
                                                     {format(new Date(visit.visit_date), 'MM/dd/yyyy')} - {visit.visit_type || 'Office Visit'}
+                                                    {!visit.note_signed_at && !visit.locked ? ' (Unsigned)' : ''}
                                                 </option>
                                             ))}
                                     </select>
                                 )}
-                                {visits.length > 0 && visits.filter(v => v.note_signed_at || v.locked).length === 0 && (
-                                    <div className="mt-2 text-sm text-red-600">
-                                        No signed visits found for this patient
+                                {visits.length > 0 && (
+                                    <div className="mt-2 text-xs text-gray-500">
+                                        Showing all visits (Signed & Unsigned)
                                     </div>
                                 )}
                             </div>
@@ -832,16 +819,22 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
                             </div>
                         )}
 
-                        <div className="flex justify-end pt-4 border-t">
+                        <div className="flex justify-end pt-4 border-t gap-2">
                             <button
-                                onClick={() => setStep(2)}
+                                onClick={onClose}
+                                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleCreateSuperbill}
                                 disabled={!selectedVisit}
                                 className="px-4 py-2 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-md"
                                 style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
                                 onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
                                 onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
                             >
-                                Next
+                                Create Superbill
                             </button>
                         </div>
                     </div>
