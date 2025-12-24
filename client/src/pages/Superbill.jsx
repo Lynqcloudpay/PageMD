@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
     Save, CheckCircle, Printer, FileDown, Trash2, Plus,
     Search, Shield, Building, User, Calendar, Info,
-    ChevronRight, AlertTriangle, X, FileText, ArrowLeft, RefreshCw
+    ChevronRight, AlertTriangle, X, FileText, ArrowLeft, RefreshCw,
+    Send, Lock
 } from 'lucide-react';
 import { superbillsAPI, codesAPI, authAPI, settingsAPI } from '../services/api';
 import { format } from 'date-fns';
