@@ -129,19 +129,19 @@ router.post('/from-visit/:visitId', requirePermission('billing:edit'), async (re
         // 5. Populate Suggested Lines from Orders
         // Map common orders to CPTs (Mock Mapping)
         const orderResults = await client.query(`
-            SELECT order_type as type, description, id FROM orders WHERE visit_id = $1 AND status != 'CANCELLED'
+            SELECT order_type as type, test_name as description, id FROM orders WHERE visit_id = $1 AND status != 'CANCELLED'
         `, [visitId]);
 
         for (const order of orderResults.rows) {
             let cpt = null;
-            let desc = order.description;
+            let desc = order.description || 'Order';
 
             // Simple keyword mapping for demo
             if (order.type === 'lab') {
                 if (desc.match(/cbc/i)) cpt = '85025';
                 else if (desc.match(/cmp|comprehensive/i)) cpt = '80053';
                 else if (desc.match(/lipid/i)) cpt = '80061';
-                else if (desc.match(/ts/i)) cpt = '84443';
+                else if (desc.match(/tsh/i)) cpt = '84443';
             } else if (order.type === 'imaging') {
                 if (desc.match(/x-ray/i)) cpt = '71046'; // Chest X-ray
                 else if (desc.match(/ekg|ecg/i)) cpt = '93000';
