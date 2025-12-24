@@ -165,14 +165,31 @@ const Superbill = () => {
     const [isFinalizing, setIsFinalizing] = useState(false);
 
     const handleFinalize = async () => {
-        // Validation: Diagnosis Pointers for every line
-        const missingPtrs = sb.lines.some(l => !l.diagnosis_pointers || l.diagnosis_pointers.trim() === '');
-        if (missingPtrs) {
+        // 1. Check diagnosis pointers
+        const missingPointers = sb.lines.filter(l => !l.diagnosis_pointers || l.diagnosis_pointers.trim() === '');
+        if (missingPointers.length > 0) {
             alert('❌ Medical Necessity Error:\n\nEvery procedure line MUST have at least one diagnosis pointer (1, 2, etc.) linking it to a diagnosis.');
             return;
         }
 
-        // Warning if note is not signed
+        // 2. Check total charges (CRITICAL - prevents payer rejections)
+        const totalCharges = (sb.lines || []).reduce((sum, l) => sum + parseFloat(l.charge || 0), 0);
+        if (totalCharges === 0) {
+            alert('❌ Cannot Finalize: Total charges are $0.00\n\nAt least one procedure must have a non-zero charge.\n\nAction needed:\n• Add CPT codes to your fee schedule, OR\n• Manually enter charges in the table');
+            return;
+        }
+
+        // 3. Check providers
+        if (!sb.rendering_provider_id) {
+            alert('❌ Missing Rendering Provider\n\nPlease select a rendering provider.');
+            return;
+        }
+        if (!sb.billing_provider_id) {
+            alert('❌ Missing Billing Provider\n\nPlease select a billing provider.');
+            return;
+        }
+
+        // 4. Warning if note unsigned
         if (!sb.note_signed_at && !window.confirm('⚠️ Warning: Clinical note is NOT SIGNED.\n\nAre you sure you want to finalize this superbill?')) {
             return;
         }
@@ -184,7 +201,7 @@ const Superbill = () => {
             const response = await superbillsAPI.finalize(superbillId);
             if (response.data) {
                 setSb(response.data);
-                alert('Superbill finalized successfully.');
+                alert('✅ Superbill finalized successfully.');
             } else {
                 fetchData();
             }
@@ -381,22 +398,24 @@ const Superbill = () => {
                                 <div>
                                     <label className="text-[10px] font-bold text-slate-400 uppercase">Rendering Provider</label>
                                     <select
-                                        value={sb.rendering_provider_id}
+                                        value={sb.rendering_provider_id || ''}
                                         disabled={isLocked}
                                         onChange={(e) => handleUpdateSb({ rendering_provider_id: e.target.value })}
                                         className="w-full bg-transparent border-b border-slate-200 py-1 font-medium focus:border-blue-500 outline-none"
                                     >
+                                        <option value="">-- Select Rendering Provider --</option>
                                         {providers.map(p => <option key={p.id} value={p.id}>{p.first_name} {p.last_name}</option>)}
                                     </select>
                                 </div>
                                 <div>
                                     <label className="text-[10px] font-bold text-slate-400 uppercase">Billing Provider</label>
                                     <select
-                                        value={sb.billing_provider_id}
+                                        value={sb.billing_provider_id || ''}
                                         disabled={isLocked}
                                         onChange={(e) => handleUpdateSb({ billing_provider_id: e.target.value })}
                                         className="w-full bg-transparent border-b border-slate-200 py-1 font-medium focus:border-blue-500 outline-none"
                                     >
+                                        <option value="">-- Select Billing Provider --</option>
                                         {providers.map(p => <option key={p.id} value={p.id}>{p.first_name} {p.last_name}</option>)}
                                     </select>
                                 </div>
