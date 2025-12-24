@@ -3,7 +3,8 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
     Save, Lock, FileText, ChevronDown, ChevronUp, Plus, ClipboardList,
     Sparkles, ArrowLeft, Zap, Search, X, Printer, History,
-    Activity, CheckSquare, Square, Trash2, Pill, Users, UserCircle, ChevronRight
+    Activity, CheckSquare, Square, Trash2, Pill, Users, UserCircle, ChevronRight,
+    DollarSign
 } from 'lucide-react';
 import Toast from '../components/ui/Toast';
 import { OrderModal, PrescriptionModal, ReferralModal } from '../components/ActionModals';
@@ -17,7 +18,7 @@ import OrderPicker from '../components/OrderPicker';
 import OrderDetailsModal from '../components/OrderDetailsModal';
 import { usePrivileges } from '../hooks/usePrivileges';
 import { useAuth } from '../context/AuthContext';
-import { ordersCatalogAPI, visitsAPI, codesAPI, patientsAPI, icd10API } from '../services/api';
+import { ordersCatalogAPI, visitsAPI, codesAPI, patientsAPI, icd10API, superbillsAPI } from '../services/api';
 import { format } from 'date-fns';
 import { hpiDotPhrases } from '../data/hpiDotPhrases';
 import { ProblemInput, MedicationInput, AllergyInput, FamilyHistoryInput } from '../components/PAMFOSInputs';
@@ -800,6 +801,24 @@ const VisitNote = () => {
             isAutoSavingRef.current = false;
         }
     }, [id, currentVisitId, urlVisitId, isSigned, isSaving, noteData, vitals, combineNoteSections, parseNoteText, parsePlanText, showToast]);
+
+    const handleCreateSuperbill = async () => {
+        if (!currentVisitId || currentVisitId === 'new') {
+            showToast('Please save the visit first', 'error');
+            return;
+        }
+        try {
+            setLoading(true);
+            const response = await superbillsAPI.fromVisit(currentVisitId);
+            const superbillId = response.data.id;
+            navigate(`/patient/${id}/superbill/${superbillId}`);
+        } catch (error) {
+            console.error('Error creating superbill:', error);
+            showToast('Failed to create superbill: ' + (error.response?.data?.error || error.message), 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Debounced auto-save function
     const scheduleAutoSave = useCallback((showToastMessage = false) => {
@@ -1585,6 +1604,14 @@ const VisitNote = () => {
                                     </button>
                                 </>
                             )}
+                            <button
+                                onClick={handleCreateSuperbill}
+                                className="px-2.5 py-1.5 bg-slate-800 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-all duration-200 hover:bg-slate-900 text-xs font-medium"
+                                title="Create/Open Commercial Superbill"
+                            >
+                                <DollarSign className="w-3.5 h-3.5" />
+                                <span>Superbill</span>
+                            </button>
                             <button onClick={() => setShowPrintModal(true)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors" title="Print">
                                 <Printer className="w-3.5 h-3.5" />
                             </button>

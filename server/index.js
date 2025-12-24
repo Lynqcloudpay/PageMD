@@ -166,7 +166,9 @@ app.use('/api/medications', medicationRoutes);
 
 // Billing endpoints
 const billingRoutes = require('./routes/billing');
+const superbillRoutes = require('./routes/superbills');
 app.use('/api/billing', billingRoutes);
+app.use('/api/superbills', superbillRoutes);
 
 // User management endpoints
 const userRoutes = require('./routes/users');

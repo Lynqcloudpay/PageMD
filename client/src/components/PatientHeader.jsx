@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Phone, Mail, MapPin, Shield, Activity,
     AlertCircle, Edit2, Camera, X, Check,
-    ExternalLink, Calendar, FileText, Upload, Pill
+    ExternalLink, Calendar, FileText, Upload, Pill, Receipt
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
@@ -382,6 +382,14 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
 
                 {/* Primary Actions */}
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => navigate(`/patient/${patient?.id || id}/snapshot?tab=billing`)}
+                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 shadow-sm transition-all flex items-center gap-2"
+                        title="Billing & Superbills"
+                    >
+                        <Receipt size={16} />
+                        Superbill
+                    </button>
                     <button
                         onClick={handleOpenChart}
                         className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm transition-all hover:shadow flex items-center gap-2"

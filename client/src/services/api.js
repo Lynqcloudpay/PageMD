@@ -216,6 +216,24 @@ export const billingAPI = {
   getStatistics: (params) => api.get('/billing/statistics', { params }),
 };
 
+// Superbills
+export const superbillsAPI = {
+  fromVisit: (visitId) => api.post(`/superbills/from-visit/${visitId}`),
+  getByPatient: (patientId) => api.get(`/superbills/patient/${patientId}`),
+  get: (id) => api.get(`/superbills/${id}`),
+  update: (id, data) => api.put(`/superbills/${id}`, data),
+  addDiagnosis: (id, data) => api.post(`/superbills/${id}/diagnoses`, data),
+  addLine: (id, data) => api.post(`/superbills/${id}/lines`, data),
+  updateLine: (id, lineId, data) => api.put(`/superbills/${id}/lines/${lineId}`, data),
+  deleteDiagnosis: (id, diagId) => api.delete(`/superbills/${id}/diagnoses/${diagId}`),
+  deleteLine: (id, lineId) => api.delete(`/superbills/${id}/lines/${lineId}`),
+  finalize: (id) => api.post(`/superbills/${id}/finalize`),
+  void: (id) => api.post(`/superbills/${id}/void`),
+  printUrl: (id) => `${API_BASE_URL}/superbills/${id}/print`,
+  exportCMS1500: (id) => api.get(`/superbills/${id}/export/cms1500`),
+  export837P: (id) => api.get(`/superbills/${id}/export/837p`),
+};
+
 // Reports
 export const reportsAPI = {
   getRegistry: (condition, search) => api.get(`/reports/registry/${condition}`, { params: { search } }),
@@ -399,6 +417,7 @@ export const settingsAPI = {
 
   // Practice settings
   getPractice: () => api.get('/settings/practice'),
+  getLocations: () => api.get('/settings/locations'),
   updatePractice: (data) => api.put('/settings/practice', data),
 
   // Security settings

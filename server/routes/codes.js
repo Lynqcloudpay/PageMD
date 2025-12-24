@@ -9,7 +9,7 @@ router.use(authenticate);
 router.get('/icd10', async (req, res) => {
   try {
     const { search, limit = 50 } = req.query;
-    
+
     // First, try database if icd10_codes table exists
     try {
       const tableCheck = await pool.query(`
@@ -46,7 +46,7 @@ router.get('/icd10', async (req, res) => {
       console.warn('Database search failed, using fallback:', dbError.message);
       // Fall through to hardcoded codes
     }
-    
+
     // Fallback to hardcoded cardiology-specific ICD-10 codes (200 most common)
     const commonCodes = [
       // ========== HYPERTENSIVE DISEASES ==========
@@ -62,7 +62,7 @@ router.get('/icd10', async (req, res) => {
       { code: 'I15.2', description: 'Hypertension secondary to endocrine disorders' },
       { code: 'I15.8', description: 'Other secondary hypertension' },
       { code: 'I15.9', description: 'Secondary hypertension, unspecified' },
-      
+
       // ========== ISCHEMIC HEART DISEASES ==========
       { code: 'I20.0', description: 'Unstable angina' },
       { code: 'I20.1', description: 'Angina pectoris with documented spasm' },
@@ -105,7 +105,7 @@ router.get('/icd10', async (req, res) => {
       { code: 'I25.700', description: 'Atherosclerosis of coronary artery bypass graft(s), unspecified, with unstable angina pectoris' },
       { code: 'I25.710', description: 'Atherosclerosis of autologous vein coronary artery bypass graft(s) with unstable angina pectoris' },
       { code: 'I25.720', description: 'Atherosclerosis of autologous artery coronary artery bypass graft(s) with unstable angina pectoris' },
-      
+
       // ========== PULMONARY HEART DISEASE ==========
       { code: 'I26.01', description: 'Septic pulmonary embolism with acute cor pulmonale' },
       { code: 'I26.02', description: 'Saddle embolus of pulmonary artery with acute cor pulmonale' },
@@ -127,7 +127,7 @@ router.get('/icd10', async (req, res) => {
       { code: 'I27.83', description: 'Pulmonary hypertension due to interstitial lung disease' },
       { code: 'I27.89', description: 'Other specified pulmonary heart diseases' },
       { code: 'I27.9', description: 'Pulmonary heart disease, unspecified' },
-      
+
       // ========== OTHER FORMS OF HEART DISEASE ==========
       { code: 'I28.0', description: 'Arteriovenous fistula of pulmonary vessels' },
       { code: 'I28.1', description: 'Aneurysm of pulmonary artery' },
@@ -175,7 +175,7 @@ router.get('/icd10', async (req, res) => {
       { code: 'I39.3', description: 'Pulmonary valve disorders in diseases classified elsewhere' },
       { code: 'I39.4', description: 'Multiple valve disorders in diseases classified elsewhere' },
       { code: 'I39.8', description: 'Endocarditis and valve disorders in diseases classified elsewhere' },
-      
+
       // ========== CARDIOMYOPATHY ==========
       { code: 'I40.0', description: 'Infective cardiomyopathy' },
       { code: 'I40.1', description: 'Isolated myocarditis' },
@@ -199,7 +199,7 @@ router.get('/icd10', async (req, res) => {
       { code: 'I43.1', description: 'Cardiomyopathy in metabolic diseases' },
       { code: 'I43.2', description: 'Cardiomyopathy in nutritional diseases' },
       { code: 'I43.8', description: 'Cardiomyopathy in other diseases classified elsewhere' },
-      
+
       // ========== CONDUCTION DISORDERS ==========
       { code: 'I44.0', description: 'Atrioventricular block, first degree' },
       { code: 'I44.1', description: 'Atrioventricular block, second degree' },
@@ -219,7 +219,7 @@ router.get('/icd10', async (req, res) => {
       { code: 'I45.81', description: 'Long QT syndrome' },
       { code: 'I45.89', description: 'Other specified conduction disorders' },
       { code: 'I45.9', description: 'Conduction disorder, unspecified' },
-      
+
       // ========== CARDIAC ARRHYTHMIAS ==========
       { code: 'I46.2', description: 'Cardiac arrest due to underlying cardiac condition' },
       { code: 'I46.8', description: 'Cardiac arrest due to other underlying condition' },
@@ -245,7 +245,7 @@ router.get('/icd10', async (req, res) => {
       { code: 'I49.5', description: 'Sick sinus syndrome' },
       { code: 'I49.8', description: 'Other specified cardiac arrhythmias' },
       { code: 'I49.9', description: 'Cardiac arrhythmia, unspecified' },
-      
+
       // ========== HEART FAILURE ==========
       { code: 'I50.1', description: 'Left ventricular failure' },
       { code: 'I50.2', description: 'Systolic heart failure' },
@@ -264,7 +264,7 @@ router.get('/icd10', async (req, res) => {
       { code: 'I50.41', description: 'Acute combined systolic and diastolic heart failure' },
       { code: 'I50.42', description: 'Chronic combined systolic and diastolic heart failure' },
       { code: 'I50.43', description: 'Acute on chronic combined systolic and diastolic heart failure' },
-      
+
       // ========== COMPLICATIONS AND ILL-DEFINED HEART DISEASE ==========
       { code: 'I51.0', description: 'Cardiac septal defect, acquired' },
       { code: 'I51.1', description: 'Rupture of chordae tendineae, not elsewhere classified' },
@@ -276,13 +276,13 @@ router.get('/icd10', async (req, res) => {
       { code: 'I51.81', description: 'Takotsubo syndrome' },
       { code: 'I51.89', description: 'Other ill-defined heart diseases' },
       { code: 'I51.9', description: 'Heart disease, unspecified' },
-      
+
       // ========== CEREBROVASCULAR DISEASES ==========
       { code: 'I63.9', description: 'Cerebral infarction, unspecified' },
       { code: 'I64', description: 'Stroke, not specified as hemorrhage or infarction' },
       { code: 'I65.29', description: 'Occlusion and stenosis of unspecified carotid artery' },
       { code: 'I66.9', description: 'Occlusion and stenosis of unspecified cerebral artery' },
-      
+
       // ========== DISEASES OF ARTERIES, ARTERIOLES AND CAPILLARIES ==========
       { code: 'I70.0', description: 'Atherosclerosis of aorta' },
       { code: 'I70.1', description: 'Atherosclerosis of renal artery' },
@@ -330,7 +330,7 @@ router.get('/icd10', async (req, res) => {
       { code: 'I77.9', description: 'Disorder of arteries and arterioles, unspecified' },
       { code: 'I78.0', description: 'Hereditary hemorrhagic telangiectasia' },
       { code: 'I78.9', description: 'Disease of capillaries, unspecified' },
-      
+
       // ========== DISEASES OF VEINS, LYMPHATIC VESSELS AND LYMPH NODES ==========
       { code: 'I80.10', description: 'Phlebitis and thrombophlebitis of unspecified femoral vein' },
       { code: 'I80.11', description: 'Phlebitis and thrombophlebitis of right femoral vein' },
@@ -361,7 +361,7 @@ router.get('/icd10', async (req, res) => {
       { code: 'I87.2', description: 'Venous insufficiency (chronic) (peripheral)' },
       { code: 'I87.8', description: 'Other specified disorders of veins' },
       { code: 'I87.9', description: 'Disorder of vein, unspecified' },
-      
+
       // ========== OTHER AND ILL-DEFINED DISORDERS OF CIRCULATORY SYSTEM ==========
       { code: 'I95.0', description: 'Idiopathic hypotension' },
       { code: 'I95.1', description: 'Orthostatic hypotension' },
@@ -398,7 +398,7 @@ router.get('/icd10', async (req, res) => {
       { code: 'I97.89', description: 'Other intraoperative and postprocedural complications and disorders of circulatory system, not elsewhere classified' },
       { code: 'I97.9', description: 'Unspecified intraoperative and postprocedural complication and disorder of circulatory system' },
       { code: 'I99', description: 'Other and unspecified disorders of circulatory system' },
-      
+
       // ========== SYMPTOMS AND SIGNS ==========
       { code: 'R00.0', description: 'Tachycardia, unspecified' },
       { code: 'R00.1', description: 'Bradycardia, unspecified' },
@@ -413,7 +413,7 @@ router.get('/icd10', async (req, res) => {
       { code: 'R55', description: 'Syncope and collapse' },
       { code: 'R57.0', description: 'Cardiogenic shock' },
       { code: 'R94.31', description: 'Abnormal electrocardiogram [ECG] [EKG]' },
-      
+
       // ========== ENCOUNTERS FOR EXAMINATION ==========
       { code: 'Z00.00', description: 'Encounter for general adult medical examination without abnormal findings' },
       { code: 'Z00.01', description: 'Encounter for general adult medical examination with abnormal findings' },
@@ -436,8 +436,8 @@ router.get('/icd10', async (req, res) => {
     let results = commonCodes;
     if (search && search.trim()) {
       const searchLower = search.toLowerCase();
-      results = commonCodes.filter(c => 
-        c.code.toLowerCase().includes(searchLower) || 
+      results = commonCodes.filter(c =>
+        c.code.toLowerCase().includes(searchLower) ||
         c.description.toLowerCase().includes(searchLower)
       );
     }
@@ -455,9 +455,23 @@ router.get('/icd10', async (req, res) => {
 router.get('/cpt', async (req, res) => {
   try {
     const { search, limit = 50 } = req.query;
-    
-    // First, try database if cpt_codes table exists
+
+    // First, try database if cpt_codes or fee_schedule exists
     try {
+      const dbResult = await pool.query(`
+        SELECT code, description, 'CPT' as category, fee_amount as "medicareFee", active
+        FROM fee_schedule
+        WHERE code_type = 'CPT'
+          AND (code ILIKE $1 OR description ILIKE $1)
+        ORDER BY CASE WHEN code ILIKE $1 THEN 1 ELSE 2 END, code
+        LIMIT $2
+      `, [`%${search}%`, parseInt(limit)]);
+
+      if (dbResult.rows.length > 0) {
+        return res.json(dbResult.rows);
+      }
+
+      // If fee_schedule is empty or doesn't have it, try cpt_codes 
       const tableCheck = await pool.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
@@ -467,7 +481,6 @@ router.get('/cpt', async (req, res) => {
       `);
 
       if (tableCheck.rows[0].exists && search) {
-        // Use database search with full-text search
         const result = await pool.query(`
           SELECT code, description, category, medicare_fee, active
           FROM cpt_codes
@@ -491,27 +504,47 @@ router.get('/cpt', async (req, res) => {
       }
     } catch (dbError) {
       console.warn('Database search failed, using fallback:', dbError.message);
-      // Fall through to hardcoded codes
     }
-    
-    // Fallback to hardcoded common codes
+
+    // Fallback to hardcoded common codes (Enhanced for Cardiology)
     const commonCodes = [
-      { code: '99213', description: 'Office or other outpatient visit, established patient' },
-      { code: '99214', description: 'Office or other outpatient visit, established patient, detailed' },
-      { code: '99215', description: 'Office or other outpatient visit, established patient, comprehensive' },
-      { code: '99203', description: 'Office or other outpatient visit, new patient' },
-      { code: '99204', description: 'Office or other outpatient visit, new patient, detailed' },
-      { code: '99205', description: 'Office or other outpatient visit, new patient, comprehensive' },
-      { code: '85025', description: 'Complete blood count (CBC)' },
-      { code: '80053', description: 'Comprehensive metabolic panel' },
+      // ========== E/M CODES ==========
+      { code: '99213', description: 'Office visit, est, 20-29 min' },
+      { code: '99214', description: 'Office visit, est, 30-39 min' },
+      { code: '99215', description: 'Office visit, est, 40-54 min' },
+      { code: '99203', description: 'Office visit, new, 30-44 min' },
+      { code: '99204', description: 'Office visit, new, 45-59 min' },
+      { code: '99205', description: 'Office visit, new, 60-74 min' },
+
+      // ========== CARDIOLOGY PROCEDURES ==========
+      { code: '93000', description: 'EKG, routine, w/ at least 12 leads; w/ interpretation & report' },
+      { code: '93010', description: 'EKG; interpretation & report only' },
+      { code: '93306', description: 'Echocardiography, transthoracic, complete' },
+      { code: '93307', description: 'Echocardiography, transthoracic, follow-up' },
+      { code: '93015', description: 'Cardiovascular stress test w/ supervision & interpretation' },
+      { code: '93224', description: 'Holter monitor, up to 48 hrs' },
+      { code: '93225', description: 'Holter monitor, recording only' },
+      { code: '93227', description: 'Holter monitor, interpretation & report' },
+      { code: '93798', description: 'Cardiac rehab w/ continuous ECG monitoring' },
+      { code: '93880', description: 'Duplex scan of extracranial arteries; complete bilateral study' },
+
+      // ========== LABS ==========
+      { code: '85025', description: 'CBC (Complete Blood Count)' },
+      { code: '80053', description: 'CMP (Comprehensive Metabolic Panel)' },
       { code: '80061', description: 'Lipid panel' },
+      { code: '84443', description: 'TSH (Thyroid Stimulating Hormone)' },
+      { code: '83036', description: 'Hemoglobin A1c' },
+      { code: '82172', description: 'Apolipoprotein, each' },
+      { code: '82550', description: 'Creatine kinase (CK), (CPK); total' },
+      { code: '84484', description: 'Troponin, quantitative' },
+      { code: '83880', description: 'B-type natriuretic peptide (BNP)' },
     ];
 
     let results = commonCodes;
     if (search) {
       const searchLower = search.toLowerCase();
-      results = commonCodes.filter(c => 
-        c.code.toLowerCase().includes(searchLower) || 
+      results = commonCodes.filter(c =>
+        c.code.toLowerCase().includes(searchLower) ||
         c.description.toLowerCase().includes(searchLower)
       );
     }

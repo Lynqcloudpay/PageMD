@@ -12,19 +12,11 @@ const pool = require('../db');
 
 const router = express.Router();
 
-// All routes require admin privileges
-router.use(authenticate);
-router.use(requireAdmin);
-
-/**
- * GET /settings/practice
- * Get practice settings
- */
-router.get('/practice', async (req, res) => {
+// Basic settings accessible to most authenticated users (with specific permissions)
+router.get('/practice', authenticate, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM practice_settings ORDER BY updated_at DESC LIMIT 1');
     if (result.rows.length === 0) {
-      // Return defaults if no settings exist
       return res.json({
         practice_name: 'My Practice',
         timezone: 'America/New_York',
@@ -40,10 +32,47 @@ router.get('/practice', async (req, res) => {
 });
 
 /**
+ * GET /api/settings/locations
+ * Get all active locations
+ */
+router.get('/locations', authenticate, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM locations WHERE active = true ORDER BY name');
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching locations:', error);
+    res.status(500).json({ error: 'Failed to fetch locations' });
+  }
+});
+
+/**
+ * POST /api/settings/locations
+ * Create a new location
+ */
+router.post('/locations', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { name, npi, pos_code, address_line1, address_line2, city, state, zip, phone, organization_id } = req.body;
+    const result = await pool.query(`
+      INSERT INTO locations (name, npi, pos_code, address_line1, address_line2, city, state, zip, phone, organization_id)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING *
+    `, [name, npi, pos_code, address_line1, address_line2, city, state, zip, phone, organization_id]);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error creating location:', error);
+    res.status(500).json({ error: 'Failed to create location' });
+  }
+});
+
+// Admin-only routes for modifications
+const adminRouter = express.Router();
+adminRouter.use(authenticate, requireAdmin); // Apply authenticate and requireAdmin to all admin routes
+
+/**
  * PUT /settings/practice
  * Update practice settings
  */
-router.put('/practice', [
+adminRouter.put('/practice', [
   body('practice_name').optional().notEmpty(),
   body('timezone').optional().isString(),
 ], async (req, res) => {
@@ -62,7 +91,7 @@ router.put('/practice', [
 
     // Check if settings exist
     const existing = await pool.query('SELECT id FROM practice_settings LIMIT 1');
-    
+
     let result;
     if (existing.rows.length > 0) {
       // Update existing
@@ -127,7 +156,7 @@ router.put('/practice', [
  * GET /settings/security
  * Get security settings
  */
-router.get('/security', async (req, res) => {
+adminRouter.get('/security', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM security_settings ORDER BY updated_at DESC LIMIT 1');
     if (result.rows.length === 0) {
@@ -153,7 +182,7 @@ router.get('/security', async (req, res) => {
  * PUT /settings/security
  * Update security settings
  */
-router.put('/security', async (req, res) => {
+adminRouter.put('/security', async (req, res) => {
   try {
     const {
       password_min_length, password_require_uppercase, password_require_lowercase,
@@ -164,7 +193,7 @@ router.put('/security', async (req, res) => {
     } = req.body;
 
     const existing = await pool.query('SELECT id FROM security_settings LIMIT 1');
-    
+
     let result;
     if (existing.rows.length > 0) {
       result = await pool.query(`
@@ -227,7 +256,7 @@ router.put('/security', async (req, res) => {
  * GET /settings/clinical
  * Get clinical settings
  */
-router.get('/clinical', async (req, res) => {
+adminRouter.get('/clinical', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM clinical_settings ORDER BY updated_at DESC LIMIT 1');
     if (result.rows.length === 0) {
@@ -251,10 +280,10 @@ router.get('/clinical', async (req, res) => {
  * PUT /settings/clinical
  * Update clinical settings
  */
-router.put('/clinical', async (req, res) => {
+adminRouter.put('/clinical', async (req, res) => {
   try {
     const existing = await pool.query('SELECT id FROM clinical_settings LIMIT 1');
-    
+
     const updates = { ...req.body };
     const values = [];
     const setClauses = [];
@@ -275,7 +304,7 @@ router.put('/clinical', async (req, res) => {
     if (existing.rows.length > 0) {
       setClauses.push(`WHERE id = $${paramIndex}`);
       values.push(existing.rows[0].id);
-      
+
       result = await pool.query(`
         UPDATE clinical_settings SET ${setClauses.join(', ')} RETURNING *
       `, values);
@@ -284,7 +313,7 @@ router.put('/clinical', async (req, res) => {
       const allFields = Object.keys(updates);
       const fieldValues = allFields.map(() => `$${paramIndex++}`);
       fieldValues.push(`$${paramIndex++}`); // updated_by
-      
+
       result = await pool.query(`
         INSERT INTO clinical_settings (${allFields.join(', ')}, updated_by)
         VALUES (${fieldValues.join(', ')})
@@ -304,7 +333,7 @@ router.put('/clinical', async (req, res) => {
  * GET /settings/email
  * Get email settings
  */
-router.get('/email', async (req, res) => {
+adminRouter.get('/email', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM email_settings ORDER BY updated_at DESC LIMIT 1');
     if (result.rows.length === 0) {
@@ -326,7 +355,7 @@ router.get('/email', async (req, res) => {
  * PUT /settings/email
  * Update email settings
  */
-router.put('/email', async (req, res) => {
+adminRouter.put('/email', async (req, res) => {
   try {
     const {
       smtp_host, smtp_port, smtp_secure, smtp_username, smtp_password,
@@ -334,7 +363,7 @@ router.put('/email', async (req, res) => {
     } = req.body;
 
     const existing = await pool.query('SELECT id, smtp_password FROM email_settings LIMIT 1');
-    
+
     let result;
     if (existing.rows.length > 0) {
       // Only update password if provided (don't overwrite with empty)
@@ -409,7 +438,7 @@ router.get('/features', async (req, res) => {
  * PUT /settings/features/:key
  * Update a feature flag
  */
-router.put('/features/:key', [
+adminRouter.put('/features/:key', [
   body('enabled').isBoolean(),
 ], async (req, res) => {
   try {
@@ -475,6 +504,8 @@ router.get('/all', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch settings' });
   }
 });
+
+router.use('/', adminRouter);
 
 module.exports = router;
 

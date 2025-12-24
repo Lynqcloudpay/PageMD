@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
-    DollarSign, Search, Filter, Download, Upload, Plus, FileText, 
+import {
+    DollarSign, Search, Filter, Download, Upload, Plus, FileText,
     CheckCircle2, XCircle, Clock, AlertCircle, Edit, Trash2, Eye,
     Calendar, User, Building2, Receipt, TrendingUp, CreditCard, X,
     Lightbulb, Zap, Info
 } from 'lucide-react';
-import { billingAPI, patientsAPI, visitsAPI, codesAPI } from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import { billingAPI, patientsAPI, visitsAPI, codesAPI, superbillsAPI } from '../services/api';
 import { format } from 'date-fns';
 import Modal from '../components/ui/Modal';
 import CodeSearchModal from '../components/CodeSearchModal';
@@ -13,6 +14,7 @@ import { usePrivileges } from '../hooks/usePrivileges';
 // Automatic code extraction removed - codes must be added manually
 
 const Billing = () => {
+    const navigate = useNavigate();
     const [claims, setClaims] = useState([]);
     const [filteredClaims, setFilteredClaims] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -382,10 +384,10 @@ const Billing = () => {
 const ClaimDetailModal = ({ claim, isOpen, onClose }) => {
     if (!isOpen) return null;
 
-    const diagnosisCodes = Array.isArray(claim.diagnosis_codes) 
-        ? claim.diagnosis_codes 
+    const diagnosisCodes = Array.isArray(claim.diagnosis_codes)
+        ? claim.diagnosis_codes
         : (claim.diagnosis_codes ? JSON.parse(claim.diagnosis_codes) : []);
-    
+
     const procedureCodes = Array.isArray(claim.procedure_codes)
         ? claim.procedure_codes
         : (claim.procedure_codes ? JSON.parse(claim.procedure_codes) : []);
@@ -479,7 +481,9 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
     const [procedureSearch, setProcedureSearch] = useState('');
     const [billingNotes, setBillingNotes] = useState([]);
     const [qualityMeasures, setQualityMeasures] = useState([]);
+    const [existingSuperbills, setExistingSuperbills] = useState([]);
     const { hasPrivilege } = usePrivileges();
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (isOpen) {
@@ -500,6 +504,7 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
             setShowNotePreview(false);
             setBillingNotes([]);
             setQualityMeasures([]);
+            setExistingSuperbills([]);
         }
     }, [isOpen]);
 
@@ -523,13 +528,13 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
     // Search patients when searchQuery changes
     useEffect(() => {
         if (!isOpen || step !== 1) return;
-        
+
         const searchPatients = async () => {
             if (searchQuery.trim().length < 2) {
                 setSearchResults([]);
                 return;
             }
-            
+
             setSearching(true);
             try {
                 const response = await patientsAPI.search(searchQuery);
@@ -587,15 +592,19 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
             if (patient) {
                 setSelectedPatient(patient);
             }
+
+            // Also fetch existing superbills
+            const sbRes = await superbillsAPI.getByPatient(patientToUse.id);
+            setExistingSuperbills(sbRes.data || []);
         } catch (error) {
-            console.error('Error fetching visits:', error);
+            console.error('Error fetching visits/superbills:', error);
             setVisits([]);
         }
     };
 
     const loadVisitData = async () => {
         if (!selectedVisit || !selectedPatient) return;
-        
+
         try {
             // Fetch visit data
             const visitResponse = await visitsAPI.get(selectedVisit.id);
@@ -606,10 +615,10 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
             // Load patient problems for diagnosis codes
             const problemsResponse = await patientsAPI.getProblems(selectedPatient.id);
             const problems = problemsResponse.data || [];
-            
+
             // Automatic code extraction removed - codes must be added manually
             // Diagnosis and procedure codes will remain empty until manually added
-            
+
         } catch (error) {
             console.error('Error loading visit data:', error);
         }
@@ -623,50 +632,27 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
     };
 
     const handleCreateSuperbill = async () => {
-        if (!selectedVisit || diagnosisCodes.length === 0 || procedureCodes.length === 0) {
-            alert('Please select a visit, add at least one diagnosis code, and one procedure code');
+        if (!selectedVisit) {
+            alert('Please select a visit');
             return;
         }
 
         setLoading(true);
         try {
-            // Normalize data format for claim creation
-            const normalizedDiagnosisCodes = diagnosisCodes.map(dx => ({
-                code: typeof dx === 'string' ? dx : (dx.code || dx),
-                description: typeof dx === 'string' ? '' : (dx.description || '')
-            }));
-            
-            const normalizedProcedureCodes = procedureCodes.map(proc => ({
-                code: proc.code,
-                description: proc.description || '',
-                amount: parseFloat(proc.amount || 0),
-                units: parseFloat(proc.units || 1)
-            }));
-            
-            await billingAPI.createClaim({
-                visitId: selectedVisit.id,
-                diagnosisCodes: normalizedDiagnosisCodes,
-                procedureCodes: normalizedProcedureCodes,
-                totalAmount: totalAmount,
-                serviceDateStart: selectedVisit.visit_date,
-                insuranceProvider: selectedPatient.insurance_provider
-            });
-            alert('Superbill created successfully!');
+            // Create the commercial superbill from the visit
+            // This will auto-prepopulate from notes and orders
+            const response = await superbillsAPI.fromVisit(selectedVisit.id);
+            const sbId = response.data.id;
+
+            // Optionally, we could add the manual codes selected in Step 2 here,
+            // but the new Superbill editor is better for that.
+            // For now, let's just navigate to the full editor.
+
+            navigate(`/patient/${selectedPatient.id}/superbill/${sbId}`);
             onSuccess();
         } catch (error) {
             console.error('Error creating superbill:', error);
-            console.error('Error response:', error.response?.data);
-            let errorMessage = 'Failed to create superbill';
-            if (error.response?.data?.error) {
-                errorMessage = error.response.data.error;
-                if (error.response.data.details) {
-                    console.error('Detailed error:', error.response.data.details);
-                    errorMessage += `\n\nDetails: ${JSON.stringify(error.response.data.details, null, 2)}`;
-                }
-            } else if (error.message) {
-                errorMessage = error.message;
-            }
-            alert(`Failed to create superbill: ${errorMessage}`);
+            alert('Failed to create superbill: ' + (error.response?.data?.error || error.message));
         } finally {
             setLoading(false);
         }
@@ -709,7 +695,7 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
                                     autoFocus
                                 />
                             </div>
-                            
+
                             {/* Patient search results dropdown */}
                             {searchQuery.trim().length >= 2 && (
                                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
@@ -813,7 +799,40 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
                             </div>
                         )}
 
-                        <div className="flex justify-end">
+                        {selectedPatient && existingSuperbills.length > 0 && (
+                            <div className="mt-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Existing Superbills</label>
+                                <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                                    {existingSuperbills.map(sb => (
+                                        <button
+                                            key={sb.id}
+                                            onClick={() => {
+                                                navigate(`/patient/${selectedPatient.id}/superbill/${sb.id}`);
+                                                onClose();
+                                            }}
+                                            className="w-full flex items-center justify-between p-3 bg-white border border-gray-200 rounded hover:bg-slate-50 transition-colors"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <Receipt className="w-4 h-4 text-blue-500" />
+                                                <div className="text-left">
+                                                    <div className="text-sm font-medium text-gray-900">{format(new Date(sb.service_date_from), 'MM/dd/yyyy')}</div>
+                                                    <div className="text-xs text-gray-500">{sb.provider_first_name ? `${sb.provider_first_name} ${sb.provider_last_name}` : 'No provider'}</div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${sb.status === 'FINALIZED' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                                                    }`}>
+                                                    {sb.status}
+                                                </span>
+                                                <ChevronRight className="w-4 h-4 text-gray-400" />
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex justify-end pt-4 border-t">
                             <button
                                 onClick={() => setStep(2)}
                                 disabled={!selectedVisit}
@@ -875,7 +894,7 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
                                     />
                                     <div className="mt-2 max-h-32 overflow-y-auto">
                                         {availableDiagnosisCodes
-                                            .filter(code => 
+                                            .filter(code =>
                                                 code.code.toLowerCase().includes(diagnosisSearch.toLowerCase()) ||
                                                 (code.description || '').toLowerCase().includes(diagnosisSearch.toLowerCase())
                                             )
@@ -954,7 +973,7 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
                                     <div className="mt-2 max-h-32 overflow-y-auto">
                                         {feeSchedule
                                             .filter(f => f.code_type === 'CPT')
-                                            .filter(code => 
+                                            .filter(code =>
                                                 code.code.toLowerCase().includes(procedureSearch.toLowerCase()) ||
                                                 (code.description || '').toLowerCase().includes(procedureSearch.toLowerCase())
                                             )
