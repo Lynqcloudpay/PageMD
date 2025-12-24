@@ -398,7 +398,7 @@ const Superbill = () => {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-50">
-                                            {sb.lines.length === 0 ? (
+                                            {(!sb.lines || sb.lines.length === 0) ? (
                                                 <tr><td colSpan="7" className="px-4 py-8 text-center text-slate-400 italic">No services billed</td></tr>
                                             ) : sb.lines.map(line => (
                                                 <tr key={line.id} className="hover:bg-slate-50/50 group transition-colors">
