@@ -780,7 +780,7 @@ router.post('/:id/sync', requirePermission('billing:edit'), async (req, res) => 
         // 3. Sync Suggested Lines (Orders)
         // Only add if not already suggested
         const orderResults = await client.query(`
-            SELECT type, description, id FROM orders WHERE visit_id = $1 AND status != 'CANCELLED'
+            SELECT order_type as type, test_name as description, id FROM orders WHERE visit_id = $1 AND status != 'CANCELLED'
         `, [superbill.visit_id]);
 
         let addedLines = 0;
@@ -793,13 +793,13 @@ router.post('/:id/sync', requirePermission('billing:edit'), async (req, res) => 
             if (existing.rows.length > 0) continue;
 
             let cpt = null;
-            let desc = order.description;
+            let desc = order.description || 'Order';
             // Mapping Logic (Reused)
             if (order.type === 'lab') {
                 if (desc.match(/cbc/i)) cpt = '85025';
                 else if (desc.match(/cmp|comprehensive/i)) cpt = '80053';
                 else if (desc.match(/lipid/i)) cpt = '80061';
-                else if (desc.match(/ts/i)) cpt = '84443';
+                else if (desc.match(/tsh/i)) cpt = '84443';
             } else if (order.type === 'imaging') {
                 if (desc.match(/x-ray/i)) cpt = '71046';
                 else if (desc.match(/ekg|ecg/i)) cpt = '93000';
