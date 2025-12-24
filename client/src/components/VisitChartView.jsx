@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { X, Printer, Calendar, User, Phone, Mail, MapPin, Stethoscope, CheckCircle2, CreditCard, Building2, Users, FilePlus, Receipt, DollarSign } from 'lucide-react';
-import { visitsAPI, patientsAPI, billingAPI, codesAPI } from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import { visitsAPI, patientsAPI, billingAPI, codesAPI, superbillsAPI } from '../services/api';
 import { format } from 'date-fns';
 
 const VisitChartView = ({ visitId, patientId, onClose }) => {
+    const navigate = useNavigate();
     const [patient, setPatient] = useState(null);
     const [visit, setVisit] = useState(null);
     const [allergies, setAllergies] = useState([]);
@@ -373,35 +375,17 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     };
 
     const handleCreateSuperbill = async () => {
-        if (selectedDiagnosisCodes.length === 0) {
-            alert('Please select at least one diagnosis code');
-            return;
-        }
-        if (selectedProcedureCodes.length === 0) {
-            alert('Please select at least one procedure code');
-            return;
-        }
+        console.log('handleCreateSuperbill called in VisitChartView');
+        console.log('Type of navigate:', typeof navigate);
         try {
-            let total = 0;
-            selectedProcedureCodes.forEach(code => {
-                const feeItem = feeSchedule.find(f => f.code === code.code && f.code_type === 'CPT');
-                if (feeItem && feeItem.fee_amount) {
-                    total += parseFloat(feeItem.fee_amount);
-                }
-            });
-            await billingAPI.createClaim({
-                visitId: visitId,
-                diagnosisCodes: selectedDiagnosisCodes,
-                procedureCodes: selectedProcedureCodes,
-                totalAmount: total
-            });
+            const response = await superbillsAPI.fromVisit(visitId);
+            const sbId = response.data.id;
             setShowSuperbillModal(false);
-            setSelectedDiagnosisCodes([]);
-            setSelectedProcedureCodes([]);
-            alert('Superbill created successfully!');
+            onClose(); // Close the modal
+            navigate(`/patient/${patientId}/superbill/${sbId}`);
         } catch (error) {
             console.error('Error creating superbill:', error);
-            alert('Failed to create superbill');
+            alert('Failed to create superbill: ' + (error.response?.data?.error || error.message));
         }
     };
 

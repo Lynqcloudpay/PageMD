@@ -803,6 +803,8 @@ const VisitNote = () => {
     }, [id, currentVisitId, urlVisitId, isSigned, isSaving, noteData, vitals, combineNoteSections, parseNoteText, parsePlanText, showToast]);
 
     const handleCreateSuperbill = async () => {
+        console.log('handleCreateSuperbill called in VisitNote');
+        console.log('Origin navigate type:', typeof navigate);
         if (!currentVisitId || currentVisitId === 'new') {
             showToast('Please save the visit first', 'error');
             return;

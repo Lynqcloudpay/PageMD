@@ -1,3 +1,5 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     X, FileText, Image, FlaskConical, Pill, ExternalLink,
     Database, CreditCard, Clock, CheckCircle2,
@@ -11,6 +13,7 @@ import DoseSpotPrescribe from './DoseSpotPrescribe';
 import VisitChartView from './VisitChartView';
 
 const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview' }) => {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState(initialTab);
     const [loading, setLoading] = useState(false);
 
@@ -1535,6 +1538,8 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                     // This usually creates from the most recent visit if not already created
                                                     const recentVisit = notes[0];
                                                     if (recentVisit) {
+                                                        console.log('Creating superbill from PatientChartPanel');
+                                                        console.log('Type of navigate:', typeof navigate);
                                                         superbillsAPI.fromVisit(recentVisit.id).then(res => {
                                                             navigate(`/patient/${patientId}/superbill/${res.data.id}`);
                                                         });
@@ -1565,7 +1570,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                                 <div className="flex items-center gap-2">
                                                                     <span className="font-bold text-gray-900">Superbill #{sb.id.toString().padStart(6, '0')}</span>
                                                                     <span className={`px-2 py-0.5 rounded-[4px] text-[10px] font-bold uppercase tracking-wider ${sb.status === 'FINALIZED' ? 'bg-green-100 text-green-700' :
-                                                                            sb.status === 'VOID' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                                                                        sb.status === 'VOID' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
                                                                         }`}>
                                                                         {sb.status}
                                                                     </span>

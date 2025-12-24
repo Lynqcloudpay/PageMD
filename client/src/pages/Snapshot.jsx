@@ -684,6 +684,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
     };
 
     const handleViewNote = (noteId, e) => {
+        console.log('handleViewNote called for note:', noteId);
+        console.log('Type of navigate:', typeof navigate);
         if (e) {
             e.preventDefault();
             e.stopPropagation();
