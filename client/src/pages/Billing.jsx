@@ -493,10 +493,10 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
     }, [isOpen]);
 
     useEffect(() => {
-        if (selectedPatient && step === 1) {
+        if (selectedPatient) {
             fetchPatientVisits();
         }
-    }, [selectedPatient, step]);
+    }, [selectedPatient]);
 
     useEffect(() => {
         if (selectedVisit && selectedPatient) {
@@ -505,13 +505,9 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedVisit, selectedPatient]);
 
-    useEffect(() => {
-        calculateTotal();
-    }, [procedureCodes]);
-
     // Search patients when searchQuery changes
     useEffect(() => {
-        if (!isOpen || step !== 1) return;
+        if (!isOpen) return;
 
         const searchPatients = async () => {
             if (searchQuery.trim().length < 2) {
@@ -534,7 +530,7 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
 
         const timeoutId = setTimeout(searchPatients, 300); // Debounce
         return () => clearTimeout(timeoutId);
-    }, [searchQuery, isOpen, step]);
+    }, [searchQuery, isOpen]);
 
     const fetchFeeSchedule = async () => {
         try {
@@ -606,13 +602,6 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
         } catch (error) {
             console.error('Error loading visit data:', error);
         }
-    };
-
-    const calculateTotal = () => {
-        const total = procedureCodes.reduce((sum, proc) => {
-            return sum + parseFloat(proc.amount || 0);
-        }, 0);
-        setTotalAmount(total);
     };
 
     const handleCreateSuperbill = async () => {
