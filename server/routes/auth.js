@@ -68,14 +68,15 @@ router.get('/providers', authenticate, async (req, res) => {
        WHERE (u.status IS NULL OR u.status = 'active')
          AND (u.status IS DISTINCT FROM 'suspended')
          AND (u.active IS NULL OR u.active = true)
-         AND COALESCE(r.name, u.role) IN (
-           'Physician', 
-           'Nurse Practitioner', 
+         AND UPPER(COALESCE(r.name, u.role)) IN (
+           'PHYSICIAN', 
+           'NURSE PRACTITIONER', 
            'NP', 
-           'Physician Assistant', 
+           'PHYSICIAN ASSISTANT', 
            'PA', 
-           'Clinician',
-           'Doctor'
+           'CLINICIAN',
+           'DOCTOR',
+           'PROVIDER'
          )
        ORDER BY u.last_name, u.first_name`
     );

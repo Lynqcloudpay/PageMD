@@ -82,21 +82,55 @@ router.post('/from-visit/:visitId', requirePermission('billing:edit'), async (re
         const superbill = superbillInsert.rows[0];
 
         // 4. Prepopulate Diagnoses from order_diagnoses/problems
-        const diagResult = await client.query(`
-      SELECT DISTINCT pr.icd10_code, pr.problem_name as description
-      FROM order_diagnoses od
-      JOIN problems pr ON od.problem_id = pr.id
-      WHERE od.order_id IN (SELECT id FROM orders WHERE visit_id = $1)
-      OR od.order_id IN (SELECT id FROM referrals WHERE visit_id = $1)
-      LIMIT 12
-    `, [visitId]);
+        // 4. Prepopulate Diagnoses
+        // First, get diagnoses from orders
+        const orderDiags = await client.query(`
+          SELECT DISTINCT pr.icd10_code, pr.problem_name as description
+          FROM order_diagnoses od
+          JOIN problems pr ON od.problem_id = pr.id
+          WHERE od.order_id IN (SELECT id FROM orders WHERE visit_id = $1)
+          OR od.order_id IN (SELECT id FROM referrals WHERE visit_id = $1)
+        `, [visitId]);
 
-        for (let i = 0; i < diagResult.rows.length; i++) {
-            const diag = diagResult.rows[i];
+        const allDiags = [...orderDiags.rows];
+
+        // Second, parse from note_draft (Assessment section)
+        if (visit.note_draft) {
+            // Find "Assessment:" section
+            const assessmentMatch = visit.note_draft.match(/Assessment:([\s\S]*?)(?:Plan:|$)/i);
+            if (assessmentMatch && assessmentMatch[1]) {
+                const assessmentText = assessmentMatch[1];
+                // Regex for "Code - Description" e.g., "I10 - Hypertension" or "I10 Hypertension"
+                // Matches standard ICD-10 format: [A-Z][0-9]{2}(?:\.[0-9]{1,4})?
+                const diagMatches = assessmentText.matchAll(/([A-Z][0-9]{2}(?:\.[0-9]{1,4})?)\s*[-–:]?\s*([^\n]+)/g);
+
+                for (const match of diagMatches) {
+                    const code = match[1];
+                    const description = match[2].trim();
+                    // Avoid duplicates
+                    if (!allDiags.find(d => d.icd10_code === code)) {
+                        allDiags.push({ icd10_code: code, description });
+                    }
+                }
+            }
+        }
+
+        // Insert distinct ICD-10 codes (limit 12)
+        const uniqueDiags = [];
+        const seenCodes = new Set();
+        for (const d of allDiags) {
+            if (!seenCodes.has(d.icd10_code) && uniqueDiags.length < 12) {
+                seenCodes.add(d.icd10_code);
+                uniqueDiags.push(d);
+            }
+        }
+
+        for (let i = 0; i < uniqueDiags.length; i++) {
+            const diag = uniqueDiags[i];
             await client.query(`
-        INSERT INTO superbill_diagnoses (superbill_id, icd10_code, description, sequence)
-        VALUES ($1, $2, $3, $4)
-      `, [superbill.id, diag.icd10_code, diag.description, i + 1]);
+                INSERT INTO superbill_diagnoses (superbill_id, icd10_code, description, sequence)
+                VALUES ($1, $2, $3, $4)
+            `, [superbill.id, diag.icd10_code, diag.description, i + 1]);
         }
 
         // 5. Prepopulate Lines from orders/charges (if any)

@@ -121,13 +121,27 @@ const Superbill = () => {
         }
     };
 
+    const [isFinalizing, setIsFinalizing] = useState(false);
+
     const handleFinalize = async () => {
         if (!window.confirm('Finalize this superbill? This will lock editing.')) return;
+
+        setIsFinalizing(true);
         try {
-            await superbillsAPI.finalize(superbillId);
-            fetchData();
+            const response = await superbillsAPI.finalize(superbillId);
+            if (response.data) {
+                setSb(response.data);
+                // Optional: Show success message or toast
+                alert('Superbill finalized successfully.');
+            } else {
+                // Fallback if no data returned (shouldn't happen with updated API)
+                fetchData();
+            }
         } catch (error) {
-            alert(error.response?.data?.error || 'Finallization failed');
+            console.error('Finalize error:', error);
+            alert(error.response?.data?.error || 'Finalization failed');
+        } finally {
+            setIsFinalizing(false);
         }
     };
 
@@ -278,6 +292,17 @@ const Superbill = () => {
                                     </select>
                                 </div>
                                 <div>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase">Billing Provider</label>
+                                    <select
+                                        value={sb.billing_provider_id}
+                                        disabled={isLocked}
+                                        onChange={(e) => handleUpdateSb({ billing_provider_id: e.target.value })}
+                                        className="w-full bg-transparent border-b border-slate-200 py-1 font-medium focus:border-blue-500 outline-none"
+                                    >
+                                        {providers.map(p => <option key={p.id} value={p.id}>{p.first_name} {p.last_name}</option>)}
+                                    </select>
+                                </div>
+                                <div>
                                     <label className="text-[10px] font-bold text-slate-400 uppercase">Facility Location</label>
                                     <select
                                         value={sb.facility_location_id || ''}
@@ -376,15 +401,26 @@ const Superbill = () => {
                                                     <td className="px-4 py-3 font-bold text-blue-600">{line.cpt_code}</td>
                                                     <td className="px-4 py-3 font-medium text-slate-600 max-w-[200px] truncate">{line.description}</td>
                                                     <td className="px-4 py-3">
-                                                        <input
-                                                            type="text"
-                                                            value={line.modifier1 || ''}
-                                                            disabled={isLocked}
-                                                            maxLength={2}
-                                                            onChange={(e) => handleUpdateLine(line.id, { modifier1: e.target.value })}
-                                                            className="w-8 bg-slate-50 border-b border-slate-200 outline-none focus:border-blue-400 text-center"
-                                                            placeholder="--"
-                                                        />
+                                                        <div className="flex gap-1">
+                                                            <input
+                                                                type="text"
+                                                                value={line.modifier1 || ''}
+                                                                disabled={isLocked}
+                                                                maxLength={2}
+                                                                onChange={(e) => handleUpdateLine(line.id, { modifier1: e.target.value })}
+                                                                className="w-8 bg-slate-50 border-b border-slate-200 outline-none focus:border-blue-400 text-center uppercase"
+                                                                placeholder="--"
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                value={line.modifier2 || ''}
+                                                                disabled={isLocked}
+                                                                maxLength={2}
+                                                                onChange={(e) => handleUpdateLine(line.id, { modifier2: e.target.value })}
+                                                                className="w-8 bg-slate-50 border-b border-slate-200 outline-none focus:border-blue-400 text-center uppercase"
+                                                                placeholder="--"
+                                                            />
+                                                        </div>
                                                     </td>
                                                     <td className="px-4 py-3 text-right">
                                                         <input
