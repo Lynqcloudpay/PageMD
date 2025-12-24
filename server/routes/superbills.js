@@ -129,7 +129,7 @@ router.post('/from-visit/:visitId', requirePermission('billing:edit'), async (re
         // 5. Populate Suggested Lines from Orders
         // Map common orders to CPTs (Mock Mapping)
         const orderResults = await client.query(`
-            SELECT type, description, id FROM orders WHERE visit_id = $1 AND status != 'CANCELLED'
+            SELECT order_type as type, description, id FROM orders WHERE visit_id = $1 AND status != 'CANCELLED'
         `, [visitId]);
 
         for (const order of orderResults.rows) {
