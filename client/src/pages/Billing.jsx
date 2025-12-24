@@ -457,30 +457,14 @@ const ClaimDetailModal = ({ claim, isOpen, onClose }) => {
 
 // Superbill Modal Component - Commercial Grade
 const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
-    const [step, setStep] = useState(1);
     const [selectedPatient, setSelectedPatient] = useState(null);
     const [selectedVisit, setSelectedVisit] = useState(null);
     const [patients, setPatients] = useState([]);
     const [searchResults, setSearchResults] = useState([]);
     const [visits, setVisits] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const [diagnosisCodes, setDiagnosisCodes] = useState([]);
-    const [procedureCodes, setProcedureCodes] = useState([]);
-    const [feeSchedule, setFeeSchedule] = useState([]);
-    const [availableDiagnosisCodes, setAvailableDiagnosisCodes] = useState([]);
-    const [totalAmount, setTotalAmount] = useState(0);
     const [loading, setLoading] = useState(false);
     const [searching, setSearching] = useState(false);
-    const [showNotePreview, setShowNotePreview] = useState(false);
-    const [visitNote, setVisitNote] = useState(null);
-    const [showAddDiagnosis, setShowAddDiagnosis] = useState(false);
-    const [showAddProcedure, setShowAddProcedure] = useState(false);
-    const [showICD10Modal, setShowICD10Modal] = useState(false);
-    const [showCPTModal, setShowCPTModal] = useState(false);
-    const [diagnosisSearch, setDiagnosisSearch] = useState('');
-    const [procedureSearch, setProcedureSearch] = useState('');
-    const [billingNotes, setBillingNotes] = useState([]);
-    const [qualityMeasures, setQualityMeasures] = useState([]);
     const [existingSuperbills, setExistingSuperbills] = useState([]);
     const { hasPrivilege } = usePrivileges();
     const navigate = useNavigate();
@@ -666,493 +650,178 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
                 {/* Step Indicator Removed - Direct Creation */}
                 <div className="mb-4 text-sm text-gray-500">Select a patient and visit to initialize the superbill.</div>
 
-                {step === 1 && (
-                    <div className="space-y-4">
+                <div className="space-y-4">
+                    <div className="relative">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Search Patient</label>
                         <div className="relative">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Search Patient</label>
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search by name or MRN..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    autoFocus
-                                />
-                            </div>
-
-                            {/* Patient search results dropdown */}
-                            {searchQuery.trim().length >= 2 && (
-                                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                                    {searching ? (
-                                        <div className="p-4 text-center text-sm text-gray-500">Searching...</div>
-                                    ) : searchResults.length > 0 ? (
-                                        <div className="divide-y divide-gray-200">
-                                            {searchResults.map((patient) => (
-                                                <button
-                                                    key={patient.id}
-                                                    onClick={() => {
-                                                        setSelectedPatient(patient);
-                                                        setSearchQuery(`${patient.first_name} ${patient.last_name}${patient.mrn ? ` (MRN: ${patient.mrn})` : ''}`);
-                                                        setSearchResults([]);
-                                                        fetchPatientVisits(patient);
-                                                    }}
-                                                    className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors"
-                                                >
-                                                    <div className="font-medium text-gray-900">
-                                                        {patient.first_name} {patient.last_name}
-                                                    </div>
-                                                    {patient.mrn && (
-                                                        <div className="text-sm text-gray-500 mt-0.5">
-                                                            MRN: {patient.mrn}
-                                                        </div>
-                                                    )}
-                                                    {patient.dob && (
-                                                        <div className="text-xs text-gray-500 mt-0.5">
-                                                            DOB: {format(new Date(patient.dob), 'MM/dd/yyyy')}
-                                                        </div>
-                                                    )}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="p-4 text-center text-sm text-gray-500">
-                                            No patients found
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Search by name or MRN..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                autoFocus
+                            />
                         </div>
 
-                        {selectedPatient && (
-                            <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <div className="font-medium text-gray-900">
-                                            {selectedPatient.first_name} {selectedPatient.last_name}
-                                        </div>
-                                        {selectedPatient.mrn && (
-                                            <div className="text-sm text-gray-600">MRN: {selectedPatient.mrn}</div>
-                                        )}
-                                    </div>
-                                    <button
-                                        onClick={() => {
-                                            setSelectedPatient(null);
-                                            setSelectedVisit(null);
-                                            setSearchQuery('');
-                                            setVisits([]);
-                                        }}
-                                        className="text-gray-400 hover:text-gray-600"
-                                    >
-                                        <XCircle className="w-5 h-5" />
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {selectedPatient && (
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Select Visit</label>
-                                {visits.length === 0 ? (
-                                    <div className="text-sm text-gray-500 p-3 border border-gray-300 rounded-md">
-                                        Loading visits...
-                                    </div>
-                                ) : (
-                                    <select
-                                        value={selectedVisit?.id || ''}
-                                        onChange={(e) => {
-                                            const visit = visits.find(v => v.id === e.target.value);
-                                            setSelectedVisit(visit);
-                                        }}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    >
-                                        <option value="">Select a visit</option>
-                                        {visits
-                                            .sort((a, b) => new Date(b.visit_date) - new Date(a.visit_date))
-                                            .map(visit => (
-                                                <option key={visit.id} value={visit.id}>
-                                                    {format(new Date(visit.visit_date), 'MM/dd/yyyy')} - {visit.visit_type || 'Office Visit'}
-                                                    {!visit.note_signed_at && !visit.locked ? ' (Unsigned)' : ''}
-                                                </option>
-                                            ))}
-                                    </select>
-                                )}
-                                {visits.length > 0 && (
-                                    <div className="mt-2 text-xs text-gray-500">
-                                        Showing all visits (Signed & Unsigned)
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {selectedPatient && existingSuperbills.length > 0 && (
-                            <div className="mt-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Existing Superbills</label>
-                                <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
-                                    {existingSuperbills.map(sb => (
-                                        <button
-                                            key={sb.id}
-                                            onClick={() => {
-                                                navigate(`/patient/${selectedPatient.id}/superbill/${sb.id}`);
-                                                onClose();
-                                            }}
-                                            className="w-full flex items-center justify-between p-3 bg-white border border-gray-200 rounded hover:bg-slate-50 transition-colors"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <Receipt className="w-4 h-4 text-blue-500" />
-                                                <div className="text-left">
-                                                    <div className="text-sm font-medium text-gray-900">{format(new Date(sb.service_date_from), 'MM/dd/yyyy')}</div>
-                                                    <div className="text-xs text-gray-500">{sb.provider_first_name ? `${sb.provider_first_name} ${sb.provider_last_name}` : 'No provider'}</div>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${sb.status === 'FINALIZED' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                                                    }`}>
-                                                    {sb.status}
-                                                </span>
-                                                <ChevronRight className="w-4 h-4 text-gray-400" />
-                                            </div>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="flex justify-end pt-4 border-t gap-2">
-                            <button
-                                onClick={onClose}
-                                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleCreateSuperbill}
-                                disabled={!selectedVisit}
-                                className="px-4 py-2 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-md"
-                                style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
-                                onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
-                            >
-                                Create Superbill
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {step === 2 && selectedVisit && (
-                    <div className="space-y-4">
-                        {/* Peek at Note Button */}
-                        <div className="flex justify-end">
-                            <button
-                                onClick={() => setShowNotePreview(true)}
-                                className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md border border-gray-300 flex items-center space-x-2"
-                                title="View Visit Note"
-                            >
-                                <Eye className="w-4 h-4" />
-                                <span>Peek at Note</span>
-                            </button>
-                        </div>
-
-                        {/* Diagnosis Codes */}
-                        <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <label className="block text-sm font-medium text-gray-700">Diagnosis Codes (ICD-10)</label>
-                                <div className="flex items-center space-x-2">
-                                    {hasPrivilege('search_icd10') && (
-                                        <button
-                                            onClick={() => setShowICD10Modal(true)}
-                                            className="px-2 py-1 text-xs text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded"
-                                            title="Search ICD-10 Codes"
-                                        >
-                                            Search ICD-10
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={() => setShowAddDiagnosis(!showAddDiagnosis)}
-                                        className="px-2 py-1 text-xs text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded"
-                                    >
-                                        {showAddDiagnosis ? 'Cancel' : '+ Add'}
-                                    </button>
-                                </div>
-                            </div>
-                            {showAddDiagnosis && (
-                                <div className="mb-2 p-2 bg-gray-50 rounded border border-gray-200">
-                                    <input
-                                        type="text"
-                                        placeholder="Search ICD-10 codes..."
-                                        value={diagnosisSearch}
-                                        onChange={(e) => setDiagnosisSearch(e.target.value)}
-                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md"
-                                    />
-                                    <div className="mt-2 max-h-32 overflow-y-auto">
-                                        {availableDiagnosisCodes
-                                            .filter(code =>
-                                                code.code.toLowerCase().includes(diagnosisSearch.toLowerCase()) ||
-                                                (code.description || '').toLowerCase().includes(diagnosisSearch.toLowerCase())
-                                            )
-                                            .slice(0, 5)
-                                            .map((code) => (
-                                                <button
-                                                    key={code.id || code.code}
-                                                    onClick={() => {
-                                                        if (!diagnosisCodes.find(dx => dx.code === code.code)) {
-                                                            setDiagnosisCodes([...diagnosisCodes, {
-                                                                code: code.code,
-                                                                description: code.description || ''
-                                                            }]);
-                                                        }
-                                                        setDiagnosisSearch('');
-                                                        setShowAddDiagnosis(false);
-                                                    }}
-                                                    className="w-full text-left px-2 py-1 text-sm hover:bg-gray-100 rounded"
-                                                >
-                                                    {code.code} - {code.description}
-                                                </button>
-                                            ))}
-                                    </div>
-                                </div>
-                            )}
-                            <div className="border border-gray-300 rounded-md p-3 max-h-40 overflow-y-auto bg-gray-50">
-                                {diagnosisCodes.length === 0 ? (
-                                    <p className="text-sm text-gray-500 text-center py-2">No diagnosis codes added</p>
-                                ) : (
-                                    diagnosisCodes.map((dx, idx) => (
-                                        <div key={idx} className="flex items-center justify-between py-1 px-2 hover:bg-white rounded">
-                                            <span className="text-sm">{dx.code} - {dx.description}</span>
+                        {/* Patient search results dropdown */}
+                        {searchQuery.trim().length >= 2 && (
+                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                {searching ? (
+                                    <div className="p-4 text-center text-sm text-gray-500">Searching...</div>
+                                ) : searchResults.length > 0 ? (
+                                    <div className="divide-y divide-gray-200">
+                                        {searchResults.map((patient) => (
                                             <button
-                                                onClick={() => setDiagnosisCodes(diagnosisCodes.filter((_, i) => i !== idx))}
-                                                className="text-red-600 hover:text-red-700"
+                                                key={patient.id}
+                                                onClick={() => {
+                                                    setSelectedPatient(patient);
+                                                    setSearchQuery(`${patient.first_name} ${patient.last_name}${patient.mrn ? ` (MRN: ${patient.mrn})` : ''}`);
+                                                    setSearchResults([]);
+                                                    fetchPatientVisits(patient);
+                                                }}
+                                                className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors"
                                             >
-                                                <XCircle className="w-4 h-4" />
+                                                <div className="font-medium text-gray-900">
+                                                    {patient.first_name} {patient.last_name}
+                                                </div>
+                                                {patient.mrn && (
+                                                    <div className="text-sm text-gray-500 mt-0.5">
+                                                        MRN: {patient.mrn}
+                                                    </div>
+                                                )}
+                                                {patient.dob && (
+                                                    <div className="text-xs text-gray-500 mt-0.5">
+                                                        DOB: {format(new Date(patient.dob), 'MM/dd/yyyy')}
+                                                    </div>
+                                                )}
                                             </button>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Procedure Codes */}
-                        <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <label className="block text-sm font-medium text-gray-700">Procedure Codes (CPT)</label>
-                                <div className="flex items-center space-x-2">
-                                    {hasPrivilege('search_cpt') && (
-                                        <button
-                                            onClick={() => setShowCPTModal(true)}
-                                            className="px-2 py-1 text-xs text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded"
-                                            title="Search CPT Codes"
-                                        >
-                                            Search CPT
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={() => setShowAddProcedure(!showAddProcedure)}
-                                        className="px-2 py-1 text-xs text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded"
-                                    >
-                                        {showAddProcedure ? 'Cancel' : '+ Add'}
-                                    </button>
-                                </div>
-                            </div>
-                            {showAddProcedure && (
-                                <div className="mb-2 p-2 bg-gray-50 rounded border border-gray-200">
-                                    <input
-                                        type="text"
-                                        placeholder="Search CPT codes..."
-                                        value={procedureSearch}
-                                        onChange={(e) => setProcedureSearch(e.target.value)}
-                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md"
-                                    />
-                                    <div className="mt-2 max-h-32 overflow-y-auto">
-                                        {feeSchedule
-                                            .filter(f => f.code_type === 'CPT')
-                                            .filter(code =>
-                                                code.code.toLowerCase().includes(procedureSearch.toLowerCase()) ||
-                                                (code.description || '').toLowerCase().includes(procedureSearch.toLowerCase())
-                                            )
-                                            .slice(0, 5)
-                                            .map((code) => (
-                                                <button
-                                                    key={code.id || code.code}
-                                                    onClick={() => {
-                                                        if (!procedureCodes.find(p => p.code === code.code)) {
-                                                            setProcedureCodes([...procedureCodes, {
-                                                                code: code.code,
-                                                                description: code.description || '',
-                                                                amount: code.fee_amount || 0
-                                                            }]);
-                                                        }
-                                                        setProcedureSearch('');
-                                                        setShowAddProcedure(false);
-                                                    }}
-                                                    className="w-full text-left px-2 py-1 text-sm hover:bg-gray-100 rounded flex items-center justify-between"
-                                                >
-                                                    <span>{code.code} - {code.description}</span>
-                                                    {code.fee_amount && (
-                                                        <span className="text-xs font-semibold text-gray-600">
-                                                            ${parseFloat(code.fee_amount).toFixed(2)}
-                                                        </span>
-                                                    )}
-                                                </button>
-                                            ))}
+                                        ))}
                                     </div>
-                                </div>
-                            )}
-                            <div className="border border-gray-300 rounded-md p-3 max-h-60 overflow-y-auto bg-gray-50">
-                                {procedureCodes.length === 0 ? (
-                                    <p className="text-sm text-gray-500 text-center py-2">No procedure codes added</p>
                                 ) : (
-                                    procedureCodes.map((proc, idx) => (
-                                        <div key={idx} className="flex items-center justify-between py-1 px-2 hover:bg-white rounded">
-                                            <span className="text-sm">{proc.code} - {proc.description}</span>
-                                            <div className="flex items-center space-x-2">
-                                                <span className="text-sm font-semibold">${parseFloat(proc.amount || 0).toFixed(2)}</span>
-                                                <button
-                                                    onClick={() => setProcedureCodes(procedureCodes.filter((_, i) => i !== idx))}
-                                                    className="text-red-600 hover:text-red-700"
-                                                >
-                                                    <XCircle className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))
+                                    <div className="p-4 text-center text-sm text-gray-500">
+                                        No patients found
+                                    </div>
                                 )}
                             </div>
-                        </div>
-
-                        {/* Quality Measures Detected */}
-                        {qualityMeasures.length > 0 && (
-                            <div className="bg-green-50 border border-green-200 rounded-md p-3">
-                                <div className="flex items-center space-x-2 mb-2">
-                                    <Zap className="w-4 h-4 text-green-600" />
-                                    <span className="text-sm font-semibold text-green-800">Quality Measures Detected</span>
-                                </div>
-                                <div className="space-y-1">
-                                    {qualityMeasures.map((measure, idx) => (
-                                        <div key={idx} className="text-xs text-green-700 flex items-center space-x-2">
-                                            <CheckCircle2 className="w-3 h-3" />
-                                            <span className="capitalize">{measure.measure.replace(/([A-Z])/g, ' $1').trim()}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
                         )}
-
-                        {/* Billing Optimization Notes */}
-                        {billingNotes.length > 0 && (
-                            <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                                <div className="flex items-center space-x-2 mb-2">
-                                    <Info className="w-4 h-4 text-blue-600" />
-                                    <span className="text-sm font-semibold text-blue-800">Billing Notes</span>
-                                </div>
-                                <div className="space-y-1">
-                                    {billingNotes.map((note, idx) => (
-                                        <div key={idx} className="text-xs text-blue-700 flex items-start space-x-2">
-                                            {note.startsWith('💡') ? (
-                                                <>
-                                                    <Lightbulb className="w-3 h-3 mt-0.5 text-yellow-500 flex-shrink-0" />
-                                                    <span>{note.replace('💡 TIP: ', '')}</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <span className="text-blue-500">•</span>
-                                                    <span>{note}</span>
-                                                </>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Total */}
-                        <div className="border-t pt-4">
-                            <div className="flex justify-between items-center">
-                                <span className="text-lg font-semibold">Total Amount:</span>
-                                <span className="text-xl font-bold text-primary-600">${totalAmount.toFixed(2)}</span>
-                            </div>
-                            <p className="text-xs text-gray-500 mt-1">Based on 2024 Medicare Physician Fee Schedule rates</p>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex justify-end space-x-2">
-                            <button
-                                onClick={() => setStep(1)}
-                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                            >
-                                Back
-                            </button>
-                            <button
-                                onClick={handleCreateSuperbill}
-                                disabled={loading || diagnosisCodes.length === 0 || procedureCodes.length === 0}
-                                className="px-4 py-2 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-md"
-                                style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
-                                onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
-                            >
-                                {loading ? 'Creating...' : 'Create Superbill'}
-                            </button>
-                        </div>
                     </div>
-                )}
 
-                {/* Note Preview Modal */}
-                {showNotePreview && visitNote && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setShowNotePreview(false)}>
-                        <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-                            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                                <h3 className="text-lg font-semibold text-gray-900">Visit Note Preview</h3>
-                                <button onClick={() => setShowNotePreview(false)} className="p-1 hover:bg-gray-100 rounded">
-                                    <X className="w-5 h-5" />
+                    {selectedPatient && (
+                        <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <div className="font-medium text-gray-900">
+                                        {selectedPatient.first_name} {selectedPatient.last_name}
+                                    </div>
+                                    {selectedPatient.mrn && (
+                                        <div className="text-sm text-gray-600">MRN: {selectedPatient.mrn}</div>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        setSelectedPatient(null);
+                                        setSelectedVisit(null);
+                                        setSearchQuery('');
+                                        setVisits([]);
+                                    }}
+                                    className="text-gray-400 hover:text-gray-600"
+                                >
+                                    <XCircle className="w-5 h-5" />
                                 </button>
                             </div>
-                            <div className="flex-1 overflow-y-auto p-6">
-                                <pre className="whitespace-pre-wrap text-sm text-gray-900 font-mono">{visitNote}</pre>
+                        </div>
+                    )}
+
+                    {selectedPatient && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Select Visit</label>
+                            {visits.length === 0 ? (
+                                <div className="text-sm text-gray-500 p-3 border border-gray-300 rounded-md">
+                                    Loading visits...
+                                </div>
+                            ) : (
+                                <select
+                                    value={selectedVisit?.id || ''}
+                                    onChange={(e) => {
+                                        const visit = visits.find(v => v.id === e.target.value);
+                                        setSelectedVisit(visit);
+                                    }}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                >
+                                    <option value="">Select a visit</option>
+                                    {visits
+                                        .sort((a, b) => new Date(b.visit_date) - new Date(a.visit_date))
+                                        .map(visit => (
+                                            <option key={visit.id} value={visit.id}>
+                                                {format(new Date(visit.visit_date), 'MM/dd/yyyy')} - {visit.visit_type || 'Office Visit'}
+                                                {!visit.note_signed_at && !visit.locked ? ' (Unsigned)' : ''}
+                                            </option>
+                                        ))}
+                                </select>
+                            )}
+                            {visits.length > 0 && (
+                                <div className="mt-2 text-xs text-gray-500">
+                                    Showing all visits (Signed & Unsigned)
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {selectedPatient && existingSuperbills.length > 0 && (
+                        <div className="mt-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Existing Superbills</label>
+                            <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                                {existingSuperbills.map(sb => (
+                                    <button
+                                        key={sb.id}
+                                        onClick={() => {
+                                            navigate(`/patient/${selectedPatient.id}/superbill/${sb.id}`);
+                                            onClose();
+                                        }}
+                                        className="w-full flex items-center justify-between p-3 bg-white border border-gray-200 rounded hover:bg-slate-50 transition-colors"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <Receipt className="w-4 h-4 text-blue-500" />
+                                            <div className="text-left">
+                                                <div className="text-sm font-medium text-gray-900">{format(new Date(sb.service_date_from), 'MM/dd/yyyy')}</div>
+                                                <div className="text-xs text-gray-500">{sb.provider_first_name ? `${sb.provider_first_name} ${sb.provider_last_name}` : 'No provider'}</div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${sb.status === 'FINALIZED' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                                                }`}>
+                                                {sb.status}
+                                            </span>
+                                            <ChevronRight className="w-4 h-4 text-gray-400" />
+                                        </div>
+                                    </button>
+                                ))}
                             </div>
                         </div>
+                    )}
+
+                    <div className="flex justify-end pt-4 border-t gap-2">
+                        <button
+                            onClick={onClose}
+                            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleCreateSuperbill}
+                            disabled={!selectedVisit}
+                            className="px-4 py-2 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-md"
+                            style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                            onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+                            onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
+                        >
+                            Create Superbill
+                        </button>
                     </div>
-                )}
+                </div>
 
-                {/* Code Search Modals */}
-                {hasPrivilege('search_icd10') && (
-                    <CodeSearchModal
-                        isOpen={showICD10Modal}
-                        onClose={() => setShowICD10Modal(false)}
-                        onSelect={(code) => {
-                            if (!diagnosisCodes.find(d => d.code === code.code)) {
-                                setDiagnosisCodes([...diagnosisCodes, {
-                                    code: code.code,
-                                    description: code.description || ''
-                                }]);
-                            }
-                            setShowICD10Modal(false);
-                        }}
-                        codeType="ICD10"
-                        multiSelect={true}
-                        selectedCodes={diagnosisCodes}
-                    />
-                )}
-
-                {hasPrivilege('search_cpt') && (
-                    <CodeSearchModal
-                        isOpen={showCPTModal}
-                        onClose={() => setShowCPTModal(false)}
-                        onSelect={(code) => {
-                            if (!procedureCodes.find(p => p.code === code.code)) {
-                                const feeCode = feeSchedule.find(f => f.code === code.code && f.code_type === 'CPT');
-                                setProcedureCodes([...procedureCodes, {
-                                    code: code.code,
-                                    description: code.description || '',
-                                    amount: feeCode?.fee_amount || 0
-                                }]);
-                            }
-                            setShowCPTModal(false);
-                        }}
-                        codeType="CPT"
-                        multiSelect={true}
-                        selectedCodes={procedureCodes}
-                    />
-                )}
             </div>
         </Modal>
     );
