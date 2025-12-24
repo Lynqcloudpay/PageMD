@@ -124,6 +124,11 @@ const Superbill = () => {
     const [isFinalizing, setIsFinalizing] = useState(false);
 
     const handleFinalize = async () => {
+        // Warning if note is not signed
+        if (!sb.note_signed_at && !window.confirm('⚠️ Warning: Clinical note is NOT SIGNED.\n\nAre you sure you want to finalize this superbill?')) {
+            return;
+        }
+
         if (!window.confirm('Finalize this superbill? This will lock editing.')) return;
 
         setIsFinalizing(true);
@@ -131,10 +136,8 @@ const Superbill = () => {
             const response = await superbillsAPI.finalize(superbillId);
             if (response.data) {
                 setSb(response.data);
-                // Optional: Show success message or toast
                 alert('Superbill finalized successfully.');
             } else {
-                // Fallback if no data returned (shouldn't happen with updated API)
                 fetchData();
             }
         } catch (error) {
@@ -421,6 +424,24 @@ const Superbill = () => {
                                                                 disabled={isLocked}
                                                                 maxLength={2}
                                                                 onChange={(e) => handleUpdateLine(line.id, { modifier2: e.target.value })}
+                                                                className="w-8 bg-slate-50 border-b border-slate-200 outline-none focus:border-blue-400 text-center uppercase"
+                                                                placeholder="--"
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                value={line.modifier3 || ''}
+                                                                disabled={isLocked}
+                                                                maxLength={2}
+                                                                onChange={(e) => handleUpdateLine(line.id, { modifier3: e.target.value })}
+                                                                className="w-8 bg-slate-50 border-b border-slate-200 outline-none focus:border-blue-400 text-center uppercase"
+                                                                placeholder="--"
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                value={line.modifier4 || ''}
+                                                                disabled={isLocked}
+                                                                maxLength={2}
+                                                                onChange={(e) => handleUpdateLine(line.id, { modifier4: e.target.value })}
                                                                 className="w-8 bg-slate-50 border-b border-slate-200 outline-none focus:border-blue-400 text-center uppercase"
                                                                 placeholder="--"
                                                             />

@@ -198,9 +198,11 @@ router.get('/:id', requirePermission('billing:view'), async (req, res) => {
              p.first_name as patient_first_name, p.last_name as patient_last_name, p.mrn, p.dob,
              render.first_name as rendering_first_name, render.last_name as rendering_last_name, render.npi as rendering_npi,
              bill.first_name as billing_first_name, bill.last_name as billing_last_name, bill.npi as billing_npi,
-             loc.name as location_name, loc.address_line1 as location_address
+             loc.name as location_name, loc.address_line1 as location_address,
+             v.note_signed_at
       FROM superbills s
       JOIN patients p ON s.patient_id = p.id
+      JOIN visits v ON s.visit_id = v.id
       JOIN users render ON s.rendering_provider_id = render.id
       JOIN users bill ON s.billing_provider_id = bill.id
       LEFT JOIN locations loc ON s.facility_location_id = loc.id
@@ -341,16 +343,17 @@ router.post('/:id/lines', requirePermission('billing:edit'), async (req, res) =>
     const client = await pool.connect();
     try {
         const { id } = req.params;
-        const { cpt_code, description, modifier1, units, charge, diagnosis_pointers, service_date } = req.body;
+        const { cpt_code, description, modifier1, modifier2, modifier3, modifier4, units, charge, diagnosis_pointers, service_date } = req.body;
 
         await client.query('BEGIN');
         const result = await client.query(`
       INSERT INTO superbill_lines (
-        superbill_id, cpt_code, description, modifier1, 
+        superbill_id, cpt_code, description, 
+        modifier1, modifier2, modifier3, modifier4, 
         units, charge, diagnosis_pointers, service_date
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
-    `, [id, cpt_code, description, modifier1, units || 1, charge || 0.00, diagnosis_pointers, service_date]);
+    `, [id, cpt_code, description, modifier1, modifier2, modifier3, modifier4, units || 1, charge || 0.00, diagnosis_pointers, service_date]);
 
         // Update totals
         await client.query(`
@@ -391,7 +394,7 @@ router.put('/:id/lines/:lineId', requirePermission('billing:edit'), async (req, 
     const client = await pool.connect();
     try {
         const { id, lineId } = req.params;
-        const { modifier1, modifier2, units, charge, diagnosis_pointers, service_date } = req.body;
+        const { modifier1, modifier2, modifier3, modifier4, units, charge, diagnosis_pointers, service_date } = req.body;
 
         await client.query('BEGIN');
 
@@ -399,13 +402,15 @@ router.put('/:id/lines/:lineId', requirePermission('billing:edit'), async (req, 
       UPDATE superbill_lines SET
         modifier1 = COALESCE($1, modifier1),
         modifier2 = COALESCE($2, modifier2),
-        units = COALESCE($3, units),
-        charge = COALESCE($4, charge),
-        diagnosis_pointers = COALESCE($5, diagnosis_pointers),
-        service_date = COALESCE($6, service_date),
+        modifier3 = COALESCE($3, modifier3),
+        modifier4 = COALESCE($4, modifier4),
+        units = COALESCE($5, units),
+        charge = COALESCE($6, charge),
+        diagnosis_pointers = COALESCE($7, diagnosis_pointers),
+        service_date = COALESCE($8, service_date),
         updated_at = NOW()
-      WHERE id = $7 AND superbill_id = $8
-    `, [modifier1, modifier2, units, charge, diagnosis_pointers, service_date, lineId, id]);
+      WHERE id = $9 AND superbill_id = $10
+    `, [modifier1, modifier2, modifier3, modifier4, units, charge, diagnosis_pointers, service_date, lineId, id]);
 
         // Update totals
         await client.query(`
