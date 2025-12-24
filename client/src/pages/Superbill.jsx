@@ -130,8 +130,12 @@ const Superbill = () => {
                 ...prev,
                 lines: prev.lines.map(l => l.id === lineId ? { ...l, ...updates } : l)
             }));
-            // We might need to refresh because totals change on the server
-            fetchData();
+            // Only refetch data if we changed something that affects totals
+            // Don't refetch for diagnosis_pointers or modifiers - they don't change totals
+            const changesAffectTotals = 'units' in updates || 'charge' in updates;
+            if (changesAffectTotals) {
+                fetchData();
+            }
         } catch (error) {
             console.error('Error updating line:', error);
         }
