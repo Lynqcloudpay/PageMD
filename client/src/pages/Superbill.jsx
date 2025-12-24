@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
     Save, CheckCircle, Printer, FileDown, Trash2, Plus,
     Search, Shield, Building, User, Calendar, Info,
-    ChevronRight, AlertTriangle, X, FileText, ArrowLeft
+    ChevronRight, AlertTriangle, X, FileText, ArrowLeft, RefreshCw
 } from 'lucide-react';
 import { superbillsAPI, codesAPI, authAPI, settingsAPI } from '../services/api';
 import { format } from 'date-fns';
@@ -23,6 +23,22 @@ const Superbill = () => {
     const [showCPTModal, setShowCPTModal] = useState(false);
     const [saving, setSaving] = useState(false);
     const [validationErrors, setValidationErrors] = useState([]);
+    const [showClinicalNote, setShowClinicalNote] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    const handleSync = async () => {
+        setIsSyncing(true);
+        try {
+            const res = await superbillsAPI.sync(superbillId);
+            alert(`Sync Complete!\nAdded ${res.data.new_diagnoses} new diagnoses and ${res.data.new_lines} suggested lines.`);
+            fetchData();
+        } catch (error) {
+            console.error('Sync error:', error);
+            alert('Failed to sync from note.');
+        } finally {
+            setIsSyncing(false);
+        }
+    };
 
     useEffect(() => {
         fetchData();
@@ -124,6 +140,13 @@ const Superbill = () => {
     const [isFinalizing, setIsFinalizing] = useState(false);
 
     const handleFinalize = async () => {
+        // Validation: Diagnosis Pointers for every line
+        const missingPtrs = sb.lines.some(l => !l.diagnosis_pointers || l.diagnosis_pointers.trim() === '');
+        if (missingPtrs) {
+            alert('❌ Medical Necessity Error:\n\nEvery procedure line MUST have at least one diagnosis pointer (1, 2, etc.) linking it to a diagnosis.');
+            return;
+        }
+
         // Warning if note is not signed
         if (!sb.note_signed_at && !window.confirm('⚠️ Warning: Clinical note is NOT SIGNED.\n\nAre you sure you want to finalize this superbill?')) {
             return;
@@ -163,6 +186,34 @@ const Superbill = () => {
     const isVoid = sb.status === 'VOID';
     const isLocked = isFinalized || isVoid;
 
+    const handleAcceptSuggestion = async (line) => {
+        try {
+            await superbillsAPI.addLine(superbillId, {
+                cpt_code: line.cpt_code,
+                description: line.description,
+                units: line.units || 1,
+                charge: line.charge || 0,
+                service_date: sb.service_date_from,
+                diagnosis_pointers: '1' // Default
+            });
+            await superbillsAPI.deleteSuggestedLine(superbillId, line.id);
+            fetchData();
+        } catch (error) {
+            console.error(error);
+            alert('Failed to accept suggestion');
+        }
+    };
+
+    const handleRejectSuggestion = async (lineId) => {
+        try {
+            await superbillsAPI.deleteSuggestedLine(superbillId, lineId);
+            fetchData();
+        } catch (error) {
+            console.error(error);
+            alert('Failed to reject suggestion');
+        }
+    };
+
     return (
         <div className="flex flex-col h-screen bg-slate-50 text-slate-900 overflow-hidden">
             {/* Header */}
@@ -185,6 +236,21 @@ const Superbill = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setShowClinicalNote(!showClinicalNote)}
+                        className={`flex items-center gap-2 px-3 py-2 border rounded-lg font-medium transition-all shadow-sm ${showClinicalNote ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+                    >
+                        <FileText className="w-4 h-4" /> {showClinicalNote ? 'Hide Note' : 'Show Note'}
+                    </button>
+                    {!isLocked && (
+                        <button
+                            onClick={handleSync}
+                            disabled={isSyncing}
+                            className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-all shadow-sm disabled:opacity-50"
+                        >
+                            <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} /> Sync
+                        </button>
+                    )}
                     {!isLocked && (
                         <>
                             <button
@@ -325,10 +391,9 @@ const Superbill = () => {
                         </Card>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start h-full">
                         {/* Diagnoses Panel */}
-                        <div className="lg:col-span-4 space-y-6">
+                        <div className={`${showClinicalNote ? 'lg:col-span-3' : 'lg:col-span-4'} space-y-6 flex flex-col`}>
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                                 <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
                                     <h3 className="font-bold flex items-center gap-2 text-sm text-slate-700">
@@ -343,7 +408,7 @@ const Superbill = () => {
                                         </button>
                                     )}
                                 </div>
-                                <div className="p-4 space-y-2">
+                                <div className="p-4 space-y-2 max-h-[400px] overflow-y-auto">
                                     {sb.diagnoses.length === 0 ? (
                                         <p className="text-xs text-slate-400 italic text-center py-4">No diagnoses added</p>
                                     ) : (
@@ -371,8 +436,36 @@ const Superbill = () => {
                             </div>
                         </div>
 
-                        {/* Procedures Table */}
-                        <div className="lg:col-span-8 space-y-6">
+                        {/* Middle Column: Procedures + Suggested */}
+                        <div className={`${showClinicalNote ? 'lg:col-span-4' : 'lg:col-span-8'} space-y-6`}>
+
+                            {/* Suggested Lines Section */}
+                            {sb.suggested_lines && sb.suggested_lines.length > 0 && (
+                                <div className="bg-indigo-50/50 rounded-xl border border-indigo-100 overflow-hidden">
+                                    <div className="px-4 py-2 border-b border-indigo-100 flex items-center justify-between bg-indigo-50">
+                                        <h3 className="font-bold text-xs text-indigo-700 uppercase tracking-wide flex items-center gap-2">
+                                            <Info className="w-4 h-4" /> Suggested Services (from Orders)
+                                        </h3>
+                                    </div>
+                                    <div className="divide-y divide-indigo-100">
+                                        {sb.suggested_lines.map(s => (
+                                            <div key={s.id} className="p-3 flex items-center justify-between hover:bg-indigo-50 transition-colors">
+                                                <div className="text-sm">
+                                                    <span className="font-bold text-indigo-900 mr-2">{s.cpt_code}</span>
+                                                    <span className="text-indigo-800">{s.description}</span>
+                                                    <span className="ml-2 text-[10px] font-bold text-indigo-500 bg-white border border-indigo-200 px-1.5 rounded">{s.source}</span>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => handleRejectSuggestion(s.id)} className="p-1 px-2 text-red-400 hover:bg-white hover:text-red-600 rounded text-xs font-medium">Ignore</button>
+                                                    <button onClick={() => handleAcceptSuggestion(s)} className="p-1 px-3 bg-indigo-600 text-white rounded text-xs font-bold hover:bg-indigo-700 shadow-sm">Accept</button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Procedures Table */}
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                                 <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
                                     <h3 className="font-bold flex items-center gap-2 text-sm text-slate-700">
@@ -406,7 +499,7 @@ const Superbill = () => {
                                             ) : sb.lines.map(line => (
                                                 <tr key={line.id} className="hover:bg-slate-50/50 group transition-colors">
                                                     <td className="px-4 py-3 font-bold text-blue-600">{line.cpt_code}</td>
-                                                    <td className="px-4 py-3 font-medium text-slate-600 max-w-[200px] truncate">{line.description}</td>
+                                                    <td className="px-4 py-3 font-medium text-slate-600 max-w-[150px] truncate">{line.description}</td>
                                                     <td className="px-4 py-3">
                                                         <div className="flex gap-1">
                                                             <input
@@ -415,7 +508,7 @@ const Superbill = () => {
                                                                 disabled={isLocked}
                                                                 maxLength={2}
                                                                 onChange={(e) => handleUpdateLine(line.id, { modifier1: e.target.value })}
-                                                                className="w-8 bg-slate-50 border-b border-slate-200 outline-none focus:border-blue-400 text-center uppercase"
+                                                                className="w-7 bg-slate-50 border-b border-slate-200 outline-none focus:border-blue-400 text-center uppercase text-xs"
                                                                 placeholder="--"
                                                             />
                                                             <input
@@ -424,7 +517,7 @@ const Superbill = () => {
                                                                 disabled={isLocked}
                                                                 maxLength={2}
                                                                 onChange={(e) => handleUpdateLine(line.id, { modifier2: e.target.value })}
-                                                                className="w-8 bg-slate-50 border-b border-slate-200 outline-none focus:border-blue-400 text-center uppercase"
+                                                                className="w-7 bg-slate-50 border-b border-slate-200 outline-none focus:border-blue-400 text-center uppercase text-xs"
                                                                 placeholder="--"
                                                             />
                                                             <input
@@ -433,7 +526,7 @@ const Superbill = () => {
                                                                 disabled={isLocked}
                                                                 maxLength={2}
                                                                 onChange={(e) => handleUpdateLine(line.id, { modifier3: e.target.value })}
-                                                                className="w-8 bg-slate-50 border-b border-slate-200 outline-none focus:border-blue-400 text-center uppercase"
+                                                                className="w-7 bg-slate-50 border-b border-slate-200 outline-none focus:border-blue-400 text-center uppercase text-xs"
                                                                 placeholder="--"
                                                             />
                                                             <input
@@ -442,7 +535,7 @@ const Superbill = () => {
                                                                 disabled={isLocked}
                                                                 maxLength={2}
                                                                 onChange={(e) => handleUpdateLine(line.id, { modifier4: e.target.value })}
-                                                                className="w-8 bg-slate-50 border-b border-slate-200 outline-none focus:border-blue-400 text-center uppercase"
+                                                                className="w-7 bg-slate-50 border-b border-slate-200 outline-none focus:border-blue-400 text-center uppercase text-xs"
                                                                 placeholder="--"
                                                             />
                                                         </div>
@@ -453,7 +546,7 @@ const Superbill = () => {
                                                             value={line.units}
                                                             disabled={isLocked}
                                                             onChange={(e) => handleUpdateLine(line.id, { units: parseInt(e.target.value) || 1 })}
-                                                            className="w-12 bg-transparent text-right outline-none focus:border-b focus:border-blue-400"
+                                                            className="w-10 bg-transparent text-right outline-none focus:border-b focus:border-blue-400"
                                                         />
                                                     </td>
                                                     <td className="px-4 py-3 text-right font-semibold">
@@ -463,16 +556,16 @@ const Superbill = () => {
                                                             disabled={isLocked}
                                                             step="0.01"
                                                             onChange={(e) => handleUpdateLine(line.id, { charge: parseFloat(e.target.value) || 0 })}
-                                                            className="w-20 bg-transparent text-right outline-none focus:border-b focus:border-blue-400 font-semibold"
+                                                            className="w-16 bg-transparent text-right outline-none focus:border-b focus:border-blue-400 font-semibold"
                                                         />
                                                     </td>
                                                     <td className="px-4 py-3 text-center">
                                                         <input
                                                             type="text"
-                                                            value={line.diagnosis_pointers || '1'}
+                                                            value={line.diagnosis_pointers || ''}
                                                             disabled={isLocked}
                                                             onChange={(e) => handleUpdateLine(line.id, { diagnosis_pointers: e.target.value })}
-                                                            className="w-16 bg-slate-100 px-2 py-0.5 rounded text-slate-600 text-center text-xs outline-none focus:ring-1 focus:ring-blue-400"
+                                                            className={`w-14 bg-slate-100 px-2 py-0.5 rounded text-slate-600 text-center text-xs outline-none focus:ring-1 focus:ring-blue-400 ${!line.diagnosis_pointers ? 'border border-red-300 bg-red-50' : ''}`}
                                                             placeholder="1,2"
                                                         />
                                                     </td>
@@ -507,6 +600,34 @@ const Superbill = () => {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Right Column: Justification Panel */}
+                        {showClinicalNote && (
+                            <div className="lg:col-span-5 h-[calc(100vh-250px)] overflow-hidden flex flex-col bg-white border border-slate-200 rounded-xl shadow-lg">
+                                <div className="bg-blue-50/50 px-4 py-3 border-b border-blue-100 font-bold text-blue-800 flex justify-between items-center text-sm">
+                                    <span className="flex items-center gap-2"><FileText className="w-4 h-4" /> Medical Necessity Assistant</span>
+                                    <button onClick={() => setShowClinicalNote(false)}><X className="w-4 h-4 text-slate-400 hover:text-slate-600" /></button>
+                                </div>
+                                <div className="p-4 overflow-y-auto flex-1 bg-white text-sm leading-relaxed text-slate-700 font-serif">
+                                    {sb.note_draft ? (
+                                        <div className="space-y-4">
+                                            <div className="p-3 bg-yellow-50 border border-yellow-100 rounded text-xs text-yellow-800">
+                                                <strong>Tip:</strong> Ensure every procedure on the left is justified by the documentation below.
+                                                Link diagnoses (e.g. "I10") using the "Pointer" column.
+                                            </div>
+                                            <div className="prose prose-sm max-w-none">
+                                                {/* Simple render of note text, preserving whitespace */}
+                                                <div className="whitespace-pre-wrap">{sb.note_draft}</div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-10 text-slate-400 italic">
+                                            No clinical note content available for reference.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div >
             </main >

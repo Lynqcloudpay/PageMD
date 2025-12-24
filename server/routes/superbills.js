@@ -81,9 +81,11 @@ router.post('/from-visit/:visitId', requirePermission('billing:edit'), async (re
 
         const superbill = superbillInsert.rows[0];
 
-        // 4. Prepopulate Diagnoses from order_diagnoses/problems
-        // 4. Prepopulate Diagnoses
-        // First, get diagnoses from orders
+        // 4. Prepopulate Diagnoses (Merge Logic)
+        // Sources: Note Assessment, Existing Orders
+        const diagnosisMap = new Map();
+
+        // A. From Orders
         const orderDiags = await client.query(`
           SELECT DISTINCT pr.icd10_code, pr.problem_name as description
           FROM order_diagnoses od
@@ -92,55 +94,72 @@ router.post('/from-visit/:visitId', requirePermission('billing:edit'), async (re
           OR od.order_id IN (SELECT id FROM referrals WHERE visit_id = $1)
         `, [visitId]);
 
-        const allDiags = [...orderDiags.rows];
+        orderDiags.rows.forEach(d => diagnosisMap.set(d.icd10_code, d.description));
 
-        // Second, parse from note_draft (Assessment section)
+        // B. From Note Assessment
         if (visit.note_draft) {
-            // Find "Assessment:" section
             const assessmentMatch = visit.note_draft.match(/Assessment:([\s\S]*?)(?:Plan:|$)/i);
             if (assessmentMatch && assessmentMatch[1]) {
-                const assessmentText = assessmentMatch[1];
-                // Regex for "Code - Description" e.g., "I10 - Hypertension" or "I10 Hypertension"
-                // Matches standard ICD-10 format: [A-Z][0-9]{2}(?:\.[0-9]{1,4})?
-                const diagMatches = assessmentText.matchAll(/([A-Z][0-9]{2}(?:\.[0-9]{1,4})?)\s*[-–:]?\s*([^\n]+)/g);
-
-                for (const match of diagMatches) {
+                const text = assessmentMatch[1];
+                // Regex for ICD-10 like "I10 - Hypertension" or "I10"
+                const icdRegex = /([A-Z][0-9]{2}(?:\.[0-9]{1,4})?)\s*(?:[-–:])?\s*([^\n\r,]*)/g;
+                let match;
+                while ((match = icdRegex.exec(text)) !== null) {
                     const code = match[1];
-                    const description = match[2].trim();
-                    // Avoid duplicates
-                    if (!allDiags.find(d => d.icd10_code === code)) {
-                        allDiags.push({ icd10_code: code, description });
+                    const desc = match[2]?.trim() || 'Diagnosis from Note';
+                    if (!diagnosisMap.has(code)) {
+                        diagnosisMap.set(code, desc);
                     }
                 }
             }
         }
 
-        // Insert distinct ICD-10 codes (limit 12)
-        const uniqueDiags = [];
-        const seenCodes = new Set();
-        for (const d of allDiags) {
-            if (!seenCodes.has(d.icd10_code) && uniqueDiags.length < 12) {
-                seenCodes.add(d.icd10_code);
-                uniqueDiags.push(d);
-            }
-        }
-
-        for (let i = 0; i < uniqueDiags.length; i++) {
-            const diag = uniqueDiags[i];
+        // Insert Diagnoses (Max 12)
+        const diagsToInsert = Array.from(diagnosisMap.entries()).slice(0, 12);
+        for (let i = 0; i < diagsToInsert.length; i++) {
+            const [code, desc] = diagsToInsert[i];
             await client.query(`
                 INSERT INTO superbill_diagnoses (superbill_id, icd10_code, description, sequence)
                 VALUES ($1, $2, $3, $4)
-            `, [superbill.id, diag.icd10_code, diag.description, i + 1]);
+                ON CONFLICT (superbill_id, icd10_code) DO NOTHING
+            `, [superbill.id, code, desc, i + 1]);
         }
 
-        // 5. Prepopulate Lines from orders/charges (if any)
-        // For now, let's just add a default E&M code if it's an office visit
-        if (visit.note_type === 'office_visit') {
-            await client.query(`
-        INSERT INTO superbill_lines (superbill_id, cpt_code, description, units, charge, diagnosis_pointers, service_date)
-        VALUES ($1, '99213', 'Office visit, established patient', 1, 100.00, '1', $2)
-      `, [superbill.id, serviceDate]);
+        // 5. Populate Suggested Lines from Orders
+        // Map common orders to CPTs (Mock Mapping)
+        const orderResults = await client.query(`
+            SELECT type, description, id FROM orders WHERE visit_id = $1 AND status != 'CANCELLED'
+        `, [visitId]);
+
+        for (const order of orderResults.rows) {
+            let cpt = null;
+            let desc = order.description;
+
+            // Simple keyword mapping for demo
+            if (order.type === 'lab') {
+                if (desc.match(/cbc/i)) cpt = '85025';
+                else if (desc.match(/cmp|comprehensive/i)) cpt = '80053';
+                else if (desc.match(/lipid/i)) cpt = '80061';
+                else if (desc.match(/ts/i)) cpt = '84443';
+            } else if (order.type === 'imaging') {
+                if (desc.match(/x-ray/i)) cpt = '71046'; // Chest X-ray
+                else if (desc.match(/ekg|ecg/i)) cpt = '93000';
+            }
+
+            if (cpt) {
+                await client.query(`
+                    INSERT INTO superbill_suggested_lines (
+                        superbill_id, source, source_id, cpt_code, description, charge, status
+                    ) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')
+                 `, [superbill.id, `ORDER_${order.type.toUpperCase()}`, order.id, cpt, desc, 0.00]);
+            }
         }
+
+        // Audit Log
+        await client.query(`
+            INSERT INTO superbill_audit_logs (superbill_id, user_id, action, changes)
+            VALUES ($1, $2, 'CREATE', $3)
+        `, [superbill.id, req.user.id, JSON.stringify({ type: 'initial_creation' })]);
 
         // Update totals
         await client.query(`
@@ -199,7 +218,7 @@ router.get('/:id', requirePermission('billing:view'), async (req, res) => {
              render.first_name as rendering_first_name, render.last_name as rendering_last_name, render.npi as rendering_npi,
              bill.first_name as billing_first_name, bill.last_name as billing_last_name, bill.npi as billing_npi,
              loc.name as location_name, loc.address_line1 as location_address,
-             v.note_signed_at
+             v.note_signed_at, v.note_draft, v.note_type
       FROM superbills s
       JOIN patients p ON s.patient_id = p.id
       JOIN visits v ON s.visit_id = v.id
@@ -468,14 +487,20 @@ router.post('/:id/finalize', requirePermission('billing:edit'), async (req, res)
         const { id } = req.params;
 
         // Validation
+        // Strict Commercial-Grade Validation
         const diagCount = await client.query('SELECT count(*) FROM superbill_diagnoses WHERE superbill_id = $1', [id]);
-        const lineCount = await client.query('SELECT count(*) FROM superbill_lines WHERE superbill_id = $1', [id]);
-
         if (parseInt(diagCount.rows[0].count) === 0) {
             return res.status(400).json({ error: 'At least one diagnosis required to finalize' });
         }
-        if (parseInt(lineCount.rows[0].count) === 0) {
+
+        const linesResult = await client.query('SELECT * FROM superbill_lines WHERE superbill_id = $1', [id]);
+        if (linesResult.rows.length === 0) {
             return res.status(400).json({ error: 'At least one line item required to finalize' });
+        }
+
+        const invalidLines = linesResult.rows.filter(l => !l.diagnosis_pointers || l.diagnosis_pointers.trim() === '');
+        if (invalidLines.length > 0) {
+            return res.status(400).json({ error: `Line item '${invalidLines[0].cpt_code}' is missing Diagnosis Pointers.` });
         }
 
         const result = await client.query(
@@ -584,8 +609,9 @@ async function getFullSuperbillData(id) {
 
     const diags = await pool.query('SELECT * FROM superbill_diagnoses WHERE superbill_id = $1 ORDER BY sequence', [id]);
     const lines = await pool.query('SELECT * FROM superbill_lines WHERE superbill_id = $1 ORDER BY service_date', [id]);
+    const suggested = await pool.query('SELECT * FROM superbill_suggested_lines WHERE superbill_id = $1 AND status != \'REJECTED\' ORDER BY created_at', [id]);
 
-    return { ...sb, diagnoses: diags.rows, lines: lines.rows };
+    return { ...sb, diagnoses: diags.rows, lines: lines.rows, suggested_lines: suggested.rows };
 }
 
 // Helper: CMS-1500 Mapper
@@ -635,5 +661,133 @@ function edi837pStructure(sb) {
         }
     };
 }
+router.delete('/:id/suggested-lines/:lineId', requirePermission('billing:edit'), async (req, res) => {
+    try {
+        const { id, lineId } = req.params;
+        await pool.query('DELETE FROM superbill_suggested_lines WHERE id = $1 AND superbill_id = $2', [lineId, id]);
+        res.json({ message: 'Suggested line removed' });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to remove suggested line' });
+    }
+});
+
+/**
+ * POST /api/superbills/:id/sync
+     * Manually triggers sync from Visit Note & Orders
+     */
+router.post('/:id/sync', requirePermission('billing:edit'), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { id } = req.params;
+
+        // 1. Get Superbill and Visit Info
+        const sbResult = await client.query('SELECT * FROM superbills WHERE id = $1', [id]);
+        if (sbResult.rows.length === 0) return res.status(404).json({ error: 'Superbill not found' });
+        const superbill = sbResult.rows[0];
+
+        if (superbill.status === 'FINALIZED' || superbill.status === 'VOID') {
+            return res.status(400).json({ error: 'Cannot sync finalized or voided superbill' });
+        }
+
+        const visitResult = await client.query('SELECT * FROM visits WHERE id = $1', [superbill.visit_id]);
+        const visit = visitResult.rows[0];
+
+        await client.query('BEGIN');
+
+        // 2. Sync Diagnoses (Merge)
+        const diagMap = new Map();
+
+        // Load existing
+        const existingDiags = await client.query('SELECT icd10_code FROM superbill_diagnoses WHERE superbill_id = $1', [id]);
+        existingDiags.rows.forEach(d => diagMap.set(d.icd10_code, true));
+
+        // Find new from Note
+        const newDiags = [];
+        if (visit.note_draft) {
+            const assessmentMatch = visit.note_draft.match(/Assessment:([\s\S]*?)(?:Plan:|$)/i);
+            if (assessmentMatch && assessmentMatch[1]) {
+                const text = assessmentMatch[1];
+                const icdRegex = /([A-Z][0-9]{2}(?:\.[0-9]{1,4})?)\s*(?:[-–:])?\s*([^\n\r,]*)/g;
+                let match;
+                while ((match = icdRegex.exec(text)) !== null) {
+                    const code = match[1];
+                    const desc = match[2]?.trim() || 'Diagnosis from Note';
+                    if (!diagMap.has(code)) {
+                        newDiags.push({ code, desc });
+                        diagMap.set(code, true);
+                    }
+                }
+            }
+        }
+
+        // Insert new diagnoses
+        let nextSeq = existingDiags.rows.length + 1;
+        for (const d of newDiags) {
+            if (nextSeq <= 12) {
+                await client.query(`
+                    INSERT INTO superbill_diagnoses (superbill_id, icd10_code, description, sequence)
+                    VALUES ($1, $2, $3, $4)
+                    ON CONFLICT (superbill_id, icd10_code) DO NOTHING
+                `, [id, d.code, d.description, nextSeq++]);
+            }
+        }
+
+        // 3. Sync Suggested Lines (Orders)
+        // Only add if not already suggested
+        const orderResults = await client.query(`
+            SELECT type, description, id FROM orders WHERE visit_id = $1 AND status != 'CANCELLED'
+        `, [superbill.visit_id]);
+
+        let addedLines = 0;
+        for (const order of orderResults.rows) {
+            // Check if already exists
+            const existing = await client.query(
+                'SELECT id FROM superbill_suggested_lines WHERE superbill_id = $1 AND source_id = $2',
+                [id, order.id]
+            );
+            if (existing.rows.length > 0) continue;
+
+            let cpt = null;
+            let desc = order.description;
+            // Mapping Logic (Reused)
+            if (order.type === 'lab') {
+                if (desc.match(/cbc/i)) cpt = '85025';
+                else if (desc.match(/cmp|comprehensive/i)) cpt = '80053';
+                else if (desc.match(/lipid/i)) cpt = '80061';
+                else if (desc.match(/ts/i)) cpt = '84443';
+            } else if (order.type === 'imaging') {
+                if (desc.match(/x-ray/i)) cpt = '71046';
+                else if (desc.match(/ekg|ecg/i)) cpt = '93000';
+            }
+
+            if (cpt) {
+                await client.query(`
+                    INSERT INTO superbill_suggested_lines (
+                        superbill_id, source, source_id, cpt_code, description, charge, status
+                    ) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')
+                 `, [id, `ORDER_${order.type.toUpperCase()}`, order.id, cpt, desc, 0.00]);
+                addedLines++;
+            }
+        }
+
+        // Audit Log
+        if (newDiags.length > 0 || addedLines > 0) {
+            await client.query(`
+                INSERT INTO superbill_audit_logs (superbill_id, user_id, action, changes)
+                VALUES ($1, $2, 'SYNC', $3)
+            `, [id, req.user.id, JSON.stringify({ new_diagnoses: newDiags.length, new_lines: addedLines })]);
+        }
+
+        await client.query('COMMIT');
+        res.json({ message: 'Sync complete', new_diagnoses: newDiags.length, new_lines: addedLines });
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error syncing superbill:', error);
+        res.status(500).json({ error: 'Sync failed' });
+    } finally {
+        client.release();
+    }
+});
 
 module.exports = router;

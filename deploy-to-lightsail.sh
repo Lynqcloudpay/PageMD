@@ -68,6 +68,7 @@ $SSH_CMD $USER@$HOST << EOF
   sleep 10
   docker compose -f docker-compose.prod.yml exec -T api node scripts/update_patients_schema.js || echo "⚠️ Patients schema update failed, check logs"
   docker compose -f docker-compose.prod.yml exec -T api node scripts/create_ordersets_table.js || echo "⚠️ Ordersets schema update failed, check logs"
+  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-superbill-enhancements.js || echo "⚠️ Superbill migration failed, check logs"
   
   echo "🧹 Cleaning up old images..."
   docker image prune -f
