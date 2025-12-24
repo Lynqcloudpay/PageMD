@@ -148,11 +148,25 @@ router.post('/from-visit/:visitId', requirePermission('billing:edit'), async (re
             }
 
             if (cpt) {
+                // Lookup charge from fee schedule
+                let charge = 0.00;
+                try {
+                    const feeResult = await client.query(
+                        'SELECT fee_amount FROM fee_schedule WHERE code = $1 AND code_type = \'CPT\' LIMIT 1',
+                        [cpt]
+                    );
+                    if (feeResult.rows.length > 0) {
+                        charge = parseFloat(feeResult.rows[0].fee_amount) || 0.00;
+                    }
+                } catch (feeError) {
+                    console.warn(`Could not fetch fee for ${cpt}:`, feeError.message);
+                }
+
                 await client.query(`
                     INSERT INTO superbill_suggested_lines (
                         superbill_id, source, source_id, cpt_code, description, charge, status
                     ) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')
-                 `, [superbill.id, `ORDER_${order.type.toUpperCase()}`, order.id, cpt, desc, 0.00]);
+                 `, [superbill.id, `ORDER_${order.type.toUpperCase()}`, order.id, cpt, desc, charge]);
             }
         }
 
@@ -806,11 +820,25 @@ router.post('/:id/sync', requirePermission('billing:edit'), async (req, res) => 
             }
 
             if (cpt) {
+                // Lookup charge from fee schedule
+                let charge = 0.00;
+                try {
+                    const feeResult = await client.query(
+                        'SELECT fee_amount FROM fee_schedule WHERE code = $1 AND code_type = \'CPT\' LIMIT 1',
+                        [cpt]
+                    );
+                    if (feeResult.rows.length > 0) {
+                        charge = parseFloat(feeResult.rows[0].fee_amount) || 0.00;
+                    }
+                } catch (feeError) {
+                    console.warn(`Could not fetch fee for ${cpt}:`, feeError.message);
+                }
+
                 await client.query(`
                     INSERT INTO superbill_suggested_lines (
                         superbill_id, source, source_id, cpt_code, description, charge, status
                     ) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')
-                 `, [id, `ORDER_${order.type.toUpperCase()}`, order.id, cpt, desc, 0.00]);
+                 `, [id, `ORDER_${order.type.toUpperCase()}`, order.id, cpt, desc, charge]);
                 addedLines++;
             }
         }
