@@ -145,6 +145,10 @@ const Superbill = () => {
         }
     };
 
+    useEffect(() => {
+        console.log('Superbill Component Loaded - Version 2.0');
+    }, []);
+
     const handlePrint = () => {
         window.open(superbillsAPI.printUrl(superbillId), '_blank');
     };
