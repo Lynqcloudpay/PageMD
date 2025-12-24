@@ -1606,14 +1606,6 @@ const VisitNote = () => {
                                     </button>
                                 </>
                             )}
-                            <button
-                                onClick={handleCreateSuperbill}
-                                className="px-2.5 py-1.5 bg-slate-800 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-all duration-200 hover:bg-slate-900 text-xs font-medium"
-                                title="Create/Open Commercial Superbill"
-                            >
-                                <DollarSign className="w-3.5 h-3.5" />
-                                <span>Superbill</span>
-                            </button>
                             <button onClick={() => setShowPrintModal(true)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors" title="Print">
                                 <Printer className="w-3.5 h-3.5" />
                             </button>
@@ -2464,6 +2456,14 @@ const VisitNote = () => {
                                     <Lock className="w-3.5 h-3.5" />
                                     <span>Sign</span>
                                 </button>
+                                <button
+                                    onClick={handleCreateSuperbill}
+                                    className="px-2.5 py-1.5 bg-slate-800 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-all duration-200 hover:bg-slate-900 text-xs font-medium"
+                                    title="Create/Open Commercial Superbill"
+                                >
+                                    <DollarSign className="w-3.5 h-3.5" />
+                                    <span>Superbill</span>
+                                </button>
                                 <button onClick={handleDelete} className="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-colors text-xs font-medium">
                                     <Trash2 className="w-3.5 h-3.5" />
                                     <span>Delete</span>
@@ -2481,7 +2481,17 @@ const VisitNote = () => {
                         </div>
                     )}
                     {isSigned && (
-                        <div className="mt-6 pt-4 border-t border-neutral-200 flex items-center justify-end">
+                        <div className="mt-6 pt-4 border-t border-neutral-200 flex items-center justify-between">
+                            <div className="flex items-center space-x-1.5">
+                                <button
+                                    onClick={handleCreateSuperbill}
+                                    className="px-2.5 py-1.5 bg-slate-800 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-all duration-200 hover:bg-slate-900 text-xs font-medium"
+                                    title="Create/Open Commercial Superbill"
+                                >
+                                    <DollarSign className="w-3.5 h-3.5" />
+                                    <span>Superbill</span>
+                                </button>
+                            </div>
                             <div className="flex items-center gap-2">
                                 <button onClick={() => navigate(`/patient/${id}/snapshot`)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors flex items-center gap-1" title="Back to Patient Chart">
                                     <ArrowLeft className="w-3.5 h-3.5" />
