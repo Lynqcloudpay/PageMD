@@ -415,9 +415,43 @@ router.post('/:id/lines', requirePermission('billing:edit'), async (req, res) =>
 router.delete('/:id/diagnoses/:diagId', requirePermission('billing:edit'), async (req, res) => {
     try {
         const { id, diagId } = req.params;
+
+        // CRITICAL: Check if any procedure lines reference this diagnosis
+        // Get the diagnosis sequence/letter
+        const diagResult = await pool.query(
+            'SELECT sequence, icd10_code FROM superbill_diagnoses WHERE id = $1 AND superbill_id = $2',
+            [diagId, id]
+        );
+
+        if (diagResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Diagnosis not found' });
+        }
+
+        const sequence = diagResult.rows[0].sequence; // 1, 2, 3...
+        const letter = String.fromCharCode(64 + sequence); // A, B, C...
+        const code = diagResult.rows[0].icd10_code;
+
+        // Check if any line uses this pointer (either as number or letter)
+        const linesResult = await pool.query(
+            'SELECT cpt_code, diagnosis_pointers FROM superbill_lines WHERE superbill_id = $1',
+            [id]
+        );
+
+        for (const line of linesResult.rows) {
+            const pointers = (line.diagnosis_pointers || '').toUpperCase();
+            // Check for both number and letter representations
+            if (pointers.includes(String(sequence)) || pointers.includes(letter)) {
+                return res.status(400).json({
+                    error: `Cannot delete diagnosis ${letter} (${code}). Procedure ${line.cpt_code} references it. Remove the pointer first.`
+                });
+            }
+        }
+
+        // Safe to delete
         await pool.query('DELETE FROM superbill_diagnoses WHERE id = $1 AND superbill_id = $2', [diagId, id]);
         res.json({ message: 'Diagnosis removed' });
     } catch (error) {
+        console.error('Error removing diagnosis:', error);
         res.status(500).json({ error: 'Failed to remove diagnosis' });
     }
 });
@@ -540,7 +574,13 @@ router.post('/:id/finalize', requirePermission('billing:edit'), async (req, res)
             errors.push(`Procedure '${invalidLines[0].cpt_code}' is missing Diagnosis Pointers.`);
         }
 
-        // E. Service Date Consistency
+        // E. Zero-Charge Validation (CRITICAL - prevents payer rejections)
+        const totalCharges = linesResult.rows.reduce((sum, l) => sum + parseFloat(l.charge || 0), 0);
+        if (totalCharges === 0) {
+            errors.push('Superbill has $0.00 total charges. At least one procedure must have a non-zero charge.');
+        }
+
+        // F. Service Date Consistency
         const mismatchedDates = linesResult.rows.some(l => {
             const lineDate = new Date(l.service_date).toDateString();
             const sbFrom = new Date(sb.service_date_from).toDateString();
