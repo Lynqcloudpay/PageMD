@@ -3,7 +3,7 @@ import {
     DollarSign, Search, Filter, Download, Upload, Plus, FileText,
     CheckCircle2, XCircle, Clock, AlertCircle, Edit, Trash2, Eye,
     Calendar, User, Building2, Receipt, TrendingUp, CreditCard, X,
-    Lightbulb, Zap, Info
+    Lightbulb, Zap, Info, ChevronRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { billingAPI, patientsAPI, visitsAPI, codesAPI, superbillsAPI } from '../services/api';
