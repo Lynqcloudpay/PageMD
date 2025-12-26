@@ -10,7 +10,7 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
     const [selectedOrders, setSelectedOrders] = useState(new Set());
     const [expandedVisits, setExpandedVisits] = useState({});
     const [clinicInfo, setClinicInfo] = useState({
-        name: "myHEART Cardiology & Primary Care",
+        name: "myHEART Cardiology",
         address: "123 Medical Plaza, Ste 100\nHealthcare City, ST 12345",
         phone: "(555) 123-4567",
         logo: "/clinic-logo.png"
@@ -101,7 +101,7 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                     .join('\n');
 
                 setClinicInfo({
-                    name: p.practice_name || "myHEART Cardiology & Primary Care",
+                    name: p.practice_name || "myHEART Cardiology",
                     address: address || "123 Medical Plaza, Ste 100\nHealthcare City, ST 12345",
                     phone: p.phone || "(555) 123-4567",
                     logo: p.logo_url || "/clinic-logo.png",
@@ -307,20 +307,27 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                             margin: 0;
                             padding: 0;
                         }
-                        .req-container { max-width: 8.5in; margin: 0 auto; }
+                        .req-container { max-width: 8.5in; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
                         
-                        /* Header Section */
-                        .req-header {
-                            display: table;
-                            width: 100%;
-                            border-bottom: 2px solid #000;
-                            padding-bottom: 10px;
+                        /* Header Section (VisitChartView Style) */
+                        .req-banner {
+                            background-color: #eff6ff !important;
+                            border-bottom: 2px solid #cbd5e1;
+                            padding: 20px;
                             margin-bottom: 20px;
                         }
-                        .clinic-branding { display: table-cell; vertical-align: middle; width: 60%; }
-                        .clinic-logo { height: 50px; margin-bottom: 5px; }
-                        .clinic-name { font-size: 16pt; font-weight: bold; margin: 0; }
-                        .clinic-details { font-size: 9pt; color: #444; }
+                        .banner-top {
+                            display: table;
+                            width: 100%;
+                            border-bottom: 1px solid #cbd5e1;
+                            padding-bottom: 15px;
+                            margin-bottom: 15px;
+                        }
+                        .branding-cell { display: table-cell; vertical-align: middle; }
+                        .logo-img { width: 100px; height: 100px; object-fit: contain; margin-right: 20px; vertical-align: middle; }
+                        .clinic-info-wrap { display: inline-block; vertical-align: middle; }
+                        .clinic-name { font-size: 18pt; font-weight: 800; color: #1e293b; margin: 0 0 5px 0; }
+                        .clinic-details { font-size: 9pt; color: #64748b; line-height: 1.4; }
                         
                         .req-type-badge {
                             display: table-cell;
@@ -427,12 +434,12 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                         .sub-label { font-size: 8pt; color: #666; margin-top: 2px; }
                         
                         .disclaimer {
-                            margin-top: 40px;
+                            margin: 40px 20px 20px;
                             font-size: 8pt;
-                            color: #666;
+                            color: #64748b;
                             text-align: justify;
-                            border-top: 1px solid #eee;
-                            padding-top: 10px;
+                            border-top: 1px solid #e2e8f0;
+                            padding-top: 15px;
                         }
 
                         @media print {
@@ -443,50 +450,62 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                 </head>
                 <body>
                     <div class="req-container">
-                        <div style="background-color: #f8fafc; border-bottom: 2px solid #e2e8f0; padding: 20px; border-radius: 8px 8px 0 0; margin-bottom: 20px;">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 15px;">
-                                <div style="display: flex; align-items: center; gap: 15px;">
-                                    ${clinicInfo.logo ? `<img src="${clinicInfo.logo}" style="width: 100px; height: 100px; object-fit: contain;" alt="Logo">` : ''}
-                                    <div>
-                                        <h1 style="font-size: 18pt; font-weight: 800; color: #1e293b; margin: 0 0 5px 0;">${clinicInfo.name}</h1>
-                                        <div style="font-size: 9pt; color: #64748b; line-height: 1.4;">
-                                            ${clinicInfo.address.replace(/\n/g, '<br>')}<br>
-                                            <span style="display: inline-flex; align-items: center; gap: 5px;"><strong>TEL:</strong> ${clinicInfo.phone}</span> &middot; 
-                                            <span style="display: inline-flex; align-items: center; gap: 5px;"><strong>FAX:</strong> ${clinicInfo.fax}</span><br>
-                                            <strong>NPI:</strong> ${clinicInfo.npi} &middot; <strong>EML:</strong> ${clinicInfo.email || 'office@myheartclinic.com'}
+                        <div class="req-banner">
+                            <div class="banner-top">
+                                <div class="branding-cell">
+                                    ${clinicInfo.logo ? `<img src="${clinicInfo.logo}" class="logo-img" alt="Logo">` : ''}
+                                    <div class="clinic-info-wrap">
+                                        <h1 class="clinic-name">${clinicInfo.name}</h1>
+                                        <div class="clinic-details">
+                                            ${clinicInfo.address.replace(/\n/g, '<br>')}
+                                            <div style="margin-top: 5px;">
+                                                <strong>TEL:</strong> ${clinicInfo.phone} &middot; 
+                                                <strong>FAX:</strong> ${clinicInfo.fax}<br>
+                                                <strong>NPI:</strong> ${clinicInfo.npi} &middot; 
+                                                <strong>EML:</strong> ${clinicInfo.email || 'office@myheartclinic.com'}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div style="text-align: right; border-left: 1px solid #e2e8f0; padding-left: 15px;">
-                                    <div style="font-size: 10pt; font-weight: 700; color: #2563eb; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px;">Order Requisition</div>
-                                    <div style="font-size: 8pt; color: #64748b;">
-                                        <div><strong>Printed:</strong> ${datePrinted}</div>
+                                <div style="display: table-cell; text-align: right; vertical-align: top; border-left: 1px solid #cbd5e1; padding-left: 20px;">
+                                    <div style="font-size: 11pt; font-weight: 700; color: #2563eb; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px;">Order Requisition</div>
+                                    <div style="font-size: 8pt; color: #64748b; line-height: 1.5;">
+                                        <div><strong>Date:</strong> ${datePrinted}</div>
                                         <div><strong>Ref:</strong> ${patientMRN}</div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div style="display: flex; gap: 20px;">
-                                <div>
-                                    <h2 style="font-size: 16pt; font-weight: 700; color: #0f172a; margin: 0 0 8px 0;">${patientName}</h2>
+                            <div style="display: table; width: 100%;">
+                                <div style="display: table-cell; width: 45%; vertical-align: top;">
+                                    <h2 style="font-size: 16pt; font-weight: 700; color: #0f172a; margin: 0 0 5px 0;">${patientName}</h2>
                                     <div style="display: flex; gap: 15px; font-size: 9pt; color: #334155;">
                                         <span><strong>MRN:</strong> ${patientMRN}</span>
                                         <span><strong>DOB:</strong> ${patientDOB} (${patientAge})</span>
                                         <span><strong>SEX:</strong> ${patientGender}</span>
                                     </div>
                                 </div>
-                                <div style="flex: 1; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 8pt; color: #475569; border-left: 1px solid #e2e8f0; padding-left: 20px;">
-                                    <div>
-                                        <div style="font-weight: 700; text-transform: uppercase; font-size: 7pt; color: #94a3b8;">Phone</div>
-                                        <div>${patientPhone}</div>
-                                    </div>
-                                    <div>
-                                        <div style="font-weight: 700; text-transform: uppercase; font-size: 7pt; color: #94a3b8;">Address</div>
-                                        <div style="line-height: 1.2;">${(patient.address_line1 || '')}<br>${(patient.city || '')}, ${(patient.state || '')} ${(patient.zip || '')}</div>
+                                <div style="display: table-cell; width: 55%; vertical-align: top; border-left: 1px solid #cbd5e1; padding-left: 20px;">
+                                    <div style="display: table; width: 100%; font-size: 8pt; color: #475569;">
+                                        <div style="display: table-row;">
+                                            <div style="display: table-cell; padding-right: 20px; padding-bottom: 5px;">
+                                                <div style="font-weight: 700; text-transform: uppercase; font-size: 7pt; color: #94a3b8; margin-bottom: 2px;">Phone</div>
+                                                <div>${patientPhone}</div>
+                                            </div>
+                                            <div style="display: table-cell;">
+                                                <div style="font-weight: 700; text-transform: uppercase; font-size: 7pt; color: #94a3b8; margin-bottom: 2px;">Patient Address</div>
+                                                <div style="line-height: 1.2;">
+                                                    ${patient.address_line1 || ''}<br>
+                                                    ${patient.city || ''}, ${patient.state || ''} ${patient.zip || ''}
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+
+                        <div style="padding: 0 20px;">
 
                         ${labs.length > 0 ? `
                             <div class="section">
