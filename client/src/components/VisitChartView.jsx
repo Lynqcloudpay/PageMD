@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Printer, Calendar, User, Phone, Mail, MapPin, Stethoscope, CheckCircle2, CreditCard, Building2, Users, FilePlus, Receipt, DollarSign } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { visitsAPI, patientsAPI, billingAPI, codesAPI, superbillsAPI } from '../services/api';
+import { visitsAPI, patientsAPI, billingAPI, codesAPI, superbillsAPI, settingsAPI } from '../services/api';
 import { format } from 'date-fns';
 
 const VisitChartView = ({ visitId, patientId, onClose }) => {
@@ -23,6 +23,15 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     const [addendumText, setAddendumText] = useState('');
     const [showBillingModal, setShowBillingModal] = useState(false);
     const [feeSchedule, setFeeSchedule] = useState([]);
+    const [clinicInfo, setClinicInfo] = useState({
+        name: "myHEART Cardiology",
+        address: "123 Medical Center Drive, Suite 100\nCity, State 12345",
+        phone: "(555) 123-4567",
+        fax: "(555) 123-4568",
+        email: "office@myheartclinic.com",
+        website: "www.myheartclinic.com",
+        logo: "/clinic-logo.png"
+    });
 
     useEffect(() => {
         if (visitId && patientId) {
@@ -194,14 +203,15 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [patientRes, visitRes, allergiesRes, medicationsRes, problemsRes, familyHistoryRes, socialHistoryRes] = await Promise.all([
+            const [patientRes, visitRes, allergiesRes, medicationsRes, problemsRes, familyHistoryRes, socialHistoryRes, practiceRes] = await Promise.all([
                 patientsAPI.get(patientId),
                 visitsAPI.get(visitId),
                 patientsAPI.getAllergies(patientId).catch(() => ({ data: [] })),
                 patientsAPI.getMedications(patientId).catch(() => ({ data: [] })),
                 patientsAPI.getProblems(patientId).catch(() => ({ data: [] })),
                 patientsAPI.getFamilyHistory(patientId).catch(() => ({ data: [] })),
-                patientsAPI.getSocialHistory(patientId).catch(() => ({ data: null }))
+                patientsAPI.getSocialHistory(patientId).catch(() => ({ data: null })),
+                settingsAPI.getPractice().catch(() => ({ data: null }))
             ]);
 
             setPatient(patientRes.data);
@@ -211,6 +221,19 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
             setProblems(problemsRes.data || []);
             setFamilyHistory(familyHistoryRes.data || []);
             setSocialHistory(socialHistoryRes.data);
+
+            if (practiceRes?.data) {
+                const p = practiceRes.data;
+                setClinicInfo({
+                    name: p.practice_name || "myHEART Cardiology",
+                    address: [p.address_line1, p.address_line2, `${p.city || ''} ${p.state || ''} ${p.zip || ''}`.trim()].filter(Boolean).join('\n') || "123 Medical Center Drive, Suite 100\nCity, State 12345",
+                    phone: p.phone || "(555) 123-4567",
+                    fax: p.fax || "(555) 123-4568",
+                    email: p.email || "office@myheartclinic.com",
+                    website: p.website || "www.myheartclinic.com",
+                    logo: p.logo_url || "/clinic-logo.png"
+                });
+            }
 
             if (visitRes.data.addendums) {
                 setAddendums(Array.isArray(visitRes.data.addendums) ? visitRes.data.addendums : JSON.parse(visitRes.data.addendums || '[]'));
@@ -449,16 +472,18 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                 <div className="flex items-center justify-between gap-4 mb-3 pb-3 border-b border-gray-300">
                                     <div className="flex items-center gap-1 flex-1">
                                         <div className="flex-shrink-0">
-                                            <img src="/clinic-logo.png" alt="myPCP Clinic Logo" className="w-36 h-36 object-contain" onError={(e) => { e.target.style.display = 'none'; }} />
+                                            <img src={clinicInfo.logo} alt="Clinic Logo" className="w-36 h-36 object-contain" onError={(e) => { e.target.style.display = 'none'; }} />
                                         </div>
                                         <div className="flex-1 ml-4">
                                             <div className="flex flex-col gap-0.5 text-[11px] text-gray-700">
-                                                <div>123 Medical Center Drive, Suite 100</div>
-                                                <div>City, State 12345</div>
-                                                <div className="flex items-center gap-1"><Phone className="w-3 h-3 text-primary-600" /><span>(555) 123-4567</span></div>
-                                                <div className="flex items-center gap-1"><Phone className="w-3 h-3 text-primary-600" /><span>Fax: (555) 123-4568</span></div>
-                                                <div className="flex items-center gap-1"><Mail className="w-3 h-3 text-primary-600" /><span>info@mypcp.com</span></div>
-                                                <div className="flex items-center gap-1"><span className="text-primary-600 font-medium">www.bemypcp.com</span></div>
+                                                <div className="font-bold text-gray-900 text-[13px] mb-1">{clinicInfo.name}</div>
+                                                {clinicInfo.address.split('\n').map((line, idx) => (
+                                                    <div key={idx}>{line}</div>
+                                                ))}
+                                                <div className="flex items-center gap-1 mt-1"><Phone className="w-3 h-3 text-primary-600" /><span>{clinicInfo.phone}</span></div>
+                                                {clinicInfo.fax && <div className="flex items-center gap-1"><Phone className="w-3 h-3 text-primary-600" /><span>Fax: {clinicInfo.fax}</span></div>}
+                                                {clinicInfo.email && <div className="flex items-center gap-1"><Mail className="w-3 h-3 text-primary-600" /><span>{clinicInfo.email}</span></div>}
+                                                {clinicInfo.website && <div className="flex items-center gap-1"><span className="text-primary-600 font-medium">{clinicInfo.website}</span></div>}
                                             </div>
                                         </div>
                                     </div>
