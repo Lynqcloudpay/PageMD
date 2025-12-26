@@ -54,7 +54,7 @@ class TenantManager {
                 database: tenantInfo.db_name,
                 user: tenantInfo.db_user,
                 password: dbPassword,
-                ssl: tenantInfo.ssl_mode === 'require' ? { rejectUnauthorized: false } : false,
+                ssl: tenantInfo.ssl_mode === 'disable' ? false : { rejectUnauthorized: false },
                 max: 10,
                 idleTimeoutMillis: 30000,
             });

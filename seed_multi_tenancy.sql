@@ -10,15 +10,19 @@ ON CONFLICT (slug) DO NOTHING;
 -- 2. Link to the current database
 -- Replace these values with the actual production DB credentials if different.
 -- Note: 'db' is the hostname of the postgres container in our docker-compose.
-INSERT INTO clinic_db_connections (clinic_id, host, db_name, db_user, db_password_encrypted)
+-- Internal Docker connections don't require SSL
+INSERT INTO clinic_db_connections (clinic_id, host, db_name, db_user, db_password_encrypted, ssl_mode)
 VALUES (
     '00000000-0000-0000-0000-000000000001', 
     'db', 
     'emr_db', 
     'emr_user', 
-    'ZW1yX3Bhc3N3b3Jk' -- Base64 for 'emr_password' (matching our init seeds)
+    'Q0hBTkdFX01FX1NUUk9OR19QQVNTV09SRF9NSU5fMzJfQ0hBUlM=', -- Base64 for 'CHANGE_ME_STRONG_PASSWORD_MIN_32_CHARS'
+    'disable'  -- No SSL for internal Docker network
 )
-ON CONFLICT (clinic_id) DO NOTHING;
+ON CONFLICT (clinic_id) DO UPDATE SET 
+    ssl_mode = 'disable',
+    db_password_encrypted = 'Q0hBTkdFX01FX1NUUk9OR19QQVNTV09SRF9NSU5fMzJfQ0hBUlM=';
 
 -- 3. Initial settings
 INSERT INTO clinic_settings (clinic_id, time_zone)
