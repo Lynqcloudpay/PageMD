@@ -18,20 +18,19 @@ const resolveTenant = async (req, res, next) => {
         }
     }
 
-    // Fallback for development (e.g., localhost)
-    if (!slug && process.env.NODE_ENV === 'development') {
-        slug = process.env.DEFAULT_TENANT_SLUG || 'default';
-    }
-
+    // Fallback for development or during platform transition
     if (!slug) {
-        // If no slug, we continue with the default pool (or handle as error)
-        return next();
+        slug = process.env.DEFAULT_TENANT_SLUG || 'default';
     }
 
     try {
         const pool = await tenantManager.getTenantPool(slug);
 
         if (!pool) {
+            // If we are at the root or health check, we might not have a pool
+            // But for /api/ core routes, we should probably error out
+            if (req.path === '/health' || req.path === '/') return next();
+
             return res.status(404).json({
                 error: `Clinic '${slug}' not found or inactive.`,
                 code: 'TENANT_NOT_FOUND'
