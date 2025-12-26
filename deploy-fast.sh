@@ -49,12 +49,6 @@ ssh $SSH_OPTS $USER@$HOST << EOF
   git fetch origin
   git reset --hard origin/main
   
-  echo "🗄️  Applying database schema fixes..."
-  # Run the schema fix script inside the DB container
-  # We use 'docker exec' to reach the database container
-  # We use the service name 'emr-db' defined in docker-compose.prod.yml
-  docker compose -f deploy/docker-compose.prod.yml exec -T db psql -U emr_user -d emr_db < ./fix_schema.sql || echo "⚠️ Warning: Schema fix failed, but continuing deployment..."
-  
   cd deploy
   
   # Ensure env files exist
@@ -69,6 +63,19 @@ ssh $SSH_OPTS $USER@$HOST << EOF
   echo "🚀 Restarting containers..."
   docker compose -f docker-compose.prod.yml up -d --remove-orphans
   
+  echo "⏳ Waiting for database to be healthy..."
+  for i in {1..30}; do
+    if docker compose -f docker-compose.prod.yml exec -T db pg_isready -U emr_user -d emr_db > /dev/null 2>&1; then
+      echo "✅ Database is ready!"
+      break
+    fi
+    echo "Still waiting... ($i/30)"
+    sleep 2
+  done
+
+  echo "🗄️  Applying database schema fixes..."
+  docker compose -f docker-compose.prod.yml exec -T db psql -U emr_user -d emr_db < $DIR/fix_schema.sql || echo "⚠️ Warning: Schema fix failed."
+
   echo "🧹 Cleanup..."
   docker image prune -f
 EOF
