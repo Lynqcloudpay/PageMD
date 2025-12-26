@@ -38,7 +38,7 @@ const Login = () => {
         try {
             const result = await login(email, password);
             console.log('Login successful, result:', result);
-            
+
             // Verify token was set
             const token = tokenManager.getToken();
             if (!token) {
@@ -47,7 +47,7 @@ const Login = () => {
                 setLoading(false);
                 return;
             }
-            
+
             console.log('Token verified, navigating to dashboard');
             // Small delay to ensure state is updated
             setTimeout(() => {
@@ -65,9 +65,9 @@ const Login = () => {
         <div className="min-h-screen bg-white flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 w-full max-w-md p-8">
                 <div className="flex items-center justify-center mb-8">
-                    <img 
-                        src="/logo.png" 
-                        alt="PageMD Logo" 
+                    <img
+                        src="/logo.png"
+                        alt="myHEART Cardiology Logo"
                         className="h-16 w-auto object-contain max-w-[200px]"
                         onError={(e) => {
                             // Hide broken image
