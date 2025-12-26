@@ -449,6 +449,43 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
         `;
     };
 
+    const renderOrderRow = (order) => {
+        const isSelected = selectedOrders.has(order.id);
+        const Icon = order.category === 'prescription' ? Pill :
+            order.category === 'lab' ? FlaskConical :
+                order.category === 'imaging' ? Image :
+                    order.category === 'referral' ? ExternalLink : CheckCircle2;
+
+        return (
+            <div
+                key={order.id}
+                onClick={() => toggleOrder(order.id)}
+                className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${isSelected
+                    ? 'bg-primary-50 border-primary-200 shadow-sm'
+                    : 'bg-white border-transparent hover:border-gray-200'
+                    }`}
+            >
+                <div className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${isSelected ? 'bg-primary-600 border-primary-600' : 'bg-white border-gray-300'
+                    }`}>
+                    {isSelected && <CheckCircle2 className="w-4 h-4 text-white" />}
+                </div>
+                <div className={`p-2 rounded-lg ${isSelected ? 'bg-white' : 'bg-gray-50'}`}>
+                    <Icon className={`w-4 h-4 ${isSelected ? 'text-primary-600' : 'text-gray-400'}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <div className={`text-sm font-bold truncate ${isSelected ? 'text-primary-900' : 'text-gray-700'}`}>
+                        {order.type === 'virtual' ? order.display_title : order.category === 'prescription' ? order.medication_name : order.order_payload?.test_name || order.order_payload?.name || order.recipient_specialty || 'Untitled Order'}
+                    </div>
+                    <div className="text-[10px] text-gray-500 font-medium uppercase truncate flex items-center gap-2">
+                        <span>{order.category === 'referral' ? 'Specialist Referral' : order.category}</span>
+                        {order.sig && ` • ${order.sig}`}
+                        {order.diagnosis_name && <span className="text-primary-600 bg-primary-50 px-1.5 py-0.5 rounded border border-primary-100 normal-case ml-2">{order.diagnosis_name}</span>}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     if (!isOpen) return null;
 
     return (
