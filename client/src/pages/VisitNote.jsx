@@ -22,6 +22,7 @@ import { ordersCatalogAPI, visitsAPI, codesAPI, patientsAPI, icd10API, superbill
 import { format } from 'date-fns';
 import { hpiDotPhrases } from '../data/hpiDotPhrases';
 import { ProblemInput, MedicationInput, AllergyInput, FamilyHistoryInput } from '../components/PAMFOSInputs';
+import PrintOrdersModal from '../components/PrintOrdersModal';
 
 // Collapsible Section Component
 const Section = ({ title, children, defaultOpen = true }) => {
@@ -182,6 +183,7 @@ const VisitNote = () => {
     const { hasPrivilege } = usePrivileges();
     const { user } = useAuth();
     const [showPrintModal, setShowPrintModal] = useState(false);
+    const [showPrintOrdersModal, setShowPrintOrdersModal] = useState(false);
     const [showPatientChart, setShowPatientChart] = useState(false);
     const [patientChartTab, setPatientChartTab] = useState('history');
     const [patientData, setPatientData] = useState(null);
@@ -1606,7 +1608,11 @@ const VisitNote = () => {
                                     </button>
                                 </>
                             )}
-                            <button onClick={() => setShowPrintModal(true)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors" title="Print">
+                            <button onClick={() => setShowPrintOrdersModal(true)} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white text-primary-600 hover:bg-primary-50 text-xs font-bold rounded-md border border-primary-200 transition-all shadow-sm" title="Print Orders">
+                                <Printer className="w-3.5 h-3.5" />
+                                <span>Print Orders</span>
+                            </button>
+                            <button onClick={() => setShowPrintModal(true)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors" title="Print Visit Note">
                                 <Printer className="w-3.5 h-3.5" />
                             </button>
                         </div>
@@ -2613,6 +2619,13 @@ const VisitNote = () => {
                 onClose={() => setShowPatientChart(false)}
                 initialTab={patientChartTab}
             />
+            {showPrintOrdersModal && (
+                <PrintOrdersModal
+                    patient={{ ...patientData, id }}
+                    isOpen={showPrintOrdersModal}
+                    onClose={() => setShowPrintOrdersModal(false)}
+                />
+            )}
         </div >
     );
 };

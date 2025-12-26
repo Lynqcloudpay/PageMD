@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
     AlertCircle, Activity, Pill, FileText, Clock, Eye, ChevronDown, ChevronUp, ChevronRight, Plus,
-    Phone, Mail, MapPin, CreditCard, Building2, Users, Heart,
+    Phone, Mail, MapPin, CreditCard, Building2, Users, Heart, Printer,
     CheckCircle2, Edit, ArrowRight, ExternalLink, UserCircle, Camera, User, X, FileImage, Save, FlaskConical, Database, Trash2, Upload, Layout, RotateCcw, Waves
 } from 'lucide-react';
 import { visitsAPI, patientsAPI, ordersAPI, referralsAPI, documentsAPI } from '../services/api';
@@ -20,6 +20,7 @@ import EPrescribeEnhanced from '../components/EPrescribeEnhanced';
 import Modal from '../components/ui/Modal';
 import { usePrivileges } from '../hooks/usePrivileges';
 import CardiologyViewer from '../components/CardiologyViewer';
+import PrintOrdersModal from '../components/PrintOrdersModal';
 // AuthedImg removed
 import PatientHeader from '../components/PatientHeader';
 
@@ -85,6 +86,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const documentUploadInputRef = React.useRef(null);
     const [todayDraftVisit, setTodayDraftVisit] = useState(null);
     const [showNewVisitDropdown, setShowNewVisitDropdown] = useState(false);
+    const [showPrintOrdersModal, setShowPrintOrdersModal] = useState(false);
 
     // EKG States
     const [showEKGModal, setShowEKGModal] = useState(false);
@@ -1393,6 +1395,13 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         {referrals.length + orders.filter(o => o.order_type === 'referral').length}
                                     </span>
                                 )}
+                            </button>
+                            <button
+                                onClick={() => setShowPrintOrdersModal(true)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-primary-700 bg-white hover:bg-primary-50 rounded-md transition-all border border-primary-200 shadow-sm"
+                            >
+                                <Printer className="w-3.5 h-3.5" />
+                                <span>Print Orders</span>
                             </button>
                         </div>
                         <div className="flex-shrink-0 ml-2 flex items-center gap-2">
@@ -2714,6 +2723,13 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 documents={documents}
                 patientName={patient ? `${patient.first_name} ${patient.last_name}` : 'Patient'}
             />
+            {showPrintOrdersModal && (
+                <PrintOrdersModal
+                    patient={{ ...patient, id }}
+                    isOpen={showPrintOrdersModal}
+                    onClose={() => setShowPrintOrdersModal(false)}
+                />
+            )}
         </div >
     );
 };

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     X, FileText, Image, FlaskConical, Pill, ExternalLink,
     Database, CreditCard, Clock, CheckCircle2,
-    XCircle, UserCircle, FileImage, Trash2, Plus, Activity,
+    XCircle, UserCircle, FileImage, Trash2, Plus, Activity, Printer,
     LayoutDashboard, ChevronRight, Search, FilePlus, ChevronDown, HeartPulse, ActivitySquare, Zap, Waves,
     Edit2, RotateCcw, Calendar, AlertCircle, Users, Receipt
 } from 'lucide-react';
@@ -11,6 +11,7 @@ import { visitsAPI, documentsAPI, ordersAPI, referralsAPI, patientsAPI, eprescri
 import { format } from 'date-fns';
 import DoseSpotPrescribe from './DoseSpotPrescribe';
 import VisitChartView from './VisitChartView';
+import PrintOrdersModal from './PrintOrdersModal';
 
 const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview' }) => {
     const navigate = useNavigate();
@@ -39,6 +40,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
     const [showDoseSpotModal, setShowDoseSpotModal] = useState(false);
     const [activeMedications, setActiveMedications] = useState([]);
     const [hubDocuments, setHubDocuments] = useState([]);
+    const [showPrintOrdersModal, setShowPrintOrdersModal] = useState(false);
 
     // Patient Details
     const [formData, setFormData] = useState({
@@ -526,15 +528,23 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
 
                 {/* Main Content Area */}
                 <div className="flex-1 flex flex-col h-full overflow-hidden bg-white relative">
-                    {/* Header */}
                     <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100/80 bg-white/90 backdrop-blur-md sticky top-0 z-20">
                         <h2 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
                             {tabs.find(t => t.id === activeTab)?.icon && React.createElement(tabs.find(t => t.id === activeTab).icon, { className: "w-5 h-5 text-gray-400" })}
                             {tabs.find(t => t.id === activeTab)?.label}
                         </h2>
-                        <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition-all">
-                            <X className="w-5 h-5" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setShowPrintOrdersModal(true)}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-white text-primary-600 text-xs font-bold rounded-lg border border-primary-200 hover:bg-primary-50 transition-all shadow-sm"
+                            >
+                                <Printer className="w-4 h-4" />
+                                Print Orders
+                            </button>
+                            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition-all">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Content Scrollable */}
@@ -1605,8 +1615,8 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                             </div>
                         )}
                     </div>
-                </div>
-            </div>
+                </div >
+            </div >
 
             {/* Keeping the existing logic for DoseSpot modal if needed */}
             {
@@ -1632,7 +1642,14 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                     />
                 )
             }
-        </div >
+            {showPrintOrdersModal && (
+                <PrintOrdersModal
+                    patient={{ ...patient, id: patientId }}
+                    isOpen={showPrintOrdersModal}
+                    onClose={() => setShowPrintOrdersModal(false)}
+                />
+            )}
+        </div>
     );
 };
 
