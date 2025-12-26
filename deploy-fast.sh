@@ -53,7 +53,7 @@ ssh $SSH_OPTS $USER@$HOST << EOF
   # Run the schema fix script inside the DB container
   # We use 'docker exec' to reach the database container
   # We use the service name 'emr-db' defined in docker-compose.prod.yml
-  docker compose -f deploy/docker-compose.prod.yml exec -T emr-db psql -U postgres -d paper_emr -f ./fix_schema.sql || echo "⚠️ Warning: Schema fix failed, but continuing deployment..."
+  docker compose -f deploy/docker-compose.prod.yml exec -T db psql -U emr_user -d emr_db -f ./fix_schema.sql || echo "⚠️ Warning: Schema fix failed, but continuing deployment..."
   
   cd deploy
   
