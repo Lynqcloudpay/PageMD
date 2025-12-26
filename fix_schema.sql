@@ -209,3 +209,8 @@ CREATE TABLE IF NOT EXISTS feature_flags (
 INSERT INTO practice_settings (practice_name, timezone, date_format, time_format)
 SELECT 'myHEART Cardiology', 'America/New_York', 'MM/DD/YYYY', '12h'
 WHERE NOT EXISTS (SELECT 1 FROM practice_settings);
+
+-- Force update practice name if it's the old default
+UPDATE practice_settings 
+SET practice_name = 'myHEART Cardiology'
+WHERE practice_name = 'PageMD Family Practice';
