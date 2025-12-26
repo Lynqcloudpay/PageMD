@@ -22,6 +22,66 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
         }
     }, [isOpen, patient?.id]);
 
+    const parseOrdersFromNote = (noteText, visitId) => {
+        if (!noteText) return [];
+
+        // Extract the Plan section
+        const planMatch = noteText.match(/(?:Plan|P):[\s\n]*([\s\S]+?)(?:\n\n|\n(?:Care Plan|CP|Follow Up|FU):|$)/i);
+        if (!planMatch) return [];
+
+        const planText = planMatch[1];
+        const lines = planText.split('\n');
+        const extracted = [];
+        let currentDiagnosis = '';
+
+        lines.forEach(line => {
+            const trimmed = line.trim();
+            if (!trimmed) return;
+
+            // Check if it's a diagnosis line (e.g., "1. Hypertension")
+            const diagMatch = trimmed.match(/^(\d+)\.\s*(.+)$/);
+            if (diagMatch) {
+                currentDiagnosis = diagMatch[2].trim();
+                return;
+            }
+
+            // Check if it's an order line
+            if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
+                const orderText = trimmed.replace(/^[•\-]\s*/, '').trim();
+                if (!orderText) return;
+
+                let category = 'order';
+                let displayTitle = orderText;
+
+                if (orderText.toLowerCase().startsWith('prescription:')) {
+                    category = 'prescription';
+                    displayTitle = orderText.replace(/^prescription:\s*/i, '');
+                } else if (orderText.toLowerCase().startsWith('lab:')) {
+                    category = 'lab';
+                    displayTitle = orderText.replace(/^lab:\s*/i, '');
+                } else if (orderText.toLowerCase().startsWith('imaging:')) {
+                    category = 'imaging';
+                    displayTitle = orderText.replace(/^imaging:\s*/i, '');
+                } else if (orderText.toLowerCase().startsWith('referral:')) {
+                    category = 'referral';
+                    displayTitle = orderText.replace(/^referral:\s*/i, '');
+                }
+
+                extracted.push({
+                    id: `virtual-${visitId}-${extracted.length}`,
+                    visit_id: visitId,
+                    type: 'virtual',
+                    category: category,
+                    display_title: displayTitle,
+                    diagnosis_name: currentDiagnosis,
+                    is_virtual: true
+                });
+            }
+        });
+
+        return extracted;
+    };
+
     const fetchAllOrders = async () => {
         setLoading(true);
         try {
@@ -53,27 +113,49 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
             const referralsData = Array.isArray(referralsRes.data) ? referralsRes.data.map(r => ({ ...r, id: String(r.id), visit_id: r.visit_id ? String(r.visit_id) : null })) : [];
             const epData = Array.isArray(epRes.data?.prescriptions) ? epRes.data.prescriptions.map(p => ({ ...p, id: String(p.id), visit_id: p.visit_id ? String(p.visit_id) : null })) : [];
 
+            // Extract virtual orders from visit notes
+            const virtualOrders = [];
+            visitsData.forEach(v => {
+                const noteOrders = parseOrdersFromNote(v.note_draft, v.id);
+                virtualOrders.push(...noteOrders);
+            });
+
             // Group all orders by visit_id
             const consolidated = [
                 ...ordersData.map(o => ({ ...o, type: 'order', category: o.order_type || 'order' })),
                 ...referralsData.map(r => ({ ...r, type: 'referral', category: 'referral' })),
-                ...epData.map(p => ({ ...p, type: 'prescription', category: 'prescription' }))
+                ...epData.map(p => ({ ...p, type: 'prescription', category: 'prescription' })),
+                ...virtualOrders
             ];
 
-            setAllOrders(consolidated);
+            // Filter out duplicates if a virtual order matches a real order (rudimentary check)
+            const filteredConsolidated = consolidated.filter((item, index, self) => {
+                if (item.type !== 'virtual') return true;
+                // If it's virtual, check if there's a real order with similar title in the same visit
+                const hasRealMatch = self.some(other =>
+                    other.type !== 'virtual' &&
+                    other.visit_id === item.visit_id &&
+                    (String(other.medication_name || '').toLowerCase().includes(item.display_title.toLowerCase()) ||
+                        String(other.order_payload?.test_name || '').toLowerCase().includes(item.display_title.toLowerCase()) ||
+                        String(other.recipient_specialty || '').toLowerCase().includes(item.display_title.toLowerCase()))
+                );
+                return !hasRealMatch;
+            });
+
+            setAllOrders(filteredConsolidated);
             setVisits(visitsData.sort((a, b) => new Date(b.visit_date) - new Date(a.visit_date)));
 
             // Auto-expand visits that have orders
             const initialExpanded = {};
             visitsData.forEach((v, idx) => {
-                const hasOrders = consolidated.some(o => o.visit_id === v.id);
+                const hasOrders = filteredConsolidated.some(o => o.visit_id === v.id);
                 if (hasOrders && Object.keys(initialExpanded).length < 2) {
                     initialExpanded[v.id] = true;
                 }
             });
 
             // If we have standalone orders, expand that group too
-            const hasStandalone = consolidated.some(o => !o.visit_id);
+            const hasStandalone = filteredConsolidated.some(o => !o.visit_id);
             if (hasStandalone) {
                 initialExpanded['standalone'] = true;
             }
@@ -266,17 +348,19 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                             ${prescriptions.map(p => `
                                 <div class="order-card">
                                     <div class="order-header">
-                                        <div class="order-name">${p.medication_name}</div>
-                                        <div class="order-date">${format(new Date(p.created_at), 'MMM d, yyyy')}</div>
+                                        <div class="order-name">${p.type === 'virtual' ? p.display_title : p.medication_name}</div>
+                                        <div class="order-date">${p.created_at ? format(new Date(p.created_at), 'MMM d, yyyy') : 'N/A'}</div>
                                     </div>
                                     <div class="order-details">
-                                        <strong>Sig:</strong> ${p.sig}<br/>
-                                        <strong>Qty:</strong> ${p.quantity} | <strong>Refills:</strong> ${p.refills}
+                                        ${p.type === 'virtual' ? '' : `
+                                            <strong>Sig:</strong> ${p.sig}<br/>
+                                            <strong>Qty:</strong> ${p.quantity} | <strong>Refills:</strong> ${p.refills}
+                                        `}
                                     </div>
-                                    ${p.diagnoses?.length > 0 ? `
+                                    ${(p.diagnoses?.length > 0 || p.diagnosis_name) ? `
                                         <div class="order-dx">
                                             <strong>Diagnoses:</strong> 
-                                            ${p.diagnoses.map(d => `<span class="dx-pill">${d.icd10Code || d.icd10_code}: ${d.name || d.problem_name}</span>`).join('')}
+                                            ${p.diagnosis_name ? `<span class="dx-pill">${p.diagnosis_name}</span>` : p.diagnoses.map(d => `<span class="dx-pill">${d.icd10Code || d.icd10_code}: ${d.name || d.problem_name}</span>`).join('')}
                                         </div>
                                     ` : ''}
                                 </div>
@@ -290,16 +374,16 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                             ${labs.map(l => `
                                 <div class="order-card">
                                     <div class="order-header">
-                                        <div class="order-name">${l.order_payload?.test_name || l.order_payload?.name || 'Lab Test'}</div>
-                                        <div class="order-date">${format(new Date(l.created_at), 'MMM d, yyyy')}</div>
+                                        <div class="order-name">${l.type === 'virtual' ? l.display_title : l.order_payload?.test_name || l.order_payload?.name || 'Lab Test'}</div>
+                                        <div class="order-date">${l.created_at ? format(new Date(l.created_at), 'MMM d, yyyy') : 'N/A'}</div>
                                     </div>
                                     <div class="order-details">
-                                        ${l.order_payload?.instructions ? `<strong>Instructions:</strong> ${l.order_payload.instructions}` : ''}
+                                        ${l.type === 'virtual' ? '' : l.order_payload?.instructions ? `<strong>Instructions:</strong> ${l.order_payload.instructions}` : ''}
                                     </div>
-                                    ${l.diagnoses?.length > 0 ? `
+                                    ${(l.diagnoses?.length > 0 || l.diagnosis_name) ? `
                                         <div class="order-dx">
                                             <strong>Diagnoses:</strong> 
-                                            ${l.diagnoses.map(d => `<span class="dx-pill">${d.icd10Code || d.icd10_code}: ${d.name || d.problem_name}</span>`).join('')}
+                                            ${l.diagnosis_name ? `<span class="dx-pill">${l.diagnosis_name}</span>` : l.diagnoses.map(d => `<span class="dx-pill">${d.icd10Code || d.icd10_code}: ${d.name || d.problem_name}</span>`).join('')}
                                         </div>
                                     ` : ''}
                                 </div>
@@ -313,17 +397,19 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                             ${imaging.map(i => `
                                 <div class="order-card">
                                     <div class="order-header">
-                                        <div class="order-name">${i.order_payload?.test_name || i.order_payload?.name || 'Imaging Study'}</div>
-                                        <div class="order-date">${format(new Date(i.created_at), 'MMM d, yyyy')}</div>
+                                        <div class="order-name">${i.type === 'virtual' ? i.display_title : i.order_payload?.test_name || i.order_payload?.name || 'Imaging Study'}</div>
+                                        <div class="order-date">${i.created_at ? format(new Date(i.created_at), 'MMM d, yyyy') : 'N/A'}</div>
                                     </div>
                                     <div class="order-details">
-                                        ${i.order_payload?.indication ? `<strong>Indication:</strong> ${i.order_payload.indication}` : ''}
-                                        ${i.order_payload?.instructions ? `<br/><strong>Instructions:</strong> ${i.order_payload.instructions}` : ''}
+                                        ${i.type === 'virtual' ? '' : `
+                                            ${i.order_payload?.indication ? `<strong>Indication:</strong> ${i.order_payload.indication}` : ''}
+                                            ${i.order_payload?.instructions ? `<br/><strong>Instructions:</strong> ${i.order_payload.instructions}` : ''}
+                                        `}
                                     </div>
-                                    ${i.diagnoses?.length > 0 ? `
+                                    ${(i.diagnoses?.length > 0 || i.diagnosis_name) ? `
                                         <div class="order-dx">
                                             <strong>Diagnoses:</strong> 
-                                            ${i.diagnoses.map(d => `<span class="dx-pill">${d.icd10Code || d.icd10_code}: ${d.name || d.problem_name}</span>`).join('')}
+                                            ${i.diagnosis_name ? `<span class="dx-pill">${i.diagnosis_name}</span>` : i.diagnoses.map(d => `<span class="dx-pill">${d.icd10Code || d.icd10_code}: ${d.name || d.problem_name}</span>`).join('')}
                                         </div>
                                     ` : ''}
                                 </div>
