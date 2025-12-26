@@ -187,8 +187,8 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
         return Array.from(dxSet).sort();
     }, [allOrders]);
 
-    const toggleDiagnosisOrders = (dxName) => {
-        const matchingOrders = allOrders.filter(order => {
+    const toggleVisitDiagnosisOrders = (dxName, visitOrders) => {
+        const matchingOrders = visitOrders.filter(order => {
             if (order.diagnosis_name === dxName) return true;
             if (order.diagnoses?.some(d => (d.name || d.problem_name || d.icd10Code || d.icd10_code) === dxName)) return true;
             return false;
@@ -731,8 +731,28 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                                         </div>
 
                                         {expandedVisits['standalone'] && (
-                                            <div className="p-2 bg-gray-50/30 border-t border-gray-100 space-y-1">
-                                                {getOrdersForVisit(null).map(order => renderOrderRow(order))}
+                                            <div className="bg-gray-50/30 border-t border-gray-100 p-2">
+                                                {/* Visit-specific Diagnosis Select */}
+                                                {(Array.from(new Set(getOrdersForVisit(null).map(o => o.diagnosis_name || o.diagnoses?.map(d => d.name || d.problem_name || d.icd10Code || d.icd10_code)).flat().filter(Boolean))).length > 1) && (
+                                                    <div className="px-2 py-3 mb-2 flex flex-wrap gap-1.5 border-b border-gray-100">
+                                                        {Array.from(new Set(getOrdersForVisit(null).map(o => o.diagnosis_name || o.diagnoses?.map(d => d.name || d.problem_name || d.icd10Code || d.icd10_code)).flat().filter(Boolean))).sort().map(dx => {
+                                                            const visitDxOrders = getOrdersForVisit(null).filter(o => o.diagnosis_name === dx || o.diagnoses?.some(d => (d.name || d.problem_name || d.icd10Code || d.icd10_code) === dx));
+                                                            const allDxInVisitSelected = visitDxOrders.every(o => selectedOrders.has(o.id));
+                                                            return (
+                                                                <button
+                                                                    key={dx}
+                                                                    onClick={() => toggleVisitDiagnosisOrders(dx, getOrdersForVisit(null))}
+                                                                    className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all ${allDxInVisitSelected ? 'bg-primary-600 border-primary-600 text-white' : 'bg-white border-primary-100 text-primary-700 hover:border-primary-300'}`}
+                                                                >
+                                                                    {dx} ({visitDxOrders.length})
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                                <div className="space-y-1">
+                                                    {getOrdersForVisit(null).map(order => renderOrderRow(order))}
+                                                </div>
                                             </div>
                                         )}
                                     </div>
@@ -775,8 +795,28 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                                             </div>
 
                                             {isExpanded && (
-                                                <div className="p-2 bg-gray-50/30 border-t border-gray-100 space-y-1">
-                                                    {visitOrders.map(order => renderOrderRow(order))}
+                                                <div className="bg-gray-50/30 border-t border-gray-100 p-2">
+                                                    {/* Visit-specific Diagnosis Select */}
+                                                    {(Array.from(new Set(visitOrders.map(o => o.diagnosis_name || o.diagnoses?.map(d => d.name || d.problem_name || d.icd10Code || d.icd10_code)).flat().filter(Boolean))).length > 0) && (
+                                                        <div className="px-2 py-3 mb-2 flex flex-wrap gap-1.5 border-b border-gray-100">
+                                                            {Array.from(new Set(visitOrders.map(o => o.diagnosis_name || o.diagnoses?.map(d => d.name || d.problem_name || d.icd10Code || d.icd10_code)).flat().filter(Boolean))).sort().map(dx => {
+                                                                const visitDxOrders = visitOrders.filter(o => o.diagnosis_name === dx || o.diagnoses?.some(d => (d.name || d.problem_name || d.icd10Code || d.icd10_code) === dx));
+                                                                const allDxInVisitSelected = visitDxOrders.every(o => selectedOrders.has(o.id));
+                                                                return (
+                                                                    <button
+                                                                        key={dx}
+                                                                        onClick={() => toggleVisitDiagnosisOrders(dx, visitOrders)}
+                                                                        className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all ${allDxInVisitSelected ? 'bg-primary-600 border-primary-600 text-white' : 'bg-white border-primary-100 text-primary-700 hover:border-primary-300'}`}
+                                                                    >
+                                                                        {dx} ({visitDxOrders.length})
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                    <div className="space-y-1">
+                                                        {visitOrders.map(order => renderOrderRow(order))}
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
@@ -784,39 +824,6 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                                 })}
                             </div>
 
-                            {/* Diagnosis Quick Select - Moved under visits */}
-                            {uniqueDiagnoses.length > 0 && (
-                                <div className="mt-8 p-4 bg-primary-50/50 rounded-2xl border border-primary-100 flex flex-col gap-3">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="text-[11px] font-bold text-primary-700 uppercase tracking-wider">Quick Select by Diagnosis</h3>
-                                        <span className="text-[10px] text-primary-500 font-medium italic">Click to select all associated orders</span>
-                                    </div>
-                                    <div className="flex flex-wrap gap-2">
-                                        {uniqueDiagnoses.map(dx => {
-                                            const matchingOrders = allOrders.filter(o => {
-                                                if (o.diagnosis_name === dx) return true;
-                                                return o.diagnoses?.some(d => (d.name || d.problem_name || d.icd10Code || d.icd10_code) === dx);
-                                            });
-                                            const allSelected = matchingOrders.every(o => selectedOrders.has(o.id));
-
-                                            return (
-                                                <button
-                                                    key={dx}
-                                                    onClick={() => toggleDiagnosisOrders(dx)}
-                                                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border flex items-center gap-2 ${allSelected
-                                                        ? 'bg-primary-600 border-primary-600 text-white shadow-md'
-                                                        : 'bg-white border-primary-100 text-primary-900 hover:border-primary-300 hover:bg-white shadow-sm'
-                                                        }`}
-                                                >
-                                                    {allSelected && <CheckCircle2 className="w-3.5 h-3.5" />}
-                                                    {dx}
-                                                    <span className={`ml-1 text-[10px] ${allSelected ? 'text-primary-200' : 'text-primary-400'}`}>({matchingOrders.length})</span>
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     )}
                 </div>
