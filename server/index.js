@@ -17,6 +17,7 @@ const labRoutes = require('./routes/labs');
 const fhirRoutes = require('./routes/fhir');
 const ordersetRoutes = require('./routes/ordersets');
 const icd10HierarchyRoutes = require('./routes/icd10-hierarchy');
+const { resolveTenant } = require('./middleware/tenant');
 
 const app = express();
 // Enable trust proxy for Caddy (reverse proxy) to pass correct IP steps
@@ -100,6 +101,9 @@ const staticFiles = express.static(uploadDir, {
 
 app.use('/api/uploads', staticMiddleware, staticFiles);
 app.use('/uploads', staticMiddleware, staticFiles);
+
+// Multi-tenancy resolver - resolves clinic specific database
+app.use('/api', resolveTenant);
 
 // Session timeout middleware (for authenticated routes)
 app.use('/api', sessionTimeout);
@@ -186,6 +190,9 @@ app.use('/api/settings', settingsRoutes);
 const reportsRoutes = require('./routes/reports');
 app.use('/api/reports', reportsRoutes);
 
+// Super Admin (Platform Management)
+app.use('/api/super', require('./routes/superAdmin'));
+
 // HL7 endpoints
 const hl7Routes = require('./routes/hl7');
 app.use('/api/hl7', hl7Routes);
@@ -213,7 +220,7 @@ app.use('/api/followups', followupsRoutes);
 // Root endpoint - redirect to frontend or show API info
 app.get('/', (req, res) => {
   res.json({
-    message: 'PageMD API Server',
+    message: 'Medical Health Record API Server',
     version: '1.0.0',
     endpoints: {
       health: '/api/health',

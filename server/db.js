@@ -1,56 +1,66 @@
 const { Pool, types } = require('pg');
+const { AsyncLocalStorage } = require('async_hooks');
 require('dotenv').config();
+
+// Create the storage for the current tenant's pool
+const dbStorage = new AsyncLocalStorage();
 
 // Override DATE parser (OID 1082) to return date as string (YYYY-MM-DD)
 // This prevents timezone-related date shifting (e.g. DOB shifting back one day)
 types.setTypeParser(1082, (stringValue) => stringValue);
 
-// Use DATABASE_URL if available (production), otherwise use individual env vars
-const pool = process.env.DATABASE_URL
-  ? new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false // Allow self-signed certificates
-    },
-    // Keep a modest pool size; too many connections can hurt small instances
-    max: 10,
-    // Close idle connections a bit sooner to avoid stale sockets
-    idleTimeoutMillis: 15000,
-    // Give the DB more time to accept new connections to avoid spurious timeouts
-    connectionTimeoutMillis: 15000,
-  })
-  : new Pool({
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
-    database: process.env.DB_NAME || 'paper_emr',
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'postgres',
-    max: 20,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
-  });
-
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
-  // Don't exit the process - log the error and let the pool handle reconnection
-  // The pool will automatically retry connections
+/**
+ * Control Pool: Connects to the platform/tenant registry database.
+ * Used exclusively by the TenantManager and Super Admin tools.
+ */
+const controlPool = new Pool({
+  connectionString: process.env.CONTROL_DATABASE_URL || process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  max: 5,
+  idleTimeoutMillis: 30000,
 });
 
-// Monitor connection pool health
-if (process.env.NODE_ENV === 'development') {
-  setInterval(() => {
-    console.log('🔌 POOL STATUS:', {
-      total: pool.totalCount,
-      idle: pool.idleCount,
-      waiting: pool.waitingCount
-    });
-    if (pool.waitingCount > 0) {
-      console.warn('⚠️ WARNING: Connection pool has waiting requests - possible connection leak!');
+/**
+ * Default Pool: Used when no tenant is resolved (e.g. startup, health checks).
+ */
+const defaultPool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  max: 10,
+  idleTimeoutMillis: 15000,
+  connectionTimeoutMillis: 15000,
+});
+
+/**
+ * The Proxy Object: This is what routes import via require('../db').
+ * It dynamically routes queries to the correct tenant's pool using AsyncLocalStorage.
+ */
+const poolProxy = {
+  get dbStorage() {
+    return dbStorage;
+  },
+
+  // Helper to get the current pool from context
+  get _currentPool() {
+    const pool = dbStorage.getStore();
+    if (!pool) {
+      // If no tenant pool is in context, we use the default pool
+      // In production, this might be a SuperAdmin or Shared DB depending on logic
+      return defaultPool;
     }
-  }, 10000); // Every 10 seconds
-}
+    return pool;
+  },
 
-module.exports = pool;
+  // Proxy the most common pool methods
+  query: (...args) => poolProxy._currentPool.query(...args),
+  connect: (...args) => poolProxy._currentPool.connect(...args),
+  on: (...args) => poolProxy._currentPool.on(...args),
+  end: (...args) => poolProxy._currentPool.end(...args),
 
+  // Expose the control pool for platform-level operations
+  get controlPool() {
+    return controlPool;
+  }
+};
 
-
+module.exports = poolProxy;

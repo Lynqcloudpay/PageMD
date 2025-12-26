@@ -15,6 +15,46 @@ const router = express.Router();
 // Basic settings accessible to most authenticated users (with specific permissions)
 router.get('/practice', authenticate, async (req, res) => {
   try {
+    // If we have a clinic resolved in the context, pull branding from Control DB
+    if (req.clinic) {
+      const result = await pool.controlPool.query(
+        'SELECT * FROM clinics WHERE id = $1',
+        [req.clinic.id]
+      );
+      if (result.rows.length > 0) {
+        const c = result.rows[0];
+        // Merge with clinic_settings
+        const settingsRes = await pool.controlPool.query(
+          'SELECT * FROM clinic_settings WHERE clinic_id = $1',
+          [req.clinic.id]
+        );
+        const s = settingsRes.rows[0] || {};
+
+        return res.json({
+          id: c.id,
+          practice_name: c.display_name,
+          legal_name: c.legal_name,
+          practice_type: c.specialty,
+          tax_id: c.tax_id,
+          npi: c.npi,
+          address_line1: c.address_line1,
+          address_line2: c.address_line2,
+          city: c.city,
+          state: c.state,
+          zip: c.zip,
+          phone: c.phone,
+          fax: c.fax,
+          email: c.email,
+          website: c.website,
+          logo_url: c.logo_url,
+          timezone: s.time_zone || 'America/New_York',
+          date_format: s.date_format || 'MM/DD/YYYY',
+          time_format: s.time_format || '12h'
+        });
+      }
+    }
+
+    // Fallback to local DB for backward compatibility or unit tests
     const result = await pool.query('SELECT * FROM practice_settings ORDER BY updated_at DESC LIMIT 1');
     if (result.rows.length === 0) {
       return res.json({
@@ -89,7 +129,45 @@ adminRouter.put('/practice', [
       timezone, date_format, time_format
     } = req.body;
 
-    // Check if settings exist
+    if (req.clinic) {
+      // Update Control DB
+      await pool.controlPool.query(`
+        UPDATE clinics SET
+          display_name = COALESCE($1, display_name),
+          legal_name = COALESCE($2, legal_name),
+          specialty = COALESCE($3, specialty),
+          tax_id = COALESCE($4, tax_id),
+          npi = COALESCE($5, npi),
+          address_line1 = COALESCE($6, address_line1),
+          address_line2 = COALESCE($7, address_line2),
+          city = COALESCE($8, city),
+          state = COALESCE($9, state),
+          zip = COALESCE($10, zip),
+          phone = COALESCE($11, phone),
+          fax = COALESCE($12, fax),
+          email = COALESCE($13, email),
+          website = COALESCE($14, website),
+          logo_url = COALESCE($15, logo_url)
+        WHERE id = $16
+      `, [
+        practice_name, legal_name, practice_type, tax_id, npi,
+        address_line1, address_line2, city, state, zip,
+        phone, fax, email, website, logo_url,
+        req.clinic.id
+      ]);
+
+      await pool.controlPool.query(`
+        UPDATE clinic_settings SET
+          time_zone = COALESCE($1, time_zone),
+          date_format = COALESCE($2, date_format),
+          time_format = COALESCE($3, time_format)
+        WHERE clinic_id = $4
+      `, [timezone, date_format, time_format, req.clinic.id]);
+
+      return res.json({ message: 'Clinic settings updated successfully in Control DB' });
+    }
+
+    // Fallback/Legacy local update
     const existing = await pool.query('SELECT id FROM practice_settings LIMIT 1');
 
     let result;
