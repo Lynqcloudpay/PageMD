@@ -10,10 +10,10 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
     const [selectedOrders, setSelectedOrders] = useState(new Set());
     const [expandedVisits, setExpandedVisits] = useState({});
     const [clinicInfo, setClinicInfo] = useState({
-        name: "PageMD Family Practice",
+        name: "myHEART Cardiology & Primary Care",
         address: "123 Medical Plaza, Ste 100\nHealthcare City, ST 12345",
         phone: "(555) 123-4567",
-        logo: "https://pagemd.com/wp-content/uploads/2023/10/pagemd-logo.png"
+        logo: "/clinic-logo.png"
     });
 
     useEffect(() => {
@@ -101,13 +101,13 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                     .join('\n');
 
                 setClinicInfo({
-                    name: p.practice_name || "PageMD Family Practice",
+                    name: p.practice_name || "myHEART Cardiology & Primary Care",
                     address: address || "123 Medical Plaza, Ste 100\nHealthcare City, ST 12345",
                     phone: p.phone || "(555) 123-4567",
-                    logo: p.logo_url || "https://pagemd.com/wp-content/uploads/2023/10/pagemd-logo.png",
+                    logo: p.logo_url || "/clinic-logo.png",
                     npi: p.npi || "1234567890",
                     fax: p.fax || "(555) 123-4568",
-                    email: p.email || "info@pagemd.com"
+                    email: p.email || "office@myheartclinic.com"
                 });
             }
 
@@ -274,9 +274,10 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
         const patientName = `${patient.last_name || ''}, ${patient.first_name || ''}`.toUpperCase();
         const patientDOB = patient.dob ? format(new Date(patient.dob), 'MM/dd/yyyy') : 'N/A';
         const patientAge = patient.dob ? `${Math.floor((new Date() - new Date(patient.dob)) / 31557600000)}Y` : '';
-        const patientGender = (patient.gender || 'U').charAt(0).toUpperCase();
+        const patientGender = (patient.sex || patient.gender || 'U').charAt(0).toUpperCase();
         const patientMRN = patient.mrn || 'N/A';
         const datePrinted = format(new Date(), 'MM/dd/yyyy HH:mm');
+        const patientPhone = patient.phone ? patient.phone.replace(/\D/g, '').replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3') : 'N/A';
 
         const labs = ordersToPrint.filter(o => o.category === 'lab');
         const imaging = ordersToPrint.filter(o => o.category === 'imaging');
@@ -442,48 +443,47 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                 </head>
                 <body>
                     <div class="req-container">
-                        <div class="req-header">
-                            <div class="clinic-branding">
-                                ${clinicInfo.logo ? `<img src="${clinicInfo.logo}" class="clinic-logo" alt="Logo">` : ''}
-                                <h1 class="clinic-name">${clinicInfo.name}</h1>
-                                <div class="clinic-details">
-                                    ${clinicInfo.address.replace(/\n/g, ' &middot; ')}<br>
-                                    TEL: ${clinicInfo.phone} &middot; FAX: ${clinicInfo.fax}<br>
-                                    NPI: ${clinicInfo.npi}
+                        <div style="background-color: #f8fafc; border-bottom: 2px solid #e2e8f0; padding: 20px; border-radius: 8px 8px 0 0; margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 15px;">
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    ${clinicInfo.logo ? `<img src="${clinicInfo.logo}" style="width: 100px; height: 100px; object-fit: contain;" alt="Logo">` : ''}
+                                    <div>
+                                        <h1 style="font-size: 18pt; font-weight: 800; color: #1e293b; margin: 0 0 5px 0;">${clinicInfo.name}</h1>
+                                        <div style="font-size: 9pt; color: #64748b; line-height: 1.4;">
+                                            ${clinicInfo.address.replace(/\n/g, '<br>')}<br>
+                                            <span style="display: inline-flex; align-items: center; gap: 5px;"><strong>TEL:</strong> ${clinicInfo.phone}</span> &middot; 
+                                            <span style="display: inline-flex; align-items: center; gap: 5px;"><strong>FAX:</strong> ${clinicInfo.fax}</span><br>
+                                            <strong>NPI:</strong> ${clinicInfo.npi} &middot; <strong>EML:</strong> ${clinicInfo.email || 'office@myheartclinic.com'}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="text-align: right; border-left: 1px solid #e2e8f0; padding-left: 15px;">
+                                    <div style="font-size: 10pt; font-weight: 700; color: #2563eb; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px;">Order Requisition</div>
+                                    <div style="font-size: 8pt; color: #64748b;">
+                                        <div><strong>Printed:</strong> ${datePrinted}</div>
+                                        <div><strong>Ref:</strong> ${patientMRN}</div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="req-type-badge">
-                                <div class="badge-text">Order Requisition</div>
-                            </div>
-                        </div>
 
-                        <div class="info-grid">
-                            <div class="info-row">
-                                <div class="info-cell" style="width: 40%;">
-                                    <span class="cell-label">Patient Name</span>
-                                    <span class="cell-value">${patientName}</span>
+                            <div style="display: flex; gap: 20px;">
+                                <div>
+                                    <h2 style="font-size: 16pt; font-weight: 700; color: #0f172a; margin: 0 0 8px 0;">${patientName}</h2>
+                                    <div style="display: flex; gap: 15px; font-size: 9pt; color: #334155;">
+                                        <span><strong>MRN:</strong> ${patientMRN}</span>
+                                        <span><strong>DOB:</strong> ${patientDOB} (${patientAge})</span>
+                                        <span><strong>SEX:</strong> ${patientGender}</span>
+                                    </div>
                                 </div>
-                                <div class="info-cell" style="width: 20%;">
-                                    <span class="cell-label">Date of Birth</span>
-                                    <span class="cell-value">${patientDOB}</span>
-                                </div>
-                                <div class="info-cell" style="width: 20%;">
-                                    <span class="cell-label">Gender / Age</span>
-                                    <span class="cell-value">${patientGender} / ${patientAge}</span>
-                                </div>
-                                <div class="info-cell" style="width: 20%;">
-                                    <span class="cell-label">Patient MRN</span>
-                                    <span class="cell-value">${patientMRN}</span>
-                                </div>
-                            </div>
-                            <div class="info-row">
-                                <div class="info-cell">
-                                    <span class="cell-label">Patient Contact</span>
-                                    <span class="cell-value">${patient.phone || 'N/A'}</span>
-                                </div>
-                                <div class="info-cell" colspan="3">
-                                    <span class="cell-label">Patient Address</span>
-                                    <span class="cell-value">${(patient.address_line1 || '') + ' ' + (patient.city || '') + ', ' + (patient.state || '') + ' ' + (patient.zip || '')}</span>
+                                <div style="flex: 1; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 8pt; color: #475569; border-left: 1px solid #e2e8f0; padding-left: 20px;">
+                                    <div>
+                                        <div style="font-weight: 700; text-transform: uppercase; font-size: 7pt; color: #94a3b8;">Phone</div>
+                                        <div>${patientPhone}</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 700; text-transform: uppercase; font-size: 7pt; color: #94a3b8;">Address</div>
+                                        <div style="line-height: 1.2;">${(patient.address_line1 || '')}<br>${(patient.city || '')}, ${(patient.state || '')} ${(patient.zip || '')}</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -681,39 +681,6 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                         </div>
                     ) : (
                         <div className="p-4">
-                            {/* Diagnosis Quick Select */}
-                            {uniqueDiagnoses.length > 0 && (
-                                <div className="mb-8 p-4 bg-primary-50/50 rounded-2xl border border-primary-100 flex flex-col gap-3">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="text-[11px] font-bold text-primary-700 uppercase tracking-wider">Quick Select by Diagnosis</h3>
-                                        <span className="text-[10px] text-primary-500 font-medium italic">Click to select all associated orders</span>
-                                    </div>
-                                    <div className="flex flex-wrap gap-2">
-                                        {uniqueDiagnoses.map(dx => {
-                                            const matchingOrders = allOrders.filter(o => {
-                                                if (o.diagnosis_name === dx) return true;
-                                                return o.diagnoses?.some(d => (d.name || d.problem_name || d.icd10Code || d.icd10_code) === dx);
-                                            });
-                                            const allSelected = matchingOrders.every(o => selectedOrders.has(o.id));
-
-                                            return (
-                                                <button
-                                                    key={dx}
-                                                    onClick={() => toggleDiagnosisOrders(dx)}
-                                                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border flex items-center gap-2 ${allSelected
-                                                        ? 'bg-primary-600 border-primary-600 text-white shadow-md'
-                                                        : 'bg-white border-primary-100 text-primary-900 hover:border-primary-300 hover:bg-white shadow-sm'
-                                                        }`}
-                                                >
-                                                    {allSelected && <CheckCircle2 className="w-3.5 h-3.5" />}
-                                                    {dx}
-                                                    <span className={`ml-1 text-[10px] ${allSelected ? 'text-primary-200' : 'text-primary-400'}`}>({matchingOrders.length})</span>
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
-                            )}
 
                             <div className="space-y-4">
                                 {/* Standalone Orders Group (if any) */}
@@ -797,6 +764,40 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                                     );
                                 })}
                             </div>
+
+                            {/* Diagnosis Quick Select - Moved under visits */}
+                            {uniqueDiagnoses.length > 0 && (
+                                <div className="mt-8 p-4 bg-primary-50/50 rounded-2xl border border-primary-100 flex flex-col gap-3">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-[11px] font-bold text-primary-700 uppercase tracking-wider">Quick Select by Diagnosis</h3>
+                                        <span className="text-[10px] text-primary-500 font-medium italic">Click to select all associated orders</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {uniqueDiagnoses.map(dx => {
+                                            const matchingOrders = allOrders.filter(o => {
+                                                if (o.diagnosis_name === dx) return true;
+                                                return o.diagnoses?.some(d => (d.name || d.problem_name || d.icd10Code || d.icd10_code) === dx);
+                                            });
+                                            const allSelected = matchingOrders.every(o => selectedOrders.has(o.id));
+
+                                            return (
+                                                <button
+                                                    key={dx}
+                                                    onClick={() => toggleDiagnosisOrders(dx)}
+                                                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border flex items-center gap-2 ${allSelected
+                                                        ? 'bg-primary-600 border-primary-600 text-white shadow-md'
+                                                        : 'bg-white border-primary-100 text-primary-900 hover:border-primary-300 hover:bg-white shadow-sm'
+                                                        }`}
+                                                >
+                                                    {allSelected && <CheckCircle2 className="w-3.5 h-3.5" />}
+                                                    {dx}
+                                                    <span className={`ml-1 text-[10px] ${allSelected ? 'text-primary-200' : 'text-primary-400'}`}>({matchingOrders.length})</span>
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
