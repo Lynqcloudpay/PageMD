@@ -1608,7 +1608,7 @@ const VisitNote = () => {
                                     </button>
                                 </>
                             )}
-                            <button onClick={() => setShowPrintOrdersModal(true)} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white text-primary-600 hover:bg-primary-50 text-xs font-bold rounded-md border border-primary-200 transition-all shadow-sm" title="Print Orders">
+                            <button onClick={() => setShowPrintOrdersModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-primary-600 hover:bg-primary-50 text-xs font-bold rounded-full border border-primary-200 transition-all shadow-sm" title="Print Orders">
                                 <Printer className="w-3.5 h-3.5" />
                                 <span>Print Orders</span>
                             </button>

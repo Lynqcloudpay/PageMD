@@ -1398,7 +1398,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             </button>
                             <button
                                 onClick={() => setShowPrintOrdersModal(true)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-primary-700 bg-white hover:bg-primary-50 rounded-md transition-all border border-primary-200 shadow-sm"
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-primary-600 hover:bg-primary-50 text-xs font-bold rounded-full border border-primary-200 transition-all shadow-sm"
+                                title="Print Orders"
                             >
                                 <Printer className="w-3.5 h-3.5" />
                                 <span>Print Orders</span>

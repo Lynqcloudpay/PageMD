@@ -536,10 +536,11 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => setShowPrintOrdersModal(true)}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-white text-primary-600 text-xs font-bold rounded-lg border border-primary-200 hover:bg-primary-50 transition-all shadow-sm"
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-primary-600 hover:bg-primary-50 text-xs font-bold rounded-full border border-primary-200 transition-all shadow-sm"
+                                title="Print Orders"
                             >
                                 <Printer className="w-4 h-4" />
-                                Print Orders
+                                <span>Print Orders</span>
                             </button>
                             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition-all">
                                 <X className="w-5 h-5" />

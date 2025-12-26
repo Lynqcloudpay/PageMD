@@ -30,7 +30,7 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                 ordersAPI.getByPatient(patient.id),
                 referralsAPI.getByPatient(patient.id),
                 eprescribeAPI.getPrescriptions(patient.id).catch(() => ({ data: { prescriptions: [] } })),
-                settingsAPI.getPractice()
+                settingsAPI.getPractice().catch(() => ({ data: null }))
             ]);
 
             // Update clinic info if available
@@ -457,7 +457,7 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                         <button onClick={onClose} className="px-5 py-2.5 text-sm font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition-all">
                             Cancel
                         </button>
-                        <button onClick={handlePrint} disabled={selectedOrders.size === 0} className={`px-6 py-2.5 text-sm font-bold text-white rounded-xl shadow-lg shadow-primary-200 flex items-center gap-2 transition-all ${selectedOrders.size === 0 ? 'bg-gray-300 cursor-not-allowed grayscale' : 'bg-primary-600 hover:bg-primary-700 active:scale-95'}`}>
+                        <button onClick={handlePrint} disabled={selectedOrders.size === 0} className={`px-6 py-2.5 text-sm font-bold text-white rounded-full shadow-lg shadow-primary-200 flex items-center gap-2 transition-all ${selectedOrders.size === 0 ? 'bg-gray-300 cursor-not-allowed grayscale' : 'bg-primary-600 hover:bg-primary-700 active:scale-95'}`}>
                             <Printer className="w-4 h-4" />
                             Print Selected
                         </button>

@@ -146,3 +146,66 @@ CREATE TRIGGER update_icd10_codes_updated_at
     BEFORE UPDATE ON icd10_codes
     FOR EACH ROW
     EXECUTE PROCEDURE update_updated_at_column();
+
+-- Admin Settings Tables
+CREATE TABLE IF NOT EXISTS practice_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    practice_name VARCHAR(255) NOT NULL DEFAULT 'My Practice',
+    practice_type VARCHAR(100),
+    tax_id VARCHAR(50),
+    npi VARCHAR(10),
+    address_line1 VARCHAR(255),
+    address_line2 VARCHAR(255),
+    city VARCHAR(100),
+    state VARCHAR(50),
+    zip VARCHAR(20),
+    phone VARCHAR(20),
+    fax VARCHAR(20),
+    email VARCHAR(255),
+    website VARCHAR(255),
+    logo_url TEXT,
+    timezone VARCHAR(50) DEFAULT 'America/New_York',
+    date_format VARCHAR(20) DEFAULT 'MM/DD/YYYY',
+    time_format VARCHAR(20) DEFAULT '12h',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID
+);
+
+CREATE TABLE IF NOT EXISTS clinical_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    default_note_template TEXT,
+    require_dx_on_visit BOOLEAN DEFAULT true,
+    require_vitals_on_visit BOOLEAN DEFAULT false,
+    default_vitals_template JSONB,
+    lab_result_retention_days INTEGER DEFAULT 2555,
+    imaging_result_retention_days INTEGER DEFAULT 2555,
+    document_retention_days INTEGER DEFAULT 2555,
+    enable_clinical_alerts BOOLEAN DEFAULT true,
+    enable_drug_interaction_check BOOLEAN DEFAULT true,
+    enable_allergy_alerts BOOLEAN DEFAULT true,
+    default_visit_duration_minutes INTEGER DEFAULT 15,
+    enable_appointment_reminders BOOLEAN DEFAULT false,
+    reminder_days_before INTEGER DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID
+);
+
+CREATE TABLE IF NOT EXISTS feature_flags (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    feature_key VARCHAR(255) UNIQUE NOT NULL,
+    enabled BOOLEAN DEFAULT false,
+    description TEXT,
+    category VARCHAR(100),
+    requires_config BOOLEAN DEFAULT false,
+    config_data JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID
+);
+
+-- Insert default practice settings if none exist
+INSERT INTO practice_settings (practice_name, timezone, date_format, time_format)
+SELECT 'PageMD Family Practice', 'America/New_York', 'MM/DD/YYYY', '12h'
+WHERE NOT EXISTS (SELECT 1 FROM practice_settings);
