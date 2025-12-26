@@ -104,7 +104,10 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                     name: p.practice_name || "PageMD Family Practice",
                     address: address || "123 Medical Plaza, Ste 100\nHealthcare City, ST 12345",
                     phone: p.phone || "(555) 123-4567",
-                    logo: p.logo_url || "https://pagemd.com/wp-content/uploads/2023/10/pagemd-logo.png"
+                    logo: p.logo_url || "https://pagemd.com/wp-content/uploads/2023/10/pagemd-logo.png",
+                    npi: p.npi || "1234567890",
+                    fax: p.fax || "(555) 123-4568",
+                    email: p.email || "info@pagemd.com"
                 });
             }
 
@@ -235,214 +238,338 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
     };
 
     const generatePrintHTML = (ordersToPrint) => {
-        const patientName = `${patient.first_name} ${patient.last_name}`;
+        const patientName = `${patient.last_name || ''}, ${patient.first_name || ''}`.toUpperCase();
         const patientDOB = patient.dob ? format(new Date(patient.dob), 'MM/dd/yyyy') : 'N/A';
+        const patientAge = patient.dob ? `${Math.floor((new Date() - new Date(patient.dob)) / 31557600000)}Y` : '';
+        const patientGender = (patient.gender || 'U').charAt(0).toUpperCase();
         const patientMRN = patient.mrn || 'N/A';
-        const datePrinted = format(new Date(), 'MMMM d, yyyy h:mm a');
+        const datePrinted = format(new Date(), 'MM/dd/yyyy HH:mm');
 
-        // Group by type for the printout
         const labs = ordersToPrint.filter(o => o.category === 'lab');
         const imaging = ordersToPrint.filter(o => o.category === 'imaging');
         const prescriptions = ordersToPrint.filter(o => o.category === 'prescription');
         const referrals = ordersToPrint.filter(o => o.category === 'referral');
 
+        const renderDiagnosisList = (order) => {
+            if (order.diagnosis_name) return `<span class="dx-code">${order.diagnosis_name}</span>`;
+            if (order.diagnoses?.length > 0) {
+                return order.diagnoses.map(d => `<span class="dx-code">${d.icd10Code || d.icd10_code || ''}: ${d.name || d.problem_name || ''}</span>`).join('; ');
+            }
+            return '<span class="text-muted">None specified</span>';
+        };
+
         return `
+            <!DOCTYPE html>
             <html>
                 <head>
-                    <title>Patient Orders - ${patientName}</title>
+                    <title>ORDER_REQUISITION_${patient.last_name}_${patient.mrn}</title>
                     <style>
-                        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+                        @page { size: portrait; margin: 0.5in; }
                         body {
-                            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-                            color: #1a202c;
-                            line-height: 1.5;
-                            padding: 40px;
-                            max-width: 800px;
-                            margin: 0 auto;
+                            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                            color: #000;
+                            line-height: 1.3;
+                            font-size: 11pt;
+                            margin: 0;
+                            padding: 0;
                         }
-                        .header {
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: flex-start;
-                            border-bottom: 2px solid #e2e8f0;
-                            padding-bottom: 20px;
-                            margin-bottom: 30px;
-                        }
-                        .clinic-info h1 { margin: 0; font-size: 24px; color: #2d3748; }
-                        .clinic-info p { margin: 2px 0; font-size: 12px; color: #718096; }
-                        .patient-info { text-align: right; }
-                        .patient-info h2 { margin: 0; font-size: 18px; }
-                        .patient-info p { margin: 2px 0; font-size: 12px; }
+                        .req-container { max-width: 8.5in; margin: 0 auto; }
                         
-                        .section { margin-bottom: 30px; page-break-inside: avoid; }
-                        .section-title {
-                            font-size: 14px;
-                            font-weight: 700;
+                        /* Header Section */
+                        .req-header {
+                            display: table;
+                            width: 100%;
+                            border-bottom: 2px solid #000;
+                            padding-bottom: 10px;
+                            margin-bottom: 20px;
+                        }
+                        .clinic-branding { display: table-cell; vertical-align: middle; width: 60%; }
+                        .clinic-logo { height: 50px; margin-bottom: 5px; }
+                        .clinic-name { font-size: 16pt; font-weight: bold; margin: 0; }
+                        .clinic-details { font-size: 9pt; color: #444; }
+                        
+                        .req-type-badge {
+                            display: table-cell;
+                            vertical-align: middle;
+                            text-align: right;
+                            width: 40%;
+                        }
+                        .badge-text {
+                            display: inline-block;
+                            padding: 8px 15px;
+                            background: #000;
+                            color: #fff;
+                            font-weight: bold;
+                            font-size: 12pt;
                             text-transform: uppercase;
-                            letter-spacing: 0.05em;
-                            color: #4a5568;
-                            border-bottom: 1px solid #edf2f7;
-                            padding-bottom: 8px;
-                            margin-bottom: 15px;
-                            display: flex;
-                            align-items: center;
-                            gap: 8px;
                         }
-                        
-                        .order-card {
-                            border: 1px solid #e2e8f0;
-                            border-radius: 8px;
-                            padding: 15px;
-                            margin-bottom: 15px;
-                            background-color: #f8fafc;
+
+                        /* Info Grid */
+                        .info-grid {
+                            display: table;
+                            width: 100%;
+                            margin-bottom: 25px;
+                            border: 1px solid #ccc;
                         }
-                        .order-header {
-                            display: flex;
-                            justify-content: space-between;
+                        .info-row { display: table-row; }
+                        .info-cell {
+                            display: table-cell;
+                            padding: 8px;
+                            border: 1px solid #eee;
+                            vertical-align: top;
+                        }
+                        .cell-label {
+                            font-size: 8pt;
+                            font-weight: bold;
+                            text-transform: uppercase;
+                            color: #666;
+                            display: block;
+                            margin-bottom: 2px;
+                        }
+                        .cell-value { font-size: 11pt; font-weight: 600; }
+
+                        /* Section Styles */
+                        .section { margin-bottom: 30px; }
+                        .section-header {
+                            background: #f4f4f4;
+                            padding: 5px 10px;
+                            font-weight: bold;
+                            border-left: 4px solid #000;
+                            margin-bottom: 15px;
+                            text-transform: uppercase;
+                            font-size: 10pt;
+                        }
+
+                        /* Table Styles */
+                        .order-table {
+                            width: 100%;
+                            border-collapse: collapse;
                             margin-bottom: 10px;
                         }
-                        .order-name { font-weight: 700; font-size: 14px; }
-                        .order-date { font-size: 11px; color: #a0aec0; }
-                        .order-details { font-size: 13px; color: #4a5568; }
-                        .order-dx { margin-top: 10px; font-size: 11px; color: #718096; }
-                        .dx-pill {
-                            display: inline-block;
-                            background: #edf2f7;
-                            padding: 2px 8px;
-                            border-radius: 4px;
-                            margin-right: 5px;
+                        .order-table th {
+                            text-align: left;
+                            font-size: 9pt;
+                            text-transform: uppercase;
+                            border-bottom: 1px solid #000;
+                            padding: 5px;
                         }
-                        
-                        .footer {
-                            margin-top: 50px;
-                            padding-top: 20px;
-                            border-top: 1px solid #e2e8f0;
-                            font-size: 10px;
-                            color: #a0aec0;
+                        .order-table td {
+                            padding: 8px 5px;
+                            border-bottom: 1px solid #eee;
+                            vertical-align: top;
+                        }
+                        .dx-code { font-size: 9pt; font-style: italic; color: #444; }
+                        .text-muted { color: #888; }
+
+                        /* Requisition Card for single-item visibility */
+                        .req-card {
+                            border: 1px solid #ddd;
+                            padding: 12px;
+                            margin-bottom: 10px;
+                            background: #fff;
+                        }
+                        .card-title { font-weight: bold; font-size: 11pt; margin-bottom: 4px; }
+                        .card-meta { font-size: 9pt; color: #555; }
+
+                        /* Signature & Footer */
+                        .print-footer {
+                            margin-top: 60px;
+                            display: table;
+                            width: 100%;
+                        }
+                        .sig-block {
+                            display: table-cell;
+                            width: 50%;
+                            border-top: 1px solid #000;
+                            padding-top: 5px;
+                        }
+                        .date-block {
+                            display: table-cell;
+                            width: 20%;
+                            border-top: 1px solid #000;
+                            padding-top: 5px;
                             text-align: center;
                         }
+                        .sub-label { font-size: 8pt; color: #666; margin-top: 2px; }
+                        
+                        .disclaimer {
+                            margin-top: 40px;
+                            font-size: 8pt;
+                            color: #666;
+                            text-align: justify;
+                            border-top: 1px solid #eee;
+                            padding-top: 10px;
+                        }
+
                         @media print {
-                            body { padding: 0; }
-                            .order-card { break-inside: avoid; }
+                            .no-print { display: none; }
+                            body { -webkit-print-color-adjust: exact; }
                         }
                     </style>
                 </head>
                 <body>
-                    <div class="header">
-                        <div class="clinic-info">
-                            <h1>${clinicInfo.name}</h1>
-                            ${clinicInfo.address.split('\n').map(line => `<p>${line}</p>`).join('')}
-                            <p>Ph: ${clinicInfo.phone}</p>
-                        </div>
-                        <div class="patient-info">
-                            <h2>${patientName}</h2>
-                            <p>DOB: ${patientDOB}</p>
-                            <p>MRN: ${patientMRN}</p>
-                            <p>Date Printed: ${datePrinted}</p>
-                        </div>
-                    </div>
-
-                    ${prescriptions.length > 0 ? `
-                        <div class="section">
-                            <div class="section-title">Medications / Prescriptions</div>
-                            ${prescriptions.map(p => `
-                                <div class="order-card">
-                                    <div class="order-header">
-                                        <div class="order-name">${p.type === 'virtual' ? p.display_title : p.medication_name}</div>
-                                        <div class="order-date">${p.created_at ? format(new Date(p.created_at), 'MMM d, yyyy') : 'N/A'}</div>
-                                    </div>
-                                    <div class="order-details">
-                                        ${p.type === 'virtual' ? '' : `
-                                            <strong>Sig:</strong> ${p.sig}<br/>
-                                            <strong>Qty:</strong> ${p.quantity} | <strong>Refills:</strong> ${p.refills}
-                                        `}
-                                    </div>
-                                    ${(p.diagnoses?.length > 0 || p.diagnosis_name) ? `
-                                        <div class="order-dx">
-                                            <strong>Diagnoses:</strong> 
-                                            ${p.diagnosis_name ? `<span class="dx-pill">${p.diagnosis_name}</span>` : p.diagnoses.map(d => `<span class="dx-pill">${d.icd10Code || d.icd10_code}: ${d.name || d.problem_name}</span>`).join('')}
-                                        </div>
-                                    ` : ''}
+                    <div class="req-container">
+                        <div class="req-header">
+                            <div class="clinic-branding">
+                                ${clinicInfo.logo ? `<img src="${clinicInfo.logo}" class="clinic-logo" alt="Logo">` : ''}
+                                <h1 class="clinic-name">${clinicInfo.name}</h1>
+                                <div class="clinic-details">
+                                    ${clinicInfo.address.replace(/\n/g, ' &middot; ')}<br>
+                                    TEL: ${clinicInfo.phone} &middot; FAX: ${clinicInfo.fax}<br>
+                                    NPI: ${clinicInfo.npi}
                                 </div>
-                            `).join('')}
+                            </div>
+                            <div class="req-type-badge">
+                                <div class="badge-text">Order Requisition</div>
+                            </div>
                         </div>
-                    ` : ''}
 
-                    ${labs.length > 0 ? `
-                        <div class="section">
-                            <div class="section-title">Laboratory Orders</div>
-                            ${labs.map(l => `
-                                <div class="order-card">
-                                    <div class="order-header">
-                                        <div class="order-name">${l.type === 'virtual' ? l.display_title : l.order_payload?.test_name || l.order_payload?.name || 'Lab Test'}</div>
-                                        <div class="order-date">${l.created_at ? format(new Date(l.created_at), 'MMM d, yyyy') : 'N/A'}</div>
-                                    </div>
-                                    <div class="order-details">
-                                        ${l.type === 'virtual' ? '' : l.order_payload?.instructions ? `<strong>Instructions:</strong> ${l.order_payload.instructions}` : ''}
-                                    </div>
-                                    ${(l.diagnoses?.length > 0 || l.diagnosis_name) ? `
-                                        <div class="order-dx">
-                                            <strong>Diagnoses:</strong> 
-                                            ${l.diagnosis_name ? `<span class="dx-pill">${l.diagnosis_name}</span>` : l.diagnoses.map(d => `<span class="dx-pill">${d.icd10Code || d.icd10_code}: ${d.name || d.problem_name}</span>`).join('')}
-                                        </div>
-                                    ` : ''}
+                        <div class="info-grid">
+                            <div class="info-row">
+                                <div class="info-cell" style="width: 40%;">
+                                    <span class="cell-label">Patient Name</span>
+                                    <span class="cell-value">${patientName}</span>
                                 </div>
-                            `).join('')}
-                        </div>
-                    ` : ''}
-
-                    ${imaging.length > 0 ? `
-                        <div class="section">
-                            <div class="section-title">Imaging & Cardiology Orders</div>
-                            ${imaging.map(i => `
-                                <div class="order-card">
-                                    <div class="order-header">
-                                        <div class="order-name">${i.type === 'virtual' ? i.display_title : i.order_payload?.test_name || i.order_payload?.name || 'Imaging Study'}</div>
-                                        <div class="order-date">${i.created_at ? format(new Date(i.created_at), 'MMM d, yyyy') : 'N/A'}</div>
-                                    </div>
-                                    <div class="order-details">
-                                        ${i.type === 'virtual' ? '' : `
-                                            ${i.order_payload?.indication ? `<strong>Indication:</strong> ${i.order_payload.indication}` : ''}
-                                            ${i.order_payload?.instructions ? `<br/><strong>Instructions:</strong> ${i.order_payload.instructions}` : ''}
-                                        `}
-                                    </div>
-                                    ${(i.diagnoses?.length > 0 || i.diagnosis_name) ? `
-                                        <div class="order-dx">
-                                            <strong>Diagnoses:</strong> 
-                                            ${i.diagnosis_name ? `<span class="dx-pill">${i.diagnosis_name}</span>` : i.diagnoses.map(d => `<span class="dx-pill">${d.icd10Code || d.icd10_code}: ${d.name || d.problem_name}</span>`).join('')}
-                                        </div>
-                                    ` : ''}
+                                <div class="info-cell" style="width: 20%;">
+                                    <span class="cell-label">Date of Birth</span>
+                                    <span class="cell-value">${patientDOB}</span>
                                 </div>
-                            `).join('')}
-                        </div>
-                    ` : ''}
-
-                    ${referrals.length > 0 ? `
-                        <div class="section">
-                            <div class="section-title">Referrals</div>
-                            ${referrals.map(r => `
-                                <div class="order-card">
-                                    <div class="order-header">
-                                        <div class="order-name">Referral to ${r.recipient_specialty || 'Specialist'}</div>
-                                        <div class="order-date">${format(new Date(r.created_at), 'MMM d, yyyy')}</div>
-                                    </div>
-                                    <div class="order-details">
-                                        <strong>Recipient:</strong> ${r.recipient_name || 'TBD'}<br/>
-                                        <strong>Reason:</strong> ${r.reason}
-                                    </div>
-                                    ${r.diagnoses?.length > 0 ? `
-                                        <div class="order-dx">
-                                            <strong>Diagnoses:</strong> 
-                                            ${r.diagnoses.map(d => `<span class="dx-pill">${d.icd10Code || d.icd10_code}: ${d.name || d.problem_name}</span>`).join('')}
-                                        </div>
-                                    ` : ''}
+                                <div class="info-cell" style="width: 20%;">
+                                    <span class="cell-label">Gender / Age</span>
+                                    <span class="cell-value">${patientGender} / ${patientAge}</span>
                                 </div>
-                            `).join('')}
+                                <div class="info-cell" style="width: 20%;">
+                                    <span class="cell-label">Patient MRN</span>
+                                    <span class="cell-value">${patientMRN}</span>
+                                </div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-cell">
+                                    <span class="cell-label">Patient Contact</span>
+                                    <span class="cell-value">${patient.phone || 'N/A'}</span>
+                                </div>
+                                <div class="info-cell" colspan="3">
+                                    <span class="cell-label">Patient Address</span>
+                                    <span class="cell-value">${(patient.address_line1 || '') + ' ' + (patient.city || '') + ', ' + (patient.state || '') + ' ' + (patient.zip || '')}</span>
+                                </div>
+                            </div>
                         </div>
-                    ` : ''}
 
-                    <div class="footer">
-                        This is a clinical document generated by PageMD EMR. Please contact the clinic for verification if needed.
+                        ${labs.length > 0 ? `
+                            <div class="section">
+                                <div class="section-header">Laboratory Orders</div>
+                                <table class="order-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 40%;">Test Name</th>
+                                            <th style="width: 40%;">Diagnosis / ICD-10</th>
+                                            <th style="width: 20%;">Instructions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${labs.map(l => `
+                                            <tr>
+                                                <td><strong>${l.type === 'virtual' ? l.display_title : l.order_payload?.test_name || l.order_payload?.name || 'Lab Test'}</strong></td>
+                                                <td>${renderDiagnosisList(l)}</td>
+                                                <td class="card-meta">${l.order_payload?.instructions || '-'}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : ''}
+
+                        ${imaging.length > 0 ? `
+                            <div class="section">
+                                <div class="section-header">Imaging & Cardiology Requisition</div>
+                                <table class="order-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 35%;">Study Description</th>
+                                            <th style="width: 35%;">Indication / Diagnosis</th>
+                                            <th style="width: 30%;">Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${imaging.map(i => `
+                                            <tr>
+                                                <td><strong>${i.type === 'virtual' ? i.display_title : i.order_payload?.test_name || i.order_payload?.name || 'Imaging'}</strong></td>
+                                                <td>${renderDiagnosisList(i)}</td>
+                                                <td class="card-meta">${i.order_payload?.instructions || '-'}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : ''}
+
+                        ${referrals.length > 0 ? `
+                            <div class="section">
+                                <div class="section-header">Specialist Consultations</div>
+                                <table class="order-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 35%;">Recipient Specialty</th>
+                                            <th style="width: 35%;">Reason for Referral</th>
+                                            <th style="width: 30%;">Diagnosis</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${referrals.map(r => `
+                                            <tr>
+                                                <td><strong>${r.recipient_specialty || 'General Specialist'}</strong></td>
+                                                <td>${r.reason || 'Routine evaluation'}</td>
+                                                <td>${renderDiagnosisList(r)}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : ''}
+
+                        ${prescriptions.length > 0 ? `
+                            <div class="section">
+                                <div class="section-header">Prescription Summary (Electronic)</div>
+                                <table class="order-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 40%;">Medication</th>
+                                            <th style="width: 40%;">Sig / Instructions</th>
+                                            <th style="width: 20%;">Qty / Refills</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${prescriptions.map(p => `
+                                            <tr>
+                                                <td><strong>${p.type === 'virtual' ? p.display_title : p.medication_name}</strong></td>
+                                                <td>${p.sig || 'As directed'}</td>
+                                                <td>${p.quantity || '-'}${p.refills ? ` / ${p.refills} refills` : ''}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : ''}
+
+                        <div class="print-footer">
+                            <div class="sig-block">
+                                <div style="height: 30px;"></div>
+                                <strong>Physician Signature</strong>
+                                <div class="sub-label">${clinicInfo.name} &middot; NPI: ${clinicInfo.npi}</div>
+                            </div>
+                            <div style="display: table-cell; width: 10%;"></div>
+                            <div class="date-block">
+                                <div style="height: 30px; font-size: 10pt; vertical-align: bottom;">${datePrinted}</div>
+                                <strong>Date / Time</strong>
+                                <div class="sub-label">Generated per EMR</div>
+                            </div>
+                        </div>
+
+                        <div class="disclaimer">
+                            CONFIDENTIALITY NOTICE: This document contains protected health information intended only for the use of the individual or entity named above. 
+                            If you are not the intended recipient, any disclosure, copying, or distribution is strictly prohibited. 
+                            Facilitating labs: please fax results to ${clinicInfo.fax} or transmit via secure HL7 interface.
+                        </div>
                     </div>
                 </body>
             </html>
