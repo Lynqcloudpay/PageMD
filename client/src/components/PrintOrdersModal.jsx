@@ -171,6 +171,39 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
         }
     };
 
+    const uniqueDiagnoses = useMemo(() => {
+        const dxSet = new Set();
+        allOrders.forEach(order => {
+            if (order.diagnosis_name) {
+                dxSet.add(order.diagnosis_name);
+            }
+            if (order.diagnoses?.length > 0) {
+                order.diagnoses.forEach(d => {
+                    const name = d.name || d.problem_name || d.icd10Code || d.icd10_code;
+                    if (name) dxSet.add(name);
+                });
+            }
+        });
+        return Array.from(dxSet).sort();
+    }, [allOrders]);
+
+    const toggleDiagnosisOrders = (dxName) => {
+        const matchingOrders = allOrders.filter(order => {
+            if (order.diagnosis_name === dxName) return true;
+            if (order.diagnoses?.some(d => (d.name || d.problem_name || d.icd10Code || d.icd10_code) === dxName)) return true;
+            return false;
+        });
+
+        const next = new Set(selectedOrders);
+        const allSelected = matchingOrders.every(o => next.has(o.id));
+
+        matchingOrders.forEach(o => {
+            if (allSelected) next.delete(o.id);
+            else next.add(o.id);
+        });
+        setSelectedOrders(next);
+    };
+
     const toggleVisit = (visitId) => {
         setExpandedVisits(prev => ({ ...prev, [visitId]: !prev[visitId] }));
     };
@@ -647,87 +680,123 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                             <p className="text-sm font-medium">No orders found for this patient.</p>
                         </div>
                     ) : (
-                        <div className="p-4 space-y-4">
-                            {/* Standalone Orders Group (if any) */}
-                            {allOrders.some(o => !o.visit_id) && (
-                                <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
-                                    <div
-                                        onClick={() => toggleVisit('standalone')}
-                                        className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors bg-gray-50/50"
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center bg-white cursor-pointer"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    toggleVisitAll('standalone', getOrdersForVisit(null));
-                                                }}
-                                            >
-                                                {getOrdersForVisit(null).every(o => selectedOrders.has(o.id)) && <CheckCircle2 className="w-4 h-4 text-primary-600" />}
-                                                {!getOrdersForVisit(null).every(o => selectedOrders.has(o.id)) && getOrdersForVisit(null).some(o => selectedOrders.has(o.id)) && <div className="w-2.5 h-0.5 bg-primary-600 rounded-full"></div>}
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-sm font-bold text-gray-900">Standalone Orders</span>
-                                                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-tight">Not linked to a specific visit</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">{getOrdersForVisit(null).length}</span>
-                                            {expandedVisits['standalone'] ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
-                                        </div>
+                        <div className="p-4">
+                            {/* Diagnosis Quick Select */}
+                            {uniqueDiagnoses.length > 0 && (
+                                <div className="mb-8 p-4 bg-primary-50/50 rounded-2xl border border-primary-100 flex flex-col gap-3">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-[11px] font-bold text-primary-700 uppercase tracking-wider">Quick Select by Diagnosis</h3>
+                                        <span className="text-[10px] text-primary-500 font-medium italic">Click to select all associated orders</span>
                                     </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {uniqueDiagnoses.map(dx => {
+                                            const matchingOrders = allOrders.filter(o => {
+                                                if (o.diagnosis_name === dx) return true;
+                                                return o.diagnoses?.some(d => (d.name || d.problem_name || d.icd10Code || d.icd10_code) === dx);
+                                            });
+                                            const allSelected = matchingOrders.every(o => selectedOrders.has(o.id));
 
-                                    {expandedVisits['standalone'] && (
-                                        <div className="p-2 bg-gray-50/30 border-t border-gray-100 space-y-1">
-                                            {getOrdersForVisit(null).map(order => renderOrderRow(order))}
-                                        </div>
-                                    )}
+                                            return (
+                                                <button
+                                                    key={dx}
+                                                    onClick={() => toggleDiagnosisOrders(dx)}
+                                                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border flex items-center gap-2 ${allSelected
+                                                        ? 'bg-primary-600 border-primary-600 text-white shadow-md'
+                                                        : 'bg-white border-primary-100 text-primary-900 hover:border-primary-300 hover:bg-white shadow-sm'
+                                                        }`}
+                                                >
+                                                    {allSelected && <CheckCircle2 className="w-3.5 h-3.5" />}
+                                                    {dx}
+                                                    <span className={`ml-1 text-[10px] ${allSelected ? 'text-primary-200' : 'text-primary-400'}`}>({matchingOrders.length})</span>
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
                                 </div>
                             )}
 
-                            {/* Orders grouped by visit */}
-                            {visits.map(visit => {
-                                const visitOrders = getOrdersForVisit(visit.id);
-                                if (visitOrders.length === 0) return null;
-
-                                const isExpanded = expandedVisits[visit.id];
-                                const allInVisitSelected = visitOrders.every(o => selectedOrders.has(o.id));
-                                const someInVisitSelected = visitOrders.some(o => selectedOrders.has(o.id));
-
-                                return (
-                                    <div key={visit.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+                            <div className="space-y-4">
+                                {/* Standalone Orders Group (if any) */}
+                                {allOrders.some(o => !o.visit_id) && (
+                                    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
                                         <div
-                                            onClick={() => toggleVisit(visit.id)}
-                                            className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+                                            onClick={() => toggleVisit('standalone')}
+                                            className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors bg-gray-50/50"
                                         >
                                             <div className="flex items-center gap-4">
                                                 <div className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center bg-white cursor-pointer"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        toggleVisitAll(visit.id, visitOrders);
+                                                        toggleVisitAll('standalone', getOrdersForVisit(null));
                                                     }}
                                                 >
-                                                    {allInVisitSelected && <CheckCircle2 className="w-4 h-4 text-primary-600" />}
-                                                    {!allInVisitSelected && someInVisitSelected && <div className="w-2.5 h-0.5 bg-primary-600 rounded-full"></div>}
+                                                    {getOrdersForVisit(null).every(o => selectedOrders.has(o.id)) && <CheckCircle2 className="w-4 h-4 text-primary-600" />}
+                                                    {!getOrdersForVisit(null).every(o => selectedOrders.has(o.id)) && getOrdersForVisit(null).some(o => selectedOrders.has(o.id)) && <div className="w-2.5 h-0.5 bg-primary-600 rounded-full"></div>}
                                                 </div>
-                                                <div className="flex flex-col min-w-0">
-                                                    <span className="text-sm font-bold text-gray-900">{format(new Date(visit.visit_date), 'MMMM d, yyyy')}</span>
-                                                    <span className="text-[10px] text-gray-500 font-bold uppercase tracking-tight">{visit.visit_type || 'Office Visit'}</span>
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-bold text-gray-900">Standalone Orders</span>
+                                                    <span className="text-[10px] text-gray-500 font-bold uppercase tracking-tight">Not linked to a specific visit</span>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <span className="text-xs font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">{visitOrders.length} {visitOrders.length === 1 ? 'Order' : 'Orders'}</span>
-                                                {isExpanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+                                                <span className="text-xs font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">{getOrdersForVisit(null).length}</span>
+                                                {expandedVisits['standalone'] ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
                                             </div>
                                         </div>
 
-                                        {isExpanded && (
+                                        {expandedVisits['standalone'] && (
                                             <div className="p-2 bg-gray-50/30 border-t border-gray-100 space-y-1">
-                                                {visitOrders.map(order => renderOrderRow(order))}
+                                                {getOrdersForVisit(null).map(order => renderOrderRow(order))}
                                             </div>
                                         )}
                                     </div>
-                                );
-                            })}
+                                )}
+
+                                {/* Orders grouped by visit */}
+                                {visits.map(visit => {
+                                    const visitOrders = getOrdersForVisit(visit.id);
+                                    if (visitOrders.length === 0) return null;
+
+                                    const isExpanded = expandedVisits[visit.id];
+                                    const allInVisitSelected = visitOrders.every(o => selectedOrders.has(o.id));
+                                    const someInVisitSelected = visitOrders.some(o => selectedOrders.has(o.id));
+
+                                    return (
+                                        <div key={visit.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+                                            <div
+                                                onClick={() => toggleVisit(visit.id)}
+                                                className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center bg-white cursor-pointer"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            toggleVisitAll(visit.id, visitOrders);
+                                                        }}
+                                                    >
+                                                        {allInVisitSelected && <CheckCircle2 className="w-4 h-4 text-primary-600" />}
+                                                        {!allInVisitSelected && someInVisitSelected && <div className="w-2.5 h-0.5 bg-primary-600 rounded-full"></div>}
+                                                    </div>
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span className="text-sm font-bold text-gray-900">{format(new Date(visit.visit_date), 'MMMM d, yyyy')}</span>
+                                                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-tight">{visit.visit_type || 'Office Visit'}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">{visitOrders.length} {visitOrders.length === 1 ? 'Order' : 'Orders'}</span>
+                                                    {isExpanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+                                                </div>
+                                            </div>
+
+                                            {isExpanded && (
+                                                <div className="p-2 bg-gray-50/30 border-t border-gray-100 space-y-1">
+                                                    {visitOrders.map(order => renderOrderRow(order))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
                 </div>
@@ -741,7 +810,11 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                         <button onClick={onClose} className="px-5 py-2.5 text-sm font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition-all">
                             Cancel
                         </button>
-                        <button onClick={handlePrint} disabled={selectedOrders.size === 0} className={`px-6 py-2.5 text-sm font-bold text-white rounded-full shadow-lg shadow-primary-200 flex items-center gap-2 transition-all ${selectedOrders.size === 0 ? 'bg-gray-300 cursor-not-allowed grayscale' : 'bg-primary-600 hover:bg-primary-700 active:scale-95'}`}>
+                        <button
+                            onClick={handlePrint}
+                            disabled={selectedOrders.size === 0}
+                            className={`px-6 py-2.5 text-sm font-bold text-white rounded-full shadow-lg shadow-primary-200 flex items-center gap-2 transition-all ${selectedOrders.size === 0 ? 'bg-gray-300 cursor-not-allowed grayscale' : 'bg-primary-600 hover:bg-primary-700 active:scale-95'}`}
+                        >
                             <Printer className="w-4 h-4" />
                             Print Selected
                         </button>
