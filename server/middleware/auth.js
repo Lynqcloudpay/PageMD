@@ -223,7 +223,7 @@ const logAudit = async (
 
     await pool.query(
       `INSERT INTO audit_logs (
-        actor_user_id, action, target_type, target_id, 
+        user_id, action, target_type, target_id, 
         actor_ip, details, user_agent, outcome, request_id, session_id
       )
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,

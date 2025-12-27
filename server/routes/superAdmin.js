@@ -144,6 +144,44 @@ router.get('/clinics/:id', verifySuperAdmin, async (req, res) => {
 });
 
 /**
+ * GET /api/super/clinics/:id/users
+ * List all users in a specific clinic
+ * Priority placement to avoid generic ID collision
+ */
+router.get('/clinics/:id/users', verifySuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log(`[SuperAdmin] Request for clinic users. ID: ${id}`);
+
+        // 1. Get clinic schema
+        const clinicRes = await pool.controlPool.query('SELECT schema_name FROM clinics WHERE id = $1', [id]);
+        if (clinicRes.rows.length === 0) {
+            console.warn(`[SuperAdmin] Clinic not found during user list request: ${id}`);
+            return res.status(404).json({ error: 'Clinic not found' });
+        }
+
+        const { schema_name } = clinicRes.rows[0];
+        console.log(`[SuperAdmin] Found schema: ${schema_name} for clinic: ${id}`);
+
+        // 2. Query users from that schema
+        const usersRes = await pool.controlPool.query(`
+            SELECT 
+                u.id, u.email, u.first_name, u.last_name, u.status, u.role, u.is_admin, u.last_login, u.created_at,
+                r.name as role_display_name
+            FROM ${schema_name}.users u
+            LEFT JOIN ${schema_name}.roles r ON u.role_id = r.id
+            ORDER BY u.created_at DESC
+        `);
+
+        console.log(`[SuperAdmin] Successfully retrieved ${usersRes.rows.length} users for ${schema_name}`);
+        res.json(usersRes.rows);
+    } catch (error) {
+        console.error('[SuperAdmin] Error fetching clinic users:', error);
+        res.status(500).json({ error: 'Failed to fetch users for this clinic' });
+    }
+});
+
+/**
  * PATCH /api/super/clinics/:id/status
  * Update clinic status (activate, suspend, deactivate)
  */
@@ -446,6 +484,77 @@ router.patch('/tickets/:id', verifySuperAdmin, async (req, res) => {
     } catch (error) {
         console.error('Error updating ticket:', error);
         res.status(500).json({ error: 'Failed to update ticket' });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// CLINIC PERSONNEL & ACCESS MANAGEMENT
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Clinic Personnel Route (Moved up)
+ */
+
+/**
+ * POST /api/super/clinics/:id/users/:userId/reset-password
+ * Reset a clinic user's password (by Platform Admin)
+ */
+router.post('/clinics/:id/users/:userId/reset-password', verifySuperAdmin, async (req, res) => {
+    try {
+        const { id, userId } = req.params;
+        const { newPassword } = req.body;
+
+        if (!newPassword || newPassword.length < 8) {
+            return res.status(400).json({ error: 'Password must be at least 8 characters' });
+        }
+
+        // 1. Get clinic schema
+        const clinicRes = await pool.controlPool.query('SELECT schema_name FROM clinics WHERE id = $1', [id]);
+        if (clinicRes.rows.length === 0) return res.status(404).json({ error: 'Clinic not found' });
+        const { schema_name } = clinicRes.rows[0];
+
+        // 2. Hash new password
+        const bcrypt = require('bcryptjs');
+        const hash = await bcrypt.hash(newPassword, 10);
+
+        // 3. Update in tenant schema
+        await pool.controlPool.query(`
+            UPDATE ${schema_name}.users SET password_hash = $1, updated_at = NOW() WHERE id = $2
+        `, [hash, userId]);
+
+        // 4. Log the action
+        await pool.controlPool.query(`
+            INSERT INTO platform_audit_logs (action, target_clinic_id, details)
+            VALUES ($1, $2, $3)
+        `, ['user_password_reset_by_admin', id, JSON.stringify({ userId })]);
+
+        res.json({ message: 'Password reset successfully' });
+    } catch (error) {
+        console.error('Error resetting user password:', error);
+        res.status(500).json({ error: 'Failed to reset password' });
+    }
+});
+
+/**
+ * PATCH /api/super/clinics/:id/users/:userId/status
+ * Enable/Disable a clinic user
+ */
+router.patch('/clinics/:id/users/:userId/status', verifySuperAdmin, async (req, res) => {
+    try {
+        const { id, userId } = req.params;
+        const { status } = req.body; // 'active' or 'suspended'
+
+        const clinicRes = await pool.controlPool.query('SELECT schema_name FROM clinics WHERE id = $1', [id]);
+        const { schema_name } = clinicRes.rows[0];
+
+        await pool.controlPool.query(`
+            UPDATE ${schema_name}.users SET status = $1, updated_at = NOW() WHERE id = $2
+        `, [status, userId]);
+
+        res.json({ message: `User status updated to ${status}` });
+    } catch (error) {
+        console.error('Error updating user status:', error);
+        res.status(500).json({ error: 'Failed to update user status' });
     }
 });
 

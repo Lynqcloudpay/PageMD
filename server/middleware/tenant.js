@@ -108,37 +108,30 @@ const resolveTenant = async (req, res, next) => {
         req.clinic = { id, slug, schema_name };
 
         // 5. Run Request within Context
-        pool.dbStorage.run(client, () => {
-            // Hook into response finish to Commit/Rollback
-            res.on('finish', async () => {
-                try {
-                    if (res.statusCode >= 400) {
-                        // console.log(`[Tenant] Request failed (${res.statusCode}), rolling back.`);
-                        await client.query('ROLLBACK');
-                    } else {
-                        // console.log('[Tenant] Request success, committing.');
-                        await client.query('COMMIT');
-                    }
-                } catch (e) {
-                    console.error('[Tenant] Commit/Rollback failed:', e);
-                } finally {
-                    client.release();
-                }
-            });
+        // Use enterWith to ensure context persists through Express's asynchronous middleware ticks
+        pool.dbStorage.enterWith(client);
 
-            // Also handle close (client disconnect)
-            res.on('close', async () => {
-                // If checking 'finish' handling managed it, fine. If prematurely closed:
-                if (!res.writableEnded) {
-                    // console.warn('[Tenant] Connection closed prematurely, rolling back.');
-                    try { await client.query('ROLLBACK'); } catch (e) { }
-                    client.release();
+        const cleanup = async () => {
+            try {
+                if (res.statusCode >= 400) {
+                    await client.query('ROLLBACK');
+                } else {
+                    await client.query('COMMIT');
                 }
-            });
+            } catch (e) {
+                console.error('[Tenant] Cleanup error:', e);
+            } finally {
+                client.release();
+            }
+        };
 
-            next();
+        res.on('finish', cleanup);
+        res.on('close', async () => {
+            if (!res.writableEnded) await cleanup();
         });
 
+        console.log(`[Tenant] Established persistent context for ${schema_name} (derived from ${slug})`);
+        return next();
     } catch (error) {
         console.error('[Tenant] Resolution failed:', error);
         if (client) {

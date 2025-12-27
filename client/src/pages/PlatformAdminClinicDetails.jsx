@@ -1,7 +1,125 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Building2, Activity, CreditCard, Shield, Settings, AlertTriangle, CheckCircle, XCircle, Trash2 } from 'lucide-react';
+import { ArrowLeft, Building2, Activity, CreditCard, Shield, Settings, AlertTriangle, CheckCircle, XCircle, Trash2, Key, UserX, UserCheck, Mail, Clock } from 'lucide-react';
 import { usePlatformAdmin } from '../context/PlatformAdminContext';
+
+const ClinicPersonnelManager = ({ clinicId, apiCall }) => {
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        loadUsers();
+    }, [clinicId]);
+
+    const loadUsers = async () => {
+        try {
+            const data = await apiCall('GET', `/clinics/${clinicId}/users`);
+            setUsers(data);
+        } catch (err) {
+            console.error('Failed to load users:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResetPassword = async (user) => {
+        const newPassword = prompt(`Enter a new temporary password for ${user.email} (min 8 chars):`);
+        if (!newPassword || newPassword.length < 8) return;
+
+        try {
+            await apiCall('POST', `/clinics/${clinicId}/users/${user.id}/reset-password`, { newPassword });
+            alert(`Password reset successfully for ${user.email}`);
+        } catch (err) {
+            alert(err.response?.data?.error || 'Failed to reset password');
+        }
+    };
+
+    const handleToggleStatus = async (user) => {
+        const newStatus = user.status === 'active' ? 'suspended' : 'active';
+        if (!confirm(`Are you sure you want to set user ${user.email} to ${newStatus}?`)) return;
+
+        try {
+            await apiCall('PATCH', `/clinics/${clinicId}/users/${user.id}/status`, { status: newStatus });
+            loadUsers();
+        } catch (err) {
+            alert(err.response?.data?.error || 'Failed to update status');
+        }
+    };
+
+    if (loading) return <div className="text-slate-500 text-sm animate-pulse">Loading personnel...</div>;
+
+    return (
+        <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+                <thead className="text-slate-500 border-b border-white/10 uppercase text-[10px] tracking-widest">
+                    <tr>
+                        <th className="pb-2 font-medium">User / Role</th>
+                        <th className="pb-2 font-medium text-center">Status</th>
+                        <th className="pb-2 font-medium text-right">Last Login</th>
+                        <th className="pb-2 font-medium text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                    {users.length === 0 ? (
+                        <tr><td colSpan="4" className="py-4 text-center text-slate-500 italic">No users found in this clinical schema.</td></tr>
+                    ) : (
+                        users.map((user) => (
+                            <tr key={user.id} className="group">
+                                <td className="py-4">
+                                    <div className="flex flex-col">
+                                        <span className="text-white font-medium flex items-center gap-2">
+                                            {user.first_name} {user.last_name}
+                                            {user.is_admin && <span className="text-[10px] bg-blue-500/20 text-blue-300 px-1.5 rounded border border-blue-500/30 uppercase">Clinic Admin</span>}
+                                        </span>
+                                        <span className="text-slate-400 text-xs flex items-center gap-1">
+                                            <Mail className="w-3 h-3" />
+                                            {user.email}
+                                        </span>
+                                        <span className="text-slate-500 text-[10px]">{user.role_display_name || user.role}</span>
+                                    </div>
+                                </td>
+                                <td className="py-4 text-center">
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-tighter ${user.status === 'active' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                        }`}>
+                                        {user.status || 'active'}
+                                    </span>
+                                </td>
+                                <td className="py-4 text-right text-slate-400 text-xs">
+                                    {user.last_login ? (
+                                        <span className="flex items-center justify-end gap-1">
+                                            <Clock className="w-3 h-3" />
+                                            {new Date(user.last_login).toLocaleDateString()}
+                                        </span>
+                                    ) : 'Never'}
+                                </td>
+                                <td className="py-4 text-right">
+                                    <div className="flex items-center justify-end gap-2">
+                                        <button
+                                            title="Reset Password"
+                                            onClick={() => handleResetPassword(user)}
+                                            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-blue-400 transition-colors"
+                                        >
+                                            <Key className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                            title={user.status === 'active' ? 'Suspend Access' : 'Restore Access'}
+                                            onClick={() => handleToggleStatus(user)}
+                                            className={`p-1.5 rounded-lg bg-white/5 transition-colors ${user.status === 'active' ? 'hover:bg-red-500/10 text-red-400' : 'hover:bg-green-500/10 text-green-400'
+                                                }`}
+                                        >
+                                            {user.status === 'active' ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))
+                    )}
+                </tbody>
+            </table>
+        </div>
+    );
+};
+
 
 const PlatformAdminClinicDetails = () => {
     const { id } = useParams();
@@ -155,6 +273,15 @@ const PlatformAdminClinicDetails = () => {
                             ) : (
                                 <p className="text-slate-500 text-sm italic">No recent activity recorded.</p>
                             )}
+                        </div>
+
+                        {/* Clinic Personnel */}
+                        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-6">
+                            <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                <Shield className="w-5 h-5 text-purple-400" />
+                                Clinic Personnel
+                            </h2>
+                            <ClinicPersonnelManager clinicId={id} apiCall={apiCall} />
                         </div>
 
                         {/* Payment History */}
