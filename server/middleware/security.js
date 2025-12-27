@@ -47,6 +47,10 @@ const sanitizeInput = (req, res, next) => {
   const sanitize = (obj) => {
     if (typeof obj === 'string') {
       // Remove potentially dangerous characters
+      // Don't escape if it looks like a URL or absolute path (to prevent breaking logo URLs)
+      if (obj.startsWith('http') || obj.startsWith('/') || obj.startsWith('./') || obj.startsWith('../')) {
+        return obj.trim();
+      }
       return validator.escape(validator.trim(obj));
     }
     if (Array.isArray(obj)) {
@@ -78,7 +82,7 @@ const sanitizeInput = (req, res, next) => {
 // Minimum 12 characters, uppercase, lowercase, digit, symbol
 const validatePassword = (password) => {
   const errors = [];
-  
+
   if (!password || password.length < 12) {
     errors.push('Password must be at least 12 characters long');
   }
@@ -94,13 +98,13 @@ const validatePassword = (password) => {
   if (!/[!@#$%^&*(),.?":{}|<>_+\-=\[\]\\;',./]/.test(password)) {
     errors.push('Password must contain at least one special character');
   }
-  
+
   // Check for common weak passwords
   const commonPasswords = ['password', 'password123', 'admin', '12345678', 'qwerty'];
   if (commonPasswords.some(weak => password.toLowerCase().includes(weak))) {
     errors.push('Password is too common or weak');
   }
-  
+
   return errors;
 };
 
@@ -110,7 +114,7 @@ const sessionTimeout = (maxAge = 30 * 60 * 1000) => { // 30 minutes default
     if (req.user && req.user.lastActivity) {
       const now = Date.now();
       const lastActivity = new Date(req.user.lastActivity).getTime();
-      
+
       if (now - lastActivity > maxAge) {
         return res.status(401).json({ error: 'Session expired. Please log in again.' });
       }
