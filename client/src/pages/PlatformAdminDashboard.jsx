@@ -9,15 +9,22 @@ import { usePlatformAdmin } from '../context/PlatformAdminContext';
 
 const PlatformAdminDashboard = () => {
     const navigate = useNavigate();
-    const { logout, apiCall, admin } = usePlatformAdmin();
+    const { logout, apiCall, admin, isAuthenticated } = usePlatformAdmin();
     const [dashboard, setDashboard] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        loadDashboard();
-        const interval = setInterval(loadDashboard, 30000);
-        return () => clearInterval(interval);
-    }, []);
+        if (!isAuthenticated && !loading) {
+            navigate('/platform-admin/login');
+            return;
+        }
+
+        if (isAuthenticated) {
+            loadDashboard();
+            const interval = setInterval(loadDashboard, 30000);
+            return () => clearInterval(interval);
+        }
+    }, [isAuthenticated, loading]);
 
     const loadDashboard = async () => {
         try {
@@ -295,8 +302,8 @@ const PlatformAdminDashboard = () => {
                                             </div>
                                         </div>
                                         <span className={`px-2 py-0.5 text-[10px] font-semibold rounded ${clinic.status === 'active' ? 'bg-green-500/15 text-green-400 border border-green-500/20' :
-                                                clinic.status === 'trial' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20' :
-                                                    'bg-slate-500/15 text-slate-400 border border-slate-500/20'
+                                            clinic.status === 'trial' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20' :
+                                                'bg-slate-500/15 text-slate-400 border border-slate-500/20'
                                             }`}>
                                             {clinic.status}
                                         </span>

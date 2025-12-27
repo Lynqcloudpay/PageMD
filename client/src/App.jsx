@@ -31,6 +31,8 @@ import { PlatformAdminProvider } from './context/PlatformAdminContext'
 import PlatformAdminLogin from './pages/PlatformAdminLogin'
 import PlatformAdminDashboard from './pages/PlatformAdminDashboard'
 import PlatformAdminClinics from './pages/PlatformAdminClinics'
+import PlatformAdminTeam from './pages/PlatformAdminTeam'
+import PlatformAdminProfile from './pages/PlatformAdminProfile'
 
 // Patient Redirect Component - redirects /patient/:id to /patient/:id/snapshot
 const PatientRedirect = () => {
@@ -95,12 +97,12 @@ function App() {
                                             <Route path="/platform-admin/login" element={<PlatformAdminLogin />} />
                                             <Route path="/platform-admin/dashboard" element={<PlatformAdminDashboard />} />
                                             <Route path="/platform-admin/clinics" element={<PlatformAdminClinics />} />
-                                            <Route path="/platform-admin/revenue" element={<PlatformAdminClinics />} />
-                                            <Route path="/platform-admin/support" element={<PlatformAdminClinics />} />
-                                            <Route path="/platform-admin/team" element={<PlatformAdminClinics />} />
-                                            <Route path="/platform-admin/database" element={<PlatformAdminClinics />} />
-                                            <Route path="/platform-admin/settings" element={<PlatformAdminClinics />} />
-                                            <Route path="/platform-admin/system" element={<PlatformAdminClinics />} />
+                                            {/* <Route path="/platform-admin/revenue" element={<PlatformAdminRevenue />} /> */}
+                                            {/* <Route path="/platform-admin/support" element={<PlatformAdminSupport />} /> */}
+                                            <Route path="/platform-admin/team" element={<PlatformAdminTeam />} />
+                                            {/* <Route path="/platform-admin/database" element={<PlatformAdminDatabase />} /> */}
+                                            <Route path="/platform-admin/settings" element={<PlatformAdminProfile />} />
+                                            {/* <Route path="/platform-admin/system" element={<PlatformAdminSystem />} /> */}
 
                                             {/* Regular EMR Routes */}
                                             <Route path="/login" element={<Login />} />

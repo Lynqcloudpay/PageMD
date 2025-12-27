@@ -298,4 +298,68 @@ router.patch('/team/:id', async (req, res) => {
     }
 });
 
+/**
+ * POST /api/platform-auth/change-password
+ * Change current admin's password
+ */
+router.post('/change-password', async (req, res) => {
+    try {
+        const token = req.headers['x-platform-token'];
+        if (!token) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ error: 'Current and new passwords required' });
+        }
+
+        if (newPassword.length < 8) {
+            return res.status(400).json({ error: 'Password must be at least 8 characters' });
+        }
+
+        // Get admin
+        const session = await pool.controlPool.query(
+            `SELECT sa.* FROM platform_admin_sessions pas
+       JOIN super_admins sa ON pas.admin_id = sa.id
+       WHERE pas.token = $1 AND pas.expires_at > NOW() AND sa.is_active = true`,
+            [token]
+        );
+
+        if (session.rows.length === 0) {
+            return res.status(401).json({ error: 'Invalid session' });
+        }
+
+        const admin = session.rows[0];
+
+        // Verify current password
+        const isValid = await bcrypt.compare(currentPassword, admin.password_hash);
+        if (!isValid) {
+            return res.status(401).json({ error: 'Incorrect current password' });
+        }
+
+        // Hash new password
+        const newHash = await bcrypt.hash(newPassword, 10);
+
+        // Update password
+        await pool.controlPool.query(
+            'UPDATE super_admins SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+            [newHash, admin.id]
+        );
+
+        // Log the change
+        await pool.controlPool.query(
+            `INSERT INTO platform_audit_logs (super_admin_id, action, details)
+       VALUES ($1, $2, $3)`,
+            [admin.id, 'password_change', '{}']
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Password change error:', error);
+        res.status(500).json({ error: 'Failed to change password' });
+    }
+});
+
 module.exports = router;
