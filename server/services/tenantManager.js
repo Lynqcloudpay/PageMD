@@ -1,5 +1,6 @@
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
+const tenantSchemaSQL = require('../config/tenantSchema');
 
 // The Control Pool connects to the main platform database
 const controlPool = new Pool({
@@ -105,87 +106,22 @@ class TenantManager {
     }
 
     /**
-     * Executes the base clinical schema into a target schema.
+     * Executes the complete clinical schema into a target schema.
+     * This ensures all new clinics have the full EMR database structure.
      */
     async _runMigrations(client, schemaName) {
+        console.log(`[TenantManager] Running complete schema migration for ${schemaName}...`);
+
         // Set context to this schema for the duration of these queries
         await client.query(`SET search_path TO ${schemaName}, public`);
 
-        // Essential Tables (subset of full clinical schema)
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS roles (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                name VARCHAR(50) UNIQUE NOT NULL,
-                description TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
+        // Execute the complete tenant schema SQL
+        await client.query(tenantSchemaSQL);
 
-            INSERT INTO roles (name, description) VALUES 
-                ('admin', 'Clinic Administrator'),
-                ('clinician', 'Healthcare Provider'),
-                ('staff', 'Clinic Staff')
-            ON CONFLICT (name) DO NOTHING;
+        // Reset search path back to public
+        await client.query('SET search_path TO public');
 
-            CREATE TABLE IF NOT EXISTS users (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                email VARCHAR(255) UNIQUE NOT NULL,
-                password_hash VARCHAR(255) NOT NULL,
-                first_name VARCHAR(100) NOT NULL,
-                last_name VARCHAR(100) NOT NULL,
-                role VARCHAR(50),
-                role_id UUID REFERENCES roles(id),
-                is_admin BOOLEAN DEFAULT false,
-                status VARCHAR(20) DEFAULT 'active',
-                active BOOLEAN DEFAULT true,
-                last_login TIMESTAMP,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS audit_logs (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                user_id UUID,
-                action VARCHAR(100) NOT NULL,
-                entity_type VARCHAR(50),
-                entity_id UUID,
-                details JSONB,
-                ip_address VARCHAR(45),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS patients (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                mrn VARCHAR(50) UNIQUE NOT NULL,
-                first_name VARCHAR(100) NOT NULL,
-                last_name VARCHAR(100) NOT NULL,
-                dob DATE NOT NULL,
-                sex VARCHAR(10),
-                phone VARCHAR(20),
-                email VARCHAR(255),
-                address_line1 VARCHAR(255),
-                address_line2 VARCHAR(255),
-                city VARCHAR(100),
-                state VARCHAR(50),
-                zip VARCHAR(20),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS visits (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                patient_id UUID REFERENCES patients(id),
-                provider_id UUID REFERENCES users(id),
-                visit_date DATE DEFAULT CURRENT_DATE,
-                status VARCHAR(50) DEFAULT 'scheduled',
-                reason TEXT,
-                notes TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            -- Reset search path back to public just in case
-            SET search_path TO public;
-        `);
+        console.log(`[TenantManager] Schema migration completed for ${schemaName}`);
     }
 
     /**
