@@ -205,7 +205,13 @@ router.post('/clinics/onboard', verifySuperAdmin, async (req, res) => {
     };
 
     try {
-        const clinicId = await tenantManager.provisionClinic(clinic, finalDbConfig);
+        // Map frontend payload to TenantManager (expecting displayName)
+        const clinicData = {
+            ...clinic,
+            displayName: clinic.displayName || clinic.name // flexible mapping
+        };
+
+        const clinicId = await tenantManager.provisionClinic(clinicData, finalDbConfig);
 
         // Create trial subscription
         const trialPlan = await pool.controlPool.query(
