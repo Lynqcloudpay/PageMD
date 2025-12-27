@@ -468,7 +468,7 @@ router.get('/dashboard', verifySuperAdmin, async (req, res) => {
 
         // Recent activity
         const recentClinics = await pool.controlPool.query(`
-      SELECT display_name, slug, created_at, status
+      SELECT id, display_name, slug, created_at, status
       FROM clinics
       ORDER BY created_at DESC
       LIMIT 5

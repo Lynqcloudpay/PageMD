@@ -6,6 +6,7 @@ import Snapshot from './pages/Snapshot'
 import VisitNote from './pages/VisitNote'
 import Schedule from './pages/Schedule'
 import MySchedule from './pages/MySchedule'
+
 import Patients from './pages/Patients'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -33,6 +34,7 @@ import PlatformAdminDashboard from './pages/PlatformAdminDashboard'
 import PlatformAdminClinics from './pages/PlatformAdminClinics'
 import PlatformAdminTeam from './pages/PlatformAdminTeam'
 import PlatformAdminProfile from './pages/PlatformAdminProfile'
+import PlatformAdminClinicDetails from './pages/PlatformAdminClinicDetails'
 
 // Patient Redirect Component - redirects /patient/:id to /patient/:id/snapshot
 const PatientRedirect = () => {
@@ -97,6 +99,7 @@ function App() {
                                             <Route path="/platform-admin/login" element={<PlatformAdminLogin />} />
                                             <Route path="/platform-admin/dashboard" element={<PlatformAdminDashboard />} />
                                             <Route path="/platform-admin/clinics" element={<PlatformAdminClinics />} />
+                                            <Route path="/platform-admin/clinics/:id" element={<PlatformAdminClinicDetails />} />
                                             {/* <Route path="/platform-admin/revenue" element={<PlatformAdminRevenue />} /> */}
                                             {/* <Route path="/platform-admin/support" element={<PlatformAdminSupport />} /> */}
                                             <Route path="/platform-admin/team" element={<PlatformAdminTeam />} />

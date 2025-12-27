@@ -119,7 +119,8 @@ const Layout = ({ children }) => {
         { path: '/telehealth', icon: Video, label: 'Telehealth', badge: null },
         // Admin items - requires users:manage or reports:view
         ...(canManageUsers ? [
-            { path: '/users', icon: Shield, label: 'User Management', badge: null }
+            { path: '/users', icon: Shield, label: 'User Management', badge: null },
+            { path: '/admin-settings', icon: Settings, label: 'Settings', badge: null }
         ] : []),
     ];
 

@@ -289,7 +289,7 @@ const PlatformAdminDashboard = () => {
                                 dashboard.recent_clinics.map((clinic, idx) => (
                                     <button
                                         key={idx}
-                                        onClick={() => handleNavigation(`/platform-admin/clinics`)}
+                                        onClick={() => handleNavigation(`/platform-admin/clinics/${clinic.id}`)}
                                         className="w-full flex items-center justify-between p-2.5 rounded-lg border border-white/10 hover:bg-white/5 transition-colors"
                                     >
                                         <div className="flex items-center gap-2">
@@ -338,8 +338,8 @@ const PlatformAdminDashboard = () => {
                         </div>
                     </div>
                 </div>
-            </main>
-        </div>
+            </main >
+        </div >
     );
 };
 
