@@ -5,7 +5,7 @@
  * Uses permissions array from user context instead of role checks
  */
 
-import { useContext } from 'react';
+import { useContext, useCallback } from 'react';
 import { AuthContext } from '../context/AuthContext';
 
 /**
@@ -21,40 +21,40 @@ export function usePermissions() {
    * @param {string} permissionKey - Permission key to check
    * @returns {boolean}
    */
-  const can = (permissionKey) => {
+  const can = useCallback((permissionKey) => {
     if (!user || !user.permissions || !Array.isArray(user.permissions)) {
       return false;
     }
     return user.permissions.includes(permissionKey);
-  };
+  }, [user]);
 
   /**
    * Check if user has any of the specified permissions
    * @param {string[]} permissionKeys - Array of permission keys
    * @returns {boolean}
    */
-  const canAny = (permissionKeys) => {
+  const canAny = useCallback((permissionKeys) => {
     if (!Array.isArray(permissionKeys)) return false;
     return permissionKeys.some(key => can(key));
-  };
+  }, [can]);
 
   /**
    * Check if user has all of the specified permissions
    * @param {string[]} permissionKeys - Array of permission keys
    * @returns {boolean}
    */
-  const canAll = (permissionKeys) => {
+  const canAll = useCallback((permissionKeys) => {
     if (!Array.isArray(permissionKeys)) return false;
     return permissionKeys.every(key => can(key));
-  };
+  }, [can]);
 
   /**
    * Get user's scope configuration
    * @returns {Object} { scheduleScope, patientScope }
    */
-  const getScope = () => {
+  const getScope = useCallback(() => {
     return user?.scope || { scheduleScope: 'CLINIC', patientScope: 'CLINIC' };
-  };
+  }, [user]);
 
   return {
     can,
@@ -75,8 +75,8 @@ export function usePermissions() {
 export function withPermission(permission, Component, Fallback = null) {
   return function PermissionWrapper(props) {
     const { can, canAny } = usePermissions();
-    const hasPermission = Array.isArray(permission) 
-      ? canAny(permission) 
+    const hasPermission = Array.isArray(permission)
+      ? canAny(permission)
       : can(permission);
 
     if (!hasPermission) {

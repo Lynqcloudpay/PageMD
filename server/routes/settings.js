@@ -505,7 +505,7 @@ adminRouter.put('/email', async (req, res) => {
  * GET /settings/features
  * Get feature flags
  */
-router.get('/features', async (req, res) => {
+router.get('/features', authenticate, requireAdmin, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM feature_flags ORDER BY category, feature_key');
     res.json(result.rows);
@@ -557,10 +557,43 @@ adminRouter.put('/features/:key', [
  * GET /settings/all
  * Get all settings at once
  */
-router.get('/all', async (req, res) => {
+router.get('/all', authenticate, requireAdmin, async (req, res) => {
   try {
+    const practiceQuery = req.clinic
+      ? (async () => {
+        const cRes = await pool.controlPool.query('SELECT * FROM clinics WHERE id = $1', [req.clinic.id]);
+        if (cRes.rows.length === 0) return { rows: [] };
+        const c = cRes.rows[0];
+        const sRes = await pool.controlPool.query('SELECT * FROM clinic_settings WHERE clinic_id = $1', [req.clinic.id]);
+        const s = sRes.rows[0] || {};
+        return {
+          rows: [{
+            id: c.id,
+            practice_name: c.display_name,
+            legal_name: c.legal_name,
+            practice_type: c.specialty,
+            tax_id: c.tax_id,
+            npi: c.npi,
+            address_line1: c.address_line1,
+            address_line2: c.address_line2,
+            city: c.city,
+            state: c.state,
+            zip: c.zip,
+            phone: c.phone,
+            fax: c.fax,
+            email: c.email,
+            website: c.website,
+            logo_url: c.logo_url,
+            timezone: s.time_zone || 'America/New_York',
+            date_format: s.date_format || 'MM/DD/YYYY',
+            time_format: s.time_format || '12h'
+          }]
+        };
+      })()
+      : pool.query('SELECT * FROM practice_settings ORDER BY updated_at DESC LIMIT 1');
+
     const [practice, security, clinical, email, features] = await Promise.all([
-      pool.query('SELECT * FROM practice_settings ORDER BY updated_at DESC LIMIT 1'),
+      practiceQuery,
       pool.query('SELECT * FROM security_settings ORDER BY updated_at DESC LIMIT 1'),
       pool.query('SELECT * FROM clinical_settings ORDER BY updated_at DESC LIMIT 1'),
       pool.query('SELECT * FROM email_settings ORDER BY updated_at DESC LIMIT 1'),

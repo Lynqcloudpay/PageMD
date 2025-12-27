@@ -1,47 +1,57 @@
 #!/bin/bash
-# Ultra-fast deployment script
+set -x
+# Ultra-fast deployment script (Robust Version)
 # Builds frontend locally and rsyncs it to the server
-# Usage: ./deploy-fast.sh [path_to_key]
 
 HOST="bemypcp.com"
 USER="ubuntu"
 DIR="/home/ubuntu/emr"
-KEY_PATH="$1"
+INPUT_KEY_PATH="$1"
 
-SSH_OPTS=""
-if [ ! -z "$KEY_PATH" ]; then
-  SSH_OPTS="-i $KEY_PATH"
-fi
+# Hardcoded absolute path to avoid pwd/shell issues with spaces
+PROJECT_ROOT="/Volumes/Mel's SSD/paper emr"
 
 echo "🚀 Starting ULTRA-FAST deployment to $HOST..."
 
+# Handle Key (Copy to /tmp to avoid space/quote issues in ssh/rsync commands)
+if [ ! -z "$INPUT_KEY_PATH" ]; then
+  echo "Copying key from '$INPUT_KEY_PATH' to /tmp/deploy_key"
+  cp "$INPUT_KEY_PATH" /tmp/deploy_key || { echo "❌ Failed to copy key"; exit 1; }
+  chmod 600 /tmp/deploy_key
+  KEY_PATH="/tmp/deploy_key"
+else
+  echo "❌ No key path provided"
+  exit 1
+fi
+
+ls -la "$KEY_PATH"
+
 # 1. Local Build
 echo "🏗️  Building frontend locally..."
-cd client
+cd "$PROJECT_ROOT/client" || { echo "❌ Cannot cd to client dir"; exit 1; }
+
 echo "VITE_API_URL=https://bemypcp.com/api" > .env.production.local
-npm run build
-cd ..
+npm run build || { echo "❌ Build failed"; exit 1; }
+
+cd "$PROJECT_ROOT"
 
 # 2. Sync Static Files
 echo "📤 Syncing static files to server..."
-ssh $SSH_OPTS $USER@$HOST "mkdir -p $DIR/deploy/static"
+# Using strict verify checking for ssh
+ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST "mkdir -p $DIR/deploy/static"
 
-LOCAL_DIST="$(pwd)/client/dist/"
+LOCAL_DIST="$PROJECT_ROOT/client/dist/"
 echo "Syncing from $LOCAL_DIST to $USER@$HOST:$DIR/deploy/static/"
 
-if [ ! -z "$KEY_PATH" ]; then
-  rsync -av --delete -e "ssh -i $KEY_PATH" "$LOCAL_DIST" "$USER@$HOST:$DIR/deploy/static/"
-else
-  rsync -av --delete "$LOCAL_DIST" "$USER@$HOST:$DIR/deploy/static/"
-fi
+rsync -av --delete -e "ssh -i $KEY_PATH -o StrictHostKeyChecking=no" "$LOCAL_DIST" "$USER@$HOST:$DIR/deploy/static/"
 
 # Verify files reached the server
 echo "🔍 Verifying files on server..."
-ssh $SSH_OPTS $USER@$HOST "ls -la $DIR/deploy/static/index.html"
+ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST "ls -la $DIR/deploy/static/index.html"
 
 # 3. Server-side API build & restart
 echo "⚙️  Updating server code and restarting API..."
-ssh $SSH_OPTS $USER@$HOST << EOF
+ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST << EOF
   set -e
   cd $DIR
   
@@ -69,19 +79,11 @@ ssh $SSH_OPTS $USER@$HOST << EOF
       echo "✅ Database is ready!"
       break
     fi
-    echo "Still waiting... ($i/30)"
+    echo "Still waiting... (\$i/30)"
     sleep 2
   done
 
-  echo "🗄️  Applying database schema fixes..."
-  docker compose -f docker-compose.prod.yml exec -T db psql -U emr_user -d emr_db < $DIR/fix_schema.sql || echo "⚠️ Warning: Schema fix failed."
-
-  echo "🏢 Setting up Multi-Tenancy Control Database..."
-  docker compose -f docker-compose.prod.yml exec -T db psql -U emr_user -d emr_db < $DIR/control_schema.sql || echo "⚠️ Warning: Control schema failed."
-  docker compose -f docker-compose.prod.yml exec -T db psql -U emr_user -d emr_db < $DIR/seed_multi_tenancy.sql || echo "⚠️ Warning: Multi-tenancy seeding failed."
-  docker compose -f docker-compose.prod.yml exec -T db psql -U emr_user -d emr_db < $DIR/platform_business_schema.sql || echo "⚠️ Warning: Platform business schema failed."
-  docker compose -f docker-compose.prod.yml exec -T db psql -U emr_user -d emr_db < $DIR/seed_platform_admin.sql || echo "⚠️ Warning: Platform admin seeding failed."
-
+  # Application-specific migrations
   echo "⚙️  Running Admin Settings Migration..."
   docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-admin-settings.js || echo "⚠️ Warning: Admin settings migration failed."
 
@@ -89,5 +91,5 @@ ssh $SSH_OPTS $USER@$HOST << EOF
   docker image prune -f
 EOF
 
-echo "✅ Ultra-fast deployment complete!"
-echo "🌍 Visit https://bemypcp.com"
+echo "✅ Deployment complete!"
+rm /tmp/deploy_key
