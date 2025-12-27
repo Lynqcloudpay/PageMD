@@ -9,9 +9,9 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess }) => {
     const [currentSection, setCurrentSection] = useState(1);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    
+
     const totalSections = 7;
-    
+
     const [formData, setFormData] = useState({
         // Personal Information
         firstName: '',
@@ -25,7 +25,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess }) => {
         race: '',
         ethnicity: '',
         maritalStatus: '',
-        
+
         // Contact Information
         phone: '',
         phoneSecondary: '',
@@ -39,7 +39,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess }) => {
         communicationPreference: 'Phone',
         consentToText: false,
         consentToEmail: false,
-        
+
         // Address
         addressLine1: '',
         addressLine2: '',
@@ -48,12 +48,12 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess }) => {
         zip: '',
         country: 'United States',
         addressType: 'Home',
-        
+
         // Employment
         employmentStatus: '',
         occupation: '',
         employerName: '',
-        
+
         // Insurance
         insuranceProvider: '',
         insuranceId: '',
@@ -67,7 +67,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess }) => {
         insuranceEffectiveDate: '',
         insuranceExpiryDate: '',
         insuranceNotes: '',
-        
+
         // Pharmacy
         pharmacyName: '',
         pharmacyAddress: '',
@@ -75,7 +75,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess }) => {
         pharmacyNpi: '',
         pharmacyFax: '',
         pharmacyPreferred: true,
-        
+
         // Emergency Contact
         emergencyContactName: '',
         emergencyContactPhone: '',
@@ -84,7 +84,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess }) => {
         emergencyContact2Name: '',
         emergencyContact2Phone: '',
         emergencyContact2Relationship: '',
-        
+
         // Additional
         referralSource: '',
         smokingStatus: '',
@@ -113,9 +113,76 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess }) => {
         setError(null);
 
         try {
-            const response = await patientsAPI.create(formData);
+            // Transform camelCase to snake_case for backend
+            const backendData = {
+                first_name: formData.firstName,
+                middle_name: formData.middleName,
+                last_name: formData.lastName,
+                name_suffix: formData.nameSuffix,
+                preferred_name: formData.preferredName,
+                dob: formData.dob,
+                sex: formData.sex,
+                gender: formData.gender,
+                race: formData.race,
+                ethnicity: formData.ethnicity,
+                marital_status: formData.maritalStatus,
+                phone: formData.phone,
+                phone_secondary: formData.phoneSecondary,
+                phone_cell: formData.phoneCell,
+                phone_work: formData.phoneWork,
+                phone_preferred: formData.phonePreferred,
+                email: formData.email,
+                email_secondary: formData.emailSecondary,
+                preferred_language: formData.preferredLanguage,
+                interpreter_needed: formData.interpreterNeeded,
+                communication_preference: formData.communicationPreference,
+                consent_to_text: formData.consentToText,
+                consent_to_email: formData.consentToEmail,
+                address_line1: formData.addressLine1,
+                address_line2: formData.addressLine2,
+                city: formData.city,
+                state: formData.state,
+                zip: formData.zip,
+                country: formData.country,
+                address_type: formData.addressType,
+                employment_status: formData.employmentStatus,
+                occupation: formData.occupation,
+                employer_name: formData.employerName,
+                insurance_provider: formData.insuranceProvider,
+                insurance_id: formData.insuranceId,
+                insurance_group_number: formData.insuranceGroupNumber,
+                insurance_plan_name: formData.insurancePlanName,
+                insurance_plan_type: formData.insurancePlanType,
+                insurance_subscriber_name: formData.insuranceSubscriberName,
+                insurance_subscriber_dob: formData.insuranceSubscriberDob,
+                insurance_subscriber_relationship: formData.insuranceSubscriberRelationship,
+                insurance_copay: formData.insuranceCopay,
+                insurance_effective_date: formData.insuranceEffectiveDate,
+                insurance_expiry_date: formData.insuranceExpiryDate,
+                insurance_notes: formData.insuranceNotes,
+                pharmacy_name: formData.pharmacyName,
+                pharmacy_address: formData.pharmacyAddress,
+                pharmacy_phone: formData.pharmacyPhone,
+                pharmacy_npi: formData.pharmacyNpi,
+                pharmacy_fax: formData.pharmacyFax,
+                pharmacy_preferred: formData.pharmacyPreferred,
+                emergency_contact_name: formData.emergencyContactName,
+                emergency_contact_phone: formData.emergencyContactPhone,
+                emergency_contact_relationship: formData.emergencyContactRelationship,
+                emergency_contact_address: formData.emergencyContactAddress,
+                emergency_contact2_name: formData.emergencyContact2Name,
+                emergency_contact2_phone: formData.emergencyContact2Phone,
+                emergency_contact2_relationship: formData.emergencyContact2Relationship,
+                referral_source: formData.referralSource,
+                smoking_status: formData.smokingStatus,
+                alcohol_use: formData.alcoholUse,
+                allergies_known: formData.allergiesKnown,
+                notes: formData.notes,
+            };
+
+            const response = await patientsAPI.create(backendData);
             const newPatient = response.data || response;
-            
+
             addPatient({
                 id: newPatient.id || Date.now(),
                 name: `${newPatient.first_name} ${newPatient.last_name}`,
@@ -125,7 +192,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess }) => {
                 phone: newPatient.phone,
                 age: new Date().getFullYear() - new Date(newPatient.dob).getFullYear()
             });
-            
+
             onSuccess(`Patient ${newPatient.first_name} ${newPatient.last_name} enrolled successfully`);
             setFormData({
                 firstName: '', middleName: '', lastName: '', nameSuffix: '', preferredName: '',
@@ -1014,7 +1081,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess }) => {
                         const SectionIcon = section.icon;
                         const isActive = section.id === currentSection;
                         const isCompleted = section.id < currentSection;
-                        
+
                         return (
                             <button
                                 key={section.id}
@@ -1024,11 +1091,11 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess }) => {
                                 className={`
                                     flex flex-col items-center justify-center gap-0.5 px-1.5 py-1.5 sm:px-2 sm:py-2 rounded-md text-[10px] sm:text-xs font-medium transition-all
                                     min-w-0 w-full
-                                    ${isActive 
-                                        ? 'bg-blue-600 text-white shadow-md' 
+                                    ${isActive
+                                        ? 'bg-blue-600 text-white shadow-md'
                                         : isCompleted
-                                        ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                     }
                                     ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                                 `}

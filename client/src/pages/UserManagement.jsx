@@ -600,33 +600,34 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
     setLoading(true);
 
     try {
+      // Transform camelCase to snake_case for backend
       const submitData = {
         email: formData.email || formData.username + '@clinic.com',
         password: formData.password,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        middleName: formData.middleName,
-        roleId: formData.roleId,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        middle_name: formData.middleName,
+        role_id: formData.roleId,
         status: formData.status,
-        professionalType: selectedRole?.name || '',
+        professional_type: selectedRole?.name || '',
         title: formData.title,
         phone: formData.phone,
-        phoneMobile: formData.phoneMobile,
+        phone_mobile: formData.phoneMobile,
         extension: formData.extension,
         fax: formData.fax,
         notes: formData.notes,
-        isAdmin: formData.isAdmin || false // Send admin privileges flag separately
+        is_admin: formData.isAdmin || false
       };
 
       // Add healthcare provider fields
       if (isHealthcareProvider) {
         submitData.credentials = formData.credentials;
         submitData.npi = formData.npi;
-        submitData.licenseNumber = formData.licenseNumber;
-        submitData.licenseState = formData.licenseState;
+        submitData.license_number = formData.licenseNumber;
+        submitData.license_state = formData.licenseState;
         if (canPrescribe) {
-          submitData.deaNumber = formData.deaNumber;
-          submitData.taxonomyCode = formData.taxonomyCode;
+          submitData.dea_number = formData.deaNumber;
+          submitData.taxonomy_code = formData.taxonomyCode;
           submitData.upin = formData.upin;
         }
         if (selectedRole.name === 'Physician' || selectedRole.name === 'Nurse Practitioner') {
@@ -687,10 +688,10 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
                 <div className="flex items-center">
                   <div
                     className={`flex items-center justify-center w-10 h-10 rounded-full border-2 font-medium text-sm ${currentStep > step.id
-                        ? 'border-strong-azure text-white'
-                        : currentStep === step.id
-                          ? 'border-strong-azure text-strong-azure bg-strong-azure/10'
-                          : 'border-gray-300 text-gray-400 bg-white'
+                      ? 'border-strong-azure text-white'
+                      : currentStep === step.id
+                        ? 'border-strong-azure text-strong-azure bg-strong-azure/10'
+                        : 'border-gray-300 text-gray-400 bg-white'
                       }`}
                   >
                     {currentStep > step.id ? (
@@ -1370,8 +1371,8 @@ const EditUserModal = ({ isOpen, onClose, user, roles }) => {
                   type="button"
                   onClick={() => setActiveTab(tab)}
                   className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab
-                      ? 'border-primary-500 text-primary-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                     }`}
                 >
                   {tabLabels[tab] || tab}
