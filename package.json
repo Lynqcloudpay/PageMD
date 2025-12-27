@@ -12,13 +12,18 @@
     "setup": "bash setup.sh",
     "init": "bash setup.sh"
   },
-  "keywords": ["emr", "ehr", "medical", "healthcare"],
+  "keywords": [
+    "emr",
+    "ehr",
+    "medical",
+    "healthcare"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3"
   }
 }
-
-
-

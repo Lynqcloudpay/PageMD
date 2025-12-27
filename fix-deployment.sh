@@ -22,7 +22,7 @@ ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST << EOF
   
   echo "🛑 FORCING DOWN all containers..."
   # Force stop and remove everything related to this compose project
-  docker compose -f docker-compose.prod.yml down --remove-orphans --volumes
+  docker compose -f docker-compose.prod.yml down --remove-orphans
   # Note: --volumes might remove db volume if it's anonymous, but usually prod db is named volume or bind mount. 
   # Let's check docker-compose.prod.yml first? 
   # Actually, 'down' is usually enough. 'down --volumes' is dangerous if data is not persistent.

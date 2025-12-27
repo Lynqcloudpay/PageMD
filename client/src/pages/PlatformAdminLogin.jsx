@@ -17,9 +17,12 @@ const PlatformAdminLogin = () => {
         setLoading(true);
 
         try {
+            console.log('Attempting login with:', email);
             await login(email, password);
+            console.log('Login successful, navigating...');
             navigate('/platform-admin/dashboard');
         } catch (err) {
+            console.error('Login error in component:', err);
             setError(err.message || 'Invalid email or password');
         } finally {
             setLoading(false);
