@@ -138,6 +138,7 @@ router.post('/login', [
       });
     }
 
+    console.log('[Auth] Login request for:', email);
     let result;
     try {
       result = await pool.query(`
@@ -151,40 +152,39 @@ router.post('/login', [
       `, [email]);
     } catch (dbError) {
       console.error('Database query error:', dbError);
-
-      // In development, provide helpful error message
-      if (process.env.NODE_ENV !== 'production') {
-        return res.status(500).json({
-          error: 'Database connection failed. PostgreSQL is not running.',
-          hint: 'Set DEV_MODE=true in .env to use mock authentication, or start PostgreSQL',
-          details: dbError.message
-        });
-      }
-
-      return res.status(500).json({
-        error: 'Database connection failed',
-        details: process.env.NODE_ENV === 'development' ? dbError.message : undefined
-      });
+      throw dbError; // throw to catch block at end
     }
 
     if (result.rows.length === 0) {
+      console.log('[Auth] User not found');
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const user = result.rows[0];
+    console.log('[Auth] User found:', user.email, 'Hash start:', user.password_hash.substring(0, 10));
+
     if (user.status && user.status !== 'active') {
       return res.status(401).json({ error: `Account is ${user.status}` });
     }
 
     // Support both Argon2 (new users) and bcrypt (legacy/admin users) password hashes
     let valid = false;
-    if (user.password_hash.startsWith('$argon2')) {
-      // Argon2 hash (users created via User Management)
-      valid = await passwordService.verifyPassword(user.password_hash, password);
-    } else {
-      // bcrypt hash (legacy users or admin accounts)
-      valid = await bcrypt.compare(password, user.password_hash);
+    try {
+      if (user.password_hash.startsWith('$argon2')) {
+        // Argon2 hash (users created via User Management)
+        console.log('[Auth] Verifying Argon2 hash');
+        valid = await passwordService.verifyPassword(user.password_hash, password);
+      } else {
+        // bcrypt hash (legacy users or admin accounts)
+        console.log('[Auth] Verifying bcrypt hash');
+        valid = await bcrypt.compare(password, user.password_hash);
+      }
+    } catch (verifyError) {
+      console.error('[Auth] Verification threw:', verifyError);
+      throw verifyError;
     }
+
+    console.log('[Auth] Password valid:', valid);
 
     if (!valid) {
       console.error('Login failed: Password mismatch for', email);
