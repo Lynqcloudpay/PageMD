@@ -258,6 +258,27 @@ class UserService {
       isAdminValue // is_admin flag (secondary to role_id)
     ]);
 
+
+    // Create platform lookup entry for multi-tenant login resolution
+    try {
+      const schemaRes = await pool.query('SELECT current_schema()');
+      const currentSchema = schemaRes.rows[0].current_schema;
+
+      if (currentSchema && currentSchema !== 'public') {
+        await pool.controlPool.query(
+          `INSERT INTO platform_user_lookup (email, schema_name) 
+           VALUES ($1, $2) 
+           ON CONFLICT (email) 
+           DO UPDATE SET schema_name = $2`,
+          [email, currentSchema]
+        );
+        // console.log(`[UserService] Added ${email} to platform_user_lookup for schema ${currentSchema}`);
+      }
+    } catch (lookupError) {
+      console.error('[UserService] Failed to update platform_user_lookup:', lookupError);
+      // Non-critical, do not fail user creation
+    }
+
     return result.rows[0];
   }
 
