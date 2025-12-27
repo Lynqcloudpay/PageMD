@@ -577,7 +577,7 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
       'pharmacy_name', 'pharmacy_address', 'pharmacy_phone', 'pharmacy_npi', 'pharmacy_fax', 'pharmacy_preferred',
       'referral_source', 'smoking_status', 'alcohol_use', 'allergies_known', 'notes',
       'primary_care_provider', 'photo_url', 'clinic_id', 'created_at', 'updated_at',
-      'deceased', 'deceased_date'
+      'deceased', 'deceased_date', 'clinic_id'
     ]);
 
     // Debug log to trace missing fields
@@ -607,6 +607,13 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
         values.push(value);
         paramIndex++;
       }
+    }
+
+    // Explicitly add clinic_id if present in user context and not in fields
+    if (req.user?.clinic_id && !fields.includes('clinic_id')) {
+      fields.push('clinic_id');
+      values.push(req.user.clinic_id);
+      paramIndex++;
     }
 
     // Add encryption_metadata if present and not already in fields

@@ -238,9 +238,10 @@ router.post('/open-today/:patientId', requirePermission('notes:create'), async (
         encounter_date,
         visit_date,
         created_at, 
-        updated_at
+        updated_at,
+        clinic_id
       )
-      VALUES ($1, $2, 'draft', $3, $4, $5, $6, $7)
+      VALUES ($1, $2, 'draft', $3, $4, $5, $6, $7, $8)
       RETURNING *
     `;
 
@@ -251,7 +252,8 @@ router.post('/open-today/:patientId', requirePermission('notes:create'), async (
       todayDate,
       now,
       now,
-      now
+      now,
+      req.user?.clinic_id
     ]);
 
     await client.query('COMMIT');
@@ -389,10 +391,11 @@ router.post('/find-or-create', requirePermission('notes:create'), async (req, re
         note_type,
         encounter_date,
         created_at,
-        updated_at
+        updated_at,
+        clinic_id
       )
-      VALUES ($1, $2, $3, $4, 'draft', $5, $6, $7, $8) RETURNING *`,
-      [patientId, now, visitType || 'Office Visit', providerId, noteType, todayDate, now, now]
+      VALUES ($1, $2, $3, $4, 'draft', $5, $6, $7, $8, $9) RETURNING *`,
+      [patientId, now, visitType || 'Office Visit', providerId, noteType, todayDate, now, now, req.user?.clinic_id]
     );
     console.log('Created visit:', insertResult.rows[0]?.id);
 
@@ -774,9 +777,9 @@ router.post('/', requirePermission('notes:create'), async (req, res) => {
     const { patient_id, visit_date, visit_type, provider_id } = req.body;
 
     const result = await pool.query(
-      `INSERT INTO visits (patient_id, visit_date, visit_type, provider_id)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [patient_id, visit_date || new Date(), visit_type || 'Office Visit', provider_id || req.user.id]
+      `INSERT INTO visits (patient_id, visit_date, visit_type, provider_id, clinic_id)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [patient_id, visit_date || new Date(), visit_type || 'Office Visit', provider_id || req.user.id, req.user?.clinic_id]
     );
 
     await logAudit(req.user.id, 'create_visit', 'visit', result.rows[0].id, req.body, req.ip);

@@ -1,15 +1,16 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from './AuthContext';
 
 const PatientTabsContext = createContext({
     tabs: [],
     activeTab: null,
     recentPatient: null,
-    addTab: () => {},
-    removeTab: () => {},
-    switchTab: () => {},
-    updateTabPath: () => {},
-    setActiveTab: () => {}
+    addTab: () => { },
+    removeTab: () => { },
+    switchTab: () => { },
+    updateTabPath: () => { },
+    setActiveTab: () => { }
 });
 
 export const usePatientTabs = () => {
@@ -20,11 +21,11 @@ export const usePatientTabs = () => {
             tabs: [],
             activeTab: null,
             recentPatient: null,
-            addTab: () => {},
-            removeTab: () => {},
-            switchTab: () => {},
-            updateTabPath: () => {},
-            setActiveTab: () => {}
+            addTab: () => { },
+            removeTab: () => { },
+            switchTab: () => { },
+            updateTabPath: () => { },
+            setActiveTab: () => { }
         };
     }
     return context;
@@ -34,20 +35,38 @@ export const PatientTabsProvider = ({ children }) => {
     const [tabs, setTabs] = useState([]);
     const [activeTab, setActiveTab] = useState(null);
     const [recentPatient, setRecentPatient] = useState(null);
+    const { user } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Load tabs and recent patient from localStorage on mount
+    // Use a clinic-scoped storage key
+    const storageKey = useMemo(() => {
+        return user?.clinic_id ? `patientTabs_${user.clinic_id}` : 'patientTabs';
+    }, [user?.clinic_id]);
+
+    const recentPatientKey = useMemo(() => {
+        return user?.clinic_id ? `recentPatient_${user.clinic_id}` : 'recentPatient';
+    }, [user?.clinic_id]);
+
+    // Clear tabs when clinic changes
     useEffect(() => {
+        setTabs([]);
+        setActiveTab(null);
+    }, [user?.clinic_id]);
+
+    // Load tabs and recent patient from localStorage on mount or clinic change
+    useEffect(() => {
+        if (!user) return;
+
         try {
-            const savedTabs = localStorage.getItem('patientTabs');
+            const savedTabs = localStorage.getItem(storageKey);
             if (savedTabs) {
                 try {
                     const parsed = JSON.parse(savedTabs);
                     setTabs(parsed);
                     // Set active tab based on current route
                     const currentPath = location.pathname;
-                    const matchingTab = parsed.find(tab => 
+                    const matchingTab = parsed.find(tab =>
                         currentPath.includes(`/patient/${tab.patientId}`)
                     );
                     if (matchingTab) {
@@ -57,9 +76,9 @@ export const PatientTabsProvider = ({ children }) => {
                     console.error('Error loading tabs:', e);
                 }
             }
-            
+
             // Load most recent patient
-            const savedRecent = localStorage.getItem('recentPatient');
+            const savedRecent = localStorage.getItem(recentPatientKey);
             if (savedRecent) {
                 try {
                     setRecentPatient(JSON.parse(savedRecent));
@@ -70,14 +89,17 @@ export const PatientTabsProvider = ({ children }) => {
         } catch (error) {
             console.error('Error accessing localStorage:', error);
         }
-    }, [location.pathname]);
+    }, [location.pathname, storageKey, recentPatientKey, user]);
 
     // Save tabs to localStorage whenever they change
     useEffect(() => {
         if (tabs.length > 0) {
-            localStorage.setItem('patientTabs', JSON.stringify(tabs));
+            localStorage.setItem(storageKey, JSON.stringify(tabs));
+        } else if (storageKey) {
+            // If tabs is empty, we might want to clear it, but be careful with async updates
+            // For now, let's only set if it's explicitly cleared or added
         }
-    }, [tabs]);
+    }, [tabs, storageKey]);
 
     // Update active tab when route changes
     useEffect(() => {
@@ -86,11 +108,11 @@ export const PatientTabsProvider = ({ children }) => {
         if (patientMatch) {
             const patientId = patientMatch[1];
             setActiveTab(patientId);
-            
+
             // Update tab path if tab exists
-            setTabs(prev => prev.map(t => 
-                t.patientId === patientId && t.path !== currentPath 
-                    ? { ...t, path: currentPath } 
+            setTabs(prev => prev.map(t =>
+                t.patientId === patientId && t.path !== currentPath
+                    ? { ...t, path: currentPath }
                     : t
             ));
         } else {
@@ -104,7 +126,7 @@ export const PatientTabsProvider = ({ children }) => {
         const currentPath = location.pathname;
         const isOnPatientRoute = currentPath.includes(`/patient/${patient.id}`);
         const tabPath = isOnPatientRoute ? currentPath : `/patient/${patient.id}/snapshot`;
-        
+
         const newTab = {
             patientId: patient.id,
             patientName: patient.name || `${patient.first_name} ${patient.last_name}`,
@@ -112,8 +134,7 @@ export const PatientTabsProvider = ({ children }) => {
             path: tabPath,
             lastAccessed: new Date().toISOString()
         };
-        
-        // Update recent patient
+
         const recentPatientData = {
             id: patient.id,
             name: patient.name || `${patient.first_name} ${patient.last_name}`,
@@ -121,25 +142,25 @@ export const PatientTabsProvider = ({ children }) => {
             lastAccessed: new Date().toISOString()
         };
         setRecentPatient(recentPatientData);
-        localStorage.setItem('recentPatient', JSON.stringify(recentPatientData));
-        
+        localStorage.setItem(recentPatientKey, JSON.stringify(recentPatientData));
+
         setTabs(prev => {
             const existing = prev.find(t => t.patientId === patient.id);
             if (existing) {
                 // Update last accessed time and path if on patient route
-                return prev.map(t => 
-                    t.patientId === patient.id 
+                return prev.map(t =>
+                    t.patientId === patient.id
                         ? { ...t, lastAccessed: new Date().toISOString(), path: isOnPatientRoute ? currentPath : t.path }
                         : t
                 );
             }
             return [...prev, newTab];
         });
-        
+
         setActiveTab(patient.id);
         // Only navigate if explicitly requested (e.g., from search or patient list)
         if (shouldNavigate) {
-        navigate(newTab.path);
+            navigate(newTab.path);
         }
     };
 
@@ -169,7 +190,7 @@ export const PatientTabsProvider = ({ children }) => {
     };
 
     const updateTabPath = (patientId, newPath) => {
-        setTabs(prev => prev.map(t => 
+        setTabs(prev => prev.map(t =>
             t.patientId === patientId ? { ...t, path: newPath } : t
         ));
     };

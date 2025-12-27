@@ -88,6 +88,59 @@ async function runMigrationForSchema(client, schema) {
         ADD COLUMN IF NOT EXISTS session_id UUID;
     `);
 
+    // 3. Update Visits Table
+    console.log(`  Checking visits table in ${schema}...`);
+    const tableVisits = await client.query(`SELECT 1 FROM information_schema.tables WHERE table_schema = '${schema}' AND table_name = 'visits'`);
+    if (tableVisits.rows.length > 0) {
+        console.log(`  Updating visits table in ${schema}...`);
+        await client.query(`
+            ALTER TABLE visits
+            ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'scheduled',
+            ADD COLUMN IF NOT EXISTS encounter_date DATE,
+            ADD COLUMN IF NOT EXISTS note_type VARCHAR(50) DEFAULT 'office_visit',
+            ADD COLUMN IF NOT EXISTS clinic_id UUID;
+        `);
+
+        // Add unique index for today's draft if it doesn't exist
+        await client.query(`
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = '${schema}' AND indexname = 'idx_visits_unique_today_draft') THEN
+                    CREATE UNIQUE INDEX idx_visits_unique_today_draft ON visits (patient_id, encounter_date, note_type) 
+                    WHERE status = 'draft' AND note_signed_at IS NULL;
+                END IF;
+            END $$;
+        `);
+        console.log(`  ✅ Visits table in ${schema} updated.`);
+    }
+
+    // 4. Update Orders Table
+    console.log(`  Checking orders table in ${schema}...`);
+    const tableOrders = await client.query(`SELECT 1 FROM information_schema.tables WHERE table_schema = '${schema}' AND table_name = 'orders'`);
+    if (tableOrders.rows.length > 0) {
+        await client.query(`
+            ALTER TABLE orders
+            ADD COLUMN IF NOT EXISTS clinic_id UUID;
+        `);
+    }
+
+    // 5. Update Appointments Table
+    console.log(`  Checking appointments table in ${schema}...`);
+    const tableAppointments = await client.query(`SELECT 1 FROM information_schema.tables WHERE table_schema = '${schema}' AND table_name = 'appointments'`);
+    if (tableAppointments.rows.length > 0) {
+        await client.query(`
+            ALTER TABLE appointments
+            ADD COLUMN IF NOT EXISTS clinic_id UUID,
+            ADD COLUMN IF NOT EXISTS patient_status VARCHAR(50) DEFAULT 'scheduled',
+            ADD COLUMN IF NOT EXISTS room_sub_status VARCHAR(100),
+            ADD COLUMN IF NOT EXISTS status_history JSONB DEFAULT '[]'::jsonb,
+            ADD COLUMN IF NOT EXISTS arrival_time TIMESTAMP,
+            ADD COLUMN IF NOT EXISTS checkout_time TIMESTAMP,
+            ADD COLUMN IF NOT EXISTS current_room VARCHAR(50),
+            ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;
+        `);
+    }
+
     // Ensure actor_user_id mapping if needed
     await client.query(`
         DO $$

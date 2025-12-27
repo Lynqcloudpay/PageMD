@@ -10,7 +10,7 @@ router.use(authenticate);
 router.get('/', requirePermission('schedule:view'), async (req, res) => {
   try {
     const { date, startDate, endDate, providerId } = req.query;
-    
+
     let query = `
       SELECT a.*,
              p.first_name as patient_first_name,
@@ -24,10 +24,10 @@ router.get('/', requirePermission('schedule:view'), async (req, res) => {
       JOIN users u ON a.provider_id = u.id
       WHERE 1=1
     `;
-    
+
     const params = [];
     let paramCount = 0;
-    
+
     // Scope filtering: clinicians with SELF scope only see their own appointments
     if (req.user.scope?.scheduleScope === 'SELF' && req.user.role === 'CLINICIAN') {
       paramCount++;
@@ -39,7 +39,7 @@ router.get('/', requirePermission('schedule:view'), async (req, res) => {
       query += ` AND a.provider_id = $${paramCount}`;
       params.push(providerId);
     }
-    
+
     if (date) {
       paramCount++;
       query += ` AND a.appointment_date = $${paramCount}`;
@@ -52,18 +52,18 @@ router.get('/', requirePermission('schedule:view'), async (req, res) => {
       query += ` AND a.appointment_date <= $${paramCount}`;
       params.push(endDate);
     }
-    
+
     query += ` ORDER BY a.appointment_date ASC, a.appointment_time ASC`;
-    
+
     const result = await pool.query(query, params);
-    
+
     const appointments = result.rows.map(row => {
       // Parse status_history if it's a string (PostgreSQL JSONB can return as string)
       let statusHistory = [];
       if (row.status_history) {
         try {
-          statusHistory = typeof row.status_history === 'string' 
-            ? JSON.parse(row.status_history) 
+          statusHistory = typeof row.status_history === 'string'
+            ? JSON.parse(row.status_history)
             : row.status_history;
           if (!Array.isArray(statusHistory)) {
             statusHistory = [];
@@ -73,7 +73,7 @@ router.get('/', requirePermission('schedule:view'), async (req, res) => {
           statusHistory = [];
         }
       }
-      
+
       return {
         id: row.id,
         patientId: row.patient_id,
@@ -97,7 +97,7 @@ router.get('/', requirePermission('schedule:view'), async (req, res) => {
         cancellation_reason: row.cancellation_reason ?? null
       };
     });
-    
+
     res.json(appointments);
   } catch (error) {
     console.error('Error fetching appointments:', error);
@@ -123,19 +123,19 @@ router.get('/:id', requirePermission('schedule:view'), async (req, res) => {
        WHERE a.id = $1`,
       [id]
     );
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Appointment not found' });
     }
-    
+
     const row = result.rows[0];
-    
+
     // Parse status_history if it's a string (PostgreSQL JSONB can return as string)
     let statusHistory = [];
     if (row.status_history) {
       try {
-        statusHistory = typeof row.status_history === 'string' 
-          ? JSON.parse(row.status_history) 
+        statusHistory = typeof row.status_history === 'string'
+          ? JSON.parse(row.status_history)
           : row.status_history;
         if (!Array.isArray(statusHistory)) {
           statusHistory = [];
@@ -145,7 +145,7 @@ router.get('/:id', requirePermission('schedule:view'), async (req, res) => {
         statusHistory = [];
       }
     }
-    
+
     const appointment = {
       id: row.id,
       patientId: row.patient_id,
@@ -168,7 +168,7 @@ router.get('/:id', requirePermission('schedule:view'), async (req, res) => {
       checkout_time: row.checkout_time ?? null,
       cancellation_reason: row.cancellation_reason ?? null
     };
-    
+
     res.json(appointment);
   } catch (error) {
     console.error('Error fetching appointment:', error);
@@ -180,14 +180,14 @@ router.get('/:id', requirePermission('schedule:view'), async (req, res) => {
 router.post('/', requirePermission('schedule:edit'), async (req, res) => {
   try {
     const { patientId, providerId, date, time, duration, type, notes } = req.body;
-    
+
     if (!patientId || !date || !time) {
       return res.status(400).json({ error: 'Patient ID, date, and time are required' });
     }
-    
+
     // Use current user as provider if not specified
     const finalProviderId = providerId || req.user.id;
-    
+
     // Check for existing appointments at the same time slot (max 2 per slot)
     // Exception: If BOTH appointments are cancelled/no-show, treat slot as empty (0/2)
     const existingAppts = await pool.query(
@@ -198,26 +198,26 @@ router.post('/', requirePermission('schedule:edit'), async (req, res) => {
          AND appointment_time = $3`,
       [finalProviderId, date, time]
     );
-    
-    const allCancelled = existingAppts.rows.length === 2 && 
-                         existingAppts.rows.every(row => 
-                           row.patient_status === 'cancelled' || row.patient_status === 'no_show'
-                         );
-    
+
+    const allCancelled = existingAppts.rows.length === 2 &&
+      existingAppts.rows.every(row =>
+        row.patient_status === 'cancelled' || row.patient_status === 'no_show'
+      );
+
     // If both are cancelled, treat as empty (allow booking)
     if (!allCancelled && existingAppts.rows.length >= 2) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Time slot is full. Maximum 2 appointments allowed per time slot.',
         existingCount: existingAppts.rows.length
       });
     }
-    
+
     const result = await pool.query(
-      `INSERT INTO appointments (patient_id, provider_id, appointment_date, appointment_time, duration, appointment_type, notes, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [patientId, finalProviderId, date, time, duration || 30, type || 'Follow-up', notes || null, req.user.id]
+      `INSERT INTO appointments (patient_id, provider_id, appointment_date, appointment_time, duration, appointment_type, notes, created_by, clinic_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [patientId, finalProviderId, date, time, duration || 30, type || 'Follow-up', notes || null, req.user.id, req.user?.clinic_id]
     );
-    
+
     // Fetch the full appointment with patient and provider names
     const fullResult = await pool.query(
       `SELECT a.*,
@@ -233,15 +233,15 @@ router.post('/', requirePermission('schedule:edit'), async (req, res) => {
        WHERE a.id = $1`,
       [result.rows[0].id]
     );
-    
+
     const row = fullResult.rows[0];
-    
+
     // Parse status_history if it's a string (PostgreSQL JSONB can return as string)
     let statusHistory = [];
     if (row.status_history) {
       try {
-        statusHistory = typeof row.status_history === 'string' 
-          ? JSON.parse(row.status_history) 
+        statusHistory = typeof row.status_history === 'string'
+          ? JSON.parse(row.status_history)
           : row.status_history;
         if (!Array.isArray(statusHistory)) {
           statusHistory = [];
@@ -251,7 +251,7 @@ router.post('/', requirePermission('schedule:edit'), async (req, res) => {
         statusHistory = [];
       }
     }
-    
+
     const appointment = {
       id: row.id,
       patientId: row.patient_id,
@@ -274,7 +274,7 @@ router.post('/', requirePermission('schedule:edit'), async (req, res) => {
       checkout_time: row.checkout_time ?? null,
       cancellation_reason: row.cancellation_reason ?? null
     };
-    
+
     res.status(201).json(appointment);
   } catch (error) {
     console.error('Error creating appointment:', error);
@@ -286,10 +286,10 @@ router.post('/', requirePermission('schedule:edit'), async (req, res) => {
 router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { 
+    const {
       date, time, duration, type, status, notes, providerId
     } = req.body;
-    
+
     // Accept both snake_case and camelCase for patient status fields (for compatibility)
     const normalizedPatientStatus = req.body.patient_status ?? req.body.patientStatus;
     const normalizedRoomSubStatus = req.body.room_sub_status ?? req.body.roomSubStatus;
@@ -298,17 +298,17 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
     const normalizedCurrentRoom = req.body.current_room ?? req.body.currentRoom;
     const normalizedCheckoutTime = req.body.checkout_time ?? req.body.checkoutTime;
     const normalizedCancellationReason = req.body.cancellation_reason ?? req.body.cancellationReason;
-    
+
     // First, verify appointment exists
     const existingAppointment = await pool.query('SELECT id FROM appointments WHERE id = $1', [id]);
     if (existingAppointment.rows.length === 0) {
       return res.status(404).json({ error: 'Appointment not found' });
     }
-    
+
     const updates = [];
     const params = [];
     let paramCount = 0;
-    
+
     // Standard appointment fields
     if (date !== undefined) {
       paramCount++;
@@ -345,23 +345,23 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
       updates.push(`provider_id = $${paramCount}`);
       params.push(providerId);
     }
-    
+
     // Patient status fields - require schedule:status_update permission
     if (normalizedPatientStatus !== undefined) {
       // Check permission for status updates
       if (!req.user.permissions || !req.user.permissions.includes('schedule:status_update')) {
-        return res.status(403).json({ 
+        return res.status(403).json({
           error: 'Forbidden',
           message: 'Insufficient permissions to update appointment status',
           required: 'schedule:status_update'
         });
       }
-      
+
       // Validate patient_status value
       const validStatuses = ['scheduled', 'arrived', 'checked_in', 'in_room', 'checked_out', 'no_show', 'cancelled'];
       if (!validStatuses.includes(normalizedPatientStatus)) {
-        return res.status(400).json({ 
-          error: 'Invalid patient_status value', 
+        return res.status(400).json({
+          error: 'Invalid patient_status value',
           validValues: validStatuses,
           received: normalizedPatientStatus
         });
@@ -370,18 +370,18 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
       updates.push(`patient_status = $${paramCount}`);
       params.push(normalizedPatientStatus);
     }
-    
+
     if (normalizedCancellationReason !== undefined) {
       paramCount++;
       updates.push(`cancellation_reason = $${paramCount}`);
       params.push(normalizedCancellationReason || null);
     }
-    
+
     // Handle status_history - ensure it's always a valid JSON array
     if (normalizedStatusHistory !== undefined) {
       paramCount++;
       updates.push(`status_history = $${paramCount}::jsonb`);
-      
+
       let historyJson;
       try {
         // Parse if string, otherwise use as-is
@@ -399,12 +399,12 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
           console.warn('status_history is not an array or string, defaulting to empty array');
           historyArray = [];
         }
-        
+
         // Ensure it's an array
         if (!Array.isArray(historyArray)) {
           historyArray = [];
         }
-        
+
         // Update the last entry's timestamp to use server time if it's very recent
         if (historyArray.length > 0) {
           const now = new Date();
@@ -435,16 +435,16 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
             };
           }
         }
-        
+
         historyJson = JSON.stringify(historyArray);
       } catch (error) {
         console.error('Error processing status_history:', error);
         historyJson = JSON.stringify([]);
       }
-      
+
       params.push(historyJson);
     }
-    
+
     // Handle arrival_time
     if (normalizedArrivalTime !== undefined) {
       if (normalizedArrivalTime === null || normalizedArrivalTime === '') {
@@ -456,7 +456,7 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
           const clientTime = new Date(normalizedArrivalTime);
           const serverTime = new Date();
           const timeDiff = Math.abs(serverTime.getTime() - clientTime.getTime());
-          
+
           // If timestamp is very recent (within 10 seconds), use server time for accuracy
           if (timeDiff < 10000 && !isNaN(clientTime.getTime())) {
             updates.push(`arrival_time = CURRENT_TIMESTAMP`);
@@ -471,7 +471,7 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
         }
       }
     }
-    
+
     // Handle checkout_time
     if (normalizedCheckoutTime !== undefined) {
       if (normalizedCheckoutTime === null || normalizedCheckoutTime === '') {
@@ -483,7 +483,7 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
           const clientTime = new Date(normalizedCheckoutTime);
           const serverTime = new Date();
           const timeDiff = Math.abs(serverTime.getTime() - clientTime.getTime());
-          
+
           // If timestamp is very recent (within 10 seconds), use server time for accuracy
           if (timeDiff < 10000 && !isNaN(clientTime.getTime())) {
             updates.push(`checkout_time = CURRENT_TIMESTAMP`);
@@ -498,33 +498,33 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
         }
       }
     }
-    
+
     // Handle current_room
     if (normalizedCurrentRoom !== undefined) {
       paramCount++;
       updates.push(`current_room = $${paramCount}`);
       params.push(normalizedCurrentRoom || null);
     }
-    
+
     // Handle room_sub_status
     if (normalizedRoomSubStatus !== undefined) {
       paramCount++;
       updates.push(`room_sub_status = $${paramCount}`);
       params.push(normalizedRoomSubStatus || null);
     }
-    
+
     // Ensure we have something to update
     if (updates.length === 0) {
       return res.status(400).json({ error: 'No fields to update' });
     }
-    
+
     // Scope check: verify appointment exists and user has access
     const checkRes = await pool.query('SELECT id, provider_id FROM appointments WHERE id = $1', [id]);
     if (checkRes.rows.length === 0) {
       await audit(req, 'appointment_update', 'appointment', id, false);
       return res.status(404).json({ error: 'Appointment not found' });
     }
-    
+
     // Scope check: if SELF scope, ensure appointment belongs to user
     if (req.user.scope?.scheduleScope === 'SELF' && req.user.role === 'CLINICIAN') {
       if (checkRes.rows[0].provider_id !== req.user.id) {
@@ -532,24 +532,24 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
         return res.status(403).json({ error: 'Forbidden: Cannot update appointments outside your scope' });
       }
     }
-    
+
     // Add updated_at timestamp
     updates.push(`updated_at = CURRENT_TIMESTAMP`);
-    
+
     // Add WHERE clause parameter
     paramCount++;
     params.push(id);
-    
+
     // Build and execute update query
     const updateQuery = `UPDATE appointments SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`;
-    
+
     // Log for debugging in development
     if (process.env.NODE_ENV === 'development') {
       console.log('Update query:', updateQuery);
       console.log('Update params count:', params.length);
       console.log('Updates count:', updates.length);
     }
-    
+
     let updateResult;
     try {
       updateResult = await pool.query(updateQuery, params);
@@ -567,15 +567,15 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
       });
       throw dbError;
     }
-    
+
     if (updateResult.rows.length === 0) {
       await audit(req, 'appointment_update', 'appointment', id, false);
       return res.status(404).json({ error: 'Appointment not found after update' });
     }
-    
+
     // Audit successful update
     await audit(req, 'appointment_update', 'appointment', id, true);
-    
+
     // Fetch updated appointment
     const fullResult = await pool.query(
       `SELECT a.*,
@@ -591,19 +591,19 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
        WHERE a.id = $1`,
       [id]
     );
-    
+
     if (fullResult.rows.length === 0) {
       return res.status(404).json({ error: 'Appointment not found' });
     }
-    
+
     const row = fullResult.rows[0];
-    
+
     // Parse status_history if it's a string (PostgreSQL JSONB can return as string)
     let statusHistory = [];
     if (row.status_history) {
       try {
-        statusHistory = typeof row.status_history === 'string' 
-          ? JSON.parse(row.status_history) 
+        statusHistory = typeof row.status_history === 'string'
+          ? JSON.parse(row.status_history)
           : row.status_history;
         if (!Array.isArray(statusHistory)) {
           statusHistory = [];
@@ -613,7 +613,7 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
         statusHistory = [];
       }
     }
-    
+
     const appointment = {
       id: row.id,
       patientId: row.patient_id,
@@ -636,7 +636,7 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
       checkout_time: row.checkout_time ?? null,
       cancellation_reason: row.cancellation_reason ?? null
     };
-    
+
     res.json(appointment);
   } catch (error) {
     console.error('Error updating appointment:', error);
@@ -650,7 +650,7 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
       column: error.column,
       stack: error.stack
     });
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to update appointment',
       message: error.message,
       details: error.detail || error.message,
@@ -666,11 +666,11 @@ router.delete('/:id', requirePermission('schedule:edit'), async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query('DELETE FROM appointments WHERE id = $1 RETURNING *', [id]);
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Appointment not found' });
     }
-    
+
     res.json({ message: 'Appointment deleted successfully' });
   } catch (error) {
     console.error('Error deleting appointment:', error);

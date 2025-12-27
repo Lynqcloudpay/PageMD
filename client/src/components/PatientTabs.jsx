@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { X, ChevronDown, MoreHorizontal, History } from 'lucide-react';
 import { usePatientTabs } from '../context/PatientTabsContext';
+import { useAuth } from '../context/AuthContext';
 
 const PatientTabs = () => {
     const { tabs, activeTab, switchTab, removeTab, addTab } = usePatientTabs();
+    const { user } = useAuth();
     const [isAnimating, setIsAnimating] = useState(false);
     const [visibleTabsCount, setVisibleTabsCount] = useState(tabs.length);
     const [showDropdown, setShowDropdown] = useState(false);
@@ -35,40 +37,41 @@ const PatientTabs = () => {
             const containerWidth = containerRef.current.offsetWidth;
             const dropdownWidth = 40; // Space for dropdown button
             const availableWidth = containerWidth - dropdownWidth;
-            
+
             // Approximate tab width (smaller tabs now)
             const avgTabWidth = 90; // Reduced from ~120px
             const maxVisible = Math.floor(availableWidth / avgTabWidth);
-            
+
             setVisibleTabsCount(Math.max(1, Math.min(maxVisible, tabs.length)));
         };
 
         calculateVisibleTabs();
         window.addEventListener('resize', calculateVisibleTabs);
-        
+
         // Recalculate after a short delay to ensure DOM is rendered
         const timer = setTimeout(calculateVisibleTabs, 100);
-        
+
         return () => {
             window.removeEventListener('resize', calculateVisibleTabs);
             clearTimeout(timer);
         };
     }, [tabs.length]);
 
-    // Get recent patients from localStorage (accessed by this user)
+    // Get recent patients from localStorage (accessed by this user/clinic)
     const recentPatients = useMemo(() => {
         try {
+            const storageKey = user?.clinic_id ? `patientTabs_${user.clinic_id}` : 'patientTabs';
             // Get all recent patients from localStorage
-            const savedTabs = localStorage.getItem('patientTabs');
+            const savedTabs = localStorage.getItem(storageKey);
             if (!savedTabs) return [];
-            
+
             const allTabs = JSON.parse(savedTabs);
             // Sort by lastAccessed, most recent first
             const sorted = [...allTabs].sort((a, b) => {
-        const timeA = a.lastAccessed ? new Date(a.lastAccessed).getTime() : 0;
-        const timeB = b.lastAccessed ? new Date(b.lastAccessed).getTime() : 0;
-        return timeB - timeA;
-    });
+                const timeA = a.lastAccessed ? new Date(a.lastAccessed).getTime() : 0;
+                const timeB = b.lastAccessed ? new Date(b.lastAccessed).getTime() : 0;
+                return timeB - timeA;
+            });
 
             // Return up to 10 most recent, excluding currently open tabs
             const openTabIds = new Set(tabs.map(t => t.patientId));
@@ -84,12 +87,13 @@ const PatientTabs = () => {
     // Check if there are any saved tabs in localStorage (to show the button even if all are open)
     const hasAnySavedTabs = useMemo(() => {
         try {
-            const savedTabs = localStorage.getItem('patientTabs');
+            const storageKey = user?.clinic_id ? `patientTabs_${user.clinic_id}` : 'patientTabs';
+            const savedTabs = localStorage.getItem(storageKey);
             return savedTabs && JSON.parse(savedTabs).length > 0;
         } catch {
             return false;
         }
-    }, [tabs]);
+    }, [tabs, user?.clinic_id]);
 
     // Close dropdowns when clicking outside
     useEffect(() => {
@@ -127,8 +131,8 @@ const PatientTabs = () => {
     };
 
     return (
-        <div 
-            className="bg-white border-b border-deep-gray/10 flex items-center overflow-hidden relative" 
+        <div
+            className="bg-white border-b border-deep-gray/10 flex items-center overflow-hidden relative"
             ref={containerRef}
         >
             {/* Recent Patients Dropdown - Always show if there are any saved tabs */}
@@ -144,7 +148,7 @@ const PatientTabs = () => {
                             border-r border-deep-gray/10 cursor-pointer
                             transition-colors duration-200
                             ${showRecentDropdown
-                                ? 'bg-soft-gray text-strong-azure' 
+                                ? 'bg-soft-gray text-strong-azure'
                                 : 'bg-white text-deep-gray/70 hover:bg-soft-gray hover:text-strong-azure'
                             }
                         `}
@@ -196,62 +200,58 @@ const PatientTabs = () => {
             {/* Open Tabs - Display in original order, no sorting */}
             {tabs.length > 0 && (
                 <div className="flex items-center min-w-0 flex-1 patient-tabs-container" ref={tabsContainerRef}>
-                {visibleTabs.map((tab) => {
-                    const isActive = activeTab === tab.patientId;
-                    
-                    return (
-                        <div
-                            key={tab.patientId}
-                            className={`
+                    {visibleTabs.map((tab) => {
+                        const isActive = activeTab === tab.patientId;
+
+                        return (
+                            <div
+                                key={tab.patientId}
+                                className={`
                                 flex items-center px-2 py-1 border-r border-deep-gray/10 cursor-pointer
                                 min-w-0 group patient-tab-item flex-shrink-0
-                                ${isActive 
-                                    ? 'text-white border-b-2 shadow-sm tab-active' 
-                                    : 'bg-white text-deep-gray hover:bg-soft-gray hover:text-strong-azure'
-                                }
+                                ${isActive
+                                        ? 'text-white border-b-2 shadow-sm tab-active'
+                                        : 'bg-white text-deep-gray hover:bg-soft-gray hover:text-strong-azure'
+                                    }
                                 ${isAnimating && isActive ? 'tab-switch-animation' : ''}
                         `}
-                        style={isActive ? {
-                            background: '#3B82F6',
-                            borderBottomColor: '#3B82F6',
-                            boxShadow: '0 1px 3px 0 rgba(59, 130, 246, 0.3)'
-                        } : {}}
-                        onClick={() => switchTab(tab.patientId)}
-                    >
-                            <span className={`truncate max-w-[80px] text-[11px] font-medium transition-colors duration-300 ${
-                                isActive ? 'text-white' : 'text-deep-gray'
-                        }`}>
-                            {tab.patientName}
-                        </span>
-                        {tab.mrn && (
-                                <span className={`ml-1 text-[9px] truncate px-1 py-0.5 rounded font-medium transition-all duration-300 ${
-                                    isActive 
-                                    ? 'bg-white/20 text-white' 
-                                        : 'bg-soft-gray text-deep-gray/70'
-                            }`}>
-                                    {tab.mrn.split('-').pop() || tab.mrn}
-                            </span>
-                        )}
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                removeTab(tab.patientId);
-                            }}
-                                className={`ml-1 opacity-0 group-hover:opacity-100 rounded p-0.5 transition-all duration-200 ${
-                                    isActive 
-                                        ? 'hover:bg-white/20' 
-                                        : 'hover:bg-soft-gray'
-                                }`}
-                        >
-                                <X className={`w-2.5 h-2.5 ${
-                                    isActive 
-                                        ? 'text-white/70 hover:text-white' 
-                                        : 'text-deep-gray/50 hover:text-deep-gray'
-                            }`} />
-                        </button>
-                    </div>
-                    );
-                })}
+                                style={isActive ? {
+                                    background: '#3B82F6',
+                                    borderBottomColor: '#3B82F6',
+                                    boxShadow: '0 1px 3px 0 rgba(59, 130, 246, 0.3)'
+                                } : {}}
+                                onClick={() => switchTab(tab.patientId)}
+                            >
+                                <span className={`truncate max-w-[80px] text-[11px] font-medium transition-colors duration-300 ${isActive ? 'text-white' : 'text-deep-gray'
+                                    }`}>
+                                    {tab.patientName}
+                                </span>
+                                {tab.mrn && (
+                                    <span className={`ml-1 text-[9px] truncate px-1 py-0.5 rounded font-medium transition-all duration-300 ${isActive
+                                            ? 'bg-white/20 text-white'
+                                            : 'bg-soft-gray text-deep-gray/70'
+                                        }`}>
+                                        {tab.mrn.split('-').pop() || tab.mrn}
+                                    </span>
+                                )}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        removeTab(tab.patientId);
+                                    }}
+                                    className={`ml-1 opacity-0 group-hover:opacity-100 rounded p-0.5 transition-all duration-200 ${isActive
+                                            ? 'hover:bg-white/20'
+                                            : 'hover:bg-soft-gray'
+                                        }`}
+                                >
+                                    <X className={`w-2.5 h-2.5 ${isActive
+                                            ? 'text-white/70 hover:text-white'
+                                            : 'text-deep-gray/50 hover:text-deep-gray'
+                                        }`} />
+                                </button>
+                            </div>
+                        );
+                    })}
                 </div>
             )}
 
@@ -268,7 +268,7 @@ const PatientTabs = () => {
                             border-l border-deep-gray/10 cursor-pointer
                             transition-colors duration-200
                             ${showDropdown || hiddenTabs.some(t => t.patientId === activeTab)
-                                ? 'bg-soft-gray text-strong-azure' 
+                                ? 'bg-soft-gray text-strong-azure'
                                 : 'bg-white text-deep-gray/70 hover:bg-soft-gray hover:text-strong-azure'
                             }
                         `}
@@ -290,8 +290,8 @@ const PatientTabs = () => {
                                         className={`
                                             flex items-center justify-between px-3 py-2 cursor-pointer
                                             transition-colors duration-200 group
-                                            ${isActive 
-                                                ? 'bg-strong-azure/10 text-strong-azure border-l-2 border-l-strong-azure' 
+                                            ${isActive
+                                                ? 'bg-strong-azure/10 text-strong-azure border-l-2 border-l-strong-azure'
                                                 : 'hover:bg-soft-gray text-deep-gray'
                                             }
                                         `}
@@ -301,17 +301,15 @@ const PatientTabs = () => {
                                         }}
                                     >
                                         <div className="flex items-center min-w-0 flex-1">
-                                            <span className={`truncate text-xs font-medium ${
-                                                isActive ? 'text-strong-azure' : 'text-deep-gray'
-                                            }`}>
+                                            <span className={`truncate text-xs font-medium ${isActive ? 'text-strong-azure' : 'text-deep-gray'
+                                                }`}>
                                                 {tab.patientName}
                                             </span>
                                             {tab.mrn && (
-                                                <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                                                    isActive 
-                                                        ? 'bg-strong-azure/20 text-strong-azure' 
+                                                <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded font-medium ${isActive
+                                                        ? 'bg-strong-azure/20 text-strong-azure'
                                                         : 'bg-soft-gray text-deep-gray/70'
-                                                }`}>
+                                                    }`}>
                                                     {tab.mrn}
                                                 </span>
                                             )}
@@ -330,7 +328,7 @@ const PatientTabs = () => {
                             })}
                         </div>
                     )}
-            </div>
+                </div>
             )}
         </div>
     );

@@ -217,15 +217,15 @@ const Patients = () => {
                 ) : (
                     <div className="space-y-6">
                         {/* Recently Viewed */}
-                        {recentlyViewed.length > 0 && (
-                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                                <div className="px-4 py-2.5 bg-blue-50 border-b border-gray-200 flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
-                                            <Clock className="w-4 h-4 text-blue-600" />
-                                        </div>
-                                        <h2 className="font-semibold text-gray-800 text-sm">Recently Viewed</h2>
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                            <div className="px-4 py-2.5 bg-blue-50 border-b border-gray-200 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
+                                        <Clock className="w-4 h-4 text-blue-600" />
                                     </div>
+                                    <h2 className="font-semibold text-gray-800 text-sm">Recently Viewed</h2>
+                                </div>
+                                {recentlyViewed.length > 0 && (
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
@@ -238,7 +238,9 @@ const Patients = () => {
                                     >
                                         Clear History
                                     </button>
-                                </div>
+                                )}
+                            </div>
+                            {recentlyViewed.length > 0 ? (
                                 <div className="divide-y divide-gray-100">
                                     {recentlyViewed.map((patient, index) => (
                                         <PatientListItem
@@ -249,37 +251,13 @@ const Patients = () => {
                                         />
                                     ))}
                                 </div>
-                            </div>
-                        )}
-
-                        {/* Patient List (All) */}
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                            <div className="px-4 py-2.5 bg-white border-b border-gray-200 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center">
-                                        <User className="w-4 h-4 text-gray-600" />
-                                    </div>
-                                    <h2 className="font-semibold text-gray-800 text-sm">Patient Registry ({patients.length})</h2>
-                                </div>
-                            </div>
-                            {patients.length > 0 ? (
-                                <div className="divide-y divide-gray-100">
-                                    {patients.map((patient, index) => (
-                                        <PatientListItem
-                                            key={patient.id}
-                                            patient={patient}
-                                            index={index}
-                                            onClick={() => handlePatientClick(patient.id)}
-                                        />
-                                    ))}
-                                </div>
                             ) : (
                                 <div className="p-8 text-center text-gray-500">
                                     <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-3">
-                                        <User className="w-6 h-6 text-blue-400" />
+                                        <Clock className="w-6 h-6 text-blue-400" />
                                     </div>
-                                    <p className="mb-2 text-sm font-medium text-gray-900">No patients enrolled yet</p>
-                                    <p className="text-xs text-gray-500 mb-4">Enroll your first patient to get started.</p>
+                                    <p className="mb-2 text-sm font-medium text-gray-900">No recently viewed patients</p>
+                                    <p className="text-xs text-gray-500 mb-4">Search for a patient to view their chart. Recent patients will appear here.</p>
                                     <div className="text-center">
                                         <button
                                             onClick={() => setShowAddModal(true)}
