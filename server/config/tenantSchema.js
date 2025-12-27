@@ -193,6 +193,7 @@ CREATE TABLE IF NOT EXISTS patients (
     allergies_known BOOLEAN DEFAULT FALSE,
     notes TEXT,
     clinic_id UUID,
+    encryption_metadata JSONB,
     deceased BOOLEAN DEFAULT FALSE,
     deceased_date DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
