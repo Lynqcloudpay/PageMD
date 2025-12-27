@@ -139,6 +139,7 @@ CREATE TABLE IF NOT EXISTS patients (
     phone_cell VARCHAR(20),
     phone_home VARCHAR(20),
     phone_work VARCHAR(20),
+    phone_preferred VARCHAR(20),
     email VARCHAR(255),
     address_line1 VARCHAR(255),
     address_line2 VARCHAR(255),
