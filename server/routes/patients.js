@@ -582,7 +582,8 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
 
     // Debug log to trace missing fields
     if (process.env.DEBUG_AUTH === 'true' || process.env.NODE_ENV !== 'production') {
-      console.log('[Patient Create] Request Body Sample (firstName):', req.body.firstName || req.body.first_name);
+      console.log('[Patient Create] FULL Request Body:', JSON.stringify(req.body, null, 2));
+      console.log('[Patient Create] Extracted Names:', { final_first_name, final_last_name, dob });
     }
 
     // Build INSERT query with encrypted data
@@ -627,7 +628,7 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
     const decryptedPatient = await patientEncryptionService.decryptPatientPHI(result.rows[0]);
 
     // Log audit with full correlation metadata
-    const requestId = req.headers['x-request-id'] || req.requestId || require('crypto').randomUUID();
+    const requestId = req.headers['x-request-id'] || req.requestId || uuidv4();
     await logAudit(
       req.user.id,
       'create_patient',
