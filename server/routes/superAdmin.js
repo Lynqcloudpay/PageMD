@@ -189,20 +189,11 @@ const generatePassword = (length = 16) => {
  * Provisions a new clinic
  */
 router.post('/clinics/onboard', verifySuperAdmin, async (req, res) => {
-    const { clinic, dbConfig = {} } = req.body;
+    const { clinic, adminUser } = req.body;
 
-    if (!clinic.slug || !dbConfig.dbName) {
-        return res.status(400).json({ error: 'Missing required onboarding data (slug and dbName).' });
+    if (!clinic || !clinic.slug) {
+        return res.status(400).json({ error: 'Missing required onboarding data (slug).' });
     }
-
-    // Default DB Config if not provided
-    const finalDbConfig = {
-        host: dbConfig.host || process.env.DB_HOST || 'emr-db',
-        port: dbConfig.port || process.env.DB_PORT || 5432,
-        dbName: dbConfig.dbName,
-        dbUser: dbConfig.user || process.env.DB_USER || 'postgres',
-        password: dbConfig.password || generatePassword()
-    };
 
     try {
         // Map frontend payload to TenantManager (expecting displayName)
@@ -211,7 +202,7 @@ router.post('/clinics/onboard', verifySuperAdmin, async (req, res) => {
             displayName: clinic.displayName || clinic.name // flexible mapping
         };
 
-        const clinicId = await tenantManager.provisionClinic(clinicData, finalDbConfig);
+        const clinicId = await tenantManager.provisionClinic(clinicData, {}, adminUser);
 
         // Create trial subscription
         const trialPlan = await pool.controlPool.query(
@@ -227,15 +218,11 @@ router.post('/clinics/onboard', verifySuperAdmin, async (req, res) => {
 
         res.status(201).json({
             message: 'Clinic onboarded successfully with 30-day trial.',
-            clinicId,
-            dbConfig: {
-                ...finalDbConfig,
-                password: '*** hidden ***' // Don't return the password
-            }
+            clinicId
         });
     } catch (error) {
         console.error('Onboarding failed:', error);
-        res.status(500).json({ error: 'Failed to onboard clinic.' });
+        res.status(500).json({ error: error.message || 'Failed to onboard clinic.' });
     }
 });
 

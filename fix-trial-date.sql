@@ -1,0 +1,1 @@
+ALTER TABLE clinic_subscriptions ADD COLUMN IF NOT EXISTS trial_end_date TIMESTAMP WITH TIME ZONE;

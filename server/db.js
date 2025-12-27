@@ -2,65 +2,58 @@ const { Pool, types } = require('pg');
 const { AsyncLocalStorage } = require('async_hooks');
 require('dotenv').config();
 
-// Create the storage for the current tenant's pool
+// Store the active database client (Transaction Wrapper)
 const dbStorage = new AsyncLocalStorage();
 
-// Override DATE parser (OID 1082) to return date as string (YYYY-MM-DD)
-// This prevents timezone-related date shifting (e.g. DOB shifting back one day)
+// Override DATE parser
 types.setTypeParser(1082, (stringValue) => stringValue);
 
 /**
- * Control Pool: Connects to the platform/tenant registry database.
- * Used exclusively by the TenantManager and Super Admin tools.
+ * Control Pool: Main entry point for the application.
+ * Used for:
+ * 1. Control queries (clinics table)
+ * 2. Acquiring clients for tenant transactions
  */
 const controlPool = new Pool({
   connectionString: process.env.CONTROL_DATABASE_URL || process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 5,
+  max: 20, // Increased for transaction handling
   idleTimeoutMillis: 30000,
 });
 
 /**
- * Default Pool: Used when no tenant is resolved (e.g. startup, health checks).
- */
-const defaultPool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 10,
-  idleTimeoutMillis: 15000,
-  connectionTimeoutMillis: 15000,
-});
-
-/**
- * The Proxy Object: This is what routes import via require('../db').
- * It dynamically routes queries to the correct tenant's pool using AsyncLocalStorage.
+ * The Proxy Object:
+ * Automatically routes queries to the active transaction client if one exists.
+ * Otherwise, falls back to the control pool (for global lookups).
  */
 const poolProxy = {
   get dbStorage() {
     return dbStorage;
   },
 
-  // Helper to get the current pool from context
-  get _currentPool() {
-    const pool = dbStorage.getStore();
-    if (!pool) {
-      // If no tenant pool is in context, we use the default pool
-      // In production, this might be a SuperAdmin or Shared DB depending on logic
-      return defaultPool;
-    }
-    return pool;
-  },
-
-  // Proxy the most common pool methods
-  query: (...args) => poolProxy._currentPool.query(...args),
-  connect: (...args) => poolProxy._currentPool.connect(...args),
-  on: (...args) => poolProxy._currentPool.on(...args),
-  end: (...args) => poolProxy._currentPool.end(...args),
-
-  // Expose the control pool for platform-level operations
   get controlPool() {
     return controlPool;
-  }
+  },
+
+  // Helper to get the current transactional client
+  get _currentClient() {
+    return dbStorage.getStore();
+  },
+
+  query: async (text, params) => {
+    const client = dbStorage.getStore();
+    if (client) {
+      // We are in a tenant request context - use the transaction client
+      return client.query(text, params);
+    }
+    // We are in a global context - use the control pool
+    return controlPool.query(text, params);
+  },
+
+  // Legacy/Pool compat methods
+  connect: (...args) => controlPool.connect(...args),
+  on: (...args) => controlPool.on(...args),
+  end: (...args) => controlPool.end(...args),
 };
 
 module.exports = poolProxy;
