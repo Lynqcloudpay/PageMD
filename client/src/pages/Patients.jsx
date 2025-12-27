@@ -104,19 +104,6 @@ const Patients = () => {
         setShowAddModal(false);
     };
 
-    // Format date helper
-    const formatDate = (dateString) => {
-        if (!dateString) return '';
-        try {
-            const date = typeof dateString === 'string' && dateString.includes('T')
-                ? parseISO(dateString)
-                : new Date(dateString);
-            return format(date, 'MMM d, yyyy');
-        } catch {
-            return dateString;
-        }
-    };
-
     return (
         <div className="h-full bg-white w-full">
             <div className="p-4 w-full">
@@ -191,7 +178,7 @@ const Patients = () => {
                     </div>
                 )}
 
-                {/* Search Results or Recently Viewed */}
+                {/* Search Results or Recently Viewed / All Patients */}
                 {searchQuery.trim() ? (
                     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                         <div className="px-4 py-2.5 bg-blue-50 border-b border-gray-200">
@@ -212,138 +199,99 @@ const Patients = () => {
                         ) : filteredPatients.length > 0 ? (
                             <div className="divide-y divide-gray-100">
                                 {filteredPatients.map((patient, index) => (
-                                    <div
+                                    <PatientListItem
                                         key={patient.id}
+                                        patient={patient}
+                                        index={index}
                                         onClick={() => handlePatientClick(patient.id)}
-                                        className="p-3 hover:bg-blue-50 cursor-pointer transition-all flex items-center justify-between group border-l-4 border-transparent hover:border-blue-500"
-                                    >
-                                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                                            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-sm font-bold text-blue-700 group-hover:bg-blue-200 transition-all">
-                                                {index + 1}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <h3 className="font-semibold text-gray-800 text-sm group-hover:text-blue-600 transition-colors mb-1.5">{patient.name || `${patient.first_name} ${patient.last_name}`}</h3>
-                                                <div className="flex items-center gap-2 text-xs text-gray-600 flex-wrap">
-                                                    <span className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded">
-                                                        <span className="text-gray-500 text-xs">MRN:</span>
-                                                        <span className="font-mono font-semibold text-gray-700">{patient.mrn}</span>
-                                                    </span>
-                                                    <span className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded">
-                                                        <Calendar className="w-3 h-3 text-blue-600" />
-                                                        <span className="font-medium">{formatDate(patient.dob || patient.date_of_birth)}</span>
-                                                    </span>
-                                                    {patient.sex && (
-                                                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${patient.sex === 'M' ? 'bg-blue-100 text-blue-700' :
-                                                            patient.sex === 'F' ? 'bg-pink-100 text-pink-700' :
-                                                                'bg-gray-100 text-gray-700'
-                                                            }`}>
-                                                            {patient.sex === 'M' ? 'Male' : patient.sex === 'F' ? 'Female' : patient.sex}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex-shrink-0 ml-3">
-                                            <div className="w-8 h-8 rounded-lg bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center transition-all">
-                                                <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
-                                            </div>
-                                        </div>
-                                    </div>
+                                    />
                                 ))}
                             </div>
                         ) : (
                             <div className="p-8 text-center text-gray-500">
                                 <User className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                                <p className="text-sm">No patients found</p>
+                                <p className="text-sm">No patients found matching "{searchQuery}"</p>
                             </div>
                         )}
                     </div>
                 ) : (
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                        <div className="px-4 py-2.5 bg-blue-50 border-b border-gray-200 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
-                                    <Clock className="w-4 h-4 text-blue-600" />
-                                </div>
-                                <h2 className="font-semibold text-gray-800 text-sm">Recently Viewed</h2>
-                            </div>
-                            {recentlyViewed.length > 0 && (
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (confirm('Clear recently viewed list?')) {
-                                            setRecentlyViewed([]);
-                                            localStorage.removeItem(storageKey);
-                                        }
-                                    }}
-                                    className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
-                                >
-                                    Clear History
-                                </button>
-                            )}
-                        </div>
-                        {recentlyViewed.length > 0 ? (
-                            <div className="divide-y divide-gray-100">
-                                {recentlyViewed.map((patient, index) => (
-                                    <div
-                                        key={`${patient.id}-${index}`}
-                                        onClick={() => handlePatientClick(patient.id)}
-                                        className="p-3 hover:bg-blue-50 cursor-pointer transition-all flex items-center justify-between group border-l-4 border-transparent hover:border-blue-500"
-                                    >
-                                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                                            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-sm font-bold text-blue-700 group-hover:bg-blue-200 transition-all">
-                                                {index + 1}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <h3 className="font-semibold text-gray-800 text-sm group-hover:text-blue-600 transition-colors mb-1.5">{patient.name || `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || 'Unknown Patient'}</h3>
-                                                <div className="flex items-center gap-2 text-xs text-gray-600 flex-wrap">
-                                                    <span className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded">
-                                                        <span className="text-gray-500 text-xs">MRN:</span>
-                                                        <span className="font-mono font-semibold text-gray-700">{patient.mrn}</span>
-                                                    </span>
-                                                    {patient.dob && (
-                                                        <span className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded">
-                                                            <Calendar className="w-3 h-3 text-blue-600" />
-                                                            <span className="font-medium">{formatDate(patient.dob || patient.date_of_birth)}</span>
-                                                        </span>
-                                                    )}
-                                                    {patient.sex && (
-                                                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${patient.sex === 'M' ? 'bg-blue-100 text-blue-700' :
-                                                            patient.sex === 'F' ? 'bg-pink-100 text-pink-700' :
-                                                                'bg-gray-100 text-gray-700'
-                                                            }`}>
-                                                            {patient.sex === 'M' ? 'Male' : patient.sex === 'F' ? 'Female' : patient.sex}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
+                    <div className="space-y-6">
+                        {/* Recently Viewed */}
+                        {recentlyViewed.length > 0 && (
+                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                                <div className="px-4 py-2.5 bg-blue-50 border-b border-gray-200 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
+                                            <Clock className="w-4 h-4 text-blue-600" />
                                         </div>
-                                        <div className="flex-shrink-0 ml-3">
-                                            <div className="w-8 h-8 rounded-lg bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center transition-all">
-                                                <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
-                                            </div>
-                                        </div>
+                                        <h2 className="font-semibold text-gray-800 text-sm">Recently Viewed</h2>
                                     </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="p-8 text-center text-gray-500">
-                                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-3">
-                                    <Clock className="w-6 h-6 text-blue-400" />
-                                </div>
-                                <p className="mb-2 text-sm font-medium text-gray-900">No recently viewed patients</p>
-                                <p className="text-xs text-gray-500 mb-4">Search for a patient to view their chart. Recent patients will appear here.</p>
-                                <div className="text-center">
                                     <button
-                                        onClick={() => setShowAddModal(true)}
-                                        className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 hover:text-gray-900 transition-all font-medium text-xs inline-flex items-center gap-2"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (confirm('Clear recently viewed list?')) {
+                                                setRecentlyViewed([]);
+                                                localStorage.removeItem(storageKey);
+                                            }
+                                        }}
+                                        className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
                                     >
-                                        <Plus className="w-3.5 h-3.5" />
-                                        <span>Enroll New Patient</span>
+                                        Clear History
                                     </button>
+                                </div>
+                                <div className="divide-y divide-gray-100">
+                                    {recentlyViewed.map((patient, index) => (
+                                        <PatientListItem
+                                            key={`${patient.id}-${index}`}
+                                            patient={patient}
+                                            index={index}
+                                            onClick={() => handlePatientClick(patient.id)}
+                                        />
+                                    ))}
                                 </div>
                             </div>
                         )}
+
+                        {/* Patient List (All) */}
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                            <div className="px-4 py-2.5 bg-white border-b border-gray-200 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center">
+                                        <User className="w-4 h-4 text-gray-600" />
+                                    </div>
+                                    <h2 className="font-semibold text-gray-800 text-sm">Patient Registry ({patients.length})</h2>
+                                </div>
+                            </div>
+                            {patients.length > 0 ? (
+                                <div className="divide-y divide-gray-100">
+                                    {patients.map((patient, index) => (
+                                        <PatientListItem
+                                            key={patient.id}
+                                            patient={patient}
+                                            index={index}
+                                            onClick={() => handlePatientClick(patient.id)}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="p-8 text-center text-gray-500">
+                                    <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-3">
+                                        <User className="w-6 h-6 text-blue-400" />
+                                    </div>
+                                    <p className="mb-2 text-sm font-medium text-gray-900">No patients enrolled yet</p>
+                                    <p className="text-xs text-gray-500 mb-4">Enroll your first patient to get started.</p>
+                                    <div className="text-center">
+                                        <button
+                                            onClick={() => setShowAddModal(true)}
+                                            className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 hover:text-gray-900 transition-all font-medium text-xs inline-flex items-center gap-2"
+                                        >
+                                            <Plus className="w-3.5 h-3.5" />
+                                            <span>Enroll New Patient</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
 
@@ -359,4 +307,61 @@ const Patients = () => {
 };
 
 export default Patients;
+
+// --- Sub-components & Helpers ---
+
+const formatDate = (dateString) => {
+    if (!dateString) return '';
+    try {
+        const date = typeof dateString === 'string' && dateString.includes('T')
+            ? parseISO(dateString)
+            : new Date(dateString);
+        return format(date, 'MMM d, yyyy');
+    } catch {
+        return dateString;
+    }
+};
+
+const PatientListItem = ({ patient, index, onClick }) => (
+    <div
+        onClick={onClick}
+        className="p-3 hover:bg-blue-50 cursor-pointer transition-all flex items-center justify-between group border-l-4 border-transparent hover:border-blue-500"
+    >
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-sm font-bold text-blue-700 group-hover:bg-blue-200 transition-all">
+                {index + 1}
+            </div>
+            <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-gray-800 text-sm group-hover:text-blue-600 transition-colors mb-1.5">
+                    {patient.name || `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || 'Unknown Patient'}
+                </h3>
+                <div className="flex items-center gap-2 text-xs text-gray-600 flex-wrap">
+                    <span className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded">
+                        <span className="text-gray-500 text-xs">MRN:</span>
+                        <span className="font-mono font-semibold text-gray-700">{patient.mrn}</span>
+                    </span>
+                    {(patient.dob || patient.date_of_birth) && (
+                        <span className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded">
+                            <Calendar className="w-3 h-3 text-blue-600" />
+                            <span className="font-medium">{formatDate(patient.dob || patient.date_of_birth)}</span>
+                        </span>
+                    )}
+                    {patient.sex && (
+                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${patient.sex === 'M' ? 'bg-blue-100 text-blue-700' :
+                            patient.sex === 'F' ? 'bg-pink-100 text-pink-700' :
+                                'bg-gray-100 text-gray-700'
+                            }`}>
+                            {patient.sex === 'M' ? 'Male' : patient.sex === 'F' ? 'Female' : patient.sex}
+                        </span>
+                    )}
+                </div>
+            </div>
+        </div>
+        <div className="flex-shrink-0 ml-3">
+            <div className="w-8 h-8 rounded-lg bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center transition-all">
+                <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
+            </div>
+        </div>
+    </div>
+);
 

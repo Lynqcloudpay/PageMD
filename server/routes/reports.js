@@ -11,7 +11,7 @@ router.get('/registry/:condition', requireRole('clinician', 'admin'), async (req
   try {
     const { condition } = req.params;
     const { search } = req.query;
-    
+
     // Search problems table for condition
     const result = await pool.query(
       `SELECT DISTINCT p.*, pr.problem_name, pr.status, pr.onset_date
@@ -22,7 +22,7 @@ router.get('/registry/:condition', requireRole('clinician', 'admin'), async (req
        ORDER BY p.last_name, p.first_name`,
       search ? [`%${condition}%`, `%${search}%`] : [`%${condition}%`]
     );
-    
+
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching registry:', error);
@@ -34,7 +34,7 @@ router.get('/registry/:condition', requireRole('clinician', 'admin'), async (req
 router.get('/quality-measures', requireRole('clinician', 'admin'), async (req, res) => {
   try {
     const { measure, startDate, endDate } = req.query;
-    
+
     // Example: Diabetes A1C control measure
     let query = `
       SELECT 
@@ -48,7 +48,7 @@ router.get('/quality-measures', requireRole('clinician', 'admin'), async (req, r
         AND o.test_name ILIKE '%A1C%'
         AND o.status = 'completed'
     `;
-    
+
     const params = [];
     if (startDate) {
       params.push(startDate);
@@ -59,7 +59,7 @@ router.get('/quality-measures', requireRole('clinician', 'admin'), async (req, r
       query += ` AND o.completed_at <= $${params.length}`;
     }
     query += ` WHERE LOWER(pr.problem_name) LIKE '%diabetes%'`;
-    
+
     const result = await pool.query(query, params);
     res.json(result.rows[0]);
   } catch (error) {
@@ -72,23 +72,37 @@ router.get('/quality-measures', requireRole('clinician', 'admin'), async (req, r
 router.get('/dashboard', requirePermission('reports:view'), async (req, res) => {
   try {
     const stats = {};
-    
+
     // Total patients
-    const patients = await pool.query('SELECT COUNT(*) as count FROM patients');
+    let patientsQuery = 'SELECT COUNT(*) as count FROM patients WHERE 1=1';
+    const patientsParams = [];
+    if (req.user?.clinic_id) {
+      patientsQuery += ' AND clinic_id = $1';
+      patientsParams.push(req.user.clinic_id);
+    }
+    const patients = await pool.query(patientsQuery, patientsParams);
     stats.totalPatients = parseInt(patients.rows[0]?.count || 0);
-    
+
     // Visits today
-    const visitsToday = await pool.query(
-      `SELECT COUNT(*) as count FROM visits WHERE DATE(visit_date) = CURRENT_DATE`
-    );
+    let visitsQuery = 'SELECT COUNT(*) as count FROM visits WHERE DATE(visit_date) = CURRENT_DATE';
+    const visitsParams = [];
+    if (req.user?.clinic_id) {
+      visitsQuery += ' AND clinic_id = $1';
+      visitsParams.push(req.user.clinic_id);
+    }
+    const visitsToday = await pool.query(visitsQuery, visitsParams);
     stats.visitsToday = parseInt(visitsToday.rows[0]?.count || 0);
-    
+
     // Pending orders
-    const pendingOrders = await pool.query(
-      `SELECT COUNT(*) as count FROM orders WHERE status = 'pending'`
-    );
+    let ordersQuery = "SELECT COUNT(*) as count FROM orders WHERE status = 'pending'";
+    const ordersParams = [];
+    if (req.user?.clinic_id) {
+      ordersQuery += ' AND clinic_id = $1';
+      ordersParams.push(req.user.clinic_id);
+    }
+    const pendingOrders = await pool.query(ordersQuery, ordersParams);
     stats.pendingOrders = parseInt(pendingOrders.rows[0]?.count || 0);
-    
+
     // Unread messages (only if user is authenticated)
     if (req.user?.id) {
       try {
@@ -104,12 +118,12 @@ router.get('/dashboard', requirePermission('reports:view'), async (req, res) => 
     } else {
       stats.unreadMessages = 0;
     }
-    
+
     res.json(stats);
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
     console.error('Error details:', error.message, error.stack);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch dashboard statistics',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
