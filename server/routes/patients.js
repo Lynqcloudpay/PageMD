@@ -458,6 +458,26 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
       primaryCareProvider, primary_care_provider,
     } = req.body;
 
+    // 1. Validate required fields to prevent DB null constraint violations
+    const final_first_name = first_name || firstName;
+    const final_last_name = last_name || lastName;
+
+    if (!final_first_name || !final_last_name || !dob) {
+      console.warn('[Patient Create] Missing required fields:', {
+        firstName: !!final_first_name,
+        lastName: !!final_last_name,
+        dob: !!dob
+      });
+      return res.status(400).json({
+        error: 'Missing required fields',
+        details: 'First name, Last name, and Date of Birth are mandatory.'
+      });
+    }
+
+    // 2. Extract clinic_id from user context for multi-tenancy
+    // Check multiple sources: req.user.clinic_id, req.user.clinicId, or req.clinic.id (from tenant middleware)
+    const userClinicId = req.user?.clinic_id || req.user?.clinicId || req.clinic?.id || null;
+
     // Generate MRN if not provided - 6 digit number
     const finalMRN = mrn || String(Math.floor(100000 + Math.random() * 900000));
 
@@ -466,11 +486,11 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
       middle_name: middle_name || middleName,
       name_suffix: name_suffix || nameSuffix,
       preferred_name: preferred_name || preferredName,
-      sex: sex,
       gender: gender,
       race: race,
       ethnicity: ethnicity,
       marital_status: marital_status || maritalStatus,
+      sex: sex,
       phone: phone,
       phone_secondary: phone_secondary || phoneSecondary,
       phone_cell: phone_cell || phoneCell,
@@ -524,21 +544,22 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
       allergies_known: allergies_known || allergiesKnown,
       notes: notes,
       primary_care_provider: primary_care_provider || primaryCareProvider,
+      clinic_id: userClinicId,
     };
 
     // Build patient object for encryption
     const patientData = {
       mrn: finalMRN,
-      first_name: first_name || firstName,
-      last_name: last_name || lastName,
+      first_name: final_first_name,
+      last_name: final_last_name,
       dob: dob,
+      clinic_id: userClinicId,
       ...optionalFields
     };
 
     // Encrypt PHI fields before storing
     const encryptedPatient = await patientEncryptionService.preparePatientForStorage(patientData);
 
-    // List of valid columns in the patients table (to prevent SQL errors)
     // List of valid columns in the patients table (to prevent SQL errors)
     const validColumns = new Set([
       'id', 'mrn', 'first_name', 'last_name', 'dob', 'sex', 'gender',
@@ -555,12 +576,13 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
       'insurance_copay', 'insurance_effective_date', 'insurance_expiry_date', 'insurance_notes',
       'pharmacy_name', 'pharmacy_address', 'pharmacy_phone', 'pharmacy_npi', 'pharmacy_fax', 'pharmacy_preferred',
       'referral_source', 'smoking_status', 'alcohol_use', 'allergies_known', 'notes',
-      'primary_care_provider', 'photo_url', 'created_at', 'updated_at'
+      'primary_care_provider', 'photo_url', 'clinic_id', 'created_at', 'updated_at',
+      'deceased', 'deceased_date'
     ]);
 
     // Debug log to trace missing fields
     if (process.env.DEBUG_AUTH === 'true' || process.env.NODE_ENV !== 'production') {
-      console.log('[Patient Create] Request Body:', JSON.stringify(req.body, null, 2));
+      console.log('[Patient Create] Request Body Sample (firstName):', req.body.firstName || req.body.first_name);
     }
 
     // Build INSERT query with encrypted data
@@ -577,15 +599,17 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
         console.warn(`Skipping field ${dbField} - column does not exist in patients table`);
         continue;
       }
-      if (value !== undefined && value !== null && value !== '') {
+      // CRITICAL: Include empty strings if they are provide to satisfy NOT NULL constraints
+      // Only skip if explicitly undefined or null
+      if (value !== undefined && value !== null) {
         fields.push(dbField);
         values.push(value);
         paramIndex++;
       }
     }
 
-    // Add encryption_metadata if present
-    if (encryptedPatient.encryption_metadata) {
+    // Add encryption_metadata if present and not already in fields
+    if (encryptedPatient.encryption_metadata && !fields.includes('encryption_metadata')) {
       fields.push('encryption_metadata');
       values.push(JSON.stringify(encryptedPatient.encryption_metadata));
     }
@@ -602,7 +626,20 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
     // Decrypt for response
     const decryptedPatient = await patientEncryptionService.decryptPatientPHI(result.rows[0]);
 
-    await logAudit(req.user.id, 'create_patient', 'patient', result.rows[0].id, {}, req.ip);
+    // Log audit with full correlation metadata
+    const requestId = req.headers['x-request-id'] || req.requestId || require('crypto').randomUUID();
+    await logAudit(
+      req.user.id,
+      'create_patient',
+      'patient',
+      result.rows[0].id,
+      {},
+      req.ip,
+      req.get('user-agent'),
+      'success',
+      requestId,
+      req.sessionId
+    );
 
     res.status(201).json(decryptedPatient);
   } catch (error) {
@@ -610,7 +647,11 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
     if (error.code === '23505') {
       return res.status(400).json({ error: 'MRN already exists' });
     }
-    res.status(500).json({ error: 'Failed to create patient', details: error.message });
+    res.status(500).json({
+      error: 'Failed to create patient',
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 

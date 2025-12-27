@@ -14,6 +14,12 @@ KEY_PATH="/tmp/deploy_key_chk_col"
 ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST << EOF
   echo "🔍 Checking clinic_subscriptions columns:"
   docker exec emr-db psql -U emr_user -d emr_db -c "SELECT column_name FROM information_schema.columns WHERE table_name='clinic_subscriptions';"
+
+  echo "🔍 Checking patients columns:"
+  docker exec emr-db psql -U emr_user -d emr_db -c "SELECT column_name FROM information_schema.columns WHERE table_name='patients';"
+
+  echo "🔍 Checking audit_logs columns:"
+  docker exec emr-db psql -U emr_user -d emr_db -c "SELECT column_name FROM information_schema.columns WHERE table_name='audit_logs';"
 EOF
 
 rm /tmp/deploy_key_chk_col

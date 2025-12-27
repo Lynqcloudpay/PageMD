@@ -738,11 +738,11 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
 
                 let orderText = '';
                 if (item.type === 'labs') {
-                    orderText = item.originalString || `Lab: ${item.name}`;
+                    orderText = item.originalString || `Lab: ${item.name}${item.loinc ? ` [${item.loinc}]` : ''}`;
                 } else if (item.type === 'imaging') {
-                    orderText = `Imaging: ${item.name}`;
+                    orderText = `Imaging: ${item.name}${item.loinc ? ` [${item.loinc}]` : ''}`;
                 } else if (item.type === 'procedures') {
-                    orderText = `Procedure: ${item.name}`;
+                    orderText = `Procedure: ${item.name}${item.loinc ? ` [${item.loinc}]` : ''}`;
                 } else if (item.type === 'referrals') {
                     orderText = `Referral: ${item.name}${item.reason ? ` - ${item.reason}` : ''}`;
                 } else if (item.type === 'medications') {
@@ -828,7 +828,23 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                             } catch (erxError) {
                                 console.warn('[OrderModal] E-Rx draft creation failed (skipping):', erxError);
                             }
+                        }
 
+                        // 3. Persist catalog orders to visit_orders Table
+                        if (['labs', 'imaging', 'procedures'].includes(item.type)) {
+                            const catalogId = item.catalogId || item.details?.catalogId;
+                            if (catalogId) {
+                                try {
+                                    await ordersCatalogAPI.createVisitOrder(visitId, {
+                                        catalog_id: catalogId,
+                                        patient_id: patientId,
+                                        diagnosis_icd10_ids: [item.diagnosis || 'Unassigned'],
+                                        priority: 'ROUTINE'
+                                    });
+                                } catch (orderErr) {
+                                    console.error('[OrderModal] Failed to persist visit_order:', orderErr);
+                                }
+                            }
                         }
                     } catch (error) {
                         console.error(`Error saving ${item.type}:`, error);

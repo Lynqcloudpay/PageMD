@@ -62,6 +62,7 @@ const authenticate = async (req, res, next) => {
       req.user = {
         ...user,
         ...authContext,
+        clinic_id: req.clinic?.id || authContext.clinicId || user.clinic_id || null,
         // Force is_admin to use database value (highest priority)
         is_admin: dbIsAdmin,
         isAdmin: dbIsAdmin,   // Also set camelCase version

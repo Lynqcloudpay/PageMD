@@ -1306,6 +1306,51 @@ const VisitNote = () => {
         });
     };
 
+    const handleOrderSelect = async (order) => {
+        const diagnosisToUse = selectedDiagnosis || diagnoses[0] || 'Unassigned';
+
+        let prefix = '';
+        if (order.type === 'LAB') prefix = 'Lab: ';
+        else if (order.type === 'IMAGING') prefix = 'Imaging: ';
+        else if (order.type === 'PROCEDURE') prefix = 'Procedure: ';
+
+        const orderText = `${prefix}${order.name}${order.loinc_code ? ` [${order.loinc_code}]` : ''}`;
+
+        // 1. Persist to backend visit_orders table
+        try {
+            await ordersCatalogAPI.createVisitOrder(currentVisitId || urlVisitId, {
+                catalog_id: order.id,
+                patient_id: id,
+                diagnosis_icd10_ids: [diagnosisToUse],
+                priority: 'ROUTINE'
+            });
+        } catch (err) {
+            console.error('Failed to create visit order record', err);
+        }
+
+        // 2. Update frontend note data
+        setNoteData(prev => {
+            const currentPlan = prev.planStructured || [];
+            const dxIndex = currentPlan.findIndex(p => p.diagnosis === diagnosisToUse);
+
+            let updatedPlan;
+            if (dxIndex >= 0) {
+                updatedPlan = [...currentPlan];
+                updatedPlan[dxIndex] = {
+                    ...updatedPlan[dxIndex],
+                    orders: [...updatedPlan[dxIndex].orders, orderText]
+                };
+            } else {
+                updatedPlan = [...currentPlan, { diagnosis: diagnosisToUse, orders: [orderText] }];
+            }
+
+            const formattedPlan = formatPlanText(updatedPlan);
+            return { ...prev, planStructured: updatedPlan, plan: formattedPlan };
+        });
+
+        setShowOrderPicker(false);
+    };
+
     const removeFromPlan = (diagnosisIndex, orderIndex = null) => {
         setNoteData(prev => {
             const updatedPlan = [...(prev.planStructured || [])];
@@ -2377,12 +2422,13 @@ const VisitNote = () => {
                                 {hasPrivilege('order_labs') && (
                                     <button
                                         onClick={() => {
-                                            setOrderModalTab('labs');
-                                            setShowOrderModal(true);
+                                            setOrderPickerType(null);
+                                            setShowOrderPicker(true);
                                         }}
-                                        className="px-2.5 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors"
+                                        className="px-2.5 py-1.5 text-xs font-bold bg-primary-600 hover:bg-primary-700 text-white rounded-md shadow-sm transition-all flex items-center gap-1.5"
                                     >
-                                        Add Order
+                                        <Plus className="w-3.5 h-3.5" />
+                                        <span>Add Order</span>
                                     </button>
                                 )}
                                 <button
@@ -2546,6 +2592,20 @@ const VisitNote = () => {
                 visitId={currentVisitId || urlVisitId}
                 initialMedications={patientData?.medications}
             />
+
+            {showOrderPicker && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowOrderPicker(false)}>
+                    <div onClick={(e) => e.stopPropagation()} className="w-full max-w-xl">
+                        <OrderPicker
+                            type={orderPickerType}
+                            onSelect={handleOrderSelect}
+                            onClose={() => setShowOrderPicker(false)}
+                            visitId={currentVisitId || urlVisitId}
+                            patientId={id}
+                        />
+                    </div>
+                </div>
+            )}
 
             {showPrintModal && <VisitPrint visitId={currentVisitId || urlVisitId} patientId={id} onClose={() => setShowPrintModal(false)} />}
 
