@@ -490,16 +490,19 @@ CREATE TABLE IF NOT EXISTS encryption_keys (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     key_id VARCHAR(255),
     key_type VARCHAR(50) NOT NULL,
-    encrypted_key TEXT NOT NULL,
     key_version INTEGER DEFAULT 1,
+    dek_encrypted TEXT,
+    encrypted_key TEXT NOT NULL,
+    algorithm VARCHAR(50) DEFAULT 'AES-256-GCM',
     is_active BOOLEAN DEFAULT TRUE,
+    active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     rotated_at TIMESTAMP
 );
 
 -- Insert dummy encryption key
-INSERT INTO encryption_keys (key_id, key_type, encrypted_key, key_version, is_active)
-VALUES ('master-key-1', 'DEK', 'dummy_encrypted_key_placeholder', 1, TRUE)
+INSERT INTO encryption_keys (key_id, key_type, encrypted_key, dek_encrypted, key_version, is_active, active, algorithm)
+VALUES ('master-key-1', 'DEK', 'dummy_encrypted_key_placeholder', 'dummy_encrypted_key_placeholder', 1, TRUE, TRUE, 'AES-256-GCM')
 ON CONFLICT DO NOTHING;
 
 -- ============================================
