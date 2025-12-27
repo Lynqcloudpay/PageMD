@@ -362,7 +362,9 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     entity_type VARCHAR(50),
     entity_id UUID,
     ip_address VARCHAR(45),
+    actor_ip VARCHAR(45),
     user_agent TEXT,
+    actor_user_agent TEXT,
     details JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
