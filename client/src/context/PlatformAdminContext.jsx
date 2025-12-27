@@ -89,9 +89,14 @@ export const PlatformAdminProvider = ({ children }) => {
     };
 
     const apiCall = async (method, endpoint, data = null) => {
+        // Determine the base URL based on the endpoint
+        // platform-auth endpoints are at /api/platform-auth
+        // super admin endpoints are at /api/super
+        const baseURL = endpoint.startsWith('/platform-auth') ? '/api' : '/api/super';
+
         const config = {
             method,
-            url: `/api/super${endpoint}`,
+            url: `${baseURL}${endpoint}`,
             headers: { 'X-Platform-Token': token }
         };
 

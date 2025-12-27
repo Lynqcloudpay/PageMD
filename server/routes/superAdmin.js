@@ -174,19 +174,38 @@ router.patch('/clinics/:id/status', verifySuperAdmin, async (req, res) => {
     }
 });
 
+// Helper to generate secure random password
+const generatePassword = (length = 16) => {
+    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    let ret = '';
+    for (let i = 0, n = charset.length; i < length; ++i) {
+        ret += charset.charAt(Math.floor(Math.random() * n));
+    }
+    return ret;
+};
+
 /**
  * POST /api/super/clinics/onboard
  * Provisions a new clinic
  */
 router.post('/clinics/onboard', verifySuperAdmin, async (req, res) => {
-    const { clinic, dbConfig } = req.body;
+    const { clinic, dbConfig = {} } = req.body;
 
     if (!clinic.slug || !dbConfig.dbName) {
-        return res.status(400).json({ error: 'Missing required onboarding data.' });
+        return res.status(400).json({ error: 'Missing required onboarding data (slug and dbName).' });
     }
 
+    // Default DB Config if not provided
+    const finalDbConfig = {
+        host: dbConfig.host || process.env.DB_HOST || 'emr-db',
+        port: dbConfig.port || process.env.DB_PORT || 5432,
+        dbName: dbConfig.dbName,
+        dbUser: dbConfig.user || process.env.DB_USER || 'postgres',
+        password: dbConfig.password || generatePassword()
+    };
+
     try {
-        const clinicId = await tenantManager.provisionClinic(clinic, dbConfig);
+        const clinicId = await tenantManager.provisionClinic(clinic, finalDbConfig);
 
         // Create trial subscription
         const trialPlan = await pool.controlPool.query(
@@ -202,7 +221,11 @@ router.post('/clinics/onboard', verifySuperAdmin, async (req, res) => {
 
         res.status(201).json({
             message: 'Clinic onboarded successfully with 30-day trial.',
-            clinicId
+            clinicId,
+            dbConfig: {
+                ...finalDbConfig,
+                password: '*** hidden ***' // Don't return the password
+            }
         });
     } catch (error) {
         console.error('Onboarding failed:', error);
