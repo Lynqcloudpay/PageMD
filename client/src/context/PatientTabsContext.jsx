@@ -48,10 +48,24 @@ export const PatientTabsProvider = ({ children }) => {
         return user?.clinic_id ? `recentPatient_${user.clinic_id}` : 'recentPatient';
     }, [user?.clinic_id]);
 
-    // Clear tabs when clinic changes
+    // Clear tabs when clinic changes - AGGRESSIVE CLEANUP TO PREVENT DATA LEAKAGE
     useEffect(() => {
+        if (!user?.clinic_id) return;
+
+        // Completely wipe all patient data from state
         setTabs([]);
         setActiveTab(null);
+        setRecentPatient(null);
+
+        // Clear localStorage for this clinic to ensure fresh start
+        const currentStorageKey = `patientTabs_${user.clinic_id}`;
+        const currentRecentKey = `recentPatient_${user.clinic_id}`;
+
+        // Remove old data
+        localStorage.removeItem(currentStorageKey);
+        localStorage.removeItem(currentRecentKey);
+
+        console.log(`[PatientTabs] Clinic changed to ${user.clinic_id} - all patient data cleared`);
     }, [user?.clinic_id]);
 
     // Load tabs and recent patient from localStorage on mount or clinic change
