@@ -32,9 +32,9 @@ const PlatformAdminClinicDetails = () => {
         const confirm1 = confirm("⚠️ WARNING: This will PERMANENTLY DELETE the clinic and ALL of its clinical data (patients, visits, etc.). This cannot be undone.");
         if (!confirm1) return;
 
-        const confirm2 = prompt("To confirm deletion, type the clinic slug below:");
-        if (confirm2 !== clinicData.clinic.slug) {
-            alert("Slug mismatch. Deletion cancelled.");
+        const confirm2 = prompt(`To confirm deletion, type the clinic name "${clinicData.clinic.display_name}" below:`);
+        if (confirm2 !== clinicData.clinic.display_name) {
+            alert("Name mismatch. Deletion cancelled.");
             return;
         }
 
