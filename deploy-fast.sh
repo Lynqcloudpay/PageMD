@@ -71,6 +71,7 @@ ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST << EOF
   DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build api
   
   echo "🚀 Restarting containers..."
+  docker rm -f emr-api || true
   docker compose -f docker-compose.prod.yml up -d --remove-orphans
   
   echo "⏳ Waiting for database to be healthy..."
