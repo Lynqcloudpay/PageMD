@@ -21,13 +21,14 @@ import Modal from '../components/ui/Modal';
 import { usePrivileges } from '../hooks/usePrivileges';
 import CardiologyViewer from '../components/CardiologyViewer';
 import PrintOrdersModal from '../components/PrintOrdersModal';
-// AuthedImg removed
 import PatientHeader from '../components/PatientHeader';
+import { usePatientTabs } from '../context/PatientTabsContext';
 
 const Snapshot = ({ showNotesOnly = false }) => {
     const { id } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
+    const { addTab } = usePatientTabs();
 
     const [patient, setPatient] = useState(null);
     const [recentNotes, setRecentNotes] = useState([]);
@@ -357,7 +358,16 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 try {
                     const fullPatientResponse = await patientsAPI.get(id);
                     if (fullPatientResponse.data) {
-                        setPatient(prev => ({ ...prev, ...fullPatientResponse.data }));
+                        const patientData = { ...snapshot.patient, ...fullPatientResponse.data };
+                        setPatient(prev => ({ ...prev, ...patientData }));
+
+                        // Add to patient tabs for session-based switching
+                        addTab({
+                            id: patientData.id,
+                            first_name: patientData.first_name,
+                            last_name: patientData.last_name,
+                            mrn: patientData.mrn
+                        });
                     }
                 } catch (error) {
                     console.warn('Could not fetch full patient data:', error);

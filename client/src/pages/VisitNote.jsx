@@ -2422,8 +2422,8 @@ const VisitNote = () => {
                                 {hasPrivilege('order_labs') && (
                                     <button
                                         onClick={() => {
-                                            setOrderPickerType(null);
-                                            setShowOrderPicker(true);
+                                            setOrderModalTab('labs');
+                                            setShowOrderModal(true);
                                         }}
                                         className="px-2.5 py-1.5 text-xs font-bold bg-primary-600 hover:bg-primary-700 text-white rounded-md shadow-sm transition-all flex items-center gap-1.5"
                                     >
