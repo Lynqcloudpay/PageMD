@@ -101,4 +101,4 @@ const resolveTenant = async (req, res, next) => {
     }
 };
 
-module.exports = resolveTenant;
+module.exports = { resolveTenant };
