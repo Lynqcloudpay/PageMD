@@ -539,12 +539,29 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
     const encryptedPatient = await patientEncryptionService.preparePatientForStorage(patientData);
 
     // List of valid columns in the patients table (to prevent SQL errors)
+    // List of valid columns in the patients table (to prevent SQL errors)
     const validColumns = new Set([
-      'id', 'mrn', 'first_name', 'last_name', 'dob', 'sex',
-      'phone', 'email', 'address_line1', 'address_line2', 'city', 'state', 'zip',
-      'insurance_provider', 'insurance_id', 'pharmacy_name', 'pharmacy_address', 'pharmacy_phone',
+      'id', 'mrn', 'first_name', 'last_name', 'dob', 'sex', 'gender',
+      'middle_name', 'name_suffix', 'preferred_name', 'race', 'ethnicity', 'marital_status',
+      'phone', 'phone_secondary', 'phone_cell', 'phone_work', 'phone_preferred',
+      'email', 'email_secondary',
+      'address_line1', 'address_line2', 'city', 'state', 'zip', 'country', 'address_type',
+      'preferred_language', 'interpreter_needed', 'communication_preference', 'consent_to_text', 'consent_to_email',
+      'employment_status', 'occupation', 'employer_name',
+      'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relationship', 'emergency_contact_address',
+      'emergency_contact_2_name', 'emergency_contact_2_phone', 'emergency_contact_2_relationship',
+      'insurance_provider', 'insurance_id', 'insurance_group_number', 'insurance_plan_name', 'insurance_plan_type',
+      'insurance_subscriber_name', 'insurance_subscriber_dob', 'insurance_subscriber_relationship',
+      'insurance_copay', 'insurance_effective_date', 'insurance_expiry_date', 'insurance_notes',
+      'pharmacy_name', 'pharmacy_address', 'pharmacy_phone', 'pharmacy_npi', 'pharmacy_fax', 'pharmacy_preferred',
+      'referral_source', 'smoking_status', 'alcohol_use', 'allergies_known', 'notes',
       'primary_care_provider', 'photo_url', 'created_at', 'updated_at'
     ]);
+
+    // Debug log to trace missing fields
+    if (process.env.DEBUG_AUTH === 'true' || process.env.NODE_ENV !== 'production') {
+      console.log('[Patient Create] Request Body:', JSON.stringify(req.body, null, 2));
+    }
 
     // Build INSERT query with encrypted data
     const fields = ['mrn'];

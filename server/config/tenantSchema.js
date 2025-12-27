@@ -366,6 +366,8 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     user_agent TEXT,
     actor_user_agent TEXT,
     outcome VARCHAR(20),
+    request_id VARCHAR(50),
+    session_id VARCHAR(50),
     details JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
