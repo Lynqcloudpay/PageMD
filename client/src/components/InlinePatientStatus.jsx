@@ -345,7 +345,31 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
             ? (roomSubStatus === 'ready_for_provider' ? 'text-amber-700 font-bold' : 'text-violet-700 font-bold')
             : isPast ? 'text-violet-500' : 'text-gray-300 hover:text-gray-500';
 
-        // ... (handleRoomClick and other handlers) ...
+        const handleRoomClick = (e) => {
+            e.stopPropagation();
+            if (isTerminalState || !canUpdateStatus) return;
+
+            // If not in room, first set status to in_room (with_nurse default)
+            if (status !== 'in_room') {
+                handleStatusChange('in_room', 'with_nurse', room || '');
+            }
+
+            // Then show input to edit room
+            setShowRoomInput(true);
+            setRoomInput(room || '');
+        };
+
+        const handleRoomSubmit = () => {
+            if (roomInput.trim() !== room) {
+                handleStatusChange('in_room', roomSubStatus || 'with_nurse', roomInput.trim());
+            } else {
+                setShowRoomInput(false);
+            }
+        };
+
+        const handleCircleToggle = (newSubStatus) => {
+            handleStatusChange('in_room', newSubStatus, room);
+        };
 
         return (
             <div className="flex items-center gap-1 w-[140px]">
