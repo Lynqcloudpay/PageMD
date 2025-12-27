@@ -22,11 +22,11 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
     const [checkoutTime, setCheckoutTime] = useState(appointment?.checkout_time ? new Date(appointment.checkout_time) : null);
     const [currentStatusTime, setCurrentStatusTime] = useState(0);
     const [statusTimes, setStatusTimes] = useState({});
-    
+
     // Room input state
     const [showRoomInput, setShowRoomInput] = useState(false);
     const [roomInput, setRoomInput] = useState('');
-    
+
     // No Show / Cancelled modal state
     const [showReasonModal, setShowReasonModal] = useState(false);
     const [pendingStatus, setPendingStatus] = useState(null);
@@ -46,22 +46,22 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
     // Calculate status times
     useEffect(() => {
         if (appointment?.status_history) {
-            const history = [...appointment.status_history].sort((a, b) => 
+            const history = [...appointment.status_history].sort((a, b) =>
                 new Date(a.timestamp) - new Date(b.timestamp)
             );
-            
+
             const times = {};
             const now = new Date();
             const isCheckedOut = status === 'checked_out' && checkoutTime;
-            
+
             for (let i = 0; i < history.length; i++) {
                 const entry = history[i];
                 const nextEntry = history[i + 1];
                 const startTime = new Date(entry.timestamp);
-                
+
                 // Skip current active status that's not checked_out (it's still running)
                 if (entry.status === status && !isCheckedOut && !nextEntry) continue;
-                
+
                 let endTime;
                 if (nextEntry) {
                     // There's a next status, so this status ended when the next one started
@@ -78,13 +78,13 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                     // Use checkout_time if available (visit is complete), otherwise now
                     endTime = checkoutTime ? new Date(checkoutTime) : now;
                 }
-                
+
                 const statusKey = entry.room_sub_status ? `${entry.status}_${entry.room_sub_status}` : entry.status;
                 if (!times[statusKey]) times[statusKey] = 0;
                 const duration = Math.floor((endTime - startTime) / 1000);
                 times[statusKey] += Math.max(0, duration); // Ensure non-negative
             }
-            
+
             // Special handling for checked_out status - show TOTAL visit time (from arrival to checkout)
             // This gives a complete view of how long the patient was in the office
             if (arrivalTime && checkoutTime) {
@@ -100,7 +100,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
             } else {
                 times['checked_out'] = 0;
             }
-            
+
             setStatusTimes(times);
 
             const currentEntry = history.slice().reverse().find(entry => entry.status === status);
@@ -123,7 +123,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
         const hours = Math.floor(seconds / 3600);
         const minutes = Math.floor((seconds % 3600) / 60);
         const secs = seconds % 60;
-        
+
         // If over 1 hour, show hours and minutes
         if (hours > 0) {
             if (minutes > 0) {
@@ -131,19 +131,19 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
             }
             return `${hours}h`;
         }
-        
+
         // If over 1 minute, show minutes:seconds
         if (minutes > 0) {
             return `${minutes}:${secs.toString().padStart(2, '0')}`;
         }
-        
+
         // Otherwise show just seconds
         return `:${secs.toString().padStart(2, '0')}`;
     };
 
     const handleStatusChange = async (newStatus, subStatus = null, newRoom = null, cancellationReason = null) => {
         if (saving) return;
-        
+
         setSaving(true);
         try {
             const now = new Date();
@@ -208,7 +208,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
 
             const response = await appointmentsAPI.update(appointment.id, updateData);
             const updated = response.data || response;
-            
+
             setStatus(newStatus);
             setRoomSubStatus(subStatus);
             if (newRoom !== null) setRoom(newRoom);
@@ -249,7 +249,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
 
     const getStatusOrder = (s) => ['scheduled', 'arrived', 'checked_in', 'in_room', 'checked_out', 'no_show', 'cancelled'].indexOf(s);
     const currentOrder = getStatusOrder(status);
-    
+
     // Check if appointment is in a terminal state
     const isTerminalState = status === 'checked_out' || status === 'no_show' || status === 'cancelled';
 
@@ -259,7 +259,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
         const isActive = status === statusKey;
         const isPast = currentOrder > order;
         const isCheckedOut = status === 'checked_out';
-        
+
         let time = statusTimes[statusKey] || 0;
         if (isActive && currentStatusTime > 0 && !isCheckedOut) {
             time += currentStatusTime;
@@ -268,13 +268,13 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
         const showTime = (isPast || isActive) && time > 0;
 
         const colors = {
-            arrived: isActive ? 'text-blue-700 font-bold' : isPast ? 'text-blue-500' : 'text-gray-300 hover:text-gray-500',
-            checked_in: isActive ? 'text-emerald-700 font-bold' : isPast ? 'text-emerald-500' : 'text-gray-300 hover:text-gray-500',
-            checked_out: isActive ? 'text-red-600 font-bold bg-red-50 px-1.5 py-0.5 rounded border border-red-300' : isPast ? 'text-red-500' : 'text-gray-300 hover:text-gray-500'
+            arrived: isActive ? 'text-blue-700 font-bold' : isPast ? 'text-blue-500' : 'text-gray-400 hover:text-gray-600',
+            checked_in: isActive ? 'text-emerald-700 font-bold' : isPast ? 'text-emerald-500' : 'text-gray-400 hover:text-gray-600',
+            checked_out: isActive ? 'text-red-600 font-bold bg-red-50 px-2 py-0.5 rounded border border-red-300' : isPast ? 'text-red-500' : 'text-gray-400 hover:text-gray-600'
         };
 
         const isDisabled = saving || isTerminalState || !canUpdateStatus;
-        
+
         return (
             <button
                 type="button"
@@ -285,18 +285,18 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                 }}
                 disabled={isDisabled}
                 title={!canUpdateStatus ? 'You do not have permission to update appointment status' : ''}
-                className={`text-[10px] transition-all ${colors[statusKey]} ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} inline-flex items-center w-[85px] justify-start`}
+                className={`text-[11px] transition-all whitespace-nowrap ${colors[statusKey]} ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
             >
-                <span className="inline-flex items-center min-w-[20px]">
-                    {isPast && <span className="text-[8px] mr-0.5">✓</span>}
-                    {isActive && statusKey === 'checked_out' && <span className="text-[8px] mr-0.5">✓</span>}
-                </span>
-                <span className={`${isActive ? 'underline underline-offset-2' : ''} flex-shrink-0`}>
+                {isPast && <span className="text-[9px] mr-0.5">✓</span>}
+                {isActive && statusKey === 'checked_out' && <span className="text-[9px] mr-0.5">✓</span>}
+                <span className={isActive ? 'underline underline-offset-2' : ''}>
                     {label}
                 </span>
-                <span className="text-[9px] opacity-70 ml-0.5 w-[35px] text-left">
-                    {showTime ? formatCompactTime(time) : ''}
-                </span>
+                {showTime && (
+                    <span className="text-[9px] opacity-70 ml-1">
+                        {formatCompactTime(time)}
+                    </span>
+                )}
             </button>
         );
     };
@@ -306,7 +306,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
         const isActive = status === 'in_room';
         const isPast = currentOrder > getStatusOrder('in_room');
         const isCheckedOut = status === 'checked_out';
-        
+
         // Calculate times for each sub-status separately
         // Also include 'in_room' entries without sub_status (from older data)
         let nurseTime = statusTimes['in_room_with_nurse'] || 0;
@@ -316,7 +316,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
         if (genericRoomTime > 0) {
             nurseTime += genericRoomTime;
         }
-        
+
         // Add current active time to the appropriate sub-status (only if still in room)
         if (isActive && currentStatusTime > 0 && !isCheckedOut) {
             if (roomSubStatus === 'with_nurse') {
@@ -325,7 +325,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                 readyTime += currentStatusTime;
             }
         }
-        
+
         // Get the room number - use current room, or derive from status_history if checked out
         let displayRoom = room;
         if (!displayRoom && isPast && appointment?.status_history) {
@@ -337,18 +337,18 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                 displayRoom = roomEntry.current_room;
             }
         }
-        
+
         // Check if there's any room time recorded (indicates patient was in a room)
         const hasRoomTime = nurseTime > 0 || readyTime > 0;
 
-        const color = isActive 
+        const color = isActive
             ? (roomSubStatus === 'ready_for_provider' ? 'text-amber-700 font-bold' : 'text-violet-700 font-bold')
             : isPast ? 'text-violet-500' : 'text-gray-300 hover:text-gray-500';
 
         // Handle room button click - opens room input or moves to room
         const handleRoomClick = () => {
             if (saving || isTerminalState || !canUpdateStatus) return;
-            
+
             if (status !== 'in_room') {
                 // First click: move to room with nurse
                 if (!room) {
@@ -394,17 +394,16 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                             onClick={(e) => {
                                 e.stopPropagation();
                                 // Toggle between the two states
-                                const newStatus = roomSubStatus === 'with_nurse' 
-                                    ? 'ready_for_provider' 
+                                const newStatus = roomSubStatus === 'with_nurse'
+                                    ? 'ready_for_provider'
                                     : 'with_nurse';
                                 handleCircleToggle(newStatus);
                             }}
                             disabled={saving}
-                            className={`w-2.5 h-2.5 rounded-full transition-all ${
-                                roomSubStatus === 'ready_for_provider'
-                                    ? 'bg-amber-500 cursor-pointer hover:bg-amber-600'
-                                    : 'border-2 border-violet-500 bg-violet-50 cursor-pointer hover:bg-violet-100'
-                            } ${saving ? 'opacity-50' : ''}`}
+                            className={`w-2.5 h-2.5 rounded-full transition-all ${roomSubStatus === 'ready_for_provider'
+                                ? 'bg-amber-500 cursor-pointer hover:bg-amber-600'
+                                : 'border-2 border-violet-500 bg-violet-50 cursor-pointer hover:bg-violet-100'
+                                } ${saving ? 'opacity-50' : ''}`}
                             title={
                                 roomSubStatus === 'ready_for_provider'
                                     ? `Ready for Provider${readyTime > 0 ? ` - ${formatCompactTime(readyTime)}` : ''} - Click to switch to Nurse`
@@ -413,7 +412,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                         />
                     )}
                 </span>
-                
+
                 <button
                     type="button"
                     onClick={handleRoomClick}
@@ -428,7 +427,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                         Room{displayRoom ? ` ${displayRoom}` : ''}
                     </span>
                 </button>
-                
+
                 {/* Show timings separately - always reserve space for both timings */}
                 <span className="text-[9px] opacity-70 flex items-center gap-0.5 w-[70px] text-left">
                     {hasRoomTime ? (
@@ -448,7 +447,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                         <span className="invisible whitespace-nowrap">○:00 ●:00</span>
                     )}
                 </span>
-                
+
                 {/* Room input - shows when clicking Room button */}
                 {showRoomInput && (
                     <div className="flex items-center gap-1 ml-0.5">
@@ -500,12 +499,12 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
     // No Show / Cancelled button component
     const NoShowCancelledBtn = ({ statusKey, label }) => {
         const isActive = status === statusKey;
-        const color = isActive 
+        const color = isActive
             ? (statusKey === 'no_show' ? 'text-orange-700 font-bold' : 'text-red-700 font-bold')
             : (statusKey === 'no_show' ? 'text-orange-500 hover:text-orange-600' : 'text-red-500 hover:text-red-600');
 
         const isDisabled = saving || isTerminalState || !canUpdateStatus;
-        
+
         return (
             <button
                 type="button"
@@ -528,14 +527,14 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
 
     // Calculate total visit time for display (updates every second)
     const [displayTotalTime, setDisplayTotalTime] = useState(0);
-    
+
     useEffect(() => {
         if (arrivalTime && status !== 'scheduled' && status !== 'no_show' && status !== 'cancelled') {
             const updateTotalTime = () => {
                 const now = new Date();
                 const arrival = new Date(arrivalTime);
                 const checkout = checkoutTime ? new Date(checkoutTime) : null;
-                const total = checkout 
+                const total = checkout
                     ? Math.floor((checkout - arrival) / 1000)
                     : Math.floor((now - arrival) / 1000);
                 setDisplayTotalTime(Math.max(0, total));
@@ -547,32 +546,34 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
             setDisplayTotalTime(0);
         }
     }, [arrivalTime, checkoutTime, status]);
-    
+
     const showTotalTimer = arrivalTime && (status !== 'scheduled' && status !== 'no_show' && status !== 'cancelled');
 
     return (
         <>
-            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                <StatusBtn statusKey="arrived" label="Arrived" />
-                <span className="text-gray-300 text-[10px] w-[8px] text-center flex-shrink-0">→</span>
-                <StatusBtn statusKey="checked_in" label="Checked In" />
-                <span className="text-gray-300 text-[10px] w-[8px] text-center flex-shrink-0">→</span>
-                <RoomBtn />
-                <span className="text-gray-300 text-[10px] w-[8px] text-center flex-shrink-0">→</span>
-                <StatusBtn statusKey="checked_out" label="Out" />
+            <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                {/* Status flow - consistent sizing */}
+                <div className="flex items-center gap-2">
+                    <StatusBtn statusKey="arrived" label="Arrived" />
+                    <span className="text-gray-300 text-[10px]">→</span>
+                    <StatusBtn statusKey="checked_in" label="Checked In" />
+                    <span className="text-gray-300 text-[10px]">→</span>
+                    <RoomBtn />
+                    <span className="text-gray-300 text-[10px]">→</span>
+                    <StatusBtn statusKey="checked_out" label="Out" />
+                </div>
+
                 {showCancelledBadge && (status === 'no_show' || status === 'cancelled') && (
-                    <span className={`text-[8px] px-1 py-0.5 rounded font-semibold whitespace-nowrap ml-1 flex-shrink-0 ${
-                        status === 'no_show' 
-                            ? 'bg-orange-100 text-orange-700' 
-                            : 'bg-red-100 text-red-700'
-                    }`}>
+                    <span className={`text-[8px] px-1.5 py-0.5 rounded font-semibold whitespace-nowrap ml-3 flex-shrink-0 ${status === 'no_show'
+                        ? 'bg-orange-100 text-orange-700'
+                        : 'bg-red-100 text-red-700'
+                        }`}>
                         {status === 'no_show' ? 'NO SHOW' : 'CANCELLED'}
                     </span>
                 )}
                 {showNoShowCancelled && !isTerminalState && (
-                    <div className="ml-auto flex items-center gap-1.5">
+                    <div className="ml-4 flex items-center gap-3 border-l border-gray-200 pl-4">
                         <NoShowCancelledBtn statusKey="no_show" label="No Show" />
-                        <span className="text-gray-300 text-[10px]">·</span>
                         <NoShowCancelledBtn statusKey="cancelled" label="Cancelled" />
                     </div>
                 )}
@@ -580,7 +581,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
 
             {/* Cancellation Reason Modal - only for cancelled status */}
             {showReasonModal && pendingStatus === 'cancelled' && (
-                <div 
+                <div
                     className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center"
                     onClick={() => {
                         setShowReasonModal(false);
@@ -588,7 +589,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                         setPendingStatus(null);
                     }}
                 >
-                    <div 
+                    <div
                         className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4"
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -597,7 +598,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                                 Cancel Appointment
                             </h2>
                         </div>
-                        
+
                         <div className="p-6">
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
