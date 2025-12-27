@@ -191,9 +191,9 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     const renderSection = (key, condition, title, content) => {
         if (!condition) return null;
         return (
-            <div key={key} className="border-b border-gray-200 pb-3 rounded-lg">
-                <h2 className="text-base font-bold text-gray-900 uppercase tracking-wide mb-3">{title}</h2>
-                <div className="text-xs">
+            <div key={key} className="border-b border-slate-100 pb-2 mb-2">
+                <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{title}</h2>
+                <div className="text-[11px] text-slate-700 leading-relaxed">
                     {content}
                 </div>
             </div>
@@ -224,8 +224,9 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
 
             if (practiceRes?.data) {
                 const p = practiceRes.data;
+                console.log('VisitChartView: Practice Data Loaded:', p);
                 setClinicInfo({
-                    name: p.practice_name || "myHEART Cardiology",
+                    name: p.practice_name || p.display_name || "myHEART Cardiology",
                     address: [p.address_line1, p.address_line2, `${p.city || ''} ${p.state || ''} ${p.zip || ''}`.trim()].filter(Boolean).join('\n') || "123 Medical Center Drive, Suite 100\nCity, State 12345",
                     phone: p.phone || "(555) 123-4567",
                     fax: p.fax || "(555) 123-4568",
@@ -233,6 +234,8 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                     website: p.website || "www.myheartclinic.com",
                     logo: p.logo_url || "/clinic-logo.png"
                 });
+            } else {
+                console.warn('VisitChartView: No practice data returned from API');
             }
 
             if (visitRes.data.addendums) {
@@ -466,52 +469,49 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                         </div>
                     </div>
 
-                    <div id="visit-chart-view" className="flex-1 overflow-y-auto bg-white py-4 px-10 max-w-5xl mx-auto rounded-2xl print:!max-w-none print:!mx-0 print:!p-0 print:!rounded-none print:!w-full">
-                        {/* Compact Clinical Header */}
-                        <div className="mb-6 border-b-2 border-slate-100 pb-4">
-                            <div className="flex items-center justify-between gap-6">
+                    <div id="visit-chart-view" className="flex-1 overflow-y-auto bg-white py-3 px-8 max-w-5xl mx-auto rounded-xl print:!max-w-none print:!mx-0 print:!p-0 print:!rounded-none print:!w-full">
+                        {/* Ultra-Compact Clinical Header */}
+                        <div className="mb-4 border-b border-slate-100 pb-3">
+                            <div className="flex items-center justify-between gap-4">
                                 {/* Left: Clinic Identity */}
-                                <div className="flex items-center gap-5 flex-1 min-w-0">
-                                    <div className="flex-shrink-0 w-20 h-20 flex items-center justify-center bg-slate-50 rounded-lg overflow-hidden border border-slate-100 p-1.5">
+                                <div className="flex items-center gap-4 flex-1 min-w-0">
+                                    <div className="flex-shrink-0 w-16 h-16 flex items-center justify-center bg-slate-50 rounded-md overflow-hidden border border-slate-100 p-1">
                                         {clinicInfo.logo ? (
                                             <img
                                                 src={clinicInfo.logo}
                                                 alt="Clinic Logo"
                                                 className="max-w-full max-h-full object-contain"
                                                 onError={(e) => {
-                                                    console.error('Logo failed to load:', clinicInfo.logo);
-                                                    e.target.parentElement.innerHTML = '<div class="text-slate-300"><svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></div>';
+                                                    console.error('VisitChartView: Logo 404/Error:', clinicInfo.logo);
+                                                    e.target.style.display = 'none';
+                                                    e.target.parentElement.innerHTML = '<div class="text-slate-300"><svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></div>';
                                                 }}
                                             />
                                         ) : (
-                                            <Building2 className="w-8 h-8 text-slate-300" />
+                                            <Building2 className="w-6 h-6 text-slate-300" />
                                         )}
                                     </div>
 
                                     <div className="flex-1 min-w-0">
-                                        <h1 className="text-lg font-extrabold text-slate-900 mb-1 leading-tight truncate">
+                                        <h1 className="text-base font-black text-slate-900 leading-tight truncate">
                                             {clinicInfo.name}
                                         </h1>
-                                        <div className="text-[10px] text-slate-500 font-medium leading-tight mb-2">
+                                        <div className="text-[9px] text-slate-500 font-bold leading-tight mb-1 truncate">
                                             {clinicInfo.address.replace(/\n/g, ' • ')}
                                         </div>
-                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                                            {clinicInfo.phone && (
-                                                <div className="flex items-center gap-1">
-                                                    <Phone className="w-2.5 h-2.5 text-primary-500" />
-                                                    <span className="text-slate-600 font-bold">{clinicInfo.phone}</span>
-                                                </div>
-                                            )}
-                                            {clinicInfo.fax && (
-                                                <div className="flex items-center gap-1">
-                                                    <span className="text-primary-400">FAX</span>
-                                                    <span className="text-slate-600">{clinicInfo.fax}</span>
-                                                </div>
-                                            )}
-                                            {clinicInfo.email && (
-                                                <div className="flex items-center gap-1">
-                                                    <Mail className="w-2.5 h-2.5 text-primary-500" />
-                                                    <span className="text-slate-600 normal-case font-semibold">{clinicInfo.email}</span>
+                                        <div className="flex items-center gap-x-3 text-[9px] font-bold text-slate-400 uppercase tracking-tight">
+                                            <div className="flex items-center gap-1">
+                                                <Phone className="w-2.5 h-2.5 text-primary-500" />
+                                                <span className="text-slate-600 tracking-tighter">{clinicInfo.phone}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <Mail className="w-2.5 h-2.5 text-primary-500" />
+                                                <span className="text-slate-600 lowercase font-medium">{clinicInfo.email}</span>
+                                            </div>
+                                            {clinicInfo.website && (
+                                                <div className="flex items-center gap-1 print:hidden">
+                                                    <Globe className="w-2.5 h-2.5 text-primary-500" />
+                                                    <span className="text-primary-600">{clinicInfo.website}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -519,22 +519,20 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                 </div>
 
                                 {/* Right: Visit Summary */}
-                                <div className="flex-shrink-0 text-right min-w-[160px] pl-6 border-l border-slate-100">
-                                    <div className="text-sm font-black text-primary-600 mb-1 uppercase tracking-tighter">
+                                <div className="flex-shrink-0 text-right min-w-[140px] pl-4 border-l border-slate-100">
+                                    <div className="text-[11px] font-black text-primary-600 mb-0.5 uppercase">
                                         {visit.visit_type || 'Office Visit'}
                                     </div>
-                                    <div className="flex flex-col items-end gap-0.5 mb-2">
-                                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                                            {visitDate}
-                                        </div>
-                                        <div className="text-[10px] text-slate-500 font-semibold truncate max-w-[150px]">
-                                            {providerName}
-                                        </div>
+                                    <div className="text-[9px] text-slate-400 font-black uppercase mb-0.5">
+                                        {visitDate}
+                                    </div>
+                                    <div className="text-[9px] text-slate-500 font-bold mb-1 truncate max-w-[130px]">
+                                        {providerName}
                                     </div>
 
                                     {signedDate && (
-                                        <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 border border-emerald-200 rounded text-[9px] font-black text-emerald-700">
-                                            <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                                        <div className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-50 border border-emerald-100 rounded text-[8px] font-black text-emerald-700">
+                                            <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500" />
                                             <span>SIGNED</span>
                                         </div>
                                     )}
@@ -542,24 +540,20 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                             </div>
                         </div>
 
-                        {/* Patient Information Section (More Compact) */}
-                        <div className="mb-6 px-6 py-4 bg-slate-50/50 rounded-xl border border-slate-100/80">
-                            <div className="flex items-center justify-between gap-4 mb-4">
-                                <div className="flex-1">
-                                    <h2 className="text-xl font-black text-slate-900 leading-tight">
-                                        {patient.last_name}, {patient.first_name}
-                                    </h2>
-                                    <div className="flex items-center gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                                        <span>MRN <span className="text-slate-700 ml-1">{patient.mrn}</span></span>
-                                        <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                                        <span>DOB <span className="text-slate-700 ml-1">{patientDOB} ({patientAge}y)</span></span>
-                                        <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                                        <span>SEX <span className="text-slate-700 ml-1">{patient.sex || 'N/A'}</span></span>
-                                    </div>
+                        {/* Ultra-Compact Patient Header */}
+                        <div className="mb-4 px-4 py-2.5 bg-slate-50/50 rounded-lg border border-slate-100">
+                            <div className="flex items-baseline justify-between gap-4 mb-2">
+                                <h2 className="text-lg font-black text-slate-900 tracking-tight">
+                                    {patient.last_name}, {patient.first_name}
+                                </h2>
+                                <div className="flex items-center gap-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                    <span>MRN <span className="text-slate-700 ml-0.5">{patient.mrn}</span></span>
+                                    <span>DOB <span className="text-slate-700 ml-0.5">{patientDOB} ({patientAge}y)</span></span>
+                                    <span>SEX <span className="text-slate-700 ml-0.5">{patient.sex || 'N/A'}</span></span>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-3 md:grid-cols-6 gap-x-4 gap-y-3 pt-3 border-t border-slate-200/50">
+                            <div className="grid grid-cols-3 md:grid-cols-6 gap-x-3 gap-y-1.5 pt-2 border-t border-slate-200/50">
                                 {[
                                     { icon: Phone, label: 'Phone', value: formatPhone(patient.phone) },
                                     { icon: Mail, label: 'Email', value: patient.email, truncate: true },
@@ -569,11 +563,11 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                     { icon: Users, label: 'Emergency', value: patient.emergency_contact_name }
                                 ].map((item, idx) => (
                                     <div key={idx} className="min-w-0">
-                                        <div className="flex items-center gap-1.5 mb-0.5 opacity-60">
-                                            <item.icon className="w-2.5 h-2.5 text-primary-600" />
-                                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-tighter">{item.label}</span>
+                                        <div className="flex items-center gap-1 opacity-50 mb-0">
+                                            <item.icon className="w-2 h-2 text-primary-600" />
+                                            <span className="text-[7px] font-black text-slate-500 uppercase tracking-tighter">{item.label}</span>
                                         </div>
-                                        <div className={`text-[10px] font-bold text-slate-700 leading-tight ${item.truncate ? 'truncate' : ''}`} title={item.value}>
+                                        <div className={`text-[9px] font-bold text-slate-700 truncate leading-none`} title={item.value}>
                                             {item.value || '—'}
                                         </div>
                                     </div>
@@ -581,7 +575,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                             </div>
                         </div>
 
-                        <div className="space-y-6 bg-white">
+                        <div className="space-y-4 bg-white">
                             {renderSection('chiefComplaint', true, 'Chief Complaint', noteData.chiefComplaint ? <p className="text-xs text-gray-800 leading-relaxed">{noteData.chiefComplaint}</p> : <p className="text-xs text-gray-500 italic">No chief complaint recorded</p>)}
                             {renderSection('hpi', true, 'History of Present Illness', noteData.hpi ? <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{noteData.hpi}</p> : <p className="text-xs text-gray-500 italic">No history of present illness recorded</p>)}
                             {renderSection('ros', true, 'Review of Systems', noteData.rosNotes ? <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.rosNotes) }} /> : <p className="text-xs text-gray-500 italic">No review of systems recorded</p>)}

@@ -456,7 +456,11 @@ const PracticeSettingsTab = ({ settings, setSettings, onSave, saving }) => {
 
                   try {
                     const response = await settingsAPI.uploadPracticeLogo(formData);
-                    updateField('logo_url', response.data.logo_url);
+                    // Refresh all settings to ensure everything is in sync
+                    const allRes = await settingsAPI.getAll();
+                    if (allRes.data.practice) setPracticeSettings(allRes.data.practice);
+                    setSaveStatus({ type: 'success', message: 'Logo uploaded successfully' });
+                    setTimeout(() => setSaveStatus(null), 2000);
                   } catch (error) {
                     console.error('Error uploading logo:', error);
                     alert('Failed to upload logo');
