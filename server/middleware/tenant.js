@@ -1,3 +1,4 @@
+const jwt = require('jsonwebtoken');
 const pool = require('../db');
 const tenantManager = require('../services/tenantManager');
 
@@ -13,10 +14,43 @@ const resolveTenant = async (req, res, next) => {
         return next();
     }
 
-    // 2. Determine Clinic Slug
+    // 2. Determine Clinic Slug / Schema
     let slug = req.headers['x-clinic-slug'];
+    let lookupSchema = null;
 
-    if (!slug && req.headers.host) {
+    // A. Recognition by JWT Token (for already authenticated users)
+    const authHeader = req.headers.authorization;
+    if (!slug && authHeader && authHeader.startsWith('Bearer ')) {
+        try {
+            const token = authHeader.split(' ')[1];
+            const decoded = jwt.decode(token); // Just peek, verification happens later in auth middleware
+            if (decoded && decoded.clinicSlug) {
+                slug = decoded.clinicSlug;
+            }
+        } catch (e) {
+            // Ignore decoding errors here
+        }
+    }
+
+    // B. Recognition by Email (specifically for Login)
+    // If it's a login attempt and we don't have a slug, try to find the clinic by email
+    const isLogin = req.path === '/auth/login' || req.path === '/api/auth/login';
+    if (!slug && isLogin && req.body && req.body.email) {
+        try {
+            const lookup = await pool.controlPool.query(
+                'SELECT schema_name FROM platform_user_lookup WHERE email = $1',
+                [req.body.email]
+            );
+            if (lookup.rows.length > 0) {
+                lookupSchema = lookup.rows[0].schema_name;
+            }
+        } catch (e) {
+            console.error('[Tenant] Lookup failed:', e);
+        }
+    }
+
+    // C. Subdomain / Host Resolution
+    if (!slug && !lookupSchema && req.headers.host) {
         const host = req.headers.host;
         // logic for subdomains: clinic.bemypcp.com
         if (host.includes('bemypcp.com') || host.includes('localhost')) {
@@ -28,23 +62,36 @@ const resolveTenant = async (req, res, next) => {
     }
 
     // Default Fallback (Legacy Support)
-    if (!slug) slug = 'default';
+    if (!slug && !lookupSchema) slug = 'default';
 
     // 3. Lookup Tenant Schema
     let client = null;
     try {
         // We use controlPool directly to find the tenant wrapper info
-        const result = await pool.controlPool.query(
-            'SELECT id, schema_name FROM clinics WHERE slug = $1 AND status = \'active\'',
-            [slug]
-        );
+        let tenantInfo = null;
 
-        if (result.rows.length === 0) {
-            console.warn(`[Tenant] Clinic not found: ${slug}`);
-            return res.status(404).json({ error: `Clinic '${slug}' not found or inactive.` });
+        if (lookupSchema) {
+            // We already found the schema by email
+            const result = await pool.controlPool.query(
+                'SELECT id, slug, schema_name FROM clinics WHERE schema_name = $1 AND status = \'active\'',
+                [lookupSchema]
+            );
+            tenantInfo = result.rows[0];
+        } else {
+            // Find by slug
+            const result = await pool.controlPool.query(
+                'SELECT id, slug, schema_name FROM clinics WHERE slug = $1 AND status = \'active\'',
+                [slug]
+            );
+            tenantInfo = result.rows[0];
         }
 
-        const { id, schema_name } = result.rows[0];
+        if (!tenantInfo) {
+            console.warn(`[Tenant] Clinic not found for slug: ${slug} or schema: ${lookupSchema}`);
+            return res.status(404).json({ error: `Clinic access denied or clinic inactive.` });
+        }
+
+        const { id, schema_name } = tenantInfo;
 
         // 4. Start Transaction Wrapper
         client = await pool.controlPool.connect();

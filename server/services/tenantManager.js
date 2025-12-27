@@ -75,6 +75,15 @@ class TenantManager {
                     INSERT INTO ${schemaName}.users (email, password_hash, first_name, last_name, role, role_id, is_admin, status)
                     VALUES ($1, $2, $3, $4, 'admin', $5, true, 'active')
                 `, [adminUser.email, passwordHash, adminUser.firstName, adminUser.lastName, roleId]);
+
+                // 5b. Add to Global User Lookup (for recognition by email)
+                await client.query(`
+                    INSERT INTO platform_user_lookup (email, clinic_id, schema_name)
+                    VALUES ($1, $2, $3)
+                    ON CONFLICT (email) DO UPDATE SET 
+                        clinic_id = EXCLUDED.clinic_id,
+                        schema_name = EXCLUDED.schema_name
+                `, [adminUser.email, clinicId, schemaName]);
             }
 
             // 6. Initialize Settings in control_db
@@ -201,13 +210,16 @@ class TenantManager {
                 await client.query(`DROP SCHEMA IF EXISTS ${schema_name} CASCADE`);
             }
 
+            // 2b. Clean up Global User Lookup
+            await client.query('DELETE FROM platform_user_lookup WHERE clinic_id = $1', [clinicId]);
+
             // 3. Delete Clinic Record
             await client.query('DELETE FROM clinics WHERE id = $1', [clinicId]);
 
             // 4. Log the action
             await client.query(`
-                INSERT INTO platform_audit_logs(action, details)
-                VALUES($1, $2)
+                INSERT INTO platform_audit_logs (action, details)
+                VALUES ($1, $2)
             `, ['clinic_deleted', JSON.stringify({ clinicId, slug, schema_name })]);
 
             await client.query('COMMIT');

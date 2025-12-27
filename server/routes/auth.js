@@ -46,7 +46,11 @@ router.post('/register', [
     );
 
     const user = result.rows[0];
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    const token = jwt.sign(
+      { userId: user.id, clinicSlug: req.clinic?.slug || 'default' },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
 
     await logAudit(user.id, 'user_registered', 'user', user.id, {}, req.ip);
 
@@ -194,7 +198,11 @@ router.post('/login', [
       console.warn('Failed to update last login:', updateError.message);
     }
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    const token = jwt.sign(
+      { userId: user.id, clinicSlug: req.clinic?.slug || 'default' },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
 
     try {
       await logAudit(user.id, 'user_login', 'user', user.id, {}, req.ip);
