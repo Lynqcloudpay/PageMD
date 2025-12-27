@@ -123,7 +123,7 @@ adminRouter.put('/practice', [
     }
 
     const {
-      practice_name, tax_id, npi,
+      practice_name, legal_name, tax_id, npi,
       address_line1, address_line2, city, state, zip,
       phone, fax, email, website, logo_url,
       timezone, date_format, time_format
