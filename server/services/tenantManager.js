@@ -149,6 +149,10 @@ class TenantManager {
             // 2b. Clean up Global User Lookup
             await client.query('DELETE FROM platform_user_lookup WHERE clinic_id = $1', [clinicId]);
 
+            // Explicitly delete related records that might otherwise be SET NULL
+            await client.query('DELETE FROM payment_history WHERE clinic_id = $1', [clinicId]);
+            await client.query('DELETE FROM support_tickets WHERE clinic_id = $1', [clinicId]);
+
             // 3. Delete Clinic Record
             await client.query('DELETE FROM clinics WHERE id = $1', [clinicId]);
 
