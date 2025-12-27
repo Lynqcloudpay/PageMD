@@ -13,8 +13,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Settings, Building2, Users, Shield, Stethoscope, Mail, 
+import {
+  Settings, Building2, Users, Shield, Stethoscope, Mail,
   ToggleLeft, ToggleRight, Save, Loader2, AlertCircle, CheckCircle2,
   DollarSign, Database, Activity, Lock, Globe, Clock, Bell,
   Eye, EyeOff, Server, Zap
@@ -32,7 +32,7 @@ const AdminSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
-  
+
   // Settings state
   const [practiceSettings, setPracticeSettings] = useState({});
   const [securitySettings, setSecuritySettings] = useState({});
@@ -40,25 +40,23 @@ const AdminSettings = () => {
   const [emailSettings, setEmailSettings] = useState({});
   const [featureFlags, setFeatureFlags] = useState([]);
 
-  // Check if user has admin permissions
+  // Check permissions and load settings
   useEffect(() => {
     if (user) {
       // Check for users:manage permission (admin permission)
       if (!can('users:manage')) {
         console.log('AdminSettings: User does not have users:manage permission');
         navigate('/dashboard');
-      } else {
-        console.log('AdminSettings: User has admin permissions. Loading settings...');
+        return;
       }
-    }
-  }, [user, can, navigate]);
 
-  // Load all settings
-  useEffect(() => {
-    if (user && can('users:manage')) {
+      // User has admin permissions, load settings
+      console.log('AdminSettings: Using admin permissions to load settings');
       loadAllSettings();
     }
-  }, [user, can]);
+    // Dependency on user.id and permissions value prevents infinite loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, navigate, JSON.stringify(user?.permissions)]);
 
   const loadAllSettings = async () => {
     try {
@@ -137,7 +135,7 @@ const AdminSettings = () => {
   const handleToggleFeature = async (featureKey, enabled) => {
     try {
       await settingsAPI.updateFeature(featureKey, { enabled });
-      setFeatureFlags(flags => 
+      setFeatureFlags(flags =>
         flags.map(f => f.feature_key === featureKey ? { ...f, enabled } : f)
       );
     } catch (error) {
@@ -176,11 +174,10 @@ const AdminSettings = () => {
 
       {/* Save Status */}
       {saveStatus && (
-        <div className={`p-4 rounded-lg flex items-center space-x-2 ${
-          saveStatus.type === 'success' 
-            ? 'bg-green-50 border border-green-200 text-green-800' 
+        <div className={`p-4 rounded-lg flex items-center space-x-2 ${saveStatus.type === 'success'
+            ? 'bg-green-50 border border-green-200 text-green-800'
             : 'bg-red-50 border border-red-200 text-red-800'
-        }`}>
+          }`}>
           {saveStatus.type === 'success' ? (
             <CheckCircle2 className="w-5 h-5" />
           ) : (
@@ -203,11 +200,10 @@ const AdminSettings = () => {
                 }
                 setActiveTab(tab.id);
               }}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === tab.id
+              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${activeTab === tab.id
                   ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
+                }`}
             >
               <tab.icon className="w-5 h-5" />
               <span>{tab.label}</span>
@@ -279,7 +275,7 @@ const PracticeSettingsTab = ({ settings, setSettings, onSave, saving }) => {
     <div className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Practice Information</h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Practice Name *</label>
@@ -423,7 +419,7 @@ const PracticeSettingsTab = ({ settings, setSettings, onSave, saving }) => {
 
       <div className="border-t border-gray-200 pt-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Regional Settings</h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
@@ -507,7 +503,7 @@ const SecuritySettingsTab = ({ settings, setSettings, onSave, saving }) => {
     <div className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Password Policy</h2>
-        
+
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Minimum Password Length</label>
@@ -523,7 +519,7 @@ const SecuritySettingsTab = ({ settings, setSettings, onSave, saving }) => {
 
           <div className="space-y-3">
             <label className="block text-sm font-medium text-gray-700">Password Requirements</label>
-            
+
             <label className="flex items-center space-x-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -569,7 +565,7 @@ const SecuritySettingsTab = ({ settings, setSettings, onSave, saving }) => {
 
       <div className="border-t border-gray-200 pt-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Session Security</h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Session Timeout (minutes)</label>
@@ -599,7 +595,7 @@ const SecuritySettingsTab = ({ settings, setSettings, onSave, saving }) => {
 
       <div className="border-t border-gray-200 pt-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Login Security</h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Max Login Attempts</label>
@@ -629,7 +625,7 @@ const SecuritySettingsTab = ({ settings, setSettings, onSave, saving }) => {
 
       <div className="border-t border-gray-200 pt-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Two-Factor Authentication</h2>
-        
+
         <div className="space-y-3">
           <label className="flex items-center space-x-2 cursor-pointer">
             <input
@@ -655,7 +651,7 @@ const SecuritySettingsTab = ({ settings, setSettings, onSave, saving }) => {
 
       <div className="border-t border-gray-200 pt-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Audit & Logging</h2>
-        
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Audit Log Retention (days)</label>
           <input
@@ -710,7 +706,7 @@ const ClinicalSettingsTab = ({ settings, setSettings, onSave, saving }) => {
     <div className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Visit Requirements</h2>
-        
+
         <div className="space-y-3">
           <label className="flex items-center space-x-2 cursor-pointer">
             <input
@@ -748,7 +744,7 @@ const ClinicalSettingsTab = ({ settings, setSettings, onSave, saving }) => {
 
       <div className="border-t border-gray-200 pt-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Clinical Alerts</h2>
-        
+
         <div className="space-y-3">
           <label className="flex items-center space-x-2 cursor-pointer">
             <input
@@ -784,7 +780,7 @@ const ClinicalSettingsTab = ({ settings, setSettings, onSave, saving }) => {
 
       <div className="border-t border-gray-200 pt-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Data Retention</h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Lab Results (days)</label>
@@ -854,7 +850,7 @@ const ClinicalSettingsTab = ({ settings, setSettings, onSave, saving }) => {
 // Email Settings Tab Component
 const EmailSettingsTab = ({ settings, setSettings, onSave, saving }) => {
   const [showPassword, setShowPassword] = useState(false);
-  
+
   const updateField = (field, value) => {
     setSettings(prev => ({ ...prev, [field]: value }));
   };
@@ -867,7 +863,7 @@ const EmailSettingsTab = ({ settings, setSettings, onSave, saving }) => {
     <div className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold text-gray-900 mb-4">SMTP Configuration</h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">SMTP Host</label>
@@ -936,7 +932,7 @@ const EmailSettingsTab = ({ settings, setSettings, onSave, saving }) => {
 
       <div className="border-t border-gray-200 pt-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Email Settings</h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">From Name</label>
@@ -1058,11 +1054,10 @@ const FeaturesTab = ({ features, onToggle }) => {
                   </div>
                   <button
                     onClick={() => onToggle(feature.feature_key, !feature.enabled)}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                      feature.enabled
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${feature.enabled
                         ? 'bg-green-100 text-green-800 hover:bg-green-200'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
+                      }`}
                   >
                     {feature.enabled ? (
                       <>
@@ -1096,7 +1091,7 @@ const BillingSettingsTab = () => {
           <div>
             <h3 className="font-medium text-blue-900">Billing Configuration</h3>
             <p className="text-sm text-blue-700 mt-1">
-              Billing configuration settings will be available here. This section will include fee schedule management, 
+              Billing configuration settings will be available here. This section will include fee schedule management,
               clearinghouse configuration, and claim submission settings.
             </p>
           </div>
