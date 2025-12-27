@@ -2,11 +2,8 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'paper_emr',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
+  connectionString: process.env.DATABASE_URL || `postgresql://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD || 'postgres'}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 5432}/${process.env.DB_NAME || 'paper_emr'}`,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
 // 500 most common ICD-10 codes for a cardiology clinic
@@ -25,7 +22,7 @@ const cardiologyCodesRaw = [
   { code: 'I15.2', description: 'Hypertension secondary to endocrine disorders' },
   { code: 'I15.8', description: 'Other secondary hypertension' },
   { code: 'I15.9', description: 'Secondary hypertension, unspecified' },
-  
+
   // ISCHEMIC HEART DISEASES (I20-I25)
   { code: 'I20.0', description: 'Unstable angina' },
   { code: 'I20.1', description: 'Angina pectoris with documented spasm' },
@@ -77,7 +74,7 @@ const cardiologyCodesRaw = [
   { code: 'I25.84', description: 'Coronary atherosclerosis due to calcified coronary lesion' },
   { code: 'I25.89', description: 'Other forms of chronic ischemic heart disease' },
   { code: 'I25.9', description: 'Chronic ischemic heart disease, unspecified' },
-  
+
   // PULMONARY HEART DISEASE (I26-I28)
   { code: 'I26.01', description: 'Septic pulmonary embolism with acute cor pulmonale' },
   { code: 'I26.02', description: 'Saddle embolus of pulmonary artery with acute cor pulmonale' },
@@ -103,7 +100,7 @@ const cardiologyCodesRaw = [
   { code: 'I28.1', description: 'Aneurysm of pulmonary artery' },
   { code: 'I28.8', description: 'Other specified diseases of pulmonary vessels' },
   { code: 'I28.9', description: 'Disease of pulmonary vessels, unspecified' },
-  
+
   // PERICARDIAL DISEASES (I30-I32)
   { code: 'I30.0', description: 'Acute nonspecific idiopathic pericarditis' },
   { code: 'I30.1', description: 'Infective pericarditis' },
@@ -118,7 +115,7 @@ const cardiologyCodesRaw = [
   { code: 'I31.9', description: 'Disease of pericardium, unspecified' },
   { code: 'I32.0', description: 'Pericarditis in diseases classified elsewhere' },
   { code: 'I32.8', description: 'Other forms of pericarditis in diseases classified elsewhere' },
-  
+
   // ENDOCARDIAL DISEASES (I33-I39)
   { code: 'I33.0', description: 'Acute and subacute infective endocarditis' },
   { code: 'I33.9', description: 'Acute endocarditis, unspecified' },
@@ -149,7 +146,7 @@ const cardiologyCodesRaw = [
   { code: 'I39.3', description: 'Pulmonary valve disorders in diseases classified elsewhere' },
   { code: 'I39.4', description: 'Multiple valve disorders in diseases classified elsewhere' },
   { code: 'I39.8', description: 'Endocarditis and valve disorders in diseases classified elsewhere' },
-  
+
   // CARDIOMYOPATHY (I40-I43)
   { code: 'I40.0', description: 'Infective cardiomyopathy' },
   { code: 'I40.1', description: 'Isolated myocarditis' },
@@ -173,7 +170,7 @@ const cardiologyCodesRaw = [
   { code: 'I43.1', description: 'Cardiomyopathy in metabolic diseases' },
   { code: 'I43.2', description: 'Cardiomyopathy in nutritional diseases' },
   { code: 'I43.8', description: 'Cardiomyopathy in other diseases classified elsewhere' },
-  
+
   // CONDUCTION DISORDERS (I44-I45)
   { code: 'I44.0', description: 'Atrioventricular block, first degree' },
   { code: 'I44.1', description: 'Atrioventricular block, second degree' },
@@ -193,7 +190,7 @@ const cardiologyCodesRaw = [
   { code: 'I45.81', description: 'Long QT syndrome' },
   { code: 'I45.89', description: 'Other specified conduction disorders' },
   { code: 'I45.9', description: 'Conduction disorder, unspecified' },
-  
+
   // CARDIAC ARRHYTHMIAS (I46-I49)
   { code: 'I46.2', description: 'Cardiac arrest due to underlying cardiac condition' },
   { code: 'I46.8', description: 'Cardiac arrest due to other underlying condition' },
@@ -219,7 +216,7 @@ const cardiologyCodesRaw = [
   { code: 'I49.5', description: 'Sick sinus syndrome' },
   { code: 'I49.8', description: 'Other specified cardiac arrhythmias' },
   { code: 'I49.9', description: 'Cardiac arrhythmia, unspecified' },
-  
+
   // HEART FAILURE (I50)
   { code: 'I50.1', description: 'Left ventricular failure' },
   { code: 'I50.2', description: 'Systolic heart failure' },
@@ -238,7 +235,7 @@ const cardiologyCodesRaw = [
   { code: 'I50.41', description: 'Acute combined systolic and diastolic heart failure' },
   { code: 'I50.42', description: 'Chronic combined systolic and diastolic heart failure' },
   { code: 'I50.43', description: 'Acute on chronic combined systolic and diastolic heart failure' },
-  
+
   // COMPLICATIONS AND ILL-DEFINED HEART DISEASE (I51)
   { code: 'I51.0', description: 'Cardiac septal defect, acquired' },
   { code: 'I51.1', description: 'Rupture of chordae tendineae, not elsewhere classified' },
@@ -250,13 +247,13 @@ const cardiologyCodesRaw = [
   { code: 'I51.81', description: 'Takotsubo syndrome' },
   { code: 'I51.89', description: 'Other ill-defined heart diseases' },
   { code: 'I51.9', description: 'Heart disease, unspecified' },
-  
+
   // CEREBROVASCULAR DISEASES (I60-I69)
   { code: 'I63.9', description: 'Cerebral infarction, unspecified' },
   { code: 'I64', description: 'Stroke, not specified as hemorrhage or infarction' },
   { code: 'I65.29', description: 'Occlusion and stenosis of unspecified carotid artery' },
   { code: 'I66.9', description: 'Occlusion and stenosis of unspecified cerebral artery' },
-  
+
   // DISEASES OF ARTERIES, ARTERIOLES AND CAPILLARIES (I70-I79)
   { code: 'I70.0', description: 'Atherosclerosis of aorta' },
   { code: 'I70.1', description: 'Atherosclerosis of renal artery' },
@@ -304,7 +301,7 @@ const cardiologyCodesRaw = [
   { code: 'I77.9', description: 'Disorder of arteries and arterioles, unspecified' },
   { code: 'I78.0', description: 'Hereditary hemorrhagic telangiectasia' },
   { code: 'I78.9', description: 'Disease of capillaries, unspecified' },
-  
+
   // DISEASES OF VEINS (I80-I87)
   { code: 'I80.10', description: 'Phlebitis and thrombophlebitis of unspecified femoral vein' },
   { code: 'I80.11', description: 'Phlebitis and thrombophlebitis of right femoral vein' },
@@ -335,7 +332,7 @@ const cardiologyCodesRaw = [
   { code: 'I87.2', description: 'Venous insufficiency (chronic) (peripheral)' },
   { code: 'I87.8', description: 'Other specified disorders of veins' },
   { code: 'I87.9', description: 'Disorder of vein, unspecified' },
-  
+
   // OTHER CIRCULATORY DISORDERS (I95-I99)
   { code: 'I95.0', description: 'Idiopathic hypotension' },
   { code: 'I95.1', description: 'Orthostatic hypotension' },
@@ -372,7 +369,7 @@ const cardiologyCodesRaw = [
   { code: 'I97.89', description: 'Other intraoperative and postprocedural complications and disorders of circulatory system, not elsewhere classified' },
   { code: 'I97.9', description: 'Unspecified intraoperative and postprocedural complication and disorder of circulatory system' },
   { code: 'I99', description: 'Other and unspecified disorders of circulatory system' },
-  
+
   // SYMPTOMS AND SIGNS (R00-R99) - Cardiology related
   { code: 'R00.0', description: 'Tachycardia, unspecified' },
   { code: 'R00.1', description: 'Bradycardia, unspecified' },
@@ -387,7 +384,7 @@ const cardiologyCodesRaw = [
   { code: 'R55', description: 'Syncope and collapse' },
   { code: 'R57.0', description: 'Cardiogenic shock' },
   { code: 'R94.31', description: 'Abnormal electrocardiogram [ECG] [EKG]' },
-  
+
   // ENCOUNTERS FOR EXAMINATION (Z00-Z99) - Cardiology related
   { code: 'Z00.00', description: 'Encounter for general adult medical examination without abnormal findings' },
   { code: 'Z00.01', description: 'Encounter for general adult medical examination with abnormal findings' },
@@ -405,14 +402,14 @@ const cardiologyCodesRaw = [
   { code: 'Z95.819', description: 'Presence of unspecified cardiac implant and graft' },
   { code: 'Z98.61', description: 'Personal history of cardiac arrest' },
   { code: 'Z98.84', description: 'Personal history of cardiac surgery' },
-  
+
   // DIABETES WITH CARDIAC COMPLICATIONS
   { code: 'E11.65', description: 'Type 2 diabetes mellitus with hyperglycemia' },
   { code: 'E11.9', description: 'Type 2 diabetes mellitus without complications' },
   { code: 'E11.22', description: 'Type 2 diabetes mellitus with diabetic chronic kidney disease' },
   { code: 'E11.40', description: 'Type 2 diabetes mellitus with diabetic neuropathy, unspecified' },
   { code: 'E11.621', description: 'Type 2 diabetes mellitus with foot ulcer' },
-  
+
   // HYPERLIPIDEMIA AND METABOLIC DISORDERS
   { code: 'E78.00', description: 'Pure hypercholesterolemia, unspecified' },
   { code: 'E78.01', description: 'Familial hypercholesterolemia' },
@@ -427,13 +424,13 @@ const cardiologyCodesRaw = [
   { code: 'E78.81', description: 'Lipoid dermatoarthritis' },
   { code: 'E78.89', description: 'Other disorders of lipoprotein metabolism' },
   { code: 'E78.9', description: 'Disorder of lipoprotein metabolism, unspecified' },
-  
+
   // OBESITY (often seen in cardiology)
   { code: 'E66.01', description: 'Morbid (severe) obesity due to excess calories' },
   { code: 'E66.09', description: 'Other obesity due to excess calories' },
   { code: 'E66.3', description: 'Overweight' },
   { code: 'E66.9', description: 'Obesity, unspecified' },
-  
+
   // ADDITIONAL HEART FAILURE VARIATIONS
   { code: 'I50.1', description: 'Left ventricular failure' },
   { code: 'I50.20', description: 'Unspecified systolic heart failure' },
@@ -448,7 +445,7 @@ const cardiologyCodesRaw = [
   { code: 'I50.41', description: 'Acute combined systolic and diastolic heart failure' },
   { code: 'I50.42', description: 'Chronic combined systolic and diastolic heart failure' },
   { code: 'I50.43', description: 'Acute on chronic combined systolic and diastolic heart failure' },
-  
+
   // ADDITIONAL ATRIAL FIBRILLATION CODES
   { code: 'I48.0', description: 'Paroxysmal atrial fibrillation' },
   { code: 'I48.1', description: 'Persistent atrial fibrillation' },
@@ -457,7 +454,7 @@ const cardiologyCodesRaw = [
   { code: 'I48.20', description: 'Chronic atrial fibrillation, unspecified' },
   { code: 'I48.21', description: 'Permanent atrial fibrillation' },
   { code: 'I48.91', description: 'Unspecified atrial fibrillation' },
-  
+
   // ADDITIONAL CORONARY ARTERY DISEASE CODES
   { code: 'I25.10', description: 'Atherosclerotic heart disease of native coronary artery without angina pectoris' },
   { code: 'I25.110', description: 'Atherosclerotic heart disease of native coronary artery with unstable angina pectoris' },
@@ -471,7 +468,7 @@ const cardiologyCodesRaw = [
   { code: 'I25.84', description: 'Coronary atherosclerosis due to calcified coronary lesion' },
   { code: 'I25.89', description: 'Other forms of chronic ischemic heart disease' },
   { code: 'I25.9', description: 'Chronic ischemic heart disease, unspecified' },
-  
+
   // ADDITIONAL VALVE DISORDERS
   { code: 'I34.0', description: 'Nonrheumatic mitral (valve) insufficiency' },
   { code: 'I34.1', description: 'Nonrheumatic mitral (valve) prolapse' },
@@ -483,7 +480,7 @@ const cardiologyCodesRaw = [
   { code: 'I36.1', description: 'Nonrheumatic tricuspid (valve) insufficiency' },
   { code: 'I37.0', description: 'Nonrheumatic pulmonary valve stenosis' },
   { code: 'I37.1', description: 'Nonrheumatic pulmonary valve insufficiency' },
-  
+
   // ADDITIONAL ARRHYTHMIA CODES
   { code: 'I49.01', description: 'Ventricular fibrillation' },
   { code: 'I49.02', description: 'Ventricular flutter' },
@@ -493,7 +490,7 @@ const cardiologyCodesRaw = [
   { code: 'I49.5', description: 'Sick sinus syndrome' },
   { code: 'I49.8', description: 'Other specified cardiac arrhythmias' },
   { code: 'I49.9', description: 'Cardiac arrhythmia, unspecified' },
-  
+
   // ADDITIONAL PERIPHERAL VASCULAR CODES
   { code: 'I73.0', description: 'Raynaud syndrome' },
   { code: 'I73.00', description: 'Raynaud syndrome without gangrene' },
@@ -508,7 +505,7 @@ const cardiologyCodesRaw = [
   { code: 'I74.3', description: 'Embolism and thrombosis of arteries of lower extremities' },
   { code: 'I74.4', description: 'Embolism and thrombosis of arteries of extremities, unspecified' },
   { code: 'I74.5', description: 'Embolism and thrombosis of iliac artery' },
-  
+
   // ADDITIONAL PULMONARY HYPERTENSION CODES
   { code: 'I27.0', description: 'Primary pulmonary hypertension' },
   { code: 'I27.20', description: 'Pulmonary hypertension, unspecified' },
@@ -517,7 +514,7 @@ const cardiologyCodesRaw = [
   { code: 'I27.23', description: 'Pulmonary hypertension due to lung diseases and hypoxia' },
   { code: 'I27.24', description: 'Chronic thromboembolic pulmonary hypertension' },
   { code: 'I27.29', description: 'Other secondary pulmonary hypertension' },
-  
+
   // ADDITIONAL PULMONARY EMBOLISM CODES
   { code: 'I26.01', description: 'Septic pulmonary embolism with acute cor pulmonale' },
   { code: 'I26.02', description: 'Saddle embolus of pulmonary artery with acute cor pulmonale' },
@@ -525,7 +522,7 @@ const cardiologyCodesRaw = [
   { code: 'I26.90', description: 'Septic pulmonary embolism without acute cor pulmonale' },
   { code: 'I26.92', description: 'Saddle embolus of pulmonary artery without acute cor pulmonale' },
   { code: 'I26.99', description: 'Other pulmonary embolism without acute cor pulmonale' },
-  
+
   // ADDITIONAL SYMPTOMS AND SIGNS
   { code: 'R00.0', description: 'Tachycardia, unspecified' },
   { code: 'R00.1', description: 'Bradycardia, unspecified' },
@@ -556,7 +553,7 @@ const cardiologyCodesRaw = [
   { code: 'R57.9', description: 'Shock, unspecified' },
   { code: 'R94.31', description: 'Abnormal electrocardiogram [ECG] [EKG]' },
   { code: 'R94.39', description: 'Abnormal results of other cardiovascular function studies' },
-  
+
   // ADDITIONAL ENCOUNTER CODES
   { code: 'Z00.00', description: 'Encounter for general adult medical examination without abnormal findings' },
   { code: 'Z00.01', description: 'Encounter for general adult medical examination with abnormal findings' },
@@ -577,7 +574,7 @@ const cardiologyCodesRaw = [
   { code: 'Z98.61', description: 'Personal history of cardiac arrest' },
   { code: 'Z98.84', description: 'Personal history of cardiac surgery' },
   { code: 'Z98.85', description: 'Personal history of cardiac device in situ' },
-  
+
   // ADDITIONAL COMMON CARDIOLOGY CODES TO REACH 500
   { code: 'I20.0', description: 'Unstable angina' },
   { code: 'I20.1', description: 'Angina pectoris with documented spasm' },
@@ -828,7 +825,7 @@ const cardiologyCodesRaw = [
   { code: 'I97.89', description: 'Other intraoperative and postprocedural complications and disorders of circulatory system, not elsewhere classified' },
   { code: 'I97.9', description: 'Unspecified intraoperative and postprocedural complication and disorder of circulatory system' },
   { code: 'I99', description: 'Other and unspecified disorders of circulatory system' },
-  
+
   // ADDITIONAL COMMON CARDIOLOGY CODES TO REACH 500
   { code: 'E11.21', description: 'Type 2 diabetes mellitus with diabetic nephropathy' },
   { code: 'E11.29', description: 'Type 2 diabetes mellitus with other diabetic kidney complication' },
@@ -867,7 +864,7 @@ const cardiologyCodesRaw = [
   { code: 'E11.69', description: 'Type 2 diabetes mellitus with other specified complication' },
   { code: 'E11.8', description: 'Type 2 diabetes mellitus with unspecified complications' },
   { code: 'E11.9', description: 'Type 2 diabetes mellitus without complications' },
-  
+
   // CHRONIC KIDNEY DISEASE (often seen with cardiac issues)
   { code: 'N18.1', description: 'Chronic kidney disease, stage 1' },
   { code: 'N18.2', description: 'Chronic kidney disease, stage 2 (mild)' },
@@ -879,16 +876,16 @@ const cardiologyCodesRaw = [
   { code: 'N18.5', description: 'Chronic kidney disease, stage 5' },
   { code: 'N18.6', description: 'End stage renal disease' },
   { code: 'N18.9', description: 'Chronic kidney disease, unspecified' },
-  
+
   // ANEMIA (common in cardiac patients)
   { code: 'D50.9', description: 'Iron deficiency anemia, unspecified' },
   { code: 'D64.9', description: 'Anemia, unspecified' },
-  
+
   // THYROID DISORDERS (can affect heart)
   { code: 'E03.9', description: 'Hypothyroidism, unspecified' },
   { code: 'E04.9', description: 'Nontoxic goiter, unspecified' },
   { code: 'E05.90', description: 'Thyrotoxicosis, unspecified without thyrotoxic crisis or storm' },
-  
+
   // CHEST PAIN AND RELATED SYMPTOMS
   { code: 'R06.82', description: 'Tachypnea' },
   { code: 'R06.83', description: 'Snoring' },
@@ -908,7 +905,7 @@ const cardiologyCodesRaw = [
   { code: 'R57.9', description: 'Shock, unspecified' },
   { code: 'R94.31', description: 'Abnormal electrocardiogram [ECG] [EKG]' },
   { code: 'R94.39', description: 'Abnormal results of other cardiovascular function studies' },
-  
+
   // ADDITIONAL ENCOUNTER CODES
   { code: 'Z00.121', description: 'Encounter for routine child health examination with abnormal findings' },
   { code: 'Z00.129', description: 'Encounter for routine child health examination without abnormal findings' },
@@ -917,12 +914,12 @@ const cardiologyCodesRaw = [
   { code: 'Z95.818', description: 'Presence of other cardiac implants and grafts' },
   { code: 'Z95.819', description: 'Presence of unspecified cardiac implant and graft' },
   { code: 'Z98.85', description: 'Personal history of cardiac device in situ' },
-  
+
   // ADDITIONAL HYPERTENSION VARIATIONS
   { code: 'I16.0', description: 'Hypertensive urgency' },
   { code: 'I16.1', description: 'Hypertensive emergency' },
   { code: 'I16.9', description: 'Hypertensive crisis, unspecified' },
-  
+
   // ADDITIONAL ATRIAL FIBRILLATION VARIATIONS
   { code: 'I48.0', description: 'Paroxysmal atrial fibrillation' },
   { code: 'I48.1', description: 'Persistent atrial fibrillation' },
@@ -931,7 +928,7 @@ const cardiologyCodesRaw = [
   { code: 'I48.20', description: 'Chronic atrial fibrillation, unspecified' },
   { code: 'I48.21', description: 'Permanent atrial fibrillation' },
   { code: 'I48.91', description: 'Unspecified atrial fibrillation' },
-  
+
   // ADDITIONAL VALVE DISORDERS
   { code: 'I34.8', description: 'Other nonrheumatic mitral valve disorders' },
   { code: 'I34.9', description: 'Nonrheumatic mitral valve disorder, unspecified' },
@@ -941,7 +938,7 @@ const cardiologyCodesRaw = [
   { code: 'I36.9', description: 'Nonrheumatic tricuspid valve disorder, unspecified' },
   { code: 'I37.8', description: 'Other nonrheumatic pulmonary valve disorders' },
   { code: 'I37.9', description: 'Nonrheumatic pulmonary valve disorder, unspecified' },
-  
+
   // ADDITIONAL CARDIOMYOPATHY CODES
   { code: 'I42.0', description: 'Dilated cardiomyopathy' },
   { code: 'I42.1', description: 'Obstructive hypertrophic cardiomyopathy' },
@@ -953,7 +950,7 @@ const cardiologyCodesRaw = [
   { code: 'I42.7', description: 'Cardiomyopathy due to drug and external agent' },
   { code: 'I42.8', description: 'Other cardiomyopathies' },
   { code: 'I42.9', description: 'Cardiomyopathy, unspecified' },
-  
+
   // ADDITIONAL CONDUCTION DISORDERS
   { code: 'I44.0', description: 'Atrioventricular block, first degree' },
   { code: 'I44.1', description: 'Atrioventricular block, second degree' },
@@ -973,7 +970,7 @@ const cardiologyCodesRaw = [
   { code: 'I45.81', description: 'Long QT syndrome' },
   { code: 'I45.89', description: 'Other specified conduction disorders' },
   { code: 'I45.9', description: 'Conduction disorder, unspecified' },
-  
+
   // ADDITIONAL ARRHYTHMIA CODES
   { code: 'I46.2', description: 'Cardiac arrest due to underlying cardiac condition' },
   { code: 'I46.8', description: 'Cardiac arrest due to other underlying condition' },
@@ -986,7 +983,7 @@ const cardiologyCodesRaw = [
   { code: 'I49.49', description: 'Other premature depolarization' },
   { code: 'I49.8', description: 'Other specified cardiac arrhythmias' },
   { code: 'I49.9', description: 'Cardiac arrhythmia, unspecified' },
-  
+
   // ADDITIONAL CODES TO REACH 500
   { code: 'E10.65', description: 'Type 1 diabetes mellitus with hyperglycemia' },
   { code: 'E10.9', description: 'Type 1 diabetes mellitus without complications' },
@@ -1040,7 +1037,7 @@ const cardiologyCodesRaw = [
   { code: 'I28.1', description: 'Aneurysm of pulmonary artery' },
   { code: 'I28.8', description: 'Other specified diseases of pulmonary vessels' },
   { code: 'I28.9', description: 'Disease of pulmonary vessels, unspecified' },
-  
+
   // FINAL CODES TO REACH 500
   { code: 'E11.311', description: 'Type 2 diabetes mellitus with unspecified diabetic retinopathy with macular edema' },
   { code: 'E11.319', description: 'Type 2 diabetes mellitus with unspecified diabetic retinopathy without macular edema' },
@@ -1086,7 +1083,7 @@ const cardiologyCodesRaw = [
   { code: 'E78.1', description: 'Pure hyperglyceridemia' },
   { code: 'E78.3', description: 'Hyperchylomicronemia' },
   { code: 'E78.4', description: 'Other hyperlipidemia' },
-  
+
   // FINAL 37 CODES TO REACH 500
   { code: 'I25.119', description: 'Atherosclerotic heart disease of native coronary artery with unspecified angina pectoris' },
   { code: 'I25.3', description: 'Aneurysm of heart' },
@@ -1128,7 +1125,7 @@ const cardiologyCodesRaw = [
   { code: 'I39.3', description: 'Pulmonary valve disorders in diseases classified elsewhere' },
   { code: 'I39.4', description: 'Multiple valve disorders in diseases classified elsewhere' },
   { code: 'I39.8', description: 'Endocarditis and valve disorders in diseases classified elsewhere' },
-  
+
   // ADDITIONAL UNIQUE CODES TO REACH 500
   { code: 'I25.82', description: 'Chronic total occlusion of coronary artery' },
   { code: 'I25.83', description: 'Coronary atherosclerosis due to lipid rich plaque' },
@@ -1199,7 +1196,7 @@ const cardiologyCodesRaw = [
   { code: 'I39.3', description: 'Pulmonary valve disorders in diseases classified elsewhere' },
   { code: 'I39.4', description: 'Multiple valve disorders in diseases classified elsewhere' },
   { code: 'I39.8', description: 'Endocarditis and valve disorders in diseases classified elsewhere' },
-  
+
   // FINAL 12 CODES TO REACH 500
   { code: 'I25.82', description: 'Chronic total occlusion of coronary artery' },
   { code: 'I25.83', description: 'Coronary atherosclerosis due to lipid rich plaque' },
@@ -1222,7 +1219,7 @@ const cardiologyCodesRaw = [
   { code: 'I25.894', description: 'Atherosclerosis of other coronary artery bypass graft(s) without angina pectoris' },
   { code: 'I25.898', description: 'Other forms of chronic ischemic heart disease' },
   { code: 'I25.899', description: 'Other forms of chronic ischemic heart disease' },
-  
+
   // FINAL 12 UNIQUE CODES TO REACH 500
   { code: 'I25.892', description: 'Atherosclerosis of other coronary artery bypass graft(s) with other forms of angina pectoris' },
   { code: 'I25.893', description: 'Atherosclerosis of other coronary artery bypass graft(s) with unspecified angina pectoris' },
@@ -1835,10 +1832,10 @@ const generalCodesRaw = [
 
 async function seedICD10Codes() {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     // Check if table exists
     const tableCheck = await client.query(`
       SELECT EXISTS (
@@ -1847,7 +1844,7 @@ async function seedICD10Codes() {
         AND table_name = 'icd10_codes'
       );
     `);
-    
+
     if (!tableCheck.rows[0].exists) {
       console.log('Creating icd10_codes table...');
       await client.query(`
@@ -1873,18 +1870,18 @@ async function seedICD10Codes() {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
-      
+
       await client.query(`
         CREATE INDEX IF NOT EXISTS idx_icd10_search 
         ON icd10_codes USING GIN(search_vector)
       `);
-      
+
       await client.query(`
         CREATE INDEX IF NOT EXISTS idx_icd10_code 
         ON icd10_codes(code)
       `);
     }
-    
+
     // Combine cardiology and general codes, then remove duplicates by code
     const allCodesRaw = [...cardiologyCodesRaw, ...generalCodesRaw];
     const uniqueCodes = [];
@@ -1895,13 +1892,13 @@ async function seedICD10Codes() {
         uniqueCodes.push(codeData);
       }
     }
-    
+
     console.log(`Seeding ${uniqueCodes.length} unique ICD-10 codes (${cardiologyCodesRaw.length} cardiology + ${generalCodesRaw.length} general, removed ${allCodesRaw.length - uniqueCodes.length} duplicates)...`);
-    
+
     let inserted = 0;
     let updated = 0;
     let skipped = 0;
-    
+
     for (const codeData of uniqueCodes) {
       try {
         const result = await client.query(`
@@ -1912,7 +1909,7 @@ async function seedICD10Codes() {
             description = EXCLUDED.description
           RETURNING id
         `, [codeData.code, codeData.description, true, true]);
-        
+
         if (result.rows.length > 0) {
           inserted++;
         }
@@ -1921,14 +1918,14 @@ async function seedICD10Codes() {
         skipped++;
       }
     }
-    
+
     await client.query('COMMIT');
     console.log(`✅ Successfully seeded ICD-10 codes:`);
     console.log(`   - Inserted: ${inserted}`);
     console.log(`   - Updated: ${updated}`);
     console.log(`   - Skipped: ${skipped}`);
     console.log(`   - Total: ${uniqueCodes.length}`);
-    
+
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error seeding ICD-10 codes:', error);
