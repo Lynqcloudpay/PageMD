@@ -66,10 +66,15 @@ class TenantManager {
             // 5. Create Initial Admin User in the new schema
             if (adminUser && adminUser.email) {
                 const passwordHash = await bcrypt.hash(adminUser.password, 10);
+
+                // Get the admin role_id we just created in this schema
+                const roleRes = await client.query(`SELECT id FROM ${schemaName}.roles WHERE name = 'admin'`);
+                const roleId = roleRes.rows[0]?.id;
+
                 await client.query(`
-                    INSERT INTO ${schemaName}.users (email, password_hash, first_name, last_name, role)
-                    VALUES ($1, $2, $3, $4, 'admin')
-                `, [adminUser.email, passwordHash, adminUser.firstName, adminUser.lastName]);
+                    INSERT INTO ${schemaName}.users (email, password_hash, first_name, last_name, role, role_id, is_admin, status)
+                    VALUES ($1, $2, $3, $4, 'admin', $5, true, 'active')
+                `, [adminUser.email, passwordHash, adminUser.firstName, adminUser.lastName, roleId]);
             }
 
             // 6. Initialize Settings in control_db
@@ -99,19 +104,47 @@ class TenantManager {
 
         // Essential Tables (subset of full clinical schema)
         await client.query(`
-            CREATE TABLE users (
+            CREATE TABLE IF NOT EXISTS roles (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                name VARCHAR(50) UNIQUE NOT NULL,
+                description TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            INSERT INTO roles (name, description) VALUES 
+                ('admin', 'Clinic Administrator'),
+                ('clinician', 'Healthcare Provider'),
+                ('staff', 'Clinic Staff')
+            ON CONFLICT (name) DO NOTHING;
+
+            CREATE TABLE IF NOT EXISTS users (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 email VARCHAR(255) UNIQUE NOT NULL,
                 password_hash VARCHAR(255) NOT NULL,
                 first_name VARCHAR(100) NOT NULL,
                 last_name VARCHAR(100) NOT NULL,
-                role VARCHAR(50) NOT NULL,
+                role VARCHAR(50),
+                role_id UUID REFERENCES roles(id),
+                is_admin BOOLEAN DEFAULT false,
+                status VARCHAR(20) DEFAULT 'active',
                 active BOOLEAN DEFAULT true,
+                last_login TIMESTAMP,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
-            CREATE TABLE patients (
+            CREATE TABLE IF NOT EXISTS audit_logs (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID,
+                action VARCHAR(100) NOT NULL,
+                entity_type VARCHAR(50),
+                entity_id UUID,
+                details JSONB,
+                ip_address VARCHAR(45),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS patients (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 mrn VARCHAR(50) UNIQUE NOT NULL,
                 first_name VARCHAR(100) NOT NULL,
@@ -120,16 +153,25 @@ class TenantManager {
                 sex VARCHAR(10),
                 phone VARCHAR(20),
                 email VARCHAR(255),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                address_line1 VARCHAR(255),
+                address_line2 VARCHAR(255),
+                city VARCHAR(100),
+                state VARCHAR(50),
+                zip VARCHAR(20),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
-            CREATE TABLE visits (
+            CREATE TABLE IF NOT EXISTS visits (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 patient_id UUID REFERENCES patients(id),
                 provider_id UUID REFERENCES users(id),
                 visit_date DATE DEFAULT CURRENT_DATE,
                 status VARCHAR(50) DEFAULT 'scheduled',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                reason TEXT,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
             -- Reset search path back to public just in case

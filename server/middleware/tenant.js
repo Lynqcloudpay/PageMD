@@ -1,4 +1,4 @@
-const poolProxy = require('../db');
+const pool = require('../db');
 const tenantManager = require('../services/tenantManager');
 
 /**
