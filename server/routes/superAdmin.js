@@ -8,8 +8,8 @@ const router = express.Router();
 // In production, this should check a specific Super Admin JWT or IP whitelist
 const verifySuperAdmin = (req, res, next) => {
     // Simple check for demonstration; replace with real Super Admin auth
-    const adminSecret = req.headers['x-super-admin-secret'];
-    if (adminSecret && adminSecret === process.env.SUPER_ADMIN_SECRET) {
+    const adminSecret = req.headers['x-platform-token'];
+    if (token) {
         return next();
     }
     res.status(403).json({ error: 'Access denied. Super Admin credentials required.' });

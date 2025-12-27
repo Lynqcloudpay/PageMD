@@ -79,6 +79,8 @@ ssh $SSH_OPTS $USER@$HOST << EOF
   echo "🏢 Setting up Multi-Tenancy Control Database..."
   docker compose -f docker-compose.prod.yml exec -T db psql -U emr_user -d emr_db < $DIR/control_schema.sql || echo "⚠️ Warning: Control schema failed."
   docker compose -f docker-compose.prod.yml exec -T db psql -U emr_user -d emr_db < $DIR/seed_multi_tenancy.sql || echo "⚠️ Warning: Multi-tenancy seeding failed."
+  docker compose -f docker-compose.prod.yml exec -T db psql -U emr_user -d emr_db < $DIR/platform_business_schema.sql || echo "⚠️ Warning: Platform business schema failed."
+  docker compose -f docker-compose.prod.yml exec -T db psql -U emr_user -d emr_db < $DIR/seed_platform_admin.sql || echo "⚠️ Warning: Platform admin seeding failed."
 
   echo "🧹 Cleanup..."
   docker image prune -f

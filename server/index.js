@@ -191,6 +191,7 @@ const reportsRoutes = require('./routes/reports');
 app.use('/api/reports', reportsRoutes);
 
 // Super Admin (Platform Management)
+app.use('/api/platform-auth', require('./routes/platformAuth'));
 app.use('/api/super', require('./routes/superAdmin'));
 
 // HL7 endpoints

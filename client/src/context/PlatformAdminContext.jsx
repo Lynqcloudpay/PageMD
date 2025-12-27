@@ -13,49 +13,86 @@ export const usePlatformAdmin = () => {
 
 export const PlatformAdminProvider = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [adminSecret, setAdminSecret] = useState(null);
+    const [admin, setAdmin] = useState(null);
+    const [token, setToken] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Check if admin secret exists in localStorage
-        const stored = localStorage.getItem('platform_admin_secret');
-        if (stored) {
-            setAdminSecret(stored);
-            setIsAuthenticated(true);
+        // Check if token exists in localStorage
+        const storedToken = localStorage.getItem('platform_admin_token');
+        if (storedToken) {
+            // Verify token is still valid
+            verifyToken(storedToken);
+        } else {
+            setLoading(false);
         }
-        setLoading(false);
     }, []);
 
-    const login = async (secret) => {
+    const verifyToken = async (tokenToVerify) => {
         try {
-            // Test the secret by calling dashboard API
-            const response = await axios.get('/api/super/dashboard', {
-                headers: { 'X-Super-Admin-Secret': secret }
+            const response = await axios.get('/api/platform-auth/me', {
+                headers: { 'X-Platform-Token': tokenToVerify }
             });
 
-            if (response.data) {
-                setAdminSecret(secret);
+            if (response.data.admin) {
+                setAdmin(response.data.admin);
+                setToken(tokenToVerify);
                 setIsAuthenticated(true);
-                localStorage.setItem('platform_admin_secret', secret);
+            }
+        } catch (error) {
+            // Token invalid or expired
+            localStorage.removeItem('platform_admin_token');
+            localStorage.removeItem('platform_admin_user');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const login = async (email, password) => {
+        try {
+            const response = await axios.post('/api/platform-auth/login', {
+                email,
+                password
+            });
+
+            if (response.data.success) {
+                const { token: newToken, admin: adminData } = response.data;
+                setToken(newToken);
+                setAdmin(adminData);
+                setIsAuthenticated(true);
+                localStorage.setItem('platform_admin_token', newToken);
+                localStorage.setItem('platform_admin_user', JSON.stringify(adminData));
                 return true;
             }
         } catch (error) {
             console.error('Platform admin login failed:', error);
-            throw new Error('Invalid admin secret');
+            throw new Error(error.response?.data?.error || 'Invalid credentials');
         }
     };
 
-    const logout = () => {
-        setAdminSecret(null);
-        setIsAuthenticated(false);
-        localStorage.removeItem('platform_admin_secret');
+    const logout = async () => {
+        try {
+            if (token) {
+                await axios.post('/api/platform-auth/logout', {}, {
+                    headers: { 'X-Platform-Token': token }
+                });
+            }
+        } catch (error) {
+            console.error('Logout error:', error);
+        } finally {
+            setToken(null);
+            setAdmin(null);
+            setIsAuthenticated(false);
+            localStorage.removeItem('platform_admin_token');
+            localStorage.removeItem('platform_admin_user');
+        }
     };
 
     const apiCall = async (method, endpoint, data = null) => {
         const config = {
             method,
             url: `/api/super${endpoint}`,
-            headers: { 'X-Super-Admin-Secret': adminSecret }
+            headers: { 'X-Platform-Token': token }
         };
 
         if (data) {
@@ -67,7 +104,7 @@ export const PlatformAdminProvider = ({ children }) => {
             return response.data;
         } catch (error) {
             console.error('Platform admin API call failed:', error);
-            if (error.response?.status === 403) {
+            if (error.response?.status === 401 || error.response?.status === 403) {
                 logout();
             }
             throw error;
@@ -76,7 +113,8 @@ export const PlatformAdminProvider = ({ children }) => {
 
     const value = {
         isAuthenticated,
-        adminSecret,
+        admin,
+        token,
         loading,
         login,
         logout,
