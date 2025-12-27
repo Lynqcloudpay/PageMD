@@ -23,12 +23,28 @@ const ClinicPersonnelManager = ({ clinicId, apiCall }) => {
     };
 
     const handleResetPassword = async (user) => {
-        const newPassword = prompt(`Enter a new temporary password for ${user.email} (min 8 chars):`);
-        if (!newPassword || newPassword.length < 8) return;
+        const generatePassword = () => {
+            const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%";
+            let pass = "";
+            for (let i = 0; i < 12; i++) {
+                pass += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return pass;
+        };
+
+        const suggestedPassword = generatePassword();
+        const newPassword = prompt(`Enter a new temporary password for ${user.email} (min 8 chars):`, suggestedPassword);
+
+        if (!newPassword) return; // Users cancelled
+
+        if (newPassword.length < 8) {
+            alert("Password must be at least 8 characters.");
+            return;
+        }
 
         try {
             await apiCall('POST', `/clinics/${clinicId}/users/${user.id}/reset-password`, { newPassword });
-            alert(`Password reset successfully for ${user.email}`);
+            alert(`Password reset successfully for ${user.email}.\n\nPASSWORD: ${newPassword}\n\nPlease copy this password now.`);
         } catch (err) {
             alert(err.response?.data?.error || 'Failed to reset password');
         }
