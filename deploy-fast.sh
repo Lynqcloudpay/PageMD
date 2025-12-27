@@ -82,6 +82,9 @@ ssh $SSH_OPTS $USER@$HOST << EOF
   docker compose -f docker-compose.prod.yml exec -T db psql -U emr_user -d emr_db < $DIR/platform_business_schema.sql || echo "⚠️ Warning: Platform business schema failed."
   docker compose -f docker-compose.prod.yml exec -T db psql -U emr_user -d emr_db < $DIR/seed_platform_admin.sql || echo "⚠️ Warning: Platform admin seeding failed."
 
+  echo "⚙️  Running Admin Settings Migration..."
+  docker compose -f docker-compose.prod.yml exec -T api node server/scripts/migrate-admin-settings.js || echo "⚠️ Warning: Admin settings migration failed."
+
   echo "🧹 Cleanup..."
   docker image prune -f
 EOF
