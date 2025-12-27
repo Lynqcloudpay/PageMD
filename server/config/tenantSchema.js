@@ -488,6 +488,7 @@ CREATE TABLE IF NOT EXISTS settings (
 
 CREATE TABLE IF NOT EXISTS encryption_keys (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    key_id VARCHAR(255),
     key_type VARCHAR(50) NOT NULL,
     encrypted_key TEXT NOT NULL,
     key_version INTEGER DEFAULT 1,
@@ -497,8 +498,8 @@ CREATE TABLE IF NOT EXISTS encryption_keys (
 );
 
 -- Insert dummy encryption key
-INSERT INTO encryption_keys (key_type, encrypted_key, key_version, is_active)
-VALUES ('DEK', 'dummy_encrypted_key_placeholder', 1, TRUE)
+INSERT INTO encryption_keys (key_id, key_type, encrypted_key, key_version, is_active)
+VALUES ('master-key-1', 'DEK', 'dummy_encrypted_key_placeholder', 1, TRUE)
 ON CONFLICT DO NOTHING;
 
 -- ============================================
@@ -512,6 +513,9 @@ CREATE TABLE IF NOT EXISTS cancellation_followups (
     provider_id UUID REFERENCES users(id),
     status VARCHAR(50) DEFAULT 'pending',
     reason TEXT,
+    addressed_by UUID REFERENCES users(id),
+    addressed_at TIMESTAMP,
+    notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
