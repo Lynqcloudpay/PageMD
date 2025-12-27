@@ -18,6 +18,11 @@ const resolveTenant = async (req, res, next) => {
         }
     }
 
+    // Skip tenant resolution for Platform Admin routes
+    if (req.path.startsWith('/api/super/') || req.path.startsWith('/api/platform-auth/')) {
+        return next();
+    }
+
     // Fallback for development or during platform transition
     if (!slug) {
         slug = process.env.DEFAULT_TENANT_SLUG || 'default';
