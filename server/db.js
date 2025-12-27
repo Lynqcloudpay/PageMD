@@ -43,10 +43,10 @@ const poolProxy = {
   query: async (text, params) => {
     const client = dbStorage.getStore();
     if (client) {
-      // We are in a tenant request context - use the transaction client
+      // console.log(`[DB] Using transactional client for query: ${text.substring(0, 50)}...`);
       return client.query(text, params);
     }
-    // We are in a global context - use the control pool
+    // console.log(`[DB] Falling back to controlPool for query: ${text.substring(0, 50)}...`);
     return controlPool.query(text, params);
   },
 

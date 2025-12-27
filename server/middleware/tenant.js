@@ -130,7 +130,9 @@ const resolveTenant = async (req, res, next) => {
             if (!res.writableEnded) await cleanup();
         });
 
-        console.log(`[Tenant] Established persistent context for ${schema_name} (derived from ${slug})`);
+        const status = await client.query('SELECT current_schema() as sch, current_setting(\'search_path\') as path');
+        console.log(`[Tenant] Established persistent context for ${schema_name} (slug: ${slug}). Current Schema: ${status.rows[0].sch}, Path: ${status.rows[0].path}`);
+
         return next();
     } catch (error) {
         console.error('[Tenant] Resolution failed:', error);
