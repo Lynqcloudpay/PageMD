@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS roles (
 );
 
 INSERT INTO roles (name, description, is_system_role) VALUES 
-    ('admin', 'Clinic Administrator with full access', true),
+    ('Admin', 'Clinic Administrator with full access', true),
     ('Physician', 'Licensed physician with full clinical privileges', true),
     ('staff', 'Clinic Staff', true)
 ON CONFLICT (name) DO NOTHING;
