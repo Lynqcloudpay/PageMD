@@ -123,11 +123,14 @@ adminRouter.put('/practice', [
     }
 
     const {
-      practice_name, practice_type, tax_id, npi,
+      practice_name, tax_id, npi,
       address_line1, address_line2, city, state, zip,
       phone, fax, email, website, logo_url,
       timezone, date_format, time_format
     } = req.body;
+
+    // Handle variation in field name
+    const practice_type = req.body.practice_type || req.body.specialty;
 
     if (req.clinic) {
       // Update Control DB
