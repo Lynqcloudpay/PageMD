@@ -40,8 +40,7 @@ services:
       PORT: 3000
       DATABASE_URL: postgresql://${DB_USER:-emr_user}:${DB_PASSWORD}@db:5432/${DB_NAME:-emr_db}
       FRONTEND_URL: ${APP_BASE_URL}
-      # Encryption
-      ENABLE_PHI_ENCRYPTION: ${ENABLE_PHI_ENCRYPTION}
+      ENABLE_PHI_ENCRYPTION: "false"
       ENCRYPTION_KEY_MANAGEMENT: ${ENCRYPTION_KEY_MANAGEMENT:-local}
       # Security
       FORCE_HTTPS: ${FORCE_HTTPS:-true}

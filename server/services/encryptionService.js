@@ -247,8 +247,8 @@ const getDEK = async () => {
     const keyVersion = '1';
 
     const insertResult = await pool.query(`
-      INSERT INTO encryption_keys (key_id, key_version, dek_encrypted, algorithm, active)
-      VALUES ($1, $2, $3, $4, true)
+      INSERT INTO encryption_keys (key_id, key_version, dek_encrypted, algorithm, active, key_type, encrypted_key)
+      VALUES ($1, $2, $3, $4, true, 'DEK', 'dummy_value_until_implemented')
       RETURNING id, key_id, key_version
     `, [keyId, keyVersion, dekEncrypted, 'AES-256-GCM']);
 
