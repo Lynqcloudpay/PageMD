@@ -130,6 +130,9 @@ CREATE TABLE IF NOT EXISTS patients (
     middle_name VARCHAR(100),
     last_name VARCHAR(100) NOT NULL,
     preferred_name VARCHAR(100),
+    name_prefix VARCHAR(50),
+    name_suffix VARCHAR(50),
+    previous_name VARCHAR(255),
     dob DATE NOT NULL,
     date_of_birth DATE,
     sex VARCHAR(10) CHECK (sex IN ('M', 'F', 'Other')),
@@ -229,6 +232,10 @@ CREATE TABLE IF NOT EXISTS medications (
     start_date DATE,
     end_date DATE,
     active BOOLEAN DEFAULT true,
+    status VARCHAR(50) DEFAULT 'active',
+    instructions TEXT,
+    notes TEXT,
+    clinic_id UUID,
     prescriber_id UUID REFERENCES users(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -341,6 +348,18 @@ CREATE TABLE IF NOT EXISTS orders (
     comment TEXT,
     comments JSONB DEFAULT '[]'::jsonb,
     clinic_id UUID,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS order_sets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    items JSONB DEFAULT '[]',
+    created_by UUID,
+    clinic_id UUID,
+    is_public BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -620,6 +639,96 @@ CREATE TABLE IF NOT EXISTS cancellation_followup_notes (
     created_by UUID,
     created_by_name VARCHAR(255),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ============================================
+-- ADDITIONAL SETTINGS TABLES
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS practice_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    practice_name VARCHAR(255),
+    practice_type VARCHAR(100),
+    tax_id VARCHAR(50),
+    npi VARCHAR(20),
+    address_line1 VARCHAR(255),
+    address_line2 VARCHAR(255),
+    city VARCHAR(100),
+    state VARCHAR(50),
+    zip VARCHAR(20),
+    phone VARCHAR(20),
+    fax VARCHAR(20),
+    email VARCHAR(255),
+    website VARCHAR(255),
+    logo_url TEXT,
+    timezone VARCHAR(50) DEFAULT 'America/New_York',
+    date_format VARCHAR(20) DEFAULT 'MM/DD/YYYY',
+    time_format VARCHAR(10) DEFAULT '12h',
+    updated_by UUID,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS security_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    password_min_length INTEGER DEFAULT 8,
+    password_require_uppercase BOOLEAN DEFAULT TRUE,
+    password_require_lowercase BOOLEAN DEFAULT TRUE,
+    password_require_number BOOLEAN DEFAULT TRUE,
+    password_require_special BOOLEAN DEFAULT TRUE,
+    session_timeout_minutes INTEGER DEFAULT 30,
+    max_login_attempts INTEGER DEFAULT 5,
+    lockout_duration_minutes INTEGER DEFAULT 15,
+    require_2fa BOOLEAN DEFAULT FALSE,
+    require_2fa_for_admin BOOLEAN DEFAULT FALSE,
+    inactivity_timeout_minutes INTEGER DEFAULT 15,
+    audit_log_retention_days INTEGER DEFAULT 365,
+    ip_whitelist TEXT,
+    updated_by UUID,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS clinical_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    require_dx_on_visit BOOLEAN DEFAULT TRUE,
+    require_vitals_on_visit BOOLEAN DEFAULT FALSE,
+    enable_clinical_alerts BOOLEAN DEFAULT TRUE,
+    enable_drug_interaction_check BOOLEAN DEFAULT TRUE,
+    enable_allergy_alerts BOOLEAN DEFAULT TRUE,
+    default_visit_duration_minutes INTEGER DEFAULT 15,
+    updated_by UUID,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS email_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    smtp_host VARCHAR(255),
+    smtp_port INTEGER,
+    smtp_secure BOOLEAN DEFAULT TRUE,
+    smtp_username VARCHAR(255),
+    smtp_password VARCHAR(255),
+    from_name VARCHAR(255),
+    from_email VARCHAR(255),
+    reply_to_email VARCHAR(255),
+    enabled BOOLEAN DEFAULT FALSE,
+    test_email VARCHAR(255),
+    updated_by UUID,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS feature_flags (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    feature_key VARCHAR(100),
+    category VARCHAR(100),
+    enabled BOOLEAN DEFAULT FALSE,
+    config_data JSONB,
+    updated_by UUID,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(feature_key)
 );
 `;
 
