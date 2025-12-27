@@ -51,7 +51,16 @@ const poolProxy = {
   },
 
   // Legacy/Pool compat methods
-  connect: (...args) => controlPool.connect(...args),
+  connect: async (...args) => {
+    const newClient = await controlPool.connect(...args);
+    const store = dbStorage.getStore();
+    if (store && store.tenantSchema) {
+      // Propagation: Inherit search_path for manual connections (e.g. for transactions with isolation)
+      // console.log(`[DB] Propagating search_path ${store.tenantSchema} to new connection`);
+      await newClient.query(`SET search_path TO ${store.tenantSchema}, public`);
+    }
+    return newClient;
+  },
   on: (...args) => controlPool.on(...args),
   end: (...args) => controlPool.end(...args),
 };

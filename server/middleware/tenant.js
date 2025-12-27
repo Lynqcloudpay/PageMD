@@ -106,6 +106,7 @@ const resolveTenant = async (req, res, next) => {
 
         // 5. Run Request within Context
         // Use enterWith to ensure context persists through Express's asynchronous middleware ticks
+        client.tenantSchema = schema_name;
         pool.dbStorage.enterWith(client);
 
         const cleanup = async () => {
