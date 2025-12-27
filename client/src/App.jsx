@@ -30,6 +30,7 @@ import { TaskProvider } from './context/TaskContext'
 import { PlatformAdminProvider } from './context/PlatformAdminContext'
 import PlatformAdminLogin from './pages/PlatformAdminLogin'
 import PlatformAdminDashboard from './pages/PlatformAdminDashboard'
+import PlatformAdminClinics from './pages/PlatformAdminClinics'
 
 // Patient Redirect Component - redirects /patient/:id to /patient/:id/snapshot
 const PatientRedirect = () => {
@@ -93,6 +94,13 @@ function App() {
                                             {/* Platform Admin Routes */}
                                             <Route path="/platform-admin/login" element={<PlatformAdminLogin />} />
                                             <Route path="/platform-admin/dashboard" element={<PlatformAdminDashboard />} />
+                                            <Route path="/platform-admin/clinics" element={<PlatformAdminClinics />} />
+                                            <Route path="/platform-admin/revenue" element={<PlatformAdminClinics />} />
+                                            <Route path="/platform-admin/support" element={<PlatformAdminClinics />} />
+                                            <Route path="/platform-admin/team" element={<PlatformAdminClinics />} />
+                                            <Route path="/platform-admin/database" element={<PlatformAdminClinics />} />
+                                            <Route path="/platform-admin/settings" element={<PlatformAdminClinics />} />
+                                            <Route path="/platform-admin/system" element={<PlatformAdminClinics />} />
 
                                             {/* Regular EMR Routes */}
                                             <Route path="/login" element={<Login />} />
