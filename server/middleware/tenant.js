@@ -19,7 +19,10 @@ const resolveTenant = async (req, res, next) => {
     }
 
     // Skip tenant resolution for Platform Admin routes
-    if (req.path.startsWith('/api/super/') || req.path.startsWith('/api/platform-auth/')) {
+    // Middleware is mounted at /api, so req.path is relative (e.g., /platform-auth/login)
+    // We check both with and without /api prefix to be safe for different router configs
+    if (req.path.startsWith('/super/') || req.path.startsWith('/platform-auth/') ||
+        req.path.startsWith('/api/super/') || req.path.startsWith('/api/platform-auth/')) {
         return next();
     }
 
