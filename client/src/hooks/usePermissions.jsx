@@ -22,7 +22,20 @@ export function usePermissions() {
    * @returns {boolean}
    */
   const can = useCallback((permissionKey) => {
-    if (!user || !user.permissions || !Array.isArray(user.permissions)) {
+    if (!user) return false;
+
+    // Admin users always have all permissions
+    // Check multiple possible admin flags - be very explicit about boolean checks
+    const isAdmin = user.isAdmin === true ||
+      user.is_admin === true ||
+      user.is_admin === 't' ||
+      user.is_admin === 'true' ||
+      user.role_name?.toUpperCase() === 'ADMIN' ||
+      user.role?.toUpperCase() === 'ADMIN';
+
+    if (isAdmin) return true;
+
+    if (!user.permissions || !Array.isArray(user.permissions)) {
       return false;
     }
     return user.permissions.includes(permissionKey);

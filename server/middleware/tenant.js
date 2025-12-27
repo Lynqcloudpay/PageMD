@@ -91,7 +91,7 @@ const resolveTenant = async (req, res, next) => {
             return res.status(404).json({ error: `Clinic access denied or clinic inactive.` });
         }
 
-        const { id, schema_name } = tenantInfo;
+        const { id, schema_name, slug: resolvedSlug } = tenantInfo;
 
         // 4. Start Transaction Wrapper
         client = await pool.controlPool.connect();
@@ -99,13 +99,10 @@ const resolveTenant = async (req, res, next) => {
         await client.query('BEGIN');
 
         // Critical Security Step: Set Search Path
-        // We use a parameterized query for the schema name to be safe, 
-        // though schema_name comes from our trusted DB.
-        // SET LOCAL is scoped to the transaction.
         await client.query(`SET LOCAL search_path TO ${schema_name}, public`);
 
         // Attach clinic info
-        req.clinic = { id, slug, schema_name };
+        req.clinic = { id, slug: resolvedSlug, schema_name };
 
         // 5. Run Request within Context
         // Use enterWith to ensure context persists through Express's asynchronous middleware ticks

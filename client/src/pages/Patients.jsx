@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, User, Clock, Calendar, Plus, ChevronRight } from 'lucide-react';
 import { patientsAPI } from '../services/api';
 import { usePatient } from '../context/PatientContext';
+import { useAuth } from '../context/AuthContext';
 import AddPatientModal from '../components/AddPatientModal';
 import { format, parseISO } from 'date-fns';
 
@@ -15,17 +16,22 @@ const Patients = () => {
     const [loading, setLoading] = useState(false);
     const [recentlyViewed, setRecentlyViewed] = useState([]);
 
-    // Load recently viewed from local storage
+    // Load recently viewed from local storage - scoped by clinic
+    const { user } = useAuth();
+    const storageKey = user?.id ? `recentPatients_${user.id}` : 'recentPatients';
+
     useEffect(() => {
         try {
-            const saved = localStorage.getItem('recentPatients');
+            const saved = localStorage.getItem(storageKey);
             if (saved) {
                 setRecentlyViewed(JSON.parse(saved));
+            } else {
+                setRecentlyViewed([]);
             }
         } catch (e) {
             console.error('Failed to load recent patients', e);
         }
-    }, []);
+    }, [storageKey]);
 
     const [showAddModal, setShowAddModal] = useState(false);
 
@@ -87,7 +93,7 @@ const Patients = () => {
             ].slice(0, 10); // Keep last 10
 
             setRecentlyViewed(newRecent);
-            localStorage.setItem('recentPatients', JSON.stringify(newRecent));
+            localStorage.setItem(storageKey, JSON.stringify(newRecent));
         }
 
         navigate(`/patient/${patientId}/snapshot`);
@@ -267,7 +273,7 @@ const Patients = () => {
                                         e.stopPropagation();
                                         if (confirm('Clear recently viewed list?')) {
                                             setRecentlyViewed([]);
-                                            localStorage.removeItem('recentPatients');
+                                            localStorage.removeItem(storageKey);
                                         }
                                     }}
                                     className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
