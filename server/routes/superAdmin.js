@@ -4,15 +4,34 @@ const tenantManager = require('../services/tenantManager');
 
 const router = express.Router();
 
-// Middleware to verify Super Admin status
-// In production, this should check a specific Super Admin JWT or IP whitelist
-const verifySuperAdmin = (req, res, next) => {
-    // Simple check for demonstration; replace with real Super Admin auth
-    const adminSecret = req.headers['x-platform-token'];
-    if (token) {
-        return next();
+// Middleware to verify Platform Admin authentication
+const verifySuperAdmin = async (req, res, next) => {
+    const token = req.headers['x-platform-token'];
+
+    if (!token) {
+        return res.status(401).json({ error: 'Authentication required' });
     }
-    res.status(403).json({ error: 'Access denied. Super Admin credentials required.' });
+
+    try {
+        // Validate session token
+        const result = await pool.controlPool.query(
+            `SELECT sa.* FROM platform_admin_sessions pas
+       JOIN super_admins sa ON pas.admin_id = sa.id
+       WHERE pas.token = $1 AND pas.expires_at > NOW() AND sa.is_active = true`,
+            [token]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(401).json({ error: 'Invalid or expired session' });
+        }
+
+        // Attach admin info to request
+        req.platformAdmin = result.rows[0];
+        next();
+    } catch (error) {
+        console.error('Auth verification error:', error);
+        res.status(500).json({ error: 'Authentication failed' });
+    }
 };
 
 // ═══════════════════════════════════════════════════════════════
