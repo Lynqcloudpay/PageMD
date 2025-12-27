@@ -46,7 +46,7 @@ router.get('/', requireAdmin, async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Users can only view their own profile unless admin
     const isAdmin = await userService.isAdmin(req.user.id);
     if (!isAdmin && req.user.id !== id) {
@@ -72,9 +72,9 @@ router.get('/:id', async (req, res) => {
 router.post('/', requireAdmin, [
   body('email').isEmail().normalizeEmail(),
   body('password').isLength({ min: 8 }),
-  body('firstName').trim().notEmpty(),
-  body('lastName').trim().notEmpty(),
-  body('roleId').isUUID(),
+  // Validation needs to be flexible or check the coalesced values later. 
+  // For now, we'll relax these check here and rely on manual check or DB constraints 
+  // to avoid complex conditional validation logic in express-validator
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -85,18 +85,30 @@ router.post('/', requireAdmin, [
     const {
       email,
       password,
-      firstName,
-      lastName,
-      roleId,
-      professionalType,
+      firstName, first_name,
+      lastName, last_name,
+      roleId, role_id,
+      professionalType, professional_type,
       npi,
-      licenseNumber,
-      licenseState,
-      deaNumber,
-      taxonomyCode,
+      licenseNumber, license_number,
+      licenseState, license_state,
+      deaNumber, dea_number,
+      taxonomyCode, taxonomy_code,
       credentials,
-      isAdmin
+      isAdmin, is_admin
     } = req.body;
+
+    // Coalesce values (prefer snake_case from new frontend, fallback to camelCase)
+    const firstNameFinal = first_name || firstName;
+    const lastNameFinal = last_name || lastName;
+    const roleIdFinal = role_id || roleId;
+
+    if (!firstNameFinal || !lastNameFinal) {
+      return res.status(400).json({ error: 'First name and Last name are required' });
+    }
+    if (!roleIdFinal) {
+      return res.status(400).json({ error: 'Role ID is required' });
+    }
 
     // Validate password strength
     const passwordErrors = validatePassword(password);
@@ -113,29 +125,34 @@ router.post('/', requireAdmin, [
     }
 
     // Validate DEA if provided
-    if (deaNumber) {
-      const deaValidation = userService.validateDEA(deaNumber);
+    const deaNumberFinal = dea_number || deaNumber;
+    if (deaNumberFinal) {
+      const deaValidation = userService.validateDEA(deaNumberFinal);
       if (!deaValidation.valid) {
         return res.status(400).json({ error: deaValidation.error });
       }
     }
 
     // Validate license if provided
-    if (licenseNumber) {
-      const licenseValidation = userService.validateLicense(licenseNumber, licenseState);
+    const licenseNumberFinal = license_number || licenseNumber;
+    const licenseStateFinal = license_state || licenseState;
+
+    if (licenseNumberFinal) {
+      const licenseValidation = userService.validateLicense(licenseNumberFinal, licenseStateFinal);
       if (!licenseValidation.valid) {
         return res.status(400).json({ error: licenseValidation.error });
       }
     }
 
     // Verify role exists
-    const role = await roleService.getRoleById(roleId);
+    const role = await roleService.getRoleById(roleIdFinal);
     if (!role) {
       return res.status(400).json({ error: 'Invalid role' });
     }
 
     // Check if trying to grant admin privileges (only existing admins can grant admin privileges)
-    if (isAdmin === true || isAdmin === 'true') {
+    const isAdminFinal = is_admin || isAdmin;
+    if (isAdminFinal === true || isAdminFinal === 'true') {
       const currentUserIsAdmin = await userService.isAdmin(req.user.id);
       if (!currentUserIsAdmin) {
         return res.status(403).json({ error: 'Only admins can grant admin privileges' });
@@ -145,17 +162,17 @@ router.post('/', requireAdmin, [
     const user = await userService.createUser({
       email,
       password,
-      firstName,
-      lastName,
-      roleId,
-      professionalType,
+      firstName: firstNameFinal,
+      lastName: lastNameFinal,
+      roleId: roleIdFinal,
+      professionalType: professional_type || professionalType,
       npi,
-      licenseNumber,
-      licenseState,
-      deaNumber,
-      taxonomyCode,
+      licenseNumber: licenseNumberFinal,
+      licenseState: licenseStateFinal,
+      deaNumber: deaNumberFinal,
+      taxonomyCode: taxonomy_code || taxonomyCode,
       credentials,
-      isAdmin: isAdmin === true || isAdmin === 'true'
+      isAdmin: isAdminFinal === true || isAdminFinal === 'true'
     });
 
     await logAudit(req.user.id, 'user_created', 'user', user.id, {
@@ -187,7 +204,7 @@ router.put('/:id', [
 
     const { id } = req.params;
     const isAdmin = await userService.isAdmin(req.user.id);
-    
+
     // Users can only update their own profile unless admin
     if (!isAdmin && req.user.id !== id) {
       return res.status(403).json({ error: 'Insufficient permissions' });
@@ -233,7 +250,7 @@ router.put('/:id', [
     console.error('Error updating user:', error);
     console.error('Error details:', error.message, error.stack);
     console.error('Update payload:', JSON.stringify(req.body, null, 2));
-    res.status(400).json({ 
+    res.status(400).json({
       error: error.message || 'Failed to update user',
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
@@ -255,7 +272,7 @@ router.put('/:id/password', [
 
     const { id } = req.params;
     const isAdmin = await userService.isAdmin(req.user.id);
-    
+
     // Users can only change their own password unless admin
     if (!isAdmin && req.user.id !== id) {
       return res.status(403).json({ error: 'Insufficient permissions' });
@@ -340,13 +357,13 @@ router.delete('/:id', requireAdmin, async (req, res) => {
     `, [id]);
 
     const counts = associatedRecords.rows[0];
-    const hasAssociatedRecords = 
+    const hasAssociatedRecords =
       parseInt(counts.visits_count) > 0 ||
       parseInt(counts.signed_notes_count) > 0 ||
       parseInt(counts.messages_count) > 0;
 
     if (hasAssociatedRecords && !force) {
-      return res.status(409).json({ 
+      return res.status(409).json({
         error: 'Cannot delete user with associated clinical records',
         details: {
           visits: parseInt(counts.visits_count),
@@ -355,7 +372,7 @@ router.delete('/:id', requireAdmin, async (req, res) => {
           auditLogs: parseInt(counts.audit_logs_count)
         },
         suggestion: 'For HIPAA compliance, deactivate this user instead of deleting. ' +
-                    'Use PUT /users/:id/status with status="inactive" to preserve audit trails.'
+          'Use PUT /users/:id/status with status="inactive" to preserve audit trails.'
       });
     }
 
@@ -366,15 +383,15 @@ router.delete('/:id', requireAdmin, async (req, res) => {
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
     console.error('Error deleting user:', error);
-    
+
     // Check if it's a foreign key constraint error
     if (error.code === '23503') {
-      return res.status(409).json({ 
+      return res.status(409).json({
         error: 'Cannot delete user with associated records',
         suggestion: 'Deactivate this user instead to preserve audit trails.'
       });
     }
-    
+
     res.status(400).json({ error: error.message || 'Failed to delete user' });
   }
 });
@@ -386,7 +403,7 @@ router.delete('/:id', requireAdmin, async (req, res) => {
 router.get('/:id/privileges', async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     if (!req.user || !req.user.id) {
       return res.status(401).json({ error: 'Authentication required' });
     }
@@ -398,7 +415,7 @@ router.get('/:id/privileges', async (req, res) => {
       console.error('Error checking admin status:', error);
       // Continue - will just check permissions normally
     }
-    
+
     // Users can only view their own privileges unless admin
     if (!isAdmin && req.user.id !== id) {
       return res.status(403).json({ error: 'Insufficient permissions' });

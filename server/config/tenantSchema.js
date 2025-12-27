@@ -365,6 +365,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     actor_ip VARCHAR(45),
     user_agent TEXT,
     actor_user_agent TEXT,
+    outcome VARCHAR(20),
     details JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -480,6 +481,8 @@ CREATE TABLE IF NOT EXISTS settings (
     value TEXT,
     description TEXT,
     category VARCHAR(100),
+    is_public BOOLEAN DEFAULT false,
+    updated_by UUID,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
