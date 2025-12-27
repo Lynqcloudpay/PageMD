@@ -18,19 +18,26 @@ router.post('/login', async (req, res) => {
         }
 
         // Find admin user
+        console.log(`[PlatformAuth] Login attempt for: ${email}`);
         const result = await pool.controlPool.query(
             'SELECT * FROM super_admins WHERE email = $1 AND is_active = true',
             [email]
         );
 
+        console.log(`[PlatformAuth] User found: ${result.rows.length > 0}`);
+
         if (result.rows.length === 0) {
+            console.log('[PlatformAuth] User not found or inactive');
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
         const admin = result.rows[0];
 
         // Verify password
+        console.log(`[PlatformAuth] Verifying password against hash: ${admin.password_hash.substring(0, 10)}...`);
         const isValid = await bcrypt.compare(password, admin.password_hash);
+        console.log(`[PlatformAuth] Password valid: ${isValid}`);
+
         if (!isValid) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
