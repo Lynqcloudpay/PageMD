@@ -127,10 +127,18 @@ CREATE TABLE IF NOT EXISTS patients (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     mrn VARCHAR(50) UNIQUE NOT NULL,
     first_name VARCHAR(100) NOT NULL,
+    middle_name VARCHAR(100),
     last_name VARCHAR(100) NOT NULL,
+    preferred_name VARCHAR(100),
     dob DATE NOT NULL,
+    date_of_birth DATE,
     sex VARCHAR(10) CHECK (sex IN ('M', 'F', 'Other')),
+    gender VARCHAR(50),
+    ssn_encrypted TEXT,
     phone VARCHAR(20),
+    phone_cell VARCHAR(20),
+    phone_home VARCHAR(20),
+    phone_work VARCHAR(20),
     email VARCHAR(255),
     address_line1 VARCHAR(255),
     address_line2 VARCHAR(255),
@@ -138,18 +146,31 @@ CREATE TABLE IF NOT EXISTS patients (
     state VARCHAR(50),
     zip VARCHAR(20),
     primary_care_provider UUID REFERENCES users(id),
+    emergency_contact_name VARCHAR(255),
+    emergency_contact_phone VARCHAR(20),
+    emergency_contact_relationship VARCHAR(100),
     insurance_provider VARCHAR(255),
     insurance_id VARCHAR(100),
+    insurance_group_number VARCHAR(100),
+    insurance_member_id VARCHAR(100),
     pharmacy_name VARCHAR(255),
     pharmacy_address TEXT,
     pharmacy_phone VARCHAR(20),
     photo_url TEXT,
+    preferred_language VARCHAR(50),
+    ethnicity VARCHAR(100),
+    race VARCHAR(100),
+    marital_status VARCHAR(50),
+    clinic_id UUID,
+    deceased BOOLEAN DEFAULT FALSE,
+    deceased_date DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_patients_mrn ON patients(mrn);
 CREATE INDEX IF NOT EXISTS idx_patients_name ON patients(last_name, first_name);
+
 
 -- ============================================
 -- CLINICAL TABLES
@@ -216,6 +237,19 @@ CREATE TABLE IF NOT EXISTS social_history (
     diet VARCHAR(100),
     occupation VARCHAR(255),
     living_situation VARCHAR(255),
+    marital_status VARCHAR(50),
+    education_level VARCHAR(100),
+    employment_status VARCHAR(100),
+    physical_activity VARCHAR(255),
+    diet_notes TEXT,
+    sleep_hours_per_night INTEGER,
+    caffeine_use VARCHAR(255),
+    stress_level VARCHAR(50),
+    social_support TEXT,
+    travel_history TEXT,
+    pets TEXT,
+    hobbies TEXT,
+    safety_concerns TEXT,
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -237,6 +271,10 @@ CREATE TABLE IF NOT EXISTS visits (
     note_signed_at TIMESTAMP,
     addendums JSONB,
     locked BOOLEAN DEFAULT false,
+    status VARCHAR(50) DEFAULT 'draft',
+    encounter_date DATE,
+    note_type VARCHAR(100),
+    clinic_id UUID,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -270,6 +308,7 @@ CREATE TABLE IF NOT EXISTS orders (
     reviewed_by UUID REFERENCES users(id),
     comment TEXT,
     comments JSONB DEFAULT '[]'::jsonb,
+    clinic_id UUID,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -345,6 +384,14 @@ CREATE TABLE IF NOT EXISTS appointments (
     status VARCHAR(50) DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'confirmed', 'checked-in', 'in-progress', 'completed', 'cancelled', 'no-show')),
     notes TEXT,
     created_by UUID NOT NULL REFERENCES users(id),
+    clinic_id UUID,
+    patient_status VARCHAR(50) DEFAULT 'scheduled',
+    room_sub_status VARCHAR(50),
+    current_room VARCHAR(20),
+    arrival_time TIMESTAMP,
+    checkout_time TIMESTAMP,
+    cancellation_reason TEXT,
+    status_history JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -525,9 +572,22 @@ CREATE TABLE IF NOT EXISTS cancellation_followups (
     reason TEXT,
     addressed_by UUID REFERENCES users(id),
     addressed_at TIMESTAMP,
+    dismissed_by UUID REFERENCES users(id),
+    dismissed_at TIMESTAMP,
+    dismiss_reason TEXT,
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS cancellation_followup_notes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    followup_id UUID NOT NULL,
+    note TEXT NOT NULL,
+    note_type VARCHAR(50) DEFAULT 'general',
+    created_by UUID,
+    created_by_name VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 `;
 
