@@ -178,7 +178,48 @@ class TenantManager {
             SET search_path TO public;
         `);
     }
+
+    /**
+     * Deprovision a clinic (Delete everything)
+     */
+    async deprovisionClinic(clinicId) {
+        const client = await controlPool.connect();
+        try {
+            await client.query('BEGIN');
+
+            // 1. Get schema name
+            const result = await client.query('SELECT schema_name, slug FROM clinics WHERE id = $1', [clinicId]);
+            if (result.rows.length === 0) {
+                throw new Error('Clinic not found');
+            }
+
+            const { schema_name, slug } = result.rows[0];
+
+            // 2. Drop the Physical Schema
+            // Security: schema_name is stored in our trusted control_db and validated on creation.
+            if (schema_name && schema_name.startsWith('tenant_')) {
+                await client.query(`DROP SCHEMA IF EXISTS ${schema_name} CASCADE`);
+            }
+
+            // 3. Delete Clinic Record
+            await client.query('DELETE FROM clinics WHERE id = $1', [clinicId]);
+
+            // 4. Log the action
+            await client.query(`
+                INSERT INTO platform_audit_logs(action, details)
+                VALUES($1, $2)
+            `, ['clinic_deleted', JSON.stringify({ clinicId, slug, schema_name })]);
+
+            await client.query('COMMIT');
+            return true;
+        } catch (error) {
+            await client.query('ROLLBACK');
+            console.error('[TenantManager] Deprovisioning failed:', error);
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
 }
 
 module.exports = new TenantManager();
-

@@ -174,6 +174,21 @@ router.patch('/clinics/:id/status', verifySuperAdmin, async (req, res) => {
     }
 });
 
+/**
+ * DELETE /api/super/clinics/:id
+ * Fully deletes a clinic and its data
+ */
+router.delete('/clinics/:id', verifySuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        await tenantManager.deprovisionClinic(id);
+        res.json({ message: 'Clinic and all associated data deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting clinic:', error);
+        res.status(500).json({ error: error.message || 'Failed to delete clinic' });
+    }
+});
+
 // Helper to generate secure random password
 const generatePassword = (length = 16) => {
     const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';

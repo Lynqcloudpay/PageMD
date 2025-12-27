@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Building2, Activity, CreditCard, Shield, Settings, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Building2, Activity, CreditCard, Shield, Settings, AlertTriangle, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import { usePlatformAdmin } from '../context/PlatformAdminContext';
 
 const PlatformAdminClinicDetails = () => {
@@ -11,6 +11,7 @@ const PlatformAdminClinicDetails = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [statusUpdating, setStatusUpdating] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
     useEffect(() => {
         loadClinic();
@@ -24,6 +25,27 @@ const PlatformAdminClinicDetails = () => {
             setError(err.response?.data?.error || 'Failed to load clinic details');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDeleteClinic = async () => {
+        const confirm1 = confirm("⚠️ WARNING: This will PERMANENTLY DELETE the clinic and ALL of its clinical data (patients, visits, etc.). This cannot be undone.");
+        if (!confirm1) return;
+
+        const confirm2 = prompt("To confirm deletion, type the clinic slug below:");
+        if (confirm2 !== clinicData.clinic.slug) {
+            alert("Slug mismatch. Deletion cancelled.");
+            return;
+        }
+
+        setDeleting(true);
+        try {
+            await apiCall('DELETE', `/clinics/${id}`);
+            alert("Clinic successfully deleted.");
+            navigate('/platform-admin/clinics');
+        } catch (err) {
+            alert(err.response?.data?.error || 'Failed to delete clinic');
+            setDeleting(false);
         }
     };
 
@@ -85,8 +107,8 @@ const PlatformAdminClinicDetails = () => {
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-6 mb-6 shadow-2xl relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${clinic.status === 'active' ? 'bg-green-500/20 text-green-300 border-green-500/30' :
-                                clinic.status === 'suspended' ? 'bg-red-500/20 text-red-300 border-red-500/30' :
-                                    'bg-slate-500/20 text-slate-300 border-slate-500/30'
+                            clinic.status === 'suspended' ? 'bg-red-500/20 text-red-300 border-red-500/30' :
+                                'bg-slate-500/20 text-slate-300 border-slate-500/30'
                             }`}>
                             {clinic.status}
                         </span>
@@ -181,7 +203,7 @@ const PlatformAdminClinicDetails = () => {
                             <div className="space-y-3">
                                 {clinic.status !== 'active' && (
                                     <button
-                                        disabled={statusUpdating}
+                                        disabled={statusUpdating || deleting}
                                         onClick={() => handleStatusChange('active')}
                                         className="w-full flex items-center justify-center gap-2 p-3 bg-green-600 hover:bg-green-500 rounded-lg text-white font-medium transition-colors disabled:opacity-50"
                                     >
@@ -192,7 +214,7 @@ const PlatformAdminClinicDetails = () => {
 
                                 {clinic.status !== 'suspended' && (
                                     <button
-                                        disabled={statusUpdating}
+                                        disabled={statusUpdating || deleting}
                                         onClick={() => handleStatusChange('suspended')}
                                         className="w-full flex items-center justify-center gap-2 p-3 bg-amber-600 hover:bg-amber-500 rounded-lg text-white font-medium transition-colors disabled:opacity-50"
                                     >
@@ -203,14 +225,25 @@ const PlatformAdminClinicDetails = () => {
 
                                 {clinic.status !== 'deactivated' && (
                                     <button
-                                        disabled={statusUpdating}
+                                        disabled={statusUpdating || deleting}
                                         onClick={() => handleStatusChange('deactivated')}
-                                        className="w-full flex items-center justify-center gap-2 p-3 bg-red-900/50 border border-red-500/30 hover:bg-red-900/80 rounded-lg text-red-300 font-medium transition-colors disabled:opacity-50"
+                                        className="w-full flex items-center justify-center gap-2 p-3 bg-slate-700 hover:bg-slate-600 rounded-lg text-white font-medium transition-colors disabled:opacity-50"
                                     >
                                         <XCircle className="w-4 h-4" />
                                         Deactivate
                                     </button>
                                 )}
+
+                                <div className="pt-4 mt-4 border-t border-white/10">
+                                    <button
+                                        disabled={statusUpdating || deleting}
+                                        onClick={handleDeleteClinic}
+                                        className="w-full flex items-center justify-center gap-2 p-3 bg-transparent border border-red-500/50 hover:bg-red-500/10 rounded-lg text-red-400 text-sm font-medium transition-all duration-200"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                        {deleting ? 'Deleting...' : 'Permanently Delete Clinic'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
