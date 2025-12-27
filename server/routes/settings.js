@@ -9,8 +9,47 @@ const { body, validationResult } = require('express-validator');
 const { authenticate, logAudit } = require('../middleware/auth');
 const { requireAdmin, requirePrivilege } = require('../middleware/authorization');
 const pool = require('../db');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 const router = express.Router();
+
+// Configure multer for clinic logos
+const baseUploadDir = process.env.UPLOAD_DIR || './uploads';
+const logoUploadDir = path.join(baseUploadDir, 'clinic-logos');
+if (!fs.existsSync(logoUploadDir)) {
+  fs.mkdirSync(logoUploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    if (!fs.existsSync(logoUploadDir)) {
+      fs.mkdirSync(logoUploadDir, { recursive: true });
+    }
+    cb(null, logoUploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const prefix = req.clinic ? `clinic-${req.clinic.id}` : 'practice';
+    cb(null, `${prefix}-logo-${uniqueSuffix}${path.extname(file.originalname)}`);
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (extname && mimetype) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
 
 // Basic settings accessible to most authenticated users (with specific permissions)
 router.get('/practice', authenticate, async (req, res) => {
@@ -230,6 +269,47 @@ adminRouter.put('/practice', [
   } catch (error) {
     console.error('Error updating practice settings:', error);
     res.status(500).json({ error: 'Failed to update practice settings' });
+  }
+});
+
+/**
+ * POST /settings/practice/logo
+ * Upload practice logo
+ */
+adminRouter.post('/practice/logo', upload.single('logo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const logoUrl = `/api/uploads/clinic-logos/${req.file.filename}`;
+
+    if (req.clinic) {
+      // Update Control DB
+      await pool.controlPool.query(
+        'UPDATE clinics SET logo_url = $1 WHERE id = $2',
+        [logoUrl, req.clinic.id]
+      );
+    } else {
+      // Update local DB
+      const existing = await pool.query('SELECT id FROM practice_settings LIMIT 1');
+      if (existing.rows.length > 0) {
+        await pool.query(
+          'UPDATE practice_settings SET logo_url = $1, updated_at = CURRENT_TIMESTAMP, updated_by = $2 WHERE id = $3',
+          [logoUrl, req.user.id, existing.rows[0].id]
+        );
+      } else {
+        await pool.query(
+          'INSERT INTO practice_settings (logo_url, updated_by) VALUES ($1, $2)',
+          [logoUrl, req.user.id]
+        );
+      }
+    }
+
+    res.json({ logo_url: logoUrl });
+  } catch (error) {
+    console.error('Error uploading practice logo:', error);
+    res.status(500).json({ error: 'Failed to upload practice logo' });
   }
 });
 

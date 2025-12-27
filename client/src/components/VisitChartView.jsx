@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Printer, Calendar, User, Phone, Mail, MapPin, Stethoscope, CheckCircle2, CreditCard, Building2, Users, FilePlus, Receipt, DollarSign } from 'lucide-react';
+import { X, Printer, Calendar, User, Phone, Mail, MapPin, Stethoscope, CheckCircle2, CreditCard, Building2, Users, FilePlus, Receipt, DollarSign, Globe } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { visitsAPI, patientsAPI, billingAPI, codesAPI, superbillsAPI, settingsAPI } from '../services/api';
 import { format } from 'date-fns';
@@ -466,84 +466,173 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                         </div>
                     </div>
 
-                    <div id="visit-chart-view" className="flex-1 overflow-y-auto bg-white py-6 px-8 max-w-4xl mx-auto rounded-2xl print:!max-w-none print:!mx-0 print:!p-0 print:!rounded-none print:!w-full">
-                        <div className="mb-4 bg-blue-50/90 border-b-2 border-gray-300 rounded-t-lg shadow-sm">
-                            <div className="px-5 py-3">
-                                <div className="flex items-center justify-between gap-4 mb-3 pb-3 border-b border-gray-300">
-                                    <div className="flex items-center gap-1 flex-1">
-                                        <div className="flex-shrink-0">
-                                            <img src={clinicInfo.logo} alt="Clinic Logo" className="w-36 h-36 object-contain" onError={(e) => { e.target.style.display = 'none'; }} />
-                                        </div>
-                                        <div className="flex-1 ml-4">
-                                            <div className="flex flex-col gap-0.5 text-[11px] text-gray-700">
-                                                <div className="font-bold text-gray-900 text-[13px] mb-1">{clinicInfo.name}</div>
-                                                {clinicInfo.address.split('\n').map((line, idx) => (
-                                                    <div key={idx}>{line}</div>
-                                                ))}
-                                                <div className="flex items-center gap-1 mt-1"><Phone className="w-3 h-3 text-primary-600" /><span>{clinicInfo.phone}</span></div>
-                                                {clinicInfo.fax && <div className="flex items-center gap-1"><Phone className="w-3 h-3 text-primary-600" /><span>Fax: {clinicInfo.fax}</span></div>}
-                                                {clinicInfo.email && <div className="flex items-center gap-1"><Mail className="w-3 h-3 text-primary-600" /><span>{clinicInfo.email}</span></div>}
-                                                {clinicInfo.website && <div className="flex items-center gap-1"><span className="text-primary-600 font-medium">{clinicInfo.website}</span></div>}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex-shrink-0 text-right border-l border-gray-300 pl-4">
-                                        <div className="text-xs font-semibold text-primary-700 mb-1">{visit.visit_type || 'Office Visit'}</div>
-                                        <div className="text-[10px] text-gray-600 space-y-0.5">
-                                            <div><span className="font-medium">Date:</span> {visitDate}</div>
-                                            <div><span className="font-medium">Provider:</span> {providerName}</div>
-                                        </div>
-                                        {signedDate && (
-                                            <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 border border-green-300 rounded text-[9px]">
-                                                <CheckCircle2 className="w-3 h-3 text-green-600" />
-                                                <span className="font-semibold text-green-700">SIGNED</span>
-                                                <span className="text-green-600">{signedDate}</span>
-                                            </div>
+                    <div id="visit-chart-view" className="flex-1 overflow-y-auto bg-white py-6 px-10 max-w-5xl mx-auto rounded-2xl print:!max-w-none print:!mx-0 print:!p-0 print:!rounded-none print:!w-full">
+                        {/* Dynamic Clinical Header */}
+                        <div className="mb-8 border-b-2 border-slate-200 pb-6">
+                            <div className="flex items-start justify-between gap-6">
+                                {/* Left: Clinic Identity & Demographics */}
+                                <div className="flex items-start gap-6 flex-1">
+                                    <div className="flex-shrink-0 w-28 h-28 flex items-center justify-center bg-slate-50 rounded-xl overflow-hidden border border-slate-100 p-2">
+                                        {clinicInfo.logo ? (
+                                            <img
+                                                src={clinicInfo.logo}
+                                                alt="Clinic Logo"
+                                                className="max-w-full max-h-full object-contain"
+                                                onError={(e) => { e.target.parentElement.style.display = 'none'; }}
+                                            />
+                                        ) : (
+                                            <Building2 className="w-10 h-10 text-slate-300" />
                                         )}
+                                    </div>
+
+                                    <div className="flex-1">
+                                        <h1 className="text-xl font-bold text-slate-900 mb-2 leading-tight">
+                                            {clinicInfo.name}
+                                        </h1>
+                                        <div className="grid grid-cols-1 gap-y-1 text-[11px] text-slate-500 font-medium">
+                                            <div className="text-slate-600 whitespace-pre-line">
+                                                {clinicInfo.address}
+                                            </div>
+                                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
+                                                {clinicInfo.phone && (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Phone className="w-3 h-3 text-slate-400" />
+                                                        <span className="text-slate-700">{clinicInfo.phone}</span>
+                                                    </div>
+                                                )}
+                                                {clinicInfo.fax && (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-[10px] text-slate-400 font-bold">FAX</span>
+                                                        <span className="text-slate-700">{clinicInfo.fax}</span>
+                                                    </div>
+                                                )}
+                                                {clinicInfo.email && (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Mail className="w-3 h-3 text-slate-400" />
+                                                        <span className="text-slate-700">{clinicInfo.email}</span>
+                                                    </div>
+                                                )}
+                                                {clinicInfo.website && (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Globe className="w-3 h-3 text-slate-400" />
+                                                        <span className="text-primary-600 hover:underline cursor-pointer">{clinicInfo.website}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="flex items-start gap-5">
-                                    <div className="flex-shrink-0">
-                                        <h2 className="text-xl font-bold text-gray-900 mb-1.5">{patient.first_name} {patient.last_name}</h2>
-                                        <div className="flex items-center gap-4 text-xs text-gray-700">
-                                            <span><span className="font-semibold">MRN:</span> {patient.mrn}</span>
-                                            <span><span className="font-semibold">DOB:</span> {patientDOB} ({patientAge}y)</span>
-                                            <span><span className="font-semibold">Sex:</span> {patient.sex || 'N/A'}</span>
+                                {/* Right: Visit Information */}
+                                <div className="flex-shrink-0 text-right border-l-2 border-slate-100 pl-8 min-w-[200px]">
+                                    <div className="text-base font-bold text-primary-600 mb-2 uppercase tracking-wide">
+                                        {visit.visit_type || 'Office Visit'}
+                                    </div>
+                                    <div className="space-y-1.5 mb-4">
+                                        <div className="text-xs text-slate-500">
+                                            <span className="font-semibold text-slate-700">Date:</span> {visitDate}
+                                        </div>
+                                        <div className="text-xs text-slate-500">
+                                            <span className="font-semibold text-slate-700">Provider:</span> {providerName}
                                         </div>
                                     </div>
 
-                                    <div className="flex-1 grid grid-cols-3 md:grid-cols-6 gap-x-4 gap-y-2">
-                                        <div>
-                                            <div className="flex items-center gap-1.5 mb-1"><Phone className="w-3 h-3 text-gray-500" /><span className="text-[10px] font-semibold text-gray-600 uppercase">Phone</span></div>
-                                            <div className="text-xs text-gray-900 leading-tight">{formatPhone(patient.phone) || 'Not provided'}</div>
+                                    {signedDate && (
+                                        <div className="inline-flex flex-col items-end">
+                                            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-[10px]">
+                                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                                                <span className="font-bold text-emerald-700">SIGNED</span>
+                                            </div>
+                                            <span className="text-[9px] text-slate-400 mt-1 font-medium">{signedDate}</span>
                                         </div>
-                                        <div>
-                                            <div className="flex items-center gap-1.5 mb-1"><Mail className="w-3 h-3 text-gray-500" /><span className="text-[10px] font-semibold text-gray-600 uppercase">Email</span></div>
-                                            <div className="text-xs text-gray-900 leading-tight truncate">{patient.email || 'Not provided'}</div>
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-1.5 mb-1"><MapPin className="w-3 h-3 text-gray-500" /><span className="text-[10px] font-semibold text-gray-600 uppercase">Address</span></div>
-                                            <div className="text-xs text-gray-900 leading-tight">{formatAddress(patient)}</div>
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-1.5 mb-1"><CreditCard className="w-3 h-3 text-gray-500" /><span className="text-[10px] font-semibold text-gray-600 uppercase">Insurance</span></div>
-                                            <div className="text-xs text-gray-900 leading-tight">{patient.insurance_provider || 'Not on file'}</div>
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-1.5 mb-1"><Building2 className="w-3 h-3 text-gray-500" /><span className="text-[10px] font-semibold text-gray-600 uppercase">Pharmacy</span></div>
-                                            <div className="text-xs text-gray-900 leading-tight">{patient.pharmacy_name || 'Not on file'}</div>
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-1.5 mb-1"><Users className="w-3 h-3 text-gray-500" /><span className="text-[10px] font-semibold text-gray-600 uppercase">Emergency</span></div>
-                                            <div className="text-xs text-gray-900 leading-tight">{patient.emergency_contact_name || 'Not provided'}</div>
-                                        </div>
-                                    </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
 
-                        <div className="space-y-4 bg-white rounded-xl p-6 shadow-sm">
+                        {/* Patient Information Section */}
+                        <div className="mb-10 px-8 py-6 bg-slate-50/50 rounded-2xl border border-slate-100 shadow-sm">
+                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8">
+                                <div className="flex-1">
+                                    <h2 className="text-2xl font-extrabold text-slate-900 leading-tight tracking-tight mb-2">
+                                        {patient.last_name}, {patient.first_name}
+                                    </h2>
+                                    <div className="flex flex-wrap items-center gap-y-2 gap-x-6 text-sm text-slate-500 font-semibold uppercase tracking-wider">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-slate-400 min-w-[32px]">MRN</span>
+                                            <span className="text-slate-900">{patient.mrn}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-slate-400 min-w-[32px]">DOB</span>
+                                            <span className="text-slate-900">{patientDOB} <span className="text-slate-400 font-normal ml-1">({patientAge}y)</span></span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-slate-400 min-w-[32px]">SEX</span>
+                                            <span className="text-slate-900">{patient.sex || 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 pt-6 border-t border-slate-200/80">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="w-6 h-6 rounded-lg bg-white border border-slate-200 flex items-center justify-center shadow-sm">
+                                            <Phone className="w-3.5 h-3.5 text-primary-600" />
+                                        </div>
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Phone</span>
+                                    </div>
+                                    <div className="text-xs font-semibold text-slate-800">{formatPhone(patient.phone) || '—'}</div>
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="w-6 h-6 rounded-lg bg-white border border-slate-200 flex items-center justify-center shadow-sm">
+                                            <Mail className="w-3.5 h-3.5 text-primary-600" />
+                                        </div>
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email</span>
+                                    </div>
+                                    <div className="text-xs font-semibold text-slate-800 truncate" title={patient.email}>{patient.email || '—'}</div>
+                                </div>
+                                <div className="col-span-1">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="w-6 h-6 rounded-lg bg-white border border-slate-200 flex items-center justify-center shadow-sm">
+                                            <MapPin className="w-3.5 h-3.5 text-primary-600" />
+                                        </div>
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Address</span>
+                                    </div>
+                                    <div className="text-xs font-semibold text-slate-800 leading-snug">{formatAddress(patient)}</div>
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="w-6 h-6 rounded-lg bg-white border border-slate-200 flex items-center justify-center shadow-sm">
+                                            <CreditCard className="w-3.5 h-3.5 text-primary-600" />
+                                        </div>
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Insurance</span>
+                                    </div>
+                                    <div className="text-xs font-semibold text-slate-800">{patient.insurance_provider || '—'}</div>
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="w-6 h-6 rounded-lg bg-white border border-slate-200 flex items-center justify-center shadow-sm">
+                                            <Building2 className="w-3.5 h-3.5 text-primary-600" />
+                                        </div>
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pharmacy</span>
+                                    </div>
+                                    <div className="text-xs font-semibold text-slate-800">{patient.pharmacy_name || '—'}</div>
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="w-6 h-6 rounded-lg bg-white border border-slate-200 flex items-center justify-center shadow-sm">
+                                            <Users className="w-3.5 h-3.5 text-primary-600" />
+                                        </div>
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Emergency</span>
+                                    </div>
+                                    <div className="text-xs font-semibold text-slate-800">{patient.emergency_contact_name || '—'}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-8 bg-white">
                             {renderSection('chiefComplaint', true, 'Chief Complaint', noteData.chiefComplaint ? <p className="text-xs text-gray-800 leading-relaxed">{noteData.chiefComplaint}</p> : <p className="text-xs text-gray-500 italic">No chief complaint recorded</p>)}
                             {renderSection('hpi', true, 'History of Present Illness', noteData.hpi ? <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{noteData.hpi}</p> : <p className="text-xs text-gray-500 italic">No history of present illness recorded</p>)}
                             {renderSection('ros', true, 'Review of Systems', noteData.rosNotes ? <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.rosNotes) }} /> : <p className="text-xs text-gray-500 italic">No review of systems recorded</p>)}

@@ -17,7 +17,7 @@ import {
   Settings, Building2, Users, Shield, Stethoscope, Mail,
   ToggleLeft, ToggleRight, Save, Loader2, AlertCircle, CheckCircle2,
   DollarSign, Database, Activity, Lock, Globe, Clock, Bell,
-  Eye, EyeOff, Server, Zap
+  Eye, EyeOff, Server, Zap, Upload
 } from 'lucide-react';
 import { settingsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -175,8 +175,8 @@ const AdminSettings = () => {
       {/* Save Status */}
       {saveStatus && (
         <div className={`p-4 rounded-lg flex items-center space-x-2 ${saveStatus.type === 'success'
-            ? 'bg-green-50 border border-green-200 text-green-800'
-            : 'bg-red-50 border border-red-200 text-red-800'
+          ? 'bg-green-50 border border-green-200 text-green-800'
+          : 'bg-red-50 border border-red-200 text-red-800'
           }`}>
           {saveStatus.type === 'success' ? (
             <CheckCircle2 className="w-5 h-5" />
@@ -201,8 +201,8 @@ const AdminSettings = () => {
                 setActiveTab(tab.id);
               }}
               className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${activeTab === tab.id
-                  ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                 }`}
             >
               <tab.icon className="w-5 h-5" />
@@ -413,6 +413,69 @@ const PracticeSettingsTab = ({ settings, setSettings, onSave, saving }) => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
               placeholder="https://..."
             />
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t border-gray-200 pt-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Practice Branding</h2>
+        <div className="flex items-start gap-8 px-4 py-2 bg-gray-50/50 rounded-xl border border-gray-100">
+          <div className="flex-shrink-0">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Practice Logo</label>
+            <div className="relative group">
+              <div className="w-40 h-40 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center overflow-hidden bg-white group-hover:border-primary-500 transition-colors shadow-sm">
+                {settings.logo_url ? (
+                  <img src={settings.logo_url} alt="Practice Logo" className="w-full h-full object-contain p-2" />
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-gray-400">
+                    <Building2 className="w-10 h-10" />
+                    <span className="text-[10px] font-medium uppercase tracking-wider">No Logo</span>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById('logo-upload').click()}
+                    className="p-2.5 bg-white rounded-full text-primary-600 hover:bg-primary-50 shadow-lg transform scale-90 group-hover:scale-100 transition-transform"
+                  >
+                    <Upload className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+              <input
+                id="logo-upload"
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={async (e) => {
+                  const file = e.target.files[0];
+                  if (!file) return;
+
+                  const formData = new FormData();
+                  formData.append('logo', file);
+
+                  try {
+                    const response = await settingsAPI.uploadPracticeLogo(formData);
+                    updateField('logo_url', response.data.logo_url);
+                  } catch (error) {
+                    console.error('Error uploading logo:', error);
+                    alert('Failed to upload logo');
+                  }
+                }}
+              />
+            </div>
+            <p className="text-[10px] text-gray-400 mt-2 text-center">PNG, JPG or SVG (max 2MB)</p>
+          </div>
+          <div className="flex-1 pt-8">
+            <h4 className="text-sm font-semibold text-gray-800 mb-2">Branding Guidelines</h4>
+            <p className="text-xs text-gray-600 leading-relaxed mb-4">
+              Your practice logo appears on all patient-facing documents and official visit notes.
+              Upload a high-quality logo to ensure your clinical documentation looks professional.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <span className="px-2 py-1 bg-white border border-gray-200 rounded text-[10px] text-gray-500">Transparent Background Preferred</span>
+              <span className="px-2 py-1 bg-white border border-gray-200 rounded text-[10px] text-gray-500">Square or Horizontal Layout</span>
+            </div>
           </div>
         </div>
       </div>
@@ -1055,8 +1118,8 @@ const FeaturesTab = ({ features, onToggle }) => {
                   <button
                     onClick={() => onToggle(feature.feature_key, !feature.enabled)}
                     className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${feature.enabled
-                        ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                       }`}
                   >
                     {feature.enabled ? (

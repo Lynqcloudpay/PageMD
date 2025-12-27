@@ -423,6 +423,9 @@ export const settingsAPI = {
   getPractice: () => api.get('/settings/practice'),
   getLocations: () => api.get('/settings/locations'),
   updatePractice: (data) => api.put('/settings/practice', data),
+  uploadPracticeLogo: (formData) => api.post('/settings/practice/logo', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
 
   // Security settings
   getSecurity: () => api.get('/settings/security'),
