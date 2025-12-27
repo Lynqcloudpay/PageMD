@@ -62,7 +62,7 @@ const resolveTenant = async (req, res, next) => {
     }
 
     // Default Fallback (Legacy Support)
-    if (!slug && !lookupSchema) slug = 'default';
+    if (!slug && !lookupSchema) slug = 'test';
 
     // 3. Lookup Tenant Schema
     let client = null;
