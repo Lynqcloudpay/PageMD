@@ -17,6 +17,10 @@ async function migrate() {
 
         console.log('--- Creating Governance Tables ---');
 
+        // Reset tables to ensure schema match (Phase 2 fresh start)
+        await client.query('DROP TABLE IF EXISTS platform_role_template_privileges');
+        await client.query('DROP TABLE IF EXISTS platform_role_templates');
+
         // 1. Role Templates
         await client.query(`
       CREATE TABLE IF NOT EXISTS platform_role_templates (
