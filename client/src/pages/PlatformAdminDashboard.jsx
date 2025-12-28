@@ -287,12 +287,12 @@ const PlatformAdminDashboard = () => {
                             </button>
 
                             <button
-                                onClick={() => handleNavigation('/platform-admin/database')}
-                                className="group p-5 rounded-xl bg-gradient-to-br from-cyan-50 to-cyan-100/50 border border-cyan-200/60 hover:border-cyan-300 hover:shadow-lg hover:shadow-cyan-500/10 transition-all"
+                                onClick={() => handleNavigation('/platform-admin/roles')}
+                                className="group p-5 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100/50 border border-indigo-200/60 hover:border-indigo-300 hover:shadow-lg hover:shadow-indigo-500/10 transition-all"
                             >
-                                <Database className="w-10 h-10 text-cyan-600 mb-3" />
-                                <p className="text-sm font-bold text-slate-800 mb-1">Database Control</p>
-                                <p className="text-[11px] text-slate-500">Monitor instances</p>
+                                <Shield className="w-10 h-10 text-indigo-600 mb-3" />
+                                <p className="text-sm font-bold text-slate-800 mb-1">Role Governance</p>
+                                <p className="text-[11px] text-slate-500">Global templates & drift</p>
                             </button>
 
                             <button

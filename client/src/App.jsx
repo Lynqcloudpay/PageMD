@@ -35,6 +35,7 @@ import PlatformAdminClinics from './pages/PlatformAdminClinics'
 import PlatformAdminTeam from './pages/PlatformAdminTeam'
 import PlatformAdminProfile from './pages/PlatformAdminProfile'
 import PlatformAdminClinicDetails from './pages/PlatformAdminClinicDetails'
+import PlatformAdminRoles from './pages/PlatformAdminRoles'
 import ImpersonateHandler from './pages/ImpersonateHandler'
 
 // Patient Redirect Component - redirects /patient/:id to /patient/:id/snapshot
@@ -101,6 +102,7 @@ function App() {
                                             <Route path="/platform-admin/dashboard" element={<PlatformAdminDashboard />} />
                                             <Route path="/platform-admin/clinics" element={<PlatformAdminClinics />} />
                                             <Route path="/platform-admin/clinics/:id" element={<PlatformAdminClinicDetails />} />
+                                            <Route path="/platform-admin/roles" element={<PlatformAdminRoles />} />
                                             {/* <Route path="/platform-admin/revenue" element={<PlatformAdminRevenue />} /> */}
                                             {/* <Route path="/platform-admin/support" element={<PlatformAdminSupport />} /> */}
                                             <Route path="/platform-admin/team" element={<PlatformAdminTeam />} />

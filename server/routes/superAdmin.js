@@ -733,4 +733,177 @@ router.post('/clinics/:id/impersonate', verifySuperAdmin, async (req, res) => {
     }
 });
 
+/**
+ * ROLE GOVERNANCE & TEMPLATES
+ */
+
+/**
+ * GET /api/super/governance/roles
+ * List all global role templates
+ */
+router.get('/governance/roles', verifySuperAdmin, async (req, res) => {
+    try {
+        const templates = await pool.controlPool.query(`
+            SELECT t.*, 
+                   COALESCE(json_agg(tp.privilege_name) FILTER (WHERE tp.privilege_name IS NOT NULL), '[]') as privileges
+            FROM platform_role_templates t
+            LEFT JOIN platform_role_template_privileges tp ON t.id = tp.template_id
+            GROUP BY t.id
+            ORDER BY t.name
+        `);
+        res.json(templates.rows);
+    } catch (error) {
+        console.error('Error fetching role templates:', error);
+        res.status(500).json({ error: 'Failed to fetch role templates' });
+    }
+});
+
+/**
+ * GET /api/super/clinics/:id/governance/drift
+ * Detect permission drift for a specific clinic
+ */
+router.get('/clinics/:id/governance/drift', verifySuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // 1. Get clinic info (schema name)
+        const clinicRes = await pool.controlPool.query('SELECT schema_name FROM clinics WHERE id = $1', [id]);
+        if (clinicRes.rows.length === 0) return res.status(404).json({ error: 'Clinic not found' });
+        const schema = clinicRes.rows[0].schema_name;
+
+        // 2. Fetch global templates
+        const templatesRes = await pool.controlPool.query(`
+            SELECT t.name as template_name, tp.privilege_name
+            FROM platform_role_templates t
+            JOIN platform_role_template_privileges tp ON t.id = tp.template_id
+        `);
+
+        // 3. Fetch clinic's actual roles and privileges
+        const clinicRolesRes = await pool.controlPool.query(`
+            SELECT r.name as role_name, p.name as privilege_name
+            FROM ${schema}.roles r
+            JOIN ${schema}.role_privileges rp ON r.id = rp.role_id
+            JOIN ${schema}.privileges p ON rp.privilege_id = p.id
+        `);
+
+        // 4. Calculate drift
+        const templates = {};
+        templatesRes.rows.forEach(r => {
+            if (!templates[r.template_name]) templates[r.template_name] = new Set();
+            templates[r.template_name].add(r.privilege_name);
+        });
+
+        const clinicRoles = {};
+        clinicRolesRes.rows.forEach(r => {
+            if (!clinicRoles[r.role_name]) clinicRoles[r.role_name] = new Set();
+            clinicRoles[r.role_name].add(r.privilege_name);
+        });
+
+        const driftReports = [];
+        for (const [tplName, tplPrivs] of Object.entries(templates)) {
+            const actualPrivs = clinicRoles[tplName];
+
+            if (!actualPrivs) {
+                driftReports.push({
+                    roleName: tplName,
+                    status: 'missing',
+                    missingPrivileges: Array.from(tplPrivs),
+                    extraPrivileges: []
+                });
+                continue;
+            }
+
+            const missing = Array.from(tplPrivs).filter(p => !actualPrivs.has(p));
+            const extra = Array.from(actualPrivs).filter(p => !tplPrivs.has(p));
+
+            if (missing.length > 0 || extra.length > 0) {
+                driftReports.push({
+                    roleName: tplName,
+                    status: 'drifted',
+                    missingPrivileges: missing,
+                    extraPrivileges: extra
+                });
+            } else {
+                driftReports.push({
+                    roleName: tplName,
+                    status: 'synced',
+                    missingPrivileges: [],
+                    extraPrivileges: []
+                });
+            }
+        }
+
+        res.json({ clinicId: id, drift: driftReports });
+    } catch (error) {
+        console.error('Error detecting drift:', error);
+        res.status(500).json({ error: 'Failed to detect permission drift' });
+    }
+});
+
+/**
+ * POST /api/super/clinics/:id/governance/sync
+ * Repair/Sync a specific role in a clinic to match the global template
+ */
+router.post('/clinics/:id/governance/sync', verifySuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { roleName } = req.body;
+
+        if (!roleName) return res.status(400).json({ error: 'Role name required' });
+
+        const clinicRes = await pool.controlPool.query('SELECT schema_name FROM clinics WHERE id = $1', [id]);
+        if (clinicRes.rows.length === 0) return res.status(404).json({ error: 'Clinic not found' });
+        const schema = clinicRes.rows[0].schema_name;
+
+        const tplRes = await pool.controlPool.query(`
+            SELECT tp.privilege_name
+            FROM platform_role_templates t
+            JOIN platform_role_template_privileges tp ON t.id = tp.template_id
+            WHERE t.name = $1
+        `, [roleName]);
+
+        if (tplRes.rows.length === 0) return res.status(404).json({ error: 'Template not found' });
+        const targetPrivs = tplRes.rows.map(r => r.privilege_name);
+
+        await pool.controlPool.query('BEGIN');
+
+        try {
+            let rRes = await pool.controlPool.query(`SELECT id FROM ${schema}.roles WHERE name = $1`, [roleName]);
+            let roleId;
+            if (rRes.rows.length === 0) {
+                const newRole = await pool.controlPool.query(`INSERT INTO ${schema}.roles (name, description) VALUES ($1, $2) RETURNING id`, [roleName, `Synced from Global Template: ${roleName}`]);
+                roleId = newRole.rows[0].id;
+            } else {
+                roleId = rRes.rows[0].id;
+            }
+
+            await pool.controlPool.query(`DELETE FROM ${schema}.role_privileges WHERE role_id = $1`, [roleId]);
+
+            for (const pName of targetPrivs) {
+                const pRes = await pool.controlPool.query(`SELECT id FROM ${schema}.privileges WHERE name = $1`, [pName]);
+                if (pRes.rows.length > 0) {
+                    await pool.controlPool.query(`
+                        INSERT INTO ${schema}.role_privileges (role_id, privilege_id) 
+                        VALUES ($1, $2)
+                    `, [roleId, pRes.rows[0].id]);
+                }
+            }
+
+            await pool.controlPool.query(`
+                INSERT INTO platform_audit_logs (action, target_clinic_id, details)
+                VALUES ($1, $2, $3)
+            `, ['role_template_synced', id, JSON.stringify({ roleName, adminEmail: req.platformAdmin.email })]);
+
+            await pool.controlPool.query('COMMIT');
+            res.json({ message: `Role ${roleName} synced successfully` });
+        } catch (innerError) {
+            await pool.controlPool.query('ROLLBACK');
+            throw innerError;
+        }
+    } catch (error) {
+        console.error('Error syncing role:', error);
+        res.status(500).json({ error: 'Failed to sync role' });
+    }
+});
+
 module.exports = router;

@@ -161,6 +161,87 @@ const ClinicPersonnelManager = ({ clinicId, clinicSlug, apiCall }) => {
 };
 
 
+const DriftManager = ({ clinicId, apiCall }) => {
+    const [drift, setDrift] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [syncing, setSyncing] = useState(null);
+
+    useEffect(() => {
+        loadDrift();
+    }, [clinicId]);
+
+    const loadDrift = async () => {
+        try {
+            const data = await apiCall('GET', `/clinics/${clinicId}/governance/drift`);
+            setDrift(data.drift);
+        } catch (err) {
+            console.error('Failed to load drift:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSync = async (roleName) => {
+        if (!confirm(`Are you sure you want to FORCE SYNC the ${roleName} role? This will overwrite clinic-level customizations to match global standards.`)) return;
+
+        setSyncing(roleName);
+        try {
+            await apiCall('POST', `/clinics/${clinicId}/governance/sync`, { roleName });
+            await loadDrift();
+        } catch (err) {
+            alert(err.response?.data?.error || 'Failed to sync role');
+        } finally {
+            setSyncing(null);
+        }
+    };
+
+    if (loading) return <div className="text-slate-400 text-sm animate-pulse p-4">Auditing permission schemas...</div>;
+
+    return (
+        <div className="space-y-4">
+            {drift.map((report) => (
+                <div key={report.roleName} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${report.status === 'synced' ? 'bg-emerald-100 text-emerald-600' :
+                                report.status === 'drifted' ? 'bg-orange-100 text-orange-600' :
+                                    'bg-red-100 text-red-600'
+                            }`}>
+                            <Shield className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                {report.roleName}
+                                <span className={`text-[10px] uppercase px-2 py-0.5 rounded-full font-black tracking-tighter ${report.status === 'synced' ? 'bg-emerald-500/10 text-emerald-500' :
+                                        report.status === 'drifted' ? 'bg-orange-500/10 text-orange-500' :
+                                            'bg-red-500/10 text-red-500'
+                                    }`}>
+                                    {report.status}
+                                </span>
+                            </h4>
+                            <p className="text-[10px] text-slate-500">
+                                {report.status === 'synced' && 'Matches Platform Gold Standard'}
+                                {report.status === 'drifted' && `${report.missingPrivileges.length} Missing, ${report.extraPrivileges.length} Unapproved`}
+                                {report.status === 'missing' && 'Role missing from clinical schema'}
+                            </p>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={() => handleSync(report.roleName)}
+                        disabled={syncing === report.roleName || report.status === 'synced'}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${report.status === 'synced' ? 'bg-emerald-50 text-emerald-600 cursor-default' :
+                                'bg-white border border-slate-200 text-slate-700 hover:border-indigo-500 hover:text-indigo-600 shadow-sm'
+                            }`}
+                    >
+                        {syncing === report.roleName ? 'Syncing...' : report.status === 'synced' ? 'Standardized' : 'Force Sync'}
+                    </button>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+
 const PlatformAdminClinicDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -327,6 +408,19 @@ const PlatformAdminClinicDetails = () => {
                                 <span className="text-xs font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded-lg">Users & Roles</span>
                             </div>
                             <ClinicPersonnelManager clinicId={id} clinicSlug={clinic.slug} apiCall={apiCall} />
+                        </div>
+
+                        {/* Role Governance (New Phase 2 Section) */}
+                        <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl p-6 shadow-lg shadow-slate-200/40 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-indigo-500/10 transition-colors"></div>
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                                    <Shield className="w-6 h-6 text-indigo-500" />
+                                    Role Governance
+                                </h2>
+                                <span className="text-xs font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded-lg">Template Drift</span>
+                            </div>
+                            <DriftManager clinicId={id} apiCall={apiCall} />
                         </div>
 
                         {/* Metrics & Activity */}
