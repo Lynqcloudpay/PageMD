@@ -14,6 +14,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { patientsAPI, messagesAPI, visitsAPI, followupsAPI } from '../services/api';
 import PatientTabs from './PatientTabs';
 import MobileMenu from './MobileMenu';
+import ErrorBoundary from './ErrorBoundary';
 
 const Layout = ({ children }) => {
     const location = useLocation();
