@@ -1000,13 +1000,17 @@ router.patch('/support-tickets/:id', verifySuperAdmin, async (req, res) => {
             return res.status(404).json({ error: 'Ticket not found' });
         }
 
-        // Log the action
-        await AuditService.log(
-            req.platformAdmin.id,
-            'support_ticket_updated',
-            result.rows[0].clinic_id,
-            { ticketId: id, newStatus: status, notes }
-        );
+        // Log the action (non-blocking, don't fail if logging fails)
+        try {
+            await AuditService.log(
+                req.platformAdmin.id,
+                'support_ticket_updated',
+                result.rows[0].clinic_id,
+                { ticketId: id, newStatus: status, notes }
+            );
+        } catch (auditErr) {
+            console.warn('Audit logging failed for ticket update:', auditErr.message);
+        }
 
         res.json(result.rows[0]);
     } catch (error) {
