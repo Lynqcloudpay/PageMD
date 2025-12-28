@@ -38,8 +38,6 @@ if (process.env.DATABASE_URL) {
 
 // --- ENCRYPTION HARDENING (Phase 4) ---
 // In production, we MUST fail if the explicit backup key is missing.
-// We do NOT allow falling back to a JWT-derived key as that is not securely rotated or managed separately.
-
 let BACKUP_ENCRYPTION_KEY;
 
 if (process.env.NODE_ENV === 'production') {
@@ -49,11 +47,25 @@ if (process.env.NODE_ENV === 'production') {
   BACKUP_ENCRYPTION_KEY = process.env.BACKUP_ENCRYPTION_KEY;
 } else {
   // Development Fallback
+  // ...
   if (process.env.BACKUP_ENCRYPTION_KEY) {
     BACKUP_ENCRYPTION_KEY = process.env.BACKUP_ENCRYPTION_KEY;
   } else {
-    console.warn('⚠️  Using insecure fallback encryption key (DEV mode only).');
+    // ...
     BACKUP_ENCRYPTION_KEY = crypto.scryptSync(process.env.JWT_SECRET || 'dev-secret', 'backup-salt', 32);
+  }
+}
+
+// Normalize Key to Buffer (32 bytes for AES-256)
+if (typeof BACKUP_ENCRYPTION_KEY === 'string') {
+  if (BACKUP_ENCRYPTION_KEY.length === 64 && /^[0-9a-fA-F]+$/.test(BACKUP_ENCRYPTION_KEY)) {
+    // Hex String
+    BACKUP_ENCRYPTION_KEY = Buffer.from(BACKUP_ENCRYPTION_KEY, 'hex');
+  } else if (BACKUP_ENCRYPTION_KEY.length !== 32) {
+    // If not 32 chars (bytes) and not 64 chars (hex), try scrypt to derive a valid key from the passphrase
+    // This is safer than failing or using padding
+    console.warn(`WARNING: BACKUP_ENCRYPTION_KEY length is ${BACKUP_ENCRYPTION_KEY.length} (expected 32 bytes or 64 hex chars). Deriving key via scrypt...`);
+    BACKUP_ENCRYPTION_KEY = crypto.scryptSync(BACKUP_ENCRYPTION_KEY, 'salt', 32);
   }
 }
 
@@ -61,6 +73,7 @@ if (process.env.NODE_ENV === 'production') {
  * Encrypt backup file
  */
 function encryptBackup(inputPath, outputPath) {
+  // ...
   return new Promise((resolve, reject) => {
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv('aes-256-gcm', BACKUP_ENCRYPTION_KEY, iv);
