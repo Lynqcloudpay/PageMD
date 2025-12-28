@@ -22,7 +22,6 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     const [showAddendumModal, setShowAddendumModal] = useState(false);
     const [addendumText, setAddendumText] = useState('');
     const [showBillingModal, setShowBillingModal] = useState(false);
-    const [feeSchedule, setFeeSchedule] = useState([]);
     const [clinicInfo, setClinicInfo] = useState({
         name: "myHEART Cardiology",
         address: "123 Medical Center Drive, Suite 100\nCity, State 12345",
@@ -56,48 +55,22 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
         return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     };
 
-    // Format phone number to (xxx) xxx-xxxx
-    const formatPhone = (phone) => {
-        if (!phone) return null;
-        const cleaned = phone.replace(/\D/g, '');
-        if (cleaned.length === 10) {
-            return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
-        }
-        return phone;
-    };
-
-    // Format full address for display
-    const formatAddress = (patient) => {
-        if (!patient) return 'Not provided';
-        const parts = [];
-        if (patient.address_line1) parts.push(patient.address_line1);
-        if (patient.city) parts.push(patient.city);
-        if (patient.state) parts.push(patient.state);
-        if (patient.zip) parts.push(patient.zip);
-        return parts.length > 0 ? parts.join(', ') : 'Not provided';
-    };
-
     const parseNoteText = (text) => {
         if (!text || !text.trim()) return { chiefComplaint: '', hpi: '', assessment: '', plan: '', rosNotes: '', peNotes: '' };
         const decodedText = decodeHtmlEntities(text);
 
-        // Parse Chief Complaint
         const chiefComplaintMatch = decodedText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):)/is);
         const chiefComplaint = chiefComplaintMatch ? decodeHtmlEntities(chiefComplaintMatch[1].trim()) : '';
 
-        // Parse HPI
         const hpiMatch = decodedText.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment|Plan):)/is);
         const hpi = hpiMatch ? decodeHtmlEntities(hpiMatch[1].trim()) : '';
 
-        // Parse ROS
         const rosMatch = decodedText.match(/(?:ROS|Review of Systems):\s*(.+?)(?:\n\n|\n(?:PE|Physical|Assessment|Plan):)/is);
         const rosNotes = rosMatch ? decodeHtmlEntities(rosMatch[1].trim()) : '';
 
-        // Parse Physical Exam
         const peMatch = decodedText.match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):)/is);
         const peNotes = peMatch ? decodeHtmlEntities(peMatch[1].trim()) : '';
 
-        // Parse Assessment - capture ALL content from Assessment: until Plan: or end
         let assessment = '';
         const assessmentIndex = decodedText.search(/(?:Assessment|A):\s*/i);
         if (assessmentIndex !== -1) {
@@ -111,7 +84,6 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
             }
         }
 
-        // Parse Plan
         let plan = '';
         const planIndex = decodedText.search(/(?:Plan|P):\s*/i);
         if (planIndex !== -1) {
@@ -129,11 +101,9 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
             plan = planContent.trim();
         }
 
-        // Parse Care Plan
         const carePlanMatch = decodedText.match(/(?:Care Plan|CP):\s*(.+?)(?:\n\n|\n(?:Follow Up|FU):|$)/is);
         const carePlan = carePlanMatch ? decodeHtmlEntities(carePlanMatch[1].trim()) : '';
 
-        // Parse Follow Up
         const followUpMatch = decodedText.match(/(?:Follow Up|FU):\s*(.+?)(?:\n\n|$)/is);
         const followUp = followUpMatch ? decodeHtmlEntities(followUpMatch[1].trim()) : '';
 
@@ -188,17 +158,17 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
         return age;
     };
 
-    const renderSection = (key, condition, title, content) => {
+    const renderSection = (key, condition, title, content, className = "") => {
         if (!condition) return null;
         return (
-            <div key={key} className="relative group">
-                <div className="absolute -inset-1 bg-gradient-to-r from-primary-100/20 to-secondary-100/20 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-                <div className="relative bg-white/40 backdrop-blur-xl border border-white/60 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
-                    <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+            <div key={key} className={`relative group/section ${className}`}>
+                <div className="relative bg-white border border-slate-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+                    <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5 border-b border-slate-50 pb-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-primary-400"></span>
                         {title}
                     </h2>
-                    <div className="text-slate-800 leading-relaxed">
+                    <div className="text-slate-800 leading-relaxed text-sm font-medium">
                         {content}
                     </div>
                 </div>
@@ -230,7 +200,6 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
 
             if (practiceRes?.data) {
                 const p = practiceRes.data;
-                console.log('VisitChartView: Practice Data Loaded:', p);
                 setClinicInfo({
                     name: p.practice_name || p.display_name || "myHEART Cardiology",
                     address: [p.address_line1, p.address_line2, `${p.city || ''} ${p.state || ''} ${p.zip || ''}`.trim()].filter(Boolean).join('\n') || "123 Medical Center Drive, Suite 100\nCity, State 12345",
@@ -240,24 +209,12 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                     website: p.website || "www.myheartclinic.com",
                     logo: p.logo_url || "/clinic-logo.png"
                 });
-            } else {
-                console.warn('VisitChartView: No practice data returned from API');
             }
 
             if (visitRes.data.addendums) {
                 setAddendums(Array.isArray(visitRes.data.addendums) ? visitRes.data.addendums : JSON.parse(visitRes.data.addendums || '[]'));
-            } else {
-                setAddendums([]);
             }
 
-            try {
-                const feeScheduleRes = await billingAPI.getFeeSchedule();
-                setFeeSchedule(feeScheduleRes.data || []);
-            } catch (error) {
-                console.error('Error fetching fee schedule:', error);
-            }
-
-            // Parse vitals
             if (visitRes.data.vitals) {
                 let v = visitRes.data.vitals;
                 if (typeof v === 'string') {
@@ -273,11 +230,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                         decodedVitals[key] = value;
                     });
                     setVitals(decodedVitals);
-                } else {
-                    setVitals(null);
                 }
-            } else {
-                setVitals(null);
             }
 
             if (visitRes.data.note_draft) {
@@ -285,7 +238,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                 const planStructured = parsed.plan ? parsePlanText(parsed.plan) : [];
                 setNoteData({
                     ...parsed,
-                    planStructured: planStructured.length > 0 ? planStructured : []
+                    planStructured
                 });
             }
         } catch (error) {
@@ -297,468 +250,269 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
 
     const handlePrint = () => {
         const visitChartView = document.getElementById('visit-chart-view');
-        if (!visitChartView) {
-            alert('Error: Could not find content to print');
-            return;
-        }
+        if (!visitChartView) return;
 
-        // Create a hidden iframe for printing if it doesn't exist
-        let printIframe = document.getElementById('print-iframe');
-        if (!printIframe) {
-            printIframe = document.createElement('iframe');
-            printIframe.id = 'print-iframe';
-            printIframe.style.position = 'fixed';
-            printIframe.style.right = '0';
-            printIframe.style.bottom = '0';
-            printIframe.style.width = '0';
-            printIframe.style.height = '0';
-            printIframe.style.border = '0';
-            document.body.appendChild(printIframe);
-        }
+        let printIframe = document.getElementById('print-iframe') || document.createElement('iframe');
+        printIframe.id = 'print-iframe';
+        printIframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+        if (!document.getElementById('print-iframe')) document.body.appendChild(printIframe);
 
         const pri = printIframe.contentWindow;
         pri.document.open();
-        pri.document.write(`
-            <html>
-                <head>
-                    <title>Visit Note - ${patient?.first_name} ${patient?.last_name}</title>
-                    ${Array.from(document.querySelectorAll('style, link[rel="stylesheet"]')).map(s => s.outerHTML).join('')}
-                    <style>
-                        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-                        
-                        body {
-                            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                            padding: 0;
-                            margin: 0;
-                            background-color: white;
-                            color: black;
-                            width: 100%;
-                        }
-
-                        #visit-chart-view {
-                            display: block !important;
-                            width: 100% !important;
-                            max-width: none !important;
-                            margin: 0 !important;
-                            padding: 20px !important;
-                            box-shadow: none !important;
-                            overflow: visible !important;
-                            height: auto !important;
-                            position: static !important;
-                        }
-                        
-                        /* Fix for blank canvas - ensure content is visible */
-                        * {
-                            -webkit-print-color-adjust: exact !important;
-                            print-color-adjust: exact !important;
-                            visibility: visible !important;
-                            opacity: 1 !important;
-                        }
-
-                        button, .no-print, [role="button"], .print-hidden, .modal-close {
-                            display: none !important;
-                        }
-
-                        @page {
-                            size: letter portrait;
-                            margin: 0.5in;
-                        }
-                    </style>
-                </head>
-                <body>
-                    ${visitChartView.outerHTML}
-                </body>
-            </html>
-        `);
+        pri.document.write(`<html><head><title>Visit Note</title>${Array.from(document.querySelectorAll('style, link[rel="stylesheet"]')).map(s => s.outerHTML).join('')}<style>@page{margin:0.5in;}body{padding:20px; font-family: sans-serif;}</style></head><body>${visitChartView.outerHTML}</body></html>`);
         pri.document.close();
-
-        // Increased timeout to ensure styles and images (like logo) are loaded
-        setTimeout(() => {
-            pri.focus();
-            try {
-                pri.print();
-            } catch (e) {
-                console.error('Print failed', e);
-            }
-        }, 1000);
+        setTimeout(() => { pri.focus(); pri.print(); }, 1000);
     };
 
     const handleAddAddendum = async () => {
-        if (!addendumText.trim()) {
-            alert('Please enter addendum text');
-            return;
-        }
+        if (!addendumText.trim()) return;
         try {
             await visitsAPI.addAddendum(visitId, addendumText);
             const visitRes = await visitsAPI.get(visitId);
-            if (visitRes.data.addendums) {
-                setAddendums(Array.isArray(visitRes.data.addendums) ? visitRes.data.addendums : JSON.parse(visitRes.data.addendums || '[]'));
-            }
+            setAddendums(Array.isArray(visitRes.data.addendums) ? visitRes.data.addendums : JSON.parse(visitRes.data.addendums || '[]'));
             setAddendumText('');
             setShowAddendumModal(false);
-            alert('Addendum added successfully');
         } catch (error) {
             console.error('Error adding addendum:', error);
-            alert('Failed to add addendum');
         }
     };
 
     const handleCreateSuperbill = async () => {
-        console.log('handleCreateSuperbill called in VisitChartView');
-        console.log('Type of navigate:', typeof navigate);
         try {
             const response = await superbillsAPI.fromVisit(visitId);
-            const sbId = response.data.id;
-            onClose(); // Close the modal
-            navigate(`/patient/${patientId}/superbill/${sbId}`);
+            onClose();
+            navigate(`/patient/${patientId}/superbill/${response.data.id}`);
         } catch (error) {
             console.error('Error creating superbill:', error);
-            alert('Failed to create superbill: ' + (error.response?.data?.error || error.message));
         }
     };
 
-    const isSigned = visit?.note_signed_at || visit?.locked;
+    if (loading) return <div className="fixed inset-0 bg-slate-900/10 backdrop-blur-md flex items-center justify-center z-[100]"><div className="bg-white p-8 rounded-[2rem] shadow-2xl flex items-center gap-4 font-black text-slate-900 tracking-tighter border border-slate-100"><div className="w-6 h-6 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>Retrieving Clinical Record...</div></div>;
+    if (!visit || !patient) return <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 text-white font-black">Record Not Found</div>;
 
-    if (loading) {
-        return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg p-6">Loading visit...</div>
-            </div>
-        );
-    }
-
-    if (!visit || !patient) {
-        return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg p-6">
-                    <p>Visit not found</p>
-                    <button onClick={onClose} className="mt-4 px-4 py-2 text-white rounded">Close</button>
-                </div>
-            </div>
-        );
-    }
-
-    const visitDate = visit.visit_date ? format(new Date(visit.visit_date), 'MMMM d, yyyy') : format(new Date(), 'MMMM d, yyyy');
-    const providerName = visit.provider_first_name && visit.provider_last_name ? `${visit.provider_first_name} ${visit.provider_last_name}` : 'Provider';
+    const visitDate = visit.visit_date ? format(new Date(visit.visit_date), 'MMMM d, yyyy') : '';
+    const providerName = `${visit.provider_first_name || ''} ${visit.provider_last_name || ''}`.trim() || 'Attending Physician';
     const patientAge = calculateAge(patient.dob);
     const patientDOB = patient.dob ? format(new Date(patient.dob), 'MM/dd/yyyy') : '';
-    const signedDate = visit.note_signed_at ? format(new Date(visit.note_signed_at), 'MM/dd/yyyy h:mm a') : '';
+    const isSigned = visit?.note_signed_at || visit?.locked;
 
     return (
         <>
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 print:hidden" id="modal-overlay">
-                <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col print:shadow-none print:rounded-none print:max-w-none print:max-h-none print:w-full print:overflow-visible">
-                    <div className="p-4 border-b border-deep-gray/10 flex items-center justify-between print-hidden bg-gradient-to-r from-white to-soft-gray/30">
-                        <h2 className="text-xl font-bold text-deep-gray">Visit Chart View</h2>
+            <div className="fixed inset-0 bg-slate-900/20 z-50 flex items-center justify-center p-2 backdrop-blur-sm print:hidden">
+                <div className="bg-[#fcfdfe] rounded-[2.5rem] shadow-2xl max-w-5xl w-full max-h-[96vh] overflow-hidden flex flex-col border border-white">
+                    {/* Milky Glass Header Toolbar */}
+                    <div className="px-8 py-3 border-b border-slate-100 flex items-center justify-between bg-white/80">
+                        <div className="flex items-center gap-3">
+                            <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full shadow-[0_0_12px_rgba(52,211,153,0.3)]"></div>
+                            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 leading-none">Clinical System v2.4</h2>
+                        </div>
                         <div className="flex items-center gap-2">
                             {isSigned && (
-                                <button onClick={() => setShowAddendumModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-deep-gray bg-white/80 hover:bg-white border border-deep-gray/10 rounded-lg">
-                                    <FilePlus className="w-3.5 h-3.5" />
-                                    <span>Addendum</span>
-                                </button>
+                                <button onClick={() => setShowAddendumModal(true)} className="px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-2xl flex items-center gap-2 shadow-sm transition-all"><FilePlus className="w-3.5 h-3.5 text-primary-500" />Addendum</button>
                             )}
-                            <button onClick={handleCreateSuperbill} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-deep-gray bg-white/80 hover:bg-white border border-deep-gray/10 rounded-lg">
-                                <Receipt className="w-3.5 h-3.5" />
-                                <span>Superbill</span>
-                            </button>
-                            <button onClick={() => setShowBillingModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-deep-gray bg-white/80 hover:bg-white border border-deep-gray/10 rounded-lg">
-                                <DollarSign className="w-3.5 h-3.5" />
-                                <span>Billing</span>
-                            </button>
-                            <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-deep-gray bg-white/80 hover:bg-white border border-deep-gray/10 rounded-lg">
-                                <Printer className="w-3.5 h-3.5" />
-                                <span>Print</span>
-                            </button>
-                            <button onClick={onClose} className="flex items-center justify-center w-8 h-8 text-deep-gray/70 hover:text-deep-gray hover:bg-deep-gray/5 rounded-lg">
-                                <X className="w-5 h-5" />
-                            </button>
+                            <button onClick={handleCreateSuperbill} className="px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-2xl flex items-center gap-2 shadow-sm transition-all"><Receipt className="w-3.5 h-3.5 text-secondary-500" />Superbill</button>
+                            <button onClick={() => setShowBillingModal(true)} className="px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-2xl flex items-center gap-2 shadow-sm transition-all"><DollarSign className="w-3.5 h-3.5 text-emerald-500" />Billing</button>
+                            <button onClick={handlePrint} className="px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-2xl flex items-center gap-2 shadow-sm transition-all"><Printer className="w-3.5 h-3.5 text-slate-500" />Print</button>
+                            <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-2xl transition-all ml-2"><X className="w-6 h-6 text-slate-300" /></button>
                         </div>
                     </div>
 
-                    <div id="visit-chart-view" className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-blue-50/30 py-10 px-12 max-w-5xl mx-auto print:!max-w-none print:!mx-0 print:!p-0 print:!rounded-none print:!w-full relative">
-                        {/* Soft Liquid Blobs (Hidden in Print) */}
-                        <div className="absolute top-20 -left-20 w-72 h-72 bg-primary-100/30 rounded-full blur-[100px] pointer-events-none print:hidden"></div>
-                        <div className="absolute bottom-20 -right-20 w-96 h-96 bg-secondary-100/20 rounded-full blur-[120px] pointer-events-none print:hidden"></div>
+                    <div id="visit-chart-view" className="flex-1 overflow-y-auto py-8 px-12 relative bg-[#fcfdfe]">
+                        {/* Soft Brand Elements (Opaque) */}
+                        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-primary-50/40 rounded-full blur-[100px] -mr-48 -mt-48 pointer-events-none opacity-40"></div>
 
-                        {/* Compact Addendum Alert */}
+                        {/* Addendum Alert Banner */}
                         {addendums.length > 0 && (
-                            <div className="mb-8 bg-amber-50/60 backdrop-blur-md border border-amber-200/50 p-3 rounded-2xl flex items-center justify-center gap-3 animate-pulse shadow-sm">
-                                <FilePlus className="w-4 h-4 text-amber-600" />
-                                <span className="text-xs font-black text-amber-900 uppercase tracking-widest">Post-Signing Addendum Attached</span>
+                            <div className="mb-6 bg-amber-50/80 border border-amber-200/50 rounded-2xl p-4 flex items-center gap-4 shadow-sm relative overflow-hidden group">
+                                <div className="absolute inset-0 bg-gradient-to-r from-amber-200/5 to-transparent"></div>
+                                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 shadow-inner">
+                                    <FilePlus className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <div className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600 mb-0.5">Clinical Appendage Detected</div>
+                                    <div className="text-xs font-bold text-amber-900/60">This record has been supplemented with authenticated addendums. Review clinical appendicies at the footer.</div>
+                                </div>
+                                <div className="ml-auto">
+                                    <div className="px-3 py-1 bg-amber-600 text-white text-[9px] font-black uppercase tracking-widest rounded-lg shadow-lg shadow-amber-900/10">Action Required</div>
+                                </div>
                             </div>
                         )}
 
-                        {/* Elegant Glass Clinic Header */}
-                        <div className="mb-10 flex items-start justify-between gap-8 relative z-10">
-                            <div className="flex items-center gap-8">
-                                <div className="w-24 h-24 bg-white/60 backdrop-blur-lg rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-white flex items-center justify-center overflow-hidden p-3 flex-shrink-0 transition-transform hover:scale-105 duration-500">
-                                    {clinicInfo.logo ? (
-                                        <img
-                                            src={clinicInfo.logo}
-                                            alt="Logo"
-                                            className="max-w-full max-h-full object-contain"
-                                            onError={(e) => {
-                                                e.target.style.display = 'none';
-                                                e.target.parentElement.innerHTML = '<div class="text-primary-200"><svg class="w-12 h-12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg></div>';
-                                            }}
-                                        />
-                                    ) : (
-                                        <Building2 className="w-12 h-12 text-primary-200" />
-                                    )}
+                        {/* Clinic Brand Header */}
+                        <div className="mb-10 flex justify-between items-center relative z-10">
+                            <div className="flex gap-6 items-center">
+                                <div className="w-20 h-20 bg-white rounded-[1.5rem] shadow-xl shadow-slate-200/50 border border-slate-50 flex items-center justify-center overflow-hidden p-3 group">
+                                    {clinicInfo.logo ? <img src={clinicInfo.logo} className="max-h-full object-contain" /> : <Building2 className="text-primary-100 w-12 h-12" />}
                                 </div>
-                                <div className="space-y-2">
-                                    <h1 className="text-3xl font-black text-slate-950 tracking-tight leading-none bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600">{clinicInfo.name}</h1>
-                                    <div className="space-y-1.5 text-[11px] font-bold text-slate-500">
-                                        <div className="flex items-center gap-2">
-                                            <MapPin className="w-4 h-4 text-primary-400" />
-                                            <span className="truncate max-w-[400px]">{clinicInfo.address.replace(/\n/g, ' • ')}</span>
-                                        </div>
-                                        <div className="flex items-center gap-6">
-                                            <div className="flex items-center gap-2">
-                                                <Phone className="w-4 h-4 text-primary-400" />
-                                                <span>{clinicInfo.phone}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <Mail className="w-4 h-4 text-primary-400" />
-                                                <span className="lowercase">{clinicInfo.email}</span>
-                                            </div>
-                                        </div>
+                                <div className="space-y-1">
+                                    <h1 className="text-3xl font-black text-slate-900 tracking-tighter leading-none">{clinicInfo.name}</h1>
+                                    <div className="text-[11px] font-bold text-slate-400 flex items-center gap-4">
+                                        <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-primary-200" />{clinicInfo.address.replace('\n', ' • ')}</span>
+                                        <span className="flex items-center gap-1.5 font-black text-primary-400/70"><Phone className="w-3.5 h-3.5" />{clinicInfo.phone}</span>
                                     </div>
                                 </div>
                             </div>
-                            <div className="text-right flex flex-col items-end gap-2 pt-2">
-                                <div className="px-4 py-1.5 bg-white/60 backdrop-blur-md border border-white text-slate-900 text-[10px] font-black uppercase tracking-[0.25em] rounded-full shadow-lg shadow-slate-200/50">
-                                    {visit.visit_type || 'Office Visit'}
-                                </div>
-                                <div className="text-lg text-slate-950 font-black tracking-tight">{visitDate}</div>
-                                <div className="text-[10px] text-primary-500 font-black uppercase tracking-[0.2em]">{providerName}</div>
-                                {isSigned && (
-                                    <div className="mt-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-md text-[9px] font-black uppercase flex items-center gap-1 border border-emerald-100">
-                                        <CheckCircle2 className="w-3 h-3" /> Signed
-                                    </div>
-                                )}
+                            <div className="text-right">
+                                <div className="text-[10px] font-black uppercase tracking-[0.4em] text-primary-500/40 mb-1">{visit.visit_type || 'Clinical SOAP Note'}</div>
+                                <div className="text-2xl font-black text-slate-900 tracking-tighter leading-none mb-1">{visitDate}</div>
+                                <div className="inline-block px-3 py-1 bg-primary-50 text-[10px] uppercase font-black tracking-widest text-primary-500 rounded-lg">{providerName}</div>
                             </div>
                         </div>
 
-                        {/* Liquid Glass Patient Snapshot */}
-                        <div className="mb-12 relative z-10">
-                            <div className="absolute inset-0 bg-gradient-to-br from-white/80 via-white/40 to-white/10 backdrop-blur-3xl rounded-[3rem] shadow-2xl shadow-primary-900/5 border border-white/80"></div>
-                            <div className="relative p-10">
-                                <div className="flex flex-col md:flex-row md:items-end justify-between gap-10">
-                                    <div className="space-y-1">
-                                        <span className="text-[10px] font-black text-primary-400 uppercase tracking-[0.4em] pl-1">Primary Patient</span>
-                                        <h2 className="text-4xl font-black text-slate-950 tracking-tighter leading-none">
-                                            {patient.last_name}, {patient.first_name}
-                                        </h2>
+                        {/* Solid Frothy Patient Snapshot */}
+                        <div className="mb-8 relative z-10">
+                            <div className="relative bg-white rounded-[2rem] border border-slate-100 p-6 shadow-xl shadow-slate-200/40">
+                                <div className="flex flex-wrap items-center justify-between gap-8">
+                                    <div className="flex items-center gap-6">
+                                        <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 relative overflow-hidden group shrink-0">
+                                            <Stethoscope className="text-primary-200 w-8 h-8 relative z-10 group-hover:scale-110 transition-transform duration-500" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <div className="text-[9px] font-black tracking-[0.4em] text-primary-300 uppercase leading-none">Primary Subject</div>
+                                            <h2 className="text-4xl font-black text-slate-900 tracking-tighter leading-none">
+                                                {patient.last_name}, <span className="text-primary-500/70">{patient.first_name}</span>
+                                            </h2>
+                                        </div>
                                     </div>
-                                    <div className="flex gap-12 border-l border-slate-100 pl-12">
-                                        <div className="space-y-1">
-                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">MRN Identifier</span>
-                                            <span className="text-base font-black text-slate-900">{patient.mrn}</span>
+
+                                    <div className="flex flex-wrap items-center gap-8 md:border-l border-slate-100 md:pl-8 h-12">
+                                        <div className="space-y-1.5 text-center">
+                                            <span className="text-[8px] font-black text-slate-300 uppercase block tracking-[0.2em]">MRN IDENTIFIER</span>
+                                            <span className="text-sm font-black text-slate-700 tabular-nums">{patient.mrn}</span>
                                         </div>
-                                        <div className="space-y-1">
-                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Born / Current Age</span>
-                                            <span className="text-base font-black text-slate-900">{patientDOB} <span className="text-primary-400">({patientAge}y)</span></span>
+                                        <div className="space-y-1.5 text-center px-8 border-x border-slate-50">
+                                            <span className="text-[8px] font-black text-slate-300 uppercase block tracking-[0.2em]">AGE</span>
+                                            <span className="text-sm font-black text-slate-700 tracking-tight">{patientDOB} <span className="text-primary-400 ml-1.5">({patientAge}y)</span></span>
                                         </div>
-                                        <div className="space-y-1">
-                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Sex</span>
-                                            <span className="text-base font-black text-slate-900 uppercase">{(patient.sex || 'N/A').charAt(0)}</span>
+                                        <div className="space-y-1.5 text-center">
+                                            <span className="text-[8px] font-black text-slate-300 uppercase block tracking-[0.2em]">SEX</span>
+                                            <span className="text-sm font-black text-primary-600 bg-primary-50 px-3 py-1 rounded-xl uppercase">{(patient.sex || 'U').charAt(0)}</span>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="mt-10 pt-8 border-t border-slate-50 grid grid-cols-2 md:grid-cols-4 gap-8">
-                                    {[
-                                        { icon: CreditCard, label: 'Insurance', value: patient.insurance_provider || 'Self Pay' },
-                                        { icon: Building2, label: 'Pharmacy', value: patient.pharmacy_name || 'None' },
-                                        { icon: Phone, label: 'Contact', value: formatPhone(patient.phone) || 'N/A' },
-                                        { icon: Users, label: 'Emergency', value: patient.emergency_contact_name || 'N/A' }
-                                    ].map((item, idx) => (
-                                        <div key={idx} className="flex gap-4 items-start group">
-                                            <div className="w-10 h-10 rounded-2xl bg-primary-50 flex items-center justify-center text-primary-500 group-hover:bg-primary-500 group-hover:text-white transition-all duration-500">
-                                                <item.icon className="w-5 h-5" />
+
+                                {/* Contact Row */}
+                                <div className="mt-6 pt-6 border-t border-slate-50 flex flex-wrap gap-8">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-primary-400 border border-slate-100 shadow-sm"><Phone className="w-4 h-4" /></div>
+                                        <div className="leading-tight">
+                                            <div className="text-[8px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">Mobile Interface</div>
+                                            <div className="text-[12px] font-bold text-slate-600">{patient.phone || patient.mobile_phone || patient.home_phone || 'Unlisted'}</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-indigo-400 border border-slate-100 shadow-sm"><Mail className="w-4 h-4" /></div>
+                                        <div className="leading-tight">
+                                            <div className="text-[8px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">Digital Protocol</div>
+                                            <div className="text-[12px] font-bold text-slate-600 lowercase">{patient.email || patient.email_address || 'Unlisted'}</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-emerald-400 border border-slate-100 shadow-sm"><MapPin className="w-4 h-4" /></div>
+                                        <div className="leading-tight">
+                                            <div className="text-[8px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">Global Positioning</div>
+                                            <div className="text-[12px] font-bold text-slate-600">
+                                                {[patient.street_address || patient.address_line1, patient.city, patient.state, patient.zip].filter(Boolean).join(', ') || 'Unlisted Territory'}
                                             </div>
-                                            <div className="min-w-0">
-                                                <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{item.label}</div>
-                                                <div className="text-[11px] font-black text-slate-900 truncate tracking-tight">{item.value}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Note Body (Milk Style - Opaque) */}
+                        <div className="space-y-4 relative z-10">
+                            {/* CC and HPI Stacked (Vertical) */}
+                            <div className="space-y-4">
+                                {renderSection('cc', true, 'Chief Complaint', <div className="text-base font-black text-slate-900 leading-tight py-1">{noteData.chiefComplaint || 'No active complaint'}</div>)}
+                                {renderSection('hpi', true, 'History of Present Illness', <div className="text-sm font-medium text-slate-600 leading-relaxed whitespace-pre-wrap">{noteData.hpi || 'History not obtained'}</div>)}
+                            </div>
+
+                            {renderSection('ros', true, 'Review of Systems', <div className="text-[11px] font-medium text-slate-500 columns-2 md:columns-3 lg:columns-4 gap-8 leading-normal" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.rosNotes) }} />)}
+
+                            {/* Background Context (Solid Frothy) */}
+                            <div className="bg-white rounded-[2rem] border border-slate-100 p-6 shadow-sm">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                    <div className="md:border-r border-slate-50 md:pr-4">
+                                        <div className="text-[9px] font-black text-primary-300 uppercase mb-4 tracking-[0.2em] flex items-center gap-2">Patient Problems</div>
+                                        {problems.length > 0 ? (
+                                            <div className="space-y-1.5">
+                                                {problems.map((p, i) => <div key={i} className="text-[11px] font-bold text-slate-700 bg-slate-50 border border-slate-100 p-2 rounded-xl flex items-center gap-2 truncate"><span className="w-1 h-1 rounded-full bg-primary-200" />{p.problem_name}</div>)}
+                                            </div>
+                                        ) : <div className="text-xs italic text-slate-200">Non-contributory</div>}
+                                    </div>
+                                    <div className="md:border-r border-slate-50 md:pr-4">
+                                        <div className="text-[9px] font-black text-rose-300 uppercase mb-4 tracking-[0.2em] flex items-center gap-2">Allergies</div>
+                                        {allergies.length > 0 ? (
+                                            <div className="flex flex-wrap gap-2">
+                                                {allergies.map((a, i) => <div key={i} className="text-[10px] font-black text-rose-500 bg-rose-50 px-3 py-1 rounded-xl border border-rose-100 shadow-sm">{a.allergen}</div>)}
+                                            </div>
+                                        ) : <div className="text-xs font-black text-emerald-500 uppercase flex items-center gap-2 tracking-[0.1em]"><CheckCircle2 className="w-4 h-4 opacity-50" /> NKDA</div>}
+                                    </div>
+                                    <div>
+                                        <div className="text-[9px] font-black text-secondary-300 uppercase mb-4 tracking-[0.2em] flex items-center gap-2">Medications</div>
+                                        {medications.length > 0 ? (
+                                            <div className="space-y-2">
+                                                {medications.map((m, i) => (
+                                                    <div key={i} className="text-[11px] font-bold text-slate-700 flex justify-between bg-slate-50 border border-slate-100 p-2 rounded-xl">
+                                                        <span className="truncate">{m.medication_name}</span>
+                                                        <span className="text-[10px] font-medium text-slate-400 uppercase ml-2 tabular-nums">{m.dosage}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : <div className="text-xs italic text-slate-200">None Noted</div>}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Vitals Ribbon - Now just above PE */}
+                            {renderSection('vitals', vitals, 'Clinical Vitals',
+                                <div className="flex flex-wrap items-center gap-4 py-1">
+                                    {vitals && [
+                                        { icon: Heart, k: 'BP', v: vitals.bp, c: 'rose' },
+                                        { icon: Activity, k: 'HR', v: vitals.pulse, c: 'rose' },
+                                        { icon: Thermometer, k: 'Temp', v: vitals.temp, c: 'amber' },
+                                        { icon: Wind, k: 'SaO2', v: vitals.o2sat, c: 'blue' },
+                                        { icon: User, k: 'BMI', v: vitals.bmi, c: 'slate' }
+                                    ].filter(item => item.v).map((item, i) => (
+                                        <div key={i} className="flex items-center gap-3 px-4 py-2 bg-slate-50 border border-slate-100 rounded-2xl shadow-sm hover:bg-white transition-all">
+                                            <div className={`p-2 rounded-xl bg-${item.c}-500/10`}>
+                                                <item.icon className={`w-4 h-4 text-${item.c}-400`} />
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-0.5">{item.k}</span>
+                                                <span className="text-sm font-black text-slate-900 leading-none">{item.v}</span>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
-                            </div>
-                        </div>
-
-                        {/* All Clinical Sections (PAMFOS Included) */}
-                        <div className="space-y-12 px-1 relative z-10">
-                            {/* CC, HPI, ROS */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                                {renderSection('chiefComplaint', true, 'Primary Concern',
-                                    <p className="text-xl font-black text-slate-900 leading-tight bg-clip-text">
-                                        {noteData.chiefComplaint || <span className="text-slate-300 font-normal italic">None recorded</span>}
-                                    </p>
-                                )}
-                                {renderSection('hpi', true, 'Clinical Narrative',
-                                    <div className="text-slate-700 leading-relaxed whitespace-pre-wrap font-medium text-sm">
-                                        {noteData.hpi || <span className="text-slate-300 font-normal italic">No history recorded</span>}
-                                    </div>
-                                )}
-                            </div>
-
-                            {renderSection('ros', true, 'Systemic Review',
-                                <div className="text-slate-700 leading-relaxed text-xs columns-2 md:columns-3 gap-10" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.rosNotes) || '<span class="text-slate-300 italic">No ROS findings documented</span>' }} />
                             )}
 
-                            {/* PAMFOS Section */}
-                            <div className="relative group p-10 bg-white/30 backdrop-blur-2xl rounded-[3.5rem] border border-white/60 shadow-xl">
-                                <div className="flex items-center gap-4 mb-12">
-                                    <div className="w-14 h-14 bg-gradient-to-br from-primary-400 to-primary-600 rounded-3xl flex items-center justify-center text-white shadow-lg shadow-primary-200">
-                                        <Stethoscope className="w-7 h-7" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-2xl font-black text-slate-950 tracking-tighter">Clinical Background</h3>
-                                        <p className="text-[10px] font-black text-primary-400 uppercase tracking-widest pl-0.5">Comprehensive Health History</p>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-                                    <div className="space-y-12">
-                                        <div className="space-y-4">
-                                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">P: Past Medical / Surgical</div>
-                                            {problems.length > 0 ? (
-                                                <div className="space-y-3">
-                                                    {problems.map((p, i) => (
-                                                        <div key={i} className="flex gap-4 items-center p-3 bg-white/40 rounded-2xl border border-white/60 hover:bg-white/60 transition-colors duration-300">
-                                                            <span className="text-[10px] font-black text-primary-600 bg-primary-50 px-2 py-1 rounded-lg min-w-[55px] text-center tracking-tighter">{p.icd10_code || 'N/A'}</span>
-                                                            <span className="text-sm font-bold text-slate-800">{p.problem_name}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : <span className="text-slate-300 italic text-sm pl-1">No active chronic conditions</span>}
-                                        </div>
-
-                                        <div className="space-y-4">
-                                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">A: Allergies & Intolerances</div>
-                                            {allergies.length > 0 ? (
-                                                <div className="flex flex-wrap gap-3">
-                                                    {allergies.map((a, i) => (
-                                                        <div key={i} className="px-4 py-2 bg-rose-50/50 backdrop-blur-sm border border-rose-100 rounded-2xl text-[11px] font-black text-rose-700 flex items-center gap-2 shadow-sm">
-                                                            <span className="w-2 h-2 bg-rose-400 rounded-full shadow-inner" />
-                                                            {a.allergen} {a.reaction && <span className="opacity-50 font-bold">• {a.reaction}</span>}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : <div className="flex items-center gap-2 text-emerald-600 font-black text-[11px] uppercase tracking-wide bg-emerald-50/50 px-4 py-2 rounded-2xl border border-emerald-100/50 w-fit"><CheckCircle2 className="w-4 h-4" /> NKDA</div>}
-                                        </div>
-
-                                        <div className="space-y-4">
-                                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">F: Family Pedigree</div>
-                                            {familyHistory.length > 0 ? (
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    {familyHistory.map((h, i) => (
-                                                        <div key={i} className="p-4 bg-white/40 rounded-2xl border border-white/60">
-                                                            <div className="text-[8px] font-black text-primary-400 uppercase tracking-widest mb-1">{h.relationship}</div>
-                                                            <div className="text-xs font-bold text-slate-900">{h.condition}</div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : <span className="text-slate-300 italic text-sm pl-1">No significant family history</span>}
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-12">
-                                        <div className="space-y-4">
-                                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">M: Current Pharmacotherapy</div>
-                                            {medications.filter(m => m.active !== false).length > 0 ? (
-                                                <div className="space-y-4">
-                                                    {medications.filter(m => m.active !== false).map((m, i) => (
-                                                        <div key={i} className="p-5 bg-gradient-to-br from-white/60 to-white/20 backdrop-blur-xl rounded-3xl border border-white/80 shadow-lg shadow-primary-900/5 group hover:scale-[1.02] transition-transform duration-300">
-                                                            <div className="text-base font-black text-slate-950 flex justify-between items-center mb-1 bg-clip-text">
-                                                                {m.medication_name}
-                                                                <span className="text-[8px] font-black px-2 py-0.5 bg-primary-100 text-primary-600 rounded-full uppercase tracking-widest">{m.route}</span>
-                                                            </div>
-                                                            <div className="text-[10px] font-black text-slate-500 uppercase tracking-tighter flex items-center gap-2">
-                                                                {m.dosage} <span className="w-1 h-1 bg-primary-300 rounded-full" /> {m.frequency}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : <span className="text-slate-300 italic text-sm pl-1">No active medications recorded</span>}
-                                        </div>
-
-                                        <div className="space-y-4">
-                                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">O/S: Social & Environmental</div>
-                                            {socialHistory ? (
-                                                <div className="grid grid-cols-1 gap-4">
-                                                    <div className="bg-white/40 p-5 rounded-3xl border border-white/60 flex items-center justify-between">
-                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Smoking Status</span>
-                                                        <span className="text-xs font-bold text-slate-950 px-3 py-1 bg-slate-100/50 rounded-full">{socialHistory.smoking_status || "Unknown"}</span>
-                                                    </div>
-                                                    {socialHistory.occupation && (
-                                                        <div className="bg-white/40 p-5 rounded-3xl border border-white/60 flex items-center justify-between">
-                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Occupation</span>
-                                                            <span className="text-xs font-bold text-slate-950">{socialHistory.occupation}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ) : <span className="text-slate-300 italic text-sm pl-1">No social history documented</span>}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Vitals & PE */}
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-12 relative z-10">
-                                <div className="md:col-span-1">
-                                    {renderSection('vitals', true, 'Physiological Markers',
-                                        vitals && Object.keys(vitals).length > 0 ? (
-                                            <div className="space-y-4">
-                                                {[
-                                                    { label: 'Blood Pressure', val: vitals.bp, icon: Heart, color: 'text-rose-400' },
-                                                    { label: 'Heart Rate', val: vitals.pulse, unit: ' bpm', icon: Activity, color: 'text-rose-400' },
-                                                    { label: 'Temperature', val: vitals.temp, unit: ' °F', icon: Thermometer, color: 'text-amber-400' },
-                                                    { label: 'O2 Saturation', val: vitals.o2sat, unit: '%', icon: Wind, color: 'text-blue-400' },
-                                                    { label: 'Resp Rate', val: vitals.resp, icon: Wind, color: 'text-slate-300' },
-                                                    { label: 'BMI', val: vitals.bmi, icon: User, color: 'text-slate-300' }
-                                                ].filter(v => v.val).map((v, i) => (
-                                                    <div key={i} className="group p-4 bg-white/40 backdrop-blur-md rounded-2xl border border-white/60 hover:bg-white/60 transition-all duration-300">
-                                                        <div className="flex items-center gap-2 mb-1.5">
-                                                            {v.icon && <v.icon className={`w-3.5 h-3.5 ${v.color}`} />}
-                                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{v.label}</span>
-                                                        </div>
-                                                        <div className="text-lg font-black text-slate-900 leading-none">{v.val}<span className="text-[10px] ml-0.5 text-slate-400">{v.unit}</span></div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : <div className="text-sm text-slate-300 italic pl-1">Vitals not recorded</div>
-                                    )}
-                                </div>
-                                <div className="md:col-span-3">
-                                    {renderSection('physicalExam', true, 'Objective Findings',
-                                        <div className="text-slate-700 leading-relaxed text-sm bg-white/40 backdrop-blur-2xl p-10 rounded-[2.5rem] border border-white min-h-[400px] shadow-sm" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.peNotes) || '<div class="flex flex-col items-center justify-center h-full text-slate-300 italic p-12 text-center border-2 border-dashed border-white/60 rounded-[2rem]">Formal physical examination observations not documented in detail.</div>' }} />
-                                    )}
-                                </div>
-                            </div>
+                            {renderSection('pe', true, 'Physical Examination', <div className="text-slate-700 text-[13px] font-medium leading-[1.8] whitespace-pre-wrap min-h-[80px] bg-slate-50 p-5 rounded-[2rem] border border-slate-100" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.peNotes) }} />)}
 
                             {/* Assessment & Plan */}
-                            <div className="space-y-12 pt-8 relative z-10">
-                                {renderSection('assessment', true, 'Synthesized Assessment',
-                                    <div className="text-slate-950 font-black text-2xl leading-snug tracking-tight">
-                                        {noteData.assessment || <span className="text-slate-300 font-normal italic text-lg">No clinical assessment provided.</span>}
+                            <div className="space-y-6 pt-4 border-t border-slate-50">
+                                {renderSection('assessment', true, 'Clinical Assessment',
+                                    <div className="space-y-2 border-l-[6px] border-primary-500/10 pl-6 py-1">
+                                        {noteData.assessment ? noteData.assessment.split('\n').filter(line => line.trim()).map((line, i) => (
+                                            <div key={i} className="text-base font-bold text-slate-800 tracking-tight leading-snug">{line}</div>
+                                        )) : <span className="text-slate-200 italic">Assessment data sync required</span>}
                                     </div>
                                 )}
 
-                                {renderSection('plan', true, 'Therapeutic Strategy',
+                                {renderSection('plan', true, 'Therapeutic Plan',
                                     noteData.planStructured?.length > 0 ? (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                            {noteData.planStructured.map((item, index) => (
-                                                <div key={index} className="space-y-4 bg-white/40 backdrop-blur-md p-8 rounded-[2.5rem] border border-white hover:bg-white/60 transition-all duration-300 shadow-sm relative overflow-hidden group">
-                                                    <div className="flex items-center gap-4">
-                                                        <span className="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-black text-sm shadow-lg group-hover:scale-110 transition-transform">{index + 1}</span>
-                                                        <h4 className="text-base font-black text-slate-900 uppercase tracking-tight">{item.diagnosis}</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            {noteData.planStructured.map((p, i) => (
+                                                <div key={i} className="p-4 bg-white border border-slate-100 rounded-[1.5rem] shadow-sm hover:shadow-md transition-all duration-300">
+                                                    <div className="flex gap-3 mb-3 items-start">
+                                                        <span className="w-7 h-7 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-[11px] shadow-lg shrink-0 mt-0.5">{i + 1}</span>
+                                                        <h4 className="text-[12px] font-black text-slate-800 uppercase tracking-tight pt-1 leading-tight">{p.diagnosis}</h4>
                                                     </div>
-                                                    <ul className="space-y-3 list-none pl-1">
-                                                        {item.orders.map((o, i) => (
-                                                            <li key={i} className="text-xs font-bold text-slate-600 flex items-start gap-2.5">
-                                                                <span className="w-1.5 h-1.5 bg-primary-400 rounded-full mt-1 flex-shrink-0" />
+                                                    <ul className="space-y-1.5 pl-10 pr-2">
+                                                        {p.orders.map((o, j) => (
+                                                            <li key={j} className="text-[11px] font-bold text-slate-500 flex items-start gap-2.5">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-primary-200 mt-1.5 shrink-0" />
                                                                 {o}
                                                             </li>
                                                         ))}
@@ -766,68 +520,45 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                                 </div>
                                             ))}
                                         </div>
-                                    ) : (
-                                        <div className="text-slate-700 leading-relaxed text-sm">
-                                            {noteData.plan || <span className="text-slate-300 italic">No specific plan documented.</span>}
-                                        </div>
-                                    )
+                                    ) : <div className="text-sm font-medium text-slate-600 bg-slate-50 p-5 rounded-[1.5rem] border border-slate-100 italic">{noteData.plan}</div>
                                 )}
-
-                                {/* Care Plan & Follow-up */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-10 pt-10">
-                                    {renderSection('carePlan', patient.care_plan_summary, 'Collaborative Care Plan',
-                                        <div className="text-slate-600 text-xs leading-relaxed italic pr-4">
-                                            {patient.care_plan_summary}
-                                        </div>
-                                    )}
-                                    {renderSection('followUp', visit.follow_up_instructions, 'Clinical Continuity',
-                                        <div className="flex items-center gap-6 p-6 bg-primary-500/10 backdrop-blur-xl rounded-3xl border border-primary-100">
-                                            <div className="w-14 h-14 bg-primary-500 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-primary-200">
-                                                <Calendar className="w-7 h-7" />
-                                            </div>
-                                            <div>
-                                                <div className="text-[10px] font-black text-primary-400 uppercase tracking-[0.2em] mb-1">Follow-up Target</div>
-                                                <div className="text-lg font-black text-primary-600 leading-none">{visit.follow_up_instructions || 'PRN'}</div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
                             </div>
 
-                            {/* Addendums Section */}
-                            {addendums.length > 0 && (
-                                <div className="mt-28 relative">
-                                    <div className="absolute top-0 left-12 right-12 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
-                                    <div className="flex items-center gap-5 mb-12">
-                                        <div className="w-16 h-16 bg-amber-50 rounded-[2rem] flex items-center justify-center border border-amber-100/50 shadow-lg shadow-amber-900/5">
-                                            <FilePlus className="w-8 h-8 text-amber-500" />
+                            {/* Care Plan & Follow-up */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 py-4 border-t border-slate-50">
+                                {renderSection('carePlan', noteData.carePlan || patient.care_plan_summary, 'Care Plan',
+                                    <div className="text-[12px] font-medium text-slate-600 leading-relaxed bg-primary-50/30 p-4 rounded-2xl border border-primary-100/30">
+                                        {noteData.carePlan || patient.care_plan_summary}
+                                    </div>
+                                )}
+                                {renderSection('followUp', noteData.followUp || visit.follow_up_instructions, 'Follow-up Instructions',
+                                    <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-3xl border border-slate-100">
+                                        <div className="w-12 h-12 rounded-2xl bg-white shadow-xl flex items-center justify-center text-primary-500 border border-slate-50 shrink-0">
+                                            <Calendar className="w-6 h-6" />
                                         </div>
-                                        <div>
-                                            <h3 className="text-4xl font-black text-slate-950 tracking-tighter uppercase">Clinical Addendums</h3>
-                                            <p className="text-[10px] font-black text-amber-600 uppercase tracking-[0.4em] pl-1">Authenticated Narrative Updates</p>
+                                        <div className="leading-tight">
+                                            <div className="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em] mb-1.5 font-sans">Maintenance Interval</div>
+                                            <div className="text-sm font-black text-primary-600 font-sans">{noteData.followUp || visit.follow_up_instructions || 'Return Visit PRN'}</div>
                                         </div>
                                     </div>
-                                    <div className="space-y-10">
+                                )}
+                            </div>
+
+                            {/* Addendums - Opaque Stack */}
+                            {addendums.length > 0 && (
+                                <div className="mt-10 pt-6 border-t border-slate-50">
+                                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-amber-500/60 mb-5 flex items-center gap-3"><FilePlus className="w-4 h-4 pr-1" /> Authenticated Addendums</h3>
+                                    <div className="space-y-3">
                                         {addendums.map((a, i) => (
-                                            <div key={i} className="group relative bg-white/40 backdrop-blur-2xl border border-white p-12 rounded-[3.5rem] shadow-sm hover:bg-white/60 transition-all duration-700">
-                                                <div className="flex items-center gap-5 mb-10">
-                                                    <div className="w-14 h-14 bg-slate-950 rounded-[1.5rem] flex items-center justify-center text-white font-black text-lg italic shadow-xl group-hover:scale-110 transition-transform">
-                                                        {a.addedByName?.charAt(0) || 'A'}
+                                            <div key={i} className="p-5 bg-amber-50/10 border border-amber-100/30 rounded-[2rem] shadow-sm relative overflow-hidden group">
+                                                <div className="flex items-center justify-between mb-4 border-b border-amber-100/20 pb-4">
+                                                    <div className="flex items-center gap-3 text-[10px] font-black text-amber-700 uppercase tracking-widest leading-none">
+                                                        <div className="w-8 h-8 rounded-xl bg-amber-100/50 flex items-center justify-center text-[11px] italic">{a.addedByName?.charAt(0)}</div>
+                                                        {a.addedByName}
                                                     </div>
-                                                    <div>
-                                                        <div className="text-lg font-black text-slate-900 tracking-tight">{a.addedByName}</div>
-                                                        <div className="flex items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 rounded-full border border-slate-100">
-                                                                <Clock className="w-3.5 h-3.5" />
-                                                                {format(new Date(a.addedAt), 'MMMM dd, yyyy • h:mm a')}
-                                                            </div>
-                                                            <span className="text-amber-500">Official Addendum #{i + 1}</span>
-                                                        </div>
-                                                    </div>
+                                                    <div className="text-[9px] font-black text-amber-300 uppercase tracking-tighter flex items-center gap-2"><Clock className="w-3.5 h-3.5" />{format(new Date(a.addedAt), 'MMM dd, yyyy HH:mm')}</div>
                                                 </div>
-                                                <div className="text-lg font-medium text-slate-700 leading-relaxed whitespace-pre-wrap pl-8 border-l-4 border-amber-400/30">
-                                                    {a.text}
-                                                </div>
+                                                <div className="text-[13px] font-semibold text-amber-900 leading-relaxed italic border-l-4 border-amber-200/50 pl-5">{a.text}</div>
                                             </div>
                                         ))}
                                     </div>
@@ -835,75 +566,91 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                             )}
                         </div>
 
-                        {/* Professional Signature Footer */}
-                        <div className="mt-32 pt-16 border-t border-slate-100 flex items-center justify-between relative">
-                            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary-200/30 to-transparent"></div>
-                            <div className="space-y-6">
-                                <div className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] pl-1">Provider Attestation</div>
-                                <div className="flex items-center gap-6">
-                                    <div className="relative group">
-                                        <div className="absolute inset-0 bg-primary-400/20 blur-2xl rounded-full scale-150 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                        <div className="relative w-20 h-20 bg-slate-950 rounded-[2.5rem] flex items-center justify-center text-white font-black text-3xl italic border-8 border-white shadow-2xl shadow-primary-900/10">
-                                            {providerName.charAt(0)}
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <div className="text-2xl font-black text-slate-950 tracking-tighter leading-none">{providerName}</div>
-                                        <div className="inline-flex items-center gap-2.5 px-4 py-1.5 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-[0.15em] border border-emerald-100/50 shadow-sm">
-                                            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
-                                            Authenticated Digital Signature
-                                        </div>
+                        {/* Signature Block (Solid Brand) */}
+                        <div className="mt-16 pt-10 border-t border-slate-100 flex flex-wrap justify-between items-center gap-8 px-2 opacity-60 hover:opacity-100 transition-opacity">
+                            <div className="flex gap-5 items-center">
+                                <div className="w-14 h-14 bg-slate-900 rounded-[1.2rem] flex items-center justify-center text-white font-black text-xl italic shadow-2xl border border-white">
+                                    {providerName.charAt(0)}
+                                </div>
+                                <div className="leading-tight pt-1">
+                                    <div className="text-base font-black text-slate-900 tracking-tighter leading-none mb-1">{providerName}</div>
+                                    <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.3em] text-emerald-500/70">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
+                                        Digitally Authenticated
                                     </div>
                                 </div>
                             </div>
-                            <div className="text-right space-y-3 opacity-30 group">
-                                <div className="flex items-center justify-end gap-2 text-[10px] font-black uppercase tracking-[0.25em] text-slate-900">
-                                    <span>Cloud Informatics by</span>
-                                    <span className="px-2 py-1 bg-slate-950 text-white rounded-lg text-[9px] tracking-widest shadow-lg">PageMD</span>
+                            <div className="text-right leading-none space-y-3">
+                                <div className="flex items-center gap-3 justify-end text-[10px] font-black uppercase tracking-[0.2em] text-slate-200">
+                                    <span>Engineered by</span>
+                                    <span className="px-3 py-1 bg-slate-950 text-white rounded-xl text-[9px] tracking-[0.3em] shadow-xl border border-white/10 italic">PageMD</span>
                                 </div>
-                                <div className="text-[9px] text-slate-400 uppercase font-black tracking-tight">Verified Electronic Transition • v2.4.9-Stable</div>
+                                <div className="text-[8px] text-slate-200 font-black tracking-widest uppercase pl-1">Clinical Link • Local Build 27.60</div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
+            {/* Solid Frothy Modals */}
             {showAddendumModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowAddendumModal(false)}>
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-4"><h3 className="text-lg font-semibold">Add Addendum</h3><button onClick={() => setShowAddendumModal(false)}><X className="w-5 h-5" /></button></div>
-                        <textarea value={addendumText} onChange={(e) => setAddendumText(e.target.value)} className="w-full h-32 border rounded p-2" placeholder="Enter addendum text..." />
-                        <div className="flex justify-end gap-2 mt-4"><button onClick={() => setShowAddendumModal(false)} className="px-4 py-2 border rounded">Cancel</button><button onClick={handleAddAddendum} className="px-4 py-2 bg-blue-600 text-white rounded">Add</button></div>
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center z-[100] p-4" onClick={() => setShowAddendumModal(false)}>
+                    <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-xl p-10 border border-slate-50" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-8 border-b border-slate-50 pb-6">
+                            <div className="space-y-1">
+                                <h3 className="text-2xl font-black text-slate-900 tracking-tighter leading-none">Record Patch</h3>
+                                <div className="text-[10px] font-black text-amber-500/70 uppercase tracking-[0.2em] pl-0.5">Clinical Supplemental Verification</div>
+                            </div>
+                            <button onClick={() => setShowAddendumModal(false)} className="p-3 hover:bg-slate-50 rounded-2xl transition-all"><X className="w-6 h-6 text-slate-300" /></button>
+                        </div>
+                        <textarea value={addendumText} onChange={e => setAddendumText(e.target.value)} className="w-full h-48 bg-slate-50 border-2 border-slate-100 rounded-[2rem] p-6 text-sm font-bold focus:ring-[12px] focus:ring-primary-500/5 focus:border-primary-400 outline-none transition-all placeholder:text-slate-200 shadow-inner" placeholder="Enter clinical context supplement..." />
+                        <div className="flex justify-end gap-3 mt-10">
+                            <button onClick={() => setShowAddendumModal(false)} className="px-8 py-3 text-[11px] font-black uppercase tracking-widest text-slate-300 hover:text-slate-500 transition-colors">Discard</button>
+                            <button onClick={handleAddAddendum} className="px-10 py-4 bg-slate-900 text-white rounded-[1.5rem] text-[11px] font-black uppercase tracking-widest shadow-2xl shadow-slate-900/30 hover:scale-105 active:scale-95 transition-all">Patch Record</button>
+                        </div>
                     </div>
                 </div>
             )}
 
-            {
-                showBillingModal && (
-                    <BillingModal patientId={patientId} visitId={visitId} isOpen={showBillingModal} onClose={() => setShowBillingModal(false)} />
-                )
-            }
+            {showBillingModal && <BillingModal patientId={patientId} isOpen={showBillingModal} onClose={() => setShowBillingModal(false)} />}
         </>
     );
 };
 
-const BillingModal = ({ patientId, visitId, isOpen, onClose }) => {
+const BillingModal = ({ patientId, isOpen, onClose }) => {
     const [claims, setClaims] = useState([]);
-    const [loading, setLoading] = useState(true);
-
     useEffect(() => {
-        if (isOpen && patientId) {
-            billingAPI.getClaimsByPatient(patientId).then(res => setClaims(res.data || [])).catch(console.error).finally(() => setLoading(false));
-        }
-    }, [isOpen, patientId]);
-
+        if (isOpen) billingAPI.getClaimsByPatient(patientId).then(res => setClaims(res.data || [])).catch(console.error);
+    }, [isOpen]);
     if (!isOpen) return null;
-
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto p-4" onClick={onClose}>
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl p-6" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center justify-between mb-4"><h3 className="text-lg font-semibold">Billing & Claims</h3><button onClick={onClose}><X className="w-5 h-5" /></button></div>
-                {loading ? <div>Loading...</div> : claims.length === 0 ? <div>No claims found</div> : <div className="space-y-4">{claims.map((c, i) => <div key={i} className="border p-4 rounded flex justify-between"><div>{c.visit_type} - {format(new Date(c.visit_date), 'MM/dd/yyyy')} ({c.status})</div><div className="font-bold">${c.total_amount}</div></div>)}</div>}
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center z-[100] p-4" onClick={onClose}>
+            <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-2xl p-10 border border-slate-50" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-between items-center mb-8 pb-6 border-b">
+                    <div className="space-y-1">
+                        <h3 className="text-2xl font-black text-slate-900 tracking-tighter leading-none">Financial Audit</h3>
+                        <div className="text-[10px] font-black text-emerald-500/70 uppercase tracking-[0.2em] pl-0.5">Claim Transmission Log</div>
+                    </div>
+                    <button onClick={onClose} className="p-3 hover:bg-slate-50 rounded-2xl transition-all"><X className="w-6 h-6 text-slate-300" /></button>
+                </div>
+                <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-3 custom-scrollbar">
+                    {claims.map((c, i) => (
+                        <div key={i} className="group p-5 bg-slate-50 border border-slate-100 rounded-[2rem] flex justify-between items-center hover:bg-white transition-all shadow-sm">
+                            <div className="space-y-1.5">
+                                <div className="text-sm font-black text-slate-900 tracking-tight">{format(new Date(c.visit_date), 'MMMM dd, yyyy')}</div>
+                                <div className="flex items-center gap-3">
+                                    <div className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${c.status === 'Paid' ? 'bg-emerald-50 text-emerald-600' : 'bg-white border border-slate-100 text-slate-300'}`}>{c.status}</div>
+                                    <div className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.2em]">{c.visit_type || 'Procedure/Evaluation'}</div>
+                                </div>
+                            </div>
+                            <div className="text-2xl font-black text-slate-900 tracking-tighter">${c.total_amount}</div>
+                        </div>
+                    ))}
+                    {claims.length === 0 && <div className="text-center py-20 text-slate-200 font-bold uppercase tracking-widest text-[10px]">Financials Sync Required</div>}
+                </div>
+                <div className="mt-10 pt-8 border-t border-slate-50 flex justify-end">
+                    <button onClick={onClose} className="px-12 py-4 bg-slate-900 text-white rounded-[1.5rem] text-[11px] font-black uppercase tracking-widest shadow-2xl shadow-slate-900/30">Exit Audit</button>
+                </div>
             </div>
         </div>
     );
