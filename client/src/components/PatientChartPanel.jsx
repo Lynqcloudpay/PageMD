@@ -818,7 +818,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                             <div className="text-center py-12 text-gray-400">No visit history found.</div>
                                         ) : (
                                             notes.map(note => {
-                                                const noteText = note.note_draft || "";
+                                                const noteText = decodeHtmlEntities(note.note_draft || "");
                                                 // Extract chief complaint
                                                 const ccMatch = noteText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
                                                 const chiefComplaint = ccMatch ? ccMatch[1].trim() : "No Chief Complaint";
