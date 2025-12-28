@@ -4,7 +4,7 @@ import {
     Calendar, Users, FileText, Settings, LogOut, Search, X, Activity,
     Clock, History, User, ClipboardList, BarChart3,
     MessageSquare, Video, Moon, Sun, Menu, ChevronRight, Bell,
-    Zap, Command, DollarSign, Shield, AlertCircle
+    Zap, Command, DollarSign, Shield, AlertCircle, HelpCircle
 } from 'lucide-react';
 import { usePatient } from '../context/PatientContext';
 import { useAuth } from '../context/AuthContext';
@@ -14,6 +14,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { patientsAPI, messagesAPI, visitsAPI, followupsAPI } from '../services/api';
 import PatientTabs from './PatientTabs';
 import MobileMenu from './MobileMenu';
+import SupportModal from './SupportModal';
 
 const Layout = ({ children }) => {
     const location = useLocation();
@@ -26,6 +27,7 @@ const Layout = ({ children }) => {
     const [showSearch, setShowSearch] = useState(false);
     const [loading, setLoading] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [showSupportModal, setShowSupportModal] = useState(false);
     const { unreadCount: tasksCount } = useTasks();
 
     const [pendingNotesCount, setPendingNotesCount] = useState(0);
@@ -197,8 +199,14 @@ const Layout = ({ children }) => {
             e.preventDefault();
             setShowSearch(true);
         }
+        // Shift+? to open support modal
+        if (e.shiftKey && e.key === '?') {
+            e.preventDefault();
+            setShowSupportModal(true);
+        }
         if (e.key === 'Escape') {
             setShowSearch(false);
+            setShowSupportModal(false);
         }
     };
 
@@ -515,6 +523,18 @@ const Layout = ({ children }) => {
                     {children}
                 </div>
             </main>
+
+            {/* Floating Help Button */}
+            <button
+                onClick={() => setShowSupportModal(true)}
+                className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all z-50 flex items-center justify-center group"
+                title="Report an Issue (Shift+?)"
+            >
+                <HelpCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />
+            </button>
+
+            {/* Support Modal */}
+            <SupportModal isOpen={showSupportModal} onClose={() => setShowSupportModal(false)} />
 
             {/* Mobile Menu */}
             <MobileMenu />

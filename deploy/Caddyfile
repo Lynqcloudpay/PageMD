@@ -81,3 +81,48 @@ https://bemypcp.com {
     }
 }
 
+# ================================================================
+# Admin Portal Subdomain (Isolated SuperAdmin Access)
+# ================================================================
+http://admin.bemypcp.com {
+    redir https://admin.bemypcp.com{uri} permanent
+}
+
+https://admin.bemypcp.com {
+    # Security headers (stricter for admin)
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-XSS-Protection "1; mode=block"
+        X-Frame-Options "DENY"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' blob: https://admin.bemypcp.com; frame-ancestors 'none';"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+        -Server
+    }
+
+    # API reverse proxy (same backend, different origin for cookie isolation)
+    handle /api/* {
+        reverse_proxy api:3000 {
+            header_up X-Real-IP {remote_host}
+            header_up Host {host}
+            header_up X-Admin-Portal "true"
+        }
+    }
+
+    # Serve static frontend (same SPA, admin routes)
+    handle {
+        root * /usr/share/caddy
+        try_files {path} /index.html
+        file_server
+    }
+
+    log {
+        output file /var/log/caddy/admin-access.log
+        format json
+    }
+
+    handle /health {
+        respond 200
+    }
+}
