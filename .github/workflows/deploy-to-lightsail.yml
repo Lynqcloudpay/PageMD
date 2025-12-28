@@ -138,6 +138,19 @@ jobs:
                 echo 'Certs already exist'; 
               fi" || echo "⚠️  Certificate check skipped (volume may not exist yet)"
             
+            echo "📦 Building frontend (using Docker container)..."
+            # Use Docker to build frontend to avoid host environment issues
+            docker run --rm \
+              -v "$(pwd)/client:/app" \
+              -w /app \
+              node:18-alpine \
+              sh -c "npm install --legacy-peer-deps && npm run build"
+              
+            echo "📂 Syncing build artifacts to deploy/static..."
+            rm -rf deploy/static/*
+            mkdir -p deploy/static
+            cp -r client/dist/* deploy/static/
+            
             echo "🔄 Rebuilding and restarting services..."
             # Rebuild api and web containers
             docker compose -f docker-compose.prod.yml up -d --build --force-recreate
