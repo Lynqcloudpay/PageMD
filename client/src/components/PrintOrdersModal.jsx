@@ -9,11 +9,13 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
     const [allOrders, setAllOrders] = useState([]);
     const [selectedOrders, setSelectedOrders] = useState(new Set());
     const [expandedVisits, setExpandedVisits] = useState({});
+    // Default generic clinic logo as data URI
+    const defaultLogoUrl = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8fafc'/%3E%3Ccircle cx='100' cy='100' r='75' fill='%23e2e8f0' stroke='%23cbd5e1' stroke-width='2'/%3E%3Cpath d='M100 55 L100 145 M55 100 L145 100' stroke='%233b82f6' stroke-width='16' stroke-linecap='round'/%3E%3Ccircle cx='100' cy='100' r='35' fill='none' stroke='%233b82f6' stroke-width='4'/%3E%3C/svg%3E`;
     const [clinicInfo, setClinicInfo] = useState({
-        name: "myHEART Cardiology",
-        address: "123 Medical Plaza, Ste 100\nHealthcare City, ST 12345",
-        phone: "(555) 123-4567",
-        logo: "/clinic-logo.png"
+        name: "My Practice",
+        address: "",
+        phone: "",
+        logo: defaultLogoUrl
     });
 
     useEffect(() => {
@@ -101,13 +103,13 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                     .join('\n');
 
                 setClinicInfo({
-                    name: p.practice_name || "myHEART Cardiology",
-                    address: address || "123 Medical Plaza, Ste 100\nHealthcare City, ST 12345",
-                    phone: p.phone || "(555) 123-4567",
-                    logo: p.logo_url || "/clinic-logo.png",
-                    npi: p.npi || "1234567890",
-                    fax: p.fax || "(555) 123-4568",
-                    email: p.email || "office@myheartclinic.com"
+                    name: p.practice_name || "My Practice",
+                    address: address || "",
+                    phone: p.phone || "",
+                    logo: p.logo_url || defaultLogoUrl,
+                    npi: p.npi || "",
+                    fax: p.fax || "",
+                    email: p.email || ""
                 });
             }
 
@@ -461,8 +463,8 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                                             <div style="margin-top: 5px;">
                                                 <strong>TEL:</strong> ${clinicInfo.phone} &middot; 
                                                 <strong>FAX:</strong> ${clinicInfo.fax}<br>
-                                                <strong>NPI:</strong> ${clinicInfo.npi} &middot; 
-                                                <strong>EML:</strong> ${clinicInfo.email || 'office@myheartclinic.com'}
+                                                <strong>NPI:</strong> ${clinicInfo.npi || 'N/A'} &middot; 
+                                                <strong>EML:</strong> ${clinicInfo.email || 'N/A'}
                                             </div>
                                         </div>
                                     </div>

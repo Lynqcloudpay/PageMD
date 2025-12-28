@@ -200,14 +200,16 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
 
             if (practiceRes?.data) {
                 const p = practiceRes.data;
+                // Default generic clinic logo as data URI
+                const defaultLogoUrl = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8fafc'/%3E%3Ccircle cx='100' cy='100' r='75' fill='%23e2e8f0' stroke='%23cbd5e1' stroke-width='2'/%3E%3Cpath d='M100 55 L100 145 M55 100 L145 100' stroke='%233b82f6' stroke-width='16' stroke-linecap='round'/%3E%3Ccircle cx='100' cy='100' r='35' fill='none' stroke='%233b82f6' stroke-width='4'/%3E%3C/svg%3E`;
                 setClinicInfo({
-                    name: p.practice_name || p.display_name || "myHEART Cardiology",
-                    address: [p.address_line1, p.address_line2, `${p.city || ''} ${p.state || ''} ${p.zip || ''}`.trim()].filter(Boolean).join('\n') || "123 Medical Center Drive, Suite 100\nCity, State 12345",
-                    phone: p.phone || "(555) 123-4567",
-                    fax: p.fax || "(555) 123-4568",
-                    email: p.email || "office@myheartclinic.com",
-                    website: p.website || "www.myheartclinic.com",
-                    logo: p.logo_url || "/clinic-logo.png"
+                    name: p.practice_name || p.display_name || "My Practice",
+                    address: [p.address_line1, p.address_line2, `${p.city || ''} ${p.state || ''} ${p.zip || ''}`.trim()].filter(Boolean).join('\n') || "",
+                    phone: p.phone || "",
+                    fax: p.fax || "",
+                    email: p.email || "",
+                    website: p.website || "",
+                    logo: p.logo_url || defaultLogoUrl
                 });
             }
 
@@ -396,23 +398,23 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-primary-400 border border-slate-100 shadow-sm"><Phone className="w-4 h-4" /></div>
                                         <div className="leading-tight">
-                                            <div className="text-[8px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">Mobile Interface</div>
-                                            <div className="text-[12px] font-bold text-slate-600">{patient.phone || patient.mobile_phone || patient.home_phone || 'Unlisted'}</div>
+                                            <div className="text-[8px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">Phone</div>
+                                            <div className="text-[12px] font-bold text-slate-600">{patient.phone || patient.mobile_phone || patient.home_phone || 'Not provided'}</div>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-indigo-400 border border-slate-100 shadow-sm"><Mail className="w-4 h-4" /></div>
                                         <div className="leading-tight">
-                                            <div className="text-[8px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">Digital Protocol</div>
-                                            <div className="text-[12px] font-bold text-slate-600 lowercase">{patient.email || patient.email_address || 'Unlisted'}</div>
+                                            <div className="text-[8px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">Email</div>
+                                            <div className="text-[12px] font-bold text-slate-600 lowercase">{patient.email || patient.email_address || 'Not provided'}</div>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-emerald-400 border border-slate-100 shadow-sm"><MapPin className="w-4 h-4" /></div>
                                         <div className="leading-tight">
-                                            <div className="text-[8px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">Global Positioning</div>
+                                            <div className="text-[8px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">Address</div>
                                             <div className="text-[12px] font-bold text-slate-600">
-                                                {[patient.street_address || patient.address_line1, patient.city, patient.state, patient.zip].filter(Boolean).join(', ') || 'Unlisted Territory'}
+                                                {[patient.street_address || patient.address_line1, patient.city, patient.state, patient.zip].filter(Boolean).join(', ') || 'Not provided'}
                                             </div>
                                         </div>
                                     </div>
