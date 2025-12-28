@@ -100,10 +100,16 @@ router.get('/practice', authenticate, async (req, res) => {
         practice_name: 'My Practice',
         timezone: 'America/New_York',
         date_format: 'MM/DD/YYYY',
-        time_format: '12h'
+        time_format: '12h',
+        logo_url: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8fafc'/%3E%3Ccircle cx='100' cy='100' r='75' fill='%23e2e8f0' stroke='%23cbd5e1' stroke-width='2'/%3E%3Cpath d='M100 55 L100 145 M55 100 L145 100' stroke='%233b82f6' stroke-width='16' stroke-linecap='round'/%3E%3Ccircle cx='100' cy='100' r='35' fill='none' stroke='%233b82f6' stroke-width='4'/%3E%3C/svg%3E`
       });
     }
-    res.json(result.rows[0]);
+    // If logo_url is null/empty, return the default
+    const settings = result.rows[0];
+    if (!settings.logo_url) {
+      settings.logo_url = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8fafc'/%3E%3Ccircle cx='100' cy='100' r='75' fill='%23e2e8f0' stroke='%23cbd5e1' stroke-width='2'/%3E%3Cpath d='M100 55 L100 145 M55 100 L145 100' stroke='%233b82f6' stroke-width='16' stroke-linecap='round'/%3E%3Ccircle cx='100' cy='100' r='35' fill='none' stroke='%233b82f6' stroke-width='4'/%3E%3C/svg%3E`;
+    }
+    res.json(settings);
   } catch (error) {
     console.error('Error fetching practice settings:', error);
     res.status(500).json({ error: 'Failed to fetch practice settings' });
