@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../db');
 const tenantManager = require('../services/tenantManager');
 const governanceService = require('../services/governanceService');
+const AuditService = require('../services/auditService');
 
 const router = express.Router();
 
@@ -212,10 +213,8 @@ router.patch('/clinics/:id/status', verifySuperAdmin, async (req, res) => {
         );
 
         // Log the action
-        await pool.controlPool.query(`
-      INSERT INTO platform_audit_logs (action, target_clinic_id, details)
-      VALUES ($1, $2, $3)
-    `, [`clinic_${status}`, id, JSON.stringify({ reason })]);
+        // Log the action (Phase 3: Secure Audit)
+        await AuditService.log(null, `clinic_${status}`, id, { reason });
 
         res.json({ message: `Clinic ${status} successfully`, status });
     } catch (error) {
@@ -294,10 +293,8 @@ router.patch('/clinics/:id/controls', verifySuperAdmin, async (req, res) => {
         const afterData = result.rows[0];
 
         // 3. Structured Platform Audit Log (Before/After)
-        await pool.controlPool.query(`
-            INSERT INTO platform_audit_logs (action, target_clinic_id, details)
-            VALUES ($1, $2, $3)
-        `, ['clinic_controls_updated', id, JSON.stringify({
+        // 3. Structured Platform Audit Log (Phase 3: Hashed)
+        await AuditService.log(null, 'clinic_controls_updated', id, {
             adminEmail: req.platformAdmin.email,
             changes: req.body,
             previousState: {
@@ -308,7 +305,7 @@ router.patch('/clinics/:id/controls', verifySuperAdmin, async (req, res) => {
                 tenant_type: beforeData.tenant_type,
                 compliance_zones: beforeData.compliance_zones
             }
-        })]);
+        });
 
         res.json(afterData);
     } catch (error) {
@@ -628,10 +625,8 @@ router.post('/clinics/:id/users/:userId/reset-password', verifySuperAdmin, async
         `, [hash, userId]);
 
         // 4. Log the action
-        await pool.controlPool.query(`
-            INSERT INTO platform_audit_logs (action, target_clinic_id, details)
-            VALUES ($1, $2, $3)
-        `, ['user_password_reset_by_admin', id, JSON.stringify({ userId })]);
+        // 4. Log the action
+        await AuditService.log(null, 'user_password_reset_by_admin', id, { userId });
 
         res.json({ message: 'Password reset successfully' });
     } catch (error) {
@@ -764,15 +759,13 @@ router.post('/clinics/:id/impersonate', verifySuperAdmin, async (req, res) => {
         `, [req.platformAdmin.id, id, userId, token, reason]);
 
         // 4. Log the "Break Glass" event
-        await pool.controlPool.query(`
-            INSERT INTO platform_audit_logs (action, target_clinic_id, details)
-            VALUES ($1, $2, $3)
-        `, ['impersonation_initiated', id, JSON.stringify({
+        // 4. Log the "Break Glass" event
+        await AuditService.log(null, 'impersonation_initiated', id, {
             targetUserId: userId,
             reason,
             adminEmail: req.platformAdmin.email,
             expiresAt: new Date(Date.now() + 15 * 60000).toISOString()
-        })]);
+        });
 
         res.json({ token });
     } catch (error) {

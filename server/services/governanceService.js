@@ -3,6 +3,7 @@
  * Centralizes permission comparisons, drift detection, and role syncing.
  */
 const pool = require('../db');
+const AuditService = require('./auditService');
 
 /**
  * Global Permission Catalog (Gold Standard)
@@ -226,11 +227,8 @@ async function syncRole(clinicId, roleKey, adminId) {
             `, [roleId, privilegeId]);
         }
 
-        // 4. Log Platform Audit
-        await client.query(`
-            INSERT INTO platform_audit_logs (action, target_clinic_id, details)
-            VALUES ($1, $2, $3)
-        `, ['ROLE_FORCE_SYNC', clinicId, JSON.stringify({
+        // 4. Log Platform Audit (Hashed)
+        await AuditService.log(client, 'ROLE_FORCE_SYNC', clinicId, {
             roleKey,
             templateVersion: tplVersion,
             adminId,
@@ -238,7 +236,7 @@ async function syncRole(clinicId, roleKey, adminId) {
                 missingBefore,
                 extraBefore
             }
-        })]);
+        });
 
         await client.query('COMMIT');
         return { success: true, roleKey };
