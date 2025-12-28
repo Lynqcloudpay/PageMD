@@ -100,6 +100,7 @@ const Layout = ({ children }) => {
     const showMySchedule = canViewSchedule && scope.scheduleScope === 'SELF';
 
     // Navigation items with icons and badges (gated by permissions)
+    // Use defensive checks to prevent crashes if permissions undefined
     const navItems = [
         // Schedule - requires schedule:view permission
         ...(canViewSchedule ? [
@@ -124,7 +125,7 @@ const Layout = ({ children }) => {
             { path: '/users', icon: Shield, label: 'User Management', badge: null },
             { path: '/admin-settings', icon: Settings, label: 'Settings', badge: null }
         ] : []),
-    ];
+    ].filter(Boolean); // Filter out any undefined/null items
 
     useEffect(() => {
         if (searchQuery.trim()) {
@@ -286,7 +287,7 @@ const Layout = ({ children }) => {
                             </div>
                         </div>
                         <div className="space-y-0.5">
-                            {navItems.slice(0, 4).map((item) => {
+                            {(navItems || []).slice(0, 4).map((item) => {
                                 const Icon = item.icon;
                                 const active = isActive(item.path);
                                 return (
@@ -342,7 +343,7 @@ const Layout = ({ children }) => {
                             </div>
                         </div>
                         <div className="space-y-0.5">
-                            {navItems.slice(4).map((item) => {
+                            {(navItems || []).slice(4).map((item) => {
                                 const Icon = item.icon;
                                 const active = isActive(item.path);
                                 return (
