@@ -1,8 +1,10 @@
 const express = require('express');
 const pool = require('../db');
 const tenantManager = require('../services/tenantManager');
+const governanceService = require('../services/governanceService');
 
 const router = express.Router();
+
 
 // Middleware to verify Platform Admin authentication
 const verifySuperAdmin = async (req, res, next) => {
@@ -787,11 +789,11 @@ router.get('/governance/roles', verifySuperAdmin, async (req, res) => {
     try {
         const templates = await pool.controlPool.query(`
             SELECT t.*, 
-                   COALESCE(json_agg(tp.privilege_name) FILTER (WHERE tp.privilege_name IS NOT NULL), '[]') as privileges
+                   COALESCE(json_agg(tp.privilege_name) FILTER (WHERE tp.privilege_name IS NOT NULL), '[]') as privilege_set
             FROM platform_role_templates t
             LEFT JOIN platform_role_template_privileges tp ON t.id = tp.template_id
             GROUP BY t.id
-            ORDER BY t.name
+            ORDER BY t.role_key
         `);
         res.json(templates.rows);
     } catch (error) {
@@ -807,78 +809,11 @@ router.get('/governance/roles', verifySuperAdmin, async (req, res) => {
 router.get('/clinics/:id/governance/drift', verifySuperAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-
-        // 1. Get clinic info (schema name)
-        const clinicRes = await pool.controlPool.query('SELECT schema_name FROM clinics WHERE id = $1', [id]);
-        if (clinicRes.rows.length === 0) return res.status(404).json({ error: 'Clinic not found' });
-        const schema = clinicRes.rows[0].schema_name;
-
-        // 2. Fetch global templates
-        const templatesRes = await pool.controlPool.query(`
-            SELECT t.name as template_name, tp.privilege_name
-            FROM platform_role_templates t
-            JOIN platform_role_template_privileges tp ON t.id = tp.template_id
-        `);
-
-        // 3. Fetch clinic's actual roles and privileges
-        const clinicRolesRes = await pool.controlPool.query(`
-            SELECT r.name as role_name, p.name as privilege_name
-            FROM ${schema}.roles r
-            JOIN ${schema}.role_privileges rp ON r.id = rp.role_id
-            JOIN ${schema}.privileges p ON rp.privilege_id = p.id
-        `);
-
-        // 4. Calculate drift
-        const templates = {};
-        templatesRes.rows.forEach(r => {
-            if (!templates[r.template_name]) templates[r.template_name] = new Set();
-            templates[r.template_name].add(r.privilege_name);
-        });
-
-        const clinicRoles = {};
-        clinicRolesRes.rows.forEach(r => {
-            if (!clinicRoles[r.role_name]) clinicRoles[r.role_name] = new Set();
-            clinicRoles[r.role_name].add(r.privilege_name);
-        });
-
-        const driftReports = [];
-        for (const [tplName, tplPrivs] of Object.entries(templates)) {
-            const actualPrivs = clinicRoles[tplName];
-
-            if (!actualPrivs) {
-                driftReports.push({
-                    roleName: tplName,
-                    status: 'missing',
-                    missingPrivileges: Array.from(tplPrivs),
-                    extraPrivileges: []
-                });
-                continue;
-            }
-
-            const missing = Array.from(tplPrivs).filter(p => !actualPrivs.has(p));
-            const extra = Array.from(actualPrivs).filter(p => !tplPrivs.has(p));
-
-            if (missing.length > 0 || extra.length > 0) {
-                driftReports.push({
-                    roleName: tplName,
-                    status: 'drifted',
-                    missingPrivileges: missing,
-                    extraPrivileges: extra
-                });
-            } else {
-                driftReports.push({
-                    roleName: tplName,
-                    status: 'synced',
-                    missingPrivileges: [],
-                    extraPrivileges: []
-                });
-            }
-        }
-
-        res.json({ clinicId: id, drift: driftReports });
+        const drift = await governanceService.detectDrift(id);
+        res.json({ clinicId: id, drift });
     } catch (error) {
         console.error('Error detecting drift:', error);
-        res.status(500).json({ error: 'Failed to detect permission drift' });
+        res.status(500).json({ error: error.message || 'Failed to detect permission drift' });
     }
 });
 
@@ -889,62 +824,64 @@ router.get('/clinics/:id/governance/drift', verifySuperAdmin, async (req, res) =
 router.post('/clinics/:id/governance/sync', verifySuperAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { roleName } = req.body;
+        const { roleKey } = req.body;
 
-        if (!roleName) return res.status(400).json({ error: 'Role name required' });
+        if (!roleKey) return res.status(400).json({ error: 'Role key required' });
 
-        const clinicRes = await pool.controlPool.query('SELECT schema_name FROM clinics WHERE id = $1', [id]);
-        if (clinicRes.rows.length === 0) return res.status(404).json({ error: 'Clinic not found' });
-        const schema = clinicRes.rows[0].schema_name;
-
-        const tplRes = await pool.controlPool.query(`
-            SELECT tp.privilege_name
-            FROM platform_role_templates t
-            JOIN platform_role_template_privileges tp ON t.id = tp.template_id
-            WHERE t.name = $1
-        `, [roleName]);
-
-        if (tplRes.rows.length === 0) return res.status(404).json({ error: 'Template not found' });
-        const targetPrivs = tplRes.rows.map(r => r.privilege_name);
-
-        await pool.controlPool.query('BEGIN');
-
-        try {
-            let rRes = await pool.controlPool.query(`SELECT id FROM ${schema}.roles WHERE name = $1`, [roleName]);
-            let roleId;
-            if (rRes.rows.length === 0) {
-                const newRole = await pool.controlPool.query(`INSERT INTO ${schema}.roles (name, description) VALUES ($1, $2) RETURNING id`, [roleName, `Synced from Global Template: ${roleName}`]);
-                roleId = newRole.rows[0].id;
-            } else {
-                roleId = rRes.rows[0].id;
-            }
-
-            await pool.controlPool.query(`DELETE FROM ${schema}.role_privileges WHERE role_id = $1`, [roleId]);
-
-            for (const pName of targetPrivs) {
-                const pRes = await pool.controlPool.query(`SELECT id FROM ${schema}.privileges WHERE name = $1`, [pName]);
-                if (pRes.rows.length > 0) {
-                    await pool.controlPool.query(`
-                        INSERT INTO ${schema}.role_privileges (role_id, privilege_id) 
-                        VALUES ($1, $2)
-                    `, [roleId, pRes.rows[0].id]);
-                }
-            }
-
-            await pool.controlPool.query(`
-                INSERT INTO platform_audit_logs (action, target_clinic_id, details)
-                VALUES ($1, $2, $3)
-            `, ['role_template_synced', id, JSON.stringify({ roleName, adminEmail: req.platformAdmin.email })]);
-
-            await pool.controlPool.query('COMMIT');
-            res.json({ message: `Role ${roleName} synced successfully` });
-        } catch (innerError) {
-            await pool.controlPool.query('ROLLBACK');
-            throw innerError;
-        }
+        const result = await governanceService.syncRole(id, roleKey, req.platformAdmin.id);
+        res.json({ message: `Role ${roleKey} synced successfully`, ...result });
     } catch (error) {
         console.error('Error syncing role:', error);
-        res.status(500).json({ error: 'Failed to sync role' });
+        if (error.message === 'SYNC_IN_PROGRESS') {
+            return res.status(429).json({ error: 'Sync in progress for this clinic. Please wait.' });
+        }
+        res.status(500).json({ error: error.message || 'Failed to sync role' });
+    }
+});
+
+/**
+ * Audit Logs Retrieval
+ */
+
+/**
+ * GET /api/super/audit-logs
+ * List all platform-level audit logs
+ */
+router.get('/audit-logs', verifySuperAdmin, async (req, res) => {
+    try {
+        const { limit = 100, offset = 0 } = req.query;
+        const result = await pool.controlPool.query(`
+            SELECT pal.*, c.display_name as clinic_name, c.slug as clinic_slug
+            FROM platform_audit_logs pal
+            LEFT JOIN clinics c ON pal.target_clinic_id = c.id
+            ORDER BY pal.created_at DESC
+            LIMIT $1 OFFSET $2
+        `, [parseInt(limit), parseInt(offset)]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching platform audit logs:', error);
+        res.status(500).json({ error: 'Failed to fetch audit logs' });
+    }
+});
+
+/**
+ * GET /api/super/clinics/:id/audit-logs
+ * List audit logs for a specific clinic
+ */
+router.get('/clinics/:id/audit-logs', verifySuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { limit = 50 } = req.query;
+        const result = await pool.controlPool.query(`
+            SELECT * FROM platform_audit_logs
+            WHERE target_clinic_id = $1
+            ORDER BY created_at DESC
+            LIMIT $2
+        `, [id, parseInt(limit)]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching clinic audit logs:', error);
+        res.status(500).json({ error: 'Failed to fetch clinic audit logs' });
     }
 });
 

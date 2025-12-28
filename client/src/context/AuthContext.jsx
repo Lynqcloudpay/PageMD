@@ -202,7 +202,7 @@ export const AuthProvider = ({ children }) => {
                 console.log('AuthContext: Token received, updating state');
                 tokenManager.setToken(response.data.token);
                 tokenManager.setRememberedUsername(email);
-                
+
                 // Fetch full user data with permissions from /auth/me
                 try {
                     const meResponse = await authAPI.getMe();
@@ -231,7 +231,7 @@ export const AuthProvider = ({ children }) => {
                         scope: { scheduleScope: 'CLINIC', patientScope: 'CLINIC' }
                     });
                 }
-                
+
                 resetInactivityTimer();
                 return response.data;
             } else {
@@ -243,13 +243,39 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const impersonateLogin = async (impersonationData) => {
+        try {
+            const { token, user, clinic_slug } = impersonationData;
+
+            // 1. Set the token
+            tokenManager.setToken(token);
+
+            // 2. Set the clinic slug for API interceptors
+            if (clinic_slug) localStorage.setItem('clinic_slug', clinic_slug);
+
+            // 3. fetch fresh context with /auth/me (important for permissions)
+            const meResponse = await authAPI.getMe();
+            const userData = {
+                ...meResponse.data,
+                isImpersonation: true
+            };
+
+            setUser(userData);
+            resetInactivityTimer();
+            return userData;
+        } catch (error) {
+            console.error('AuthContext: Impersonation login failed', error);
+            throw error;
+        }
+    };
+
     const logout = () => {
         tokenManager.clearToken();
         setUser(null);
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout, resetInactivityTimer }}>
+        <AuthContext.Provider value={{ user, loading, login, impersonateLogin, logout, resetInactivityTimer }}>
             {children}
         </AuthContext.Provider>
     );

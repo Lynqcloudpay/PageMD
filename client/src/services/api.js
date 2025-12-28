@@ -11,17 +11,19 @@ const api = axios.create({
   },
 });
 
-// Add auth token to requests
+// Add auth token and clinic slug to requests
 api.interceptors.request.use((config) => {
   const token = tokenManager.getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
-  } else {
-    // Log when token is missing for debugging
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('API request without token:', config.url);
-    }
   }
+
+  // HIPAA: Clinic slug is used for multi-tenant routing
+  const clinicSlug = localStorage.getItem('clinic_slug');
+  if (clinicSlug) {
+    config.headers['x-clinic-slug'] = clinicSlug;
+  }
+
   return config;
 });
 

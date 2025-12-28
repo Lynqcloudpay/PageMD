@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Loader2, AlertCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const ImpersonateHandler = () => {
     const [searchParams] = useSearchParams();
     const [error, setError] = useState(null);
     const navigate = useNavigate();
+    const { impersonateLogin } = useAuth();
 
     useEffect(() => {
         const performImpersonation = async () => {
@@ -22,19 +24,17 @@ const ImpersonateHandler = () => {
                 // Call the endpoint on the target clinic API
                 const response = await axios.get(`/api/auth/impersonate?token=${token}`);
 
-                // Store clinic slug if provided
-                if (slug) localStorage.setItem('clinic_slug', slug);
+                // Establish the session via AuthContext
+                await impersonateLogin({
+                    token: response.data.token,
+                    user: response.data.user,
+                    clinic_slug: slug
+                });
 
-                // Standard login storage logic
-                localStorage.setItem('token', response.data.token);
-                localStorage.setItem('user', JSON.stringify(response.data.user));
-
-                // Set default headers for next requests
-                axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
-                if (slug) axios.defaults.headers.common['x-clinic-slug'] = slug;
-
-                // Redirect to dashboard
-                navigate('/dashboard');
+                // Small delay to ensure state propagation and prevent race conditions
+                setTimeout(() => {
+                    navigate('/dashboard', { replace: true });
+                }, 100);
             } catch (err) {
                 console.error('Impersonation error:', err);
                 setError(err.response?.data?.error || 'Impersonation failed. The token may be expired.');
@@ -42,7 +42,7 @@ const ImpersonateHandler = () => {
         };
 
         performImpersonation();
-    }, [searchParams, navigate]);
+    }, [searchParams, navigate, impersonateLogin]);
 
     if (error) {
         return (

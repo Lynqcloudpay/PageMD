@@ -181,12 +181,12 @@ const DriftManager = ({ clinicId, apiCall }) => {
         }
     };
 
-    const handleSync = async (roleName) => {
-        if (!confirm(`Are you sure you want to FORCE SYNC the ${roleName} role? This will overwrite clinic-level customizations to match global standards.`)) return;
+    const handleSync = async (roleKey) => {
+        if (!confirm(`Are you sure you want to FORCE SYNC the ${roleKey} role? This will overwrite clinic-level customizations to match global standards.`)) return;
 
-        setSyncing(roleName);
+        setSyncing(roleKey);
         try {
-            await apiCall('POST', `/clinics/${clinicId}/governance/sync`, { roleName });
+            await apiCall('POST', `/clinics/${clinicId}/governance/sync`, { roleKey });
             await loadDrift();
         } catch (err) {
             alert(err.response?.data?.error || 'Failed to sync role');
@@ -200,43 +200,94 @@ const DriftManager = ({ clinicId, apiCall }) => {
     return (
         <div className="space-y-4">
             {drift.map((report) => (
-                <div key={report.roleName} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                <div key={report.roleKey} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${report.status === 'synced' ? 'bg-emerald-100 text-emerald-600' :
-                            report.status === 'drifted' ? 'bg-orange-100 text-orange-600' :
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${report.status === 'SYNCED' ? 'bg-emerald-100 text-emerald-600' :
+                            report.status === 'DRIFTED' ? 'bg-orange-100 text-orange-600' :
                                 'bg-red-100 text-red-600'
                             }`}>
                             <Shield className="w-5 h-5" />
                         </div>
                         <div>
                             <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                                {report.roleName}
-                                <span className={`text-[10px] uppercase px-2 py-0.5 rounded-full font-black tracking-tighter ${report.status === 'synced' ? 'bg-emerald-500/10 text-emerald-500' :
-                                    report.status === 'drifted' ? 'bg-orange-500/10 text-orange-500' :
+                                {report.displayName}
+                                <span className={`text-[10px] uppercase px-2 py-0.5 rounded-full font-black tracking-tighter ${report.status === 'SYNCED' ? 'bg-emerald-500/10 text-emerald-500' :
+                                    report.status === 'DRIFTED' ? 'bg-orange-500/10 text-orange-500' :
                                         'bg-red-500/10 text-red-500'
                                     }`}>
                                     {report.status}
                                 </span>
                             </h4>
                             <p className="text-[10px] text-slate-500">
-                                {report.status === 'synced' && 'Matches Platform Gold Standard'}
-                                {report.status === 'drifted' && `${report.missingPrivileges.length} Missing, ${report.extraPrivileges.length} Unapproved`}
-                                {report.status === 'missing' && 'Role missing from clinical schema'}
+                                {report.status === 'SYNCED' && 'Matches Platform Gold Standard'}
+                                {report.status === 'DRIFTED' && `${report.missingPrivileges.length} Missing, ${report.extraPrivileges.length} Extra, ${report.unknownPrivileges?.length || 0} Unknown`}
+                                {report.status === 'MISSING' && 'Role missing from clinical schema'}
                             </p>
                         </div>
                     </div>
 
                     <button
-                        onClick={() => handleSync(report.roleName)}
-                        disabled={syncing === report.roleName || report.status === 'synced'}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${report.status === 'synced' ? 'bg-emerald-50 text-emerald-600 cursor-default' :
+                        onClick={() => handleSync(report.roleKey)}
+                        disabled={syncing === report.roleKey || report.status === 'SYNCED'}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${report.status === 'SYNCED' ? 'bg-emerald-50 text-emerald-600 cursor-default' :
                             'bg-white border border-slate-200 text-slate-700 hover:border-indigo-500 hover:text-indigo-600 shadow-sm'
                             }`}
                     >
-                        {syncing === report.roleName ? 'Syncing...' : report.status === 'synced' ? 'Standardized' : 'Force Sync'}
+                        {syncing === report.roleKey ? 'Syncing...' : report.status === 'SYNCED' ? 'Standardized' : 'Force Sync'}
                     </button>
                 </div>
             ))}
+        </div>
+    );
+};
+
+
+const PlatformAuditTrail = ({ clinicId, apiCall }) => {
+    const [logs, setLogs] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        loadLogs();
+    }, [clinicId]);
+
+    const loadLogs = async () => {
+        try {
+            const data = await apiCall('GET', `/clinics/${clinicId}/audit-logs`);
+            setLogs(data);
+        } catch (err) {
+            console.error('Failed to load clinic audit logs:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (loading) return <div className="text-slate-400 text-sm animate-pulse p-4">Fetching audit trail...</div>;
+
+    return (
+        <div className="space-y-3">
+            {logs.length === 0 ? (
+                <div className="text-center py-8 text-slate-400 italic text-sm">No platform audit logs found for this clinic.</div>
+            ) : (
+                logs.map((log) => (
+                    <div key={log.id} className="p-3 bg-white rounded-xl border border-slate-100 flex items-start gap-3 text-xs">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${log.action.includes('sync') ? 'bg-blue-50 text-blue-600' :
+                            log.action.includes('impersonation') ? 'bg-orange-50 text-orange-600' :
+                                'bg-slate-50 text-slate-600'
+                            }`}>
+                            <Activity className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-0.5">
+                                <span className="font-bold text-slate-800 uppercase tracking-tight">{log.action.replace(/_/g, ' ')}</span>
+                                <span className="text-[10px] text-slate-400 font-mono">{new Date(log.created_at).toLocaleString()}</span>
+                            </div>
+                            <div className="text-slate-500 font-mono truncate bg-slate-50 p-1 rounded">
+                                {typeof log.details === 'object' ? JSON.stringify(log.details) : log.details}
+                            </div>
+                        </div>
+                    </div>
+                ))
+            )}
         </div>
     );
 };
@@ -377,17 +428,29 @@ const PlatformAdminClinicDetails = () => {
                             </div>
 
                             <div className="flex flex-wrap items-center gap-4 text-sm">
-                                <span className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 text-slate-600 font-medium">
+                                <span className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 text-slate-600 font-medium" title="Clinic Slug">
                                     <Database className="w-4 h-4 text-blue-500" />
                                     <span className="font-mono text-xs">{clinic.slug}</span>
                                 </span>
-                                <span className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 text-slate-600 font-medium">
-                                    <Building2 className="w-4 h-4 text-purple-500" />
-                                    {clinic.address || 'No address provided'}
+                                <span className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 text-slate-600 font-medium" title="Tenant Type">
+                                    <Building2 className="w-4 h-4 text-indigo-500" />
+                                    {clinic.tenant_type || 'Solo'}
                                 </span>
-                                <span className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 text-slate-600 font-medium">
-                                    <Clock className="w-4 h-4 text-slate-400" />
-                                    Created {new Date(clinic.created_at).toLocaleDateString()}
+                                <span className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 text-slate-600 font-medium" title="Compliance Zone">
+                                    <Shield className="w-4 h-4 text-emerald-500" />
+                                    {Array.isArray(clinic.compliance_zones) && clinic.compliance_zones.length > 0 ? clinic.compliance_zones.join(', ') : 'HIPAA (Default)'}
+                                </span>
+                                <span className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 text-slate-600 font-medium" title="EMR Version">
+                                    <Zap className="w-4 h-4 text-orange-500" />
+                                    v{clinic.emr_version || '1.0.0'}
+                                </span>
+                                <span className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 text-slate-600 font-medium" title="Go-Live Date">
+                                    <Activity className="w-4 h-4 text-slate-400" />
+                                    Go-Live: {clinic.go_live_date ? new Date(clinic.go_live_date).toLocaleDateString() : 'TBD'}
+                                </span>
+                                <span className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 text-slate-400 font-medium">
+                                    <Clock className="w-4 h-4" />
+                                    Provisioned {new Date(clinic.created_at).toLocaleDateString()}
                                 </span>
                             </div>
                         </div>
@@ -421,6 +484,19 @@ const PlatformAdminClinicDetails = () => {
                                 <span className="text-xs font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded-lg">Template Drift</span>
                             </div>
                             <DriftManager clinicId={id} apiCall={apiCall} />
+                        </div>
+
+                        {/* Platform Audit Trail */}
+                        <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl p-6 shadow-lg shadow-slate-200/40 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-slate-500/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-slate-500/10 transition-colors"></div>
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                                    <Activity className="w-6 h-6 text-slate-400" />
+                                    Platform Audit Trail
+                                </h2>
+                                <span className="text-xs font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-lg">Critical Events</span>
+                            </div>
+                            <PlatformAuditTrail clinicId={id} apiCall={apiCall} />
                         </div>
 
                         {/* Metrics & Activity */}
@@ -551,6 +627,63 @@ const PlatformAdminClinicDetails = () => {
                                         </button>
                                     </div>
                                     <p className="text-[10px] text-slate-400 italic">Changes take effect immediately for all users.</p>
+                                </div>
+
+                                <div className="p-4 bg-indigo-50/30 rounded-2xl border border-indigo-100/50 space-y-4">
+                                    <h3 className="text-xs font-black text-indigo-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                                        <Settings className="w-3.5 h-3.5" />
+                                        Platform Configuration
+                                    </h3>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase">EMR Version</label>
+                                        <select
+                                            value={clinic.emr_version || '1.0.0'}
+                                            onChange={(e) => handleControlChange({ emr_version: e.target.value })}
+                                            className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs outline-none focus:border-indigo-500"
+                                        >
+                                            <option value="1.0.0">v1.0.0 (Legacy)</option>
+                                            <option value="2.0.0">v2.0.0 (Current)</option>
+                                            <option value="2.1.0-alpha">v2.1.0-alpha</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase">Tenant Type</label>
+                                        <select
+                                            value={clinic.tenant_type || 'Solo'}
+                                            onChange={(e) => handleControlChange({ tenant_type: e.target.value })}
+                                            className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs outline-none focus:border-indigo-500"
+                                        >
+                                            <option value="Solo">Solo Practice</option>
+                                            <option value="Group">Group Practice</option>
+                                            <option value="Enterprise">Enterprise</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase">Compliance Zones</label>
+                                        <input
+                                            type="text"
+                                            placeholder="HIPAA, GDPR, etc."
+                                            defaultValue={Array.isArray(clinic.compliance_zones) ? clinic.compliance_zones.join(', ') : clinic.compliance_zones}
+                                            onBlur={(e) => {
+                                                const zones = e.target.value.split(',').map(s => s.trim()).filter(s => s);
+                                                handleControlChange({ compliance_zones: zones });
+                                            }}
+                                            className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs outline-none focus:border-indigo-500"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase">Go-Live Date</label>
+                                        <input
+                                            type="date"
+                                            value={clinic.go_live_date ? new Date(clinic.go_live_date).toISOString().split('T')[0] : ''}
+                                            onChange={(e) => handleControlChange({ go_live_date: e.target.value })}
+                                            className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs outline-none focus:border-indigo-500"
+                                        />
+                                    </div>
                                 </div>
 
                                 {clinic.status !== 'suspended' && (
