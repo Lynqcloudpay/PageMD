@@ -14,7 +14,6 @@ import { usePermissions } from '../hooks/usePermissions';
 import { patientsAPI, messagesAPI, visitsAPI, followupsAPI } from '../services/api';
 import PatientTabs from './PatientTabs';
 import MobileMenu from './MobileMenu';
-import ErrorBoundary from './ErrorBoundary';
 
 const Layout = ({ children }) => {
     const location = useLocation();
@@ -209,93 +208,168 @@ const Layout = ({ children }) => {
     }, []);
 
     return (
-        <div className="flex min-h-screen bg-[#fcfdfe] transition-colors relative overflow-hidden font-sans">
-            {/* Background Aesthetic Blobs */}
-            <div className="fixed top-0 left-0 w-[500px] h-[500px] bg-primary-100/20 rounded-full blur-[120px] -ml-64 -mt-64 pointer-events-none opacity-50"></div>
-            <div className="fixed bottom-0 right-0 w-[500px] h-[500px] bg-indigo-100/20 rounded-full blur-[120px] -mr-64 -mb-64 pointer-events-none opacity-50"></div>
+        <div className="flex min-h-screen bg-white transition-colors">
 
-            {/* Floating Patient Tabs Header */}
-            <div className={`fixed top-4 right-6 left-[calc(${sidebarCollapsed ? '5rem' : '18rem'}+1.5rem)] z-40 transition-all duration-300`}>
-                <div className="frothy-blur border border-white/50 rounded-[1.5rem] shadow-xl shadow-slate-200/40 p-1.5 flex items-center gap-4 h-[60px]">
-                    <PatientTabs />
-                </div>
+            {/* Patient Tabs */}
+            <div className="fixed top-0 left-72 right-0 z-20 bg-white border-b border-deep-gray/10 shadow-sm" style={{ height: '48px' }}>
+                <PatientTabs />
             </div>
 
-            {/* Sidebar - Opaque Frothy */}
-            <aside className={`${sidebarCollapsed ? 'w-20' : 'w-72'} fixed left-4 top-4 bottom-4 z-50 bg-white border border-slate-100 flex flex-col transition-all duration-300 shadow-2xl shadow-slate-200/60 rounded-[2.5rem] overflow-hidden`}>
+            {/* Sidebar */}
+            <aside className={`${sidebarCollapsed ? 'w-20' : 'w-72'} fixed left-0 top-0 bottom-0 z-30 bg-white border-r-4 border-strong-azure flex flex-col transition-all duration-300 shadow-xl`}>
                 {/* Logo/Brand */}
-                <div className="h-24 px-8 flex items-center justify-between border-b border-slate-50 bg-white/50">
+                <div className="h-20 px-6 flex items-center justify-between border-b-2 border-strong-azure/20 bg-white">
                     {!sidebarCollapsed && (
-                        <Link to="/dashboard" className="flex items-center space-x-3 group animate-fade-in">
+                        <Link to="/dashboard" className="flex items-center space-x-3 group">
                             <img
                                 src="/logo.png"
-                                alt="Clinic Logo"
-                                className="h-10 w-auto object-contain max-w-[160px] drop-shadow-sm group-hover:scale-105 transition-transform"
-                                onError={(e) => { e.target.style.display = 'none'; }}
+                                alt="myHEART Cardiology Logo"
+                                className="h-10 w-auto object-contain max-w-[180px]"
+                                onError={(e) => {
+                                    // Hide broken image, show fallback text
+                                    e.target.style.display = 'none';
+                                }}
                             />
                         </Link>
                     )}
                     {sidebarCollapsed && (
                         <img
                             src="/logo.png"
-                            alt="Logo"
-                            className="h-9 w-auto object-contain mx-auto drop-shadow-sm"
-                            onError={(e) => { e.target.style.display = 'none'; }}
+                            alt="myHEART Cardiology"
+                            className="h-10 w-auto object-contain mx-auto"
+                            onError={(e) => {
+                                // Hide broken image
+                                e.target.style.display = 'none';
+                            }}
                         />
                     )}
+                    <button
+                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                        className="p-2 rounded-lg hover:bg-soft-gray transition-all text-deep-gray hover:text-strong-azure"
+                        title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                    >
+                        <Menu className="w-4 h-4" />
+                    </button>
                 </div>
 
-                {/* Quick Search Trigger */}
+                {/* Quick Search - Futuristic Design */}
                 {!sidebarCollapsed && (
-                    <div className="px-6 py-4 animate-fade-in">
+                    <div className="px-4 py-3 border-b-2 border-strong-azure/20 bg-white">
                         <button
                             onClick={() => setShowSearch(true)}
-                            className="w-full h-11 flex items-center gap-3 px-4 bg-slate-50 border border-slate-100/50 rounded-2xl hover:bg-white hover:border-primary-200 hover:shadow-lg hover:shadow-primary-500/5 transition-all duration-300 group"
+                            className="w-full flex items-center gap-2.5 px-3.5 py-2 bg-white border-2 border-strong-azure/30 rounded-lg hover:border-strong-azure hover:bg-strong-azure/5 hover:shadow-md transition-all duration-200 group"
                         >
-                            <Search className="w-4 h-4 text-primary-400 group-hover:text-primary-500 transition-colors" />
-                            <span className="text-[12px] text-slate-400 font-bold flex-1 text-left tracking-tight">Rapid Terminal...</span>
-                            <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[9px] font-black text-slate-300 bg-white border border-slate-100 rounded-lg">
-                                <Command className="w-2.5 h-2.5 mr-0.5" />K
+                            <Search className="w-4 h-4 text-strong-azure/70 group-hover:text-strong-azure transition-colors" />
+                            <span className="text-[13px] text-deep-gray/70 flex-1 text-left group-hover:text-strong-azure font-medium">Search patients...</span>
+                            <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold text-strong-azure bg-strong-azure/10 border border-strong-azure/30 rounded">
+                                <Command className="w-3 h-3 mr-0.5" />K
                             </kbd>
                         </button>
                     </div>
                 )}
 
-                {/* Navigation */}
-                <nav className="flex-1 overflow-y-auto custom-scrollbar px-4 py-6 space-y-8">
-                    <div className="space-y-4">
-                        <div className="px-4">
-                            <span className="frothy-label text-[9px]">Clinical Operations</span>
+                {/* Navigation - Futuristic Compact Design */}
+                <nav className="flex-1 overflow-hidden px-3 py-3 flex flex-col">
+                    {/* Primary Navigation */}
+                    <div className="mb-3 flex-shrink-0">
+                        <div className="px-2.5 mb-2">
+                            <div className="text-[9px] font-bold text-deep-gray/40 uppercase tracking-widest">
+                                Navigation
+                            </div>
                         </div>
-                        <div className="space-y-1.5">
-                            {navItems.map((item) => {
+                        <div className="space-y-0.5">
+                            {navItems.slice(0, 4).map((item) => {
                                 const Icon = item.icon;
                                 const active = isActive(item.path);
                                 return (
                                     <Link
                                         key={item.path}
                                         to={item.path}
-                                        className={`group relative flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 ${active
-                                            ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/20'
-                                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                                        className={`group relative flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 ${active
+                                            ? 'text-white shadow-lg'
+                                            : 'text-deep-gray hover:bg-soft-gray hover:text-strong-azure hover:border-l-2 hover:border-strong-azure/30'
                                             }`}
+                                        style={active ? {
+                                            background: 'linear-gradient(to right, #3B82F6, #2563EB)',
+                                            boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.3), 0 4px 6px -2px rgba(59, 130, 246, 0.2)'
+                                        } : {}}
                                     >
-                                        <div className={`relative flex-shrink-0 transition-transform group-active:scale-90 ${active ? 'scale-110' : ''}`}>
-                                            <Icon className={`w-4.5 h-4.5 ${active ? 'text-primary-400' : 'text-slate-400 group-hover:text-primary-500'}`} />
+                                        {/* Futuristic active indicator - Azure accent bar */}
+
+                                        <div className="relative flex-shrink-0 z-10">
+                                            <Icon className={`w-4 h-4 transition-all duration-200 ${active ? 'text-white' : 'text-deep-gray/50 group-hover:text-strong-azure'}`} />
                                             {item.badge && sidebarCollapsed && (
-                                                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 flex items-center justify-center text-[8px] font-black rounded-full bg-primary-500 text-white shadow-lg ring-2 ring-white">
-                                                    {item.badge > 9 ? '!' : item.badge}
+                                                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 flex items-center justify-center px-1 text-[9px] font-bold rounded-full bg-fresh-green text-white shadow-sm">
+                                                    {item.badge > 99 ? '99+' : item.badge}
                                                 </span>
                                             )}
                                         </div>
 
                                         {!sidebarCollapsed && (
                                             <>
-                                                <span className={`flex-1 text-[13px] font-black tracking-tight ${active ? 'text-white' : 'text-slate-600'}`}>
+                                                <span className={`flex-1 text-[13px] font-semibold ${active ? 'text-white' : 'text-deep-gray'} z-10 relative`}>
                                                     {item.label}
                                                 </span>
                                                 {item.badge && (
-                                                    <span className={`px-2 py-0.5 text-[9px] font-black rounded-lg transition-all ${active ? 'bg-white/20 text-white' : 'bg-primary-50 text-primary-600'
+                                                    <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md transition-all z-10 relative ${active
+                                                        ? 'bg-white/20 text-white'
+                                                        : 'bg-fresh-green/10 text-fresh-green'
+                                                        }`}>
+                                                        {item.badge}
+                                                    </span>
+                                                )}
+                                            </>
+                                        )}
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Secondary Navigation */}
+                    <div className="flex-1 overflow-y-auto hide-scrollbar">
+                        <div className="px-2.5 mb-2 mt-1">
+                            <div className="text-[9px] font-bold text-deep-gray/40 uppercase tracking-widest">
+                                Workflow
+                            </div>
+                        </div>
+                        <div className="space-y-0.5">
+                            {navItems.slice(4).map((item) => {
+                                const Icon = item.icon;
+                                const active = isActive(item.path);
+                                return (
+                                    <Link
+                                        key={item.path}
+                                        to={item.path}
+                                        className={`group relative flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 ${active
+                                            ? 'text-white shadow-lg'
+                                            : 'text-deep-gray hover:bg-soft-gray hover:text-strong-azure hover:border-l-2 hover:border-strong-azure/30'
+                                            }`}
+                                        style={active ? {
+                                            background: 'linear-gradient(to right, #3B82F6, #2563EB)',
+                                            boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.3), 0 4px 6px -2px rgba(59, 130, 246, 0.2)'
+                                        } : {}}
+                                    >
+                                        {/* Futuristic active indicator - Azure accent bar */}
+
+                                        <div className="relative flex-shrink-0 z-10">
+                                            <Icon className={`w-4 h-4 transition-all duration-200 ${active ? 'text-white' : 'text-deep-gray/50 group-hover:text-strong-azure'}`} />
+                                            {item.badge && sidebarCollapsed && (
+                                                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 flex items-center justify-center px-1 text-[9px] font-bold rounded-full bg-fresh-green text-white shadow-sm">
+                                                    {item.badge > 99 ? '99+' : item.badge}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {!sidebarCollapsed && (
+                                            <>
+                                                <span className={`flex-1 text-[13px] font-semibold ${active ? 'text-white' : 'text-deep-gray'} z-10 relative`}>
+                                                    {item.label}
+                                                </span>
+                                                {item.badge && (
+                                                    <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md transition-all z-10 relative ${active
+                                                        ? 'bg-white/20 text-white'
+                                                        : 'bg-fresh-green/10 text-fresh-green'
                                                         }`}>
                                                         {item.badge}
                                                     </span>
@@ -309,95 +383,125 @@ const Layout = ({ children }) => {
                     </div>
                 </nav>
 
-                {/* Sidebar Footer User Card */}
-                <div className="p-4 border-t border-slate-50 bg-slate-50/30">
-                    <button
-                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                        className="w-full flex items-center justify-center p-3 text-slate-300 hover:text-primary-400 hover:bg-white rounded-2xl transition-all mb-3 group"
-                    >
-                        <Menu className={`w-5 h-5 transition-transform duration-500 ${sidebarCollapsed ? 'rotate-90' : 'rotate-0'}`} />
-                    </button>
-
+                {/* Bottom Section - Futuristic User Panel */}
+                <div className="mt-auto px-3 py-2.5 border-t border-deep-gray/10 bg-gradient-to-b from-white to-soft-gray/20">
                     {user && (
-                        <div className="flex items-center gap-3 p-2 bg-white rounded-3xl border border-slate-100 shadow-sm relative group/user">
-                            <div className="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center text-white text-[11px] font-black shadow-lg shadow-slate-900/20 shrink-0">
-                                {user.firstName?.[0]}{user.lastName?.[0]}
-                            </div>
-                            {!sidebarCollapsed && (
-                                <div className="flex-1 min-w-0">
-                                    <div className="text-[12px] font-black text-slate-900 truncate tracking-tight">{user.firstName} {user.lastName}</div>
-                                    <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">{user.role_name || 'System User'}</div>
-                                </div>
-                            )}
+                        <div className="flex items-center gap-2">
+                            {/* User Button */}
                             <button
-                                onClick={logout}
-                                className="p-2 text-slate-300 hover:text-rose-500 transition-colors shrink-0"
+                                onClick={() => navigate('/profile')}
+                                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all flex-1 ${sidebarCollapsed ? 'justify-center' : ''} ${sidebarCollapsed
+                                    ? 'hover:bg-soft-gray/80'
+                                    : 'bg-white/60 backdrop-blur-sm hover:bg-white border border-deep-gray/5 hover:border-deep-gray/20 hover:shadow-sm'
+                                    }`}
+                                title={`${user.firstName} ${user.lastName} - ${user.role_name || user.role || 'User'}${user.isAdmin ? ' (Admin)' : ''} - Click to view profile`}
                             >
-                                <LogOut className="w-4 h-4" />
+                                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-strong-azure to-strong-azure/80 flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 shadow-sm">
+                                    {(user.firstName?.[0] || 'U') + (user.lastName?.[0] || '')}
+                                </div>
+                                {!sidebarCollapsed && (
+                                    <div className="text-left flex-1 min-w-0">
+                                        <div className="text-[12px] font-semibold text-deep-gray leading-tight truncate">{user.firstName} {user.lastName}</div>
+                                        <div className="text-[10px] text-deep-gray/50 capitalize leading-tight truncate font-medium">
+                                            {user.role_name || user.role || 'User'}
+                                        </div>
+                                    </div>
+                                )}
+                            </button>
+                            {/* Sign Out Button */}
+                            <button
+                                onClick={() => {
+                                    if (window.confirm('Are you sure you want to sign out?')) {
+                                        logout();
+                                        navigate('/login');
+                                    }
+                                }}
+                                className={`flex items-center justify-center px-2 py-1.5 rounded-lg transition-all hover:bg-red-50/80 hover:border-red-300 ${sidebarCollapsed ? 'w-7 h-7' : 'px-2.5'} border border-red-200/50 text-red-600 hover:text-red-700 hover:shadow-sm`}
+                                title="Sign Out"
+                            >
+                                <LogOut className="w-3.5 h-3.5" />
+                                {!sidebarCollapsed && (
+                                    <span className="ml-1 text-[11px] font-semibold">Out</span>
+                                )}
                             </button>
                         </div>
                     )}
                 </div>
             </aside>
 
-            {/* Patient Search Modal - Frothy Design */}
+            {/* Patient Search Modal */}
             {showSearch && (
                 <div
-                    className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-start justify-center pt-32 px-4"
+                    className="fixed inset-0 bg-deep-gray/60 backdrop-blur-sm z-50 flex items-start justify-center pt-20 animate-fade-in"
                     onClick={() => setShowSearch(false)}
                 >
                     <div
-                        className="bg-white rounded-[3rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-white animate-scale-in"
+                        className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 animate-scale-in border border-deep-gray/10"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="p-6 border-b border-slate-50 flex items-center gap-4">
-                            <div className="w-12 h-12 bg-primary-50 rounded-2xl flex items-center justify-center text-primary-500 shadow-inner">
-                                <Search className="w-6 h-6" />
-                            </div>
+                        <div className="p-4 border-b border-deep-gray/10 flex items-center space-x-3 bg-white">
+                            <Search className="w-5 h-5 text-strong-azure" />
                             <input
                                 type="text"
-                                placeholder="Search identification, names, or protocols..."
-                                className="flex-1 outline-none bg-transparent text-lg font-black text-slate-900 placeholder:text-slate-200 tracking-tight"
+                                placeholder="Search by name or MRN... (Press Cmd/Ctrl+K to open)"
+                                className="flex-1 outline-none bg-transparent text-deep-gray placeholder:text-soft-gray/60 text-base font-medium"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 autoFocus
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Escape') {
+                                        setShowSearch(false);
+                                    }
+                                }}
                             />
-                            <button onClick={() => setShowSearch(false)} className="p-3 hover:bg-slate-50 rounded-2xl text-slate-300 transition-all"><X className="w-6 h-6" /></button>
+                            <button
+                                onClick={() => {
+                                    setShowSearch(false);
+                                    setSearchQuery('');
+                                    setSearchResults([]);
+                                }}
+                                className="p-2 hover:bg-soft-gray rounded-lg transition-colors"
+                            >
+                                <X className="w-5 h-5 text-deep-gray/60 hover:text-deep-gray" />
+                            </button>
                         </div>
-                        <div className="max-h-[50vh] overflow-y-auto custom-scrollbar">
+                        <div className="max-h-96 overflow-y-auto">
                             {loading ? (
-                                <div className="p-20 text-center">
-                                    <div className="inline-block w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
-                                    <div className="mt-4 text-[11px] font-black text-slate-300 uppercase tracking-widest">Scanning Registry...</div>
+                                <div className="p-12 text-center">
+                                    <div className="inline-block spinner text-strong-azure"></div>
+                                    <p className="mt-4 text-sm text-deep-gray">Searching...</p>
                                 </div>
                             ) : searchResults.length > 0 ? (
-                                <div className="p-4 space-y-2">
-                                    {searchResults.map((p) => (
+                                <div className="divide-y divide-deep-gray/10">
+                                    {searchResults.map((patient) => (
                                         <button
-                                            key={p.id}
-                                            onClick={() => handleSearchSelect(p)}
-                                            className="w-full p-5 text-left bg-slate-50/50 hover:bg-slate-50 rounded-[2rem] border border-transparent hover:border-slate-100 transition-all group flex items-center justify-between"
+                                            key={patient.id}
+                                            onClick={() => handleSearchSelect(patient)}
+                                            className="w-full p-4 text-left hover:bg-soft-gray transition-all focus:outline-none group"
                                         >
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 bg-white rounded-[1.2rem] flex items-center justify-center text-slate-400 font-black group-hover:text-primary-500 shadow-sm border border-slate-50 transition-colors">
-                                                    {p.name.charAt(0)}
-                                                </div>
-                                                <div>
-                                                    <div className="font-black text-slate-900 tracking-tight group-hover:text-primary-600 transition-colors">{p.name}</div>
-                                                    <div className="text-[10px] font-bold text-slate-400 flex items-center gap-3">
-                                                        <span className="px-2 py-0.5 bg-white border border-slate-100 rounded-lg">{p.mrn}</span>
-                                                        <span>{p.sex} • {p.dob ? format(new Date(p.dob), 'MMM dd, yyyy') : 'N/A'}</span>
-                                                    </div>
-                                                </div>
+                                            <div className="font-semibold text-deep-gray group-hover:text-strong-azure">
+                                                {patient.name || 'Unknown'}
                                             </div>
-                                            <ChevronRight className="w-5 h-5 text-slate-200 group-hover:text-primary-300 group-hover:translate-x-1 transition-all" />
+                                            <div className="text-sm text-deep-gray/70 mt-1 flex items-center space-x-2">
+                                                <span className="px-2 py-0.5 bg-soft-gray rounded text-xs font-medium text-deep-gray">{patient.mrn || 'N/A'}</span>
+                                                <span>•</span>
+                                                <span>{patient.dob ? new Date(patient.dob).toLocaleDateString() : 'N/A'}</span>
+                                                <span>•</span>
+                                                <span>{patient.sex || 'N/A'}</span>
+                                            </div>
                                         </button>
                                     ))}
                                 </div>
-                            ) : searchQuery.trim() && (
-                                <div className="p-20 text-center">
-                                    <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Zero Matches Found</div>
-                                    <div className="text-sm font-bold text-slate-300">Adjustment required to search parameters.</div>
+                            ) : searchQuery.trim() ? (
+                                <div className="p-12 text-center">
+                                    <p className="text-deep-gray">No patients found for "{searchQuery}"</p>
+                                    <p className="text-xs text-deep-gray/60 mt-2">Try searching by name or MRN</p>
+                                </div>
+                            ) : (
+                                <div className="p-12 text-center">
+                                    <Search className="w-12 h-12 text-soft-gray/60 mx-auto mb-4" />
+                                    <p className="text-deep-gray">Start typing to search...</p>
+                                    <p className="text-xs text-deep-gray/60 mt-2">Press Cmd/Ctrl+K to open this search</p>
                                 </div>
                             )}
                         </div>
@@ -405,15 +509,14 @@ const Layout = ({ children }) => {
                 </div>
             )}
 
-            {/* Main Content Area */}
-            <main className={`flex-1 ${sidebarCollapsed ? 'ml-24' : 'ml-80'} transition-all duration-500 min-h-screen pt-24 pb-12 pr-6`} >
-                <div className="h-full relative z-10">
-                    <ErrorBoundary>
-                        {children}
-                    </ErrorBoundary>
+            {/* Main Content */}
+            <main className={`flex-1 ${sidebarCollapsed ? 'ml-20' : 'ml-72'} transition-all duration-300 relative`} style={{ marginTop: '48px' }}>
+                <div className="h-full bg-white">
+                    {children}
                 </div>
             </main>
 
+            {/* Mobile Menu */}
             <MobileMenu />
         </div>
     );
