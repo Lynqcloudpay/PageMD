@@ -51,7 +51,7 @@ async function detectDrift(clinicId) {
 
     // 2. Fetch clinic roles & privileges
     const clinicRolesRes = await pool.controlPool.query(`
-        SELECT r.name as role_name, p.name as privilege_name
+        SELECT r.id, r.name as role_name, r.source_template_id, p.name as privilege_name
         FROM ${schema_name}.roles r
         LEFT JOIN ${schema_name}.role_privileges rp ON r.id = rp.role_id
         LEFT JOIN ${schema_name}.privileges p ON rp.privilege_id = p.id
@@ -59,18 +59,46 @@ async function detectDrift(clinicId) {
 
     const clinicRoles = {};
     clinicRolesRes.rows.forEach(r => {
-        if (!clinicRoles[r.role_name]) clinicRoles[r.role_name] = new Set();
-        if (r.privilege_name) clinicRoles[r.role_name].add(r.privilege_name);
+        // Use a composite key or just store by multiple accessors?
+        // Let's store objects we can iterate over
+        if (!clinicRoles[r.role_name]) {
+            clinicRoles[r.role_name] = {
+                id: r.id,
+                name: r.role_name,
+                sourceTemplateId: r.source_template_id,
+                privileges: new Set()
+            };
+        }
+        if (r.privilege_name) clinicRoles[r.role_name].privileges.add(r.privilege_name);
+    });
+
+
+    // Map clinic roles by sourceTemplateId for reliable lookup
+    const rolesByTemplateId = new Map();
+    Object.values(clinicRoles).forEach(role => {
+        if (role.sourceTemplateId) {
+            rolesByTemplateId.set(role.sourceTemplateId, role);
+        }
     });
 
     const catalogSet = new Set(PERMISSION_CATALOG);
     const driftReports = [];
 
     // Compare Standard Roles
+    const templatesRes2 = await pool.controlPool.query('SELECT id, role_key FROM platform_role_templates');
+    const templateIds = new Map();
+    templatesRes2.rows.forEach(t => templateIds.set(t.role_key, t.id));
+
     for (const [tplKey, tpl] of Object.entries(templates)) {
-        // We match by name for now, but in a real system we might have role_key in clinic roles too
-        // For now, let's assume clinic role names match our role_key or display_name
-        const roleInClinic = clinicRoles[tplKey] || clinicRoles[tpl.displayName];
+        const tplId = templateIds.get(tplKey);
+
+        // 1. Try match by source_template_id (Hard Link)
+        let roleInClinic = rolesByTemplateId.get(tplId);
+
+        // 2. Fallback: Match by name (Soft Link)
+        if (!roleInClinic) {
+            roleInClinic = clinicRoles[tplKey] || clinicRoles[tpl.displayName];
+        }
 
         if (!roleInClinic) {
             driftReports.push({
@@ -84,9 +112,10 @@ async function detectDrift(clinicId) {
             continue;
         }
 
-        const missing = Array.from(tpl.privileges).filter(p => !roleInClinic.has(p));
-        const extra = Array.from(roleInClinic).filter(p => !tpl.privileges.has(p));
-        const unknown = Array.from(roleInClinic).filter(p => !catalogSet.has(p));
+        const currentPrivs = roleInClinic.privileges;
+        const missing = Array.from(tpl.privileges).filter(p => !currentPrivs.has(p));
+        const extra = Array.from(currentPrivs).filter(p => !tpl.privileges.has(p));
+        const unknown = Array.from(currentPrivs).filter(p => !catalogSet.has(p));
 
         const status = (missing.length > 0 || extra.length > 0 || unknown.length > 0) ? 'DRIFTED' : 'SYNCED';
 
@@ -137,19 +166,28 @@ async function syncRole(clinicId, roleKey, adminId) {
         if (tplRes.rows.length === 0) throw new Error('TEMPLATE_NOT_FOUND');
         const targetPrivs = tplRes.rows.map(r => r.privilege_name);
         const tplVersion = tplRes.rows[0].version;
+        const tplId = tplRes.rows[0].id;
 
-        // 1. Ensure role exists in clinic
-        let rRes = await client.query(`SELECT id FROM ${schema_name}.roles WHERE name = $1`, [roleKey]);
+        // 1. Ensure role exists in clinic (Match by source_template_id first, then name)
+        let rRes = await client.query(`SELECT id FROM ${schema_name}.roles WHERE source_template_id = $1`, [tplId]);
         let roleId;
+
+        if (rRes.rows.length === 0) {
+            // Fallback: Check by name
+            rRes = await client.query(`SELECT id FROM ${schema_name}.roles WHERE name = $1`, [roleKey]);
+        }
+
         if (rRes.rows.length === 0) {
             const newRole = await client.query(`
-                INSERT INTO ${schema_name}.roles (name, description, is_system_role) 
-                VALUES ($1, $2, TRUE) 
+                INSERT INTO ${schema_name}.roles (name, description, is_system_role, source_template_id) 
+                VALUES ($1, $2, TRUE, $3) 
                 RETURNING id
-            `, [roleKey, `System Role: ${roleKey}`]);
+            `, [roleKey, `System Role: ${roleKey}`, tplId]);
             roleId = newRole.rows[0].id;
         } else {
             roleId = rRes.rows[0].id;
+            // Ensure source_template_id is linked if we matched by name
+            await client.query(`UPDATE ${schema_name}.roles SET source_template_id = $1 WHERE id = $2`, [tplId, roleId]);
         }
 
         // 2. Identify Current State for audit logs

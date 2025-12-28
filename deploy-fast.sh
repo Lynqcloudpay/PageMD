@@ -88,6 +88,12 @@ ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST << EOF
   echo "⚙️  Running Admin Settings Migration..."
   docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-admin-settings.js || echo "⚠️ Warning: Admin settings migration failed."
 
+  echo "🛡️  Running Role Governance Migration..."
+  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-role-governance.js || echo "⚠️ Warning: Governance migration failed."
+
+  echo "🔗 Running Phase 3 Source Template Linkage Migration..."
+  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-phase3-source-template.js || echo "⚠️ Warning: Phase 3 migration failed."
+
   echo "🧹 Cleanup..."
   docker image prune -f
 EOF
