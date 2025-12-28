@@ -1,7 +1,7 @@
 # Phase 3: Governance & Security Enhancements
 
 ## 1. Role Governance Hardening
-- [ ] **Source Template Linkage**: Add `source_template_id` column to the clinic-level `roles` table.
+- [x] **Source Template Linkage**: Add `source_template_id` column to the clinic-level `roles` table.
     - **Goal**: Maintain a hard link to the global `platform_role_templates` even if the clinic Admin renames the role (e.g., "Physician" -> "Doctor").
     - **Benefit**: Allows drift detection to work reliably on renamed roles.
 
