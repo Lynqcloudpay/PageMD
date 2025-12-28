@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Lock, LogIn, Mail } from 'lucide-react';
+import { Shield, Lock, LogIn, Mail, AlertCircle } from 'lucide-react';
 import { usePlatformAdmin } from '../context/PlatformAdminContext';
 
 const PlatformAdminLogin = () => {
@@ -30,91 +30,99 @@ const PlatformAdminLogin = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p4">
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0djItMnptMCAwdjItMnoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-20"></div>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 flex items-center justify-center p-4 relative overflow-hidden">
+            {/* Background orbs */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-20 left-1/4 w-[500px] h-[500px] bg-blue-200/40 rounded-full blur-3xl"></div>
+                <div className="absolute bottom-20 right-1/4 w-[400px] h-[400px] bg-indigo-200/30 rounded-full blur-3xl"></div>
+                <div className="absolute top-1/2 right-10 w-[300px] h-[300px] bg-purple-200/20 rounded-full blur-3xl"></div>
+            </div>
 
-            <div className="bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 w-full max-w-md p-8 relative overflow-hidden">
-                {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 pointer-events-none"></div>
+            <div className="w-full max-w-md relative z-10">
+                {/* Login Card */}
+                <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl shadow-slate-200/50 border border-white/80 p-8 relative overflow-hidden">
+                    {/* Subtle gradient overlay */}
+                    <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-bl-full pointer-events-none"></div>
 
-                <div className="relative z-10">
-                    {/* Icon */}
-                    <div className="flex justify-center mb-6">
-                        <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
-                            <Shield className="w-10 h-10 text-white" />
-                        </div>
-                    </div>
-
-                    {/* Title */}
-                    <h1 className="text-3xl font-bold text-white text-center mb-2">
-                        Platform Admin
-                    </h1>
-                    <p className="text-blue-200 text-center mb-8 text-sm">
-                        PageMD IT Team Access
-                    </p>
-
-                    {/* Error */}
-                    {error && (
-                        <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm flex items-center gap-2">
-                            <Lock className="w-4 h-4" />
-                            {error}
-                        </div>
-                    )}
-
-                    {/* Form */}
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        <div>
-                            <label className="block text-sm font-medium text-blue-100 mb-2">
-                                Email Address
-                            </label>
-                            <div className="relative">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-300" />
-                                <input
-                                    type="email"
-                                    required
-                                    className="w-full pl-11 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-white placeholder:text-blue-200/50"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="your.email@pagemd.com"
-                                    autoFocus
-                                />
+                    <div className="relative z-10">
+                        {/* Icon */}
+                        <div className="flex justify-center mb-6">
+                            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/30">
+                                <Shield className="w-10 h-10 text-white" />
                             </div>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-blue-100 mb-2">
-                                Password
-                            </label>
-                            <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-300" />
-                                <input
-                                    type="password"
-                                    required
-                                    className="w-full pl-11 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-white placeholder:text-blue-200/50"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Enter your password"
-                                />
-                            </div>
-                        </div>
-
-                        <button
-                            type="submit"
-                            disabled={loading || !email || !password}
-                            className="w-full py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-xl hover:scale-105 active:scale-100"
-                        >
-                            <LogIn className="w-5 h-5" />
-                            <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
-                        </button>
-                    </form>
-
-                    {/* Footer */}
-                    <div className="mt-8 pt-6 border-t border-white/10">
-                        <p className="text-center text-xs text-blue-200/70">
-                            PageMD Platform Management System
-                            <br />
-                            All access is audited and logged
+                        {/* Title */}
+                        <h1 className="text-3xl font-bold text-slate-800 text-center mb-2">
+                            Platform Admin
+                        </h1>
+                        <p className="text-slate-500 text-center mb-8 text-sm">
+                            PageMD IT Team Access
                         </p>
+
+                        {/* Error */}
+                        {error && (
+                            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex items-center gap-2">
+                                <AlertCircle className="w-4 h-4 shrink-0" />
+                                {error}
+                            </div>
+                        )}
+
+                        {/* Form */}
+                        <form onSubmit={handleSubmit} className="space-y-5">
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                    Email Address
+                                </label>
+                                <div className="relative">
+                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                                    <input
+                                        type="email"
+                                        required
+                                        className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all text-slate-800 placeholder:text-slate-400"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        placeholder="your.email@pagemd.com"
+                                        autoFocus
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                    Password
+                                </label>
+                                <div className="relative">
+                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                                    <input
+                                        type="password"
+                                        required
+                                        className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all text-slate-800 placeholder:text-slate-400"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        placeholder="Enter your password"
+                                    />
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={loading || !email || !password}
+                                className="w-full py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-bold text-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-xl hover:shadow-blue-500/25 hover:scale-[1.02] active:scale-100"
+                            >
+                                <LogIn className="w-5 h-5" />
+                                <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
+                            </button>
+                        </form>
+
+                        {/* Footer */}
+                        <div className="mt-8 pt-6 border-t border-slate-100">
+                            <p className="text-center text-xs text-slate-400">
+                                PageMD Platform Management System
+                                <br />
+                                All access is audited and logged
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
