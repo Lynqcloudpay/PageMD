@@ -96,18 +96,20 @@ router.get('/practice', authenticate, async (req, res) => {
     // Fallback to local DB for backward compatibility or unit tests
     const result = await pool.query('SELECT * FROM practice_settings ORDER BY updated_at DESC LIMIT 1');
     if (result.rows.length === 0) {
+      // Default "NO LOGO" placeholder SVG - building icon with text
+      const defaultLogoSvg = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8fafc' rx='8'/%3E%3Crect x='60' y='45' width='80' height='90' fill='none' stroke='%23cbd5e1' stroke-width='3' rx='4'/%3E%3Crect x='75' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='75' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='88' y='110' width='24' height='25' fill='%23cbd5e1' rx='2'/%3E%3Ctext x='100' y='165' text-anchor='middle' font-family='Arial,sans-serif' font-size='14' font-weight='600' fill='%2394a3b8'%3ENO LOGO%3C/text%3E%3C/svg%3E`;
       return res.json({
         practice_name: 'My Practice',
         timezone: 'America/New_York',
         date_format: 'MM/DD/YYYY',
         time_format: '12h',
-        logo_url: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8fafc'/%3E%3Ccircle cx='100' cy='100' r='75' fill='%23e2e8f0' stroke='%23cbd5e1' stroke-width='2'/%3E%3Cpath d='M100 55 L100 145 M55 100 L145 100' stroke='%233b82f6' stroke-width='16' stroke-linecap='round'/%3E%3Ccircle cx='100' cy='100' r='35' fill='none' stroke='%233b82f6' stroke-width='4'/%3E%3C/svg%3E`
+        logo_url: defaultLogoSvg
       });
     }
-    // If logo_url is null/empty, return the default
+    // If logo_url is null/empty, return the default "NO LOGO" placeholder
     const settings = result.rows[0];
     if (!settings.logo_url) {
-      settings.logo_url = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8fafc'/%3E%3Ccircle cx='100' cy='100' r='75' fill='%23e2e8f0' stroke='%23cbd5e1' stroke-width='2'/%3E%3Cpath d='M100 55 L100 145 M55 100 L145 100' stroke='%233b82f6' stroke-width='16' stroke-linecap='round'/%3E%3Ccircle cx='100' cy='100' r='35' fill='none' stroke='%233b82f6' stroke-width='4'/%3E%3C/svg%3E`;
+      settings.logo_url = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8fafc' rx='8'/%3E%3Crect x='60' y='45' width='80' height='90' fill='none' stroke='%23cbd5e1' stroke-width='3' rx='4'/%3E%3Crect x='75' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='75' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='88' y='110' width='24' height='25' fill='%23cbd5e1' rx='2'/%3E%3Ctext x='100' y='165' text-anchor='middle' font-family='Arial,sans-serif' font-size='14' font-weight='600' fill='%2394a3b8'%3ENO LOGO%3C/text%3E%3C/svg%3E`;
     }
     res.json(settings);
   } catch (error) {

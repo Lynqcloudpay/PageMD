@@ -217,8 +217,8 @@ async function migrate() {
     // Insert default practice settings (single row)
     const practiceExists = await client.query('SELECT id FROM practice_settings LIMIT 1');
     if (practiceExists.rows.length === 0) {
-      // Default generic clinic SVG logo as data URI
-      const defaultLogoUrl = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8fafc'/%3E%3Ccircle cx='100' cy='100' r='75' fill='%23e2e8f0' stroke='%23cbd5e1' stroke-width='2'/%3E%3Cpath d='M100 55 L100 145 M55 100 L145 100' stroke='%233b82f6' stroke-width='16' stroke-linecap='round'/%3E%3Ccircle cx='100' cy='100' r='35' fill='none' stroke='%233b82f6' stroke-width='4'/%3E%3C/svg%3E`;
+      // Default "NO LOGO" placeholder SVG - building icon with text
+      const defaultLogoUrl = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8fafc' rx='8'/%3E%3Crect x='60' y='45' width='80' height='90' fill='none' stroke='%23cbd5e1' stroke-width='3' rx='4'/%3E%3Crect x='75' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='75' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='88' y='110' width='24' height='25' fill='%23cbd5e1' rx='2'/%3E%3Ctext x='100' y='165' text-anchor='middle' font-family='Arial,sans-serif' font-size='14' font-weight='600' fill='%2394a3b8'%3ENO LOGO%3C/text%3E%3C/svg%3E`;
       await client.query(`
         INSERT INTO practice_settings (practice_name, timezone, date_format, time_format, logo_url)
         VALUES ('My Practice', 'America/New_York', 'MM/DD/YYYY', '12h', $1)

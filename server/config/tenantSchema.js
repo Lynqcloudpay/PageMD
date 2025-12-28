@@ -660,7 +660,7 @@ CREATE TABLE IF NOT EXISTS practice_settings (
     fax VARCHAR(20),
     email VARCHAR(255),
     website VARCHAR(255),
-    logo_url TEXT DEFAULT 'data:image/svg+xml,%3Csvg xmlns=''http://www.w3.org/2000/svg'' width=''200'' height=''200'' viewBox=''0 0 200 200''%3E%3Crect width=''200'' height=''200'' fill=''%23f8fafc''/%3E%3Ccircle cx=''100'' cy=''100'' r=''75'' fill=''%23e2e8f0'' stroke=''%23cbd5e1'' stroke-width=''2''/%3E%3Cpath d=''M100 55 L100 145 M55 100 L145 100'' stroke=''%233b82f6'' stroke-width=''16'' stroke-linecap=''round''/%3E%3Ccircle cx=''100'' cy=''100'' r=''35'' fill=''none'' stroke=''%233b82f6'' stroke-width=''4''/%3E%3C/svg%3E',
+    logo_url TEXT DEFAULT 'data:image/svg+xml,%3Csvg xmlns=''http://www.w3.org/2000/svg'' width=''200'' height=''200'' viewBox=''0 0 200 200''%3E%3Crect width=''200'' height=''200'' fill=''%23f8fafc'' rx=''8''/%3E%3Crect x=''60'' y=''45'' width=''80'' height=''90'' fill=''none'' stroke=''%23cbd5e1'' stroke-width=''3'' rx=''4''/%3E%3Crect x=''75'' y=''60'' width=''20'' height=''15'' fill=''%23cbd5e1'' rx=''2''/%3E%3Crect x=''105'' y=''60'' width=''20'' height=''15'' fill=''%23cbd5e1'' rx=''2''/%3E%3Crect x=''75'' y=''85'' width=''20'' height=''15'' fill=''%23cbd5e1'' rx=''2''/%3E%3Crect x=''105'' y=''85'' width=''20'' height=''15'' fill=''%23cbd5e1'' rx=''2''/%3E%3Crect x=''88'' y=''110'' width=''24'' height=''25'' fill=''%23cbd5e1'' rx=''2''/%3E%3Ctext x=''100'' y=''165'' text-anchor=''middle'' font-family=''Arial,sans-serif'' font-size=''14'' font-weight=''600'' fill=''%2394a3b8''%3ENO LOGO%3C/text%3E%3C/svg%3E',
     timezone VARCHAR(50) DEFAULT 'America/New_York',
     date_format VARCHAR(20) DEFAULT 'MM/DD/YYYY',
     time_format VARCHAR(10) DEFAULT '12h',
