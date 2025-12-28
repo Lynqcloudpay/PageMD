@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Printer, Calendar, User, Phone, Mail, MapPin, Stethoscope, CheckCircle2, CreditCard, Building2, Users, FilePlus, Receipt, DollarSign, Globe, Clock } from 'lucide-react';
+import { X, Printer, Calendar, User, Phone, Mail, MapPin, Stethoscope, CheckCircle2, CreditCard, Building2, Users, FilePlus, Receipt, DollarSign, Globe, Clock, Heart, Activity, Thermometer, Wind } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { visitsAPI, patientsAPI, billingAPI, codesAPI, superbillsAPI, settingsAPI } from '../services/api';
 import { format } from 'date-fns';
@@ -469,11 +469,19 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                         </div>
                     </div>
 
-                    <div id="visit-chart-view" className="flex-1 overflow-y-auto bg-white py-8 px-12 max-w-5xl mx-auto print:!max-w-none print:!mx-0 print:!p-0 print:!rounded-none print:!w-full">
-                        {/* Modern Clinic Header */}
-                        <div className="mb-8 flex items-start justify-between gap-10 border-b border-slate-100 pb-8">
+                    <div id="visit-chart-view" className="flex-1 overflow-y-auto bg-white py-6 px-10 max-w-5xl mx-auto print:!max-w-none print:!mx-0 print:!p-0 print:!rounded-none print:!w-full">
+                        {/* Compact Addendum Alert */}
+                        {addendums.length > 0 && (
+                            <div className="mb-4 bg-amber-50 border-2 border-amber-200 p-2 rounded-lg flex items-center justify-center gap-3 animate-pulse print:border-amber-500">
+                                <FilePlus className="w-4 h-4 text-amber-600" />
+                                <span className="text-xs font-black text-amber-900 uppercase tracking-widest">Addendum Attached - See end of report</span>
+                            </div>
+                        )}
+
+                        {/* Ultra-Compact Clinic Header */}
+                        <div className="mb-6 flex items-start justify-between gap-6 border-b border-slate-100 pb-4">
                             <div className="flex items-center gap-6">
-                                <div className="w-20 h-20 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center overflow-hidden p-2 flex-shrink-0">
+                                <div className="w-20 h-20 bg-white rounded-2xl shadow-md border border-slate-100 flex items-center justify-center overflow-hidden p-2 flex-shrink-0">
                                     {clinicInfo.logo ? (
                                         <img
                                             src={clinicInfo.logo}
@@ -481,214 +489,336 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                             className="max-w-full max-h-full object-contain"
                                             onError={(e) => {
                                                 e.target.style.display = 'none';
-                                                e.target.parentElement.innerHTML = '<div class="text-slate-300"><svg class="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></div>';
+                                                e.target.parentElement.innerHTML = '<div class="text-slate-200"><svg class="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></div>';
                                             }}
                                         />
                                     ) : (
-                                        <Building2 className="w-10 h-10 text-slate-300" />
+                                        <Building2 className="w-10 h-10 text-slate-200" />
                                     )}
                                 </div>
                                 <div className="space-y-1">
-                                    <h1 className="text-2xl font-bold text-slate-950 tracking-tight">{clinicInfo.name}</h1>
-                                    <p className="text-sm text-slate-500 font-medium leading-relaxed max-w-md whitespace-pre-line">{clinicInfo.address}</p>
-                                    <div className="flex items-center gap-4 pt-1">
-                                        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
-                                            <Phone className="w-3.5 h-3.5 text-primary-500" />
-                                            <span>{clinicInfo.phone}</span>
+                                    <h1 className="text-2xl font-black text-slate-950 tracking-tight leading-none">{clinicInfo.name}</h1>
+                                    <div className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                                        <div className="flex items-center gap-2">
+                                            <MapPin className="w-3.5 h-3.5 text-primary-600" />
+                                            <span className="truncate max-w-[400px]">{clinicInfo.address.replace(/\n/g, ' • ')}</span>
                                         </div>
-                                        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
-                                            <Mail className="w-3.5 h-3.5 text-primary-500" />
-                                            <span>{clinicInfo.email}</span>
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-1.5">
+                                                <Phone className="w-3.5 h-3.5 text-primary-600" />
+                                                <span>{clinicInfo.phone}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <Mail className="w-3.5 h-3.5 text-primary-600" />
+                                                <span className="lowercase">{clinicInfo.email}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div className="text-right space-y-2">
-                                <div className="inline-block px-3 py-1 bg-primary-50 text-primary-700 text-[10px] font-bold uppercase tracking-widest rounded-full border border-primary-100">
+                            <div className="text-right flex flex-col items-end gap-1.5 pt-1">
+                                <div className="px-3 py-1 bg-primary-950 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-md shadow-sm">
                                     {visit.visit_type || 'Office Visit'}
                                 </div>
-                                <div className="text-sm text-slate-900 font-bold">{visitDate}</div>
-                                <div className="text-xs text-slate-500 font-medium">{providerName}</div>
-                                {signedDate && (
-                                    <div className="flex items-center justify-end gap-1.5 text-emerald-600 text-[10px] font-bold uppercase tracking-tight">
-                                        <CheckCircle2 className="w-3.5 h-3.5" />
-                                        <span>Signed {signedDate}</span>
+                                <div className="text-sm text-slate-950 font-black">{visitDate}</div>
+                                <div className="text-xs text-slate-400 font-bold uppercase tracking-widest">{providerName}</div>
+                                {isSigned && (
+                                    <div className="flex items-center gap-1 text-[9px] font-black text-emerald-600 uppercase">
+                                        <CheckCircle2 className="w-3 h-3" />
+                                        <span>Signed & Validated</span>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* Patient Snapshot Card */}
-                        <div className="mb-10 bg-slate-50/50 rounded-3xl border border-slate-100 p-8">
-                            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
-                                <div>
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2 block">Patient Information</span>
-                                    <h2 className="text-3xl font-bold text-slate-950 tracking-tight">
+                        {/* Dense Patient Snapshot */}
+                        <div className="mb-8 bg-slate-950 text-white rounded-3xl p-6 shadow-xl shadow-slate-900/10">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                <div className="space-y-1">
+                                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em]">Patient Full Name</span>
+                                    <h2 className="text-3xl font-black tracking-tighter">
                                         {patient.last_name}, {patient.first_name}
                                     </h2>
                                 </div>
-                                <div className="flex items-center gap-8 text-sm">
-                                    <div className="space-y-0.5">
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">MRN</span>
-                                        <span className="font-semibold text-slate-900">{patient.mrn}</span>
+                                <div className="grid grid-cols-3 gap-8 border-l border-slate-800 pl-8">
+                                    <div className="space-y-1">
+                                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">MRN</span>
+                                        <span className="text-sm font-black text-white">{patient.mrn}</span>
                                     </div>
-                                    <div className="space-y-0.5">
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Date of Birth</span>
-                                        <span className="font-semibold text-slate-900">{patientDOB} ({patientAge}y)</span>
+                                    <div className="space-y-1">
+                                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">DOB / Age</span>
+                                        <span className="text-sm font-black text-white">{patientDOB} <span className="text-slate-500 text-xs">({patientAge}y)</span></span>
                                     </div>
-                                    <div className="space-y-0.5">
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Sex</span>
-                                        <span className="font-semibold text-slate-900">{patient.sex || 'N/A'}</span>
+                                    <div className="space-y-1">
+                                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">Sex</span>
+                                        <span className="text-sm font-black text-white uppercase">{patient.sex || 'N/A'}</span>
                                     </div>
                                 </div>
                             </div>
-
-                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-12 pt-8 border-t border-slate-200/60">
-                                {[
-                                    { label: 'Insurance', value: patient.insurance_provider, icon: CreditCard },
-                                    { label: 'Pharmacy', value: patient.pharmacy_name, icon: Building2 },
-                                    { label: 'Emergency Contact', value: patient.emergency_contact_name, icon: Users },
-                                    { label: 'Primary Contact', value: formatPhone(patient.phone), icon: Phone },
-                                    { label: 'Email Address', value: patient.email, icon: Mail },
-                                    { label: 'Address', value: formatAddress(patient), icon: MapPin },
-                                ].map((item, idx) => (
-                                    <div key={idx} className="flex gap-4">
-                                        <div className="w-9 h-9 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center flex-shrink-0">
-                                            <item.icon className="w-4 h-4 text-primary-500" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">{item.label}</span>
-                                            <p className="text-xs font-semibold text-slate-900 truncate" title={item.value}>{item.value || '—'}</p>
-                                        </div>
+                            <div className="mt-6 pt-6 border-t border-slate-800 grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="flex items-center gap-2.5">
+                                    <CreditCard className="w-3.5 h-3.5 text-slate-500" />
+                                    <div className="min-w-0">
+                                        <div className="text-[8px] font-black text-slate-500 uppercase">Insurance</div>
+                                        <div className="text-[10px] font-bold text-white truncate">{patient.insurance_provider || 'Self Pay'}</div>
                                     </div>
-                                ))}
+                                </div>
+                                <div className="flex items-center gap-2.5">
+                                    <Building2 className="w-3.5 h-3.5 text-slate-500" />
+                                    <div className="min-w-0">
+                                        <div className="text-[8px] font-black text-slate-500 uppercase">Pharmacy</div>
+                                        <div className="text-[10px] font-bold text-white truncate">{patient.pharmacy_name || 'None'}</div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2.5">
+                                    <Phone className="w-3.5 h-3.5 text-slate-500" />
+                                    <div className="min-w-0">
+                                        <div className="text-[8px] font-black text-slate-500 uppercase">Contact</div>
+                                        <div className="text-[10px] font-bold text-white truncate">{formatPhone(patient.phone) || 'N/A'}</div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2.5">
+                                    <Users className="w-3.5 h-3.5 text-slate-500" />
+                                    <div className="min-w-0">
+                                        <div className="text-[8px] font-black text-slate-500 uppercase">Emergency</div>
+                                        <div className="text-[10px] font-bold text-white truncate">{patient.emergency_contact_name || 'N/A'}</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Clinical Content */}
-                        <div className="space-y-8 px-2">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                                {renderSection('chiefComplaint', true, 'Chief Complaint',
-                                    <p className="text-slate-900 leading-relaxed">{noteData.chiefComplaint || <span className="text-slate-400 italic font-normal">None recorded</span>}</p>
-                                )}
-                                {renderSection('vitals', true, 'Vital Signs',
-                                    vitals && Object.keys(vitals).length > 0 ? (
-                                        <div className="grid grid-cols-2 gap-4 pt-1">
-                                            {vitals.bp && <div className="flex justify-between items-center bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase">BP</span>
-                                                <span className="font-bold text-slate-900">{vitals.bp}</span>
-                                            </div>}
-                                            {vitals.pulse && <div className="flex justify-between items-center bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase">HR</span>
-                                                <span className="font-bold text-slate-900">{vitals.pulse}</span>
-                                            </div>}
-                                            {vitals.temp && <div className="flex justify-between items-center bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase">Temp</span>
-                                                <span className="font-bold text-slate-900">{vitals.temp}°F</span>
-                                            </div>}
-                                            {vitals.o2sat && <div className="flex justify-between items-center bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase">O2 Sat</span>
-                                                <span className="font-bold text-slate-900">{vitals.o2sat}%</span>
-                                            </div>}
-                                        </div>
-                                    ) : <span className="text-slate-400 italic font-normal">No vitals recorded</span>
-                                )}
+                        {/* All Clinical Sections (PAMFOS Included) */}
+                        <div className="space-y-10 px-1">
+                            {/* CC, HPI, ROS */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+                                <div className="md:col-span-1">
+                                    {renderSection('chiefComplaint', true, 'Chief Complaint',
+                                        <p className="text-lg font-black text-slate-950 leading-tight border-l-4 border-primary-500 pl-4">{noteData.chiefComplaint || <span className="text-slate-300 italic font-normal">None recorded</span>}</p>
+                                    )}
+                                </div>
+                                <div className="md:col-span-2">
+                                    {renderSection('hpi', true, 'History of Present Illness',
+                                        <div className="text-slate-900 leading-relaxed whitespace-pre-wrap font-medium">{noteData.hpi || <span className="text-slate-300 italic font-normal">No history recorded</span>}</div>
+                                    )}
+                                </div>
                             </div>
-
-                            {renderSection('hpi', true, 'History of Present Illness',
-                                <div className="text-slate-900 leading-relaxed whitespace-pre-wrap">{noteData.hpi || <span className="text-slate-400 italic font-normal">No history recorded</span>}</div>
-                            )}
 
                             {renderSection('ros', true, 'Review of Systems',
-                                <div className="text-slate-900 leading-relaxed whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.rosNotes) || '<span class="text-slate-400 italic font-normal">No ROS recorded</span>' }} />
+                                <div className="text-slate-900 leading-relaxed text-xs bg-slate-50 p-5 rounded-2xl border border-slate-100 columns-2 md:columns-3 gap-8" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.rosNotes) || '<span class="text-slate-300 italic font-normal">No ROS recorded</span>' }} />
                             )}
 
-                            {renderSection('physicalExam', true, 'Physical Examination',
-                                <div className="text-slate-900 leading-relaxed whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.peNotes) || '<span class="text-slate-400 italic font-normal">No PE recorded</span>' }} />
-                            )}
+                            {/* PAMFOS Section */}
+                            <div className="bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                                <div className="flex items-center gap-3 mb-8">
+                                    <div className="w-10 h-10 bg-slate-950 rounded-xl flex items-center justify-center text-white font-black italic">P</div>
+                                    <div>
+                                        <h3 className="text-xl font-black text-slate-950 tracking-tighter">PAMFOS Background</h3>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Comprehensive Clinical History</p>
+                                    </div>
+                                </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 py-8 bg-slate-50/30 rounded-3xl border border-slate-100 px-8">
-                                {renderSection('pastMedicalHistory', true, 'Active Problems',
-                                    problems.length > 0 ? (
-                                        <div className="space-y-2 mt-2">
-                                            {problems.map((p, i) => (
-                                                <div key={i} className="flex gap-2">
-                                                    <span className="text-[10px] font-bold text-primary-600 bg-primary-50 px-1.5 py-0.5 rounded leading-none flex-shrink-0 h-4 mt-0.5">{p.icd10_code || '—'}</span>
-                                                    <span className="text-xs font-semibold text-slate-800">{p.problem_name}</span>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                                    <div className="space-y-10">
+                                        {renderSection('pastMedicalHistory', true, 'P: Past Medical / Surgical',
+                                            problems.length > 0 ? (
+                                                <div className="space-y-2">
+                                                    {problems.map((p, i) => (
+                                                        <div key={i} className="flex gap-4 items-center group">
+                                                            <span className="text-[10px] font-black text-white bg-slate-900 px-2 py-0.5 rounded min-w-[50px] text-center tracking-tighter">{p.icd10_code || '—'}</span>
+                                                            <span className="text-sm font-bold text-slate-800 group-hover:text-slate-950">{p.problem_name}</span>
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                            ))}
-                                        </div>
-                                    ) : <span className="text-slate-400 italic font-normal">None recorded</span>
-                                )}
-                                {renderSection('medications', true, 'Active Medications',
-                                    medications.filter(m => m.active !== false).length > 0 ? (
-                                        <div className="space-y-3 mt-2">
-                                            {medications.filter(m => m.active !== false).map((m, i) => (
-                                                <div key={i} className="space-y-0.5">
-                                                    <div className="text-xs font-bold text-slate-900">{m.medication_name}</div>
-                                                    <div className="text-[10px] font-medium text-slate-500 uppercase tracking-tighter">
-                                                        {[m.dosage, m.frequency, m.route].filter(Boolean).join(' • ')}
+                                            ) : <span className="text-slate-400 italic text-sm">No active problems</span>
+                                        )}
+
+                                        {renderSection('allergies', true, 'A: Allergies & Sensitivities',
+                                            allergies.length > 0 ? (
+                                                <div className="flex flex-wrap gap-2.5">
+                                                    {allergies.map((a, i) => (
+                                                        <div key={i} className="px-3 py-1.5 bg-rose-50 border-2 border-rose-100 rounded-xl text-xs font-black text-rose-700 shadow-sm flex items-center gap-2">
+                                                            <span className="w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
+                                                            {a.allergen} {a.reaction && <span className="font-bold opacity-60">({a.reaction})</span>}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : <div className="flex items-center gap-2 text-emerald-600 font-black text-xs uppercase"><CheckCircle2 className="w-4 h-4" /> No Known Drug Allergies (NKDA)</div>
+                                        )}
+
+                                        {renderSection('familyHistory', true, 'F: Family History',
+                                            familyHistory.length > 0 ? (
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    {familyHistory.map((h, i) => (
+                                                        <div key={i} className="p-3 bg-white rounded-xl border border-slate-100 shadow-xs">
+                                                            <div className="text-[10px] font-black text-slate-400 uppercase leading-none mb-1">{h.relationship}</div>
+                                                            <div className="text-xs font-bold text-slate-900">{h.condition}</div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : <span className="text-slate-400 italic text-sm">None recorded</span>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-10">
+                                        {renderSection('medications', true, 'M: Current Medications',
+                                            medications.filter(m => m.active !== false).length > 0 ? (
+                                                <div className="space-y-4">
+                                                    {medications.filter(m => m.active !== false).map((m, i) => (
+                                                        <div key={i} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-primary-200 transition-colors">
+                                                            <div className="text-sm font-black text-slate-950 flex justify-between items-center mb-1">
+                                                                {m.medication_name}
+                                                                <span className="text-[9px] font-black px-1.5 py-0.5 bg-slate-50 rounded text-slate-400 uppercase tracking-widest">{m.route}</span>
+                                                            </div>
+                                                            <div className="text-[10px] font-black text-primary-600 uppercase tracking-tight flex items-center gap-2">
+                                                                {m.dosage} <span className="opacity-30">•</span> {m.frequency}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : <span className="text-slate-400 italic text-sm">No active medications</span>
+                                        )}
+
+                                        {renderSection('socialHistory', true, 'O/S: Occupational / Social',
+                                            socialHistory ? (
+                                                <div className="grid grid-cols-1 gap-4">
+                                                    <div className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
+                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Smoking Status</span>
+                                                        <span className="text-xs font-bold text-slate-950">{socialHistory.smoking_status || '—'}</span>
                                                     </div>
+                                                    {socialHistory.occupation && (
+                                                        <div className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
+                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Occupation</span>
+                                                            <span className="text-xs font-bold text-slate-950">{socialHistory.occupation}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : <span className="text-slate-400 italic text-sm">None recorded</span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Vitals & PE */}
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+                                <div className="md:col-span-1">
+                                    {renderSection('vitals', true, 'Vital Signs',
+                                        vitals && Object.keys(vitals).length > 0 ? (
+                                            <div className="space-y-3">
+                                                {[
+                                                    { label: 'Blood Pressure', val: vitals.bp, icon: Heart, color: 'text-rose-500' },
+                                                    { label: 'Heart Rate', val: vitals.pulse, unit: ' bpm', icon: Activity, color: 'text-rose-500' },
+                                                    { label: 'Temperature', val: vitals.temp, unit: ' °F', icon: Thermometer, color: 'text-amber-500' },
+                                                    { label: 'O2 Saturation', val: vitals.o2sat, unit: '%', icon: Wind, color: 'text-blue-500' },
+                                                    { label: 'Resp Rate', val: vitals.resp, icon: Wind, color: 'text-slate-400' },
+                                                    { label: 'BMI', val: vitals.bmi, icon: User, color: 'text-slate-400' }
+                                                ].filter(v => v.val).map((v, i) => (
+                                                    <div key={i} className="group p-3 bg-white rounded-xl border border-slate-100 shadow-xs hover:shadow-md transition-shadow">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            {v.icon && <v.icon className={`w-3 h-3 ${v.color}`} />}
+                                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.1em]">{v.label}</span>
+                                                        </div>
+                                                        <div className="text-base font-black text-slate-950 leading-none">{v.val}{v.unit}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : <div className="text-sm text-slate-300 italic">No vitals recorded</div>
+                                    )}
+                                </div>
+                                <div className="md:col-span-3">
+                                    {renderSection('physicalExam', true, 'Physical Examination',
+                                        <div className="text-slate-900 leading-relaxed text-sm bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm min-h-[300px]" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.peNotes) || '<div class="flex items-center justify-center h-full text-slate-300 italic p-12 text-center border-2 border-dashed border-slate-100 rounded-2xl">Complete physical examination findings not explicitly detailed in this report.</div>' }} />
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Assessment & Plan */}
+                            <div className="space-y-12 pt-8">
+                                {renderSection('assessment', true, 'Final Assessment',
+                                    <div className="text-slate-950 font-black text-2xl leading-none tracking-tight bg-slate-50 p-6 rounded-2xl border border-slate-100">{noteData.assessment || <span className="text-slate-300 italic font-normal text-lg">No assessment provided.</span>}</div>
+                                )}
+
+                                {renderSection('plan', true, 'Plan & Recommendations',
+                                    noteData.planStructured?.length > 0 ? (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            {noteData.planStructured.map((item, index) => (
+                                                <div key={index} className="space-y-3 bg-white p-6 rounded-[2rem] border-2 border-slate-50 shadow-sm relative overflow-hidden group hover:border-primary-100 transition-colors">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="w-8 h-8 rounded-full bg-slate-950 text-white flex items-center justify-center font-black text-xs">{index + 1}</span>
+                                                        <h4 className="text-base font-black text-slate-900 uppercase tracking-tight">{item.diagnosis}</h4>
+                                                    </div>
+                                                    <ul className="space-y-2 list-none">
+                                                        {item.orders.map((o, i) => (
+                                                            <li key={i} className="text-xs font-black text-slate-500 bg-slate-50 px-3 py-2 rounded-lg flex items-center gap-3">
+                                                                <span className="w-1.5 h-1.5 bg-primary-500 rounded-full" />
+                                                                {o}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
                                                 </div>
                                             ))}
                                         </div>
-                                    ) : <span className="text-slate-400 italic font-normal">No active medications</span>
+                                    ) : noteData.plan ? (
+                                        <div className="text-slate-900 leading-relaxed font-bold bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm whitespace-pre-wrap">{noteData.plan}</div>
+                                    ) : <div className="p-8 text-center border-2 border-dashed border-slate-100 rounded-2xl text-slate-300 italic">No explicit treatment plan outlined.</div>
+                                )}
+
+                                {(noteData.carePlan || noteData.followUp) && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-10 border-t border-slate-100">
+                                        {noteData.carePlan && (
+                                            <div className="space-y-4">
+                                                <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Summary of Care</div>
+                                                <div className="text-slate-800 font-bold bg-slate-50 p-6 rounded-[2rem] border border-slate-100 leading-relaxed shadow-inner">{noteData.carePlan}</div>
+                                            </div>
+                                        )}
+                                        {noteData.followUp && (
+                                            <div className="space-y-4">
+                                                <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Follow-Up Coordination</div>
+                                                <div className="flex flex-col justify-center gap-2 p-6 bg-primary-950 text-white rounded-[2rem] shadow-2xl shadow-primary-900/20">
+                                                    <div className="flex items-center gap-3 mb-2">
+                                                        <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
+                                                            <Calendar className="w-6 h-6 text-primary-400" />
+                                                        </div>
+                                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary-400">Scheduled Visit</span>
+                                                    </div>
+                                                    <div className="text-xl font-black">{noteData.followUp}</div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 )}
                             </div>
 
-                            {renderSection('assessment', true, 'Assessment',
-                                <div className="text-slate-900 leading-relaxed whitespace-pre-wrap">{noteData.assessment || <span className="text-slate-400 italic font-normal">No assessment recorded</span>}</div>
-                            )}
-
-                            {renderSection('plan', true, 'Plan & Recommendations',
-                                noteData.planStructured?.length > 0 ? (
-                                    <div className="space-y-6 mt-4">
-                                        {noteData.planStructured.map((item, index) => (
-                                            <div key={index} className="space-y-3 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="flex-shrink-0 w-6 h-6 bg-slate-900 text-white rounded-lg flex items-center justify-center text-[10px] font-bold">{index + 1}</span>
-                                                    <h4 className="text-sm font-bold text-slate-900">{item.diagnosis}</h4>
-                                                </div>
-                                                <ul className="ml-9 space-y-1.5 list-disc text-slate-700">
-                                                    {item.orders.map((o, i) => <li key={i} className="text-xs font-medium pl-1 marker:text-primary-400">{o}</li>)}
-                                                </ul>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : noteData.plan ? (
-                                    <div className="text-slate-900 leading-relaxed whitespace-pre-wrap">{noteData.plan}</div>
-                                ) : <span className="text-slate-400 italic font-normal">No plan recorded</span>
-                            )}
-
-                            {(noteData.carePlan || noteData.followUp) && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pt-8 border-t border-slate-200/60">
-                                    {renderSection('carePlan', noteData.carePlan, 'Patient Care Plan',
-                                        <div className="text-slate-800 font-medium leading-relaxed">{noteData.carePlan}</div>
-                                    )}
-                                    {renderSection('followUp', noteData.followUp, 'Follow-Up',
-                                        <div className="flex items-center gap-2 p-4 bg-primary-50 text-primary-800 rounded-2xl border border-primary-100 text-sm font-bold">
-                                            <Calendar className="w-4 h-4" />
-                                            {noteData.followUp}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
+                            {/* Addendums Section */}
                             {addendums.length > 0 && (
-                                <div className="mt-12 pt-10 border-t-2 border-slate-100">
-                                    <h3 className="text-lg font-bold text-slate-950 mb-6">Note Addendums</h3>
-                                    <div className="space-y-4">
+                                <div className="mt-20 pt-16 border-t-[6px] border-slate-950">
+                                    <div className="flex items-center gap-4 mb-10">
+                                        <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20">
+                                            <FilePlus className="w-7 h-7 text-white" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-3xl font-black text-slate-950 uppercase tracking-tighter">Clinical Addendums</h3>
+                                            <p className="text-xs font-black text-amber-600 uppercase tracking-[0.3em]">Post-Signing Modifications</p>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-10">
                                         {addendums.map((a, i) => (
-                                            <div key={i} className="bg-amber-50/50 border border-amber-100/80 p-6 rounded-3xl relative overflow-hidden">
-                                                <div className="absolute top-0 right-0 p-1 bg-amber-200/30 rounded-bl-xl text-[8px] font-black text-amber-700 uppercase tracking-widest px-3">Addendum</div>
-                                                <div className="flex items-center gap-2 mb-3 text-[10px] font-bold text-amber-700 uppercase tracking-wider">
-                                                    <User className="w-3 h-3" />
-                                                    <span>Added by {a.addedByName}</span>
-                                                    <span className="mx-1">•</span>
-                                                    <Clock className="w-3 h-3" />
-                                                    <span>{format(new Date(a.addedAt), 'MM/dd/yyyy h:mm a')}</span>
+                                            <div key={i} className="bg-white border-2 border-slate-100 p-10 rounded-[2.5rem] shadow-sm relative overflow-hidden group hover:border-amber-200 transition-all hover:shadow-xl">
+                                                <div className="absolute top-0 right-0 p-4">
+                                                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Addendum #{i + 1}</span>
                                                 </div>
-                                                <div className="text-sm font-medium text-slate-800 leading-relaxed">{a.text}</div>
+                                                <div className="flex items-center gap-4 mb-8">
+                                                    <div className="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center text-white font-black text-sm italic">
+                                                        {a.addedByName?.charAt(0) || 'A'}
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-base font-black text-slate-900">{a.addedByName}</div>
+                                                        <div className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-2">
+                                                            <Clock className="w-3.5 h-3.5" />
+                                                            {format(new Date(a.addedAt), 'MMMM dd, yyyy • h:mm a')}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-base font-bold text-slate-800 leading-relaxed whitespace-pre-wrap pl-6 border-l-4 border-amber-400">{a.text}</div>
                                             </div>
                                         ))}
                                     </div>
@@ -696,14 +826,26 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                             )}
                         </div>
 
-                        <div className="mt-16 pt-10 border-t border-slate-100 flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                            <div className="flex items-center gap-2">
-                                <span>Note Validated & Signed By</span>
-                                <span className="text-slate-900">{providerName}</span>
+                        {/* Professional Footer */}
+                        <div className="mt-20 pt-12 border-t border-slate-100 flex items-center justify-between">
+                            <div className="space-y-2">
+                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Verification & Signature</div>
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-slate-950 rounded-full flex items-center justify-center text-white font-black text-lg italic shadow-xl">
+                                        {providerName.charAt(0)}
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        <div className="text-sm font-black text-slate-950">{providerName}</div>
+                                        <div className="text-[9px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded leading-none inline-block">Digitally Validated & Signed</div>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-1.5 opacity-60">
-                                <span>Clinical Documentation Platform</span>
-                                <span className="text-slate-900">PageMD</span>
+                            <div className="text-right space-y-1">
+                                <div className="flex items-center justify-end gap-1.5 opacity-40 text-[9px] font-black uppercase tracking-widest">
+                                    <span>Clinical Informatics by</span>
+                                    <span className="text-slate-950">PageMD</span>
+                                </div>
+                                <div className="text-[8px] text-slate-300 uppercase tracking-tight">Standard medical record documentation format v2.4</div>
                             </div>
                         </div>
                     </div>
