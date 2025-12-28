@@ -7,7 +7,7 @@
 
 ## 2. Advanced Compliance
 - [ ] **Automated Compliance Checks**: Run periodical tasks to verify `compliance_zones` settings against actual data storage regions.
-- [ ] **Audit Trail Hashing**: Implement cryptographic hashing (chaining) for `platform_audit_logs` to ensure immutability and tamper-evidence.
+- [x] **Audit Trail Hashing**: Implement cryptographic hashing (chaining) for `platform_audit_logs` to ensure immutability and tamper-evidence.
 
 ## 3. Multi-Tenant Scalability
 - [ ] **Schema-per-Tenant Migration**: Evaluate full schema separation if row-level security (RLS) becomes a bottleneck.
