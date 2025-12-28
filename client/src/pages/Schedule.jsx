@@ -16,7 +16,7 @@ const NoShowCancelledButtons = ({ appointment, onStatusUpdate }) => {
     const [showReasonModal, setShowReasonModal] = useState(false);
     const [pendingStatus, setPendingStatus] = useState(null);
     const [reasonInput, setReasonInput] = useState('');
-    
+
     const status = appointment?.patient_status || 'scheduled';
     const isTerminalState = status === 'checked_out' || status === 'no_show' || status === 'cancelled';
 
@@ -33,7 +33,7 @@ const NoShowCancelledButtons = ({ appointment, onStatusUpdate }) => {
 
     const handleStatusChange = async (newStatus, cancellationReason) => {
         if (saving) return;
-        
+
         setSaving(true);
         try {
             const now = new Date();
@@ -84,7 +84,7 @@ const NoShowCancelledButtons = ({ appointment, onStatusUpdate }) => {
 
     const NoShowCancelledBtn = ({ statusKey, label }) => {
         const isActive = status === statusKey;
-        const color = isActive 
+        const color = isActive
             ? (statusKey === 'no_show' ? 'text-orange-700 font-bold' : 'text-red-700 font-bold')
             : (statusKey === 'no_show' ? 'text-orange-500 hover:text-orange-600' : 'text-red-500 hover:text-red-600');
 
@@ -117,7 +117,7 @@ const NoShowCancelledButtons = ({ appointment, onStatusUpdate }) => {
 
             {/* Cancellation Reason Modal - only for cancelled status */}
             {showReasonModal && pendingStatus === 'cancelled' && (
-                <div 
+                <div
                     className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center"
                     onClick={() => {
                         setShowReasonModal(false);
@@ -125,7 +125,7 @@ const NoShowCancelledButtons = ({ appointment, onStatusUpdate }) => {
                         setPendingStatus(null);
                     }}
                 >
-                    <div 
+                    <div
                         className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4"
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -134,7 +134,7 @@ const NoShowCancelledButtons = ({ appointment, onStatusUpdate }) => {
                                 Cancel Appointment
                             </h2>
                         </div>
-                        
+
                         <div className="p-6">
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -195,7 +195,7 @@ const ProviderChangeModal = ({ isOpen, onClose, appointment, providers, currentP
             onClose();
             return;
         }
-        
+
         setSaving(true);
         try {
             await appointmentsAPI.update(appointment.id, { providerId: selectedProviderId });
@@ -212,13 +212,13 @@ const ProviderChangeModal = ({ isOpen, onClose, appointment, providers, currentP
     if (!isOpen) return null;
 
     const displayName = currentProviderName?.split(' ')[1] || currentProviderName?.split(' ')[0] || 'Provider';
-    
+
     // Filter to only show physicians/NP/PA (roles that can see patients)
-    const providerOptions = providers.filter(p => {
+    const providerOptions = (providers || []).filter(p => {
         const role = (p.role_name || p.role || '').toLowerCase();
-        return role.includes('physician') || role.includes('doctor') || role.includes('np') || 
-               role.includes('nurse practitioner') || role.includes('pa') || role.includes('physician assistant') ||
-               role === 'clinician';
+        return role.includes('physician') || role.includes('doctor') || role.includes('np') ||
+            role.includes('nurse practitioner') || role.includes('pa') || role.includes('physician assistant') ||
+            role === 'clinician';
     });
 
     return (
@@ -228,7 +228,7 @@ const ProviderChangeModal = ({ isOpen, onClose, appointment, providers, currentP
                     <h2 className="text-xl font-bold text-white">Change Provider</h2>
                     <p className="text-blue-100 text-sm mt-1">Assign patient to a different provider</p>
                 </div>
-                
+
                 <div className="p-6">
                     <div className="mb-4">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -346,12 +346,12 @@ const Schedule = () => {
     const [showModal, setShowModal] = useState(false);
     const [showAddPatientModal, setShowAddPatientModal] = useState(false);
     const [clickedTimeSlot, setClickedTimeSlot] = useState(null);
-    const [newAppt, setNewAppt] = useState({ 
-        patientId: '', 
-        patient: '', 
-        providerId: '', 
-        type: 'Follow-up', 
-        time: '09:00', 
+    const [newAppt, setNewAppt] = useState({
+        patientId: '',
+        patient: '',
+        providerId: '',
+        type: 'Follow-up',
+        time: '09:00',
         duration: 30,
         date: format(new Date(), 'yyyy-MM-dd')
     });
@@ -369,7 +369,7 @@ const Schedule = () => {
         const saved = localStorage.getItem('schedule_showCancelled');
         return saved !== null ? saved === 'true' : true;
     });
-    
+
     // Save preference to localStorage whenever it changes
     useEffect(() => {
         localStorage.setItem('schedule_showCancelled', showCancelledAppointments.toString());
@@ -411,7 +411,7 @@ const Schedule = () => {
                 const response = await authAPI.getProviders();
                 const providersList = response.data || [];
                 setProviders(providersList);
-                
+
                 // Check if there's a saved provider preference
                 const savedProviderId = localStorage.getItem('schedule_selectedProvider');
                 if (savedProviderId) {
@@ -423,7 +423,7 @@ const Schedule = () => {
                         return; // Don't override with role-based selection if saved preference exists
                     }
                 }
-                
+
                 // If no saved preference, use role-based selection
                 const roleName = user?.role_name || user?.role || '';
                 const roleNameLower = roleName.toLowerCase();
@@ -436,7 +436,7 @@ const Schedule = () => {
                     roleNameLower === 'clinician' ||
                     user?.role === 'clinician'
                 );
-                
+
                 if (user && isPhysicianRole) {
                     const currentUserProvider = providersList.find(p => p.id === user.id);
                     if (currentUserProvider) {
@@ -450,7 +450,7 @@ const Schedule = () => {
         };
         fetchProviders();
     }, [user]);
-    
+
     // Save provider preference to localStorage whenever it changes
     useEffect(() => {
         if (selectedProvider) {
@@ -502,7 +502,7 @@ const Schedule = () => {
                 setModalAppointments([]);
                 return;
             }
-            
+
             setLoadingModalAppts(true);
             try {
                 const params = { date: newAppt.date, providerId: newAppt.providerId };
@@ -515,14 +515,14 @@ const Schedule = () => {
                 setLoadingModalAppts(false);
             }
         };
-        
+
         fetchModalAppointments();
     }, [showModal, newAppt.date, newAppt.providerId]);
 
     // Fetch appointments
     useEffect(() => {
         let isInitialLoad = true;
-        
+
         const fetchAppointments = async (isRefresh = false) => {
             // Only show loading on initial load, not on refresh
             if (!isRefresh) {
@@ -544,27 +544,27 @@ const Schedule = () => {
                 isInitialLoad = false;
             }
         };
-        
+
         fetchAppointments();
-        
+
         // Auto-refresh every 10 seconds (silent refresh, no loading state)
         const interval = setInterval(() => {
             fetchAppointments(true);
         }, 10000);
-        
+
         return () => clearInterval(interval);
     }, [currentDate, selectedProvider]);
 
     // Provider colors
     const getProviderColor = (providerId, providerName) => {
         if (!providerId) return { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-700', accent: '#64748b', light: 'bg-slate-100' };
-        
+
         let hash = 0;
         const str = providerId + (providerName || '');
         for (let i = 0; i < str.length; i++) {
             hash = str.charCodeAt(i) + ((hash << 5) - hash);
         }
-        
+
         const colors = [
             { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-900', accent: '#3b82f6', light: 'bg-blue-100' },
             { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-900', accent: '#10b981', light: 'bg-emerald-100' },
@@ -575,13 +575,13 @@ const Schedule = () => {
             { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-900', accent: '#6366f1', light: 'bg-indigo-100' },
             { bg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-900', accent: '#14b8a6', light: 'bg-teal-100' },
         ];
-        
+
         return colors[Math.abs(hash) % colors.length];
     };
 
     // Group appointments by provider - only include active providers
-    const activeProviderIds = new Set(providers.map(p => p.id));
-    const appointmentsByProvider = appointments.reduce((acc, appt) => {
+    const activeProviderIds = new Set((providers || []).map(p => p.id));
+    const appointmentsByProvider = (appointments || []).reduce((acc, appt) => {
         const providerId = appt.providerId || 'unknown';
         // Only include providers that are in the active providers list
         if (!activeProviderIds.has(providerId) && providerId !== 'unknown') {
@@ -607,7 +607,7 @@ const Schedule = () => {
     const getTimeSlotHeight = (time) => {
         const apptTime = time.substring(0, 5);
         let totalAppointments = 0;
-        
+
         // Count ALL appointments at this time across ALL providers
         Object.values(appointmentsByProvider).forEach((providerGroup) => {
             const appointmentsAtTime = providerGroup.appointments.filter(a => {
@@ -618,15 +618,15 @@ const Schedule = () => {
                 const isCancelledOrNoShow = appt.patient_status === 'cancelled' || appt.patient_status === 'no_show';
                 return showCancelledAppointments || !isCancelledOrNoShow;
             });
-            
+
             totalAppointments += appointmentsAtTime.length;
         });
-        
+
         // Calculate height needed for all stacked appointments
-        const stackedHeight = totalAppointments > 0 
+        const stackedHeight = totalAppointments > 0
             ? (totalAppointments * compactCardHeight) + ((totalAppointments - 1) * verticalGap)
             : 0;
-        
+
         // Return base height or expanded height if needed
         return stackedHeight > 0 ? Math.max(baseSlotHeight, stackedHeight + 2) : baseSlotHeight;
     };
@@ -650,7 +650,7 @@ const Schedule = () => {
             alert('Please select a provider');
             return;
         }
-        
+
         // Frontend validation: Check if slot is already full (max 2)
         // Exception: If BOTH appointments are cancelled/no-show, treat slot as empty (0/2)
         const selectedDate = newAppt.date || format(currentDate, 'yyyy-MM-dd');
@@ -660,20 +660,20 @@ const Schedule = () => {
             const apptTime = appt.time.substring(0, 5);
             return apptTime === selectedTime;
         });
-        
+
         // Check if both are cancelled/no-show
-        const allCancelled = appointmentsAtSelectedSlot.length === 2 && 
-                             appointmentsAtSelectedSlot.every(appt => 
-                               appt.patient_status === 'cancelled' || appt.patient_status === 'no_show'
-                             );
-        
+        const allCancelled = appointmentsAtSelectedSlot.length === 2 &&
+            appointmentsAtSelectedSlot.every(appt =>
+                appt.patient_status === 'cancelled' || appt.patient_status === 'no_show'
+            );
+
         // If both are cancelled, allow booking (treat as empty)
         // Otherwise, if 2 or more appointments exist, block booking
         if (!allCancelled && appointmentsAtSelectedSlot.length >= 2) {
             alert('This time slot is already full. Maximum 2 appointments allowed per time slot. Please select a different time.');
             return;
         }
-        
+
         try {
             await appointmentsAPI.create({
                 patientId: newAppt.patientId,
@@ -683,7 +683,7 @@ const Schedule = () => {
                 duration: newAppt.duration,
                 type: newAppt.type
             });
-            
+
             // Auto-address the follow-up if this was a reschedule from Cancellations
             if (pendingFollowupId) {
                 try {
@@ -697,21 +697,21 @@ const Schedule = () => {
                 }
                 setPendingFollowupId(null);
             }
-            
+
             const dateStr = format(currentDate, 'yyyy-MM-dd');
             const params = { date: dateStr };
             if (selectedProvider) params.providerId = selectedProvider;
             const response = await appointmentsAPI.get(params);
             setAppointments(response.data || []);
-            
+
             setShowModal(false);
             setClickedTimeSlot(null);
-            setNewAppt({ 
-                patientId: '', 
-                patient: '', 
+            setNewAppt({
+                patientId: '',
+                patient: '',
                 providerId: newAppt.providerId,
-                type: 'Follow-up', 
-                time: '09:00', 
+                type: 'Follow-up',
+                time: '09:00',
                 duration: 30,
                 date: format(currentDate, 'yyyy-MM-dd')
             });
@@ -738,18 +738,18 @@ const Schedule = () => {
         const topPx = (minutesFromStart / 30) * 48; // 48px per 30 min slot
         // Height based on duration - min 48px for 30min to fit content
         const heightPx = Math.max((appt.duration / 30) * 48, 48);
-        
+
         const providerKeys = Object.keys(appointmentsByProvider);
         const providerCount = providerKeys.length || 1;
         const providerIndex = providerKeys.indexOf(providerGroup.providerId || 'unknown');
-        
+
         // Find ALL appointments at the same time slot for this provider (for overlap detection)
         const apptTime = appt.time.substring(0, 5);
         const allAtSameTime = providerGroup.appointments.filter(a => {
             const aTime = a.time?.substring(0, 5);
             return aTime === apptTime;
         });
-        
+
         // Sort all appointments by status (active first, then cancelled/no-show) and then by ID
         allAtSameTime.sort((a, b) => {
             const aIsActive = a.patient_status !== 'cancelled' && a.patient_status !== 'no_show';
@@ -759,29 +759,29 @@ const Schedule = () => {
             }
             return a.id.localeCompare(b.id); // Then by ID
         });
-        
+
         // Find this appointment's index in the sorted list
         const overlapCount = allAtSameTime.length || 1;
         const overlapIndex = allAtSameTime.findIndex(a => a.id === appt.id);
-        
+
         // Ensure overlapIndex is valid (should never be -1, but safety check)
         if (overlapIndex === -1) {
             console.warn('Appointment not found in same-time list:', appt.id);
             return { top: topPx, height: heightPx, left: '80px', width: 'calc(100% - 84px)', overlapCount: 1, overlapIndex: 0 };
         }
-        
+
         // Constants
         const timeColumnWidth = 80; // w-20 = 80px
         const gap = 4; // padding between appointments
-        
+
         // Calculate provider column percentage (after time column)
         const providerWidthPct = 100 / providerCount;
         const providerStartPct = providerIndex * providerWidthPct;
-        
+
         // Calculate appointment slot within provider column
         const slotWidthPct = providerWidthPct / overlapCount;
         const slotStartPct = providerStartPct + (overlapIndex * slotWidthPct);
-        
+
         // Build CSS calc() expressions
         // left = timeColumn + (percentage of remaining width) + gap
         // width = (percentage of remaining width) - gap
@@ -820,34 +820,33 @@ const Schedule = () => {
                                     <p className="text-xs text-slate-500">Manage appointments</p>
                                 </div>
                             </div>
-                            
+
                             <div className="flex items-center gap-2">
                                 <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
-                                    <button 
-                                        className="p-2 hover:bg-white rounded-lg transition-all hover:shadow-sm" 
+                                    <button
+                                        className="p-2 hover:bg-white rounded-lg transition-all hover:shadow-sm"
                                         onClick={() => setCurrentDate(addDays(currentDate, -1))}
                                     >
                                         <ChevronLeft className="w-5 h-5 text-slate-600" />
                                     </button>
-                                    <button 
+                                    <button
                                         className="px-4 py-2 font-semibold text-slate-900 hover:bg-white rounded-lg transition-all min-w-[200px] text-center"
                                         onClick={() => setCurrentDate(new Date())}
                                     >
                                         {format(currentDate, 'EEEE, MMMM d, yyyy')}
                                     </button>
-                                    <button 
-                                        className="p-2 hover:bg-white rounded-lg transition-all hover:shadow-sm" 
+                                    <button
+                                        className="p-2 hover:bg-white rounded-lg transition-all hover:shadow-sm"
                                         onClick={() => setCurrentDate(addDays(currentDate, 1))}
                                     >
                                         <ChevronRight className="w-5 h-5 text-slate-600" />
                                     </button>
                                 </div>
-                                <button 
-                                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-all shadow-sm ${
-                                        format(currentDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
-                                            ? 'bg-blue-600 text-white border border-blue-700 hover:bg-blue-700'
-                                            : 'text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400'
-                                    }`}
+                                <button
+                                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-all shadow-sm ${format(currentDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
+                                        ? 'bg-blue-600 text-white border border-blue-700 hover:bg-blue-700'
+                                        : 'text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400'
+                                        }`}
                                     onClick={() => setCurrentDate(new Date())}
                                     title="Go to today's date"
                                 >
@@ -858,7 +857,7 @@ const Schedule = () => {
 
                         {/* Right: Provider Filter and New Appointment */}
                         <div className="flex items-center gap-4">
-                            {providers.length > 0 && (
+                            {(providers || []).length > 0 && (
                                 <div className="flex items-center gap-2 bg-slate-100 rounded-xl px-3 py-2">
                                     <Users className="w-4 h-4 text-slate-500" />
                                     <select
@@ -870,13 +869,13 @@ const Schedule = () => {
                                         }}
                                     >
                                         <option value="">All Providers</option>
-                                        {providers.map(p => (
+                                        {(providers || []).map(p => (
                                             <option key={p.id} value={p.id}>{p.name}</option>
                                         ))}
                                     </select>
                                 </div>
                             )}
-                            
+
                             <button
                                 onClick={() => {
                                     setClickedTimeSlot(null);
@@ -901,11 +900,10 @@ const Schedule = () => {
                         <div className="flex items-center gap-4">
                             <button
                                 onClick={() => setShowCancelledAppointments(!showCancelledAppointments)}
-                                className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded border transition-colors ${
-                                    showCancelledAppointments 
-                                        ? 'bg-white border-gray-400 text-gray-700 hover:bg-gray-50' 
-                                        : 'bg-white border-gray-300 text-gray-600 hover:border-gray-400'
-                                }`}
+                                className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded border transition-colors ${showCancelledAppointments
+                                    ? 'bg-white border-gray-400 text-gray-700 hover:bg-gray-50'
+                                    : 'bg-white border-gray-300 text-gray-600 hover:border-gray-400'
+                                    }`}
                             >
                                 {showCancelledAppointments ? (
                                     <>
@@ -927,13 +925,13 @@ const Schedule = () => {
                                 <span>→</span>
                                 <span className="text-green-600">Checked In</span>
                                 <span>→</span>
-                            <div className="flex items-center gap-1">
-                                <span className="text-purple-600">Room</span>
-                                <span className="w-2.5 h-2.5 rounded-full border-2 border-violet-500 bg-violet-50" title="With Nurse" />
-                                <span className="text-[9px] text-violet-600 font-medium">Nurse</span>
-                                <span className="w-2.5 h-2.5 rounded-full bg-amber-500" title="Ready for Provider" />
-                                <span className="text-[9px] text-amber-600 font-medium">Provider</span>
-                            </div>
+                                <div className="flex items-center gap-1">
+                                    <span className="text-purple-600">Room</span>
+                                    <span className="w-2.5 h-2.5 rounded-full border-2 border-violet-500 bg-violet-50" title="With Nurse" />
+                                    <span className="text-[9px] text-violet-600 font-medium">Nurse</span>
+                                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" title="Ready for Provider" />
+                                    <span className="text-[9px] text-amber-600 font-medium">Provider</span>
+                                </div>
                                 <span>→</span>
                                 <span className="text-red-600">Out</span>
                             </div>
@@ -943,9 +941,9 @@ const Schedule = () => {
                                     <span className="font-semibold text-gray-600">Providers:</span>
                                     {Object.values(appointmentsByProvider).map((providerGroup) => (
                                         <div key={providerGroup.providerId || 'unknown'} className="flex items-center gap-1.5">
-                                            <div 
+                                            <div
                                                 className={`w-3 h-3 rounded border-2 ${providerGroup.color.bg} ${providerGroup.color.border}`}
-                                                style={{ 
+                                                style={{
                                                     borderLeftWidth: '3px',
                                                     borderLeftColor: providerGroup.color.accent
                                                 }}
@@ -984,12 +982,12 @@ const Schedule = () => {
                                     const hour = parseInt(time.split(':')[0]);
                                     const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
                                     const ampm = hour >= 12 ? 'PM' : 'AM';
-                                    
+
                                     const slotHeight = getTimeSlotHeight(time);
-                                    
+
                                     return (
-                                        <div 
-                                            key={time} 
+                                        <div
+                                            key={time}
                                             className={`flex border-b border-gray-200 ${isHour ? 'bg-white' : 'bg-gray-50/50'}`}
                                             style={{ minHeight: `${slotHeight}px`, height: `${slotHeight}px` }}
                                         >
@@ -1001,9 +999,9 @@ const Schedule = () => {
                                                     </span>
                                                 )}
                                             </div>
-                                            
+
                                             {/* Single Provider Column */}
-                                            <div 
+                                            <div
                                                 className="flex-1 border-r border-gray-200 relative cursor-pointer hover:bg-blue-50/30 transition-colors"
                                                 onClick={() => handleTimeSlotClick(time)}
                                             >
@@ -1033,7 +1031,7 @@ const Schedule = () => {
                                                 });
                                             });
                                     });
-                                    
+
                                     // Group by time slot
                                     const appointmentsByTime = {};
                                     allAppointments.forEach(appt => {
@@ -1043,7 +1041,7 @@ const Schedule = () => {
                                         }
                                         appointmentsByTime[apptTime].push(appt);
                                     });
-                                    
+
                                     // Sort appointments within each time slot
                                     Object.keys(appointmentsByTime).forEach(time => {
                                         appointmentsByTime[time].sort((a, b) => {
@@ -1057,7 +1055,7 @@ const Schedule = () => {
                                             return a.id.localeCompare(b.id);
                                         });
                                     });
-                                    
+
                                     return allAppointments.map(appt => {
                                         const [hours, minutes] = appt.time.split(':').map(Number);
                                         const minutesFromStart = (hours - 7) * 60 + minutes;
@@ -1068,58 +1066,57 @@ const Schedule = () => {
                                             cumulativeTop += getTimeSlotHeight(timeSlots[i]);
                                         }
                                         const baseTopPx = cumulativeTop;
-                                        
+
                                         // Fixed compact height for all appointments
                                         const compactCardHeight = 24;
                                         const verticalGap = 1;
-                                        
+
                                         // Find position within this time slot
                                         const apptTime = appt.time.substring(0, 5);
                                         const appointmentsAtSameTime = appointmentsByTime[apptTime] || [];
                                         const overlapIndex = appointmentsAtSameTime.findIndex(a => a.id === appt.id);
-                                        
+
                                         // Stack appointments vertically
                                         let stackedTopPx = baseTopPx;
                                         for (let i = 0; i < overlapIndex; i++) {
                                             stackedTopPx += compactCardHeight + verticalGap;
                                         }
-                                        
+
                                         // Full width of single column
                                         const timeColumnWidth = 96;
                                         const slotWidthCalc = `calc(100% - ${timeColumnWidth + 4}px)`;
                                         const leftOffset = `${timeColumnWidth + 2}px`;
-                                        
+
                                         const color = appt.providerGroup.color;
                                         const isCancelledOrNoShow = appt.patient_status === 'cancelled' || appt.patient_status === 'no_show';
                                         const isActiveInClinic = appt.patient_status === 'arrived' || appt.patient_status === 'checked_in' || appt.patient_status === 'in_room';
-                                                    
+
                                         return (
-                                            <div 
-                                                key={appt.id} 
-                                                className={`absolute border-l-2 rounded shadow-sm hover:shadow-md transition-all overflow-visible ${
-                                                    isCancelledOrNoShow 
-                                                        ? 'bg-gray-100 border-gray-400 opacity-70' 
-                                                        : isActiveInClinic
+                                            <div
+                                                key={appt.id}
+                                                className={`absolute border-l-2 rounded shadow-sm hover:shadow-md transition-all overflow-visible ${isCancelledOrNoShow
+                                                    ? 'bg-gray-100 border-gray-400 opacity-70'
+                                                    : isActiveInClinic
                                                         ? `${color.bg} ${color.border} ring-2 ring-blue-400 ring-opacity-60 shadow-lg`
                                                         : `${color.bg} ${color.border}`
-                                                }`}
+                                                    }`}
                                                 style={{
-                                                    top: `${stackedTopPx}px`, 
+                                                    top: `${stackedTopPx}px`,
                                                     height: `${compactCardHeight}px`,
                                                     left: leftOffset,
                                                     width: slotWidthCalc,
-                                                    borderLeftColor: isCancelledOrNoShow 
+                                                    borderLeftColor: isCancelledOrNoShow
                                                         ? (appt.patient_status === 'no_show' ? '#f97316' : '#ef4444')
                                                         : isActiveInClinic
-                                                        ? '#3b82f6' // Blue border for active patients
-                                                        : color.accent,
+                                                            ? '#3b82f6' // Blue border for active patients
+                                                            : color.accent,
                                                     borderLeftWidth: isActiveInClinic ? '3px' : '2px',
                                                 }}
                                             >
                                                 <div className={`h-full px-1.5 py-0 flex items-center gap-1.5 overflow-visible relative ${isCancelledOrNoShow ? 'line-through' : ''}`}>
                                                     {/* Column 1: Patient Name - Fixed width with truncation */}
                                                     <div className="flex-shrink-0 w-[120px] min-w-[120px] max-w-[120px]">
-                                                        <span 
+                                                        <span
                                                             className={`font-semibold text-[9px] leading-tight ${isCancelledOrNoShow ? 'text-gray-500' : color.text} hover:underline cursor-pointer truncate block w-full`}
                                                             onClick={(e) => handlePatientNameClick(e, appt)}
                                                             title={appt.patientName}
@@ -1127,7 +1124,7 @@ const Schedule = () => {
                                                             {appt.patientName}
                                                         </span>
                                                     </div>
-                                                    
+
                                                     {/* Column 2: Appointment Type + Duration - Fixed width */}
                                                     <div className="flex-shrink-0 w-[85px] min-w-[85px] max-w-[85px]">
                                                         <div className="flex items-center gap-0.5">
@@ -1136,10 +1133,10 @@ const Schedule = () => {
                                                             <span className={`text-[8px] ${isCancelledOrNoShow ? 'text-gray-500' : 'text-gray-700'} whitespace-nowrap`}>{appt.duration}m</span>
                                                         </div>
                                                     </div>
-                                                    
+
                                                     {/* Column 3: Provider Name/Initials - Fixed width */}
                                                     <div className="flex-shrink-0 w-[60px] min-w-[60px] max-w-[60px] flex items-center">
-                                                        <ProviderSelector 
+                                                        <ProviderSelector
                                                             appointment={appt}
                                                             providers={providers}
                                                             currentProviderName={appt.providerGroup.providerName}
@@ -1147,20 +1144,20 @@ const Schedule = () => {
                                                             showInitials={true}
                                                         />
                                                     </div>
-                                                    
+
                                                     {/* Column 4: Status Flow - Flexible but with min width */}
                                                     <div className="flex-1 min-w-[150px] overflow-hidden">
-                                                        <InlinePatientStatus 
+                                                        <InlinePatientStatus
                                                             appointment={appt}
                                                             onStatusUpdate={refreshAppointments}
                                                             showNoShowCancelled={false}
                                                             showCancelledBadge={true}
                                                         />
                                                     </div>
-                                                    
+
                                                     {/* Column 5: No Show/Cancelled Buttons - Fixed width on right, always visible */}
                                                     <div className="flex-shrink-0 w-[100px] min-w-[100px] max-w-[100px] flex items-center justify-end pr-1">
-                                                        <NoShowCancelledButtons 
+                                                        <NoShowCancelledButtons
                                                             appointment={appt}
                                                             onStatusUpdate={refreshAppointments}
                                                         />
@@ -1185,7 +1182,7 @@ const Schedule = () => {
                                 {clickedTimeSlot ? `New Appointment at ${clickedTimeSlot}` : 'New Appointment'}
                             </h2>
                         </div>
-                        
+
                         <div className="p-4">
                             <div className="grid grid-cols-2 gap-4">
                                 {/* Left Column - Patient & Details */}
@@ -1262,7 +1259,7 @@ const Schedule = () => {
                                                 onChange={(e) => setNewAppt({ ...newAppt, providerId: e.target.value })}
                                             >
                                                 <option value="">Select</option>
-                                                {providers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                                {(providers || []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                             </select>
                                         </div>
                                         <div>
@@ -1310,122 +1307,121 @@ const Schedule = () => {
                                 {/* Right Column - Time Slot Picker */}
                                 <div>
 
-                            {/* Mini Scheduler - Visual Time Slot Picker */}
-                            <div>
-                                <div className="flex items-center justify-between mb-2">
-                                    <label className="text-sm font-semibold text-slate-700">Select Time Slot</label>
-                                    {newAppt.time && (
-                                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-lg font-medium">
-                                            Selected: {newAppt.time}
-                                        </span>
-                                    )}
-                                </div>
-                                
-                                {!newAppt.providerId ? (
-                                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center text-amber-700 text-sm">
-                                        Please select a provider first to see availability
-                                    </div>
-                                ) : loadingModalAppts ? (
-                                    <div className="bg-slate-50 rounded-xl p-4 text-center text-slate-500 text-sm">
-                                        Loading schedule...
-                                    </div>
-                                ) : (
-                                    <div className="bg-slate-50 rounded-xl p-3">
-                                        <div className="grid grid-cols-6 gap-1">
-                                            {timeSlots.map(slot => {
-                                                // Check how many appointments are at this exact time slot
-                                                const slotMinutes = parseInt(slot.split(':')[0]) * 60 + parseInt(slot.split(':')[1]);
-                                                
-                                                // Count ALL appointments that START at this exact slot time
-                                                // Exception: If BOTH are cancelled/no-show, treat as empty (0/2)
-                                                const appointmentsAtSlot = modalAppointments.filter(appt => {
-                                                    if (!appt.time) return false;
-                                                    const apptTime = appt.time.substring(0, 5);
-                                                    return apptTime === slot;
-                                                });
-                                                
-                                                // Check if both are cancelled/no-show
-                                                const allCancelled = appointmentsAtSlot.length === 2 && 
-                                                                     appointmentsAtSlot.every(appt => 
-                                                                       appt.patient_status === 'cancelled' || appt.patient_status === 'no_show'
-                                                                     );
-                                                
-                                                // If both cancelled, treat as 0 bookings (empty slot)
-                                                const effectiveCount = allCancelled ? 0 : appointmentsAtSlot.length;
-                                                const bookingCount = effectiveCount;
-                                                const isFullyBooked = bookingCount >= 2; // Max 2 patients per slot
-                                                const hasOneBooking = bookingCount === 1;
-                                                const isSelected = newAppt.time === slot;
-                                                
-                                                // Get patient names for tooltip (include cancelled status)
-                                                const bookedPatients = appointmentsAtSlot.map(a => {
-                                                    const status = a.patient_status === 'cancelled' ? ' (Cancelled)' : 
-                                                                  a.patient_status === 'no_show' ? ' (No Show)' : '';
-                                                    return a.patientName + status;
-                                                }).join(', ');
-                                                
-                                                return (
-                                                    <button
-                                                        key={slot}
-                                                        type="button"
-                                                        onClick={() => {
-                                                            if (!isFullyBooked) {
-                                                                setNewAppt({ ...newAppt, time: slot });
-                                                            }
-                                                        }}
-                                                        disabled={isFullyBooked}
-                                                        className={`
+                                    {/* Mini Scheduler - Visual Time Slot Picker */}
+                                    <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="text-sm font-semibold text-slate-700">Select Time Slot</label>
+                                            {newAppt.time && (
+                                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-lg font-medium">
+                                                    Selected: {newAppt.time}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {!newAppt.providerId ? (
+                                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center text-amber-700 text-sm">
+                                                Please select a provider first to see availability
+                                            </div>
+                                        ) : loadingModalAppts ? (
+                                            <div className="bg-slate-50 rounded-xl p-4 text-center text-slate-500 text-sm">
+                                                Loading schedule...
+                                            </div>
+                                        ) : (
+                                            <div className="bg-slate-50 rounded-xl p-3">
+                                                <div className="grid grid-cols-6 gap-1">
+                                                    {timeSlots.map(slot => {
+                                                        // Check how many appointments are at this exact time slot
+                                                        const slotMinutes = parseInt(slot.split(':')[0]) * 60 + parseInt(slot.split(':')[1]);
+
+                                                        // Count ALL appointments that START at this exact slot time
+                                                        // Exception: If BOTH are cancelled/no-show, treat as empty (0/2)
+                                                        const appointmentsAtSlot = modalAppointments.filter(appt => {
+                                                            if (!appt.time) return false;
+                                                            const apptTime = appt.time.substring(0, 5);
+                                                            return apptTime === slot;
+                                                        });
+
+                                                        // Check if both are cancelled/no-show
+                                                        const allCancelled = appointmentsAtSlot.length === 2 &&
+                                                            appointmentsAtSlot.every(appt =>
+                                                                appt.patient_status === 'cancelled' || appt.patient_status === 'no_show'
+                                                            );
+
+                                                        // If both cancelled, treat as 0 bookings (empty slot)
+                                                        const effectiveCount = allCancelled ? 0 : appointmentsAtSlot.length;
+                                                        const bookingCount = effectiveCount;
+                                                        const isFullyBooked = bookingCount >= 2; // Max 2 patients per slot
+                                                        const hasOneBooking = bookingCount === 1;
+                                                        const isSelected = newAppt.time === slot;
+
+                                                        // Get patient names for tooltip (include cancelled status)
+                                                        const bookedPatients = appointmentsAtSlot.map(a => {
+                                                            const status = a.patient_status === 'cancelled' ? ' (Cancelled)' :
+                                                                a.patient_status === 'no_show' ? ' (No Show)' : '';
+                                                            return a.patientName + status;
+                                                        }).join(', ');
+
+                                                        return (
+                                                            <button
+                                                                key={slot}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    if (!isFullyBooked) {
+                                                                        setNewAppt({ ...newAppt, time: slot });
+                                                                    }
+                                                                }}
+                                                                disabled={isFullyBooked}
+                                                                className={`
                                                             py-1.5 px-0.5 text-[10px] font-medium rounded transition-all relative
-                                                            ${isSelected 
-                                                                ? 'bg-blue-600 text-white ring-2 ring-blue-300' 
-                                                                : isFullyBooked 
-                                                                    ? 'bg-red-200 text-red-500 cursor-not-allowed' 
-                                                                    : hasOneBooking
-                                                                        ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-300'
-                                                                        : 'bg-white text-slate-700 hover:bg-green-100 hover:text-green-700 border border-slate-200 hover:border-green-300'
-                                                            }
+                                                            ${isSelected
+                                                                        ? 'bg-blue-600 text-white ring-2 ring-blue-300'
+                                                                        : isFullyBooked
+                                                                            ? 'bg-red-200 text-red-500 cursor-not-allowed'
+                                                                            : hasOneBooking
+                                                                                ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-300'
+                                                                                : 'bg-white text-slate-700 hover:bg-green-100 hover:text-green-700 border border-slate-200 hover:border-green-300'
+                                                                    }
                                                         `}
-                                                        title={isFullyBooked 
-                                                            ? `FULL: ${bookedPatients}` 
-                                                            : hasOneBooking 
-                                                                ? `1/2 booked: ${bookedPatients}` 
-                                                                : 'Available'}
-                                                    >
-                                                        {slot}
-                                                        {bookingCount > 0 && (
-                                                            <span className={`absolute -top-1 -right-1 w-3 h-3 text-[8px] rounded-full flex items-center justify-center font-bold ${
-                                                                isFullyBooked ? 'bg-red-500 text-white' : 'bg-amber-500 text-white'
-                                                            }`}>
-                                                                {bookingCount}
-                                                            </span>
-                                                        )}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                        
-                                        {/* Legend */}
-                                        <div className="flex items-center justify-center gap-3 mt-2 pt-2 border-t border-slate-200 text-[10px] text-slate-500">
-                                            <span className="flex items-center gap-1">
-                                                <span className="w-2.5 h-2.5 bg-white border border-slate-200 rounded"></span>
-                                                Open
-                                            </span>
-                                            <span className="flex items-center gap-1">
-                                                <span className="w-2.5 h-2.5 bg-amber-100 border border-amber-300 rounded"></span>
-                                                1/2
-                                            </span>
-                                            <span className="flex items-center gap-1">
-                                                <span className="w-2.5 h-2.5 bg-red-200 rounded"></span>
-                                                Full
-                                            </span>
-                                            <span className="flex items-center gap-1">
-                                                <span className="w-2.5 h-2.5 bg-blue-600 rounded"></span>
-                                                Selected
-                                            </span>
-                                        </div>
+                                                                title={isFullyBooked
+                                                                    ? `FULL: ${bookedPatients}`
+                                                                    : hasOneBooking
+                                                                        ? `1/2 booked: ${bookedPatients}`
+                                                                        : 'Available'}
+                                                            >
+                                                                {slot}
+                                                                {bookingCount > 0 && (
+                                                                    <span className={`absolute -top-1 -right-1 w-3 h-3 text-[8px] rounded-full flex items-center justify-center font-bold ${isFullyBooked ? 'bg-red-500 text-white' : 'bg-amber-500 text-white'
+                                                                        }`}>
+                                                                        {bookingCount}
+                                                                    </span>
+                                                                )}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+
+                                                {/* Legend */}
+                                                <div className="flex items-center justify-center gap-3 mt-2 pt-2 border-t border-slate-200 text-[10px] text-slate-500">
+                                                    <span className="flex items-center gap-1">
+                                                        <span className="w-2.5 h-2.5 bg-white border border-slate-200 rounded"></span>
+                                                        Open
+                                                    </span>
+                                                    <span className="flex items-center gap-1">
+                                                        <span className="w-2.5 h-2.5 bg-amber-100 border border-amber-300 rounded"></span>
+                                                        1/2
+                                                    </span>
+                                                    <span className="flex items-center gap-1">
+                                                        <span className="w-2.5 h-2.5 bg-red-200 rounded"></span>
+                                                        Full
+                                                    </span>
+                                                    <span className="flex items-center gap-1">
+                                                        <span className="w-2.5 h-2.5 bg-blue-600 rounded"></span>
+                                                        Selected
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
                                 </div>
                             </div>
                         </div>
@@ -1450,8 +1446,8 @@ const Schedule = () => {
             )}
 
             {/* Add Patient Modal */}
-            <AddPatientModal 
-                isOpen={showAddPatientModal} 
+            <AddPatientModal
+                isOpen={showAddPatientModal}
                 onClose={() => { setShowAddPatientModal(false); setShowModal(true); }}
                 onSuccess={(message) => { alert(message); setShowAddPatientModal(false); setShowModal(true); }}
             />
