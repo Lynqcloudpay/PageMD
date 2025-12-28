@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, AlertCircle, Clock, CheckCircle, XCircle, ChevronRight, Filter, RefreshCw } from 'lucide-react';
-import { platformAuthAPI } from '../services/api';
+import { usePlatformAdmin } from '../context/PlatformAdminContext';
 
 const PlatformAdminSupport = () => {
     const navigate = useNavigate();
+    const { apiCall, isAuthenticated, loading: authLoading } = usePlatformAdmin();
     const [tickets, setTickets] = useState([]);
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -18,13 +19,13 @@ const PlatformAdminSupport = () => {
             if (filter.status !== 'all') params.append('status', filter.status);
             if (filter.priority) params.append('priority', filter.priority);
 
-            const [ticketsRes, statsRes] = await Promise.all([
-                platformAuthAPI.get(`/super/support-tickets?${params.toString()}`),
-                platformAuthAPI.get('/super/support-stats')
+            const [ticketsData, statsData] = await Promise.all([
+                apiCall('get', `/support-tickets?${params.toString()}`),
+                apiCall('get', '/support-stats')
             ]);
 
-            setTickets(ticketsRes.data.tickets || []);
-            setStats(statsRes.data);
+            setTickets(ticketsData?.tickets || []);
+            setStats(statsData || {});
         } catch (error) {
             console.error('Failed to fetch support tickets:', error);
         } finally {
@@ -33,12 +34,14 @@ const PlatformAdminSupport = () => {
     };
 
     useEffect(() => {
-        fetchTickets();
-    }, [filter]);
+        if (isAuthenticated && !authLoading) {
+            fetchTickets();
+        }
+    }, [filter, isAuthenticated, authLoading]);
 
     const updateTicketStatus = async (ticketId, newStatus) => {
         try {
-            await platformAuthAPI.patch(`/super/support-tickets/${ticketId}`, { status: newStatus });
+            await apiCall('patch', `/support-tickets/${ticketId}`, { status: newStatus });
             fetchTickets();
             if (selectedTicket?.id === ticketId) {
                 setSelectedTicket(prev => ({ ...prev, status: newStatus }));
@@ -61,6 +64,12 @@ const PlatformAdminSupport = () => {
         resolved: 'bg-green-100 text-green-700',
         closed: 'bg-gray-100 text-gray-700'
     };
+
+    // Redirect if not authenticated
+    if (!authLoading && !isAuthenticated) {
+        navigate('/platform-admin/login');
+        return null;
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -251,8 +260,8 @@ const PlatformAdminSupport = () => {
                                                     onClick={() => updateTicketStatus(selectedTicket.id, status)}
                                                     disabled={selectedTicket.status === status}
                                                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedTicket.status === status
-                                                            ? 'bg-blue-600 text-white'
-                                                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                                                        ? 'bg-blue-600 text-white'
+                                                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                                                         }`}
                                                 >
                                                     {status.replace('_', ' ')}
