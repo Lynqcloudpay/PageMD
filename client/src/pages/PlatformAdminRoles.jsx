@@ -51,14 +51,14 @@ const PlatformAdminRoles = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {templates.map((tpl) => (
+                    {(templates || []).map((tpl) => (
                         <div key={tpl.id} className="bg-white/80 backdrop-blur-xl border border-white/80 rounded-3xl p-6 shadow-xl shadow-slate-200/50 hover:shadow-2xl transition-all">
                             <div className="flex items-start justify-between mb-4">
                                 <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-600">
                                     <Shield className="w-6 h-6" />
                                 </div>
                                 <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-2 py-1 rounded-lg uppercase tracking-widest">
-                                    {tpl.privileges.length} Privileges
+                                    {(tpl.privileges || []).length} Privileges
                                 </span>
                             </div>
 
@@ -66,7 +66,7 @@ const PlatformAdminRoles = () => {
                             <p className="text-sm text-slate-500 mb-6 line-clamp-2">{tpl.description}</p>
 
                             <div className="flex flex-wrap gap-2 mb-6 max-h-32 overflow-y-auto p-1">
-                                {tpl.privileges.map((p, idx) => (
+                                {(tpl.privileges || []).map((p, idx) => (
                                     <span key={idx} className="text-[10px] font-bold text-slate-600 bg-slate-100/80 px-2 py-1 rounded-md border border-slate-200">
                                         {p}
                                     </span>
