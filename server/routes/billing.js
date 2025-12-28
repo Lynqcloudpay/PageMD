@@ -11,6 +11,19 @@ router.use(authenticate);
 // Matches workflow of Epic, Cerner, Allscripts
 // ============================================
 
+// Middleware to check for billing lock
+const checkBillingLock = (req, res, next) => {
+  if (req.clinic?.billing_locked && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    return res.status(403).json({
+      error: 'Financial operations are currently locked for this clinic by platform administrators.',
+      code: 'BILLING_LOCKED'
+    });
+  }
+  next();
+};
+
+router.use(checkBillingLock);
+
 // Helper function to check if column exists
 async function columnExists(tableName, columnName) {
   try {
@@ -57,19 +70,19 @@ router.get('/fee-schedule', requireRole('admin', 'clinician', 'front_desk'), asy
     const { code_type, search } = req.query;
     let query = 'SELECT * FROM fee_schedule WHERE active = true';
     const params = [];
-    
+
     if (code_type) {
       params.push(code_type);
       query += ` AND code_type = $${params.length}`;
     }
-    
+
     if (search) {
       params.push(`%${search}%`);
       query += ` AND (code ILIKE $${params.length} OR description ILIKE $${params.length})`;
     }
-    
+
     query += ' ORDER BY code_type, code LIMIT 200';
-    
+
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (error) {
@@ -100,7 +113,7 @@ router.get('/insurance', async (req, res) => {
 
 router.post('/claims', requirePermission('billing:edit'), async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     // Check if claims table exists BEFORE starting transaction
     const tableCheck = await pool.query(`
@@ -110,7 +123,7 @@ router.post('/claims', requirePermission('billing:edit'), async (req, res) => {
         AND table_name = 'claims'
       );
     `);
-    
+
     if (!tableCheck.rows[0].exists) {
       // Create basic claims table if it doesn't exist
       await pool.query(`
@@ -133,9 +146,9 @@ router.post('/claims', requirePermission('billing:edit'), async (req, res) => {
       `);
       console.log('Created claims table (basic schema)');
     }
-    
+
     await client.query('BEGIN');
-    
+
     const {
       visitId,
       diagnosisCodes,
@@ -153,23 +166,23 @@ router.post('/claims', requirePermission('billing:edit'), async (req, res) => {
       billingNotes,
       qualityMeasures
     } = req.body;
-    
+
     // Validation
     if (!visitId) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Visit ID is required' });
     }
-    
+
     if (!diagnosisCodes || !Array.isArray(diagnosisCodes) || diagnosisCodes.length === 0) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'At least one diagnosis code is required' });
     }
-    
+
     if (!procedureCodes || !Array.isArray(procedureCodes) || procedureCodes.length === 0) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'At least one procedure code is required' });
     }
-    
+
     // Get visit and patient information
     const visitResult = await client.query(
       `SELECT v.*, p.id as patient_id, p.insurance_provider as patient_insurance, 
@@ -180,18 +193,18 @@ router.post('/claims', requirePermission('billing:edit'), async (req, res) => {
        WHERE v.id = $1`,
       [visitId]
     );
-    
+
     if (visitResult.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Visit not found' });
     }
-    
+
     const visit = visitResult.rows[0];
     const patientId = visit.patient_id;
-    
+
     // Use visit date as service date if not provided
     const serviceDate = serviceDateStart || visit.visit_date;
-    
+
     // Normalize diagnosis codes
     const normalizedDiagnosisCodes = diagnosisCodes.map(dx => {
       if (typeof dx === 'string') {
@@ -203,10 +216,10 @@ router.post('/claims', requirePermission('billing:edit'), async (req, res) => {
         sequence: dx.sequence || 1
       };
     });
-    
+
     // Get principal diagnosis (first diagnosis code)
     const principalDiagnosis = normalizedDiagnosisCodes[0].code;
-    
+
     // Normalize procedure codes and calculate totals
     let totalCharges = 0;
     const normalizedProcedureCodes = procedureCodes.map(proc => {
@@ -214,7 +227,7 @@ router.post('/claims', requirePermission('billing:edit'), async (req, res) => {
       const units = parseFloat(proc.units || 1);
       const lineTotal = amount * units;
       totalCharges += lineTotal;
-      
+
       return {
         code: proc.code || proc,
         description: proc.description || '',
@@ -224,16 +237,16 @@ router.post('/claims', requirePermission('billing:edit'), async (req, res) => {
         diagnosisPointers: proc.diagnosisPointers || [1]
       };
     });
-    
+
     // Generate claim number
     const claimNumber = generateClaimNumber();
-    
+
     // Check which columns exist in the claims table
     const hasEnhancedSchema = await columnExists('claims', 'service_date_start');
-    
+
     // Determine the correct status based on schema
     const initialStatus = hasEnhancedSchema ? 'draft' : 'pending';
-    
+
     // Log schema detection for debugging
     if (process.env.NODE_ENV === 'development') {
       console.log('Schema detection - hasEnhancedSchema:', hasEnhancedSchema);
@@ -242,11 +255,11 @@ router.post('/claims', requirePermission('billing:edit'), async (req, res) => {
       const totalChargesExists = await columnExists('claims', 'total_charges');
       console.log('Column checks - service_date_start:', serviceDateExists, 'claim_number:', claimNumberExists, 'total_charges:', totalChargesExists);
     }
-    
+
     // Build INSERT query based on available columns
     let insertQuery;
     let insertParams;
-    
+
     if (hasEnhancedSchema) {
       // Enhanced schema with all commercial-grade fields
       insertQuery = `
@@ -304,30 +317,30 @@ router.post('/claims', requirePermission('billing:edit'), async (req, res) => {
         req.user.id
       ];
     }
-    
+
     // Log the query for debugging
     if (process.env.NODE_ENV === 'development') {
       console.log('Creating claim with query:', insertQuery.substring(0, 200));
       console.log('Parameters count:', insertParams.length);
       console.log('Has enhanced schema:', hasEnhancedSchema);
     }
-    
+
     let result;
     try {
       result = await client.query(insertQuery, insertParams);
     } catch (insertError) {
       console.error('INSERT query failed:', insertError.message);
       console.error('Query:', insertQuery);
-      console.error('Params:', insertParams.map((p, i) => `$${i+1}: ${typeof p} - ${JSON.stringify(p).substring(0, 100)}`));
+      console.error('Params:', insertParams.map((p, i) => `$${i + 1}: ${typeof p} - ${JSON.stringify(p).substring(0, 100)}`));
       throw insertError; // Re-throw to be caught by outer catch
     }
-    
+
     if (!result || !result.rows || result.rows.length === 0) {
       throw new Error('Claim was not created - no rows returned');
     }
-    
+
     const claim = result.rows[0];
-    
+
     // Create line items if table exists
     const lineItemsTableExists = await tableExists('claim_line_items');
     if (lineItemsTableExists) {
@@ -360,7 +373,7 @@ router.post('/claims', requirePermission('billing:edit'), async (req, res) => {
         }
       }
     }
-    
+
     // Create workflow history if table exists
     const workflowTableExists = await tableExists('claim_workflow_history');
     if (workflowTableExists) {
@@ -374,12 +387,12 @@ router.post('/claims', requirePermission('billing:edit'), async (req, res) => {
         console.log('Error creating workflow history (non-critical):', workflowError.message);
       }
     }
-    
+
     await client.query('COMMIT');
-    
+
     // Log audit after commit (non-critical, don't fail request if it fails)
     try {
-      await logAudit(req.user.id, 'create_claim', 'claim', claim.id, { 
+      await logAudit(req.user.id, 'create_claim', 'claim', claim.id, {
         claimNumber: claim.claim_number || claimNumber,
         patientId,
         visitId,
@@ -388,16 +401,16 @@ router.post('/claims', requirePermission('billing:edit'), async (req, res) => {
     } catch (auditError) {
       console.warn('Failed to log audit (non-critical):', auditError.message);
     }
-    
+
     // Return claim with all details
     res.status(201).json({
       ...claim,
       totalAmount: claim.total_amount || claim.total_charges || totalCharges,
       totalCharges: totalCharges
     });
-    
+
   } catch (error) {
-    await client.query('ROLLBACK').catch(() => {}); // Ignore rollback errors
+    await client.query('ROLLBACK').catch(() => { }); // Ignore rollback errors
     console.error('Error creating claim:', error);
     console.error('Error details:', {
       message: error.message,
@@ -408,7 +421,7 @@ router.post('/claims', requirePermission('billing:edit'), async (req, res) => {
       column: error.column,
       stack: error.stack
     });
-    
+
     // Provide more specific error messages
     let errorMessage = 'Failed to create claim';
     if (error.code === '23505') {
@@ -420,8 +433,8 @@ router.post('/claims', requirePermission('billing:edit'), async (req, res) => {
     } else if (error.message) {
       errorMessage = error.message;
     }
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       error: errorMessage,
       details: process.env.NODE_ENV === 'development' ? {
         message: error.message,
@@ -451,14 +464,14 @@ router.get('/claims', requirePermission('billing:view'), async (req, res) => {
         AND table_name = 'claims'
       );
     `);
-    
+
     if (!tableExistsResult.rows[0].exists) {
       // Table doesn't exist yet, return empty array
       return res.json([]);
     }
-    
+
     const { status, patientId, dateFrom, dateTo, limit = 100, offset = 0 } = req.query;
-    
+
     let query = `
       SELECT c.*, 
              v.visit_date, v.visit_type,
@@ -472,20 +485,20 @@ router.get('/claims', requirePermission('billing:view'), async (req, res) => {
       LEFT JOIN users u ON c.created_by = u.id
       WHERE 1=1
     `;
-    
+
     const params = [];
     let paramIndex = 1;
-    
+
     if (status) {
       params.push(status);
       query += ` AND c.status = $${paramIndex++}`;
     }
-    
+
     if (patientId) {
       params.push(patientId);
       query += ` AND c.patient_id = $${paramIndex++}`;
     }
-    
+
     // Check if service_date_start column exists before using it
     if (dateFrom || dateTo) {
       const hasServiceDateColumn = await pool.query(`
@@ -496,14 +509,14 @@ router.get('/claims', requirePermission('billing:view'), async (req, res) => {
           AND column_name = 'service_date_start'
         );
       `);
-      
+
       if (hasServiceDateColumn.rows[0].exists) {
         if (dateFrom) {
           params.push(dateFrom);
           query += ` AND (c.service_date_start >= $${paramIndex++} OR c.created_at >= $${paramIndex})`;
           paramIndex++;
         }
-        
+
         if (dateTo) {
           params.push(dateTo);
           query += ` AND (c.service_date_start <= $${paramIndex++} OR c.created_at <= $${paramIndex})`;
@@ -515,35 +528,35 @@ router.get('/claims', requirePermission('billing:view'), async (req, res) => {
           params.push(dateFrom);
           query += ` AND c.created_at >= $${paramIndex++}`;
         }
-        
+
         if (dateTo) {
           params.push(dateTo);
           query += ` AND c.created_at <= $${paramIndex++}`;
         }
       }
     }
-    
+
     query += ` ORDER BY c.created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
     params.push(parseInt(limit), parseInt(offset));
-    
+
     const result = await pool.query(query, params);
-    
+
     // Parse JSONB fields
     const claims = result.rows.map(claim => ({
       ...claim,
-      diagnosis_codes: typeof claim.diagnosis_codes === 'string' 
-        ? JSON.parse(claim.diagnosis_codes) 
+      diagnosis_codes: typeof claim.diagnosis_codes === 'string'
+        ? JSON.parse(claim.diagnosis_codes)
         : claim.diagnosis_codes,
-      procedure_codes: typeof claim.procedure_codes === 'string' 
-        ? JSON.parse(claim.procedure_codes) 
+      procedure_codes: typeof claim.procedure_codes === 'string'
+        ? JSON.parse(claim.procedure_codes)
         : claim.procedure_codes
     }));
-    
+
     res.json(claims);
   } catch (error) {
     console.error('Error fetching claims:', error);
     console.error('Error details:', error.message, error.stack);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch claims',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -554,7 +567,7 @@ router.get('/claims', requirePermission('billing:view'), async (req, res) => {
 router.get('/claims/:id', requirePermission('billing:view'), async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const claimResult = await pool.query(
       `SELECT c.*, 
               v.visit_date, v.visit_type,
@@ -568,21 +581,21 @@ router.get('/claims/:id', requirePermission('billing:view'), async (req, res) =>
        WHERE c.id = $1`,
       [id]
     );
-    
+
     if (claimResult.rows.length === 0) {
       return res.status(404).json({ error: 'Claim not found' });
     }
-    
+
     let claim = claimResult.rows[0];
-    
+
     // Parse JSONB fields
-    claim.diagnosis_codes = typeof claim.diagnosis_codes === 'string' 
-      ? JSON.parse(claim.diagnosis_codes) 
+    claim.diagnosis_codes = typeof claim.diagnosis_codes === 'string'
+      ? JSON.parse(claim.diagnosis_codes)
       : claim.diagnosis_codes;
-    claim.procedure_codes = typeof claim.procedure_codes === 'string' 
-      ? JSON.parse(claim.procedure_codes) 
+    claim.procedure_codes = typeof claim.procedure_codes === 'string'
+      ? JSON.parse(claim.procedure_codes)
       : claim.procedure_codes;
-    
+
     // Get line items if table exists
     const lineItemsTableExists = await tableExists('claim_line_items');
     if (lineItemsTableExists) {
@@ -596,7 +609,7 @@ router.get('/claims/:id', requirePermission('billing:view'), async (req, res) =>
         console.log('Error fetching line items (non-critical):', error.message);
       }
     }
-    
+
     res.json(claim);
   } catch (error) {
     console.error('Error fetching claim:', error);
@@ -618,18 +631,18 @@ router.get('/claims/patient/:patientId', requirePermission('billing:view'), asyn
        ORDER BY c.created_at DESC`,
       [patientId]
     );
-    
+
     // Parse JSONB fields
     const claims = result.rows.map(claim => ({
       ...claim,
-      diagnosis_codes: typeof claim.diagnosis_codes === 'string' 
-        ? JSON.parse(claim.diagnosis_codes) 
+      diagnosis_codes: typeof claim.diagnosis_codes === 'string'
+        ? JSON.parse(claim.diagnosis_codes)
         : claim.diagnosis_codes,
-      procedure_codes: typeof claim.procedure_codes === 'string' 
-        ? JSON.parse(claim.procedure_codes) 
+      procedure_codes: typeof claim.procedure_codes === 'string'
+        ? JSON.parse(claim.procedure_codes)
         : claim.procedure_codes
     }));
-    
+
     res.json(claims);
   } catch (error) {
     console.error('Error fetching claims:', error);
@@ -643,42 +656,42 @@ router.get('/claims/patient/:patientId', requirePermission('billing:view'), asyn
 
 router.put('/claims/:id', requireRole('admin', 'front_desk'), async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     const { id } = req.params;
-    const { 
-      status, 
-      claimNumber, 
+    const {
+      status,
+      claimNumber,
       insuranceProvider,
       diagnosisCodes,
       procedureCodes,
       notes
     } = req.body;
-    
+
     // Get current claim
     const currentClaim = await client.query(
       'SELECT status FROM claims WHERE id = $1',
       [id]
     );
-    
+
     if (currentClaim.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Claim not found' });
     }
-    
+
     const oldStatus = currentClaim.rows[0].status;
-    
+
     // Build update query
     const updates = [];
     const params = [];
     let paramIndex = 1;
-    
+
     if (status) {
       updates.push(`status = $${paramIndex++}`);
       params.push(status);
-      
+
       // Update timestamps based on status
       if (status === 'submitted') {
         updates.push(`submitted_at = CURRENT_TIMESTAMP`);
@@ -692,31 +705,31 @@ router.put('/claims/:id', requireRole('admin', 'front_desk'), async (req, res) =
         updates.push(`paid_at = CURRENT_TIMESTAMP`);
       }
     }
-    
+
     if (claimNumber) {
       updates.push(`claim_number = $${paramIndex++}`);
       params.push(claimNumber);
     }
-    
+
     if (insuranceProvider) {
       updates.push(`insurance_provider = $${paramIndex++}`);
       params.push(insuranceProvider);
     }
-    
+
     if (diagnosisCodes) {
       updates.push(`diagnosis_codes = $${paramIndex++}`);
       params.push(JSON.stringify(diagnosisCodes));
     }
-    
+
     if (procedureCodes) {
       updates.push(`procedure_codes = $${paramIndex++}`);
       params.push(JSON.stringify(procedureCodes));
-      
+
       // Recalculate total if procedure codes changed
       const total = procedureCodes.reduce((sum, proc) => {
         return sum + (parseFloat(proc.amount || 0) * parseFloat(proc.units || 1));
       }, 0);
-      
+
       const hasTotalCharges = await columnExists('claims', 'total_charges');
       if (hasTotalCharges) {
         updates.push(`total_charges = $${paramIndex++}`);
@@ -726,17 +739,17 @@ router.put('/claims/:id', requireRole('admin', 'front_desk'), async (req, res) =
         params.push(total);
       }
     }
-    
+
     if (notes !== undefined) {
       updates.push(`notes = $${paramIndex++}`);
       params.push(notes);
     }
-    
+
     if (updates.length === 0) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'No fields to update' });
     }
-    
+
     // Add updated_at and updated_by
     updates.push(`updated_at = CURRENT_TIMESTAMP`);
     const hasUpdatedBy = await columnExists('claims', 'updated_by');
@@ -744,9 +757,9 @@ router.put('/claims/:id', requireRole('admin', 'front_desk'), async (req, res) =
       updates.push(`updated_by = $${paramIndex++}`);
       params.push(req.user.id);
     }
-    
+
     params.push(id);
-    
+
     await client.query(
       `UPDATE claims 
        SET ${updates.join(', ')}
@@ -754,7 +767,7 @@ router.put('/claims/:id', requireRole('admin', 'front_desk'), async (req, res) =
        RETURNING *`,
       params
     );
-    
+
     // Create workflow history if status changed
     if (status && status !== oldStatus) {
       const workflowTableExists = await tableExists('claim_workflow_history');
@@ -770,21 +783,21 @@ router.put('/claims/:id', requireRole('admin', 'front_desk'), async (req, res) =
         }
       }
     }
-    
-    await logAudit(req.user.id, 'update_claim', 'claim', id, { 
-      status, 
+
+    await logAudit(req.user.id, 'update_claim', 'claim', id, {
+      status,
       oldStatus,
       claimNumber,
-      insuranceProvider 
+      insuranceProvider
     }, req.ip);
-    
+
     await client.query('COMMIT');
-    
+
     // Fetch updated claim
     const updatedClaim = await client.query('SELECT * FROM claims WHERE id = $1', [id]);
-    
+
     res.json(updatedClaim.rows[0]);
-    
+
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error updating claim:', error);
@@ -800,69 +813,69 @@ router.put('/claims/:id', requireRole('admin', 'front_desk'), async (req, res) =
 
 router.post('/claims/:id/submit', requireRole('admin', 'front_desk'), async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     const { id } = req.params;
     const { submissionMethod = 'electronic' } = req.body;
-    
+
     // Get claim and validate
     const claimResult = await client.query(
       'SELECT * FROM claims WHERE id = $1',
       [id]
     );
-    
+
     if (claimResult.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Claim not found' });
     }
-    
+
     const claim = claimResult.rows[0];
-    
+
     // Validate claim is ready for submission
-    const diagnosisCodes = typeof claim.diagnosis_codes === 'string' 
-      ? JSON.parse(claim.diagnosis_codes) 
+    const diagnosisCodes = typeof claim.diagnosis_codes === 'string'
+      ? JSON.parse(claim.diagnosis_codes)
       : claim.diagnosis_codes;
-    const procedureCodes = typeof claim.procedure_codes === 'string' 
-      ? JSON.parse(claim.procedure_codes) 
+    const procedureCodes = typeof claim.procedure_codes === 'string'
+      ? JSON.parse(claim.procedure_codes)
       : claim.procedure_codes;
-    
+
     if (!diagnosisCodes || diagnosisCodes.length === 0) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Claim must have at least one diagnosis code' });
     }
-    
+
     if (!procedureCodes || procedureCodes.length === 0) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Claim must have at least one procedure code' });
     }
-    
+
     const oldStatus = claim.status;
-    
+
     // Update claim status
     const hasSubmissionMethod = await columnExists('claims', 'submission_method');
     const hasSubmittedBy = await columnExists('claims', 'submitted_by');
-    
+
     let updateQuery = `UPDATE claims SET status = 'submitted', submitted_at = CURRENT_TIMESTAMP`;
     const updateParams = [];
     let paramIndex = 1;
-    
+
     if (hasSubmissionMethod) {
       updateQuery += `, submission_method = $${paramIndex++}`;
       updateParams.push(submissionMethod);
     }
-    
+
     if (hasSubmittedBy) {
       updateQuery += `, submitted_by = $${paramIndex++}`;
       updateParams.push(req.user.id);
     }
-    
+
     updateQuery += `, updated_at = CURRENT_TIMESTAMP WHERE id = $${paramIndex++}`;
     updateParams.push(id);
-    
+
     await client.query(updateQuery, updateParams);
-    
+
     // Create workflow history
     const workflowTableExists = await tableExists('claim_workflow_history');
     if (workflowTableExists) {
@@ -876,19 +889,19 @@ router.post('/claims/:id/submit', requireRole('admin', 'front_desk'), async (req
         console.log('Error creating workflow history (non-critical):', error.message);
       }
     }
-    
+
     await logAudit(req.user.id, 'submit_claim', 'claim', id, { submissionMethod }, req.ip);
-    
+
     await client.query('COMMIT');
-    
+
     const updatedClaim = await client.query('SELECT * FROM claims WHERE id = $1', [id]);
-    
+
     res.json({
       success: true,
       claim: updatedClaim.rows[0],
       message: 'Claim submitted successfully'
     });
-    
+
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error submitting claim:', error);
@@ -904,36 +917,36 @@ router.post('/claims/:id/submit', requireRole('admin', 'front_desk'), async (req
 
 router.delete('/claims/:id', requireRole('admin', 'front_desk'), async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     const { id } = req.params;
-    
+
     // Check claim exists and is in draft status
     const claimResult = await client.query(
       'SELECT status FROM claims WHERE id = $1',
       [id]
     );
-    
+
     if (claimResult.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Claim not found' });
     }
-    
+
     if (claimResult.rows[0].status !== 'draft') {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Only draft claims can be deleted' });
     }
-    
+
     await client.query('DELETE FROM claims WHERE id = $1', [id]);
-    
+
     await logAudit(req.user.id, 'delete_claim', 'claim', id, {}, req.ip);
-    
+
     await client.query('COMMIT');
-    
+
     res.json({ success: true, message: 'Claim deleted successfully' });
-    
+
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error deleting claim:', error);
@@ -949,10 +962,10 @@ router.delete('/claims/:id', requireRole('admin', 'front_desk'), async (req, res
 
 router.post('/eligibility/verify', requireRole('admin', 'front_desk', 'clinician'), async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     const {
       patientId,
       insuranceProvider,
@@ -961,16 +974,16 @@ router.post('/eligibility/verify', requireRole('admin', 'front_desk', 'clinician
       insuranceGroupNumber,
       serviceDate
     } = req.body;
-    
+
     if (!patientId) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Patient ID is required' });
     }
-    
+
     // In a real system, this would call an eligibility verification API
     // For now, we'll create a record and mark as active
     const eligibilityTableExists = await tableExists('insurance_eligibility');
-    
+
     if (eligibilityTableExists) {
       const result = await client.query(
         `INSERT INTO insurance_eligibility (
@@ -990,7 +1003,7 @@ router.post('/eligibility/verify', requireRole('admin', 'front_desk', 'clinician
           'manual'
         ]
       );
-      
+
       await client.query('COMMIT');
       res.json(result.rows[0]);
     } else {
@@ -1003,7 +1016,7 @@ router.post('/eligibility/verify', requireRole('admin', 'front_desk', 'clinician
         message: 'Eligibility verification table not available'
       });
     }
-    
+
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error verifying eligibility:', error);
@@ -1017,7 +1030,7 @@ router.get('/eligibility/patient/:patientId', requireRole('admin', 'front_desk',
   try {
     const { patientId } = req.params;
     const eligibilityTableExists = await tableExists('insurance_eligibility');
-    
+
     if (eligibilityTableExists) {
       const result = await pool.query(
         `SELECT * FROM insurance_eligibility 
@@ -1042,10 +1055,10 @@ router.get('/eligibility/patient/:patientId', requireRole('admin', 'front_desk',
 
 router.post('/payments', requireRole('admin', 'front_desk'), async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     const {
       claimId,
       paymentDate,
@@ -1059,14 +1072,14 @@ router.post('/payments', requireRole('admin', 'front_desk'), async (req, res) =>
       allocationNotes,
       lineItemAllocations
     } = req.body;
-    
+
     if (!claimId || !paymentDate || !paymentAmount) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Claim ID, payment date, and payment amount are required' });
     }
-    
+
     const paymentTableExists = await tableExists('payment_postings');
-    
+
     if (paymentTableExists) {
       // Create payment posting
       const paymentResult = await client.query(
@@ -1090,9 +1103,9 @@ router.post('/payments', requireRole('admin', 'front_desk'), async (req, res) =>
           req.user.id
         ]
       );
-      
+
       const payment = paymentResult.rows[0];
-      
+
       // Create allocations if line items are specified
       if (lineItemAllocations && Array.isArray(lineItemAllocations)) {
         const allocationTableExists = await tableExists('payment_allocations');
@@ -1117,22 +1130,22 @@ router.post('/payments', requireRole('admin', 'front_desk'), async (req, res) =>
           }
         }
       }
-      
+
       // Update claim amounts
       const claimResult = await client.query(
         'SELECT amount_paid, total_charges FROM claims WHERE id = $1',
         [claimId]
       );
-      
+
       if (claimResult.rows.length > 0) {
         const currentPaid = parseFloat(claimResult.rows[0].amount_paid || 0);
         const totalCharges = parseFloat(claimResult.rows[0].total_charges || 0);
         const newPaid = currentPaid + parseFloat(paymentAmount);
-        
+
         const hasAmountPaid = await columnExists('claims', 'amount_paid');
         if (hasAmountPaid) {
           const newStatus = newPaid >= totalCharges ? 'paid' : 'partial_paid';
-          
+
           await client.query(
             `UPDATE claims 
              SET amount_paid = $1, 
@@ -1144,14 +1157,14 @@ router.post('/payments', requireRole('admin', 'front_desk'), async (req, res) =>
           );
         }
       }
-      
+
       await client.query('COMMIT');
       res.status(201).json(payment);
     } else {
       await client.query('ROLLBACK');
       res.status(400).json({ error: 'Payment posting table not available' });
     }
-    
+
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error posting payment:', error);
@@ -1165,7 +1178,7 @@ router.get('/payments/claim/:claimId', requireRole('admin', 'front_desk'), async
   try {
     const { claimId } = req.params;
     const paymentTableExists = await tableExists('payment_postings');
-    
+
     if (paymentTableExists) {
       const result = await pool.query(
         `SELECT pp.*, 
@@ -1193,10 +1206,10 @@ router.get('/payments/claim/:claimId', requireRole('admin', 'front_desk'), async
 
 router.post('/denials', requireRole('admin', 'front_desk'), async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     const {
       claimId,
       claimLineItemId,
@@ -1205,14 +1218,14 @@ router.post('/denials', requireRole('admin', 'front_desk'), async (req, res) => 
       denialCategory,
       denialDate
     } = req.body;
-    
+
     if (!claimId || !denialCode || !denialReason) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Claim ID, denial code, and denial reason are required' });
     }
-    
+
     const denialTableExists = await tableExists('claim_denials');
-    
+
     if (denialTableExists) {
       const result = await client.query(
         `INSERT INTO claim_denials (
@@ -1229,7 +1242,7 @@ router.post('/denials', requireRole('admin', 'front_desk'), async (req, res) => 
           denialDate || new Date().toISOString().split('T')[0]
         ]
       );
-      
+
       // Update claim status to denied
       await client.query(
         `UPDATE claims 
@@ -1240,14 +1253,14 @@ router.post('/denials', requireRole('admin', 'front_desk'), async (req, res) => 
          WHERE id = $3`,
         [denialCode, denialReason, claimId]
       );
-      
+
       await client.query('COMMIT');
       res.status(201).json(result.rows[0]);
     } else {
       await client.query('ROLLBACK');
       res.status(400).json({ error: 'Denial table not available' });
     }
-    
+
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error creating denial:', error);
@@ -1259,13 +1272,13 @@ router.post('/denials', requireRole('admin', 'front_desk'), async (req, res) => 
 
 router.post('/denials/:id/appeal', requireRole('admin', 'front_desk'), async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     const { id } = req.params;
     const { appealStatus = 'appeal_submitted', appealResponse } = req.body;
-    
+
     const denialTableExists = await tableExists('claim_denials');
-    
+
     if (denialTableExists) {
       const result = await pool.query(
         `UPDATE claim_denials 
@@ -1277,11 +1290,11 @@ router.post('/denials/:id/appeal', requireRole('admin', 'front_desk'), async (re
          RETURNING *`,
         [appealStatus, appealResponse || null, id]
       );
-      
+
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Denial not found' });
       }
-      
+
       // Update claim status if appeal is submitted
       if (appealStatus === 'appeal_submitted') {
         await pool.query(
@@ -1290,7 +1303,7 @@ router.post('/denials/:id/appeal', requireRole('admin', 'front_desk'), async (re
           [id]
         );
       }
-      
+
       res.json(result.rows[0]);
     } else {
       res.status(400).json({ error: 'Denial table not available' });
@@ -1305,7 +1318,7 @@ router.get('/denials/claim/:claimId', requireRole('admin', 'front_desk'), async 
   try {
     const { claimId } = req.params;
     const denialTableExists = await tableExists('claim_denials');
-    
+
     if (denialTableExists) {
       const result = await pool.query(
         'SELECT * FROM claim_denials WHERE claim_id = $1 ORDER BY denial_date DESC',
@@ -1327,10 +1340,10 @@ router.get('/denials/claim/:claimId', requireRole('admin', 'front_desk'), async 
 
 router.post('/prior-authorizations', requireRole('admin', 'front_desk', 'clinician'), async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     const {
       patientId,
       claimId,
@@ -1345,14 +1358,14 @@ router.post('/prior-authorizations', requireRole('admin', 'front_desk', 'clinici
       serviceEndDate,
       expirationDate
     } = req.body;
-    
+
     if (!patientId || !requestedDate) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Patient ID and requested date are required' });
     }
-    
+
     const priorAuthTableExists = await tableExists('prior_authorizations');
-    
+
     if (priorAuthTableExists) {
       const result = await client.query(
         `INSERT INTO prior_authorizations (
@@ -1380,14 +1393,14 @@ router.post('/prior-authorizations', requireRole('admin', 'front_desk', 'clinici
           req.user.id
         ]
       );
-      
+
       await client.query('COMMIT');
       res.status(201).json(result.rows[0]);
     } else {
       await client.query('ROLLBACK');
       res.status(400).json({ error: 'Prior authorization table not available' });
     }
-    
+
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error creating prior authorization:', error);
@@ -1401,7 +1414,7 @@ router.get('/prior-authorizations/patient/:patientId', requireRole('admin', 'fro
   try {
     const { patientId } = req.params;
     const priorAuthTableExists = await tableExists('prior_authorizations');
-    
+
     if (priorAuthTableExists) {
       const result = await pool.query(
         `SELECT * FROM prior_authorizations 
@@ -1427,23 +1440,23 @@ router.get('/prior-authorizations/patient/:patientId', requireRole('admin', 'fro
 router.get('/statistics', requireRole('admin', 'front_desk'), async (req, res) => {
   try {
     const { dateFrom, dateTo } = req.query;
-    
+
     let whereClause = 'WHERE 1=1';
     const params = [];
     let paramIndex = 1;
-    
+
     if (dateFrom) {
       params.push(dateFrom);
       whereClause += ` AND (c.service_date_start >= $${paramIndex++} OR c.created_at >= $${paramIndex})`;
       paramIndex++;
     }
-    
+
     if (dateTo) {
       params.push(dateTo);
       whereClause += ` AND (c.service_date_start <= $${paramIndex++} OR c.created_at <= $${paramIndex})`;
       paramIndex++;
     }
-    
+
     const statsQuery = `
       SELECT 
         COUNT(*) as total_claims,
@@ -1458,9 +1471,9 @@ router.get('/statistics', requireRole('admin', 'front_desk'), async (req, res) =
       FROM claims c
       ${whereClause}
     `;
-    
+
     const statsResult = await pool.query(statsQuery, params);
-    
+
     // Get claims by status breakdown
     const statusBreakdownQuery = `
       SELECT status, COUNT(*) as count, 
@@ -1470,14 +1483,14 @@ router.get('/statistics', requireRole('admin', 'front_desk'), async (req, res) =
       GROUP BY status
       ORDER BY count DESC
     `;
-    
+
     const statusResult = await pool.query(statusBreakdownQuery, params);
-    
+
     res.json({
       summary: statsResult.rows[0],
       statusBreakdown: statusResult.rows
     });
-    
+
   } catch (error) {
     console.error('Error fetching billing statistics:', error);
     res.status(500).json({ error: 'Failed to fetch billing statistics' });

@@ -63,6 +63,16 @@ router.get('/clinics', verifySuperAdmin, async (req, res) => {
         const conditions = [];
         const params = [];
 
+        if (req.query.tenant_type) {
+            conditions.push(`c.tenant_type = $${params.length + 1}`);
+            params.push(req.query.tenant_type);
+        }
+
+        if (req.query.emr_version) {
+            conditions.push(`c.emr_version = $${params.length + 1}`);
+            params.push(req.query.emr_version);
+        }
+
         if (status) {
             conditions.push(`c.status = $${params.length + 1}`);
             params.push(status);
@@ -209,6 +219,65 @@ router.patch('/clinics/:id/status', verifySuperAdmin, async (req, res) => {
     } catch (error) {
         console.error('Error updating clinic status:', error);
         res.status(500).json({ error: 'Failed to update clinic status' });
+    }
+});
+
+/**
+ * PATCH /api/super/clinics/:id/controls
+ * Update individual kill switches and metadata
+ */
+router.patch('/clinics/:id/controls', verifySuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            is_read_only,
+            billing_locked,
+            prescribing_locked,
+            emr_version,
+            tenant_type,
+            compliance_zone,
+            region
+        } = req.body;
+
+        const updates = [];
+        const params = [id];
+        let pCount = 1;
+
+        const allowedKeys = {
+            is_read_only: 'boolean',
+            billing_locked: 'boolean',
+            prescribing_locked: 'boolean',
+            emr_version: 'string',
+            tenant_type: 'string',
+            compliance_zone: 'string',
+            region: 'string'
+        };
+
+        for (const [key, type] of Object.entries(allowedKeys)) {
+            if (req.body[key] !== undefined) {
+                pCount++;
+                updates.push(`${key} = $${pCount}`);
+                params.push(req.body[key]);
+            }
+        }
+
+        if (updates.length === 0) {
+            return res.status(400).json({ error: 'No valid update fields provided' });
+        }
+
+        const query = `UPDATE clinics SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $1 RETURNING *`;
+        const result = await pool.controlPool.query(query, params);
+
+        // Log the control change
+        await pool.controlPool.query(`
+            INSERT INTO platform_audit_logs (action, target_clinic_id, details)
+            VALUES ($1, $2, $3)
+        `, ['clinic_controls_updated', id, JSON.stringify(req.body)]);
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error updating clinic controls:', error);
+        res.status(500).json({ error: 'Failed to update clinic controls' });
     }
 });
 
@@ -624,6 +693,43 @@ router.get('/dashboard', verifySuperAdmin, async (req, res) => {
     } catch (error) {
         console.error('Error fetching dashboard:', error);
         res.status(500).json({ error: 'Failed to fetch dashboard data' });
+    }
+});
+
+/**
+ * POST /api/super/clinics/:id/impersonate
+ * Generate a short-lived impersonation token for a clinic user
+ */
+router.post('/clinics/:id/impersonate', verifySuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { userId, reason } = req.body;
+
+        if (!reason) {
+            return res.status(400).json({ error: 'Access reason is required for audit' });
+        }
+
+        // 1. Generate a secure random token
+        const crypto = require('crypto');
+        const token = crypto.randomBytes(32).toString('hex');
+
+        // 2. Create impersonation record
+        await pool.controlPool.query(`
+            INSERT INTO platform_impersonation_tokens 
+            (admin_id, target_clinic_id, target_user_id, token, reason, expires_at)
+            VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '15 minutes')
+        `, [req.platformAdmin.id, id, userId, token, reason]);
+
+        // 3. Log the "Break Glass" event
+        await pool.controlPool.query(`
+            INSERT INTO platform_audit_logs (action, target_clinic_id, details)
+            VALUES ($1, $2, $3)
+        `, ['impersonation_initiated', id, JSON.stringify({ userId, reason, adminEmail: req.platformAdmin.email })]);
+
+        res.json({ token });
+    } catch (error) {
+        console.error('Error initiating impersonation:', error);
+        res.status(500).json({ error: 'Failed to initiate impersonation session' });
     }
 });
 

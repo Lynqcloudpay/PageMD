@@ -272,6 +272,86 @@ router.get('/me', authenticate, async (req, res) => {
   }
 });
 
+// Platform Admin Impersonation ("Break Glass")
+router.get('/impersonate', async (req, res) => {
+  const { token } = req.query;
+
+  if (!token) {
+    return res.status(400).json({ error: 'Impersonation token required' });
+  }
+
+  try {
+    // 1. Validate token against Control DB
+    const tokenRes = await pool.controlPool.query(`
+      SELECT pit.*, c.slug, c.schema_name
+      FROM platform_impersonation_tokens pit
+      JOIN clinics c ON pit.target_clinic_id = c.id
+      WHERE pit.token = $1 AND pit.expires_at > NOW()
+    `, [token]);
+
+    if (tokenRes.rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid or expired impersonation token' });
+    }
+
+    const { target_user_id, schema_name, target_clinic_id } = tokenRes.rows[0];
+
+    // 2. Fetch user data from the target clinic schema
+    // Note: We use pool.controlPool.query with schema prefix for safety
+    const userRes = await pool.controlPool.query(`
+      SELECT 
+        u.id, u.email, u.first_name, u.last_name, u.role_id,
+        r.name as role_name
+      FROM ${schema_name}.users u
+      LEFT JOIN ${schema_name}.roles r ON u.role_id = r.id
+      WHERE u.id = $1
+    `, [target_user_id]);
+
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Target user not found in clinic' });
+    }
+
+    const user = userRes.rows[0];
+
+    // 3. Generate JWT
+    const jwtToken = jwt.sign(
+      {
+        userId: user.id,
+        clinicSlug: tokenRes.rows[0].slug,
+        isImpersonation: true,
+        impersonatorAdminId: tokenRes.rows[0].admin_id
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' } // Shorter duration for impersonation sessions
+    );
+
+    // 4. Log the access in tenant audit log
+    await logAudit(user.id, 'admin_impersonation_login', 'user', user.id, {
+      impersonator: tokenRes.rows[0].admin_id,
+      reason: tokenRes.rows[0].reason
+    }, req.ip);
+
+    // 5. Delete the one-time token
+    await pool.controlPool.query('DELETE FROM platform_impersonation_tokens WHERE id = $1', [tokenRes.rows[0].id]);
+
+    // 6. Return standard login payload
+    res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        role: user.role_name,
+        isImpersonation: true
+      },
+      token: jwtToken,
+      redirectUrl: '/dashboard'
+    });
+  } catch (error) {
+    console.error('Impersonation failed:', error);
+    res.status(500).json({ error: 'Internal server error during impersonation' });
+  }
+});
+
 module.exports = router;
 
 

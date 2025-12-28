@@ -35,6 +35,7 @@ import PlatformAdminClinics from './pages/PlatformAdminClinics'
 import PlatformAdminTeam from './pages/PlatformAdminTeam'
 import PlatformAdminProfile from './pages/PlatformAdminProfile'
 import PlatformAdminClinicDetails from './pages/PlatformAdminClinicDetails'
+import ImpersonateHandler from './pages/ImpersonateHandler'
 
 // Patient Redirect Component - redirects /patient/:id to /patient/:id/snapshot
 const PatientRedirect = () => {
@@ -108,7 +109,9 @@ function App() {
                                             {/* <Route path="/platform-admin/system" element={<PlatformAdminSystem />} /> */}
 
                                             {/* Regular EMR Routes */}
+                                            {/* Clinic Auth & Impersonation */}
                                             <Route path="/login" element={<Login />} />
+                                            <Route path="/auth/impersonate" element={<ImpersonateHandler />} />
                                             <Route path="/" element={<Navigate to="/dashboard" replace />} />
                                             <Route path="/dashboard" element={
                                                 <ProtectedRoute>

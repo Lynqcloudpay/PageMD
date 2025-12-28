@@ -20,6 +20,19 @@ const { safeLogger } = require('../middleware/phiRedaction');
 const router = express.Router();
 router.use(authenticate);
 
+// Middleware to check for prescribing lock
+const checkPrescribeLock = (req, res, next) => {
+  if (req.clinic?.prescribing_locked && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    return res.status(403).json({
+      error: 'e-Prescribing is currently locked for this clinic by platform administrators for compliance reasons.',
+      code: 'PRESCRIBING_LOCKED'
+    });
+  }
+  next();
+};
+
+router.use(checkPrescribeLock);
+
 // Rate limiting for ePrescribe endpoints (stricter than general API)
 const eprescribeRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

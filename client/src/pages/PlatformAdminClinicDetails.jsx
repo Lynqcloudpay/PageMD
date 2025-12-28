@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Building2, Activity, CreditCard, Shield, Settings, AlertTriangle, CheckCircle, XCircle, Trash2, Key, UserX, UserCheck, Mail, Clock, ChevronRight, AlertCircle, Database } from 'lucide-react';
+import { ArrowLeft, Building2, Activity, CreditCard, Shield, Settings, AlertTriangle, CheckCircle, XCircle, Trash2, Key, UserX, UserCheck, Mail, Clock, ChevronRight, AlertCircle, Database, Eye } from 'lucide-react';
 import { usePlatformAdmin } from '../context/PlatformAdminContext';
 
-const ClinicPersonnelManager = ({ clinicId, apiCall }) => {
+const ClinicPersonnelManager = ({ clinicId, clinicSlug, apiCall }) => {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -62,6 +62,23 @@ const ClinicPersonnelManager = ({ clinicId, apiCall }) => {
         }
     };
 
+    const handleImpersonate = async (user) => {
+        const reason = prompt(`Enter reason for "Break Glass" impersonation of ${user.first_name} ${user.last_name}:`);
+        if (!reason) return;
+
+        try {
+            const { token } = await apiCall('POST', `/clinics/${clinicId}/impersonate`, { userId: user.id, reason });
+
+            // Redirect to clinic impersonation endpoint
+            // In a real multi-tenant setup, this might be a different subdomain
+            // For now, we'll try to use a standardized route
+            const impersonateUrl = `/auth/impersonate?token=${token}&slug=${clinicSlug}`;
+            window.open(impersonateUrl, '_blank');
+        } catch (err) {
+            alert(err.response?.data?.error || 'Failed to initiate impersonation');
+        }
+    };
+
     if (loading) return <div className="text-slate-400 text-sm animate-pulse">Loading personnel...</div>;
 
     return (
@@ -111,6 +128,13 @@ const ClinicPersonnelManager = ({ clinicId, apiCall }) => {
                                 <td className="p-4 text-right">
                                     <div className="flex items-center justify-end gap-2">
                                         <button
+                                            title="Impersonate User (Break Glass)"
+                                            onClick={() => handleImpersonate(user)}
+                                            className="p-2 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-orange-500 hover:border-orange-200 hover:shadow-sm transition-all"
+                                        >
+                                            <Eye className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
                                             title="Reset Password"
                                             onClick={() => handleResetPassword(user)}
                                             className="p-2 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-blue-500 hover:border-blue-200 hover:shadow-sm transition-all"
@@ -145,6 +169,7 @@ const PlatformAdminClinicDetails = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [statusUpdating, setStatusUpdating] = useState(false);
+    const [controlsUpdating, setControlsUpdating] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
     useEffect(() => {
@@ -194,6 +219,18 @@ const PlatformAdminClinicDetails = () => {
             alert(err.response?.data?.error || 'Failed to update status');
         } finally {
             setStatusUpdating(false);
+        }
+    };
+
+    const handleControlChange = async (update) => {
+        setControlsUpdating(true);
+        try {
+            await apiCall('PATCH', `/clinics/${id}/controls`, update);
+            loadClinic(); // Reload data
+        } catch (err) {
+            alert(err.response?.data?.error || 'Failed to update controls');
+        } finally {
+            setControlsUpdating(false);
         }
     };
 
@@ -289,7 +326,7 @@ const PlatformAdminClinicDetails = () => {
                                 </h2>
                                 <span className="text-xs font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded-lg">Users & Roles</span>
                             </div>
-                            <ClinicPersonnelManager clinicId={id} apiCall={apiCall} />
+                            <ClinicPersonnelManager clinicId={id} clinicSlug={clinic.slug} apiCall={apiCall} />
                         </div>
 
                         {/* Metrics & Activity */}
@@ -381,6 +418,47 @@ const PlatformAdminClinicDetails = () => {
                                     </button>
                                 )}
 
+                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
+                                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                                        <Shield className="w-3.5 h-3.5" />
+                                        Kill Switches
+                                    </h3>
+
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-bold text-slate-700">Read-Only Mode</span>
+                                        <button
+                                            onClick={() => handleControlChange({ is_read_only: !clinic.is_read_only })}
+                                            disabled={controlsUpdating}
+                                            className={`w-12 h-6 rounded-full p-1 transition-all ${clinic.is_read_only ? 'bg-red-500' : 'bg-slate-300'}`}
+                                        >
+                                            <div className={`w-4 h-4 bg-white rounded-full transition-all ${clinic.is_read_only ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-bold text-slate-700">Lock Billing</span>
+                                        <button
+                                            onClick={() => handleControlChange({ billing_locked: !clinic.billing_locked })}
+                                            disabled={controlsUpdating}
+                                            className={`w-12 h-6 rounded-full p-1 transition-all ${clinic.billing_locked ? 'bg-amber-500' : 'bg-slate-300'}`}
+                                        >
+                                            <div className={`w-4 h-4 bg-white rounded-full transition-all ${clinic.billing_locked ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-bold text-slate-700">Lock Prescribing</span>
+                                        <button
+                                            onClick={() => handleControlChange({ prescribing_locked: !clinic.prescribing_locked })}
+                                            disabled={controlsUpdating}
+                                            className={`w-12 h-6 rounded-full p-1 transition-all ${clinic.prescribing_locked ? 'bg-purple-500' : 'bg-slate-300'}`}
+                                        >
+                                            <div className={`w-4 h-4 bg-white rounded-full transition-all ${clinic.prescribing_locked ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                                        </button>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 italic">Changes take effect immediately for all users.</p>
+                                </div>
+
                                 {clinic.status !== 'suspended' && (
                                     <button
                                         disabled={statusUpdating || deleting}
@@ -446,6 +524,41 @@ const PlatformAdminClinicDetails = () => {
                                     <div>
                                         <p className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">Phone Number</p>
                                         <p className="text-sm font-semibold text-slate-700">{clinic.contact_phone || 'N/A'}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-500 shrink-0">
+                                        <Zap className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">EMR Version</p>
+                                        <select
+                                            value={clinic.emr_version}
+                                            onChange={(e) => handleControlChange({ emr_version: e.target.value })}
+                                            className="text-xs font-bold text-slate-700 bg-transparent border-none p-0 focus:ring-0 cursor-pointer"
+                                        >
+                                            <option value="1.0.0">1.0.0 (Stable)</option>
+                                            <option value="1.1.0-beta">1.1.0 (Beta)</option>
+                                            <option value="2.0.0">2.0.0 (Next Gen)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center text-orange-500 shrink-0">
+                                        <Shield className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">Tenant Type</p>
+                                        <select
+                                            value={clinic.tenant_type}
+                                            onChange={(e) => handleControlChange({ tenant_type: e.target.value })}
+                                            className="text-xs font-bold text-slate-700 bg-transparent border-none p-0 focus:ring-0 cursor-pointer"
+                                        >
+                                            <option value="Solo">Solo Practice</option>
+                                            <option value="Group">Group Practice</option>
+                                            <option value="Enterprise">Enterprise</option>
+                                        </select>
                                     </div>
                                 </div>
                             </div>

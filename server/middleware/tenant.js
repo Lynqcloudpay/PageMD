@@ -80,7 +80,7 @@ const resolveTenant = async (req, res, next) => {
         } else {
             // Find by slug
             const result = await pool.controlPool.query(
-                'SELECT id, slug, schema_name FROM clinics WHERE slug = $1 AND status = \'active\'',
+                'SELECT id, slug, schema_name, status, is_read_only, billing_locked, prescribing_locked FROM clinics WHERE slug = $1',
                 [slug]
             );
             tenantInfo = result.rows[0];
@@ -88,10 +88,26 @@ const resolveTenant = async (req, res, next) => {
 
         if (!tenantInfo) {
             console.warn(`[Tenant] Clinic not found for slug: ${slug} or schema: ${lookupSchema}`);
-            return res.status(404).json({ error: `Clinic access denied or clinic inactive.` });
+            return res.status(404).json({ error: `Clinic access denied.` });
         }
 
-        const { id, schema_name, slug: resolvedSlug } = tenantInfo;
+        if (tenantInfo.status !== 'active') {
+            return res.status(403).json({ error: `Clinic is currently ${tenantInfo.status}. Access restricted.` });
+        }
+
+        // Enforcement: Read-Only Kill Switch
+        const mutableMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
+        if (tenantInfo.is_read_only && mutableMethods.includes(req.method)) {
+            // Allow login/logout even in read-only mode
+            if (!req.path.includes('/auth/login') && !req.path.includes('/auth/logout')) {
+                return res.status(403).json({
+                    error: 'Clinic is in Read-Only mode. Modifications are currently disabled by platform administrators.',
+                    code: 'CLINIC_READ_ONLY'
+                });
+            }
+        }
+
+        const { id, schema_name, slug: resolvedSlug, is_read_only, billing_locked, prescribing_locked } = tenantInfo;
 
         // 4. Start Transaction Wrapper
         client = await pool.controlPool.connect();
@@ -102,7 +118,14 @@ const resolveTenant = async (req, res, next) => {
         await client.query(`SET LOCAL search_path TO ${schema_name}, public`);
 
         // Attach clinic info
-        req.clinic = { id, slug: resolvedSlug, schema_name };
+        req.clinic = {
+            id,
+            slug: resolvedSlug,
+            schema_name,
+            is_read_only,
+            billing_locked,
+            prescribing_locked
+        };
 
         // 5. Run Request within Context
         // Use enterWith to ensure context persists through Express's asynchronous middleware ticks
