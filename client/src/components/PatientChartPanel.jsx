@@ -96,6 +96,27 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
         { id: 'other', label: 'Other', icon: Database, types: ['other'] },
     ];
 
+    // Helper to decode HTML entities like &#x2F; and &amp;#x2F;
+    const decodeHtmlEntities = (text) => {
+        if (!text) return '';
+        let str = text;
+        // Iteratively decode to handle double-encoding
+        for (let i = 0; i < 5; i++) {
+            const prev = str;
+            str = str
+                .replace(/&amp;#x2F;/g, '/')
+                .replace(/&#x2F;/g, '/')
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&#47;/g, '/')
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'");
+            if (str === prev) break;
+        }
+        return str;
+    };
+
     useEffect(() => {
         if (isOpen && patientId) {
             setActiveTab(initialTab === 'history' ? 'overview' : initialTab); // Default to overview
@@ -642,16 +663,100 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                 </div>
                                                 <div className="bg-green-50/50 p-3 rounded-lg border border-green-100 hover:bg-green-50 transition-colors">
                                                     <span className="text-xs font-semibold text-green-600 uppercase">Active Meds</span>
-                                                    <div className="mt-1 font-bold text-gray-800">{prescriptions.length + eprescribePrescriptions.length}</div>
+                                                    <div className="mt-1 font-bold text-gray-800">{medications.filter(m => m.active !== false).length}</div>
                                                 </div>
-                                                <div className="bg-purple-50/50 p-3 rounded-lg border border-purple-100 hover:bg-purple-50 transition-colors">
-                                                    <span className="text-xs font-semibold text-purple-600 uppercase">Allergies</span>
-                                                    <div className="mt-1 font-bold text-gray-800">{patient?.allergies?.length || 0}</div>
+                                                <div className="bg-red-50/50 p-3 rounded-lg border border-red-100 hover:bg-red-50 transition-colors">
+                                                    <span className="text-xs font-semibold text-red-600 uppercase">Allergies</span>
+                                                    <div className="mt-1 font-bold text-gray-800">{allergies.length > 0 ? allergies.length : 'NKDA'}</div>
                                                 </div>
                                                 <div className="bg-orange-50/50 p-3 rounded-lg border border-orange-100 hover:bg-orange-50 transition-colors">
-                                                    <span className="text-xs font-semibold text-orange-600 uppercase">Pending Labs</span>
-                                                    <div className="mt-1 font-bold text-gray-800">{labs.filter(l => l.status === 'pending').length}</div>
+                                                    <span className="text-xs font-semibold text-orange-600 uppercase">Problems</span>
+                                                    <div className="mt-1 font-bold text-gray-800">{problems.length}</div>
                                                 </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Quick Data Summary */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {/* Active Medications List */}
+                                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                                <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-emerald-50/30">
+                                                    <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                                                        <Pill className="w-4 h-4 text-emerald-600" />
+                                                        Active Medications
+                                                    </h3>
+                                                    <button onClick={() => setActiveTab('medications')} className="text-xs text-primary-600 hover:text-primary-700 font-medium">View All</button>
+                                                </div>
+                                                <div className="p-3 max-h-40 overflow-y-auto">
+                                                    {medications.filter(m => m.active !== false).length > 0 ? (
+                                                        <div className="space-y-1">
+                                                            {medications.filter(m => m.active !== false).slice(0, 5).map(med => (
+                                                                <div key={med.id} className="text-sm text-gray-700 py-1 border-b border-gray-50 last:border-b-0">
+                                                                    <span className="font-medium">{med.medication_name}</span>
+                                                                    {med.dosage && <span className="text-gray-500 ml-2">{med.dosage}</span>}
+                                                                </div>
+                                                            ))}
+                                                            {medications.filter(m => m.active !== false).length > 5 && (
+                                                                <div className="text-xs text-gray-400 pt-1">+{medications.filter(m => m.active !== false).length - 5} more</div>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="text-sm text-gray-400 italic py-2">No active medications</div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Allergies List */}
+                                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                                <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-red-50/30">
+                                                    <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                                                        <AlertCircle className="w-4 h-4 text-red-600" />
+                                                        Allergies
+                                                    </h3>
+                                                    <button onClick={() => setActiveTab('allergies')} className="text-xs text-primary-600 hover:text-primary-700 font-medium">View All</button>
+                                                </div>
+                                                <div className="p-3">
+                                                    {allergies.length > 0 ? (
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {allergies.map(all => (
+                                                                <span key={all.id} className="px-2 py-1 bg-red-50 text-red-700 text-xs font-medium rounded-md border border-red-100">
+                                                                    {all.allergen}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="text-sm text-green-600 font-medium">NKDA (No Known Drug Allergies)</div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Problem List Summary */}
+                                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                            <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-orange-50/30">
+                                                <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                                                    <Activity className="w-4 h-4 text-orange-600" />
+                                                    Active Problems
+                                                </h3>
+                                                <button onClick={() => setActiveTab('problems')} className="text-xs text-primary-600 hover:text-primary-700 font-medium">View All</button>
+                                            </div>
+                                            <div className="p-3">
+                                                {problems.length > 0 ? (
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                        {problems.slice(0, 6).map(prob => (
+                                                            <div key={prob.id} className="flex items-center gap-2 text-sm text-gray-700 py-1">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-orange-400"></span>
+                                                                <span className="font-medium">{prob.problem_name}</span>
+                                                                {prob.icd10_code && <span className="text-xs text-gray-400 font-mono">{prob.icd10_code}</span>}
+                                                            </div>
+                                                        ))}
+                                                        {problems.length > 6 && (
+                                                            <div className="text-xs text-gray-400 pt-1 col-span-2">+{problems.length - 6} more problems</div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-sm text-gray-400 italic py-2">No active problems documented</div>
+                                                )}
                                             </div>
                                         </div>
 
@@ -663,13 +768,43 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                     <button onClick={() => setActiveTab('history')} className="text-xs text-primary-600 hover:text-primary-700 font-medium">View All</button>
                                                 </div>
                                                 <div className="p-5">
-                                                    <div className="text-sm text-gray-600 leading-relaxed max-h-48 overflow-y-auto custom-scrollbar">
-                                                        {notes[0].note_draft ? (
-                                                            <div className="whitespace-pre-wrap font-mono text-xs">{notes[0].note_draft.substring(0, 500)}...</div>
-                                                        ) : (
-                                                            <span className="italic text-gray-400">No content in latest note draft.</span>
-                                                        )}
-                                                    </div>
+                                                    {(() => {
+                                                        const noteText = decodeHtmlEntities(notes[0].note_draft || '');
+                                                        const ccMatch = noteText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Assessment|Plan):|$)/is);
+                                                        const hpiMatch = noteText.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Assessment|Plan):|$)/is);
+                                                        const cc = ccMatch ? ccMatch[1].trim() : null;
+                                                        const hpi = hpiMatch ? hpiMatch[1].trim().substring(0, 300) : null;
+
+                                                        return (
+                                                            <div className="space-y-3">
+                                                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                                    <Clock className="w-4 h-4" />
+                                                                    <span>{new Date(notes[0].visit_date || notes[0].created_at).toLocaleDateString()}</span>
+                                                                    <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold ${notes[0].locked || notes[0].note_signed_at ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                                                        {notes[0].locked || notes[0].note_signed_at ? 'Signed' : 'Draft'}
+                                                                    </span>
+                                                                </div>
+                                                                {cc && (
+                                                                    <div>
+                                                                        <div className="text-xs font-bold text-gray-500 uppercase mb-1">Chief Complaint</div>
+                                                                        <div className="text-sm font-medium text-gray-900">{cc}</div>
+                                                                    </div>
+                                                                )}
+                                                                {hpi && (
+                                                                    <div>
+                                                                        <div className="text-xs font-bold text-gray-500 uppercase mb-1">HPI Summary</div>
+                                                                        <div className="text-sm text-gray-600 leading-relaxed">{hpi}{hpi.length >= 300 ? '...' : ''}</div>
+                                                                    </div>
+                                                                )}
+                                                                {!cc && !hpi && noteText && (
+                                                                    <div className="text-sm text-gray-600 leading-relaxed">{noteText.substring(0, 300)}{noteText.length > 300 ? '...' : ''}</div>
+                                                                )}
+                                                                {!noteText && (
+                                                                    <span className="italic text-gray-400">No content in latest note draft.</span>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })()}
                                                 </div>
                                             </div>
                                         )}
