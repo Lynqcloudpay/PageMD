@@ -19,7 +19,7 @@ const PatientTabs = () => {
     }, [activeTab]);
 
     // If no tabs, show a placeholder
-    if (tabs.length === 0) {
+    if (!tabs || tabs.length === 0) {
         return (
             <div
                 className="h-full flex items-center px-4 bg-gradient-to-r from-soft-gray/30 to-white border-b border-deep-gray/10"
@@ -38,7 +38,7 @@ const PatientTabs = () => {
             className="h-full flex items-center bg-gradient-to-r from-soft-gray/30 to-white border-b border-deep-gray/10 overflow-x-auto"
             ref={containerRef}
         >
-            {tabs.map((tab, index) => {
+            {(tabs || []).map((tab, index) => {
                 const isActive = activeTab === tab.patientId;
 
                 return (
