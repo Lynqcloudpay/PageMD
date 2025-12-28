@@ -245,7 +245,16 @@ const PlatformAdminSupport = () => {
 
                                     <div>
                                         <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Clinic</label>
-                                        <p className="text-slate-700 mt-1">{selectedTicket.clinic_name || 'Unknown'}</p>
+                                        {selectedTicket.clinic_id ? (
+                                            <button
+                                                onClick={() => navigate(`/platform-admin/clinics/${selectedTicket.clinic_id}`)}
+                                                className="text-blue-600 hover:text-blue-800 hover:underline mt-1 block font-medium text-left"
+                                            >
+                                                {selectedTicket.clinic_name || 'View Clinic'} →
+                                            </button>
+                                        ) : (
+                                            <p className="text-slate-500 mt-1 italic">Unknown / No clinic linked</p>
+                                        )}
                                     </div>
 
                                     <div>
