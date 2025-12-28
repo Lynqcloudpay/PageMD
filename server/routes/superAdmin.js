@@ -893,4 +893,150 @@ router.get('/clinics/:id/audit-logs', verifySuperAdmin, async (req, res) => {
     }
 });
 
+// ═══════════════════════════════════════════════════════════════
+// SUPPORT TICKETS MANAGEMENT
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/super/support-tickets
+ * List all support tickets with filtering
+ */
+router.get('/support-tickets', verifySuperAdmin, async (req, res) => {
+    try {
+        const { status = 'all', priority, limit = 50, offset = 0 } = req.query;
+
+        let query = `
+            SELECT st.*, c.display_name as clinic_name, c.slug as clinic_slug
+            FROM platform_support_tickets st
+            LEFT JOIN clinics c ON st.clinic_id = c.id
+        `;
+        const params = [];
+        const conditions = [];
+
+        if (status !== 'all') {
+            params.push(status);
+            conditions.push(`st.status = $${params.length}`);
+        }
+
+        if (priority) {
+            params.push(priority);
+            conditions.push(`st.priority = $${params.length}`);
+        }
+
+        if (conditions.length > 0) {
+            query += ' WHERE ' + conditions.join(' AND ');
+        }
+
+        query += ' ORDER BY st.created_at DESC';
+        params.push(parseInt(limit));
+        query += ` LIMIT $${params.length}`;
+        params.push(parseInt(offset));
+        query += ` OFFSET $${params.length}`;
+
+        const result = await pool.controlPool.query(query, params);
+
+        // Get total count
+        let countQuery = 'SELECT COUNT(*) FROM platform_support_tickets st';
+        if (conditions.length > 0) {
+            countQuery += ' WHERE ' + conditions.join(' AND ');
+        }
+        const countResult = await pool.controlPool.query(countQuery, params.slice(0, conditions.length));
+
+        res.json({
+            tickets: result.rows,
+            total: parseInt(countResult.rows[0].count),
+            limit: parseInt(limit),
+            offset: parseInt(offset)
+        });
+    } catch (error) {
+        console.error('Error fetching support tickets:', error);
+        res.status(500).json({ error: 'Failed to fetch support tickets' });
+    }
+});
+
+/**
+ * GET /api/super/support-tickets/:id
+ * Get a single support ticket with full context
+ */
+router.get('/support-tickets/:id', verifySuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.controlPool.query(`
+            SELECT st.*, c.display_name as clinic_name, c.slug as clinic_slug
+            FROM platform_support_tickets st
+            LEFT JOIN clinics c ON st.clinic_id = c.id
+            WHERE st.id = $1
+        `, [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Ticket not found' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error fetching support ticket:', error);
+        res.status(500).json({ error: 'Failed to fetch support ticket' });
+    }
+});
+
+/**
+ * PATCH /api/super/support-tickets/:id
+ * Update ticket status
+ */
+router.patch('/support-tickets/:id', verifySuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, notes } = req.body;
+
+        const result = await pool.controlPool.query(`
+            UPDATE platform_support_tickets
+            SET status = COALESCE($1, status),
+                updated_at = NOW()
+            WHERE id = $2
+            RETURNING *
+        `, [status, id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Ticket not found' });
+        }
+
+        // Log the action
+        await AuditService.log(
+            req.platformAdmin.id,
+            'support_ticket_updated',
+            result.rows[0].clinic_id,
+            { ticketId: id, newStatus: status, notes }
+        );
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error updating support ticket:', error);
+        res.status(500).json({ error: 'Failed to update support ticket' });
+    }
+});
+
+/**
+ * GET /api/super/support-tickets/stats
+ * Get ticket statistics
+ */
+router.get('/support-stats', verifySuperAdmin, async (req, res) => {
+    try {
+        const result = await pool.controlPool.query(`
+            SELECT 
+                COUNT(*) FILTER (WHERE status = 'open') as open_count,
+                COUNT(*) FILTER (WHERE status = 'in_progress') as in_progress_count,
+                COUNT(*) FILTER (WHERE status = 'resolved') as resolved_count,
+                COUNT(*) FILTER (WHERE priority = 'critical' AND status = 'open') as critical_open,
+                COUNT(*) FILTER (WHERE priority = 'high' AND status = 'open') as high_open,
+                COUNT(*) as total
+            FROM platform_support_tickets
+        `);
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error fetching support stats:', error);
+        res.status(500).json({ error: 'Failed to fetch support stats' });
+    }
+});
+
 module.exports = router;
