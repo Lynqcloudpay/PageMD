@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, AlertCircle, Clock, CheckCircle, XCircle, ChevronRight, Filter, RefreshCw } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Clock, CheckCircle, ChevronRight, RefreshCw, Ticket, Filter } from 'lucide-react';
 import { usePlatformAdmin } from '../context/PlatformAdminContext';
 
 const PlatformAdminSupport = () => {
@@ -52,17 +52,17 @@ const PlatformAdminSupport = () => {
     };
 
     const priorityColors = {
-        low: 'bg-gray-100 text-gray-700',
-        medium: 'bg-blue-100 text-blue-700',
-        high: 'bg-orange-100 text-orange-700',
-        critical: 'bg-red-100 text-red-700'
+        low: 'bg-slate-100 text-slate-600 border-slate-200',
+        medium: 'bg-blue-100 text-blue-700 border-blue-200',
+        high: 'bg-orange-100 text-orange-700 border-orange-200',
+        critical: 'bg-red-100 text-red-700 border-red-200'
     };
 
     const statusColors = {
-        open: 'bg-yellow-100 text-yellow-700',
-        in_progress: 'bg-blue-100 text-blue-700',
-        resolved: 'bg-green-100 text-green-700',
-        closed: 'bg-gray-100 text-gray-700'
+        open: 'bg-amber-100 text-amber-700 border-amber-200',
+        in_progress: 'bg-blue-100 text-blue-700 border-blue-200',
+        resolved: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+        closed: 'bg-slate-100 text-slate-600 border-slate-200'
     };
 
     // Redirect if not authenticated
@@ -72,196 +72,200 @@ const PlatformAdminSupport = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-            {/* Header */}
-            <header className="bg-slate-800/50 border-b border-slate-700/50 backdrop-blur-xl sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={() => navigate('/platform-admin')}
-                                className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors"
-                            >
-                                <ArrowLeft className="w-5 h-5 text-slate-400" />
-                            </button>
-                            <div>
-                                <h1 className="text-xl font-bold text-white">Support Tickets</h1>
-                                <p className="text-sm text-slate-400">Manage user-submitted issues</p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={fetchTickets}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                        >
-                            <RefreshCw className="w-4 h-4" />
-                            Refresh
-                        </button>
-                    </div>
-                </div>
-            </header>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 relative overflow-hidden">
+            {/* Background orbs */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-20 left-1/4 w-[500px] h-[500px] bg-blue-200/30 rounded-full blur-3xl"></div>
+                <div className="absolute bottom-20 right-1/4 w-[400px] h-[400px] bg-indigo-200/20 rounded-full blur-3xl"></div>
+            </div>
 
-            <main className="max-w-7xl mx-auto px-6 py-8">
+            <div className="relative z-10 max-w-[1600px] mx-auto px-6 py-8">
+                {/* Header */}
+                <div className="mb-8">
+                    <button
+                        onClick={() => navigate('/platform-admin/dashboard')}
+                        className="flex items-center gap-2 text-blue-600 hover:text-blue-700 mb-4 transition-colors text-sm font-medium"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        Back to Dashboard
+                    </button>
+                    <h1 className="text-3xl font-bold text-slate-800 mb-2">Support Tickets</h1>
+                    <p className="text-slate-500">View and manage user-submitted issues</p>
+                </div>
+
                 {/* Stats Cards */}
                 {stats && (
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-                        <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
-                            <div className="text-2xl font-bold text-white">{stats.total || 0}</div>
-                            <div className="text-sm text-slate-400">Total Tickets</div>
+                        <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-5 border border-white/80 shadow-lg shadow-slate-200/50">
+                            <div className="text-3xl font-bold text-slate-800">{stats.total || 0}</div>
+                            <div className="text-sm text-slate-500 mt-1">Total Tickets</div>
                         </div>
-                        <div className="bg-yellow-900/20 rounded-xl p-4 border border-yellow-700/30">
-                            <div className="text-2xl font-bold text-yellow-400">{stats.open_count || 0}</div>
-                            <div className="text-sm text-yellow-400/70">Open</div>
+                        <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-5 border border-amber-100 shadow-lg shadow-amber-100/50">
+                            <div className="text-3xl font-bold text-amber-600">{stats.open_count || 0}</div>
+                            <div className="text-sm text-amber-600/70 mt-1">Open</div>
                         </div>
-                        <div className="bg-blue-900/20 rounded-xl p-4 border border-blue-700/30">
-                            <div className="text-2xl font-bold text-blue-400">{stats.in_progress_count || 0}</div>
-                            <div className="text-sm text-blue-400/70">In Progress</div>
+                        <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-5 border border-blue-100 shadow-lg shadow-blue-100/50">
+                            <div className="text-3xl font-bold text-blue-600">{stats.in_progress_count || 0}</div>
+                            <div className="text-sm text-blue-600/70 mt-1">In Progress</div>
                         </div>
-                        <div className="bg-red-900/20 rounded-xl p-4 border border-red-700/30">
-                            <div className="text-2xl font-bold text-red-400">{stats.critical_open || 0}</div>
-                            <div className="text-sm text-red-400/70">Critical Open</div>
+                        <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-5 border border-red-100 shadow-lg shadow-red-100/50">
+                            <div className="text-3xl font-bold text-red-600">{stats.critical_open || 0}</div>
+                            <div className="text-sm text-red-600/70 mt-1">Critical Open</div>
                         </div>
-                        <div className="bg-green-900/20 rounded-xl p-4 border border-green-700/30">
-                            <div className="text-2xl font-bold text-green-400">{stats.resolved_count || 0}</div>
-                            <div className="text-sm text-green-400/70">Resolved</div>
+                        <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-5 border border-emerald-100 shadow-lg shadow-emerald-100/50">
+                            <div className="text-3xl font-bold text-emerald-600">{stats.resolved_count || 0}</div>
+                            <div className="text-sm text-emerald-600/70 mt-1">Resolved</div>
                         </div>
                     </div>
                 )}
 
-                {/* Filters */}
-                <div className="flex gap-4 mb-6">
-                    <select
-                        value={filter.status}
-                        onChange={(e) => setFilter(prev => ({ ...prev, status: e.target.value }))}
-                        className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                {/* Actions Bar */}
+                <div className="mb-8 flex flex-wrap items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <Filter className="w-4 h-4 text-slate-400" />
+                        <select
+                            value={filter.status}
+                            onChange={(e) => setFilter(prev => ({ ...prev, status: e.target.value }))}
+                            className="px-4 py-2.5 bg-white/80 backdrop-blur-xl border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        >
+                            <option value="all">All Status</option>
+                            <option value="open">Open</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                        <select
+                            value={filter.priority}
+                            onChange={(e) => setFilter(prev => ({ ...prev, priority: e.target.value }))}
+                            className="px-4 py-2.5 bg-white/80 backdrop-blur-xl border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        >
+                            <option value="">All Priorities</option>
+                            <option value="critical">Critical</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                    <button
+                        onClick={fetchTickets}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 rounded-xl transition-all font-medium shadow-lg shadow-blue-500/25"
                     >
-                        <option value="all">All Status</option>
-                        <option value="open">Open</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="resolved">Resolved</option>
-                        <option value="closed">Closed</option>
-                    </select>
-                    <select
-                        value={filter.priority}
-                        onChange={(e) => setFilter(prev => ({ ...prev, priority: e.target.value }))}
-                        className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
-                    >
-                        <option value="">All Priorities</option>
-                        <option value="critical">Critical</option>
-                        <option value="high">High</option>
-                        <option value="medium">Medium</option>
-                        <option value="low">Low</option>
-                    </select>
+                        <RefreshCw className="w-4 h-4" />
+                        Refresh
+                    </button>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Ticket List */}
-                    <div className="lg:col-span-2 space-y-3">
+                    <div className="lg:col-span-2 space-y-4">
                         {loading ? (
-                            <div className="text-center py-12 text-slate-400">Loading tickets...</div>
+                            <div className="flex items-center justify-center py-20">
+                                <div className="w-10 h-10 border-3 border-blue-200 border-t-blue-500 rounded-full animate-spin"></div>
+                            </div>
                         ) : tickets.length === 0 ? (
-                            <div className="text-center py-12 bg-slate-800/50 rounded-xl border border-slate-700/50">
-                                <AlertCircle className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-                                <p className="text-slate-400">No support tickets found</p>
-                                <p className="text-sm text-slate-500 mt-2">Tickets submitted by users will appear here</p>
+                            <div className="text-center py-16 bg-white/80 backdrop-blur-xl rounded-2xl border border-white/80 shadow-lg">
+                                <Ticket className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                                <p className="text-slate-600 font-medium">No support tickets found</p>
+                                <p className="text-sm text-slate-400 mt-2">Tickets submitted by users will appear here</p>
                             </div>
                         ) : (
                             tickets.map((ticket) => (
-                                <div
+                                <button
                                     key={ticket.id}
                                     onClick={() => setSelectedTicket(ticket)}
-                                    className={`p-4 bg-slate-800/50 rounded-xl border cursor-pointer transition-all hover:bg-slate-700/50 ${selectedTicket?.id === ticket.id ? 'border-blue-500' : 'border-slate-700/50'
+                                    className={`w-full text-left p-5 bg-white/80 backdrop-blur-xl rounded-2xl border cursor-pointer transition-all hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-200 ${selectedTicket?.id === ticket.id ? 'border-blue-400 shadow-xl shadow-blue-500/10' : 'border-white/80 shadow-lg shadow-slate-200/50'
                                         }`}
                                 >
                                     <div className="flex items-start justify-between">
                                         <div className="flex-1">
-                                            <h3 className="font-medium text-white">{ticket.subject}</h3>
-                                            <p className="text-sm text-slate-400 mt-1 line-clamp-2">{ticket.description}</p>
+                                            <h3 className="font-semibold text-slate-800">{ticket.subject}</h3>
+                                            <p className="text-sm text-slate-500 mt-1 line-clamp-2">{ticket.description}</p>
                                             <div className="flex items-center gap-2 mt-3">
-                                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${priorityColors[ticket.priority]}`}>
+                                                <span className={`px-2.5 py-1 rounded-lg text-xs font-medium border ${priorityColors[ticket.priority]}`}>
                                                     {ticket.priority}
                                                 </span>
-                                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[ticket.status]}`}>
-                                                    {ticket.status}
+                                                <span className={`px-2.5 py-1 rounded-lg text-xs font-medium border ${statusColors[ticket.status]}`}>
+                                                    {ticket.status?.replace('_', ' ')}
                                                 </span>
-                                                <span className="text-xs text-slate-500">
+                                                <span className="text-xs text-slate-400">
                                                     {ticket.clinic_name || 'Unknown Clinic'}
                                                 </span>
                                             </div>
                                         </div>
-                                        <ChevronRight className="w-5 h-5 text-slate-500 flex-shrink-0" />
+                                        <ChevronRight className="w-5 h-5 text-slate-300 flex-shrink-0" />
                                     </div>
-                                    <div className="flex items-center gap-4 mt-3 text-xs text-slate-500">
+                                    <div className="flex items-center gap-4 mt-3 text-xs text-slate-400">
                                         <span>{ticket.user_email}</span>
                                         <span>•</span>
                                         <span>{new Date(ticket.created_at).toLocaleString()}</span>
                                     </div>
-                                </div>
+                                </button>
                             ))
                         )}
                     </div>
 
                     {/* Ticket Detail */}
-                    <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-6 h-fit sticky top-24">
+                    <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-white/80 shadow-lg shadow-slate-200/50 p-6 h-fit sticky top-8">
                         {selectedTicket ? (
                             <>
-                                <h2 className="text-lg font-bold text-white mb-4">{selectedTicket.subject}</h2>
+                                <h2 className="text-xl font-bold text-slate-800 mb-5">{selectedTicket.subject}</h2>
 
-                                <div className="space-y-4">
+                                <div className="space-y-5">
                                     <div>
-                                        <label className="text-sm text-slate-400">Description</label>
-                                        <p className="text-white mt-1">{selectedTicket.description}</p>
+                                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Description</label>
+                                        <p className="text-slate-700 mt-1">{selectedTicket.description}</p>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="text-sm text-slate-400">Priority</label>
-                                            <p className={`inline-block mt-1 px-2 py-0.5 rounded text-sm font-medium ${priorityColors[selectedTicket.priority]}`}>
+                                            <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Priority</label>
+                                            <p className={`inline-block mt-1 px-2.5 py-1 rounded-lg text-sm font-medium border ${priorityColors[selectedTicket.priority]}`}>
                                                 {selectedTicket.priority}
                                             </p>
                                         </div>
                                         <div>
-                                            <label className="text-sm text-slate-400">Status</label>
-                                            <p className={`inline-block mt-1 px-2 py-0.5 rounded text-sm font-medium ${statusColors[selectedTicket.status]}`}>
-                                                {selectedTicket.status}
+                                            <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Status</label>
+                                            <p className={`inline-block mt-1 px-2.5 py-1 rounded-lg text-sm font-medium border ${statusColors[selectedTicket.status]}`}>
+                                                {selectedTicket.status?.replace('_', ' ')}
                                             </p>
                                         </div>
                                     </div>
 
                                     <div>
-                                        <label className="text-sm text-slate-400">Submitted By</label>
-                                        <p className="text-white mt-1">{selectedTicket.user_email}</p>
+                                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Submitted By</label>
+                                        <p className="text-slate-700 mt-1">{selectedTicket.user_email}</p>
                                     </div>
 
                                     <div>
-                                        <label className="text-sm text-slate-400">Clinic</label>
-                                        <p className="text-white mt-1">{selectedTicket.clinic_name || 'Unknown'}</p>
+                                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Clinic</label>
+                                        <p className="text-slate-700 mt-1">{selectedTicket.clinic_name || 'Unknown'}</p>
                                     </div>
 
                                     <div>
-                                        <label className="text-sm text-slate-400">Created</label>
-                                        <p className="text-white mt-1">{new Date(selectedTicket.created_at).toLocaleString()}</p>
+                                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Created</label>
+                                        <p className="text-slate-700 mt-1">{new Date(selectedTicket.created_at).toLocaleString()}</p>
                                     </div>
 
                                     {selectedTicket.context_data && (
                                         <div>
-                                            <label className="text-sm text-slate-400">Context (Audit Trail)</label>
-                                            <pre className="mt-1 p-3 bg-slate-900 rounded-lg text-xs text-slate-300 overflow-auto max-h-48">
+                                            <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Context (Audit Trail)</label>
+                                            <pre className="mt-2 p-4 bg-slate-50 rounded-xl text-xs text-slate-600 overflow-auto max-h-48 border border-slate-100">
                                                 {JSON.stringify(selectedTicket.context_data, null, 2)}
                                             </pre>
                                         </div>
                                     )}
 
-                                    <div className="pt-4 border-t border-slate-700">
-                                        <label className="text-sm text-slate-400 mb-2 block">Update Status</label>
+                                    <div className="pt-5 border-t border-slate-100">
+                                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-3 block">Update Status</label>
                                         <div className="flex flex-wrap gap-2">
                                             {['open', 'in_progress', 'resolved', 'closed'].map((status) => (
                                                 <button
                                                     key={status}
                                                     onClick={() => updateTicketStatus(selectedTicket.id, status)}
                                                     disabled={selectedTicket.status === status}
-                                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedTicket.status === status
-                                                        ? 'bg-blue-600 text-white'
-                                                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                                                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${selectedTicket.status === status
+                                                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
+                                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                                         }`}
                                                 >
                                                     {status.replace('_', ' ')}
@@ -272,14 +276,14 @@ const PlatformAdminSupport = () => {
                                 </div>
                             </>
                         ) : (
-                            <div className="text-center py-8 text-slate-400">
-                                <Clock className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                                <p>Select a ticket to view details</p>
+                            <div className="text-center py-12">
+                                <Clock className="w-16 h-16 text-slate-200 mx-auto mb-4" />
+                                <p className="text-slate-500">Select a ticket to view details</p>
                             </div>
                         )}
                     </div>
                 </div>
-            </main>
+            </div>
         </div>
     );
 };
