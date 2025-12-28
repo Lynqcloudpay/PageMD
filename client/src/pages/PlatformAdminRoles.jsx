@@ -58,15 +58,15 @@ const PlatformAdminRoles = () => {
                                     <Shield className="w-6 h-6" />
                                 </div>
                                 <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-2 py-1 rounded-lg uppercase tracking-widest">
-                                    {(tpl.privileges || []).length} Privileges
+                                    {(tpl.privilege_set || tpl.privileges || []).length} Privileges
                                 </span>
                             </div>
 
-                            <h3 className="text-xl font-bold text-slate-800 mb-2">{tpl.name}</h3>
-                            <p className="text-sm text-slate-500 mb-6 line-clamp-2">{tpl.description}</p>
+                            <h3 className="text-xl font-bold text-slate-800 mb-2">{tpl.display_name || tpl.name || tpl.role_key}</h3>
+                            <p className="text-sm text-slate-500 mb-6 line-clamp-2">{tpl.description || 'No description available'}</p>
 
                             <div className="flex flex-wrap gap-2 mb-6 max-h-32 overflow-y-auto p-1">
-                                {(tpl.privileges || []).map((p, idx) => (
+                                {(tpl.privilege_set || tpl.privileges || []).map((p, idx) => (
                                     <span key={idx} className="text-[10px] font-bold text-slate-600 bg-slate-100/80 px-2 py-1 rounded-md border border-slate-200">
                                         {p}
                                     </span>
