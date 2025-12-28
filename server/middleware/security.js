@@ -6,34 +6,22 @@ const validator = require('validator');
 const isDevelopment = process.env.NODE_ENV !== 'production';
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: isDevelopment ? 100000 : 10000, // Increased to 10000 in production to handle auto-save and normal usage
+  max: isDevelopment ? 5000 : 2000, // Production: ~2.2 req/sec sustained per IP. Sufficient for auto-save.
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  // Skip rate limiting for certain endpoints in development
   skip: (req) => {
-    if (isDevelopment) {
-      // Skip rate limiting for all API endpoints in development
-      const skipPaths = [
-        '/api/auth/me',
-        '/api/patients',
-        '/api/appointments',
-        '/api/visits',
-        '/api/messages',
-        '/api/auth/providers',
-        '/api/users',
-        '/api/roles'
-      ];
-      return skipPaths.some(path => req.path.startsWith(path));
-    }
+    // In dev, only skip if explicitly needed, but 5000 should be plenty.
+    // Removing the massive skip list to ensure we actually test rate limiting behaviors in dev occasionally.
+    if (isDevelopment && req.path.startsWith('/api/health')) return true;
     return false;
   },
 });
 
-// More lenient rate limiting for development
+// Stricter auth rate limiting to prevent brute force
 const authLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute window
-  max: isDevelopment ? 10000 : 20, // Increased to 20 in production to prevent legitimate lockouts
+  max: isDevelopment ? 100 : 10, // Production: 10 attempts per minute per IP.
   message: 'Too many login attempts, please try again later.',
   skipSuccessfulRequests: true,
   standardHeaders: true,

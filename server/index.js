@@ -218,6 +218,9 @@ const followupsRoutes = require('./routes/followups');
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/followups', followupsRoutes);
 
+// Support
+app.use('/api/support', require('./routes/support'));
+
 // Root endpoint - redirect to frontend or show API info
 app.get('/', (req, res) => {
   res.json({
