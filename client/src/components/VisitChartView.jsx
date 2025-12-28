@@ -341,22 +341,52 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                         )}
 
                         {/* Clinic Brand Header */}
-                        <div className="mb-10 flex justify-between items-center relative z-10">
-                            <div className="flex gap-6 items-center">
-                                <div className="w-20 h-20 bg-white rounded-[1.5rem] shadow-xl shadow-slate-200/50 border border-slate-50 flex items-center justify-center overflow-hidden p-3 group">
+                        <div className="mb-10 flex justify-between items-start relative z-10">
+                            <div className="flex gap-6 items-start">
+                                <div className="w-20 h-20 bg-white rounded-[1.5rem] shadow-xl shadow-slate-200/50 border border-slate-50 flex items-center justify-center overflow-hidden p-3 group shrink-0">
                                     {clinicInfo.logo ? <img src={clinicInfo.logo} className="max-h-full object-contain" /> : <Building2 className="text-primary-100 w-12 h-12" />}
                                 </div>
-                                <div className="space-y-1">
-                                    <h1 className="text-3xl font-black text-slate-900 tracking-tighter leading-none">{clinicInfo.name}</h1>
-                                    <div className="text-[11px] font-bold text-slate-400 flex items-center gap-4">
-                                        <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-primary-200" />{clinicInfo.address.replace('\n', ' • ')}</span>
-                                        <span className="flex items-center gap-1.5 font-black text-primary-400/70"><Phone className="w-3.5 h-3.5" />{clinicInfo.phone}</span>
+                                <div className="space-y-2">
+                                    <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none">{clinicInfo.name}</h1>
+                                    {/* Clinic Address */}
+                                    {clinicInfo.address && (
+                                        <div className="text-[11px] font-semibold text-slate-500 flex items-center gap-1.5">
+                                            <MapPin className="w-3.5 h-3.5 text-primary-300 shrink-0" />
+                                            <span>{clinicInfo.address.replace(/\n/g, ' • ')}</span>
+                                        </div>
+                                    )}
+                                    {/* Contact Row */}
+                                    <div className="flex flex-wrap items-center gap-4 text-[10px]">
+                                        {clinicInfo.phone && (
+                                            <span className="flex items-center gap-1.5 font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                                                <Phone className="w-3 h-3 text-primary-400" />
+                                                {clinicInfo.phone}
+                                            </span>
+                                        )}
+                                        {clinicInfo.fax && (
+                                            <span className="flex items-center gap-1.5 font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                                                <Printer className="w-3 h-3 text-indigo-400" />
+                                                Fax: {clinicInfo.fax}
+                                            </span>
+                                        )}
+                                        {clinicInfo.email && (
+                                            <span className="flex items-center gap-1.5 font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                                                <Mail className="w-3 h-3 text-emerald-400" />
+                                                {clinicInfo.email}
+                                            </span>
+                                        )}
+                                        {clinicInfo.website && (
+                                            <span className="flex items-center gap-1.5 font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                                                <Globe className="w-3 h-3 text-blue-400" />
+                                                {clinicInfo.website}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
-                            <div className="text-right">
-                                <div className="text-[10px] font-black uppercase tracking-[0.4em] text-primary-500/40 mb-1">{visit.visit_type || 'Clinical SOAP Note'}</div>
-                                <div className="text-2xl font-black text-slate-900 tracking-tighter leading-none mb-1">{visitDate}</div>
+                            <div className="text-right shrink-0">
+                                <div className="text-[10px] font-black uppercase tracking-[0.3em] text-primary-500/50 mb-1">{visit.visit_type || 'Clinical SOAP Note'}</div>
+                                <div className="text-2xl font-black text-slate-900 tracking-tight leading-none mb-1">{visitDate}</div>
                                 <div className="inline-block px-3 py-1 bg-primary-50 text-[10px] uppercase font-black tracking-widest text-primary-500 rounded-lg">{providerName}</div>
                             </div>
                         </div>
