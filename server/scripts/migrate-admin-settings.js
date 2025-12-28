@@ -49,10 +49,44 @@ async function migrate() {
         time_format VARCHAR(20) DEFAULT '12h',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_by UUID REFERENCES users(id)
+        updated_by UUID
       )
     `);
-    console.log('✅ Created practice_settings table');
+    console.log('✅ Created or verified practice_settings table');
+
+    // Ensure all columns exist in practice_settings (for existing tables)
+    const practiceCols = [
+      ['practice_type', 'VARCHAR(100)'],
+      ['tax_id', 'VARCHAR(50)'],
+      ['npi', 'VARCHAR(10)'],
+      ['address_line1', 'VARCHAR(255)'],
+      ['address_line2', 'VARCHAR(255)'],
+      ['city', 'VARCHAR(100)'],
+      ['state', 'VARCHAR(50)'],
+      ['zip', 'VARCHAR(20)'],
+      ['phone', 'VARCHAR(20)'],
+      ['fax', 'VARCHAR(20)'],
+      ['email', 'VARCHAR(255)'],
+      ['website', 'VARCHAR(255)'],
+      ['logo_url', 'TEXT'],
+      ['timezone', "VARCHAR(50) DEFAULT 'America/New_York'"],
+      ['date_format', "VARCHAR(20) DEFAULT 'MM/DD/YYYY'"],
+      ['time_format', "VARCHAR(20) DEFAULT '12h'"]
+    ];
+
+    for (const [colName, colType] of practiceCols) {
+      await client.query(`
+        DO $$ 
+        BEGIN 
+          BEGIN
+            ALTER TABLE practice_settings ADD COLUMN ${colName} ${colType};
+          EXCEPTION
+            WHEN duplicate_column THEN NULL;
+          END;
+        END $$;
+      `);
+    }
+    console.log('✅ Verified columns in practice_settings');
 
     // System Configuration Table
     await client.query(`
