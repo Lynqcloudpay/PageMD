@@ -524,8 +524,8 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                 )}
                             </div>
 
-                            {/* Care Plan & Follow-up */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 py-4 border-t border-slate-50">
+                            {/* Care Plan & Follow-up - Stacked Vertically */}
+                            <div className="flex flex-col gap-4 py-4 border-t border-slate-50">
                                 {renderSection('carePlan', noteData.carePlan || patient.care_plan_summary, 'Care Plan',
                                     <div className="text-[12px] font-medium text-slate-600 leading-relaxed bg-primary-50/30 p-4 rounded-2xl border border-primary-100/30">
                                         {noteData.carePlan || patient.care_plan_summary}
