@@ -63,9 +63,11 @@ class ComplianceScanner {
      */
     static async checkDataResidency() {
         const issues = [];
+        let clinicCount = 0;
 
         try {
             const res = await pool.controlPool.query('SELECT id, display_name, slug, compliance_zones, region FROM clinics WHERE status = $1', ['active']);
+            clinicCount = res.rowCount;
 
             for (const clinic of res.rows) {
                 const zones = clinic.compliance_zones || [];
@@ -99,7 +101,7 @@ class ComplianceScanner {
         return {
             name: 'Data Residency',
             passed: issues.length === 0,
-            details: issues.length > 0 ? issues : [`Verified ${res ? res.rowCount : 0} clinics.`]
+            details: issues.length > 0 ? issues : [`Verified ${clinicCount} clinics.`]
         };
     }
 }
