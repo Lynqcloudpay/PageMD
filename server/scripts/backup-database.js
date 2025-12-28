@@ -15,11 +15,26 @@ const crypto = require('crypto');
 require('dotenv').config();
 
 const BACKUP_DIR = process.env.BACKUP_DIR || './backups';
-const DB_HOST = process.env.DB_HOST || 'localhost';
-const DB_PORT = process.env.DB_PORT || 5432;
-const DB_NAME = process.env.DB_NAME || 'paper_emr';
-const DB_USER = process.env.DB_USER || 'postgres';
-const DB_PASSWORD = process.env.DB_PASSWORD || 'postgres';
+const { URL } = require('url');
+
+let DB_HOST = process.env.DB_HOST || 'localhost';
+let DB_PORT = process.env.DB_PORT || 5432;
+let DB_NAME = process.env.DB_NAME || 'paper_emr';
+let DB_USER = process.env.DB_USER || 'postgres';
+let DB_PASSWORD = process.env.DB_PASSWORD || 'postgres';
+
+if (process.env.DATABASE_URL) {
+  try {
+    const dbUrl = new URL(process.env.DATABASE_URL);
+    DB_HOST = dbUrl.hostname;
+    DB_PORT = dbUrl.port || 5432;
+    DB_NAME = dbUrl.pathname.split('/')[1];
+    DB_USER = dbUrl.username;
+    DB_PASSWORD = dbUrl.password;
+  } catch (err) {
+    console.warn('Failed to parse DATABASE_URL, falling back to individual env vars');
+  }
+}
 
 // --- ENCRYPTION HARDENING (Phase 4) ---
 // In production, we MUST fail if the explicit backup key is missing.
