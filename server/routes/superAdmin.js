@@ -272,8 +272,12 @@ router.patch('/clinics/:id/controls', verifySuperAdmin, async (req, res) => {
                 pCount++;
                 updates.push(`${key} = $${pCount}`);
 
+                // Special handling for date fields: empty string means NULL
+                if (key === 'go_live_date' && req.body[key] === '') {
+                    params.push(null);
+                }
                 // Ensure objects/arrays are stringified for JSONB columns
-                if (type === 'object' && typeof req.body[key] === 'object') {
+                else if (type === 'object' && typeof req.body[key] === 'object') {
                     params.push(JSON.stringify(req.body[key]));
                 } else {
                     params.push(req.body[key]);
