@@ -817,13 +817,10 @@ router.get('/clinics/:id/governance/drift', verifySuperAdmin, async (req, res) =
 /**
  * POST /api/super/clinics/:id/governance/sync
  * Repair/Sync a specific role in a clinic to match the global template
- */
-router.post('/clinics/:id/governance/sync', verifySuperAdmin, async (req, res) => {
-    try {
         const { id } = req.params;
         const { roleKey } = req.body;
 
-        if (!roleKey) return res.status(400).json({ error: 'Role key required' });
+        if (!roleKey) return res.status(400).json({ error: 'roleKey is required' });
 
         const result = await governanceService.syncRole(id, roleKey, req.platformAdmin.id);
         res.json({ message: `Role ${roleKey} synced successfully`, ...result });
@@ -833,6 +830,20 @@ router.post('/clinics/:id/governance/sync', verifySuperAdmin, async (req, res) =
             return res.status(429).json({ error: 'Sync in progress for this clinic. Please wait.' });
         }
         res.status(500).json({ error: error.message || 'Failed to sync role' });
+    }
+});
+
+/**
+ * GET /api/super/audit/verify
+ * Verify the cryptographic integrity of the audit log chain
+ */
+router.get('/audit/verify', verifySuperAdmin, async (req, res) => {
+    try {
+        const result = await AuditService.verifyChain();
+        res.json(result);
+    } catch (error) {
+        console.error('Error verifying audit chain:', error);
+        res.status(500).json({ error: 'Failed to verify audit chain' });
     }
 });
 

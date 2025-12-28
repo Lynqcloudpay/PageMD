@@ -124,6 +124,7 @@ async function detectDrift(clinicId) {
             roleKey: tplKey,
             displayName: tpl.displayName,
             status,
+            isLinked: !!roleInClinic.sourceTemplateId,
             missingPrivileges: missing,
             extraPrivileges: extra,
             unknownPrivileges: unknown

@@ -12,28 +12,44 @@ const pool = new Pool({
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
+function stableStringify(obj) {
+    if (obj === null || typeof obj !== 'object') {
+        return JSON.stringify(obj);
+    }
+    if (Array.isArray(obj)) {
+        return '[' + obj.map(stableStringify).join(',') + ']';
+    }
+    const sortedKeys = Object.keys(obj).sort();
+    const parts = sortedKeys.map(key => {
+        return JSON.stringify(key) + ':' + stableStringify(obj[key]);
+    });
+    return '{' + parts.join(',') + '}';
+}
+
 function generateHash(prevHash, entry) {
-    const content = `${prevHash}|${entry.id}|${entry.action}|${entry.target_clinic_id || ''}|${JSON.stringify(entry.details)}|${entry.created_at.toISOString()}`;
+    // Must match AuditService.js logic exactly
+    const timestampEpoch = new Date(entry.created_at).getTime();
+    const content = `${prevHash}|${entry.id}|${entry.action}|${entry.target_clinic_id || ''}|${stableStringify(entry.details)}|${timestampEpoch}`;
     return crypto.createHash('sha256').update(content).digest('hex');
 }
 
 async function migrate() {
     const client = await pool.connect();
     try {
-        console.log('--- Starting Phase 3 Migration: Audit Hashing ---');
+        console.log('--- Starting Phase 3 Migration: Audit Hashing (Re-Hash) ---');
 
         await client.query('BEGIN');
 
         // 1. Add columns
-        console.log('Adding hash columns...');
+        console.log('Ensuring hash columns...');
         await client.query(`
             ALTER TABLE platform_audit_logs 
             ADD COLUMN IF NOT EXISTS hash VARCHAR(64),
             ADD COLUMN IF NOT EXISTS previous_hash VARCHAR(64)
         `);
 
-        // 2. Retroactive Hashing (Chain Initialization)
-        console.log('Initializing hash chain for existing logs...');
+        // 2. Retroactive Hashing (Full Re-Chain)
+        console.log('Re-initializing hash chain for ALL logs...');
 
         // Fetch all logs ordered by time
         const res = await client.query('SELECT * FROM platform_audit_logs ORDER BY created_at ASC, id ASC');
@@ -43,14 +59,9 @@ async function migrate() {
             let previousHash = '0000000000000000000000000000000000000000000000000000000000000000'; // Genesis hash
 
             for (const log of logs) {
-                // If already hashed, use it (idempotency check)
-                if (log.hash) {
-                    previousHash = log.hash;
-                    continue;
-                }
-
                 const currentHash = generateHash(previousHash, log);
 
+                // Always update to Ensure consistency with new algorithm
                 await client.query(`
                     UPDATE platform_audit_logs 
                     SET previous_hash = $1, hash = $2 
@@ -59,7 +70,7 @@ async function migrate() {
 
                 previousHash = currentHash;
             }
-            console.log(`Successfully hashed ${logs.length} logs.`);
+            console.log(`Successfully re-hashed ${logs.length} logs.`);
         } else {
             console.log('No existing logs to hash.');
         }
