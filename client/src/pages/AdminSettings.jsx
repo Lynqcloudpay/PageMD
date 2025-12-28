@@ -23,6 +23,7 @@ import { settingsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { useNavigate } from 'react-router-dom';
+import ImageCropper from '../components/ImageCropper';
 
 const AdminSettings = () => {
   const { user } = useAuth();
@@ -39,6 +40,11 @@ const AdminSettings = () => {
   const [clinicalSettings, setClinicalSettings] = useState({});
   const [emailSettings, setEmailSettings] = useState({});
   const [featureFlags, setFeatureFlags] = useState([]);
+
+  // Logo cropping state
+  const [showLogoCropper, setShowLogoCropper] = useState(false);
+  const [logoCropSrc, setLogoCropSrc] = useState(null);
+  const [logoUploading, setLogoUploading] = useState(false);
 
   // Check permissions and load settings
   useEffect(() => {
@@ -219,6 +225,13 @@ const AdminSettings = () => {
               setSettings={setPracticeSettings}
               onSave={handleSavePractice}
               saving={saving}
+              showLogoCropper={showLogoCropper}
+              setShowLogoCropper={setShowLogoCropper}
+              logoCropSrc={logoCropSrc}
+              setLogoCropSrc={setLogoCropSrc}
+              logoUploading={logoUploading}
+              setLogoUploading={setLogoUploading}
+              setSaveStatus={setSaveStatus}
             />
           )}
 
@@ -266,9 +279,44 @@ const AdminSettings = () => {
 };
 
 // Practice Settings Tab Component
-const PracticeSettingsTab = ({ settings, setSettings, onSave, saving }) => {
+const PracticeSettingsTab = ({
+  settings,
+  setSettings,
+  onSave,
+  saving,
+  showLogoCropper,
+  setShowLogoCropper,
+  logoCropSrc,
+  setLogoCropSrc,
+  logoUploading,
+  setLogoUploading,
+  setSaveStatus
+}) => {
   const updateField = (field, value) => {
     setSettings(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Handle cropped logo upload
+  const handleCroppedLogoUpload = async (croppedBlob) => {
+    setLogoUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('logo', croppedBlob, 'logo.png');
+
+      await settingsAPI.uploadPracticeLogo(formData);
+      // Refresh all settings to ensure everything is in sync
+      const allRes = await settingsAPI.getAll();
+      if (allRes.data.practice) setSettings(allRes.data.practice);
+      setSaveStatus({ type: 'success', message: 'Logo uploaded successfully' });
+      setTimeout(() => setSaveStatus(null), 2000);
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      alert('Failed to upload logo');
+    } finally {
+      setLogoUploading(false);
+      setShowLogoCropper(false);
+      setLogoCropSrc(null);
+    }
   };
 
   return (
@@ -447,24 +495,19 @@ const PracticeSettingsTab = ({ settings, setSettings, onSave, saving }) => {
                 type="file"
                 className="hidden"
                 accept="image/*"
-                onChange={async (e) => {
+                onChange={(e) => {
                   const file = e.target.files[0];
                   if (!file) return;
 
-                  const formData = new FormData();
-                  formData.append('logo', file);
-
-                  try {
-                    const response = await settingsAPI.uploadPracticeLogo(formData);
-                    // Refresh all settings to ensure everything is in sync
-                    const allRes = await settingsAPI.getAll();
-                    if (allRes.data.practice) setSettings(allRes.data.practice);
-                    setSaveStatus({ type: 'success', message: 'Logo uploaded successfully' });
-                    setTimeout(() => setSaveStatus(null), 2000);
-                  } catch (error) {
-                    console.error('Error uploading logo:', error);
-                    alert('Failed to upload logo');
-                  }
+                  // Create a URL for the file and show the cropper
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    setLogoCropSrc(reader.result);
+                    setShowLogoCropper(true);
+                  };
+                  reader.readAsDataURL(file);
+                  // Reset the input so the same file can be selected again
+                  e.target.value = '';
                 }}
               />
             </div>
@@ -552,6 +595,19 @@ const PracticeSettingsTab = ({ settings, setSettings, onSave, saving }) => {
           )}
         </button>
       </div>
+
+      {/* Logo Cropper Modal */}
+      {showLogoCropper && logoCropSrc && (
+        <ImageCropper
+          imageSrc={logoCropSrc}
+          onCropComplete={handleCroppedLogoUpload}
+          onCancel={() => {
+            setShowLogoCropper(false);
+            setLogoCropSrc(null);
+          }}
+          title="Crop Practice Logo"
+        />
+      )}
     </div>
   );
 };

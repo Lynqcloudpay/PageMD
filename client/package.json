@@ -13,6 +13,7 @@
     "react-dom": "^18.2.0",
     "react-grid-layout": "^1.5.2",
     "react-hotkeys-hook": "^4.4.1",
+    "react-image-crop": "^11.0.10",
     "react-router-dom": "^6.20.0",
     "recharts": "^3.5.1"
   },
