@@ -73,7 +73,7 @@ const resolveTenant = async (req, res, next) => {
         if (lookupSchema) {
             // We already found the schema by email
             const result = await pool.controlPool.query(
-                'SELECT id, slug, schema_name FROM clinics WHERE schema_name = $1 AND status = \'active\'',
+                'SELECT id, slug, schema_name, status, is_read_only, billing_locked, prescribing_locked FROM clinics WHERE schema_name = $1 AND status = \'active\'',
                 [lookupSchema]
             );
             tenantInfo = result.rows[0];
