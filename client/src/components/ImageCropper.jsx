@@ -33,12 +33,36 @@ const ImageCropper = ({
     const [completedCrop, setCompletedCrop] = useState(null);
     const [scale, setScale] = useState(1);
     const [rotation, setRotation] = useState(0);
+    const [imageLoaded, setImageLoaded] = useState(false);
     const imgRef = useRef(null);
+
+    // Called when the image loads - set initial crop in pixels
+    const onImageLoad = useCallback((e) => {
+        const { width, height } = e.currentTarget;
+
+        // Calculate crop area in pixels based on percentage
+        const cropWidthPx = (width * 80) / 100;
+        const cropHeightPx = (height * 80) / 100;
+        const cropXPx = (width * 10) / 100;
+        const cropYPx = (height * 10) / 100;
+
+        const initialCrop = {
+            unit: 'px',
+            width: cropWidthPx,
+            height: cropHeightPx,
+            x: cropXPx,
+            y: cropYPx,
+        };
+
+        setCrop(initialCrop);
+        setCompletedCrop(initialCrop);
+        setImageLoaded(true);
+    }, []);
 
     // Generate cropped image blob
     const getCroppedImg = useCallback(async () => {
         if (!completedCrop || !imgRef.current) {
-            console.error('No crop or image reference');
+            console.error('No crop or image reference', { completedCrop, imgRef: imgRef.current });
             return null;
         }
 
@@ -116,13 +140,23 @@ const ImageCropper = ({
     };
 
     const handleResetCrop = () => {
-        setCrop({
-            unit: '%',
-            width: 80,
-            height: 80,
-            x: 10,
-            y: 10,
-        });
+        if (imgRef.current) {
+            const { width, height } = imgRef.current;
+            const cropWidthPx = (width * 80) / 100;
+            const cropHeightPx = (height * 80) / 100;
+            const cropXPx = (width * 10) / 100;
+            const cropYPx = (height * 10) / 100;
+
+            const resetCrop = {
+                unit: 'px',
+                width: cropWidthPx,
+                height: cropHeightPx,
+                x: cropXPx,
+                y: cropYPx,
+            };
+            setCrop(resetCrop);
+            setCompletedCrop(resetCrop);
+        }
         setScale(1);
         setRotation(0);
     };
@@ -157,6 +191,7 @@ const ImageCropper = ({
                                 ref={imgRef}
                                 src={imageSrc}
                                 alt="Crop preview"
+                                onLoad={onImageLoad}
                                 style={{
                                     transform: `scale(${scale}) rotate(${rotation}deg)`,
                                     maxHeight: '400px',
