@@ -21,14 +21,26 @@ const DB_NAME = process.env.DB_NAME || 'paper_emr';
 const DB_USER = process.env.DB_USER || 'postgres';
 const DB_PASSWORD = process.env.DB_PASSWORD || 'postgres';
 
-// Encryption key (should be from KMS in production)
-// In production, fail if BACKUP_ENCRYPTION_KEY is not set
-if (process.env.NODE_ENV === 'production' && !process.env.BACKUP_ENCRYPTION_KEY) {
-  throw new Error('BACKUP_ENCRYPTION_KEY environment variable is required in production. Backup encryption cannot use fallback key.');
-}
+// --- ENCRYPTION HARDENING (Phase 4) ---
+// In production, we MUST fail if the explicit backup key is missing.
+// We do NOT allow falling back to a JWT-derived key as that is not securely rotated or managed separately.
 
-const BACKUP_ENCRYPTION_KEY = process.env.BACKUP_ENCRYPTION_KEY || 
-  crypto.scryptSync(process.env.JWT_SECRET || 'dev-secret', 'backup-salt', 32);
+let BACKUP_ENCRYPTION_KEY;
+
+if (process.env.NODE_ENV === 'production') {
+  if (!process.env.BACKUP_ENCRYPTION_KEY) {
+    throw new Error('CRITICAL: BACKUP_ENCRYPTION_KEY environment variable is required in production. Backup aborted to prevent insecure storage.');
+  }
+  BACKUP_ENCRYPTION_KEY = process.env.BACKUP_ENCRYPTION_KEY;
+} else {
+  // Development Fallback
+  if (process.env.BACKUP_ENCRYPTION_KEY) {
+    BACKUP_ENCRYPTION_KEY = process.env.BACKUP_ENCRYPTION_KEY;
+  } else {
+    console.warn('⚠️  Using insecure fallback encryption key (DEV mode only).');
+    BACKUP_ENCRYPTION_KEY = crypto.scryptSync(process.env.JWT_SECRET || 'dev-secret', 'backup-salt', 32);
+  }
+}
 
 /**
  * Encrypt backup file
@@ -37,22 +49,22 @@ function encryptBackup(inputPath, outputPath) {
   return new Promise((resolve, reject) => {
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv('aes-256-gcm', BACKUP_ENCRYPTION_KEY, iv);
-    
+
     const input = fs.createReadStream(inputPath);
     const output = fs.createWriteStream(outputPath);
-    
+
     // Write IV at the beginning
     output.write(iv);
-    
+
     input.pipe(cipher).pipe(output);
-    
+
     output.on('finish', () => {
       // Append auth tag
       const authTag = cipher.getAuthTag();
       fs.appendFileSync(outputPath, authTag);
       resolve();
     });
-    
+
     output.on('error', reject);
     input.on('error', reject);
   });
@@ -67,35 +79,35 @@ async function createBackup() {
   const backupFileName = `${DB_NAME}-${backupType}-${timestamp}.sql`;
   const backupPath = path.join(BACKUP_DIR, backupType, backupFileName);
   const encryptedPath = `${backupPath}.encrypted`;
-  
+
   // Create backup directory
   const backupTypeDir = path.join(BACKUP_DIR, backupType);
   if (!fs.existsSync(backupTypeDir)) {
     fs.mkdirSync(backupTypeDir, { recursive: true });
   }
-  
+
   console.log(`Creating ${backupType} backup: ${backupFileName}`);
-  
+
   // Create pg_dump command
   const pgDumpCmd = `PGPASSWORD="${DB_PASSWORD}" pg_dump -h ${DB_HOST} -p ${DB_PORT} -U ${DB_USER} -d ${DB_NAME} -F c -f "${backupPath}"`;
-  
+
   return new Promise((resolve, reject) => {
     exec(pgDumpCmd, (error, stdout, stderr) => {
       if (error) {
         console.error(`Backup error: ${error.message}`);
         return reject(error);
       }
-      
+
       if (stderr) {
         console.warn(`Backup warnings: ${stderr}`);
       }
-      
+
       // Encrypt backup
       encryptBackup(backupPath, encryptedPath)
         .then(() => {
           // Remove unencrypted backup
           fs.unlinkSync(backupPath);
-          
+
           // Calculate checksum
           const checksum = calculateChecksum(encryptedPath);
           const metadata = {
@@ -106,15 +118,15 @@ async function createBackup() {
             checksum: checksum,
             database: DB_NAME
           };
-          
+
           // Save metadata
           const metadataPath = `${encryptedPath}.meta.json`;
           fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
-          
+
           console.log(`✅ Backup created: ${path.basename(encryptedPath)}`);
           console.log(`   Size: ${(metadata.size / 1024 / 1024).toFixed(2)} MB`);
           console.log(`   Checksum: ${checksum}`);
-          
+
           resolve(metadata);
         })
         .catch(reject);
@@ -129,17 +141,17 @@ function getBackupType() {
   const now = new Date();
   const dayOfWeek = now.getDay();
   const dayOfMonth = now.getDate();
-  
+
   // Monthly backup on 1st of month
   if (dayOfMonth === 1) {
     return 'monthly';
   }
-  
+
   // Weekly backup on Sunday
   if (dayOfWeek === 0) {
     return 'weekly';
   }
-  
+
   // Daily backup
   return 'daily';
 }
@@ -161,11 +173,11 @@ async function cleanupOldBackups() {
     weekly: 90, // days
     monthly: 365 // days
   };
-  
+
   for (const [type, days] of Object.entries(retention)) {
     const backupTypeDir = path.join(BACKUP_DIR, type);
     if (!fs.existsSync(backupTypeDir)) continue;
-    
+
     const files = fs.readdirSync(backupTypeDir)
       .filter(f => f.endsWith('.encrypted'))
       .map(f => ({
@@ -174,10 +186,10 @@ async function cleanupOldBackups() {
         mtime: fs.statSync(path.join(backupTypeDir, f)).mtime
       }))
       .sort((a, b) => b.mtime - a.mtime);
-    
+
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
-    
+
     let deleted = 0;
     for (const file of files) {
       if (file.mtime < cutoffDate) {
@@ -190,7 +202,7 @@ async function cleanupOldBackups() {
         deleted++;
       }
     }
-    
+
     if (deleted > 0) {
       console.log(`Cleaned up ${deleted} old ${type} backup(s)`);
     }
@@ -202,39 +214,39 @@ async function cleanupOldBackups() {
  */
 function listBackups() {
   const backups = [];
-  
+
   for (const type of ['daily', 'weekly', 'monthly']) {
     const backupTypeDir = path.join(BACKUP_DIR, type);
     if (!fs.existsSync(backupTypeDir)) continue;
-    
+
     const files = fs.readdirSync(backupTypeDir)
       .filter(f => f.endsWith('.encrypted'))
       .map(f => {
         const filePath = path.join(backupTypeDir, f);
         const metaPath = `${filePath}.meta.json`;
         let metadata = {};
-        
+
         if (fs.existsSync(metaPath)) {
           metadata = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
         }
-        
+
         return {
           type,
           filename: f,
           ...metadata
         };
       });
-    
+
     backups.push(...files);
   }
-  
+
   return backups.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 }
 
 // Main execution
 if (require.main === module) {
   const command = process.argv[2];
-  
+
   if (command === 'backup') {
     createBackup()
       .then(() => cleanupOldBackups())
@@ -274,4 +286,3 @@ module.exports = {
   cleanupOldBackups,
   listBackups
 };
-
