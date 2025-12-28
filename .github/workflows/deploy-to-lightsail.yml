@@ -139,7 +139,8 @@ jobs:
               fi" || echo "⚠️  Certificate check skipped (volume may not exist yet)"
             
             echo "📦 Building frontend (using Docker container)..."
-            # Use Docker to build frontend to avoid host environment issues
+            # Build from the root directory so paths are correct
+            cd ..
             docker run --rm \
               -v "$(pwd)/client:/app" \
               -w /app \
@@ -151,6 +152,7 @@ jobs:
             mkdir -p deploy/static
             cp -r client/dist/* deploy/static/
             
+            cd deploy
             echo "🔄 Rebuilding and restarting services..."
             # Rebuild api and web containers
             docker compose -f docker-compose.prod.yml up -d --build --force-recreate
