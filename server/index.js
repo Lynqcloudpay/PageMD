@@ -249,10 +249,13 @@ app.use((err, req, res, next) => {
   });
 });
 
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📡 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
-});
+let server;
+if (require.main === module) {
+  server = app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📡 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+  });
+}
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
@@ -270,6 +273,8 @@ process.on('SIGINT', () => {
     process.exit(0);
   });
 });
+
+module.exports = app;
 
 
 

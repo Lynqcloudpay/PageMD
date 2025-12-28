@@ -235,9 +235,20 @@ router.patch('/clinics/:id/controls', verifySuperAdmin, async (req, res) => {
             prescribing_locked,
             emr_version,
             tenant_type,
-            compliance_zone,
-            region
+            compliance_zones,
+            region,
+            go_live_date
         } = req.body;
+
+        // 1. Fetch current state for audit comparison
+        const beforeRes = await pool.controlPool.query('SELECT * FROM clinics WHERE id = $1', [id]);
+        if (beforeRes.rows.length === 0) return res.status(404).json({ error: 'Clinic not found' });
+        const beforeData = beforeRes.rows[0];
+
+        // 2. Validation
+        if (tenant_type && !['Solo', 'Group', 'Enterprise'].includes(tenant_type)) {
+            return res.status(400).json({ error: 'Invalid tenant type. Must be Solo, Group, or Enterprise.' });
+        }
 
         const updates = [];
         const params = [id];
@@ -249,15 +260,22 @@ router.patch('/clinics/:id/controls', verifySuperAdmin, async (req, res) => {
             prescribing_locked: 'boolean',
             emr_version: 'string',
             tenant_type: 'string',
-            compliance_zone: 'string',
-            region: 'string'
+            compliance_zones: 'object', // for JSONB
+            region: 'string',
+            go_live_date: 'string'
         };
 
         for (const [key, type] of Object.entries(allowedKeys)) {
             if (req.body[key] !== undefined) {
                 pCount++;
                 updates.push(`${key} = $${pCount}`);
-                params.push(req.body[key]);
+
+                // Ensure objects/arrays are stringified for JSONB columns
+                if (type === 'object' && typeof req.body[key] === 'object') {
+                    params.push(JSON.stringify(req.body[key]));
+                } else {
+                    params.push(req.body[key]);
+                }
             }
         }
 
@@ -267,14 +285,26 @@ router.patch('/clinics/:id/controls', verifySuperAdmin, async (req, res) => {
 
         const query = `UPDATE clinics SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $1 RETURNING *`;
         const result = await pool.controlPool.query(query, params);
+        const afterData = result.rows[0];
 
-        // Log the control change
+        // 3. Structured Platform Audit Log (Before/After)
         await pool.controlPool.query(`
             INSERT INTO platform_audit_logs (action, target_clinic_id, details)
             VALUES ($1, $2, $3)
-        `, ['clinic_controls_updated', id, JSON.stringify(req.body)]);
+        `, ['clinic_controls_updated', id, JSON.stringify({
+            adminEmail: req.platformAdmin.email,
+            changes: req.body,
+            previousState: {
+                is_read_only: beforeData.is_read_only,
+                billing_locked: beforeData.billing_locked,
+                prescribing_locked: beforeData.prescribing_locked,
+                emr_version: beforeData.emr_version,
+                tenant_type: beforeData.tenant_type,
+                compliance_zones: beforeData.compliance_zones
+            }
+        })]);
 
-        res.json(result.rows[0]);
+        res.json(afterData);
     } catch (error) {
         console.error('Error updating clinic controls:', error);
         res.status(500).json({ error: 'Failed to update clinic controls' });
@@ -709,22 +739,34 @@ router.post('/clinics/:id/impersonate', verifySuperAdmin, async (req, res) => {
             return res.status(400).json({ error: 'Access reason is required for audit' });
         }
 
-        // 1. Generate a secure random token
+        // 1. Verify target user is NOT another platform admin (unless specifically allowed)
+        // We check against the super_admins table
+        const targetAdminCheck = await pool.controlPool.query('SELECT id FROM super_admins WHERE id = $1', [userId]);
+        if (targetAdminCheck.rows.length > 0) {
+            return res.status(403).json({ error: 'Cannot impersonate another Platform Administrator' });
+        }
+
+        // 2. Generate a secure random token
         const crypto = require('crypto');
         const token = crypto.randomBytes(32).toString('hex');
 
-        // 2. Create impersonation record
+        // 3. Create impersonation record
         await pool.controlPool.query(`
             INSERT INTO platform_impersonation_tokens 
             (admin_id, target_clinic_id, target_user_id, token, reason, expires_at)
             VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '15 minutes')
         `, [req.platformAdmin.id, id, userId, token, reason]);
 
-        // 3. Log the "Break Glass" event
+        // 4. Log the "Break Glass" event
         await pool.controlPool.query(`
             INSERT INTO platform_audit_logs (action, target_clinic_id, details)
             VALUES ($1, $2, $3)
-        `, ['impersonation_initiated', id, JSON.stringify({ userId, reason, adminEmail: req.platformAdmin.email })]);
+        `, ['impersonation_initiated', id, JSON.stringify({
+            targetUserId: userId,
+            reason,
+            adminEmail: req.platformAdmin.email,
+            expiresAt: new Date(Date.now() + 15 * 60000).toISOString()
+        })]);
 
         res.json({ token });
     } catch (error) {

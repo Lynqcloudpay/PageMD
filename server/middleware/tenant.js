@@ -100,9 +100,9 @@ const resolveTenant = async (req, res, next) => {
         if (tenantInfo.is_read_only && mutableMethods.includes(req.method)) {
             // Allow login/logout even in read-only mode
             if (!req.path.includes('/auth/login') && !req.path.includes('/auth/logout')) {
-                return res.status(403).json({
+                return res.status(423).json({
                     error: 'Clinic is in Read-Only mode. Modifications are currently disabled by platform administrators.',
-                    code: 'CLINIC_READ_ONLY'
+                    code: 'TENANT_READ_ONLY'
                 });
             }
         }

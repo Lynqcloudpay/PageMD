@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Building2, Activity, CreditCard, Shield, Settings, AlertTriangle, CheckCircle, XCircle, Trash2, Key, UserX, UserCheck, Mail, Clock, ChevronRight, AlertCircle, Database, Eye } from 'lucide-react';
+import { ArrowLeft, Building2, Activity, CreditCard, Shield, Settings, AlertTriangle, CheckCircle, XCircle, Trash2, Key, UserX, UserCheck, Mail, Clock, ChevronRight, AlertCircle, Database, Eye, Zap } from 'lucide-react';
 import { usePlatformAdmin } from '../context/PlatformAdminContext';
 
 const ClinicPersonnelManager = ({ clinicId, clinicSlug, apiCall }) => {
@@ -203,8 +203,8 @@ const DriftManager = ({ clinicId, apiCall }) => {
                 <div key={report.roleName} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${report.status === 'synced' ? 'bg-emerald-100 text-emerald-600' :
-                                report.status === 'drifted' ? 'bg-orange-100 text-orange-600' :
-                                    'bg-red-100 text-red-600'
+                            report.status === 'drifted' ? 'bg-orange-100 text-orange-600' :
+                                'bg-red-100 text-red-600'
                             }`}>
                             <Shield className="w-5 h-5" />
                         </div>
@@ -212,8 +212,8 @@ const DriftManager = ({ clinicId, apiCall }) => {
                             <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
                                 {report.roleName}
                                 <span className={`text-[10px] uppercase px-2 py-0.5 rounded-full font-black tracking-tighter ${report.status === 'synced' ? 'bg-emerald-500/10 text-emerald-500' :
-                                        report.status === 'drifted' ? 'bg-orange-500/10 text-orange-500' :
-                                            'bg-red-500/10 text-red-500'
+                                    report.status === 'drifted' ? 'bg-orange-500/10 text-orange-500' :
+                                        'bg-red-500/10 text-red-500'
                                     }`}>
                                     {report.status}
                                 </span>
@@ -230,7 +230,7 @@ const DriftManager = ({ clinicId, apiCall }) => {
                         onClick={() => handleSync(report.roleName)}
                         disabled={syncing === report.roleName || report.status === 'synced'}
                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${report.status === 'synced' ? 'bg-emerald-50 text-emerald-600 cursor-default' :
-                                'bg-white border border-slate-200 text-slate-700 hover:border-indigo-500 hover:text-indigo-600 shadow-sm'
+                            'bg-white border border-slate-200 text-slate-700 hover:border-indigo-500 hover:text-indigo-600 shadow-sm'
                             }`}
                     >
                         {syncing === report.roleName ? 'Syncing...' : report.status === 'synced' ? 'Standardized' : 'Force Sync'}

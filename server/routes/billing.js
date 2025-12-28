@@ -14,6 +14,11 @@ router.use(authenticate);
 // Middleware to check for billing lock
 const checkBillingLock = (req, res, next) => {
   if (req.clinic?.billing_locked && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    logAudit(req, 'billing_access_blocked', {
+      reason: 'Billing Lock Active',
+      path: req.path,
+      method: req.method
+    });
     return res.status(403).json({
       error: 'Financial operations are currently locked for this clinic by platform administrators.',
       code: 'BILLING_LOCKED'

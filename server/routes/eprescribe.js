@@ -23,6 +23,11 @@ router.use(authenticate);
 // Middleware to check for prescribing lock
 const checkPrescribeLock = (req, res, next) => {
   if (req.clinic?.prescribing_locked && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    logAudit(req, 'prescribing_access_blocked', {
+      reason: 'Prescribing Lock Active',
+      path: req.path,
+      method: req.method
+    });
     return res.status(403).json({
       error: 'e-Prescribing is currently locked for this clinic by platform administrators for compliance reasons.',
       code: 'PRESCRIBING_LOCKED'
