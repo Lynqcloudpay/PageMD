@@ -36,6 +36,13 @@ const PlatformAdminSupport = () => {
     useEffect(() => {
         if (isAuthenticated && !authLoading) {
             fetchTickets();
+
+            // Auto-refresh every 15 seconds for live updates
+            const interval = setInterval(() => {
+                fetchTickets();
+            }, 15000);
+
+            return () => clearInterval(interval);
         }
     }, [filter, isAuthenticated, authLoading]);
 
@@ -248,10 +255,47 @@ const PlatformAdminSupport = () => {
 
                                     {selectedTicket.context_data && (
                                         <div>
-                                            <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Context (Audit Trail)</label>
-                                            <pre className="mt-2 p-4 bg-slate-50 rounded-xl text-xs text-slate-600 overflow-auto max-h-48 border border-slate-100">
-                                                {JSON.stringify(selectedTicket.context_data, null, 2)}
-                                            </pre>
+                                            <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">User Context</label>
+                                            <div className="mt-2 p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-3">
+                                                {selectedTicket.context_data.clientState && (
+                                                    <>
+                                                        <div className="flex items-start gap-2">
+                                                            <span className="text-slate-400 text-sm w-24 flex-shrink-0">Page:</span>
+                                                            <span className="text-slate-700 text-sm font-medium">{selectedTicket.context_data.clientState.route || 'Unknown'}</span>
+                                                        </div>
+                                                        <div className="flex items-start gap-2">
+                                                            <span className="text-slate-400 text-sm w-24 flex-shrink-0">Screen:</span>
+                                                            <span className="text-slate-700 text-sm">{selectedTicket.context_data.clientState.screenSize || 'Unknown'}</span>
+                                                        </div>
+                                                        <div className="flex items-start gap-2">
+                                                            <span className="text-slate-400 text-sm w-24 flex-shrink-0">Browser:</span>
+                                                            <span className="text-slate-700 text-sm">
+                                                                {selectedTicket.context_data.userAgent?.includes('Chrome') ? 'Chrome' :
+                                                                    selectedTicket.context_data.userAgent?.includes('Safari') ? 'Safari' :
+                                                                        selectedTicket.context_data.userAgent?.includes('Firefox') ? 'Firefox' : 'Other'}
+                                                                {selectedTicket.context_data.userAgent?.includes('Mac') ? ' on Mac' :
+                                                                    selectedTicket.context_data.userAgent?.includes('Windows') ? ' on Windows' : ''}
+                                                            </span>
+                                                        </div>
+                                                    </>
+                                                )}
+                                                {selectedTicket.context_data.auditTrail?.length > 0 && (
+                                                    <div>
+                                                        <span className="text-slate-400 text-sm block mb-2">Recent Actions:</span>
+                                                        <ul className="text-sm text-slate-600 space-y-1">
+                                                            {selectedTicket.context_data.auditTrail.slice(0, 5).map((log, i) => (
+                                                                <li key={i} className="flex items-center gap-2">
+                                                                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full"></span>
+                                                                    {log.action || 'No action recorded'}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                )}
+                                                {(!selectedTicket.context_data.auditTrail || selectedTicket.context_data.auditTrail.length === 0) && (
+                                                    <p className="text-sm text-slate-500 italic">No recent platform actions recorded</p>
+                                                )}
+                                            </div>
                                         </div>
                                     )}
 
@@ -261,11 +305,16 @@ const PlatformAdminSupport = () => {
                                             {['open', 'in_progress', 'resolved', 'closed'].map((status) => (
                                                 <button
                                                     key={status}
-                                                    onClick={() => updateTicketStatus(selectedTicket.id, status)}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        console.log('Updating status to:', status);
+                                                        updateTicketStatus(selectedTicket.id, status);
+                                                    }}
                                                     disabled={selectedTicket.status === status}
-                                                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${selectedTicket.status === status
-                                                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
-                                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer ${selectedTicket.status === status
+                                                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
+                                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:scale-105'
                                                         }`}
                                                 >
                                                     {status.replace('_', ' ')}

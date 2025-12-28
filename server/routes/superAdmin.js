@@ -701,7 +701,7 @@ router.get('/dashboard', verifySuperAdmin, async (req, res) => {
       SELECT 
         status,
         COUNT(*) as count
-      FROM support_tickets
+      FROM platform_support_tickets
       WHERE status IN ('open', 'in_progress')
       GROUP BY status
     `);

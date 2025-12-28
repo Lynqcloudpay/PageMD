@@ -7,10 +7,15 @@ const { sanitizeInput } = require('../middleware/security');
 // Create Support Ticket
 router.post('/tickets', authenticate, sanitizeInput, async (req, res) => {
     try {
+        // Get clinic ID from various possible sources
+        const clinicId = req.user.clinic_id || req.user.clinicId || req.clinic?.id || null;
+
+        console.log('[Support] Creating ticket for user:', req.user.email, 'clinic:', clinicId);
+
         const ticket = await SupportService.createTicket({
-            clinicId: req.user.clinicId, // Assumes authenticate middleware populates this
+            clinicId: clinicId,
             email: req.user.email,
-            role: req.user.role,
+            role: req.user.role || req.user.role_name,
             userAgent: req.headers['user-agent']
         }, req.body);
 
