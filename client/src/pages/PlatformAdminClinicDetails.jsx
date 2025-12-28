@@ -200,41 +200,78 @@ const DriftManager = ({ clinicId, apiCall }) => {
     return (
         <div className="space-y-4">
             {drift.map((report) => (
-                <div key={report.roleKey} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${report.status === 'SYNCED' ? 'bg-emerald-100 text-emerald-600' :
-                            report.status === 'DRIFTED' ? 'bg-orange-100 text-orange-600' :
-                                'bg-red-100 text-red-600'
-                            }`}>
-                            <Shield className="w-5 h-5" />
+                <div key={report.roleKey} className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${report.status === 'SYNCED' ? 'bg-emerald-100 text-emerald-600' :
+                                report.status === 'DRIFTED' ? 'bg-orange-100 text-orange-600' :
+                                    'bg-red-100 text-red-600'
+                                }`}>
+                                <Shield className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                    {report.displayName}
+                                    <span className={`text-[10px] uppercase px-2 py-0.5 rounded-full font-black tracking-tighter ${report.status === 'SYNCED' ? 'bg-emerald-500/10 text-emerald-500' :
+                                        report.status === 'DRIFTED' ? 'bg-orange-500/10 text-orange-500' :
+                                            'bg-red-500/10 text-red-500'
+                                        }`}>
+                                        {report.status}
+                                    </span>
+                                </h4>
+                                <p className="text-[10px] text-slate-500">
+                                    {report.status === 'SYNCED' && 'Matches Platform Gold Standard'}
+                                    {report.status === 'DRIFTED' && `${report.missingPrivileges.length} Missing, ${report.extraPrivileges.length} Extra, ${report.unknownPrivileges?.length || 0} Unknown`}
+                                    {report.status === 'MISSING' && 'Role missing from clinical schema'}
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                                {report.displayName}
-                                <span className={`text-[10px] uppercase px-2 py-0.5 rounded-full font-black tracking-tighter ${report.status === 'SYNCED' ? 'bg-emerald-500/10 text-emerald-500' :
-                                    report.status === 'DRIFTED' ? 'bg-orange-500/10 text-orange-500' :
-                                        'bg-red-500/10 text-red-500'
-                                    }`}>
-                                    {report.status}
-                                </span>
-                            </h4>
-                            <p className="text-[10px] text-slate-500">
-                                {report.status === 'SYNCED' && 'Matches Platform Gold Standard'}
-                                {report.status === 'DRIFTED' && `${report.missingPrivileges.length} Missing, ${report.extraPrivileges.length} Extra, ${report.unknownPrivileges?.length || 0} Unknown`}
-                                {report.status === 'MISSING' && 'Role missing from clinical schema'}
-                            </p>
-                        </div>
+
+                        <button
+                            onClick={() => handleSync(report.roleKey)}
+                            disabled={syncing === report.roleKey || report.status === 'SYNCED'}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${report.status === 'SYNCED' ? 'bg-emerald-50 text-emerald-600 cursor-default' :
+                                'bg-white border border-slate-200 text-slate-700 hover:border-indigo-500 hover:text-indigo-600 shadow-sm'
+                                }`}
+                        >
+                            {syncing === report.roleKey ? 'Syncing...' : report.status === 'SYNCED' ? 'Standardized' : 'Force Sync'}
+                        </button>
                     </div>
 
-                    <button
-                        onClick={() => handleSync(report.roleKey)}
-                        disabled={syncing === report.roleKey || report.status === 'SYNCED'}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${report.status === 'SYNCED' ? 'bg-emerald-50 text-emerald-600 cursor-default' :
-                            'bg-white border border-slate-200 text-slate-700 hover:border-indigo-500 hover:text-indigo-600 shadow-sm'
-                            }`}
-                    >
-                        {syncing === report.roleKey ? 'Syncing...' : report.status === 'SYNCED' ? 'Standardized' : 'Force Sync'}
-                    </button>
+                    {report.status === 'DRIFTED' && (
+                        <div className="mt-4 pl-14 text-xs grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {report.missingPrivileges.length > 0 && (
+                                <div className="p-3 bg-white rounded-xl border border-dashed border-emerald-200">
+                                    <span className="font-bold text-emerald-600 flex items-center gap-2 mb-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                                        Capabilities to be ADDED
+                                    </span>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {report.missingPrivileges.map(p => (
+                                            <span key={p} className="bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md border border-emerald-100 font-mono text-[10px] font-semibold">
+                                                +{p}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            {report.extraPrivileges.length > 0 && (
+                                <div className="p-3 bg-white rounded-xl border border-dashed border-amber-200">
+                                    <span className="font-bold text-amber-600 flex items-center gap-2 mb-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                                        Capabilities to be REMOVED (Extra)
+                                    </span>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {report.extraPrivileges.map(p => (
+                                            <span key={p} className="bg-amber-50 text-amber-700 px-2 py-1 rounded-md border border-amber-100 font-mono text-[10px] font-semibold line-through opacity-70">
+                                                {p}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             ))}
         </div>

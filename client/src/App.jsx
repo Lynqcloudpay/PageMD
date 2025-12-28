@@ -100,6 +100,7 @@ function App() {
                                     <div className="min-h-screen font-sans bg-white">
                                         <Routes>
                                             {/* Platform Admin Routes */}
+                                            <Route path="/platform-admin" element={<Navigate to="/platform-admin/login" replace />} />
                                             <Route path="/platform-admin/login" element={<PlatformAdminLogin />} />
                                             <Route path="/platform-admin/dashboard" element={<PlatformAdminDashboard />} />
                                             <Route path="/platform-admin/clinics" element={<PlatformAdminClinics />} />

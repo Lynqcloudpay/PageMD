@@ -37,11 +37,31 @@ if (!fs.existsSync(patientPhotosDir)) {
 
 // CORS must come FIRST - before any redirects or security middleware
 // This allows preflight OPTIONS requests to work properly
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'https://pagemdemr.com',
+  'https://www.pagemdemr.com',
+  'https://admin.pagemdemr.com',
+  'http://localhost:5173',
+  'http://localhost:3000'
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      // Create flexible regex check for subdomains if needed, or strict for now
+      // For now, strict check + logging failure
+      console.warn(`CORS blocked request from origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Admin-Portal'],
   exposedHeaders: ['Content-Range', 'X-Content-Range']
 }));
 
@@ -69,7 +89,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
-      connectSrc: ["'self'", "https://bemypcp.com", "http://localhost:3000", "http://localhost:5173", "blob:"],
+      connectSrc: ["'self'", "https://pagemdemr.com", "http://localhost:3000", "http://localhost:5173", "blob:"],
     },
   },
 }));

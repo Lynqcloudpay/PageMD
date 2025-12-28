@@ -800,6 +800,123 @@ router.get('/governance/roles', verifySuperAdmin, async (req, res) => {
 });
 
 /**
+ * POST /api/super/governance/roles
+ * Create a new global role template
+ */
+router.post('/governance/roles', verifySuperAdmin, async (req, res) => {
+    const client = await pool.controlPool.connect();
+    try {
+        await client.query('BEGIN');
+        const { role_key, display_name, description, version, privileges } = req.body;
+
+        // 1. Create Template
+        const templateRes = await client.query(`
+            INSERT INTO platform_role_templates (role_key, display_name, description, version)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id
+        `, [role_key, display_name, description, version || '1.0']);
+        const templateId = templateRes.rows[0].id;
+
+        // 2. Add Privileges
+        if (privileges && privileges.length > 0) {
+            for (const priv of privileges) {
+                await client.query(`
+                    INSERT INTO platform_role_template_privileges (template_id, privilege_name)
+                    VALUES ($1, $2)
+                `, [templateId, priv]);
+            }
+        }
+
+        await AuditService.log(client, 'ROLE_TEMPLATE_CREATED', null, {
+            role_key, display_name, privileges
+        });
+
+        await client.query('COMMIT');
+        res.status(201).json({ id: templateId, message: 'Role template created' });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error creating role template:', error);
+        res.status(500).json({ error: error.message || 'Failed to create role template' });
+    } finally {
+        client.release();
+    }
+});
+
+/**
+ * PUT /api/super/governance/roles/:id
+ * Update an existing global role template
+ */
+router.put('/governance/roles/:id', verifySuperAdmin, async (req, res) => {
+    const client = await pool.controlPool.connect();
+    try {
+        await client.query('BEGIN');
+        const { id } = req.params;
+        const { role_key, display_name, description, version, privileges } = req.body;
+
+        // 1. Update Template Metadata
+        await client.query(`
+            UPDATE platform_role_templates
+            SET role_key = $1, display_name = $2, description = $3, version = $4, updated_at = NOW()
+            WHERE id = $5
+        `, [role_key, display_name, description, version, id]);
+
+        // 2. Update Privileges (Delete all + Re-insert is simplest/ safest for full sync)
+        await client.query('DELETE FROM platform_role_template_privileges WHERE template_id = $1', [id]);
+
+        if (privileges && privileges.length > 0) {
+            for (const priv of privileges) {
+                await client.query(`
+                    INSERT INTO platform_role_template_privileges (template_id, privilege_name)
+                    VALUES ($1, $2)
+                `, [id, priv]);
+            }
+        }
+
+        await AuditService.log(client, 'ROLE_TEMPLATE_UPDATED', null, {
+            id, role_key, display_name
+        });
+
+        await client.query('COMMIT');
+        res.json({ message: 'Role template updated successfully' });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error updating role template:', error);
+        res.status(500).json({ error: error.message || 'Failed to update role template' });
+    } finally {
+        client.release();
+    }
+});
+
+/**
+ * DELETE /api/super/governance/roles/:id
+ * Delete a global role template
+ */
+router.delete('/governance/roles/:id', verifySuperAdmin, async (req, res) => {
+    const client = await pool.controlPool.connect();
+    try {
+        await client.query('BEGIN');
+        const { id } = req.params;
+
+        // 1. Delete Privileges
+        await client.query('DELETE FROM platform_role_template_privileges WHERE template_id = $1', [id]);
+
+        // 2. Delete Template
+        await client.query('DELETE FROM platform_role_templates WHERE id = $1', [id]);
+
+        await AuditService.log(client, 'ROLE_TEMPLATE_DELETED', null, { id });
+
+        await client.query('COMMIT');
+        res.json({ message: 'Role template deleted successfully' });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error deleting role template:', error);
+        res.status(500).json({ error: error.message || 'Failed to delete role template' });
+    } finally {
+        client.release();
+    }
+});
+
+/**
  * GET /api/super/clinics/:id/governance/drift
  * Detect permission drift for a specific clinic
  */
@@ -816,7 +933,9 @@ router.get('/clinics/:id/governance/drift', verifySuperAdmin, async (req, res) =
 
 /**
  * POST /api/super/clinics/:id/governance/sync
- * Repair/Sync a specific role in a clinic to match the global template
+ */
+router.post('/clinics/:id/governance/sync', verifySuperAdmin, async (req, res) => {
+    try {
         const { id } = req.params;
         const { roleKey } = req.body;
 

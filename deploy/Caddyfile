@@ -1,48 +1,36 @@
 {
     # Global options
-    email admin@bemypcp.com
+    email admin@pagemdemr.com
 }
 
-# Force HTTPS redirect for all HTTP traffic
-http://bemypcp.com {
-    redir https://bemypcp.com{uri} permanent
+# ================================================================
+# Redirects
+# ================================================================
+
+# Redirect www.pagemdemr.com to root
+http://www.pagemdemr.com, https://www.pagemdemr.com {
+    redir https://pagemdemr.com{uri} permanent
 }
 
-http://www.bemypcp.com {
-    redir https://bemypcp.com{uri} permanent
+# Force HTTPS for new domain
+http://pagemdemr.com {
+    redir https://pagemdemr.com{uri} permanent
 }
 
-# Redirect www HTTPS to non-www
-https://www.bemypcp.com {
-    redir https://bemypcp.com{uri} permanent
-}
-
-# Main HTTPS site
-https://bemypcp.com {
+# ================================================================
+# Main Site (pagemdemr.com ONLY)
+# ================================================================
+https://pagemdemr.com {
     # Security headers
     header {
-        # HSTS - Force HTTPS for 1 year
         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        
-        # Prevent MIME type sniffing
         X-Content-Type-Options "nosniff"
-        
-        # XSS protection
         X-XSS-Protection "1; mode=block"
-        
-        # Prevent clickjacking
         X-Frame-Options "DENY"
-        
-        # Content Security Policy - allow Google Fonts and blob images
-        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' blob: https://bemypcp.com; frame-ancestors 'none';"
-        
-        # Referrer policy
+        # CSP: connect-src updated to only need new domain (+ self/blob)
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' blob: https://pagemdemr.com; frame-ancestors 'none';"
         Referrer-Policy "strict-origin-when-cross-origin"
-        
-        # Permissions policy
         Permissions-Policy "geolocation=(), microphone=(), camera=(self)"
-        
-        # Remove server header
         -Server
     }
 
@@ -54,7 +42,7 @@ https://bemypcp.com {
         }
     }
 
-    # Uploads (patient photos, documents, etc.) served by API
+    # Uploads
     handle /uploads/* {
         reverse_proxy api:3000 {
             header_up X-Real-IP {remote_host}
@@ -69,60 +57,23 @@ https://bemypcp.com {
         file_server
     }
 
-    # Logging
     log {
         output file /var/log/caddy/access.log
         format json
     }
 
-    # Health check endpoint
     handle /health {
         respond 200
     }
 }
 
 # ================================================================
-# Admin Portal Subdomain (Isolated SuperAdmin Access)
+# Admin Portal Redirection
 # ================================================================
-http://admin.bemypcp.com {
-    redir https://admin.bemypcp.com{uri} permanent
-}
 
-https://admin.bemypcp.com {
-    # Security headers (stricter for admin)
-    header {
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        X-Content-Type-Options "nosniff"
-        X-XSS-Protection "1; mode=block"
-        X-Frame-Options "DENY"
-        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' blob: https://admin.bemypcp.com; frame-ancestors 'none';"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        Permissions-Policy "geolocation=(), microphone=(), camera=()"
-        -Server
-    }
-
-    # API reverse proxy (same backend, different origin for cookie isolation)
-    handle /api/* {
-        reverse_proxy api:3000 {
-            header_up X-Real-IP {remote_host}
-            header_up Host {host}
-            header_up X-Admin-Portal "true"
-        }
-    }
-
-    # Serve static frontend (same SPA, admin routes)
-    handle {
-        root * /usr/share/caddy
-        try_files {path} /index.html
-        file_server
-    }
-
-    log {
-        output file /var/log/caddy/admin-access.log
-        format json
-    }
-
-    handle /health {
-        respond 200
-    }
+# Redirect admin.pagemdemr.com to main site path (or invalid if not needed)
+# Previously we redirected admin to proper place.
+# Let's keep admin.pagemdemr.com redirecting to the platform login path for convenience
+http://admin.pagemdemr.com, https://admin.pagemdemr.com {
+    redir https://pagemdemr.com/platform-admin/login permanent
 }
