@@ -792,7 +792,7 @@ CREATE TABLE IF NOT EXISTS payer_policies (
 CREATE TABLE IF NOT EXISTS superbills (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
-    visit_id UUID NOT NULL REFERENCES visits(id) ON DELETE CASCADE,
+    visit_id UUID NOT NULL UNIQUE REFERENCES visits(id) ON DELETE CASCADE,
     note_id UUID,
     status superbill_status DEFAULT 'DRAFT',
     service_date_from DATE NOT NULL,

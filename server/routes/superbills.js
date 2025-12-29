@@ -22,18 +22,43 @@ router.post('/from-visit/:visitId', requirePermission('billing:edit'), async (re
     try {
         const { visitId } = req.params;
 
-        // --- 0. AUTO-PROVISIONING CHECK ---
+        // --- 0. AUTO-PROVISIONING CHECK WITH ADVISORY LOCK ---
         // Ensure superbill tables exist in the current schema
         const tableCheck = await client.query("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'superbills')");
         if (!tableCheck.rows[0].exists) {
-            console.log(`[Superbill] Provisioning tables for schema...`);
-            // Run the tenantSchema portion for superbills
-            const tenantSchemaSQL = require('../config/tenantSchema');
-            // We only need the superbill part, but the template is idempotent
-            // To be safe and avoid re-running everything, we'll just run the superbill section here
-            // but for simplicity and safety against partial runs, we'll try to run the whole thing
-            // if we are sure it's IF NOT EXISTS.
-            await client.query(tenantSchemaSQL);
+            const schemaName = req.clinic?.schema_name || 'public';
+            // Generate a lock key from schema name (hash to integer)
+            const lockKey = Math.abs(schemaName.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0)) % 2147483647;
+
+            console.log(`[Superbill] Provisioning tables for schema ${schemaName}... (lock: ${lockKey})`);
+
+            // Acquire advisory lock to prevent race conditions
+            await client.query('SELECT pg_advisory_lock($1)', [lockKey]);
+
+            try {
+                // Re-check after acquiring lock (another request may have created tables)
+                const recheck = await client.query("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'superbills')");
+                if (!recheck.rows[0].exists) {
+                    const tenantSchemaSQL = require('../config/tenantSchema');
+                    await client.query(tenantSchemaSQL);
+
+                    // Log audit event for schema provisioning
+                    console.log(`[Superbill] ✅ Schema provisioned for ${schemaName}`);
+                    try {
+                        await client.query(`
+                            INSERT INTO superbill_audit_logs (superbill_id, user_id, action, changes)
+                            VALUES (gen_random_uuid(), $1, 'SCHEMA_PROVISION', $2)
+                        `, [req.user.id, JSON.stringify({ schema: schemaName, timestamp: new Date().toISOString() })]);
+                    } catch (auditErr) {
+                        console.warn('[Superbill] Could not log provisioning audit:', auditErr.message);
+                    }
+                } else {
+                    console.log(`[Superbill] Tables already exist (provisioned by concurrent request)`);
+                }
+            } finally {
+                // Always release the lock
+                await client.query('SELECT pg_advisory_unlock($1)', [lockKey]);
+            }
         }
 
         // Check for existing superbill
@@ -100,6 +125,7 @@ router.post('/from-visit/:visitId', requirePermission('billing:edit'), async (re
         // 4. Prepopulate Diagnoses (Merge Logic)
         // Sources: Note Assessment, Existing Orders
         const diagnosisMap = new Map();
+        const diagnosisSources = []; // Track sources for logging
 
         // A. From Orders (Robust check for table existence)
         try {
@@ -112,7 +138,10 @@ router.post('/from-visit/:visitId', requirePermission('billing:edit'), async (re
                   WHERE od.order_id IN (SELECT id FROM orders WHERE visit_id = $1)
                   OR od.order_id IN (SELECT id FROM referrals WHERE visit_id = $1)
                 `, [visitId]);
-                orderDiags.rows.forEach(d => diagnosisMap.set(d.icd10_code, { desc: d.description, source: 'ORDER' }));
+                if (orderDiags.rows.length > 0) {
+                    diagnosisSources.push('order_diagnoses');
+                    orderDiags.rows.forEach(d => diagnosisMap.set(d.icd10_code, { desc: d.description, source: 'ORDER' }));
+                }
             }
 
             // Also check new visit_orders table
@@ -121,6 +150,9 @@ router.post('/from-visit/:visitId', requirePermission('billing:edit'), async (re
                 const voDiags = await client.query(`
                     SELECT diagnosis_icd10_ids FROM visit_orders WHERE visit_id = $1 AND status != 'CANCELLED'
                 `, [visitId]);
+                if (voDiags.rows.length > 0) {
+                    diagnosisSources.push('visit_orders');
+                }
                 for (const row of voDiags.rows) {
                     const diags = Array.isArray(row.diagnosis_icd10_ids) ? row.diagnosis_icd10_ids : [];
                     for (const d of diags) {
@@ -151,7 +183,12 @@ router.post('/from-visit/:visitId', requirePermission('billing:edit'), async (re
                     }
                 }
             }
+            diagnosisSources.push('note_assessment');
         }
+
+        // Log diagnosis source for debugging
+        const finalDiagnosisSource = diagnosisSources.length > 0 ? diagnosisSources.join('+') : 'none';
+        console.log(`[Superbill] Diagnosis sources for visit ${visitId}: ${finalDiagnosisSource} (found ${diagnosisMap.size} codes)`);
 
         // Insert Diagnoses (Max 12)
         const diagsToInsert = Array.from(diagnosisMap.entries()).slice(0, 12);
