@@ -27,9 +27,9 @@ const SecurityPage = () => {
                     <div className="flex items-center justify-between">
                         <Link to="/" className="flex items-center gap-3">
                             <img src="/logo.png" alt="PageMD" className="h-10 w-auto" />
-                            <span className="text-xl font-semibold text-gray-900">PageMD</span>
                         </Link>
                         <div className="hidden md:flex items-center gap-8">
+                            <Link to="/" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">Home</Link>
                             <Link to="/features" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">Features</Link>
                             <Link to="/security" className="text-sm font-medium text-blue-600">Security</Link>
                             <Link to="/pricing" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">Pricing</Link>
@@ -246,7 +246,6 @@ const SecurityPage = () => {
                 <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
                     <div className="flex items-center gap-2">
                         <img src="/logo.png" alt="PageMD" className="h-8 w-auto brightness-0 invert" />
-                        <span className="text-white font-semibold">PageMD</span>
                     </div>
                     <div className="text-sm text-gray-500">© {currentYear} PageMD. All rights reserved.</div>
                 </div>

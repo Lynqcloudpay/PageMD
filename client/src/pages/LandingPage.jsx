@@ -31,7 +31,6 @@ const LandingPage = () => {
                         {/* Logo */}
                         <Link to="/" className="flex items-center gap-3">
                             <img src="/logo.png" alt="PageMD" className="h-10 w-auto" />
-                            <span className="text-xl font-semibold text-gray-900">PageMD</span>
                         </Link>
 
                         {/* Menu Items */}
@@ -415,7 +414,6 @@ const LandingPage = () => {
                         <div>
                             <div className="flex items-center gap-2 mb-4">
                                 <img src="/logo.png" alt="PageMD" className="h-8 w-auto brightness-0 invert" />
-                                <span className="text-lg font-semibold text-white">PageMD</span>
                             </div>
                             <p className="text-gray-400 text-sm">
                                 An EMR built by physicians, for physicians.
