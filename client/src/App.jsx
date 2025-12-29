@@ -10,6 +10,10 @@ import MySchedule from './pages/MySchedule'
 import Patients from './pages/Patients'
 import Login from './pages/Login'
 import LandingPage from './pages/LandingPage'
+import FeaturesPage from './pages/FeaturesPage'
+import SecurityPage from './pages/SecurityPage'
+import PricingPage from './pages/PricingPage'
+import ContactPage from './pages/ContactPage'
 import Dashboard from './pages/Dashboard'
 import PendingNotes from './pages/PendingNotes'
 import TaskManager from './pages/TaskManager'
@@ -119,6 +123,10 @@ function App() {
                                             <Route path="/login" element={<Login />} />
                                             <Route path="/auth/impersonate" element={<ImpersonateHandler />} />
                                             <Route path="/" element={<LandingPage />} />
+                                            <Route path="/features" element={<FeaturesPage />} />
+                                            <Route path="/security" element={<SecurityPage />} />
+                                            <Route path="/pricing" element={<PricingPage />} />
+                                            <Route path="/contact" element={<ContactPage />} />
                                             <Route path="/dashboard" element={
                                                 <ProtectedRoute>
                                                     <ErrorBoundary>
