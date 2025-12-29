@@ -218,8 +218,14 @@ const FeaturesPage = () => {
                                         ))}
                                     </ul>
                                 </div>
-                                <div className={`bg-gray-50 rounded-2xl p-8 h-64 flex items-center justify-center ${index % 2 === 1 ? 'lg:order-1' : ''}`}>
-                                    <feature.icon className={`w-24 h-24 ${colorClasses[feature.color].split(' ')[1]} opacity-20`} />
+                                <div className={`bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl p-6 h-72 flex flex-col items-center justify-center border border-gray-200 ${index % 2 === 1 ? 'lg:order-1' : ''}`}>
+                                    <div className={`w-16 h-16 rounded-xl ${colorClasses[feature.color]} flex items-center justify-center mb-4`}>
+                                        <feature.icon className="w-8 h-8" />
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="text-sm font-medium text-gray-500 mb-1">Screenshot</div>
+                                        <div className="text-xs text-gray-400">{feature.title} Interface</div>
+                                    </div>
                                 </div>
                             </div>
                         ))}
