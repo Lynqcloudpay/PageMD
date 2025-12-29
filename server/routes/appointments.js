@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../db');
 const { authenticate } = require('../middleware/auth');
 const { requirePermission, audit } = require('../services/authorization');
+const { preparePatientForResponse } = require('../services/patientEncryptionService');
 
 const router = express.Router();
 router.use(authenticate);
@@ -15,6 +16,8 @@ router.get('/', requirePermission('schedule:view'), async (req, res) => {
       SELECT a.*,
              p.first_name as patient_first_name,
              p.last_name as patient_last_name,
+             p.encryption_metadata,
+             p.encryption_metadata as patient_encryption_metadata,
              p.id as patient_id,
              u.first_name as provider_first_name,
              u.last_name as provider_last_name,
@@ -57,8 +60,8 @@ router.get('/', requirePermission('schedule:view'), async (req, res) => {
 
     const result = await pool.query(query, params);
 
-    const appointments = result.rows.map(row => {
-      // Parse status_history if it's a string (PostgreSQL JSONB can return as string)
+    const appointments = await Promise.all(result.rows.map(async row => {
+      // Parse status_history if it's a string
       let statusHistory = [];
       if (row.status_history) {
         try {
@@ -74,10 +77,18 @@ router.get('/', requirePermission('schedule:view'), async (req, res) => {
         }
       }
 
+      // Decrypt patient name
+      const patientData = {
+        first_name: row.patient_first_name,
+        last_name: row.patient_last_name,
+        encryption_metadata: row.patient_encryption_metadata || row.encryption_metadata
+      };
+      const decryptedPatient = await preparePatientForResponse(patientData);
+
       return {
         id: row.id,
         patientId: row.patient_id,
-        patientName: `${row.patient_first_name} ${row.patient_last_name}`,
+        patientName: `${decryptedPatient.first_name} ${decryptedPatient.last_name}`,
         providerId: row.provider_id,
         providerName: `${row.provider_first_name} ${row.provider_last_name}`,
         date: row.appointment_date,
@@ -87,7 +98,7 @@ router.get('/', requirePermission('schedule:view'), async (req, res) => {
         status: row.status,
         notes: row.notes,
         createdAt: row.created_at,
-        // Patient status tracking fields - use ?? to preserve valid falsy values
+        // Patient status tracking fields
         patient_status: row.patient_status ?? 'scheduled',
         room_sub_status: row.room_sub_status ?? null,
         status_history: statusHistory,
@@ -96,7 +107,7 @@ router.get('/', requirePermission('schedule:view'), async (req, res) => {
         checkout_time: row.checkout_time ?? null,
         cancellation_reason: row.cancellation_reason ?? null
       };
-    });
+    }));
 
     res.json(appointments);
   } catch (error) {
@@ -111,12 +122,15 @@ router.get('/:id', requirePermission('schedule:view'), async (req, res) => {
     const { id } = req.params;
     const result = await pool.query(
       `SELECT a.*,
-              p.first_name as patient_first_name,
-              p.last_name as patient_last_name,
-              p.id as patient_id,
-              u.first_name as provider_first_name,
-              u.last_name as provider_last_name,
-              u.id as provider_id
+             p.first_name as patient_first_name,
+             p.last_name as patient_last_name,
+             p.last_name as patient_last_name,
+             p.encryption_metadata,
+             p.encryption_metadata as patient_encryption_metadata,
+             p.id as patient_id,
+             u.first_name as provider_first_name,
+             u.last_name as provider_last_name,
+             u.id as provider_id
        FROM appointments a
        JOIN patients p ON a.patient_id = p.id
        JOIN users u ON a.provider_id = u.id
@@ -146,10 +160,18 @@ router.get('/:id', requirePermission('schedule:view'), async (req, res) => {
       }
     }
 
+    // Decrypt patient name
+    const patientData = {
+      first_name: row.patient_first_name,
+      last_name: row.patient_last_name,
+      encryption_metadata: row.patient_encryption_metadata || row.encryption_metadata
+    };
+    const decryptedPatient = await preparePatientForResponse(patientData);
+
     const appointment = {
       id: row.id,
       patientId: row.patient_id,
-      patientName: `${row.patient_first_name} ${row.patient_last_name}`,
+      patientName: `${decryptedPatient.first_name} ${decryptedPatient.last_name}`,
       providerId: row.provider_id,
       providerName: `${row.provider_first_name} ${row.provider_last_name}`,
       date: row.appointment_date,
@@ -221,12 +243,15 @@ router.post('/', requirePermission('schedule:edit'), async (req, res) => {
     // Fetch the full appointment with patient and provider names
     const fullResult = await pool.query(
       `SELECT a.*,
-              p.first_name as patient_first_name,
-              p.last_name as patient_last_name,
-              p.id as patient_id,
-              u.first_name as provider_first_name,
-              u.last_name as provider_last_name,
-              u.id as provider_id
+      p.first_name as patient_first_name,
+      p.last_name as patient_last_name,
+      p.last_name as patient_last_name,
+      p.encryption_metadata,
+      p.encryption_metadata as patient_encryption_metadata,
+      p.id as patient_id,
+      u.first_name as provider_first_name,
+      u.last_name as provider_last_name,
+      u.id as provider_id
        FROM appointments a
        JOIN patients p ON a.patient_id = p.id
        JOIN users u ON a.provider_id = u.id
@@ -252,10 +277,18 @@ router.post('/', requirePermission('schedule:edit'), async (req, res) => {
       }
     }
 
+    // Decrypt patient name
+    const patientData = {
+      first_name: row.patient_first_name,
+      last_name: row.patient_last_name,
+      encryption_metadata: row.patient_encryption_metadata || row.encryption_metadata
+    };
+    const decryptedPatient = await preparePatientForResponse(patientData);
+
     const appointment = {
       id: row.id,
       patientId: row.patient_id,
-      patientName: `${row.patient_first_name} ${row.patient_last_name}`,
+      patientName: `${decryptedPatient.first_name} ${decryptedPatient.last_name}`,
       providerId: row.provider_id,
       providerName: `${row.provider_first_name} ${row.provider_last_name}`,
       date: row.appointment_date,
@@ -380,7 +413,7 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
     // Handle status_history - ensure it's always a valid JSON array
     if (normalizedStatusHistory !== undefined) {
       paramCount++;
-      updates.push(`status_history = $${paramCount}::jsonb`);
+      updates.push(`status_history = $${paramCount}:: jsonb`);
 
       let historyJson;
       try {
@@ -541,7 +574,7 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
     params.push(id);
 
     // Build and execute update query
-    const updateQuery = `UPDATE appointments SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`;
+    const updateQuery = `UPDATE appointments SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING * `;
 
     // Log for debugging in development
     if (process.env.NODE_ENV === 'development') {
@@ -579,12 +612,12 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
     // Fetch updated appointment
     const fullResult = await pool.query(
       `SELECT a.*,
-              p.first_name as patient_first_name,
-              p.last_name as patient_last_name,
-              p.id as patient_id,
-              u.first_name as provider_first_name,
-              u.last_name as provider_last_name,
-              u.id as provider_id
+      p.first_name as patient_first_name,
+      p.last_name as patient_last_name,
+      p.id as patient_id,
+      u.first_name as provider_first_name,
+      u.last_name as provider_last_name,
+      u.id as provider_id
        FROM appointments a
        JOIN patients p ON a.patient_id = p.id
        JOIN users u ON a.provider_id = u.id

@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { preparePatientForResponse } = require('../services/patientEncryptionService');
 
 const router = express.Router();
 router.use(authenticate);
@@ -93,6 +94,7 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
              o.comments as comments,
              p.first_name as patient_first_name,
              p.last_name as patient_last_name,
+             p.encryption_metadata as patient_encryption_metadata,
              p.mrn as patient_mrn,
              p.id as patient_id,
              u.first_name as ordered_by_first_name,
@@ -113,13 +115,24 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
     labQuery += ` ORDER BY o.created_at DESC LIMIT $1`;
 
     const labs = await pool.query(labQuery, [parseInt(limit)]);
-    labs.rows.forEach(lab => {
+
+    // Process labs with decryption
+    for (const lab of labs.rows) {
       const payload = typeof lab.order_payload === 'string' ? JSON.parse(lab.order_payload) : lab.order_payload;
+
+      // Decrypt patient name
+      const patientData = {
+        first_name: lab.patient_first_name,
+        last_name: lab.patient_last_name,
+        encryption_metadata: lab.patient_encryption_metadata
+      };
+      const decryptedPatient = await preparePatientForResponse(patientData);
+
       allItems.push({
         id: lab.id,
         type: 'lab',
         patientId: lab.patient_id,
-        patientName: `${lab.patient_first_name} ${lab.patient_last_name}`,
+        patientName: `${decryptedPatient.first_name} ${decryptedPatient.last_name}`,
         mrn: lab.patient_mrn,
         visitId: lab.visit_id,
         title: payload?.test_name || payload?.testName || 'Lab Order',
@@ -163,13 +176,14 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
           : 'Unknown',
         orderData: payload
       });
-    });
+    }
 
     // Get all imaging orders
     let imagingQuery = `
       SELECT o.*, 
              p.first_name as patient_first_name,
              p.last_name as patient_last_name,
+             p.encryption_metadata as patient_encryption_metadata,
              p.mrn as patient_mrn,
              p.id as patient_id,
              u.first_name as ordered_by_first_name,
@@ -190,13 +204,22 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
     imagingQuery += ` ORDER BY o.created_at DESC LIMIT $1`;
 
     const imaging = await pool.query(imagingQuery, [parseInt(limit)]);
-    imaging.rows.forEach(img => {
+    for (const img of imaging.rows) {
       const payload = typeof img.order_payload === 'string' ? JSON.parse(img.order_payload) : img.order_payload;
+
+      // Decrypt patient name
+      const patientData = {
+        first_name: img.patient_first_name,
+        last_name: img.patient_last_name,
+        encryption_metadata: img.patient_encryption_metadata
+      };
+      const decryptedPatient = await preparePatientForResponse(patientData);
+
       allItems.push({
         id: img.id,
         type: 'imaging',
         patientId: img.patient_id,
-        patientName: `${img.patient_first_name} ${img.patient_last_name}`,
+        patientName: `${decryptedPatient.first_name} ${decryptedPatient.last_name}`,
         mrn: img.patient_mrn,
         visitId: img.visit_id,
         title: payload?.study_name || payload?.studyName || 'Imaging Study',
@@ -240,13 +263,14 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
           : 'Unknown',
         orderData: payload
       });
-    });
+    }
 
     // Get all documents
     let docQuery = `
       SELECT d.*, 
              p.first_name as patient_first_name,
              p.last_name as patient_last_name,
+             p.encryption_metadata as patient_encryption_metadata,
              p.mrn as patient_mrn,
              p.id as patient_id,
              u.first_name as uploader_first_name,
@@ -272,12 +296,20 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
     docQuery += ` ORDER BY d.created_at DESC LIMIT $1`;
 
     const documents = await pool.query(docQuery, [parseInt(limit)]);
-    documents.rows.forEach(doc => {
+    for (const doc of documents.rows) {
+      // Decrypt patient name
+      const patientData = {
+        first_name: doc.patient_first_name,
+        last_name: doc.patient_last_name,
+        encryption_metadata: doc.patient_encryption_metadata
+      };
+      const decryptedPatient = await preparePatientForResponse(patientData);
+
       allItems.push({
         id: doc.id,
         type: doc.doc_type === 'imaging' ? 'imaging' : 'document',
         patientId: doc.patient_id,
-        patientName: `${doc.patient_first_name} ${doc.patient_last_name}`,
+        patientName: `${decryptedPatient.first_name} ${decryptedPatient.last_name}`,
         mrn: doc.patient_mrn,
         title: doc.filename,
         description: doc.doc_type || 'Document',
@@ -320,7 +352,7 @@ router.get('/', requireRole('clinician', 'nurse', 'admin'), async (req, res) => 
           : 'Unknown',
         docData: doc
       });
-    });
+    }
 
     // Sort all items by date (newest first)
     allItems.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));

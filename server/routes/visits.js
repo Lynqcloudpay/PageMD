@@ -3,8 +3,10 @@ const router = express.Router();
 const pool = require('../db');
 const { authenticate, requireRole, logAudit } = require('../middleware/auth');
 const { requirePermission } = require('../services/authorization');
+
 const { safeLogger } = require('../middleware/phiRedaction');
 const { getTodayDateString } = require('../utils/timezone');
+const { preparePatientForResponse } = require('../services/patientEncryptionService');
 
 // All routes require authentication
 router.use(authenticate);
@@ -19,6 +21,7 @@ router.get('/', requirePermission('notes:view'), async (req, res) => {
         u.last_name as provider_last_name,
         p.first_name as patient_first_name,
         p.last_name as patient_last_name,
+        p.encryption_metadata as patient_encryption_metadata,
         signed_by_user.first_name as signed_by_first_name,
         signed_by_user.last_name as signed_by_last_name
       FROM visits v
@@ -54,10 +57,22 @@ router.get('/', requirePermission('notes:view'), async (req, res) => {
       }
     }
 
-    // Ensure all IDs are strings (UUIDs)
-    const formattedRows = result.rows.map(row => ({
-      ...row,
-      id: String(row.id) // Ensure ID is always a string
+    // Ensure all IDs are strings (UUIDs) and decrypt patient names
+    const formattedRows = await Promise.all(result.rows.map(async row => {
+      // Decrypt patient name
+      const patientData = {
+        first_name: row.patient_first_name,
+        last_name: row.patient_last_name,
+        encryption_metadata: row.patient_encryption_metadata
+      };
+      const decryptedPatient = await preparePatientForResponse(patientData);
+
+      return {
+        ...row,
+        id: String(row.id), // Ensure ID is always a string
+        patient_first_name: decryptedPatient.first_name,
+        patient_last_name: decryptedPatient.last_name
+      };
     }));
 
     res.json(formattedRows);
@@ -90,6 +105,7 @@ router.get('/pending', requirePermission('notes:view'), async (req, res) => {
         u.last_name as provider_last_name,
         p.first_name as patient_first_name,
         p.last_name as patient_last_name,
+        p.encryption_metadata as patient_encryption_metadata,
         p.mrn as mrn,
         signed_by_user.first_name as signed_by_first_name,
         signed_by_user.last_name as signed_by_last_name
@@ -112,7 +128,25 @@ router.get('/pending', requirePermission('notes:view'), async (req, res) => {
     query += ` ORDER BY v.visit_date DESC, v.created_at DESC`;
 
     const result = await pool.query(query, params);
-    res.json(result.rows);
+
+    // Decrypt patient names
+    const formattedRows = await Promise.all(result.rows.map(async row => {
+      // Decrypt patient name
+      const patientData = {
+        first_name: row.patient_first_name,
+        last_name: row.patient_last_name,
+        encryption_metadata: row.patient_encryption_metadata
+      };
+      const decryptedPatient = await preparePatientForResponse(patientData);
+
+      return {
+        ...row,
+        patient_first_name: decryptedPatient.first_name,
+        patient_last_name: decryptedPatient.last_name
+      };
+    }));
+
+    res.json(formattedRows);
   } catch (error) {
     console.error('Error fetching pending visits:', error);
     console.error('Error stack:', error.stack);

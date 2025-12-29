@@ -4,6 +4,7 @@ const { authenticate, logAudit } = require('../middleware/auth');
 const { requirePermission } = require('../services/authorization');
 const { getTodayDateString } = require('../utils/timezone');
 const pdfService = require('../services/pdfService');
+const { preparePatientForResponse } = require('../services/patientEncryptionService');
 
 const router = express.Router();
 router.use(authenticate);
@@ -305,6 +306,7 @@ router.get('/:id', requirePermission('billing:view'), async (req, res) => {
         const superbillResult = await pool.query(`
       SELECT s.*, 
              p.first_name as patient_first_name, p.last_name as patient_last_name, p.mrn, p.dob,
+             p.encryption_metadata as patient_encryption_metadata,
              p.insurance_provider as patient_insurance_provider, p.insurance_id as patient_insurance_id,
              render.first_name as rendering_first_name, render.last_name as rendering_last_name, render.npi as rendering_npi,
              bill.first_name as billing_first_name, bill.last_name as billing_last_name, bill.npi as billing_npi,
@@ -324,6 +326,16 @@ router.get('/:id', requirePermission('billing:view'), async (req, res) => {
         }
 
         const superbill = superbillResult.rows[0];
+
+        // Decrypt patient name
+        const patientData = {
+            first_name: superbill.patient_first_name,
+            last_name: superbill.patient_last_name,
+            encryption_metadata: superbill.patient_encryption_metadata
+        };
+        const decryptedPatient = await preparePatientForResponse(patientData);
+        superbill.patient_first_name = decryptedPatient.first_name;
+        superbill.patient_last_name = decryptedPatient.last_name;
 
         const diagnosesResult = await pool.query(
             'SELECT * FROM superbill_diagnoses WHERE superbill_id = $1 ORDER BY sequence',

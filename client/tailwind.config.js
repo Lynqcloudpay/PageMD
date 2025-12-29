@@ -11,15 +11,15 @@ export default {
                 // Primary Colors - PageMD EMR Global Palette
                 'graphite-black': '#111827',
                 'deep-gray': '#1F2937',
-                
+
                 // Accent Colors
                 'strong-azure': '#3B82F6',
                 'fresh-green': '#22C55E',
-                
+
                 // Neutrals
                 'soft-gray': '#F3F4F6',
                 'white': '#FFFFFF',
-                
+
                 // Semantic aliases for compatibility - NOW AZURE for consistent button colors
                 primary: {
                     DEFAULT: '#3B82F6',  // strong-azure
@@ -159,6 +159,9 @@ export default {
             },
             animation: {
                 'fade-in': 'fadeIn 0.2s ease-in-out',
+                'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+                'float-slow': 'float 6s ease-in-out infinite',
+                'float-delayed': 'float 6s ease-in-out 3s infinite',
                 'slide-up': 'slideUp 0.3s ease-out',
                 'slide-down': 'slideDown 0.3s ease-out',
                 'scale-in': 'scaleIn 0.2s ease-out',
@@ -180,6 +183,14 @@ export default {
                 scaleIn: {
                     '0%': { transform: 'scale(0.95)', opacity: '0' },
                     '100%': { transform: 'scale(1)', opacity: '1' },
+                },
+                fadeInUp: {
+                    '0%': { opacity: '0', transform: 'translateY(20px)' },
+                    '100%': { opacity: '1', transform: 'translateY(0)' },
+                },
+                float: {
+                    '0%, 100%': { transform: 'translateY(0)' },
+                    '50%': { transform: 'translateY(-10px)' },
                 },
             },
             backdropBlur: {
