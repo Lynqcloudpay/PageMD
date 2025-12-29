@@ -9,6 +9,7 @@ import MySchedule from './pages/MySchedule'
 
 import Patients from './pages/Patients'
 import Login from './pages/Login'
+import LandingPage from './pages/LandingPage'
 import Dashboard from './pages/Dashboard'
 import PendingNotes from './pages/PendingNotes'
 import TaskManager from './pages/TaskManager'
@@ -117,7 +118,7 @@ function App() {
                                             {/* Clinic Auth & Impersonation */}
                                             <Route path="/login" element={<Login />} />
                                             <Route path="/auth/impersonate" element={<ImpersonateHandler />} />
-                                            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                                            <Route path="/" element={<LandingPage />} />
                                             <Route path="/dashboard" element={
                                                 <ProtectedRoute>
                                                     <ErrorBoundary>
