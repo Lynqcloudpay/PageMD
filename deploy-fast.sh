@@ -72,6 +72,7 @@ ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST << EOF
   
   echo "🚀 Restarting containers..."
   docker rm -f emr-api || true
+  docker rm -f emr-caddy || true
   docker compose -f docker-compose.prod.yml up -d --remove-orphans
   
   echo "⏳ Waiting for database to be healthy..."
