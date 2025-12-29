@@ -17,18 +17,28 @@ http://pagemdemr.com {
     redir https://pagemdemr.com{uri} permanent
 }
 
+# Redirect www.bemypcp.com to root
+http://www.bemypcp.com, https://www.bemypcp.com {
+    redir https://bemypcp.com{uri} permanent
+}
+
+# Force HTTPS for bemypcp.com
+http://bemypcp.com {
+    redir https://bemypcp.com{uri} permanent
+}
+
 # ================================================================
-# Main Site (pagemdemr.com ONLY)
+# Main Site (pagemdemr.com AND bemypcp.com)
 # ================================================================
-https://pagemdemr.com {
+https://pagemdemr.com, https://bemypcp.com {
     # Security headers
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"
         X-XSS-Protection "1; mode=block"
         X-Frame-Options "DENY"
-        # CSP: connect-src updated to only need new domain (+ self/blob)
-        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' blob: https://pagemdemr.com; frame-ancestors 'none';"
+        # CSP: connect-src updated to include both domains
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' blob: https://pagemdemr.com https://bemypcp.com; frame-ancestors 'none';"
         Referrer-Policy "strict-origin-when-cross-origin"
         Permissions-Policy "geolocation=(), microphone=(), camera=(self)"
         -Server
