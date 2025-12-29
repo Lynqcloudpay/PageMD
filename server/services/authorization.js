@@ -130,7 +130,10 @@ function getDefaultPermissionsForRole(role) {
     'referrals:create',
     'referrals:edit',
     'schedule:edit',
-    'schedule:status_update'
+    'schedule:status_update',
+    'billing:view',
+    'billing:create',
+    'billing:edit'
   ];
 
   const nursePerms = [

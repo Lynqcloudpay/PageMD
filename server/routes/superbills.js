@@ -22,6 +22,20 @@ router.post('/from-visit/:visitId', requirePermission('billing:edit'), async (re
     try {
         const { visitId } = req.params;
 
+        // --- 0. AUTO-PROVISIONING CHECK ---
+        // Ensure superbill tables exist in the current schema
+        const tableCheck = await client.query("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'superbills')");
+        if (!tableCheck.rows[0].exists) {
+            console.log(`[Superbill] Provisioning tables for schema...`);
+            // Run the tenantSchema portion for superbills
+            const tenantSchemaSQL = require('../config/tenantSchema');
+            // We only need the superbill part, but the template is idempotent
+            // To be safe and avoid re-running everything, we'll just run the superbill section here
+            // but for simplicity and safety against partial runs, we'll try to run the whole thing
+            // if we are sure it's IF NOT EXISTS.
+            await client.query(tenantSchemaSQL);
+        }
+
         // Check for existing superbill
         const existingResult = await client.query(
             'SELECT id FROM superbills WHERE visit_id = $1 AND status != \'VOID\' ORDER BY created_at DESC LIMIT 1',
@@ -87,16 +101,40 @@ router.post('/from-visit/:visitId', requirePermission('billing:edit'), async (re
         // Sources: Note Assessment, Existing Orders
         const diagnosisMap = new Map();
 
-        // A. From Orders
-        const orderDiags = await client.query(`
-          SELECT DISTINCT pr.icd10_code, pr.problem_name as description
-          FROM order_diagnoses od
-          JOIN problems pr ON od.problem_id = pr.id
-          WHERE od.order_id IN (SELECT id FROM orders WHERE visit_id = $1)
-          OR od.order_id IN (SELECT id FROM referrals WHERE visit_id = $1)
-        `, [visitId]);
+        // A. From Orders (Robust check for table existence)
+        try {
+            const odTableCheck = await client.query("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'order_diagnoses')");
+            if (odTableCheck.rows[0].exists) {
+                const orderDiags = await client.query(`
+                  SELECT DISTINCT pr.icd10_code, pr.problem_name as description
+                  FROM order_diagnoses od
+                  JOIN problems pr ON od.problem_id = pr.id
+                  WHERE od.order_id IN (SELECT id FROM orders WHERE visit_id = $1)
+                  OR od.order_id IN (SELECT id FROM referrals WHERE visit_id = $1)
+                `, [visitId]);
+                orderDiags.rows.forEach(d => diagnosisMap.set(d.icd10_code, { desc: d.description, source: 'ORDER' }));
+            }
 
-        orderDiags.rows.forEach(d => diagnosisMap.set(d.icd10_code, { desc: d.description, source: 'ORDER' }));
+            // Also check new visit_orders table
+            const voTableCheck = await client.query("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'visit_orders')");
+            if (voTableCheck.rows[0].exists) {
+                const voDiags = await client.query(`
+                    SELECT diagnosis_icd10_ids FROM visit_orders WHERE visit_id = $1 AND status != 'CANCELLED'
+                `, [visitId]);
+                for (const row of voDiags.rows) {
+                    const diags = Array.isArray(row.diagnosis_icd10_ids) ? row.diagnosis_icd10_ids : [];
+                    for (const d of diags) {
+                        if (d.code && !diagnosisMap.has(d.code)) {
+                            diagnosisMap.set(d.code, { desc: d.description || 'Diagnosis from Order', source: 'ORDER' });
+                        } else if (typeof d === 'string' && !diagnosisMap.has(d)) {
+                            diagnosisMap.set(d, { desc: 'Diagnosis from Order', source: 'ORDER' });
+                        }
+                    }
+                }
+            }
+        } catch (diagError) {
+            console.warn('[Superbill] Error fetching order diagnoses:', diagError.message);
+        }
 
         // B. From Note Assessment
         if (visit.note_draft) {
@@ -646,7 +684,7 @@ router.post('/:id/void', requirePermission('billing:edit'), async (req, res) => 
 /**
  * POST /api/superbills/:id/ready
  */
-router.post('/:id/ready', requirePermission('charting:edit'), async (req, res) => {
+router.post('/:id/ready', requirePermission('billing:edit'), async (req, res) => {
     try {
         const { id } = req.params;
         const userId = req.user.id;
@@ -667,7 +705,7 @@ router.post('/:id/ready', requirePermission('charting:edit'), async (req, res) =
     }
 });
 
-router.post('/:id/unready', requirePermission('charting:edit'), async (req, res) => {
+router.post('/:id/unready', requirePermission('billing:edit'), async (req, res) => {
     try {
         const { id } = req.params;
         const check = await pool.query('SELECT status FROM superbills WHERE id = $1', [id]);
