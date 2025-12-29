@@ -1,20 +1,22 @@
 # STABLE VERSION RECOVERY GUIDE
 
 ## Current Stable Version
-**Tag:** `v1.0.0-stable`  
-**Commit:** `ad13621fa329f3065321150fad3b3e7f05bace61`  
-**Date:** December 21, 2025 at 14:23 EST
+**Tag:** `stable-release-v1.0`
+**Date:** December 29, 2025
 
 ## Features in This Stable Version
-✅ Social History inline editing with proper field mapping (snake_case to camelCase)
+✅ **CRITICAL FIX:** Correctly decrypts patient names in Schedule, Inbox, Superbills, and Visits
+✅ **CRITICAL FIX:** Resolved Content Security Policy (CSP) blocking logins on bemypcp.com (added mult-domain support)
+✅ **ENHANCEMENT:** Updated Landing Page with "Made for Physicians by Physicians" branding and verified copy
+✅ Social History inline editing with proper field mapping
 ✅ Social History real-time sync via event listeners
-✅ Navigation buttons correctly point to Patient Chart (not EMR dashboard)
-✅ Pending Notes shows all draft visits (including empty notes)
-✅ Visit notes load correctly without infinite loops
-✅ All PAMFOS (Problems, Allergies, Medications, Family History, Other/Social) working
+✅ Navigation buttons correctly point to Patient Chart
+✅ Pending Notes shows all draft visits
+✅ Visit notes load correctly
+✅ All PAMFOS working
 ✅ Backend API stable and running
 ✅ Database healthy
-✅ Caddy reverse proxy configured
+✅ Caddy reverse proxy correctly configured for bemypcp.com
 
 ## How to Revert to This Stable Version
 
@@ -92,8 +94,16 @@ After reverting, verify the following:
 - `client/src/pages/PendingNotes.jsx` - (No changes, but works with backend fix)
 
 ### Backend Changes:
-- `server/routes/visits.js` - Pending notes query fix (removed note_draft requirement)
-- `server/routes/patients.js` - Social History save endpoint (camelCase field mapping)
+- `server/routes/appointments.js` - Added encryption metadata selection and decryption logic
+- `server/routes/inbox.js` - Added encryption metadata selection and decryption logic
+- `server/routes/visits.js` - Added encryption metadata selection and decryption logic
+- `server/routes/superbills.js` - Added encryption metadata selection and decryption logic
+- `server/middleware/https.js` - Updated CSP for multi-domain support
+- `deploy/Caddyfile` - Updated configuration for bemypcp.com and CSP
+- `deploy-fast.sh` - Added Caddy container restart
+
+### Frontend Changes:
+- `client/src/pages/LandingPage.jsx` - Updated branding and copy
 
 ## Database State
 The database schema is stable and requires no migrations for this version.
