@@ -92,7 +92,6 @@ router.post('/', requirePermission('patients:view_chart'), upload.single('file')
         urlPath, // Store URL path instead of filesystem path
         req.file.mimetype,
         req.file.size,
-        req.file.size,
         tags && typeof tags === 'string' ? tags.split(',') : [],
       ]
     );
