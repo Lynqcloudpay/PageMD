@@ -29,8 +29,7 @@ const LandingPage = () => {
                     <div className="flex items-center justify-between">
                         {/* Logo */}
                         <Link to="/" className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">P</div>
-                            <span className="text-xl font-bold text-gray-900 tracking-tight">PageMD</span>
+                            <img src="/logo.png" alt="PageMD Logo" className="h-10 w-auto object-contain" />
                         </Link>
 
                         {/* Menu Items */}
@@ -67,24 +66,27 @@ const LandingPage = () => {
                         </div>
 
                         <h1 className="text-5xl lg:text-7xl font-extrabold text-gray-900 leading-[1.1] tracking-tight">
-                            Your Practice, <br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Simplified.</span>
+                            Built by a Physician, <br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">For Physicians.</span>
                         </h1>
 
                         <p className="text-xl text-gray-600 leading-relaxed max-w-xl">
-                            Stop clicking, start treating. PageMD is the EMR designed by independent physicians to cut through the noise, minimize screen time, and maximize care.
+                            Frustrated by EMRs built by "tech" people? PageMD is the first clinical platform designed entirely by a practicing physician to eliminate busywork and put the focus back on the patient.
                         </p>
 
                         <div className="flex flex-wrap gap-4 pt-4">
-                            <button className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-xl shadow-blue-200 hover:shadow-2xl hover:shadow-blue-300 transform hover:-translate-y-1 flex items-center gap-2">
-                                Start Free Trial
-                                <ArrowRight className="w-5 h-5" />
-                            </button>
                             <Link
-                                to="/features"
+                                to="/contact"
+                                className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-xl shadow-blue-200 hover:shadow-2xl hover:shadow-blue-300 transform hover:-translate-y-1 flex items-center gap-2"
+                            >
+                                Get Started
+                                <ArrowRight className="w-5 h-5" />
+                            </Link>
+                            <Link
+                                to="/about"
                                 className="px-8 py-4 bg-white hover:bg-gray-50 text-gray-700 font-bold rounded-xl border border-gray-200 transition-all hover:shadow-lg transform hover:-translate-y-1"
                             >
-                                See How It Works
+                                Our Story
                             </Link>
                         </div>
 
@@ -165,17 +167,11 @@ const LandingPage = () => {
                 </div>
             </section>
 
-            {/* Social Proof Bar */}
-            <section className="py-10 border-y border-gray-100 bg-gray-50/50">
-                <div className="max-w-7xl mx-auto px-6 text-center">
-                    <p className="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-8">Designed for Independent Practices</p>
-                    <div className="flex flex-wrap justify-center gap-12 lg:gap-20 opacity-50 grayscale transition-all hover:grayscale-0 hover:opacity-100 duration-500">
-                        {/* Mock Logos - CSS Text for now to avoid broken images */}
-                        <div className="text-xl font-serif font-black text-gray-800 flex items-center gap-2"><div className="w-6 h-6 bg-gray-800 rounded-full"></div> ClinicOne</div>
-                        <div className="text-xl font-sans font-black text-gray-800 flex items-center gap-2"><div className="w-6 h-6 bg-blue-800 rounded-sm"></div> HealthFlow</div>
-                        <div className="text-xl font-mono font-black text-gray-800 flex items-center gap-2"><div className="w-6 h-6 border-4 border-gray-800 rounded-full"></div> MED_TECH</div>
-                        <div className="text-xl font-sans font-bold italic text-gray-800 flex items-center gap-2">PRACTICE<span className="text-blue-600">PLUS</span></div>
-                    </div>
+            {/* Mission Section */}
+            <section className="py-12 border-y border-gray-100 bg-blue-50/30">
+                <div className="max-w-4xl mx-auto px-6 text-center">
+                    <p className="text-lg font-medium text-blue-700 italic">"I built PageMD because I was tired of spending 4 hours a day on charting. We need tools that understand the clinical workflow, not just the billing cycle."</p>
+                    <p className="mt-4 text-sm font-bold text-gray-500 uppercase tracking-widest">— Dr. Mel Rodriguez, Founder</p>
                 </div>
             </section>
 
@@ -183,9 +179,9 @@ const LandingPage = () => {
             <section className="py-24 px-6 bg-white">
                 <div className="max-w-6xl mx-auto">
                     <div className="text-center mb-20">
-                        <h2 className="text-3xl lg:text-5xl font-bold text-gray-900 mb-6">Built for speed. Optimized for care.</h2>
+                        <h2 className="text-3xl lg:text-5xl font-bold text-gray-900 mb-6">Designed in the Clinic, Not the Boardroom.</h2>
                         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                            The platform specifically specifically built to reduce administrative burden.
+                            The EMR that actually follows your clinical train of thought. Built to reduce administrative burden so you can focus on what matters.
                         </p>
                     </div>
 
@@ -328,15 +324,15 @@ const LandingPage = () => {
                         Join the growing community of independent physicians who have switched to a Better way of charting.
                     </p>
                     <div className="flex flex-col sm:flex-row justify-center gap-4">
-                        <button className="px-10 py-5 bg-blue-600 hover:bg-blue-700 text-white text-lg font-bold rounded-xl transition-all shadow-xl hover:shadow-2xl scale-100 hover:scale-105">
-                            Start Your Free Trial
-                        </button>
-                        <Link to="/contact" className="px-10 py-5 bg-white text-gray-900 text-lg font-bold rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all">
-                            Talk to Us
+                        <Link to="/contact" className="px-10 py-5 bg-blue-600 hover:bg-blue-700 text-white text-lg font-bold rounded-xl transition-all shadow-xl hover:shadow-2xl scale-100 hover:scale-105">
+                            Contact Our Team
+                        </Link>
+                        <Link to="/about" className="px-10 py-5 bg-white text-gray-900 text-lg font-bold rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all">
+                            About our Mission
                         </Link>
                     </div>
                     <p className="mt-8 text-sm text-gray-400">
-                        14-day free trial • HIPAA Compliant • No setup fees
+                        Designed for Independent Practices • HIPAA Compliant
                     </p>
                 </div>
             </section>
@@ -345,8 +341,7 @@ const LandingPage = () => {
             <footer className="py-12 px-6 bg-white border-t border-gray-100">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center text-white font-bold">P</div>
-                        <span className="font-bold text-xl tracking-tight">PageMD</span>
+                        <img src="/logo.png" alt="PageMD Logo" className="h-8 w-auto object-contain" />
                     </div>
 
                     <div className="flex gap-8 text-sm font-medium text-gray-500">
