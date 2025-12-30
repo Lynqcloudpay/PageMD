@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 const path = require('path');
 require('dotenv').config();
 
@@ -64,6 +65,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Admin-Portal'],
   exposedHeaders: ['Content-Range', 'X-Content-Range']
 }));
+
+app.use(compression());
 
 // Health check - must be before HTTPS enforcement to allow internal health checks
 app.get('/api/health', (req, res) => {

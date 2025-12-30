@@ -31,6 +31,9 @@ http://bemypcp.com {
 # Main Site (pagemdemr.com AND bemypcp.com)
 # ================================================================
 https://pagemdemr.com, https://bemypcp.com {
+    # Performance: Enable compression
+    encode zstd gzip
+
     # Security headers
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
@@ -54,10 +57,16 @@ https://pagemdemr.com, https://bemypcp.com {
 
     # Uploads
     handle /uploads/* {
+        header Cache-Control "private, max-age=3600"
         reverse_proxy api:3000 {
             header_up X-Real-IP {remote_host}
             header_up Host {host}
         }
+    }
+
+    # Performance: Cache static assets (Vite generates hashed names)
+    handle /assets/* {
+        header Cache-Control "public, max-age=31536000, immutable"
     }
 
     # Serve static frontend (SPA)
