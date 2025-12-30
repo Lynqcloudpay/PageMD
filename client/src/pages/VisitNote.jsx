@@ -3082,13 +3082,13 @@ const VisitNote = () => {
                                 </div>
                                 {/* Tab Buttons */}
                                 <div className="flex gap-1 bg-slate-700/50 rounded-lg p-1">
-                                    {['Notes', 'Labs', 'Imaging', 'Echo', 'EKG'].map((tab) => (
+                                    {['Notes', 'Vitals', 'Labs', 'Imaging', 'Echo', 'EKG', 'Stress', 'Cath', 'Docs'].map((tab) => (
                                         <button
                                             key={tab}
                                             onClick={() => setChartReviewData(prev => ({ ...prev, activeTab: tab }))}
                                             className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${(chartReviewData.activeTab || 'Notes') === tab
-                                                    ? 'bg-white text-slate-900 shadow'
-                                                    : 'text-slate-300 hover:text-white hover:bg-slate-600'
+                                                ? 'bg-white text-slate-900 shadow'
+                                                : 'text-slate-300 hover:text-white hover:bg-slate-600'
                                                 }`}
                                         >
                                             {tab}
@@ -3126,8 +3126,8 @@ const VisitNote = () => {
                                                         key={visit.id}
                                                         onClick={() => setChartReviewData(prev => ({ ...prev, selectedVisitId: visit.id }))}
                                                         className={`w-full text-left p-3 border-b border-slate-100 transition-all ${(chartReviewData.selectedVisitId || chartReviewData.visits[0]?.id) === visit.id
-                                                                ? 'bg-white border-l-4 border-l-primary-500 shadow-sm'
-                                                                : 'hover:bg-white/70'
+                                                            ? 'bg-white border-l-4 border-l-primary-500 shadow-sm'
+                                                            : 'hover:bg-white/70'
                                                             }`}
                                                     >
                                                         <div className="flex items-center gap-1.5 mb-0.5">
@@ -3294,10 +3294,14 @@ const VisitNote = () => {
                                 <div className="flex-1 flex items-center justify-center p-8">
                                     <div className="text-center">
                                         <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                                            {(chartReviewData.activeTab) === 'Vitals' && <Activity className="w-8 h-8 text-green-500" />}
                                             {(chartReviewData.activeTab) === 'Labs' && <FlaskConical className="w-8 h-8 text-purple-500" />}
                                             {(chartReviewData.activeTab) === 'Imaging' && <FileImage className="w-8 h-8 text-blue-500" />}
                                             {(chartReviewData.activeTab) === 'Echo' && <Heart className="w-8 h-8 text-rose-500" />}
                                             {(chartReviewData.activeTab) === 'EKG' && <Waves className="w-8 h-8 text-rose-500" />}
+                                            {(chartReviewData.activeTab) === 'Stress' && <Activity className="w-8 h-8 text-orange-500" />}
+                                            {(chartReviewData.activeTab) === 'Cath' && <Stethoscope className="w-8 h-8 text-red-500" />}
+                                            {(chartReviewData.activeTab) === 'Docs' && <FileText className="w-8 h-8 text-slate-500" />}
                                         </div>
                                         <h3 className="text-lg font-bold text-slate-900 mb-1">{chartReviewData.activeTab}</h3>
                                         <p className="text-sm text-slate-500 mb-4">Results will be displayed here</p>
