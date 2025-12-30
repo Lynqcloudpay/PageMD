@@ -13,6 +13,7 @@ import { OrderModal, PrescriptionModal, ReferralModal } from '../components/Acti
 import CodeSearchModal from '../components/CodeSearchModal';
 import VisitPrint from '../components/VisitPrint';
 import PatientChartPanel from '../components/PatientChartPanel';
+import ChartReviewModal from '../components/ChartReviewModal';
 
 import DiagnosisPicker from '../components/DiagnosisPicker';
 import OrderPicker from '../components/OrderPicker';
@@ -2788,644 +2789,402 @@ const VisitNote = () => {
                             </div>
                         )}
                     </div>
-                </div>
-                {/* End of main content div */}
+                    {/* End of main content div */}
 
-                {/* Right: Quick Actions Sidebar */}
-                {showQuickActions && !isSigned && (
-                    <div className="w-72 flex-shrink-0 sticky top-4 h-fit">
-                        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-                            {/* Sidebar Header */}
-                            <div className="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                                <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Quick Actions</span>
-                                <button onClick={() => setShowQuickActions(false)} className="p-1 hover:bg-slate-200 rounded transition-colors">
-                                    <X className="w-3.5 h-3.5 text-slate-500" />
-                                </button>
-                            </div>
+                    {/* Right: Quick Actions Sidebar */}
+                    {showQuickActions && !isSigned && (
+                        <div className="w-72 flex-shrink-0 sticky top-4 h-fit">
+                            <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                                {/* Sidebar Header */}
+                                <div className="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Quick Actions</span>
+                                    <button onClick={() => setShowQuickActions(false)} className="p-1 hover:bg-slate-200 rounded transition-colors">
+                                        <X className="w-3.5 h-3.5 text-slate-500" />
+                                    </button>
+                                </div>
 
-                            {/* Problem List Section */}
-                            <div className="border-b border-slate-100">
-                                <div className="px-3 py-2 bg-slate-50/50">
-                                    <div className="flex items-center gap-1.5">
-                                        <AlertCircle className="w-3.5 h-3.5 text-slate-500" />
-                                        <span className="text-[10px] font-bold text-slate-600 uppercase">Problem List</span>
+                                {/* Problem List Section */}
+                                <div className="border-b border-slate-100">
+                                    <div className="px-3 py-2 bg-slate-50/50">
+                                        <div className="flex items-center gap-1.5">
+                                            <AlertCircle className="w-3.5 h-3.5 text-slate-500" />
+                                            <span className="text-[10px] font-bold text-slate-600 uppercase">Problem List</span>
+                                        </div>
+                                    </div>
+                                    <div className="p-2 max-h-40 overflow-y-auto custom-scrollbar">
+                                        {(patientData?.problems || []).filter(p => p.status === 'active').length > 0 ? (
+                                            <div className="space-y-1">
+                                                {(patientData?.problems || []).filter(p => p.status === 'active').slice(0, 10).map((p, idx) => (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={() => addProblemToAssessment(p)}
+                                                        className="w-full text-left px-2 py-1.5 text-[11px] bg-white hover:bg-primary-50 rounded border border-slate-100 hover:border-primary-200 transition-all flex items-center gap-1.5 group"
+                                                    >
+                                                        <Plus className="w-3 h-3 text-slate-400 group-hover:text-primary-600" />
+                                                        <span className="truncate flex-1 text-slate-700 group-hover:text-primary-700">{p.problem_name}</span>
+                                                        {p.icd10_code && <span className="text-[9px] text-slate-400 font-mono">{p.icd10_code}</span>}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-[10px] text-slate-400 italic text-center py-2">No active problems</div>
+                                        )}
                                     </div>
                                 </div>
-                                <div className="p-2 max-h-40 overflow-y-auto custom-scrollbar">
-                                    {(patientData?.problems || []).filter(p => p.status === 'active').length > 0 ? (
+
+                                {/* Medications Section */}
+                                <div className="border-b border-slate-100">
+                                    <div className="px-3 py-2 bg-slate-50/50">
+                                        <div className="flex items-center gap-1.5">
+                                            <Pill className="w-3.5 h-3.5 text-emerald-500" />
+                                            <span className="text-[10px] font-bold text-slate-600 uppercase">Medications</span>
+                                        </div>
+                                    </div>
+                                    <div className="p-2 max-h-48 overflow-y-auto custom-scrollbar">
+                                        {(patientData?.medications || []).filter(m => m.active !== false).length > 0 ? (
+                                            <div className="space-y-1.5">
+                                                {(patientData?.medications || []).filter(m => m.active !== false).slice(0, 8).map((m, idx) => (
+                                                    <div key={idx} className="px-2 py-1.5 bg-white rounded border border-slate-100">
+                                                        <div className="text-[11px] font-medium text-slate-800 truncate">{m.medication_name}</div>
+                                                        <div className="text-[9px] text-slate-500">{m.dosage} {m.frequency}</div>
+                                                        <div className="flex gap-1 mt-1">
+                                                            <button onClick={() => addMedicationToPlan(m, 'continue')} className="px-1.5 py-0.5 text-[9px] bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100 transition-colors">
+                                                                Continue
+                                                            </button>
+                                                            <button onClick={() => addMedicationToPlan(m, 'refill')} className="px-1.5 py-0.5 text-[9px] bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition-colors flex items-center gap-0.5">
+                                                                <RefreshCw className="w-2.5 h-2.5" />
+                                                                Refill
+                                                            </button>
+                                                            <button onClick={() => addMedicationToPlan(m, 'stop')} className="px-1.5 py-0.5 text-[9px] bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors flex items-center gap-0.5">
+                                                                <StopCircle className="w-2.5 h-2.5" />
+                                                                Stop
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-[10px] text-slate-400 italic text-center py-2">No medications</div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* HPI Templates Section */}
+                                <div className="border-b border-slate-100">
+                                    <div className="px-3 py-2 bg-slate-50/50">
+                                        <div className="flex items-center gap-1.5">
+                                            <FileText className="w-3.5 h-3.5 text-blue-500" />
+                                            <span className="text-[10px] font-bold text-slate-600 uppercase">HPI Templates</span>
+                                        </div>
+                                    </div>
+                                    <div className="p-2 max-h-36 overflow-y-auto custom-scrollbar">
                                         <div className="space-y-1">
-                                            {(patientData?.problems || []).filter(p => p.status === 'active').slice(0, 10).map((p, idx) => (
+                                            {hpiTemplates.map((t, idx) => (
                                                 <button
                                                     key={idx}
-                                                    onClick={() => addProblemToAssessment(p)}
-                                                    className="w-full text-left px-2 py-1.5 text-[11px] bg-white hover:bg-primary-50 rounded border border-slate-100 hover:border-primary-200 transition-all flex items-center gap-1.5 group"
+                                                    onClick={() => insertHpiTemplate(t.key, t.text)}
+                                                    className="w-full text-left px-2 py-1.5 text-[11px] bg-white hover:bg-blue-50 rounded border border-slate-100 hover:border-blue-200 transition-all flex items-center gap-1.5 group"
                                                 >
-                                                    <Plus className="w-3 h-3 text-slate-400 group-hover:text-primary-600" />
-                                                    <span className="truncate flex-1 text-slate-700 group-hover:text-primary-700">{p.problem_name}</span>
-                                                    {p.icd10_code && <span className="text-[9px] text-slate-400 font-mono">{p.icd10_code}</span>}
+                                                    <Zap className="w-3 h-3 text-slate-400 group-hover:text-blue-500" />
+                                                    <span className="text-slate-700 group-hover:text-blue-700">{t.key}</span>
                                                 </button>
                                             ))}
                                         </div>
-                                    ) : (
-                                        <div className="text-[10px] text-slate-400 italic text-center py-2">No active problems</div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Medications Section */}
-                            <div className="border-b border-slate-100">
-                                <div className="px-3 py-2 bg-slate-50/50">
-                                    <div className="flex items-center gap-1.5">
-                                        <Pill className="w-3.5 h-3.5 text-emerald-500" />
-                                        <span className="text-[10px] font-bold text-slate-600 uppercase">Medications</span>
                                     </div>
                                 </div>
-                                <div className="p-2 max-h-48 overflow-y-auto custom-scrollbar">
-                                    {(patientData?.medications || []).filter(m => m.active !== false).length > 0 ? (
-                                        <div className="space-y-1.5">
-                                            {(patientData?.medications || []).filter(m => m.active !== false).slice(0, 8).map((m, idx) => (
-                                                <div key={idx} className="px-2 py-1.5 bg-white rounded border border-slate-100">
-                                                    <div className="text-[11px] font-medium text-slate-800 truncate">{m.medication_name}</div>
-                                                    <div className="text-[9px] text-slate-500">{m.dosage} {m.frequency}</div>
-                                                    <div className="flex gap-1 mt-1">
-                                                        <button onClick={() => addMedicationToPlan(m, 'continue')} className="px-1.5 py-0.5 text-[9px] bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100 transition-colors">
-                                                            Continue
-                                                        </button>
-                                                        <button onClick={() => addMedicationToPlan(m, 'refill')} className="px-1.5 py-0.5 text-[9px] bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition-colors flex items-center gap-0.5">
-                                                            <RefreshCw className="w-2.5 h-2.5" />
-                                                            Refill
-                                                        </button>
-                                                        <button onClick={() => addMedicationToPlan(m, 'stop')} className="px-1.5 py-0.5 text-[9px] bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors flex items-center gap-0.5">
-                                                            <StopCircle className="w-2.5 h-2.5" />
-                                                            Stop
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))}
+
+                                {/* Results Import Section */}
+                                <div>
+                                    <div className="px-3 py-2 bg-slate-50/50">
+                                        <div className="flex items-center gap-1.5">
+                                            <FlaskConical className="w-3.5 h-3.5 text-purple-500" />
+                                            <span className="text-[10px] font-bold text-slate-600 uppercase">Results</span>
+                                        </div>
+                                    </div>
+                                    <div className="p-2">
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                            <button
+                                                onClick={() => insertResultIntoPlan('Labs', 'Reviewed, within normal limits')}
+                                                className="px-2 py-2 text-[10px] bg-white hover:bg-purple-50 rounded border border-slate-100 hover:border-purple-200 transition-all flex flex-col items-center gap-1"
+                                            >
+                                                <FlaskConical className="w-4 h-4 text-purple-500" />
+                                                <span className="text-slate-600">Labs</span>
+                                            </button>
+                                            <button
+                                                onClick={() => insertResultIntoPlan('Imaging', 'Reviewed, findings noted')}
+                                                className="px-2 py-2 text-[10px] bg-white hover:bg-purple-50 rounded border border-slate-100 hover:border-purple-200 transition-all flex flex-col items-center gap-1"
+                                            >
+                                                <FileImage className="w-4 h-4 text-purple-500" />
+                                                <span className="text-slate-600">Imaging</span>
+                                            </button>
+                                            <button
+                                                onClick={() => insertResultIntoPlan('Echo', 'Reviewed, EF []%')}
+                                                className="px-2 py-2 text-[10px] bg-white hover:bg-rose-50 rounded border border-slate-100 hover:border-rose-200 transition-all flex flex-col items-center gap-1"
+                                            >
+                                                <Heart className="w-4 h-4 text-rose-500" />
+                                                <span className="text-slate-600">Echo</span>
+                                            </button>
+                                            <button
+                                                onClick={() => insertResultIntoPlan('EKG', 'Reviewed, normal sinus rhythm')}
+                                                className="px-2 py-2 text-[10px] bg-white hover:bg-rose-50 rounded border border-slate-100 hover:border-rose-200 transition-all flex flex-col items-center gap-1"
+                                            >
+                                                <Waves className="w-4 h-4 text-rose-500" />
+                                                <span className="text-slate-600">EKG</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+                {/* End of flex container */}
+
+                {/* Modals */}
+                {/* Premium Diagnosis Picker Modal */}
+                {
+                    showICD10Modal && (
+                        <div
+                            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-ink-950/40 backdrop-blur-sm"
+                            onClick={() => { setShowICD10Modal(false); setEditingDiagnosisIndex(null); }}
+                        >
+                            <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl">
+                                <DiagnosisPicker
+                                    onSelect={(code) => handleAddICD10(code)}
+                                    onClose={() => { setShowICD10Modal(false); setEditingDiagnosisIndex(null); }}
+                                    existingDiagnoses={diagnoses}
+                                />
+                            </div>
+                        </div>
+                    )
+                }
+                <OrderModal
+                    isOpen={showOrderModal}
+                    onClose={() => { setShowOrderModal(false); setSelectedDiagnosis(null); }}
+                    initialTab={orderModalTab}
+                    diagnoses={diagnoses}
+                    selectedDiagnosis={selectedDiagnosis}
+                    existingOrders={noteData.planStructured}
+                    onSave={handleUpdatePlan}
+                    patientId={id}
+                    visitId={currentVisitId || urlVisitId}
+                    initialMedications={patientData?.medications}
+                />
+
+                {showOrderPicker && (
+                    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowOrderPicker(false)}>
+                        <div onClick={(e) => e.stopPropagation()} className="w-full max-w-xl">
+                            <OrderPicker
+                                type={orderPickerType}
+                                onSelect={handleOrderSelect}
+                                onClose={() => setShowOrderPicker(false)}
+                                visitId={currentVisitId || urlVisitId}
+                                patientId={id}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {showPrintModal && <VisitPrint visitId={currentVisitId || urlVisitId} patientId={id} onClose={() => setShowPrintModal(false)} />}
+
+                {/* Unified Patient Chart Panel */}
+                <PatientChartPanel
+                    patientId={id}
+                    isOpen={showPatientChart}
+                    onClose={() => setShowPatientChart(false)}
+                    initialTab={patientChartTab}
+                />
+
+                {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+                {/* Dot Phrase Modal */}
+                {
+                    showDotPhraseModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => {
+                            setShowDotPhraseModal(false);
+                            setDotPhraseSearch('');
+                            setActiveTextArea(null);
+                        }}>
+                            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                                <div className="p-4 border-b border-neutral-200 flex items-center justify-between">
+                                    <h3 className="text-lg font-semibold text-ink-900 flex items-center space-x-2">
+                                        <Zap className="w-5 h-5 text-primary-600" />
+                                        <span>Dot Phrases</span>
+                                        {activeTextArea && <span className="text-sm font-normal text-ink-500">(Inserting into {activeTextArea.toUpperCase()})</span>}
+                                    </h3>
+                                    <button onClick={() => { setShowDotPhraseModal(false); setDotPhraseSearch(''); setActiveTextArea(null); }} className="p-1 hover:bg-primary-100 rounded">
+                                        <X className="w-5 h-5 text-ink-500" />
+                                    </button>
+                                </div>
+                                <div className="p-4 border-b border-neutral-200">
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                                        <input type="text" value={dotPhraseSearch} onChange={(e) => setDotPhraseSearch(e.target.value)}
+                                            placeholder="Search dot phrases..." className="w-full pl-11 pr-4 py-2.5 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" autoFocus />
+                                    </div>
+                                </div>
+                                <div className="flex-1 overflow-y-auto p-4">
+                                    {filteredDotPhrases.length === 0 ? (
+                                        <div className="text-center text-ink-500 py-8">
+                                            {dotPhraseSearch.trim() ? `No dot phrases found matching "${dotPhraseSearch}"` : 'Start typing to search dot phrases...'}
                                         </div>
                                     ) : (
-                                        <div className="text-[10px] text-slate-400 italic text-center py-2">No medications</div>
+                                        <div className="space-y-2">
+                                            {filteredDotPhrases.map((item, index) => {
+                                                const template = hpiDotPhrases[item.key];
+                                                return (
+                                                    <button key={`${item.key}-${index}`} onClick={() => handleDotPhrase(item.key)}
+                                                        className="w-full text-left p-3 border border-neutral-200 rounded-md hover:bg-primary-50 hover:border-neutral-300 transition-colors">
+                                                        <div className="font-medium text-ink-900 mb-1">{item.key}</div>
+                                                        <div className="text-sm text-ink-600 space-y-1 max-h-24 overflow-hidden">
+                                                            {template.split(/[.\n]/).filter(s => s.trim()).slice(0, 4).map((sentence, idx) => (
+                                                                <div key={idx} className="flex items-start">
+                                                                    <span className="text-ink-400 mr-2">•</span>
+                                                                    <span className="flex-1">{sentence.trim()}</span>
+                                                                </div>
+                                                            ))}
+                                                            {template.split(/[.\n]/).filter(s => s.trim()).length > 4 && <div className="text-ink-400 italic">...</div>}
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
                                     )}
                                 </div>
                             </div>
+                        </div>
+                    )
+                }
+                <PatientChartPanel
+                    patientId={id}
+                    isOpen={showPatientChart}
+                    onClose={() => setShowPatientChart(false)}
+                    initialTab={patientChartTab}
+                />
+                {showPrintOrdersModal && (
+                    <PrintOrdersModal
+                        patient={{ ...patientData, id }}
+                        isOpen={showPrintOrdersModal}
+                        onClose={() => setShowPrintOrdersModal(false)}
+                    />
+                )}
 
-                            {/* HPI Templates Section */}
-                            <div className="border-b border-slate-100">
-                                <div className="px-3 py-2 bg-slate-50/50">
-                                    <div className="flex items-center gap-1.5">
-                                        <FileText className="w-3.5 h-3.5 text-blue-500" />
-                                        <span className="text-[10px] font-bold text-slate-600 uppercase">HPI Templates</span>
-                                    </div>
+                {/* Chart Review Modal - Note Focused */}
+                {showChartReview && (
+                    <ChartReviewModal
+                        isOpen={showChartReview}
+                        onClose={() => setShowChartReview(false)}
+                        visits={chartReviewData.visits}
+                        isLoading={chartReviewData.loading}
+                        patientData={patientData}
+                        onViewFullChart={() => {
+                            setShowChartReview(false);
+                            setPatientChartTab('history');
+                            setShowPatientChart(true);
+                        }}
+                        onOpenVisit={(visitId) => {
+                            if (visitId !== (currentVisitId || urlVisitId)) {
+                                navigate(`/patient/${id}/visit/${visitId}`);
+                            }
+                        }}
+                    />
+                )}
+
+                {/* Carry Forward Modal */}
+                {showCarryForward && (
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60]" onClick={() => setShowCarryForward(false)}>
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
+                            {/* Header */}
+                            <div className="px-6 py-4 bg-gradient-to-r from-slate-700 to-slate-600 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <RotateCcw className="w-5 h-5 text-white" />
+                                    <h2 className="text-lg font-bold text-white">Pull from Previous Visit</h2>
+                                    <span className="text-[11px] font-bold uppercase text-slate-300 bg-slate-500 px-2 py-0.5 rounded">
+                                        {carryForwardField?.toUpperCase()}
+                                    </span>
                                 </div>
-                                <div className="p-2 max-h-36 overflow-y-auto custom-scrollbar">
-                                    <div className="space-y-1">
-                                        {hpiTemplates.map((t, idx) => (
-                                            <button
-                                                key={idx}
-                                                onClick={() => insertHpiTemplate(t.key, t.text)}
-                                                className="w-full text-left px-2 py-1.5 text-[11px] bg-white hover:bg-blue-50 rounded border border-slate-100 hover:border-blue-200 transition-all flex items-center gap-1.5 group"
-                                            >
-                                                <Zap className="w-3 h-3 text-slate-400 group-hover:text-blue-500" />
-                                                <span className="text-slate-700 group-hover:text-blue-700">{t.key}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
+                                <button onClick={() => setShowCarryForward(false)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                                    <X className="w-5 h-5 text-white" />
+                                </button>
                             </div>
 
-                            {/* Results Import Section */}
-                            <div>
-                                <div className="px-3 py-2 bg-slate-50/50">
-                                    <div className="flex items-center gap-1.5">
-                                        <FlaskConical className="w-3.5 h-3.5 text-purple-500" />
-                                        <span className="text-[10px] font-bold text-slate-600 uppercase">Results</span>
+                            {/* Content */}
+                            <div className="flex-1 overflow-y-auto p-6">
+                                {loadingPrevVisits ? (
+                                    <div className="flex items-center justify-center py-16">
+                                        <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
                                     </div>
-                                </div>
-                                <div className="p-2">
-                                    <div className="grid grid-cols-2 gap-1.5">
-                                        <button
-                                            onClick={() => insertResultIntoPlan('Labs', 'Reviewed, within normal limits')}
-                                            className="px-2 py-2 text-[10px] bg-white hover:bg-purple-50 rounded border border-slate-100 hover:border-purple-200 transition-all flex flex-col items-center gap-1"
-                                        >
-                                            <FlaskConical className="w-4 h-4 text-purple-500" />
-                                            <span className="text-slate-600">Labs</span>
-                                        </button>
-                                        <button
-                                            onClick={() => insertResultIntoPlan('Imaging', 'Reviewed, findings noted')}
-                                            className="px-2 py-2 text-[10px] bg-white hover:bg-purple-50 rounded border border-slate-100 hover:border-purple-200 transition-all flex flex-col items-center gap-1"
-                                        >
-                                            <FileImage className="w-4 h-4 text-purple-500" />
-                                            <span className="text-slate-600">Imaging</span>
-                                        </button>
-                                        <button
-                                            onClick={() => insertResultIntoPlan('Echo', 'Reviewed, EF []%')}
-                                            className="px-2 py-2 text-[10px] bg-white hover:bg-rose-50 rounded border border-slate-100 hover:border-rose-200 transition-all flex flex-col items-center gap-1"
-                                        >
-                                            <Heart className="w-4 h-4 text-rose-500" />
-                                            <span className="text-slate-600">Echo</span>
-                                        </button>
-                                        <button
-                                            onClick={() => insertResultIntoPlan('EKG', 'Reviewed, normal sinus rhythm')}
-                                            className="px-2 py-2 text-[10px] bg-white hover:bg-rose-50 rounded border border-slate-100 hover:border-rose-200 transition-all flex flex-col items-center gap-1"
-                                        >
-                                            <Waves className="w-4 h-4 text-rose-500" />
-                                            <span className="text-slate-600">EKG</span>
-                                        </button>
+                                ) : previousVisits.length === 0 ? (
+                                    <div className="text-center py-12 text-slate-400">
+                                        <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                                        <p className="text-sm font-medium">No previous visits with notes found</p>
                                     </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <p className="text-xs text-slate-500 mb-4">
+                                            Select a visit below to pull its <strong>{carryForwardField?.toUpperCase()}</strong> content into the current note.
+                                        </p>
+                                        {previousVisits.map((visit) => {
+                                            const sectionContent = extractSectionFromNote(visit.note_draft, carryForwardField);
+                                            const hasContent = sectionContent && sectionContent.trim().length > 0;
+
+                                            return (
+                                                <div key={visit.id} className={`p-4 rounded-xl border transition-all ${hasContent ? 'bg-white border-slate-200 hover:border-primary-300 hover:shadow-md cursor-pointer' : 'bg-slate-50 border-slate-100 opacity-60'}`}>
+                                                    <div className="flex items-start justify-between mb-2">
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-sm font-bold text-slate-900">
+                                                                    {format(new Date(visit.visit_date), 'MMM d, yyyy')}
+                                                                </span>
+                                                                {visit.locked && <Lock className="w-3 h-3 text-slate-400" />}
+                                                            </div>
+                                                            <div className="text-[11px] text-slate-500 uppercase font-medium">
+                                                                {visit.visit_type?.replace('_', ' ') || 'Office Visit'} • {visit.provider_last_name || 'Provider'}
+                                                            </div>
+                                                        </div>
+                                                        {hasContent && (
+                                                            <button
+                                                                onClick={() => insertCarryForward(sectionContent)}
+                                                                className="px-3 py-1.5 bg-primary-600 text-white text-xs font-bold rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-1.5"
+                                                            >
+                                                                <Copy className="w-3.5 h-3.5" />
+                                                                Use This
+                                                            </button>
+                                                        )}
+                                                    </div>
+
+                                                    {hasContent ? (
+                                                        <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                                                            <div className="text-[10px] font-bold uppercase text-slate-400 mb-1">
+                                                                {carryForwardField?.toUpperCase()} Content
+                                                            </div>
+                                                            <div className="text-xs text-slate-700 whitespace-pre-wrap line-clamp-4">
+                                                                {sectionContent}
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="mt-2 text-xs text-slate-400 italic">
+                                                            No {carryForwardField?.toUpperCase()} content found in this visit
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Footer */}
+                            <div className="px-6 py-3 bg-slate-50 border-t border-slate-200">
+                                <div className="text-xs text-slate-500">
+                                    Content will replace the current {carryForwardField?.toUpperCase()} field
                                 </div>
                             </div>
                         </div>
                     </div>
                 )}
             </div>
-            {/* End of flex container */}
-
-            {/* Modals */}
-            {/* Premium Diagnosis Picker Modal */}
-            {
-                showICD10Modal && (
-                    <div
-                        className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-ink-950/40 backdrop-blur-sm"
-                        onClick={() => { setShowICD10Modal(false); setEditingDiagnosisIndex(null); }}
-                    >
-                        <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl">
-                            <DiagnosisPicker
-                                onSelect={(code) => handleAddICD10(code)}
-                                onClose={() => { setShowICD10Modal(false); setEditingDiagnosisIndex(null); }}
-                                existingDiagnoses={diagnoses}
-                            />
-                        </div>
-                    </div>
-                )
-            }
-            <OrderModal
-                isOpen={showOrderModal}
-                onClose={() => { setShowOrderModal(false); setSelectedDiagnosis(null); }}
-                initialTab={orderModalTab}
-                diagnoses={diagnoses}
-                selectedDiagnosis={selectedDiagnosis}
-                existingOrders={noteData.planStructured}
-                onSave={handleUpdatePlan}
-                patientId={id}
-                visitId={currentVisitId || urlVisitId}
-                initialMedications={patientData?.medications}
-            />
-
-            {showOrderPicker && (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowOrderPicker(false)}>
-                    <div onClick={(e) => e.stopPropagation()} className="w-full max-w-xl">
-                        <OrderPicker
-                            type={orderPickerType}
-                            onSelect={handleOrderSelect}
-                            onClose={() => setShowOrderPicker(false)}
-                            visitId={currentVisitId || urlVisitId}
-                            patientId={id}
-                        />
-                    </div>
-                </div>
-            )}
-
-            {showPrintModal && <VisitPrint visitId={currentVisitId || urlVisitId} patientId={id} onClose={() => setShowPrintModal(false)} />}
-
-            {/* Unified Patient Chart Panel */}
-            <PatientChartPanel
-                patientId={id}
-                isOpen={showPatientChart}
-                onClose={() => setShowPatientChart(false)}
-                initialTab={patientChartTab}
-            />
-
-            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
-            {/* Dot Phrase Modal */}
-            {
-                showDotPhraseModal && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => {
-                        setShowDotPhraseModal(false);
-                        setDotPhraseSearch('');
-                        setActiveTextArea(null);
-                    }}>
-                        <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-                            <div className="p-4 border-b border-neutral-200 flex items-center justify-between">
-                                <h3 className="text-lg font-semibold text-ink-900 flex items-center space-x-2">
-                                    <Zap className="w-5 h-5 text-primary-600" />
-                                    <span>Dot Phrases</span>
-                                    {activeTextArea && <span className="text-sm font-normal text-ink-500">(Inserting into {activeTextArea.toUpperCase()})</span>}
-                                </h3>
-                                <button onClick={() => { setShowDotPhraseModal(false); setDotPhraseSearch(''); setActiveTextArea(null); }} className="p-1 hover:bg-primary-100 rounded">
-                                    <X className="w-5 h-5 text-ink-500" />
-                                </button>
-                            </div>
-                            <div className="p-4 border-b border-neutral-200">
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-neutral-400" />
-                                    <input type="text" value={dotPhraseSearch} onChange={(e) => setDotPhraseSearch(e.target.value)}
-                                        placeholder="Search dot phrases..." className="w-full pl-11 pr-4 py-2.5 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" autoFocus />
-                                </div>
-                            </div>
-                            <div className="flex-1 overflow-y-auto p-4">
-                                {filteredDotPhrases.length === 0 ? (
-                                    <div className="text-center text-ink-500 py-8">
-                                        {dotPhraseSearch.trim() ? `No dot phrases found matching "${dotPhraseSearch}"` : 'Start typing to search dot phrases...'}
-                                    </div>
-                                ) : (
-                                    <div className="space-y-2">
-                                        {filteredDotPhrases.map((item, index) => {
-                                            const template = hpiDotPhrases[item.key];
-                                            return (
-                                                <button key={`${item.key}-${index}`} onClick={() => handleDotPhrase(item.key)}
-                                                    className="w-full text-left p-3 border border-neutral-200 rounded-md hover:bg-primary-50 hover:border-neutral-300 transition-colors">
-                                                    <div className="font-medium text-ink-900 mb-1">{item.key}</div>
-                                                    <div className="text-sm text-ink-600 space-y-1 max-h-24 overflow-hidden">
-                                                        {template.split(/[.\n]/).filter(s => s.trim()).slice(0, 4).map((sentence, idx) => (
-                                                            <div key={idx} className="flex items-start">
-                                                                <span className="text-ink-400 mr-2">•</span>
-                                                                <span className="flex-1">{sentence.trim()}</span>
-                                                            </div>
-                                                        ))}
-                                                        {template.split(/[.\n]/).filter(s => s.trim()).length > 4 && <div className="text-ink-400 italic">...</div>}
-                                                    </div>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
-            <PatientChartPanel
-                patientId={id}
-                isOpen={showPatientChart}
-                onClose={() => setShowPatientChart(false)}
-                initialTab={patientChartTab}
-            />
-            {showPrintOrdersModal && (
-                <PrintOrdersModal
-                    patient={{ ...patientData, id }}
-                    isOpen={showPrintOrdersModal}
-                    onClose={() => setShowPrintOrdersModal(false)}
-                />
-            )}
-
-            {/* Chart Review Modal - Note Focused */}
-            {showChartReview && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60]" onClick={() => setShowChartReview(false)}>
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
-                        {/* Header with Tabs */}
-                        <div className="px-4 py-3 bg-gradient-to-r from-slate-900 to-slate-800 flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-2">
-                                    <Eye className="w-5 h-5 text-white" />
-                                    <h2 className="text-lg font-bold text-white">Chart Review</h2>
-                                </div>
-                                {/* Tab Buttons */}
-                                <div className="flex gap-1 bg-slate-700/50 rounded-lg p-1">
-                                    {['Notes', 'Vitals', 'Labs', 'Imaging', 'Echo', 'EKG', 'Stress', 'Cath', 'Docs'].map((tab) => (
-                                        <button
-                                            key={tab}
-                                            onClick={() => setChartReviewData(prev => ({ ...prev, activeTab: tab }))}
-                                            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${(chartReviewData.activeTab || 'Notes') === tab
-                                                ? 'bg-white text-slate-900 shadow'
-                                                : 'text-slate-300 hover:text-white hover:bg-slate-600'
-                                                }`}
-                                        >
-                                            {tab}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                            <button onClick={() => setShowChartReview(false)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-                                <X className="w-5 h-5 text-white" />
-                            </button>
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 flex overflow-hidden">
-                            {chartReviewData.loading ? (
-                                <div className="flex-1 flex items-center justify-center">
-                                    <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
-                                </div>
-                            ) : (chartReviewData.activeTab || 'Notes') === 'Notes' ? (
-                                <>
-                                    {/* Left: Visit List */}
-                                    <div className="w-56 border-r border-slate-200 bg-slate-50 flex flex-col">
-                                        <div className="p-3 border-b border-slate-200">
-                                            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Visit History</div>
-                                            <div className="text-[10px] text-slate-400">{chartReviewData.visits.length} visits</div>
-                                        </div>
-                                        <div className="flex-1 overflow-y-auto custom-scrollbar">
-                                            {chartReviewData.visits.map((visit, idx) => {
-                                                const noteText = visit.note_draft || '';
-                                                const ccMatch = noteText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n|$)/i);
-                                                const cc = ccMatch ? ccMatch[1].trim().substring(0, 40) : 'Visit';
-
-                                                return (
-                                                    <button
-                                                        key={visit.id}
-                                                        onClick={() => setChartReviewData(prev => ({ ...prev, selectedVisitId: visit.id }))}
-                                                        className={`w-full text-left p-3 border-b border-slate-100 transition-all ${(chartReviewData.selectedVisitId || chartReviewData.visits[0]?.id) === visit.id
-                                                            ? 'bg-white border-l-4 border-l-primary-500 shadow-sm'
-                                                            : 'hover:bg-white/70'
-                                                            }`}
-                                                    >
-                                                        <div className="flex items-center gap-1.5 mb-0.5">
-                                                            <span className="text-xs font-bold text-slate-900">
-                                                                {format(new Date(visit.visit_date), 'MMM d, yyyy')}
-                                                            </span>
-                                                            {visit.locked && <Lock className="w-2.5 h-2.5 text-slate-400" />}
-                                                        </div>
-                                                        <div className="text-[10px] text-slate-500 truncate">{cc}</div>
-                                                        <div className="text-[9px] text-slate-400 uppercase mt-0.5">
-                                                            {visit.provider_last_name || 'Provider'}
-                                                        </div>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-
-                                    {/* Center: Full Note View */}
-                                    <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                                        {(() => {
-                                            const selectedVisit = chartReviewData.visits.find(v => v.id === (chartReviewData.selectedVisitId || chartReviewData.visits[0]?.id));
-                                            if (!selectedVisit) return <div className="text-center text-slate-400 py-12">Select a visit</div>;
-
-                                            const noteText = selectedVisit.note_draft || '';
-                                            const decoded = decodeHtmlEntities(noteText);
-
-                                            // Parse sections
-                                            const ccMatch = decoded.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History):|$)/is);
-                                            const hpiMatch = decoded.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment):|$)/is);
-                                            const rosMatch = decoded.match(/(?:ROS|Review of Systems):\s*(.+?)(?:\n\n|\n(?:PE|Physical|Assessment):|$)/is);
-                                            const peMatch = decoded.match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Assessment|A):|$)/is);
-                                            const assessmentMatch = decoded.match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):|$)/is);
-                                            const planMatch = decoded.match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n(?:Care Plan|Follow):|$)/is);
-                                            const carePlanMatch = decoded.match(/(?:Care Plan|CP):\s*(.+?)(?:\n\n|$)/is);
-
-                                            return (
-                                                <div className="space-y-4">
-                                                    {/* Visit Header */}
-                                                    <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-                                                        <div>
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-lg font-bold text-slate-900">
-                                                                    {format(new Date(selectedVisit.visit_date), 'MMMM d, yyyy')}
-                                                                </span>
-                                                                {selectedVisit.locked && (
-                                                                    <span className="text-[10px] font-bold uppercase bg-green-100 text-green-700 px-2 py-0.5 rounded flex items-center gap-1">
-                                                                        <Lock className="w-3 h-3" /> Signed
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <div className="text-sm text-slate-500">
-                                                                {selectedVisit.visit_type?.replace('_', ' ') || 'Office Visit'} • {selectedVisit.provider_last_name || 'Provider'}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* CC */}
-                                                    <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
-                                                        <div className="text-[10px] font-bold text-blue-600 uppercase tracking-wide mb-1">Chief Complaint</div>
-                                                        <div className="text-sm font-semibold text-blue-900">{ccMatch ? ccMatch[1].trim() : 'Not documented'}</div>
-                                                    </div>
-
-                                                    {/* HPI */}
-                                                    {hpiMatch && (
-                                                        <div className="bg-white rounded-xl p-4 border border-slate-200">
-                                                            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">History of Present Illness</div>
-                                                            <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{hpiMatch[1].trim()}</div>
-                                                        </div>
-                                                    )}
-
-                                                    {/* ROS - Collapsed by default */}
-                                                    {rosMatch && (
-                                                        <details className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
-                                                            <summary className="p-3 cursor-pointer text-[10px] font-bold text-slate-500 uppercase tracking-wide hover:bg-slate-100">
-                                                                Review of Systems ▾
-                                                            </summary>
-                                                            <div className="p-4 pt-0 text-xs text-slate-600 whitespace-pre-wrap">{rosMatch[1].trim()}</div>
-                                                        </details>
-                                                    )}
-
-                                                    {/* PE - Collapsed by default */}
-                                                    {peMatch && (
-                                                        <details className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
-                                                            <summary className="p-3 cursor-pointer text-[10px] font-bold text-slate-500 uppercase tracking-wide hover:bg-slate-100">
-                                                                Physical Exam ▾
-                                                            </summary>
-                                                            <div className="p-4 pt-0 text-xs text-slate-600 whitespace-pre-wrap">{peMatch[1].trim()}</div>
-                                                        </details>
-                                                    )}
-
-                                                    {/* Assessment */}
-                                                    {assessmentMatch && (
-                                                        <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
-                                                            <div className="text-[10px] font-bold text-amber-700 uppercase tracking-wide mb-2">Assessment</div>
-                                                            <div className="text-sm text-amber-900 whitespace-pre-wrap leading-relaxed">{assessmentMatch[1].trim()}</div>
-                                                        </div>
-                                                    )}
-
-                                                    {/* Plan */}
-                                                    {planMatch && (
-                                                        <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
-                                                            <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide mb-2">Plan</div>
-                                                            <div className="text-sm text-emerald-900 whitespace-pre-wrap leading-relaxed">{planMatch[1].trim()}</div>
-                                                        </div>
-                                                    )}
-
-                                                    {/* Care Plan */}
-                                                    {carePlanMatch && (
-                                                        <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
-                                                            <div className="text-[10px] font-bold text-purple-700 uppercase tracking-wide mb-2">Care Plan</div>
-                                                            <div className="text-sm text-purple-900 whitespace-pre-wrap leading-relaxed">{carePlanMatch[1].trim()}</div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })()}
-                                    </div>
-
-                                    {/* Right: Quick Info */}
-                                    <div className="w-56 border-l border-slate-200 bg-slate-50 p-3 overflow-y-auto custom-scrollbar">
-                                        <div className="space-y-4">
-                                            {/* Active Problems */}
-                                            <div>
-                                                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">Active Problems</div>
-                                                <div className="space-y-1">
-                                                    {(patientData?.problems || []).filter(p => p.status === 'active').slice(0, 6).map((p, i) => (
-                                                        <div key={i} className="text-[11px] text-slate-700 flex items-start gap-1">
-                                                            <span className="text-slate-400">•</span>
-                                                            <span>{p.problem_name}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            {/* Medications */}
-                                            <div>
-                                                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">Medications</div>
-                                                <div className="space-y-1">
-                                                    {(patientData?.medications || []).filter(m => m.active !== false).slice(0, 6).map((m, i) => (
-                                                        <div key={i} className="text-[11px] text-slate-700">
-                                                            {m.medication_name}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            {/* Allergies */}
-                                            <div>
-                                                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">Allergies</div>
-                                                {(patientData?.allergies || []).length > 0 ? (
-                                                    <div className="space-y-1">
-                                                        {patientData.allergies.map((a, i) => (
-                                                            <div key={i} className="text-[11px] text-red-600 font-medium">{a.allergen}</div>
-                                                        ))}
-                                                    </div>
-                                                ) : (
-                                                    <div className="text-[11px] text-emerald-600 font-medium">NKDA</div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </>
-                            ) : (
-                                /* Labs / Imaging / Echo / EKG tabs */
-                                <div className="flex-1 flex items-center justify-center p-8">
-                                    <div className="text-center">
-                                        <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                                            {(chartReviewData.activeTab) === 'Vitals' && <Activity className="w-8 h-8 text-green-500" />}
-                                            {(chartReviewData.activeTab) === 'Labs' && <FlaskConical className="w-8 h-8 text-purple-500" />}
-                                            {(chartReviewData.activeTab) === 'Imaging' && <FileImage className="w-8 h-8 text-blue-500" />}
-                                            {(chartReviewData.activeTab) === 'Echo' && <Heart className="w-8 h-8 text-rose-500" />}
-                                            {(chartReviewData.activeTab) === 'EKG' && <Waves className="w-8 h-8 text-rose-500" />}
-                                            {(chartReviewData.activeTab) === 'Stress' && <Activity className="w-8 h-8 text-orange-500" />}
-                                            {(chartReviewData.activeTab) === 'Cath' && <Stethoscope className="w-8 h-8 text-red-500" />}
-                                            {(chartReviewData.activeTab) === 'Docs' && <FileText className="w-8 h-8 text-slate-500" />}
-                                        </div>
-                                        <h3 className="text-lg font-bold text-slate-900 mb-1">{chartReviewData.activeTab}</h3>
-                                        <p className="text-sm text-slate-500 mb-4">Results will be displayed here</p>
-                                        <button
-                                            onClick={() => { setShowChartReview(false); setPatientChartTab('results'); setShowPatientChart(true); }}
-                                            className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors"
-                                        >
-                                            View in Full Chart
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Footer */}
-                        <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-                            <div className="text-xs text-slate-500">
-                                Navigate between visits to review patient history
-                            </div>
-                            <button
-                                onClick={() => { setShowChartReview(false); setPatientChartTab('history'); setShowPatientChart(true); }}
-                                className="px-4 py-2 bg-slate-900 text-white text-sm font-bold rounded-lg hover:bg-slate-800 transition-colors"
-                            >
-                                Open Full Chart →
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Carry Forward Modal */}
-            {showCarryForward && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60]" onClick={() => setShowCarryForward(false)}>
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
-                        {/* Header */}
-                        <div className="px-6 py-4 bg-gradient-to-r from-slate-700 to-slate-600 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <RotateCcw className="w-5 h-5 text-white" />
-                                <h2 className="text-lg font-bold text-white">Pull from Previous Visit</h2>
-                                <span className="text-[11px] font-bold uppercase text-slate-300 bg-slate-500 px-2 py-0.5 rounded">
-                                    {carryForwardField?.toUpperCase()}
-                                </span>
-                            </div>
-                            <button onClick={() => setShowCarryForward(false)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-                                <X className="w-5 h-5 text-white" />
-                            </button>
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 overflow-y-auto p-6">
-                            {loadingPrevVisits ? (
-                                <div className="flex items-center justify-center py-16">
-                                    <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
-                                </div>
-                            ) : previousVisits.length === 0 ? (
-                                <div className="text-center py-12 text-slate-400">
-                                    <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                                    <p className="text-sm font-medium">No previous visits with notes found</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    <p className="text-xs text-slate-500 mb-4">
-                                        Select a visit below to pull its <strong>{carryForwardField?.toUpperCase()}</strong> content into the current note.
-                                    </p>
-                                    {previousVisits.map((visit) => {
-                                        const sectionContent = extractSectionFromNote(visit.note_draft, carryForwardField);
-                                        const hasContent = sectionContent && sectionContent.trim().length > 0;
-
-                                        return (
-                                            <div key={visit.id} className={`p-4 rounded-xl border transition-all ${hasContent ? 'bg-white border-slate-200 hover:border-primary-300 hover:shadow-md cursor-pointer' : 'bg-slate-50 border-slate-100 opacity-60'}`}>
-                                                <div className="flex items-start justify-between mb-2">
-                                                    <div>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-sm font-bold text-slate-900">
-                                                                {format(new Date(visit.visit_date), 'MMM d, yyyy')}
-                                                            </span>
-                                                            {visit.locked && <Lock className="w-3 h-3 text-slate-400" />}
-                                                        </div>
-                                                        <div className="text-[11px] text-slate-500 uppercase font-medium">
-                                                            {visit.visit_type?.replace('_', ' ') || 'Office Visit'} • {visit.provider_last_name || 'Provider'}
-                                                        </div>
-                                                    </div>
-                                                    {hasContent && (
-                                                        <button
-                                                            onClick={() => insertCarryForward(sectionContent)}
-                                                            className="px-3 py-1.5 bg-primary-600 text-white text-xs font-bold rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-1.5"
-                                                        >
-                                                            <Copy className="w-3.5 h-3.5" />
-                                                            Use This
-                                                        </button>
-                                                    )}
-                                                </div>
-
-                                                {hasContent ? (
-                                                    <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
-                                                        <div className="text-[10px] font-bold uppercase text-slate-400 mb-1">
-                                                            {carryForwardField?.toUpperCase()} Content
-                                                        </div>
-                                                        <div className="text-xs text-slate-700 whitespace-pre-wrap line-clamp-4">
-                                                            {sectionContent}
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div className="mt-2 text-xs text-slate-400 italic">
-                                                        No {carryForwardField?.toUpperCase()} content found in this visit
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Footer */}
-                        <div className="px-6 py-3 bg-slate-50 border-t border-slate-200">
-                            <div className="text-xs text-slate-500">
-                                Content will replace the current {carryForwardField?.toUpperCase()} field
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div >
+        </div>
     );
 };
 

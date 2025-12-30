@@ -14,6 +14,7 @@ import { showError, showSuccess } from '../utils/toast';
 // import 'react-grid-layout/css/styles.css';
 // import 'react-resizable/css/styles.css';
 import PatientChartPanel from '../components/PatientChartPanel';
+import ChartReviewModal from '../components/ChartReviewModal';
 import VisitFoldersModal from '../components/VisitFoldersModal';
 import VisitChartView from '../components/VisitChartView';
 import EPrescribeEnhanced from '../components/EPrescribeEnhanced';
@@ -102,6 +103,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
         interpretation: ''
     });
     const [ekgFile, setEKGFile] = useState(null);
+    const [showChartReview, setShowChartReview] = useState(false);
 
     // ECHO States
     const [showECHOModal, setShowECHOModal] = useState(false);
@@ -587,8 +589,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             chiefComplaint: chiefComplaint,
                             signed: visit.locked || !!visit.note_signed_by,
                             visitDate: visit.visit_date,
+                            visit_date: visit.visit_date, // For ChartReviewModal
                             createdAt: visit.created_at || visit.visit_date, // Fallback to visit_date if created_at not available
-                            fullNote: noteText
+                            fullNote: noteText,
+                            vitals: visit.vitals, // For ChartReviewModal
+                            visit_type: visit.visit_type, // For ChartReviewModal
                         };
                     });
 
@@ -685,6 +690,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
                         })(),
                         chiefComplaint: chiefComplaint,
                         signed: visit.locked || !!visit.note_signed_by,
+                        fullNote: noteText,
+                        vitals: visit.vitals,
+                        visitDate: visit.visit_date,
+                        visit_date: visit.visit_date,
+                        visit_type: visit.visit_type
                     };
                 });
                 setRecentNotes(formattedNotes);
@@ -1413,6 +1423,14 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             >
                                 <Printer className="w-3.5 h-3.5" />
                                 <span>Print Orders</span>
+                            </button>
+                            <button
+                                onClick={() => setShowChartReview(true)}
+                                className="flex items-center gap-1 px-2.5 py-1 bg-white text-indigo-600 hover:bg-indigo-50 text-[11px] font-bold rounded-full border border-indigo-200 transition-all"
+                                title="Chart Review"
+                            >
+                                <Eye className="w-3.5 h-3.5" />
+                                <span>Review Chart</span>
                             </button>
                         </div>
                         <div className="flex-shrink-0 ml-2 flex items-center gap-2">
@@ -2739,6 +2757,24 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     patient={{ ...patient, id }}
                     isOpen={showPrintOrdersModal}
                     onClose={() => setShowPrintOrdersModal(false)}
+                />
+            )}
+            {showChartReview && (
+                <ChartReviewModal
+                    isOpen={showChartReview}
+                    onClose={() => setShowChartReview(false)}
+                    visits={recentNotes}
+                    isLoading={loadingNotes}
+                    patientData={{ ...patient, problems, medications, allergies }}
+                    onViewFullChart={() => {
+                        setShowChartReview(false);
+                        setPatientChartTab('history');
+                        setShowPatientChart(true);
+                    }}
+                    onOpenVisit={(visitId) => {
+                        navigate(`/patient/${id}/visit/${visitId}`);
+                        setShowChartReview(false);
+                    }}
                 />
             )}
         </div >
