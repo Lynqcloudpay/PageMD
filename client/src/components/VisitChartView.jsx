@@ -629,26 +629,29 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                             <div className="max-w-[1400px] mx-auto bg-white shadow-sm border border-slate-200 min-h-full p-16 space-y-12 print-document-sheet print:border-0 print:shadow-none print:max-w-none">
 
                                 {/* 1. REFINED CLINIC HEADER */}
-                                <div className="flex justify-between items-center pb-12 border-b border-slate-300 avoid-cut">
+                                <div className="flex justify-between items-center pb-8 border-b-2 border-slate-100 avoid-cut">
                                     <div className="flex items-center gap-10">
                                         <div className="w-32 h-32 flex items-center justify-center shrink-0">
-                                            <img src={clinicInfo.logo || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8fafc' rx='8'/%3E%3Crect x='60' y='45' width='80' height='90' fill='none' stroke='%23cbd5e1' stroke-width='3' rx='4'/%3E%3Crect x='75' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='75' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='88' y='110' width='24' height='25' fill='%23cbd5e1' rx='2'/%3E%3Ctext x='100' y='165' text-anchor='middle' font-family='Arial,sans-serif' font-size='14' font-weight='600' fill='%2394a3b8'%3ENO LOGO%3C/text%3E%3C/svg%3E"} alt="Logo" className="max-w-full max-h-full object-contain" />
+                                            <img src={clinicInfo.logo || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8fafc' rx='8'/%3E%3Crect x='60' y='45' width='80' height='90' fill='none' stroke='%23cbd5e1' stroke-width='3' rx='4'/%3E%3Crect x='75' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='75' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='88' y='110' width='24' height='25' fill='%23cbd5e1' rx='2'/%3E%3Ctext x='100' y='165' text-anchor='middle' font-family='Arial,sans-serif' font-size='14' font-weight='600' fill='%2394a3b8'%3ENO LOGO%3C/text%3E%3C/svg%3E"} alt="Logo" className="max-w-full max-h-full object-contain filter drop-shadow-sm" />
                                         </div>
-                                        <div className="leading-snug">
-                                            <div className="flex items-center gap-5">
-                                                <h1 className="text-[32px] font-bold text-slate-900 tracking-tight">{clinicInfo.name}</h1>
-                                                <span className="text-[10px] border border-slate-200 text-slate-400 px-3 py-1 rounded uppercase font-bold tracking-widest">Clinical Record</span>
+                                        <div className="leading-tight">
+                                            <div className="flex items-baseline gap-4 mb-2">
+                                                <h1 className="text-[28px] font-black text-slate-800 tracking-tightest uppercase">{clinicInfo.name}</h1>
+                                                <span className="text-[9px] bg-slate-900 text-white px-2.5 py-1 rounded-sm font-black tracking-widest uppercase">Clinical Record</span>
                                             </div>
-                                            <div className="text-[14px] text-slate-500 mt-2 font-medium">
-                                                {clinicInfo.address.replace(/\n/g, ' • ')}
-                                                <span className="mx-3 text-slate-300">|</span>
-                                                P: {clinicInfo.phone}
+                                            <div className="text-[12px] text-slate-400 font-bold uppercase tracking-tight flex items-center gap-3">
+                                                <span>{clinicInfo.address.replace(/\n/g, ' • ')}</span>
+                                                <div className="w-1 h-1 rounded-full bg-slate-300" />
+                                                <span className="text-slate-600 font-black">PH: {clinicInfo.phone}</span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <div className="text-[16px] font-bold text-slate-900">{visitDate}</div>
-                                        <div className="text-[9px] text-slate-400 font-mono mt-1.5 uppercase tracking-tighter">ID: {activeVisitId?.substring(0, 10)}</div>
+                                    <div className="text-right flex flex-col items-end">
+                                        <div className="bg-slate-50 px-4 py-2 rounded-lg border border-slate-100 mb-2">
+                                            <div className="text-[18px] font-black text-slate-900 tracking-tight">{visitDate}</div>
+                                            <div className="text-[8px] text-slate-400 font-black uppercase tracking-widest text-right mt-0.5">Examination Date</div>
+                                        </div>
+                                        <div className="text-[10px] text-slate-300 font-mono tracking-tighter">REF: {activeVisitId?.substring(0, 14).toUpperCase()}</div>
                                     </div>
                                 </div>
 
