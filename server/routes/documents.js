@@ -154,6 +154,12 @@ router.put('/:id', requirePermission('patients:view_chart'), async (req, res) =>
     const values = [];
     let paramIndex = 1;
 
+    if (req.body.visit_id !== undefined) {
+      updates.push(`visit_id = $${paramIndex}`);
+      values.push(req.body.visit_id); // Can be null to unlink
+      paramIndex++;
+    }
+
     if (reviewed !== undefined) {
       updates.push(`reviewed = $${paramIndex}`);
       values.push(reviewed);
