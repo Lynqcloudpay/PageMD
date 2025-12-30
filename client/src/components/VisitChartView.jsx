@@ -29,13 +29,13 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     const [showBillingModal, setShowBillingModal] = useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [clinicInfo, setClinicInfo] = useState({
-        name: "myHEART Cardiology",
-        address: "123 Medical Center Drive, Suite 100\nCity, State 12345",
-        phone: "(555) 123-4567",
-        fax: "(555) 123-4568",
-        email: "office@myheartclinic.com",
-        website: "www.myheartclinic.com",
-        logo: "/logo.png"
+        name: "My Practice",
+        address: "",
+        phone: "",
+        fax: "",
+        email: "",
+        website: "",
+        logo: null
     });
 
     useEffect(() => {
@@ -599,7 +599,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                 <div className="flex justify-between items-center pb-12 border-b border-slate-300 avoid-cut">
                                     <div className="flex items-center gap-10">
                                         <div className="w-32 h-32 flex items-center justify-center shrink-0">
-                                            <img src={clinicInfo.logo} alt="Logo" className="max-w-full max-h-full object-contain" />
+                                            <img src={clinicInfo.logo || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8fafc' rx='8'/%3E%3Crect x='60' y='45' width='80' height='90' fill='none' stroke='%23cbd5e1' stroke-width='3' rx='4'/%3E%3Crect x='75' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='75' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='88' y='110' width='24' height='25' fill='%23cbd5e1' rx='2'/%3E%3Ctext x='100' y='165' text-anchor='middle' font-family='Arial,sans-serif' font-size='14' font-weight='600' fill='%2394a3b8'%3ENO LOGO%3C/text%3E%3C/svg%3E"} alt="Logo" className="max-w-full max-h-full object-contain" />
                                         </div>
                                         <div className="leading-snug">
                                             <div className="flex items-center gap-5">
