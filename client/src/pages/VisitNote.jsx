@@ -2004,14 +2004,6 @@ const VisitNote = () => {
                         </div>
                         <div className="flex items-center space-x-1.5">
                             <button
-                                onClick={() => { setPatientChartTab('history'); setShowPatientChart(!showPatientChart); }}
-                                className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md transition-colors text-xs font-medium border ${showPatientChart ? 'bg-primary-50 text-primary-700 border-primary-200' : 'bg-white text-neutral-700 border-gray-200 hover:bg-gray-50'}`}
-                                title="Toggle Patient Chart Side Panel"
-                            >
-                                <History className="w-3.5 h-3.5" />
-                                <span>Chart</span>
-                            </button>
-                            <button
                                 onClick={async () => {
                                     setShowChartReview(true);
                                     setChartReviewData({ visits: [], loading: true });

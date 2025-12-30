@@ -61,18 +61,25 @@ router.post('/', requirePermission('patients:view_chart'), upload.single('file')
 
     let { patientId, visitId, docType, tags } = req.body;
 
+    // Validation
+    if (!patientId) {
+      console.error(`[DOC-UPLOAD][${requestId}] Validation failed: Missing patientId`);
+      return res.status(400).json({
+        error: 'Missing patientId',
+        receivedBody: req.body // Help debug if fields are arriving after the file
+      });
+    }
+
     // Safety: Trim IDs to prevent potential FK issues with whitespace
-    if (patientId) patientId = patientId.trim();
+    patientId = patientId.trim();
     if (visitId) visitId = visitId.trim();
 
     console.log(`[DOC-UPLOAD][${requestId}] Request: patientId=${patientId}, visitId=${visitId}, docType=${docType}, file=${req.file.originalname}`);
 
-    // Check DB Context
-    const dbClient = pool._currentClient;
-    if (!dbClient) {
-      console.warn(`[DOC-UPLOAD][${requestId}] WARNING: No transactional client found in dbStorage. Using fallback pool.`);
-    } else {
-      console.log(`[DOC-UPLOAD][${requestId}] Using transactional client for schema: ${dbClient.tenantSchema}`);
+    // Determine query executor (prefer transactional client)
+    const dbClient = req.dbClient || pool._currentClient || pool;
+    if (!req.dbClient && !pool._currentClient) {
+      console.warn(`[DOC-UPLOAD][${requestId}] WARNING: No transactional client found. Falling back to global pool.`);
     }
 
     // Sanitize docType to match DB CHECK constraint: ('imaging', 'consult', 'lab', 'other')
@@ -80,12 +87,13 @@ router.post('/', requirePermission('patients:view_chart'), upload.single('file')
     if (!docType) {
       docType = 'other';
     } else {
-      docType = docType.toLowerCase();
+      docType = docType.toLowerCase().trim();
       // Map common subtypes to valid categories
-      if (docType === 'echo' || docType === 'ekg' || docType === 'stress' || docType === 'cardiac_cath') {
+      const imagingTypes = ['echo', 'ekg', 'stress', 'stress_test', 'stress-test', 'cardiac_cath', 'cardiac-cath', 'cath'];
+      if (imagingTypes.includes(docType)) {
         docType = 'imaging';
       }
-      // If still not valid, default to 'other'
+      // If still not valid category, check if it's one of the allowed ones
       if (!validDocTypes.includes(docType)) {
         docType = 'other';
       }
@@ -94,7 +102,8 @@ router.post('/', requirePermission('patients:view_chart'), upload.single('file')
     // Store URL path as /uploads/ (API base URL already includes /api prefix)
     const urlPath = `/uploads/${req.file.filename}`;
 
-    const result = await pool.query(
+    // Execute query
+    const result = await dbClient.query(
       `INSERT INTO documents (
         patient_id, visit_id, uploader_id, doc_type, filename, file_path, mime_type, file_size, tags
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
@@ -102,9 +111,9 @@ router.post('/', requirePermission('patients:view_chart'), upload.single('file')
         patientId,
         visitId || null,
         req.user.id,
-        docType || 'other',
+        docType,
         req.file.originalname,
-        urlPath, // Store URL path instead of filesystem path
+        urlPath,
         req.file.mimetype,
         req.file.size,
         tags && typeof tags === 'string' ? tags.split(',') : (Array.isArray(tags) ? tags : []),
@@ -125,11 +134,13 @@ router.post('/', requirePermission('patients:view_chart'), upload.single('file')
       code: error.code,
       detail: error.detail,
       constraint: error.constraint,
-      table: error.table
+      table: error.table,
+      body: req.body // Log body to see if fields arrived
     });
     res.status(500).json({
       error: 'Failed to upload document',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      message: error.message,
+      detail: error.detail,
       code: error.code
     });
   }

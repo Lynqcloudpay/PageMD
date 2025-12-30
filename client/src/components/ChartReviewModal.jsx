@@ -455,22 +455,31 @@ const ChartReviewModal = ({
     // Document Preview Component
     const DocumentPreview = ({ item, onClose }) => {
         const [src, setSrc] = useState(null);
+        const [mimeType, setMimeType] = useState(null);
         const [loading, setLoading] = useState(true);
 
         useEffect(() => {
-            if (item.type === 'document') {
+            let currentUrl = null;
+            if (item.type === 'document' && item.source?.id) {
                 setLoading(true);
                 documentsAPI.getFile(item.source.id).then(res => {
-                    setSrc(URL.createObjectURL(res.data));
+                    const blob = res.data;
+                    const url = URL.createObjectURL(blob);
+                    currentUrl = url;
+                    setSrc(url);
+                    setMimeType(item.source.mime_type || blob.type);
                 }).catch(err => {
                     console.error("Error loading document:", err);
                 }).finally(() => {
                     setLoading(false);
                 });
             }
-        }, [item]);
+            return () => {
+                if (currentUrl) URL.revokeObjectURL(currentUrl);
+            };
+        }, [item.id, item.source?.id]);
 
-        const tags = Array.isArray(item.source.tags) ? item.source.tags : [];
+        const tags = Array.isArray(item.source?.tags) ? item.source.tags : [];
         const interpretationTag = tags.find(t => t.startsWith('interpretation:'));
         const interpretation = interpretationTag ? interpretationTag.replace('interpretation:', '') : null;
 
@@ -496,19 +505,39 @@ const ChartReviewModal = ({
                     </button>
                 </div>
 
-                <div className="p-6">
+                <div className="p-6 flex-1">
                     {item.type === 'document' ? (
-                        <div className="space-y-6">
+                        <div className="h-full flex flex-col space-y-6">
                             {loading ? (
                                 <div className="h-64 flex items-center justify-center bg-white rounded-xl border-2 border-dashed border-slate-200">
                                     <div className="flex flex-col items-center animate-pulse">
                                         <FileImage className="w-12 h-12 text-slate-200 mb-2" />
-                                        <span className="text-xs text-slate-400 font-bold uppercase">Loading Image...</span>
+                                        <span className="text-xs text-slate-400 font-bold uppercase">Loading Document...</span>
                                     </div>
                                 </div>
                             ) : src ? (
-                                <div className="bg-white p-2 rounded-2xl shadow-sm border border-slate-200/50">
-                                    <img src={src} className="w-full h-auto rounded-xl shadow-lg cursor-zoom-in" alt="Document" onClick={() => window.open(src, '_blank')} />
+                                <div className="flex-1 flex flex-col space-y-4 min-h-0">
+                                    <div className="flex-1 bg-white p-2 rounded-2xl shadow-sm border border-slate-200/50 overflow-hidden min-h-[400px]">
+                                        {mimeType?.startsWith('image/') ? (
+                                            <div className="h-full overflow-auto custom-scrollbar flex items-center justify-center bg-slate-100/50 rounded-xl">
+                                                <img
+                                                    src={src}
+                                                    className="max-w-full h-auto rounded-lg shadow-lg cursor-zoom-in"
+                                                    alt="Document"
+                                                    onClick={() => window.open(src, '_blank')}
+                                                />
+                                            </div>
+                                        ) : (
+                                            <iframe
+                                                src={`${src}#toolbar=0&navpanes=0`}
+                                                className="w-full h-full rounded-xl border-0"
+                                                title="Document Preview"
+                                            />
+                                        )}
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 text-center font-medium italic">
+                                        Tip: Click on image documents to open in a new tab for full-size viewing.
+                                    </p>
                                 </div>
                             ) : (
                                 <div className="h-32 flex items-center justify-center bg-rose-50 rounded-xl border border-rose-100 text-rose-500 font-bold text-xs">

@@ -879,7 +879,6 @@ const Snapshot = ({ showNotesOnly = false }) => {
         if (!ekgFile || !id) return;
         try {
             const formData = new FormData();
-            formData.append('file', ekgFile);
             formData.append('patientId', id);
             formData.append('docType', 'imaging');
             // Tags for EKG data - interpretation is the user notes
@@ -895,6 +894,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 `interpretation:${ekgData.interpretation}`
             ].filter(Boolean);
             formData.append('tags', tags.join(','));
+            formData.append('file', ekgFile);
 
             await documentsAPI.upload(formData);
             const docsResponse = await documentsAPI.getByPatient(id);
@@ -912,7 +912,6 @@ const Snapshot = ({ showNotesOnly = false }) => {
         if (!echoFile || !id) return;
         try {
             const formData = new FormData();
-            formData.append('file', echoFile);
             formData.append('patientId', id);
             formData.append('docType', 'imaging');  // Use 'imaging' - 'echo' is not a valid doc_type. Type is distinguished via tags.
             // Tags for ECHO data
@@ -927,6 +926,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 `interpretation:${echoData.notes}`
             ].filter(Boolean);
             formData.append('tags', tags.join(','));
+            formData.append('file', echoFile);
 
             await documentsAPI.upload(formData);
             const docsResponse = await documentsAPI.getByPatient(id);
@@ -944,7 +944,6 @@ const Snapshot = ({ showNotesOnly = false }) => {
         if (!stressTestFile || !id) return;
         try {
             const formData = new FormData();
-            formData.append('file', stressTestFile);
             formData.append('patientId', id);
             formData.append('docType', 'imaging');
             const tags = [
@@ -958,6 +957,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 `interpretation:${stressTestData.notes}`
             ].filter(Boolean);
             formData.append('tags', tags.join(','));
+            formData.append('file', stressTestFile);
 
             await documentsAPI.upload(formData);
             const docsResponse = await documentsAPI.getByPatient(id);
@@ -975,7 +975,6 @@ const Snapshot = ({ showNotesOnly = false }) => {
         if (!cardiacCathFile || !id) return;
         try {
             const formData = new FormData();
-            formData.append('file', cardiacCathFile);
             formData.append('patientId', id);
             formData.append('docType', 'imaging');
             const tags = [
@@ -987,6 +986,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 `interpretation:${cardiacCathData.notes}`
             ].filter(Boolean);
             formData.append('tags', tags.join(','));
+            formData.append('file', cardiacCathFile);
 
             await documentsAPI.upload(formData);
             const docsResponse = await documentsAPI.getByPatient(id);
