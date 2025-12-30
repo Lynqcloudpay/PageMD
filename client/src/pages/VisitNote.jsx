@@ -4,7 +4,8 @@ import {
     Save, Lock, FileText, ChevronDown, ChevronUp, Plus, ClipboardList,
     Sparkles, ArrowLeft, Zap, Search, X, Printer, History,
     Activity, CheckSquare, Square, Trash2, Pill, Users, UserCircle, ChevronRight,
-    DollarSign, Eye, Calendar, AlertCircle, Stethoscope, ScrollText, Copy, RotateCcw
+    DollarSign, Eye, Calendar, AlertCircle, Stethoscope, ScrollText, Copy, RotateCcw,
+    PanelRight, RefreshCw, StopCircle, FileImage, FlaskConical, Heart, Waves
 } from 'lucide-react';
 import Toast from '../components/ui/Toast';
 import { OrderModal, PrescriptionModal, ReferralModal } from '../components/ActionModals';
@@ -199,6 +200,9 @@ const VisitNote = () => {
     const [carryForwardField, setCarryForwardField] = useState(null); // 'hpi', 'ros', 'pe', 'assessment'
     const [previousVisits, setPreviousVisits] = useState([]);
     const [loadingPrevVisits, setLoadingPrevVisits] = useState(false);
+
+    // Quick Actions Panel
+    const [showQuickActions, setShowQuickActions] = useState(true);
 
     // Auto-save tracking
     const autoSaveTimeoutRef = useRef(null);
@@ -1650,6 +1654,46 @@ const VisitNote = () => {
         showToast(`Added: ${problem.problem_name}`, 'success');
     };
 
+    // Add medication action to plan
+    const addMedicationToPlan = (med, action) => {
+        const actionText = action === 'continue'
+            ? `Continue ${med.medication_name} ${med.dosage || ''} ${med.frequency || ''}`
+            : action === 'refill'
+                ? `Refill ${med.medication_name} ${med.dosage || ''} - 90 day supply`
+                : `Discontinue ${med.medication_name}`;
+
+        // Add to plan as text
+        const newPlan = noteData.plan ? `${noteData.plan}\n- ${actionText}` : `- ${actionText}`;
+        setNoteData(prev => ({ ...prev, plan: newPlan }));
+        showToast(`${action === 'stop' ? 'Stopped' : action === 'refill' ? 'Refill added' : 'Continued'}: ${med.medication_name}`, 'success');
+    };
+
+    // Insert HPI template
+    const insertHpiTemplate = (templateKey, templateText) => {
+        const newHpi = noteData.hpi ? `${noteData.hpi}\n\n${templateText}` : templateText;
+        setNoteData(prev => ({ ...prev, hpi: newHpi }));
+        showToast(`Inserted: ${templateKey}`, 'success');
+    };
+
+    // Common HPI templates
+    const hpiTemplates = [
+        { key: 'Chest Pain', text: 'Patient presents with chest pain. Location: substernal. Quality: pressure. Severity: [X]/10. Onset: [TIME]. Duration: [DURATION]. Radiation: [LOCATION]. Associated symptoms: [SYMPTOMS]. Aggravating factors: [FACTORS]. Relieving factors: [FACTORS].' },
+        { key: 'Shortness of Breath', text: 'Patient presents with shortness of breath. Onset: [TIME]. Duration: [DURATION]. Severity: at rest / with exertion. Associated symptoms: orthopnea, PND, leg swelling. Number of pillows: [#]. Walking distance: [DISTANCE].' },
+        { key: 'Hypertension F/U', text: 'Patient here for hypertension follow-up. Blood pressure at home: [BP READINGS]. Medication compliance: good/fair/poor. Side effects: none/[SYMPTOMS]. Salt intake: [LOW/MODERATE/HIGH]. Exercise: [FREQUENCY].' },
+        { key: 'Diabetes F/U', text: 'Patient here for diabetes management. Home glucose readings: fasting [#], post-prandial [#]. A1C target: <7%. Hypoglycemic episodes: none/[FREQUENCY]. Diet compliance: good/fair/poor. Foot exam: normal/abnormal.' },
+        { key: 'Heart Failure', text: 'Patient with history of heart failure, EF [#]%. Current symptoms: NYHA Class [I/II/III/IV]. Weight today: [#] lbs. Dry weight: [#] lbs. Leg swelling: none/trace/1+/2+/3+. Medication compliance: good.' },
+        { key: 'Palpitations', text: 'Patient presents with palpitations. Onset: [TIME]. Frequency: [FREQUENCY]. Duration of episodes: [DURATION]. Associated symptoms: dizziness, syncope, chest pain, SOB. Triggers: caffeine, stress, exercise, none.' },
+    ];
+
+    // Insert result into plan
+    const insertResultIntoPlan = (resultType, resultText) => {
+        const newPlan = noteData.plan
+            ? `${noteData.plan}\n- ${resultType}: ${resultText}`
+            : `- ${resultType}: ${resultText}`;
+        setNoteData(prev => ({ ...prev, plan: newPlan }));
+        showToast(`${resultType} noted in plan`, 'success');
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-white flex items-center justify-center">
@@ -1780,955 +1824,1121 @@ const VisitNote = () => {
                             <button onClick={() => setShowPrintModal(true)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors" title="Print Visit Note">
                                 <Printer className="w-3.5 h-3.5" />
                             </button>
-                        </div>
-                    </div>
-
-                    {/* Vitals */}
-                    <Section title="Vital Signs" defaultOpen={true}>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                            <div>
-                                <label className="block text-xs font-medium text-neutral-700 mb-1">BP (mmHg)</label>
-                                <div className="flex items-center gap-1">
-                                    <input ref={systolicRef} type="number" placeholder="120" value={vitals.systolic}
-                                        onChange={(e) => {
-                                            const sys = e.target.value;
-                                            const bp = sys && vitals.diastolic ? `${sys}/${vitals.diastolic}` : '';
-                                            setVitals({ ...vitals, systolic: sys, bp });
-                                        }}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); diastolicRef.current?.focus(); } }}
-                                        disabled={isSigned}
-                                        className={`w-14 px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors ${isAbnormalVital('systolic', vitals.systolic) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
-                                    />
-                                    <span className="text-neutral-400 text-xs font-medium px-0.5">/</span>
-                                    <input ref={diastolicRef} type="number" placeholder="80" value={vitals.diastolic}
-                                        onChange={(e) => {
-                                            const dia = e.target.value;
-                                            const bp = vitals.systolic && dia ? `${vitals.systolic}/${dia}` : '';
-                                            setVitals({ ...vitals, diastolic: dia, bp });
-                                        }}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); pulseRef.current?.focus(); } }}
-                                        disabled={isSigned}
-                                        className={`w-14 px-1.5 py-1 text-xs border border-gray-300 rounded-md bg-white focus:ring-1 focus:ring-accent-500 focus:border-accent-500 disabled:bg-white disabled:text-gray-900 transition-colors ${isAbnormalVital('diastolic', vitals.diastolic) ? 'text-red-600 font-semibold border-red-300' : 'text-gray-900'}`}
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-neutral-700 mb-1">HR (bpm)</label>
-                                <input ref={pulseRef} type="number" placeholder="72" value={vitals.pulse}
-                                    onChange={(e) => setVitals({ ...vitals, pulse: e.target.value })}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); o2satRef.current?.focus(); } }}
-                                    disabled={isSigned}
-                                    className={`w-full px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors ${isAbnormalVital('pulse', vitals.pulse) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-neutral-700 mb-1">O2 Sat (%)</label>
-                                <input ref={o2satRef} type="number" placeholder="98" value={vitals.o2sat}
-                                    onChange={(e) => setVitals({ ...vitals, o2sat: e.target.value })}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); tempRef.current?.focus(); } }}
-                                    disabled={isSigned}
-                                    className={`w-full px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors ${isAbnormalVital('o2sat', vitals.o2sat) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-neutral-700 mb-1">Temp (°F)</label>
-                                <input ref={tempRef} type="number" step="0.1" placeholder="98.6" value={vitals.temp}
-                                    onChange={(e) => setVitals({ ...vitals, temp: e.target.value })}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); weightRef.current?.focus(); } }}
-                                    disabled={isSigned}
-                                    className={`w-full px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors ${isAbnormalVital('temp', vitals.temp) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-neutral-700 mb-1">
-                                    Weight
-                                    {previousWeight && (() => {
-                                        const change = getWeightChange();
-                                        if (!change) return null;
-                                        const isIncrease = parseFloat(change.lbs) > 0;
-                                        return <span className={`ml-1.5 text-xs font-normal ${isIncrease ? 'text-red-600' : 'text-green-600'}`}>({isIncrease ? '+' : ''}{change.lbs} lbs)</span>;
-                                    })()}
-                                </label>
-                                <div className="flex items-center gap-1">
-                                    <input ref={weightRef} type="text" value={vitals.weight || ''}
-                                        onChange={(e) => {
-                                            const weight = e.target.value;
-                                            const newVitals = { ...vitals, weight };
-                                            if (weight && vitals.height) {
-                                                newVitals.bmi = calculateBMI(weight, vitals.weightUnit, vitals.height, vitals.heightUnit);
-                                            } else {
-                                                newVitals.bmi = '';
-                                            }
-                                            setVitals(newVitals);
-                                        }}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); heightRef.current?.focus(); } }}
-                                        disabled={isSigned}
-                                        className="w-16 px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors text-neutral-900"
-                                    />
-                                    <div className="flex border border-neutral-300 rounded-md overflow-hidden flex-shrink-0">
-                                        <button type="button" onClick={() => {
-                                            const newUnit = 'lbs';
-                                            if (vitals.weight && vitals.weightUnit !== newUnit) {
-                                                const converted = convertWeight(vitals.weight, vitals.weightUnit, newUnit);
-                                                const newVitals = { ...vitals, weightUnit: newUnit, weight: converted };
-                                                if (converted && vitals.height) newVitals.bmi = calculateBMI(converted, newUnit, vitals.height, vitals.heightUnit);
-                                                setVitals(newVitals);
-                                            } else {
-                                                setVitals({ ...vitals, weightUnit: newUnit });
-                                            }
-                                        }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.weightUnit === 'lbs' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.weightUnit === 'lbs' ? { background: '#3B82F6' } : {}}>lbs</button>
-                                        <button type="button" onClick={() => {
-                                            const newUnit = 'kg';
-                                            if (vitals.weight && vitals.weightUnit !== newUnit) {
-                                                const converted = convertWeight(vitals.weight, vitals.weightUnit, newUnit);
-                                                const newVitals = { ...vitals, weightUnit: newUnit, weight: converted };
-                                                if (converted && vitals.height) newVitals.bmi = calculateBMI(converted, newUnit, vitals.height, vitals.heightUnit);
-                                                setVitals(newVitals);
-                                            } else {
-                                                setVitals({ ...vitals, weightUnit: newUnit });
-                                            }
-                                        }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.weightUnit === 'kg' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.weightUnit === 'kg' ? { background: '#3B82F6' } : {}}>kg</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-neutral-700 mb-1">Height</label>
-                                <div className="flex items-center gap-1">
-                                    <input ref={heightRef} type="number" step="0.1" placeholder="70" value={vitals.height}
-                                        onChange={(e) => {
-                                            const height = e.target.value;
-                                            const newVitals = { ...vitals, height };
-                                            if (height && vitals.weight) {
-                                                newVitals.bmi = calculateBMI(vitals.weight, vitals.weightUnit, height, vitals.heightUnit);
-                                            } else {
-                                                newVitals.bmi = '';
-                                            }
-                                            setVitals(newVitals);
-                                        }}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); hpiRef.current?.focus(); } }}
-                                        disabled={isSigned}
-                                        className="w-16 px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors text-neutral-900"
-                                    />
-                                    <div className="flex border border-neutral-300 rounded-md overflow-hidden flex-shrink-0">
-                                        <button type="button" onClick={() => {
-                                            const newUnit = 'in';
-                                            if (vitals.height && vitals.heightUnit !== newUnit) {
-                                                const converted = convertHeight(vitals.height, vitals.heightUnit, newUnit);
-                                                const newVitals = { ...vitals, heightUnit: newUnit, height: converted };
-                                                if (converted && vitals.weight) newVitals.bmi = calculateBMI(vitals.weight, vitals.weightUnit, converted, newUnit);
-                                                setVitals(newVitals);
-                                            } else {
-                                                setVitals({ ...vitals, heightUnit: newUnit });
-                                            }
-                                        }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.heightUnit === 'in' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.heightUnit === 'in' ? { background: '#3B82F6' } : {}}>in</button>
-                                        <button type="button" onClick={() => {
-                                            const newUnit = 'cm';
-                                            if (vitals.height && vitals.heightUnit !== newUnit) {
-                                                const converted = convertHeight(vitals.height, vitals.heightUnit, newUnit);
-                                                const newVitals = { ...vitals, heightUnit: newUnit, height: converted };
-                                                if (converted && vitals.weight) newVitals.bmi = calculateBMI(vitals.weight, vitals.weightUnit, converted, newUnit);
-                                                setVitals(newVitals);
-                                            } else {
-                                                setVitals({ ...vitals, heightUnit: newUnit });
-                                            }
-                                        }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.heightUnit === 'cm' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.heightUnit === 'cm' ? { background: '#3B82F6' } : {}}>cm</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-neutral-700 mb-1">BMI</label>
-                                <input type="text" value={vitals.bmi || ''} readOnly placeholder="Auto"
-                                    className={`w-full px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-gray-50 transition-colors ${vitals.bmi && isAbnormalVital('bmi', vitals.bmi) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
-                                />
-                            </div>
-                        </div>
-                    </Section>
-
-                    {/* Chief Complaint */}
-                    <div className="mb-3">
-                        <label className="block text-sm font-semibold text-neutral-900 mb-1">Chief Complaint</label>
-                        <input type="text" placeholder="Enter chief complaint..." value={noteData.chiefComplaint || ''}
-                            onChange={(e) => setNoteData({ ...noteData, chiefComplaint: e.target.value })}
-                            disabled={isSigned}
-                            className="w-full px-2 py-1.5 text-sm font-medium border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors text-neutral-900"
-                        />
-                    </div>
-
-                    {/* HPI */}
-                    <Section title="History of Present Illness (HPI)" defaultOpen={true}>
-                        <div className="relative">
-                            <textarea ref={hpiRef} value={noteData.hpi}
-                                onChange={(e) => {
-                                    handleTextChange(e.target.value, 'hpi');
-                                    handleDotPhraseAutocomplete(e.target.value, 'hpi', hpiRef);
-                                }}
-                                onKeyDown={(e) => {
-                                    if (autocompleteState.show && autocompleteState.field === 'hpi') {
-                                        if (e.key === 'ArrowDown') {
-                                            e.preventDefault();
-                                            setAutocompleteState(prev => ({
-                                                ...prev,
-                                                selectedIndex: Math.min(prev.selectedIndex + 1, prev.suggestions.length - 1)
-                                            }));
-                                        } else if (e.key === 'ArrowUp') {
-                                            e.preventDefault();
-                                            setAutocompleteState(prev => ({
-                                                ...prev,
-                                                selectedIndex: Math.max(prev.selectedIndex - 1, 0)
-                                            }));
-                                        } else if (e.key === 'Enter' && !e.shiftKey) {
-                                            e.preventDefault();
-                                            if (autocompleteState.suggestions[autocompleteState.selectedIndex]) {
-                                                insertDotPhrase(autocompleteState.suggestions[autocompleteState.selectedIndex].key, autocompleteState);
-                                            }
-                                        } else if (e.key === 'Escape') {
-                                            e.preventDefault();
-                                            setAutocompleteState(prev => ({ ...prev, show: false }));
-                                        }
-                                    } else {
-                                        handleF2Key(e, hpiRef, 'hpi');
-                                    }
-                                }}
-                                onFocus={() => setActiveTextArea('hpi')}
-                                disabled={isSigned}
-                                rows={6}
-                                className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[80px]"
-                                placeholder="Type .dotphrase to expand, or press F2 to find [] placeholders..."
-                            />
-                            {autocompleteState.show && autocompleteState.field === 'hpi' && autocompleteState.suggestions.length > 0 && (
-                                <div className="absolute z-50 bg-white border border-neutral-300 rounded-md shadow-lg max-h-32 overflow-y-auto mt-0.5 w-64" style={{ top: `${autocompleteState.position.top}px` }}>
-                                    {autocompleteState.suggestions.map((item, index) => (
-                                        <button
-                                            key={item.key}
-                                            type="button"
-                                            onClick={() => insertDotPhrase(item.key, autocompleteState)}
-                                            className={`w-full text-left px-2 py-1 border-b border-neutral-100 hover:bg-primary-50 transition-colors ${index === autocompleteState.selectedIndex ? 'bg-primary-100' : ''
-                                                }`}
-                                        >
-                                            <div className="font-medium text-neutral-900 text-xs">{item.key}</div>
-                                            <div className="text-xs text-neutral-500 truncate">{item.template.substring(0, 60)}...</div>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                        <div className="mt-1.5 flex items-center space-x-3 text-xs text-neutral-500">
-                            <button onClick={() => { setActiveTextArea('hpi'); setShowDotPhraseModal(true); }} className="flex items-center space-x-1 text-primary-600 hover:text-primary-700 transition-colors">
-                                <Zap className="w-3.5 h-3.5" />
-                                <span className="text-xs font-medium">Dot Phrases (F2)</span>
-                            </button>
                             {!isSigned && (
-                                <button onClick={() => openCarryForward('hpi')} className="flex items-center space-x-1 text-slate-600 hover:text-slate-800 transition-colors">
-                                    <RotateCcw className="w-3.5 h-3.5" />
-                                    <span className="text-xs font-medium">Pull Prior</span>
+                                <button
+                                    onClick={() => setShowQuickActions(!showQuickActions)}
+                                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-colors text-xs font-medium border ${showQuickActions ? 'bg-primary-50 text-primary-700 border-primary-200' : 'bg-white text-neutral-600 border-gray-200 hover:bg-gray-50'}`}
+                                    title="Toggle Quick Actions Panel"
+                                >
+                                    <PanelRight className="w-3.5 h-3.5" />
+                                    <span>Quick</span>
                                 </button>
                             )}
                         </div>
-                    </Section>
-
-                    {/* ROS and PE Side by Side */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
-                        {/* ROS */}
-                        <Section title="Review of Systems" defaultOpen={true}>
-                            <div className="grid grid-cols-2 gap-1 mb-1.5">
-                                {Object.keys(noteData.ros).map(system => (
-                                    <label key={system} className="flex items-center space-x-1 cursor-pointer">
-                                        {noteData.ros[system] ? <CheckSquare className="w-3 h-3 text-primary-600" /> : <Square className="w-3 h-3 text-neutral-400" />}
-                                        <span className="text-xs text-neutral-700 capitalize">{system}</span>
-                                        <input type="checkbox" checked={noteData.ros[system]}
-                                            onChange={(e) => {
-                                                const isChecked = e.target.checked;
-                                                const systemName = system.charAt(0).toUpperCase() + system.slice(1);
-                                                const findings = rosFindings[system] || '';
-                                                const newRos = { ...noteData.ros, [system]: isChecked };
-                                                let newRosNotes = noteData.rosNotes || '';
-                                                const findingsLine = `**${systemName}:** ${findings}`;
-                                                if (isChecked) {
-                                                    if (!newRosNotes.includes(`**${systemName}:**`)) {
-                                                        newRosNotes = newRosNotes.trim() ? `${newRosNotes}\n${findingsLine}` : findingsLine;
-                                                    }
-                                                } else {
-                                                    newRosNotes = newRosNotes.split('\n').filter(line => !line.trim().startsWith(`**${systemName}:**`)).join('\n').trim();
-                                                }
-                                                setNoteData({ ...noteData, ros: newRos, rosNotes: newRosNotes });
-                                            }}
-                                            disabled={isSigned}
-                                            className="hidden"
-                                        />
-                                    </label>
-                                ))}
-                            </div>
-                            <textarea value={noteData.rosNotes} onChange={(e) => setNoteData({ ...noteData, rosNotes: e.target.value })}
-                                disabled={isSigned} rows={10}
-                                className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px]"
-                                placeholder="ROS notes..."
-                            />
-                            <div className="mt-1.5 flex items-center gap-2">
-                                <button onClick={() => {
-                                    const allRos = {};
-                                    Object.keys(noteData.ros).forEach(key => { allRos[key] = true; });
-                                    let rosText = '';
-                                    Object.keys(rosFindings).forEach(key => {
-                                        const systemName = key.charAt(0).toUpperCase() + key.slice(1);
-                                        rosText += `${systemName}: ${rosFindings[key]}\n`;
-                                    });
-                                    setNoteData({ ...noteData, ros: allRos, rosNotes: rosText.trim() });
-                                }} disabled={isSigned} className="px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
-                                    Pre-fill Normal ROS
-                                </button>
-                                {!isSigned && (
-                                    <button onClick={() => openCarryForward('ros')} className="px-2 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors flex items-center gap-1">
-                                        <RotateCcw className="w-3 h-3" />
-                                        Pull Prior
-                                    </button>
-                                )}
-                            </div>
-                        </Section>
-
-                        {/* Physical Exam */}
-                        <Section title="Physical Examination" defaultOpen={true}>
-                            <div className="grid grid-cols-2 gap-1 mb-1.5">
-                                {Object.keys(noteData.pe).map(system => (
-                                    <label key={system} className="flex items-center space-x-1 cursor-pointer">
-                                        {noteData.pe[system] ? <CheckSquare className="w-3 h-3 text-primary-600" /> : <Square className="w-3 h-3 text-neutral-400" />}
-                                        <span className="text-xs text-neutral-700 capitalize">{system.replace(/([A-Z])/g, ' $1').trim()}</span>
-                                        <input type="checkbox" checked={noteData.pe[system]}
-                                            onChange={(e) => {
-                                                const isChecked = e.target.checked;
-                                                const systemName = system.replace(/([A-Z])/g, ' $1').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-                                                const findings = peFindings[system] || '';
-                                                const newPe = { ...noteData.pe, [system]: isChecked };
-                                                let newPeNotes = noteData.peNotes || '';
-                                                const findingsLine = `**${systemName}:** ${findings}`;
-                                                if (isChecked) {
-                                                    if (!newPeNotes.includes(`**${systemName}:**`)) {
-                                                        newPeNotes = newPeNotes.trim() ? `${newPeNotes}\n${findingsLine}` : findingsLine;
-                                                    }
-                                                } else {
-                                                    newPeNotes = newPeNotes.split('\n').filter(line => !line.trim().startsWith(`**${systemName}:**`)).join('\n').trim();
-                                                }
-                                                setNoteData({ ...noteData, pe: newPe, peNotes: newPeNotes });
-                                            }}
-                                            disabled={isSigned}
-                                            className="hidden"
-                                        />
-                                    </label>
-                                ))}
-                            </div>
-                            <textarea value={noteData.peNotes} onChange={(e) => setNoteData({ ...noteData, peNotes: e.target.value })}
-                                disabled={isSigned} rows={10}
-                                className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px]"
-                                placeholder="PE findings..."
-                            />
-                            <div className="mt-1.5 flex items-center gap-2">
-                                <button onClick={() => {
-                                    const allPe = {};
-                                    Object.keys(noteData.pe).forEach(key => { allPe[key] = true; });
-                                    let peText = '';
-                                    Object.keys(peFindings).forEach(key => {
-                                        const systemName = key.replace(/([A-Z])/g, ' $1').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-                                        peText += `${systemName}: ${peFindings[key]}\n`;
-                                    });
-                                    setNoteData({ ...noteData, pe: allPe, peNotes: peText.trim() });
-                                }} disabled={isSigned} className="px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
-                                    Pre-fill Normal PE
-                                </button>
-                                {!isSigned && (
-                                    <button onClick={() => openCarryForward('pe')} className="px-2 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors flex items-center gap-1">
-                                        <RotateCcw className="w-3 h-3" />
-                                        Pull Prior
-                                    </button>
-                                )}
-                            </div>
-                        </Section>
                     </div>
+                </div>
 
-                    {/* PAMFOS Section - Past Medical, Allergies, Meds, Family, Social/Other */}
-                    <Section title="Patient History (PAMFOS)" defaultOpen={true}>
-                        <div className="bg-white p-1">
-                            <div className="space-y-4">
+                {/* Main Content with Optional Sidebar */}
+                <div className={`flex gap-4 ${showQuickActions && !isSigned ? '' : ''}`}>
+                    {/* Left: Main Note Content */}
+                    <div className={`${showQuickActions && !isSigned ? 'flex-1' : 'w-full'} transition-all duration-300`}>
 
-                                {/* P - Past Medical History */}
-                                <HistoryList
-                                    title="Past Medical History"
-                                    icon={<Activity className="w-4 h-4 text-red-600" />}
-                                    items={patientData?.problems || []}
-                                    emptyMessage="No active problems"
-                                    renderItem={(problem) => (
-                                        <div className="flex justify-between items-start w-full">
-                                            <div>
-                                                <span className="font-medium text-gray-900">{problem.problem_name}</span>
-                                                {problem.icd10_code && <span className="text-gray-500 ml-2 text-xs">({problem.icd10_code})</span>}
-                                            </div>
-                                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${problem.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                                                {problem.status}
-                                            </span>
-                                        </div>
-                                    )}
-                                    renderInput={(props) => <ProblemInput {...props} />}
-                                    onAdd={async (data) => {
-                                        try {
-                                            const res = await patientsAPI.addProblem(id, data);
-                                            setPatientData(prev => ({ ...prev, problems: [res.data, ...(prev.problems || [])] }));
-                                            window.dispatchEvent(new Event('patient-data-updated'));
-                                            showToast('Problem added', 'success');
-                                        } catch (e) { showToast('Failed to add problem', 'error'); }
-                                    }}
-                                    onDelete={async (itemId) => {
-                                        if (!confirm('Are you sure?')) return;
-                                        try {
-                                            await patientsAPI.deleteProblem(itemId);
-                                            setPatientData(prev => ({ ...prev, problems: prev.problems.filter(p => p.id !== itemId) }));
-                                            window.dispatchEvent(new Event('patient-data-updated'));
-                                            showToast('Problem deleted', 'success');
-                                        } catch (e) { showToast('Failed to delete problem', 'error'); }
-                                    }}
-                                />
-
-                                {/* A - Allergies */}
-                                <HistoryList
-                                    title="Allergies"
-                                    icon={<Activity className="w-4 h-4 text-orange-600" />}
-                                    items={patientData?.allergies || []}
-                                    emptyMessage="No known allergies"
-                                    renderItem={(allergy) => (
-                                        <div className="flex justify-between items-start w-full">
-                                            <span className="font-medium text-red-700">{allergy.allergen}</span>
-                                            {allergy.reaction && <span className="text-gray-500 text-xs mx-1">- {allergy.reaction}</span>}
-                                            {allergy.severity && allergy.severity !== 'unknown' && <span className="text-gray-400 text-[10px] italic">({allergy.severity})</span>}
-                                        </div>
-                                    )}
-                                    renderInput={(props) => <AllergyInput {...props} />}
-                                    onAdd={async (data) => {
-                                        try {
-                                            const payload = typeof data === 'string' ? { allergen: data, severity: 'unknown' } : data;
-                                            const res = await patientsAPI.addAllergy(id, payload);
-                                            setPatientData(prev => ({ ...prev, allergies: [res.data, ...(prev.allergies || [])] }));
-                                            window.dispatchEvent(new Event('patient-data-updated'));
-                                            showToast('Allergy added', 'success');
-                                        } catch (e) { showToast('Failed to add allergy', 'error'); }
-                                    }}
-                                    onDelete={async (itemId) => {
-                                        if (!confirm('Are you sure?')) return;
-                                        try {
-                                            await patientsAPI.deleteAllergy(itemId);
-                                            setPatientData(prev => ({ ...prev, allergies: prev.allergies.filter(a => a.id !== itemId) }));
-                                            window.dispatchEvent(new Event('patient-data-updated'));
-                                            showToast('Allergy deleted', 'success');
-                                        } catch (e) { showToast('Failed to delete allergy', 'error'); }
-                                    }}
-                                />
-
-                                {/* M - Medications */}
-                                <HistoryList
-                                    title="Home Medications"
-                                    icon={<Pill className="w-4 h-4 text-blue-600" />}
-                                    items={(patientData?.medications || []).filter(m => m.active !== false)}
-                                    emptyMessage="No active medications"
-                                    renderItem={(med) => (
-                                        <div className="flex justify-between items-start w-full">
-                                            <span className="font-medium text-gray-900">{med.medication_name}</span>
-                                            <span className="text-gray-500 text-xs">
-                                                {[med.dosage, med.frequency, med.route].filter(Boolean).join(' ')}
-                                            </span>
-                                        </div>
-                                    )}
-                                    renderInput={(props) => <MedicationInput {...props} />}
-                                    onAdd={async (data) => {
-                                        try {
-                                            const res = await patientsAPI.addMedication(id, data);
-                                            setPatientData(prev => ({ ...prev, medications: [res.data, ...(prev.medications || [])] }));
-                                            window.dispatchEvent(new Event('patient-data-updated'));
-                                            showToast('Medication added', 'success');
-                                        } catch (e) { showToast('Failed to add medication', 'error'); }
-                                    }}
-                                    onDelete={async (itemId) => {
-                                        if (!confirm('Are you sure?')) return;
-                                        try {
-                                            await patientsAPI.deleteMedication(itemId);
-                                            setPatientData(prev => ({ ...prev, medications: prev.medications.filter(m => m.id !== itemId) }));
-                                            window.dispatchEvent(new Event('patient-data-updated'));
-                                            showToast('Medication deleted', 'success');
-                                        } catch (e) { showToast('Failed to delete medication', 'error'); }
-                                    }}
-                                />
-
-                                {/* F - Family History */}
-                                <HistoryList
-                                    title="Family History"
-                                    icon={<Users className="w-4 h-4 text-purple-600" />}
-                                    items={familyHistory}
-                                    emptyMessage="No family history recorded"
-                                    renderItem={(hist) => (
-                                        <div className="flex justify-between items-start w-full">
-                                            <span className="font-medium text-gray-900">{hist.condition}</span>
-                                            <span className="text-gray-500 text-xs">{hist.relationship}</span>
-                                        </div>
-                                    )}
-                                    renderInput={(props) => <FamilyHistoryInput {...props} />}
-                                    onAdd={async (data) => {
-                                        try {
-                                            const res = await patientsAPI.addFamilyHistory(id, data);
-                                            setFamilyHistory(prev => [res.data, ...prev]);
-                                            window.dispatchEvent(new Event('patient-data-updated'));
-                                            showToast('Family history added', 'success');
-                                        } catch (e) { showToast('Failed to add family history', 'error'); }
-                                    }}
-                                    onDelete={async (itemId) => {
-                                        if (!confirm('Are you sure?')) return;
-                                        try {
-                                            await patientsAPI.deleteFamilyHistory(itemId);
-                                            setFamilyHistory(prev => prev.filter(h => h.id !== itemId));
-                                            window.dispatchEvent(new Event('patient-data-updated'));
-                                            showToast('Family history deleted', 'success');
-                                        } catch (e) { showToast('Failed to delete family history', 'error'); }
-                                    }}
-                                />
-
-                                {/* O/S - Social History */}
-                                <div className="border rounded-md border-gray-100 bg-white">
-                                    <div className="flex items-center gap-2 p-2 bg-gray-50 border-b border-gray-100">
-                                        <UserCircle className="w-4 h-4 text-teal-600" />
-                                        <h4 className="text-sm font-semibold text-gray-800">Other / Social History</h4>
-                                    </div>
-                                    <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                                        {/* Helper to transform and save social history */}
-                                        {(() => {
-                                            const saveSocialHistory = async (changes) => {
-                                                try {
-                                                    const updatedState = { ...socialHistory, ...changes };
-                                                    // Map snake_case state to camelCase payload for backend
-                                                    const payload = {
-                                                        smokingStatus: updatedState.smoking_status,
-                                                        smokingPackYears: updatedState.smoking_pack_years,
-                                                        alcoholUse: updatedState.alcohol_use,
-                                                        alcoholQuantity: updatedState.alcohol_quantity,
-                                                        drugUse: updatedState.drug_use,
-                                                        exerciseFrequency: updatedState.exercise_frequency,
-                                                        diet: updatedState.diet,
-                                                        occupation: updatedState.occupation,
-                                                        livingSituation: updatedState.living_situation,
-                                                        notes: updatedState.notes
-                                                    };
-                                                    await patientsAPI.saveSocialHistory(id, payload);
-                                                    setSocialHistory(updatedState);
-                                                    window.dispatchEvent(new Event('patient-data-updated'));
-                                                } catch (e) {
-                                                    console.error('Error saving social history:', e);
-                                                    showToast('Failed to update social history', 'error');
-                                                }
-                                            };
-
-                                            return (
-                                                <>
-                                                    <div>
-                                                        <label className="text-xs text-gray-500 block mb-1">Smoking Status</label>
-                                                        <select
-                                                            className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                                                            value={socialHistory?.smoking_status || ''}
-                                                            onChange={(e) => saveSocialHistory({ smoking_status: e.target.value })}
-                                                        >
-                                                            <option value="">Unknown</option>
-                                                            <option value="Never smoker">Never smoker</option>
-                                                            <option value="Former smoker">Former smoker</option>
-                                                            <option value="Current smoker">Current smoker</option>
-                                                        </select>
-                                                    </div>
-                                                    <div>
-                                                        <label className="text-xs text-gray-500 block mb-1">Alcohol Use</label>
-                                                        <select
-                                                            className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                                                            value={socialHistory?.alcohol_use || ''}
-                                                            onChange={(e) => saveSocialHistory({ alcohol_use: e.target.value })}
-                                                        >
-                                                            <option value="">Unknown</option>
-                                                            <option value="None">None</option>
-                                                            <option value="Social">Social</option>
-                                                            <option value="Moderate">Moderate</option>
-                                                            <option value="Heavy">Heavy</option>
-                                                        </select>
-                                                    </div>
-                                                    <div>
-                                                        <label className="text-xs text-gray-500 block mb-1">Occupation</label>
-                                                        <input
-                                                            className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                                                            value={socialHistory?.occupation || ''}
-                                                            placeholder="Occupation"
-                                                            onBlur={(e) => saveSocialHistory({ occupation: e.target.value })}
-                                                            onChange={(e) => setSocialHistory(prev => ({ ...prev, occupation: e.target.value }))}
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="text-xs text-gray-500 block mb-1">Diet</label>
-                                                        <input
-                                                            className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                                                            value={socialHistory?.diet || ''}
-                                                            placeholder="Diet details"
-                                                            onBlur={(e) => saveSocialHistory({ diet: e.target.value })}
-                                                            onChange={(e) => setSocialHistory(prev => ({ ...prev, diet: e.target.value }))}
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="text-xs text-gray-500 block mb-1">Exercise</label>
-                                                        <input
-                                                            className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                                                            value={socialHistory?.exercise_frequency || ''}
-                                                            placeholder="Frequency"
-                                                            onBlur={(e) => saveSocialHistory({ exercise_frequency: e.target.value })}
-                                                            onChange={(e) => setSocialHistory(prev => ({ ...prev, exercise_frequency: e.target.value }))}
-                                                        />
-                                                    </div>
-                                                </>
-                                            );
-                                        })()}
+                        {/* Vitals */}
+                        <Section title="Vital Signs" defaultOpen={true}>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                <div>
+                                    <label className="block text-xs font-medium text-neutral-700 mb-1">BP (mmHg)</label>
+                                    <div className="flex items-center gap-1">
+                                        <input ref={systolicRef} type="number" placeholder="120" value={vitals.systolic}
+                                            onChange={(e) => {
+                                                const sys = e.target.value;
+                                                const bp = sys && vitals.diastolic ? `${sys}/${vitals.diastolic}` : '';
+                                                setVitals({ ...vitals, systolic: sys, bp });
+                                            }}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); diastolicRef.current?.focus(); } }}
+                                            disabled={isSigned}
+                                            className={`w-14 px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors ${isAbnormalVital('systolic', vitals.systolic) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
+                                        />
+                                        <span className="text-neutral-400 text-xs font-medium px-0.5">/</span>
+                                        <input ref={diastolicRef} type="number" placeholder="80" value={vitals.diastolic}
+                                            onChange={(e) => {
+                                                const dia = e.target.value;
+                                                const bp = vitals.systolic && dia ? `${vitals.systolic}/${dia}` : '';
+                                                setVitals({ ...vitals, diastolic: dia, bp });
+                                            }}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); pulseRef.current?.focus(); } }}
+                                            disabled={isSigned}
+                                            className={`w-14 px-1.5 py-1 text-xs border border-gray-300 rounded-md bg-white focus:ring-1 focus:ring-accent-500 focus:border-accent-500 disabled:bg-white disabled:text-gray-900 transition-colors ${isAbnormalVital('diastolic', vitals.diastolic) ? 'text-red-600 font-semibold border-red-300' : 'text-gray-900'}`}
+                                        />
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                    </Section>
-
-                    {/* Assessment */}
-                    <Section title="Assessment" defaultOpen={true}>
-                        {/* Quick Add from Problem List */}
-                        {!isSigned && (patientData?.problems || []).filter(p => p.status === 'active').length > 0 && (
-                            <div className="mb-3 p-3 bg-slate-50/80 rounded-lg border border-slate-200">
-                                <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <ClipboardList className="w-4 h-4 text-slate-500" />
-                                        <span className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Quick Add from Problem List</span>
-                                    </div>
-                                    <span className="text-[10px] text-slate-400">Click to add</span>
-                                </div>
-                                <div className="flex flex-wrap gap-1.5">
-                                    {(patientData?.problems || [])
-                                        .filter(p => p.status === 'active')
-                                        .slice(0, 8)
-                                        .map((p, idx) => (
-                                            <button
-                                                key={idx}
-                                                onClick={() => addProblemToAssessment(p)}
-                                                className="px-2.5 py-1 text-[11px] font-medium bg-white text-slate-700 rounded-full border border-slate-200 hover:bg-primary-50 hover:border-primary-300 hover:text-primary-700 transition-all flex items-center gap-1.5 shadow-sm"
-                                            >
-                                                <Plus className="w-3 h-3" />
-                                                {p.problem_name}
-                                                {p.icd10_code && <span className="text-slate-400 font-mono text-[9px]">({p.icd10_code})</span>}
-                                            </button>
-                                        ))
-                                    }
-                                </div>
-                            </div>
-                        )}
-
-                        {/* ICD-10 Search - Show first for easy access */}
-                        {hasPrivilege('search_icd10') && (
-                            <div className="mb-2">
-                                <button
-                                    onClick={() => setShowICD10Modal(true)}
-                                    className="w-full px-3 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors flex items-center justify-center space-x-1"
-                                >
-                                    <Search className="w-3.5 h-3.5" />
-                                    <span>Search ICD-10 Codes (Modal)</span>
-                                </button>
-
-                                {/* Simple inline search */}
-                                <div className="relative mt-2">
-                                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
-                                    <input
-                                        id="icd10-quick-search"
-                                        type="text"
-                                        placeholder={editingDiagnosisIndex !== null ? `Editing: ${diagnoses[editingDiagnosisIndex]}` : "Quick search: Type diagnosis or code..."}
-                                        value={icd10Search}
-                                        onChange={(e) => {
-                                            setIcd10Search(e.target.value);
-                                            setShowIcd10Search(true);
-                                        }}
-                                        className={`w-full pl-8 pr-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors ${editingDiagnosisIndex !== null ? 'border-primary-500 ring-1 ring-primary-500' : ''}`}
+                                <div>
+                                    <label className="block text-xs font-medium text-neutral-700 mb-1">HR (bpm)</label>
+                                    <input ref={pulseRef} type="number" placeholder="72" value={vitals.pulse}
+                                        onChange={(e) => setVitals({ ...vitals, pulse: e.target.value })}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); o2satRef.current?.focus(); } }}
+                                        disabled={isSigned}
+                                        className={`w-full px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors ${isAbnormalVital('pulse', vitals.pulse) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
                                     />
                                 </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-neutral-700 mb-1">O2 Sat (%)</label>
+                                    <input ref={o2satRef} type="number" placeholder="98" value={vitals.o2sat}
+                                        onChange={(e) => setVitals({ ...vitals, o2sat: e.target.value })}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); tempRef.current?.focus(); } }}
+                                        disabled={isSigned}
+                                        className={`w-full px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors ${isAbnormalVital('o2sat', vitals.o2sat) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-neutral-700 mb-1">Temp (°F)</label>
+                                    <input ref={tempRef} type="number" step="0.1" placeholder="98.6" value={vitals.temp}
+                                        onChange={(e) => setVitals({ ...vitals, temp: e.target.value })}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); weightRef.current?.focus(); } }}
+                                        disabled={isSigned}
+                                        className={`w-full px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors ${isAbnormalVital('temp', vitals.temp) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-neutral-700 mb-1">
+                                        Weight
+                                        {previousWeight && (() => {
+                                            const change = getWeightChange();
+                                            if (!change) return null;
+                                            const isIncrease = parseFloat(change.lbs) > 0;
+                                            return <span className={`ml-1.5 text-xs font-normal ${isIncrease ? 'text-red-600' : 'text-green-600'}`}>({isIncrease ? '+' : ''}{change.lbs} lbs)</span>;
+                                        })()}
+                                    </label>
+                                    <div className="flex items-center gap-1">
+                                        <input ref={weightRef} type="text" value={vitals.weight || ''}
+                                            onChange={(e) => {
+                                                const weight = e.target.value;
+                                                const newVitals = { ...vitals, weight };
+                                                if (weight && vitals.height) {
+                                                    newVitals.bmi = calculateBMI(weight, vitals.weightUnit, vitals.height, vitals.heightUnit);
+                                                } else {
+                                                    newVitals.bmi = '';
+                                                }
+                                                setVitals(newVitals);
+                                            }}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); heightRef.current?.focus(); } }}
+                                            disabled={isSigned}
+                                            className="w-16 px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors text-neutral-900"
+                                        />
+                                        <div className="flex border border-neutral-300 rounded-md overflow-hidden flex-shrink-0">
+                                            <button type="button" onClick={() => {
+                                                const newUnit = 'lbs';
+                                                if (vitals.weight && vitals.weightUnit !== newUnit) {
+                                                    const converted = convertWeight(vitals.weight, vitals.weightUnit, newUnit);
+                                                    const newVitals = { ...vitals, weightUnit: newUnit, weight: converted };
+                                                    if (converted && vitals.height) newVitals.bmi = calculateBMI(converted, newUnit, vitals.height, vitals.heightUnit);
+                                                    setVitals(newVitals);
+                                                } else {
+                                                    setVitals({ ...vitals, weightUnit: newUnit });
+                                                }
+                                            }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.weightUnit === 'lbs' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.weightUnit === 'lbs' ? { background: '#3B82F6' } : {}}>lbs</button>
+                                            <button type="button" onClick={() => {
+                                                const newUnit = 'kg';
+                                                if (vitals.weight && vitals.weightUnit !== newUnit) {
+                                                    const converted = convertWeight(vitals.weight, vitals.weightUnit, newUnit);
+                                                    const newVitals = { ...vitals, weightUnit: newUnit, weight: converted };
+                                                    if (converted && vitals.height) newVitals.bmi = calculateBMI(converted, newUnit, vitals.height, vitals.heightUnit);
+                                                    setVitals(newVitals);
+                                                } else {
+                                                    setVitals({ ...vitals, weightUnit: newUnit });
+                                                }
+                                            }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.weightUnit === 'kg' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.weightUnit === 'kg' ? { background: '#3B82F6' } : {}}>kg</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-neutral-700 mb-1">Height</label>
+                                    <div className="flex items-center gap-1">
+                                        <input ref={heightRef} type="number" step="0.1" placeholder="70" value={vitals.height}
+                                            onChange={(e) => {
+                                                const height = e.target.value;
+                                                const newVitals = { ...vitals, height };
+                                                if (height && vitals.weight) {
+                                                    newVitals.bmi = calculateBMI(vitals.weight, vitals.weightUnit, height, vitals.heightUnit);
+                                                } else {
+                                                    newVitals.bmi = '';
+                                                }
+                                                setVitals(newVitals);
+                                            }}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); hpiRef.current?.focus(); } }}
+                                            disabled={isSigned}
+                                            className="w-16 px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors text-neutral-900"
+                                        />
+                                        <div className="flex border border-neutral-300 rounded-md overflow-hidden flex-shrink-0">
+                                            <button type="button" onClick={() => {
+                                                const newUnit = 'in';
+                                                if (vitals.height && vitals.heightUnit !== newUnit) {
+                                                    const converted = convertHeight(vitals.height, vitals.heightUnit, newUnit);
+                                                    const newVitals = { ...vitals, heightUnit: newUnit, height: converted };
+                                                    if (converted && vitals.weight) newVitals.bmi = calculateBMI(vitals.weight, vitals.weightUnit, converted, newUnit);
+                                                    setVitals(newVitals);
+                                                } else {
+                                                    setVitals({ ...vitals, heightUnit: newUnit });
+                                                }
+                                            }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.heightUnit === 'in' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.heightUnit === 'in' ? { background: '#3B82F6' } : {}}>in</button>
+                                            <button type="button" onClick={() => {
+                                                const newUnit = 'cm';
+                                                if (vitals.height && vitals.heightUnit !== newUnit) {
+                                                    const converted = convertHeight(vitals.height, vitals.heightUnit, newUnit);
+                                                    const newVitals = { ...vitals, heightUnit: newUnit, height: converted };
+                                                    if (converted && vitals.weight) newVitals.bmi = calculateBMI(vitals.weight, vitals.weightUnit, converted, newUnit);
+                                                    setVitals(newVitals);
+                                                } else {
+                                                    setVitals({ ...vitals, heightUnit: newUnit });
+                                                }
+                                            }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.heightUnit === 'cm' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.heightUnit === 'cm' ? { background: '#3B82F6' } : {}}>cm</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-neutral-700 mb-1">BMI</label>
+                                    <input type="text" value={vitals.bmi || ''} readOnly placeholder="Auto"
+                                        className={`w-full px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-gray-50 transition-colors ${vitals.bmi && isAbnormalVital('bmi', vitals.bmi) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
+                                    />
+                                </div>
+                            </div>
+                        </Section>
 
-                                {showIcd10Search && icd10Results.length > 0 && icd10Search.trim().length >= 2 && (
-                                    <div className="absolute z-[60] mt-1 w-full border border-neutral-200 rounded-lg bg-white shadow-2xl max-h-80 overflow-y-auto py-1">
-                                        {icd10Results.map((code) => (
+                        {/* Chief Complaint */}
+                        <div className="mb-3">
+                            <label className="block text-sm font-semibold text-neutral-900 mb-1">Chief Complaint</label>
+                            <input type="text" placeholder="Enter chief complaint..." value={noteData.chiefComplaint || ''}
+                                onChange={(e) => setNoteData({ ...noteData, chiefComplaint: e.target.value })}
+                                disabled={isSigned}
+                                className="w-full px-2 py-1.5 text-sm font-medium border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors text-neutral-900"
+                            />
+                        </div>
+
+                        {/* HPI */}
+                        <Section title="History of Present Illness (HPI)" defaultOpen={true}>
+                            <div className="relative">
+                                <textarea ref={hpiRef} value={noteData.hpi}
+                                    onChange={(e) => {
+                                        handleTextChange(e.target.value, 'hpi');
+                                        handleDotPhraseAutocomplete(e.target.value, 'hpi', hpiRef);
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (autocompleteState.show && autocompleteState.field === 'hpi') {
+                                            if (e.key === 'ArrowDown') {
+                                                e.preventDefault();
+                                                setAutocompleteState(prev => ({
+                                                    ...prev,
+                                                    selectedIndex: Math.min(prev.selectedIndex + 1, prev.suggestions.length - 1)
+                                                }));
+                                            } else if (e.key === 'ArrowUp') {
+                                                e.preventDefault();
+                                                setAutocompleteState(prev => ({
+                                                    ...prev,
+                                                    selectedIndex: Math.max(prev.selectedIndex - 1, 0)
+                                                }));
+                                            } else if (e.key === 'Enter' && !e.shiftKey) {
+                                                e.preventDefault();
+                                                if (autocompleteState.suggestions[autocompleteState.selectedIndex]) {
+                                                    insertDotPhrase(autocompleteState.suggestions[autocompleteState.selectedIndex].key, autocompleteState);
+                                                }
+                                            } else if (e.key === 'Escape') {
+                                                e.preventDefault();
+                                                setAutocompleteState(prev => ({ ...prev, show: false }));
+                                            }
+                                        } else {
+                                            handleF2Key(e, hpiRef, 'hpi');
+                                        }
+                                    }}
+                                    onFocus={() => setActiveTextArea('hpi')}
+                                    disabled={isSigned}
+                                    rows={6}
+                                    className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[80px]"
+                                    placeholder="Type .dotphrase to expand, or press F2 to find [] placeholders..."
+                                />
+                                {autocompleteState.show && autocompleteState.field === 'hpi' && autocompleteState.suggestions.length > 0 && (
+                                    <div className="absolute z-50 bg-white border border-neutral-300 rounded-md shadow-lg max-h-32 overflow-y-auto mt-0.5 w-64" style={{ top: `${autocompleteState.position.top}px` }}>
+                                        {autocompleteState.suggestions.map((item, index) => (
                                             <button
-                                                key={code.id || code.code}
-                                                onClick={() => {
-                                                    handleAddICD10(code, false);
-                                                    setIcd10Search('');
-                                                    setIcd10Results([]);
-                                                    setShowIcd10Search(false);
-                                                }}
-                                                className="w-full text-left px-3 py-2 border-b border-neutral-50 last:border-0 hover:bg-primary-50 transition-colors group"
+                                                key={item.key}
+                                                type="button"
+                                                onClick={() => insertDotPhrase(item.key, autocompleteState)}
+                                                className={`w-full text-left px-2 py-1 border-b border-neutral-100 hover:bg-primary-50 transition-colors ${index === autocompleteState.selectedIndex ? 'bg-primary-100' : ''
+                                                    }`}
                                             >
-                                                <div className="flex items-center justify-between mb-0.5">
-                                                    <span className="font-bold text-primary-700 text-xs group-hover:text-primary-800 tracking-tight">{code.code}</span>
-                                                    {!code.is_billable && (
-                                                        <span className="text-[9px] font-bold bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded border border-amber-100 uppercase tracking-tighter">Non-Billable</span>
-                                                    )}
-                                                </div>
-                                                <div className="text-xs text-neutral-700 leading-tight line-clamp-2">{code.description}</div>
+                                                <div className="font-medium text-neutral-900 text-xs">{item.key}</div>
+                                                <div className="text-xs text-neutral-500 truncate">{item.template.substring(0, 60)}...</div>
                                             </button>
                                         ))}
                                     </div>
                                 )}
-
-                                {/* No results message */}
-                                {showIcd10Search && icd10Results.length === 0 && icd10Search.trim().length >= 2 && (
-                                    <div className="mt-1 border border-neutral-200 rounded-md bg-white p-3 text-center">
-                                        <p className="text-xs text-neutral-500">No codes found for "{icd10Search}"</p>
-                                    </div>
+                            </div>
+                            <div className="mt-1.5 flex items-center space-x-3 text-xs text-neutral-500">
+                                <button onClick={() => { setActiveTextArea('hpi'); setShowDotPhraseModal(true); }} className="flex items-center space-x-1 text-primary-600 hover:text-primary-700 transition-colors">
+                                    <Zap className="w-3.5 h-3.5" />
+                                    <span className="text-xs font-medium">Dot Phrases (F2)</span>
+                                </button>
+                                {!isSigned && (
+                                    <button onClick={() => openCarryForward('hpi')} className="flex items-center space-x-1 text-slate-600 hover:text-slate-800 transition-colors">
+                                        <RotateCcw className="w-3.5 h-3.5" />
+                                        <span className="text-xs font-medium">Pull Prior</span>
+                                    </button>
                                 )}
                             </div>
-                        )}
+                        </Section>
 
-                        {/* Show structured list of diagnoses when not signed and diagnoses exist */}
-                        {!isSigned && diagnoses.length > 0 && (
-                            <div className="mb-2 border border-neutral-200 rounded-md bg-white p-2">
-                                <div className="space-y-1">
-                                    {diagnoses.map((diag, idx) => (
-                                        <div key={idx} className="flex items-center justify-between py-1 px-2 hover:bg-neutral-50 rounded group transition-colors">
-                                            <div className="flex-1 text-xs text-neutral-900 flex items-center">
-                                                <span className="font-medium mr-2">{idx + 1}.</span>
-                                                <button
-                                                    onClick={() => {
-                                                        // Use modal for editing instead of inline search
-                                                        setEditingDiagnosisIndex(idx);
-                                                        setShowICD10Modal(true);
-                                                    }}
-                                                    className="flex-1 text-left hover:text-primary-600 hover:underline transition-colors"
-                                                >
-                                                    {diag}
-                                                </button>
-                                            </div>
-                                            <button
-                                                onClick={() => removeDiagnosisFromAssessment(idx)}
-                                                className="opacity-0 group-hover:opacity-100 text-neutral-300 hover:text-red-500 transition-all ml-2"
-                                            >
-                                                <X className="w-3 h-3" />
-                                            </button>
-                                        </div>
+                        {/* ROS and PE Side by Side */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
+                            {/* ROS */}
+                            <Section title="Review of Systems" defaultOpen={true}>
+                                <div className="grid grid-cols-2 gap-1 mb-1.5">
+                                    {Object.keys(noteData.ros).map(system => (
+                                        <label key={system} className="flex items-center space-x-1 cursor-pointer">
+                                            {noteData.ros[system] ? <CheckSquare className="w-3 h-3 text-primary-600" /> : <Square className="w-3 h-3 text-neutral-400" />}
+                                            <span className="text-xs text-neutral-700 capitalize">{system}</span>
+                                            <input type="checkbox" checked={noteData.ros[system]}
+                                                onChange={(e) => {
+                                                    const isChecked = e.target.checked;
+                                                    const systemName = system.charAt(0).toUpperCase() + system.slice(1);
+                                                    const findings = rosFindings[system] || '';
+                                                    const newRos = { ...noteData.ros, [system]: isChecked };
+                                                    let newRosNotes = noteData.rosNotes || '';
+                                                    const findingsLine = `**${systemName}:** ${findings}`;
+                                                    if (isChecked) {
+                                                        if (!newRosNotes.includes(`**${systemName}:**`)) {
+                                                            newRosNotes = newRosNotes.trim() ? `${newRosNotes}\n${findingsLine}` : findingsLine;
+                                                        }
+                                                    } else {
+                                                        newRosNotes = newRosNotes.split('\n').filter(line => !line.trim().startsWith(`**${systemName}:**`)).join('\n').trim();
+                                                    }
+                                                    setNoteData({ ...noteData, ros: newRos, rosNotes: newRosNotes });
+                                                }}
+                                                disabled={isSigned}
+                                                className="hidden"
+                                            />
+                                        </label>
                                     ))}
                                 </div>
-                            </div>
-                        )}
-                        {/* Free text assessment removed per request */}
-                    </Section>
+                                <textarea value={noteData.rosNotes} onChange={(e) => setNoteData({ ...noteData, rosNotes: e.target.value })}
+                                    disabled={isSigned} rows={10}
+                                    className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px]"
+                                    placeholder="ROS notes..."
+                                />
+                                <div className="mt-1.5 flex items-center gap-2">
+                                    <button onClick={() => {
+                                        const allRos = {};
+                                        Object.keys(noteData.ros).forEach(key => { allRos[key] = true; });
+                                        let rosText = '';
+                                        Object.keys(rosFindings).forEach(key => {
+                                            const systemName = key.charAt(0).toUpperCase() + key.slice(1);
+                                            rosText += `${systemName}: ${rosFindings[key]}\n`;
+                                        });
+                                        setNoteData({ ...noteData, ros: allRos, rosNotes: rosText.trim() });
+                                    }} disabled={isSigned} className="px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
+                                        Pre-fill Normal ROS
+                                    </button>
+                                    {!isSigned && (
+                                        <button onClick={() => openCarryForward('ros')} className="px-2 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors flex items-center gap-1">
+                                            <RotateCcw className="w-3 h-3" />
+                                            Pull Prior
+                                        </button>
+                                    )}
+                                </div>
+                            </Section>
 
-                    {/* Plan */}
-                    <Section title="Plan" defaultOpen={true}>
-                        <div className="relative">
-                            {/* Show structured plan preview only when editing and there's structured data */}
-                            {!isSigned && noteData.planStructured && noteData.planStructured.length > 0 && (
-                                <div className="mb-2 p-2 bg-neutral-50 rounded-md border border-neutral-200">
-                                    <div className="space-y-3">
-                                        {noteData.planStructured.map((item, index) => (
-                                            <div key={index} className="border-b border-neutral-200 last:border-b-0 pb-2 last:pb-0 group">
-                                                <div className="flex items-center justify-between mb-1">
+                            {/* Physical Exam */}
+                            <Section title="Physical Examination" defaultOpen={true}>
+                                <div className="grid grid-cols-2 gap-1 mb-1.5">
+                                    {Object.keys(noteData.pe).map(system => (
+                                        <label key={system} className="flex items-center space-x-1 cursor-pointer">
+                                            {noteData.pe[system] ? <CheckSquare className="w-3 h-3 text-primary-600" /> : <Square className="w-3 h-3 text-neutral-400" />}
+                                            <span className="text-xs text-neutral-700 capitalize">{system.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                            <input type="checkbox" checked={noteData.pe[system]}
+                                                onChange={(e) => {
+                                                    const isChecked = e.target.checked;
+                                                    const systemName = system.replace(/([A-Z])/g, ' $1').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+                                                    const findings = peFindings[system] || '';
+                                                    const newPe = { ...noteData.pe, [system]: isChecked };
+                                                    let newPeNotes = noteData.peNotes || '';
+                                                    const findingsLine = `**${systemName}:** ${findings}`;
+                                                    if (isChecked) {
+                                                        if (!newPeNotes.includes(`**${systemName}:**`)) {
+                                                            newPeNotes = newPeNotes.trim() ? `${newPeNotes}\n${findingsLine}` : findingsLine;
+                                                        }
+                                                    } else {
+                                                        newPeNotes = newPeNotes.split('\n').filter(line => !line.trim().startsWith(`**${systemName}:**`)).join('\n').trim();
+                                                    }
+                                                    setNoteData({ ...noteData, pe: newPe, peNotes: newPeNotes });
+                                                }}
+                                                disabled={isSigned}
+                                                className="hidden"
+                                            />
+                                        </label>
+                                    ))}
+                                </div>
+                                <textarea value={noteData.peNotes} onChange={(e) => setNoteData({ ...noteData, peNotes: e.target.value })}
+                                    disabled={isSigned} rows={10}
+                                    className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px]"
+                                    placeholder="PE findings..."
+                                />
+                                <div className="mt-1.5 flex items-center gap-2">
+                                    <button onClick={() => {
+                                        const allPe = {};
+                                        Object.keys(noteData.pe).forEach(key => { allPe[key] = true; });
+                                        let peText = '';
+                                        Object.keys(peFindings).forEach(key => {
+                                            const systemName = key.replace(/([A-Z])/g, ' $1').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+                                            peText += `${systemName}: ${peFindings[key]}\n`;
+                                        });
+                                        setNoteData({ ...noteData, pe: allPe, peNotes: peText.trim() });
+                                    }} disabled={isSigned} className="px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
+                                        Pre-fill Normal PE
+                                    </button>
+                                    {!isSigned && (
+                                        <button onClick={() => openCarryForward('pe')} className="px-2 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors flex items-center gap-1">
+                                            <RotateCcw className="w-3 h-3" />
+                                            Pull Prior
+                                        </button>
+                                    )}
+                                </div>
+                            </Section>
+                        </div>
+
+                        {/* PAMFOS Section - Past Medical, Allergies, Meds, Family, Social/Other */}
+                        <Section title="Patient History (PAMFOS)" defaultOpen={true}>
+                            <div className="bg-white p-1">
+                                <div className="space-y-4">
+
+                                    {/* P - Past Medical History */}
+                                    <HistoryList
+                                        title="Past Medical History"
+                                        icon={<Activity className="w-4 h-4 text-red-600" />}
+                                        items={patientData?.problems || []}
+                                        emptyMessage="No active problems"
+                                        renderItem={(problem) => (
+                                            <div className="flex justify-between items-start w-full">
+                                                <div>
+                                                    <span className="font-medium text-gray-900">{problem.problem_name}</span>
+                                                    {problem.icd10_code && <span className="text-gray-500 ml-2 text-xs">({problem.icd10_code})</span>}
+                                                </div>
+                                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${problem.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                                                    {problem.status}
+                                                </span>
+                                            </div>
+                                        )}
+                                        renderInput={(props) => <ProblemInput {...props} />}
+                                        onAdd={async (data) => {
+                                            try {
+                                                const res = await patientsAPI.addProblem(id, data);
+                                                setPatientData(prev => ({ ...prev, problems: [res.data, ...(prev.problems || [])] }));
+                                                window.dispatchEvent(new Event('patient-data-updated'));
+                                                showToast('Problem added', 'success');
+                                            } catch (e) { showToast('Failed to add problem', 'error'); }
+                                        }}
+                                        onDelete={async (itemId) => {
+                                            if (!confirm('Are you sure?')) return;
+                                            try {
+                                                await patientsAPI.deleteProblem(itemId);
+                                                setPatientData(prev => ({ ...prev, problems: prev.problems.filter(p => p.id !== itemId) }));
+                                                window.dispatchEvent(new Event('patient-data-updated'));
+                                                showToast('Problem deleted', 'success');
+                                            } catch (e) { showToast('Failed to delete problem', 'error'); }
+                                        }}
+                                    />
+
+                                    {/* A - Allergies */}
+                                    <HistoryList
+                                        title="Allergies"
+                                        icon={<Activity className="w-4 h-4 text-orange-600" />}
+                                        items={patientData?.allergies || []}
+                                        emptyMessage="No known allergies"
+                                        renderItem={(allergy) => (
+                                            <div className="flex justify-between items-start w-full">
+                                                <span className="font-medium text-red-700">{allergy.allergen}</span>
+                                                {allergy.reaction && <span className="text-gray-500 text-xs mx-1">- {allergy.reaction}</span>}
+                                                {allergy.severity && allergy.severity !== 'unknown' && <span className="text-gray-400 text-[10px] italic">({allergy.severity})</span>}
+                                            </div>
+                                        )}
+                                        renderInput={(props) => <AllergyInput {...props} />}
+                                        onAdd={async (data) => {
+                                            try {
+                                                const payload = typeof data === 'string' ? { allergen: data, severity: 'unknown' } : data;
+                                                const res = await patientsAPI.addAllergy(id, payload);
+                                                setPatientData(prev => ({ ...prev, allergies: [res.data, ...(prev.allergies || [])] }));
+                                                window.dispatchEvent(new Event('patient-data-updated'));
+                                                showToast('Allergy added', 'success');
+                                            } catch (e) { showToast('Failed to add allergy', 'error'); }
+                                        }}
+                                        onDelete={async (itemId) => {
+                                            if (!confirm('Are you sure?')) return;
+                                            try {
+                                                await patientsAPI.deleteAllergy(itemId);
+                                                setPatientData(prev => ({ ...prev, allergies: prev.allergies.filter(a => a.id !== itemId) }));
+                                                window.dispatchEvent(new Event('patient-data-updated'));
+                                                showToast('Allergy deleted', 'success');
+                                            } catch (e) { showToast('Failed to delete allergy', 'error'); }
+                                        }}
+                                    />
+
+                                    {/* M - Medications */}
+                                    <HistoryList
+                                        title="Home Medications"
+                                        icon={<Pill className="w-4 h-4 text-blue-600" />}
+                                        items={(patientData?.medications || []).filter(m => m.active !== false)}
+                                        emptyMessage="No active medications"
+                                        renderItem={(med) => (
+                                            <div className="flex justify-between items-start w-full">
+                                                <span className="font-medium text-gray-900">{med.medication_name}</span>
+                                                <span className="text-gray-500 text-xs">
+                                                    {[med.dosage, med.frequency, med.route].filter(Boolean).join(' ')}
+                                                </span>
+                                            </div>
+                                        )}
+                                        renderInput={(props) => <MedicationInput {...props} />}
+                                        onAdd={async (data) => {
+                                            try {
+                                                const res = await patientsAPI.addMedication(id, data);
+                                                setPatientData(prev => ({ ...prev, medications: [res.data, ...(prev.medications || [])] }));
+                                                window.dispatchEvent(new Event('patient-data-updated'));
+                                                showToast('Medication added', 'success');
+                                            } catch (e) { showToast('Failed to add medication', 'error'); }
+                                        }}
+                                        onDelete={async (itemId) => {
+                                            if (!confirm('Are you sure?')) return;
+                                            try {
+                                                await patientsAPI.deleteMedication(itemId);
+                                                setPatientData(prev => ({ ...prev, medications: prev.medications.filter(m => m.id !== itemId) }));
+                                                window.dispatchEvent(new Event('patient-data-updated'));
+                                                showToast('Medication deleted', 'success');
+                                            } catch (e) { showToast('Failed to delete medication', 'error'); }
+                                        }}
+                                    />
+
+                                    {/* F - Family History */}
+                                    <HistoryList
+                                        title="Family History"
+                                        icon={<Users className="w-4 h-4 text-purple-600" />}
+                                        items={familyHistory}
+                                        emptyMessage="No family history recorded"
+                                        renderItem={(hist) => (
+                                            <div className="flex justify-between items-start w-full">
+                                                <span className="font-medium text-gray-900">{hist.condition}</span>
+                                                <span className="text-gray-500 text-xs">{hist.relationship}</span>
+                                            </div>
+                                        )}
+                                        renderInput={(props) => <FamilyHistoryInput {...props} />}
+                                        onAdd={async (data) => {
+                                            try {
+                                                const res = await patientsAPI.addFamilyHistory(id, data);
+                                                setFamilyHistory(prev => [res.data, ...prev]);
+                                                window.dispatchEvent(new Event('patient-data-updated'));
+                                                showToast('Family history added', 'success');
+                                            } catch (e) { showToast('Failed to add family history', 'error'); }
+                                        }}
+                                        onDelete={async (itemId) => {
+                                            if (!confirm('Are you sure?')) return;
+                                            try {
+                                                await patientsAPI.deleteFamilyHistory(itemId);
+                                                setFamilyHistory(prev => prev.filter(h => h.id !== itemId));
+                                                window.dispatchEvent(new Event('patient-data-updated'));
+                                                showToast('Family history deleted', 'success');
+                                            } catch (e) { showToast('Failed to delete family history', 'error'); }
+                                        }}
+                                    />
+
+                                    {/* O/S - Social History */}
+                                    <div className="border rounded-md border-gray-100 bg-white">
+                                        <div className="flex items-center gap-2 p-2 bg-gray-50 border-b border-gray-100">
+                                            <UserCircle className="w-4 h-4 text-teal-600" />
+                                            <h4 className="text-sm font-semibold text-gray-800">Other / Social History</h4>
+                                        </div>
+                                        <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                                            {/* Helper to transform and save social history */}
+                                            {(() => {
+                                                const saveSocialHistory = async (changes) => {
+                                                    try {
+                                                        const updatedState = { ...socialHistory, ...changes };
+                                                        // Map snake_case state to camelCase payload for backend
+                                                        const payload = {
+                                                            smokingStatus: updatedState.smoking_status,
+                                                            smokingPackYears: updatedState.smoking_pack_years,
+                                                            alcoholUse: updatedState.alcohol_use,
+                                                            alcoholQuantity: updatedState.alcohol_quantity,
+                                                            drugUse: updatedState.drug_use,
+                                                            exerciseFrequency: updatedState.exercise_frequency,
+                                                            diet: updatedState.diet,
+                                                            occupation: updatedState.occupation,
+                                                            livingSituation: updatedState.living_situation,
+                                                            notes: updatedState.notes
+                                                        };
+                                                        await patientsAPI.saveSocialHistory(id, payload);
+                                                        setSocialHistory(updatedState);
+                                                        window.dispatchEvent(new Event('patient-data-updated'));
+                                                    } catch (e) {
+                                                        console.error('Error saving social history:', e);
+                                                        showToast('Failed to update social history', 'error');
+                                                    }
+                                                };
+
+                                                return (
+                                                    <>
+                                                        <div>
+                                                            <label className="text-xs text-gray-500 block mb-1">Smoking Status</label>
+                                                            <select
+                                                                className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                                                value={socialHistory?.smoking_status || ''}
+                                                                onChange={(e) => saveSocialHistory({ smoking_status: e.target.value })}
+                                                            >
+                                                                <option value="">Unknown</option>
+                                                                <option value="Never smoker">Never smoker</option>
+                                                                <option value="Former smoker">Former smoker</option>
+                                                                <option value="Current smoker">Current smoker</option>
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-xs text-gray-500 block mb-1">Alcohol Use</label>
+                                                            <select
+                                                                className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                                                value={socialHistory?.alcohol_use || ''}
+                                                                onChange={(e) => saveSocialHistory({ alcohol_use: e.target.value })}
+                                                            >
+                                                                <option value="">Unknown</option>
+                                                                <option value="None">None</option>
+                                                                <option value="Social">Social</option>
+                                                                <option value="Moderate">Moderate</option>
+                                                                <option value="Heavy">Heavy</option>
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-xs text-gray-500 block mb-1">Occupation</label>
+                                                            <input
+                                                                className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                                                value={socialHistory?.occupation || ''}
+                                                                placeholder="Occupation"
+                                                                onBlur={(e) => saveSocialHistory({ occupation: e.target.value })}
+                                                                onChange={(e) => setSocialHistory(prev => ({ ...prev, occupation: e.target.value }))}
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-xs text-gray-500 block mb-1">Diet</label>
+                                                            <input
+                                                                className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                                                value={socialHistory?.diet || ''}
+                                                                placeholder="Diet details"
+                                                                onBlur={(e) => saveSocialHistory({ diet: e.target.value })}
+                                                                onChange={(e) => setSocialHistory(prev => ({ ...prev, diet: e.target.value }))}
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-xs text-gray-500 block mb-1">Exercise</label>
+                                                            <input
+                                                                className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                                                value={socialHistory?.exercise_frequency || ''}
+                                                                placeholder="Frequency"
+                                                                onBlur={(e) => saveSocialHistory({ exercise_frequency: e.target.value })}
+                                                                onChange={(e) => setSocialHistory(prev => ({ ...prev, exercise_frequency: e.target.value }))}
+                                                            />
+                                                        </div>
+                                                    </>
+                                                );
+                                            })()}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </Section>
+
+                        {/* Assessment */}
+                        <Section title="Assessment" defaultOpen={true}>
+                            {/* Quick Add from Problem List */}
+                            {!isSigned && (patientData?.problems || []).filter(p => p.status === 'active').length > 0 && (
+                                <div className="mb-3 p-3 bg-slate-50/80 rounded-lg border border-slate-200">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <ClipboardList className="w-4 h-4 text-slate-500" />
+                                            <span className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Quick Add from Problem List</span>
+                                        </div>
+                                        <span className="text-[10px] text-slate-400">Click to add</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {(patientData?.problems || [])
+                                            .filter(p => p.status === 'active')
+                                            .slice(0, 8)
+                                            .map((p, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => addProblemToAssessment(p)}
+                                                    className="px-2.5 py-1 text-[11px] font-medium bg-white text-slate-700 rounded-full border border-slate-200 hover:bg-primary-50 hover:border-primary-300 hover:text-primary-700 transition-all flex items-center gap-1.5 shadow-sm"
+                                                >
+                                                    <Plus className="w-3 h-3" />
+                                                    {p.problem_name}
+                                                    {p.icd10_code && <span className="text-slate-400 font-mono text-[9px]">({p.icd10_code})</span>}
+                                                </button>
+                                            ))
+                                        }
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ICD-10 Search - Show first for easy access */}
+                            {hasPrivilege('search_icd10') && (
+                                <div className="mb-2">
+                                    <button
+                                        onClick={() => setShowICD10Modal(true)}
+                                        className="w-full px-3 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors flex items-center justify-center space-x-1"
+                                    >
+                                        <Search className="w-3.5 h-3.5" />
+                                        <span>Search ICD-10 Codes (Modal)</span>
+                                    </button>
+
+                                    {/* Simple inline search */}
+                                    <div className="relative mt-2">
+                                        <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+                                        <input
+                                            id="icd10-quick-search"
+                                            type="text"
+                                            placeholder={editingDiagnosisIndex !== null ? `Editing: ${diagnoses[editingDiagnosisIndex]}` : "Quick search: Type diagnosis or code..."}
+                                            value={icd10Search}
+                                            onChange={(e) => {
+                                                setIcd10Search(e.target.value);
+                                                setShowIcd10Search(true);
+                                            }}
+                                            className={`w-full pl-8 pr-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors ${editingDiagnosisIndex !== null ? 'border-primary-500 ring-1 ring-primary-500' : ''}`}
+                                        />
+                                    </div>
+
+                                    {showIcd10Search && icd10Results.length > 0 && icd10Search.trim().length >= 2 && (
+                                        <div className="absolute z-[60] mt-1 w-full border border-neutral-200 rounded-lg bg-white shadow-2xl max-h-80 overflow-y-auto py-1">
+                                            {icd10Results.map((code) => (
+                                                <button
+                                                    key={code.id || code.code}
+                                                    onClick={() => {
+                                                        handleAddICD10(code, false);
+                                                        setIcd10Search('');
+                                                        setIcd10Results([]);
+                                                        setShowIcd10Search(false);
+                                                    }}
+                                                    className="w-full text-left px-3 py-2 border-b border-neutral-50 last:border-0 hover:bg-primary-50 transition-colors group"
+                                                >
+                                                    <div className="flex items-center justify-between mb-0.5">
+                                                        <span className="font-bold text-primary-700 text-xs group-hover:text-primary-800 tracking-tight">{code.code}</span>
+                                                        {!code.is_billable && (
+                                                            <span className="text-[9px] font-bold bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded border border-amber-100 uppercase tracking-tighter">Non-Billable</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-xs text-neutral-700 leading-tight line-clamp-2">{code.description}</div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* No results message */}
+                                    {showIcd10Search && icd10Results.length === 0 && icd10Search.trim().length >= 2 && (
+                                        <div className="mt-1 border border-neutral-200 rounded-md bg-white p-3 text-center">
+                                            <p className="text-xs text-neutral-500">No codes found for "{icd10Search}"</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Show structured list of diagnoses when not signed and diagnoses exist */}
+                            {!isSigned && diagnoses.length > 0 && (
+                                <div className="mb-2 border border-neutral-200 rounded-md bg-white p-2">
+                                    <div className="space-y-1">
+                                        {diagnoses.map((diag, idx) => (
+                                            <div key={idx} className="flex items-center justify-between py-1 px-2 hover:bg-neutral-50 rounded group transition-colors">
+                                                <div className="flex-1 text-xs text-neutral-900 flex items-center">
+                                                    <span className="font-medium mr-2">{idx + 1}.</span>
                                                     <button
                                                         onClick={() => {
-                                                            setSelectedDiagnosis(item.diagnosis);
-                                                            setShowOrderModal(true);
+                                                            // Use modal for editing instead of inline search
+                                                            setEditingDiagnosisIndex(idx);
+                                                            setShowICD10Modal(true);
                                                         }}
-                                                        className="font-bold underline text-xs text-primary-700 hover:text-primary-900 text-left"
+                                                        className="flex-1 text-left hover:text-primary-600 hover:underline transition-colors"
                                                     >
-                                                        {index + 1}. {item.diagnosis}
-                                                    </button>
-                                                    <button
-                                                        onClick={() => removeFromPlan(index)}
-                                                        className="opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-red-500 transition-all p-1"
-                                                    >
-                                                        <Trash2 className="w-3 h-3" />
+                                                        {diag}
                                                     </button>
                                                 </div>
-                                                <ul className="ml-4 space-y-0.5">
-                                                    {item.orders.flatMap((order, orderIdx) => {
-                                                        const orderParts = order.split(';').map(part => part.trim()).filter(part => part);
-                                                        return orderParts.map((part, partIdx) => (
-                                                            <li key={`${orderIdx}-${partIdx}`} className="text-xs text-neutral-900 flex items-center group/order">
-                                                                <span className="mr-2 text-neutral-400">•</span>
-                                                                <span className="flex-1">{part}</span>
-                                                                <button
-                                                                    onClick={() => removeFromPlan(index, orderIdx)}
-                                                                    className="opacity-0 group-hover/order:opacity-100 text-neutral-300 hover:text-red-400 transition-all ml-2"
-                                                                >
-                                                                    <X className="w-2.5 h-2.5" />
-                                                                </button>
-                                                            </li>
-                                                        ));
-                                                    })}
-                                                </ul>
+                                                <button
+                                                    onClick={() => removeDiagnosisFromAssessment(idx)}
+                                                    className="opacity-0 group-hover:opacity-100 text-neutral-300 hover:text-red-500 transition-all ml-2"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
                             )}
-                            {/* Always show textarea - sync changes to structured plan on blur */}
-                            {/* Free text plan removed per request */}
-                            {isSigned && (
-                                <div className="p-2 border border-neutral-200 rounded-md bg-neutral-50 text-xs">
-                                    <PlanDisplay plan={noteData.plan} />
-                                </div>
-                            )}
-                            {autocompleteState.show && autocompleteState.field === 'plan' && autocompleteState.suggestions.length > 0 && (
-                                <div className="absolute z-50 bg-white border border-neutral-300 rounded-md shadow-lg max-h-32 overflow-y-auto mt-0.5 w-64" style={{ top: `${autocompleteState.position.top}px` }}>
-                                    {autocompleteState.suggestions.map((item, index) => (
-                                        <button
-                                            key={item.key}
-                                            type="button"
-                                            onClick={() => insertDotPhrase(item.key, autocompleteState)}
-                                            className={`w-full text-left px-2 py-1 border-b border-neutral-100 hover:bg-primary-50 transition-colors ${index === autocompleteState.selectedIndex ? 'bg-primary-100' : ''
-                                                }`}
-                                        >
-                                            <div className="font-medium text-neutral-900 text-xs">{item.key}</div>
-                                            <div className="text-xs text-neutral-500 truncate">{item.template.substring(0, 60)}...</div>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                        {!isSigned && (
-                            <div className="mt-2 flex space-x-1.5">
-                                {hasPrivilege('order_labs') && (
-                                    <button
-                                        onClick={() => {
-                                            setOrderModalTab('labs');
-                                            setShowOrderModal(true);
-                                        }}
-                                        className="px-2.5 py-1.5 text-xs font-bold bg-primary-600 hover:bg-primary-700 text-white rounded-md shadow-sm transition-all flex items-center gap-1.5"
-                                    >
-                                        <Plus className="w-3.5 h-3.5" />
-                                        <span>Add Order</span>
-                                    </button>
+                            {/* Free text assessment removed per request */}
+                        </Section>
+
+                        {/* Plan */}
+                        <Section title="Plan" defaultOpen={true}>
+                            <div className="relative">
+                                {/* Show structured plan preview only when editing and there's structured data */}
+                                {!isSigned && noteData.planStructured && noteData.planStructured.length > 0 && (
+                                    <div className="mb-2 p-2 bg-neutral-50 rounded-md border border-neutral-200">
+                                        <div className="space-y-3">
+                                            {noteData.planStructured.map((item, index) => (
+                                                <div key={index} className="border-b border-neutral-200 last:border-b-0 pb-2 last:pb-0 group">
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedDiagnosis(item.diagnosis);
+                                                                setShowOrderModal(true);
+                                                            }}
+                                                            className="font-bold underline text-xs text-primary-700 hover:text-primary-900 text-left"
+                                                        >
+                                                            {index + 1}. {item.diagnosis}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => removeFromPlan(index)}
+                                                            className="opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-red-500 transition-all p-1"
+                                                        >
+                                                            <Trash2 className="w-3 h-3" />
+                                                        </button>
+                                                    </div>
+                                                    <ul className="ml-4 space-y-0.5">
+                                                        {item.orders.flatMap((order, orderIdx) => {
+                                                            const orderParts = order.split(';').map(part => part.trim()).filter(part => part);
+                                                            return orderParts.map((part, partIdx) => (
+                                                                <li key={`${orderIdx}-${partIdx}`} className="text-xs text-neutral-900 flex items-center group/order">
+                                                                    <span className="mr-2 text-neutral-400">•</span>
+                                                                    <span className="flex-1">{part}</span>
+                                                                    <button
+                                                                        onClick={() => removeFromPlan(index, orderIdx)}
+                                                                        className="opacity-0 group-hover/order:opacity-100 text-neutral-300 hover:text-red-400 transition-all ml-2"
+                                                                    >
+                                                                        <X className="w-2.5 h-2.5" />
+                                                                    </button>
+                                                                </li>
+                                                            ));
+                                                        })}
+                                                    </ul>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 )}
-                                <button
-                                    onClick={() => {
-                                        setOrderModalTab('medications');
-                                        setShowOrderModal(true);
-                                    }}
-                                    className="px-2.5 py-1.5 text-xs font-medium bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-md border border-neutral-300 transition-colors"
-                                >
-                                    Prescribe Rx
-                                </button>
-                                {hasPrivilege('create_referrals') && (
-                                    <button
-                                        onClick={() => {
-                                            setOrderModalTab('referrals');
-                                            setShowOrderModal(true);
-                                        }}
-                                        className="px-2.5 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors"
-                                    >
-                                        Send Referral
-                                    </button>
+                                {/* Always show textarea - sync changes to structured plan on blur */}
+                                {/* Free text plan removed per request */}
+                                {isSigned && (
+                                    <div className="p-2 border border-neutral-200 rounded-md bg-neutral-50 text-xs">
+                                        <PlanDisplay plan={noteData.plan} />
+                                    </div>
+                                )}
+                                {autocompleteState.show && autocompleteState.field === 'plan' && autocompleteState.suggestions.length > 0 && (
+                                    <div className="absolute z-50 bg-white border border-neutral-300 rounded-md shadow-lg max-h-32 overflow-y-auto mt-0.5 w-64" style={{ top: `${autocompleteState.position.top}px` }}>
+                                        {autocompleteState.suggestions.map((item, index) => (
+                                            <button
+                                                key={item.key}
+                                                type="button"
+                                                onClick={() => insertDotPhrase(item.key, autocompleteState)}
+                                                className={`w-full text-left px-2 py-1 border-b border-neutral-100 hover:bg-primary-50 transition-colors ${index === autocompleteState.selectedIndex ? 'bg-primary-100' : ''
+                                                    }`}
+                                            >
+                                                <div className="font-medium text-neutral-900 text-xs">{item.key}</div>
+                                                <div className="text-xs text-neutral-500 truncate">{item.template.substring(0, 60)}...</div>
+                                            </button>
+                                        ))}
+                                    </div>
                                 )}
                             </div>
-                        )}
-                    </Section>
-
-                    {/* Care Plan */}
-                    <Section title="Care Plan" defaultOpen={true}>
-                        <div className="relative">
-                            <textarea
-                                value={noteData.carePlan || ''}
-                                onChange={(e) => setNoteData({ ...noteData, carePlan: e.target.value })}
-                                placeholder="Summary of what needs to be done in preparation for the next visit..."
-                                className="w-full text-xs p-2 border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-h-[80px]"
-                                disabled={isSigned}
-                            />
-                        </div>
-                    </Section>
-
-                    {/* Follow Up */}
-                    <Section title="Follow Up" defaultOpen={true}>
-                        <div className="relative">
-                            <textarea
-                                value={noteData.followUp || ''}
-                                onChange={(e) => setNoteData({ ...noteData, followUp: e.target.value })}
-                                placeholder="Follow up instructions..."
-                                className="w-full text-xs p-2 border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-h-[60px]"
-                                disabled={isSigned}
-                            />
                             {!isSigned && (
-                                <div className="mt-2 text-xs">
-                                    <label className="block text-neutral-600 font-medium mb-1">Quick Select:</label>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {['1 Week', '2 Weeks', '1 Month', '3 Months', '6 Months', '1 Year', 'PRN'].map((duration) => (
+                                <div className="mt-2 flex space-x-1.5">
+                                    {hasPrivilege('order_labs') && (
+                                        <button
+                                            onClick={() => {
+                                                setOrderModalTab('labs');
+                                                setShowOrderModal(true);
+                                            }}
+                                            className="px-2.5 py-1.5 text-xs font-bold bg-primary-600 hover:bg-primary-700 text-white rounded-md shadow-sm transition-all flex items-center gap-1.5"
+                                        >
+                                            <Plus className="w-3.5 h-3.5" />
+                                            <span>Add Order</span>
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => {
+                                            setOrderModalTab('medications');
+                                            setShowOrderModal(true);
+                                        }}
+                                        className="px-2.5 py-1.5 text-xs font-medium bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-md border border-neutral-300 transition-colors"
+                                    >
+                                        Prescribe Rx
+                                    </button>
+                                    {hasPrivilege('create_referrals') && (
+                                        <button
+                                            onClick={() => {
+                                                setOrderModalTab('referrals');
+                                                setShowOrderModal(true);
+                                            }}
+                                            className="px-2.5 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors"
+                                        >
+                                            Send Referral
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </Section>
+
+                        {/* Care Plan */}
+                        <Section title="Care Plan" defaultOpen={true}>
+                            <div className="relative">
+                                <textarea
+                                    value={noteData.carePlan || ''}
+                                    onChange={(e) => setNoteData({ ...noteData, carePlan: e.target.value })}
+                                    placeholder="Summary of what needs to be done in preparation for the next visit..."
+                                    className="w-full text-xs p-2 border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-h-[80px]"
+                                    disabled={isSigned}
+                                />
+                            </div>
+                        </Section>
+
+                        {/* Follow Up */}
+                        <Section title="Follow Up" defaultOpen={true}>
+                            <div className="relative">
+                                <textarea
+                                    value={noteData.followUp || ''}
+                                    onChange={(e) => setNoteData({ ...noteData, followUp: e.target.value })}
+                                    placeholder="Follow up instructions..."
+                                    className="w-full text-xs p-2 border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-h-[60px]"
+                                    disabled={isSigned}
+                                />
+                                {!isSigned && (
+                                    <div className="mt-2 text-xs">
+                                        <label className="block text-neutral-600 font-medium mb-1">Quick Select:</label>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {['1 Week', '2 Weeks', '1 Month', '3 Months', '6 Months', '1 Year', 'PRN'].map((duration) => (
+                                                <button
+                                                    key={duration}
+                                                    onClick={() => {
+                                                        setNoteData({ ...noteData, followUp: duration });
+                                                    }}
+                                                    className="px-2.5 py-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-200 rounded text-xs transition-colors"
+                                                >
+                                                    {duration}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </Section>
+
+                        {/* Bottom Action Buttons */}
+                        {!isSigned && (
+                            <div className="mt-6 pt-4 border-t border-neutral-200 flex items-center justify-between">
+                                <div className="flex items-center space-x-1.5">
+                                    {lastSaved && <span className="text-xs text-neutral-500 italic px-1.5">Saved {lastSaved.toLocaleTimeString()}</span>}
+                                    <button onClick={handleSave} disabled={isSaving} className="px-2.5 py-1.5 text-white rounded-md shadow-sm flex items-center space-x-1.5 disabled:opacity-50 transition-all duration-200 hover:shadow-md text-xs font-medium" style={{ background: isSaving ? '#9CA3AF' : 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => !isSaving && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')} onMouseLeave={(e) => !isSaving && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}>
+                                        <Save className="w-3.5 h-3.5" />
+                                        <span>{isSaving ? 'Saving...' : 'Save'}</span>
+                                    </button>
+                                    <button onClick={handleSign} className="px-2.5 py-1.5 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-all duration-200 hover:shadow-md text-xs font-medium" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'} onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}>
+                                        <Lock className="w-3.5 h-3.5" />
+                                        <span>Sign</span>
+                                    </button>
+                                    <button
+                                        onClick={handleCreateSuperbill}
+                                        className="px-2.5 py-1.5 bg-slate-800 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-all duration-200 hover:bg-slate-900 text-xs font-medium"
+                                        title="Create/Open Commercial Superbill"
+                                    >
+                                        <DollarSign className="w-3.5 h-3.5" />
+                                        <span>Superbill</span>
+                                    </button>
+                                    <button onClick={handleDelete} className="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-colors text-xs font-medium">
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <span>Delete</span>
+                                    </button>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button onClick={() => navigate(`/patient/${id}/snapshot`)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors flex items-center gap-1" title="Back to Patient Chart">
+                                        <ArrowLeft className="w-3.5 h-3.5" />
+                                        <span className="text-xs font-medium">Chart</span>
+                                    </button>
+                                    <button onClick={() => setShowPrintModal(true)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors" title="Print">
+                                        <Printer className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                        {isSigned && (
+                            <div className="mt-6 pt-4 border-t border-neutral-200 flex items-center justify-between">
+                                <div className="flex items-center space-x-1.5">
+                                    <button
+                                        onClick={handleCreateSuperbill}
+                                        className="px-2.5 py-1.5 bg-slate-800 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-all duration-200 hover:bg-slate-900 text-xs font-medium"
+                                        title="Create/Open Commercial Superbill"
+                                    >
+                                        <DollarSign className="w-3.5 h-3.5" />
+                                        <span>Superbill</span>
+                                    </button>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button onClick={() => navigate(`/patient/${id}/snapshot`)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors flex items-center gap-1" title="Back to Patient Chart">
+                                        <ArrowLeft className="w-3.5 h-3.5" />
+                                        <span className="text-xs font-medium">Chart</span>
+                                    </button>
+                                    <button onClick={() => setShowPrintModal(true)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors" title="Print">
+                                        <Printer className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+                {/* End of main content div */}
+
+                {/* Right: Quick Actions Sidebar */}
+                {showQuickActions && !isSigned && (
+                    <div className="w-72 flex-shrink-0 sticky top-4 h-fit">
+                        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                            {/* Sidebar Header */}
+                            <div className="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                                <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Quick Actions</span>
+                                <button onClick={() => setShowQuickActions(false)} className="p-1 hover:bg-slate-200 rounded transition-colors">
+                                    <X className="w-3.5 h-3.5 text-slate-500" />
+                                </button>
+                            </div>
+
+                            {/* Problem List Section */}
+                            <div className="border-b border-slate-100">
+                                <div className="px-3 py-2 bg-slate-50/50">
+                                    <div className="flex items-center gap-1.5">
+                                        <AlertCircle className="w-3.5 h-3.5 text-slate-500" />
+                                        <span className="text-[10px] font-bold text-slate-600 uppercase">Problem List</span>
+                                    </div>
+                                </div>
+                                <div className="p-2 max-h-40 overflow-y-auto custom-scrollbar">
+                                    {(patientData?.problems || []).filter(p => p.status === 'active').length > 0 ? (
+                                        <div className="space-y-1">
+                                            {(patientData?.problems || []).filter(p => p.status === 'active').slice(0, 10).map((p, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => addProblemToAssessment(p)}
+                                                    className="w-full text-left px-2 py-1.5 text-[11px] bg-white hover:bg-primary-50 rounded border border-slate-100 hover:border-primary-200 transition-all flex items-center gap-1.5 group"
+                                                >
+                                                    <Plus className="w-3 h-3 text-slate-400 group-hover:text-primary-600" />
+                                                    <span className="truncate flex-1 text-slate-700 group-hover:text-primary-700">{p.problem_name}</span>
+                                                    {p.icd10_code && <span className="text-[9px] text-slate-400 font-mono">{p.icd10_code}</span>}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-[10px] text-slate-400 italic text-center py-2">No active problems</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Medications Section */}
+                            <div className="border-b border-slate-100">
+                                <div className="px-3 py-2 bg-slate-50/50">
+                                    <div className="flex items-center gap-1.5">
+                                        <Pill className="w-3.5 h-3.5 text-emerald-500" />
+                                        <span className="text-[10px] font-bold text-slate-600 uppercase">Medications</span>
+                                    </div>
+                                </div>
+                                <div className="p-2 max-h-48 overflow-y-auto custom-scrollbar">
+                                    {(patientData?.medications || []).filter(m => m.active !== false).length > 0 ? (
+                                        <div className="space-y-1.5">
+                                            {(patientData?.medications || []).filter(m => m.active !== false).slice(0, 8).map((m, idx) => (
+                                                <div key={idx} className="px-2 py-1.5 bg-white rounded border border-slate-100">
+                                                    <div className="text-[11px] font-medium text-slate-800 truncate">{m.medication_name}</div>
+                                                    <div className="text-[9px] text-slate-500">{m.dosage} {m.frequency}</div>
+                                                    <div className="flex gap-1 mt-1">
+                                                        <button onClick={() => addMedicationToPlan(m, 'continue')} className="px-1.5 py-0.5 text-[9px] bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100 transition-colors">
+                                                            Continue
+                                                        </button>
+                                                        <button onClick={() => addMedicationToPlan(m, 'refill')} className="px-1.5 py-0.5 text-[9px] bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition-colors flex items-center gap-0.5">
+                                                            <RefreshCw className="w-2.5 h-2.5" />
+                                                            Refill
+                                                        </button>
+                                                        <button onClick={() => addMedicationToPlan(m, 'stop')} className="px-1.5 py-0.5 text-[9px] bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors flex items-center gap-0.5">
+                                                            <StopCircle className="w-2.5 h-2.5" />
+                                                            Stop
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-[10px] text-slate-400 italic text-center py-2">No medications</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* HPI Templates Section */}
+                            <div className="border-b border-slate-100">
+                                <div className="px-3 py-2 bg-slate-50/50">
+                                    <div className="flex items-center gap-1.5">
+                                        <FileText className="w-3.5 h-3.5 text-blue-500" />
+                                        <span className="text-[10px] font-bold text-slate-600 uppercase">HPI Templates</span>
+                                    </div>
+                                </div>
+                                <div className="p-2 max-h-36 overflow-y-auto custom-scrollbar">
+                                    <div className="space-y-1">
+                                        {hpiTemplates.map((t, idx) => (
                                             <button
-                                                key={duration}
-                                                onClick={() => {
-                                                    setNoteData({ ...noteData, followUp: duration });
-                                                }}
-                                                className="px-2.5 py-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-200 rounded text-xs transition-colors"
+                                                key={idx}
+                                                onClick={() => insertHpiTemplate(t.key, t.text)}
+                                                className="w-full text-left px-2 py-1.5 text-[11px] bg-white hover:bg-blue-50 rounded border border-slate-100 hover:border-blue-200 transition-all flex items-center gap-1.5 group"
                                             >
-                                                {duration}
+                                                <Zap className="w-3 h-3 text-slate-400 group-hover:text-blue-500" />
+                                                <span className="text-slate-700 group-hover:text-blue-700">{t.key}</span>
                                             </button>
                                         ))}
                                     </div>
                                 </div>
-                            )}
-                        </div>
-                    </Section>
+                            </div>
 
-                    {/* Bottom Action Buttons */}
-                    {!isSigned && (
-                        <div className="mt-6 pt-4 border-t border-neutral-200 flex items-center justify-between">
-                            <div className="flex items-center space-x-1.5">
-                                {lastSaved && <span className="text-xs text-neutral-500 italic px-1.5">Saved {lastSaved.toLocaleTimeString()}</span>}
-                                <button onClick={handleSave} disabled={isSaving} className="px-2.5 py-1.5 text-white rounded-md shadow-sm flex items-center space-x-1.5 disabled:opacity-50 transition-all duration-200 hover:shadow-md text-xs font-medium" style={{ background: isSaving ? '#9CA3AF' : 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => !isSaving && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')} onMouseLeave={(e) => !isSaving && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}>
-                                    <Save className="w-3.5 h-3.5" />
-                                    <span>{isSaving ? 'Saving...' : 'Save'}</span>
-                                </button>
-                                <button onClick={handleSign} className="px-2.5 py-1.5 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-all duration-200 hover:shadow-md text-xs font-medium" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'} onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}>
-                                    <Lock className="w-3.5 h-3.5" />
-                                    <span>Sign</span>
-                                </button>
-                                <button
-                                    onClick={handleCreateSuperbill}
-                                    className="px-2.5 py-1.5 bg-slate-800 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-all duration-200 hover:bg-slate-900 text-xs font-medium"
-                                    title="Create/Open Commercial Superbill"
-                                >
-                                    <DollarSign className="w-3.5 h-3.5" />
-                                    <span>Superbill</span>
-                                </button>
-                                <button onClick={handleDelete} className="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-colors text-xs font-medium">
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                    <span>Delete</span>
-                                </button>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <button onClick={() => navigate(`/patient/${id}/snapshot`)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors flex items-center gap-1" title="Back to Patient Chart">
-                                    <ArrowLeft className="w-3.5 h-3.5" />
-                                    <span className="text-xs font-medium">Chart</span>
-                                </button>
-                                <button onClick={() => setShowPrintModal(true)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors" title="Print">
-                                    <Printer className="w-3.5 h-3.5" />
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                    {isSigned && (
-                        <div className="mt-6 pt-4 border-t border-neutral-200 flex items-center justify-between">
-                            <div className="flex items-center space-x-1.5">
-                                <button
-                                    onClick={handleCreateSuperbill}
-                                    className="px-2.5 py-1.5 bg-slate-800 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-all duration-200 hover:bg-slate-900 text-xs font-medium"
-                                    title="Create/Open Commercial Superbill"
-                                >
-                                    <DollarSign className="w-3.5 h-3.5" />
-                                    <span>Superbill</span>
-                                </button>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <button onClick={() => navigate(`/patient/${id}/snapshot`)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors flex items-center gap-1" title="Back to Patient Chart">
-                                    <ArrowLeft className="w-3.5 h-3.5" />
-                                    <span className="text-xs font-medium">Chart</span>
-                                </button>
-                                <button onClick={() => setShowPrintModal(true)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors" title="Print">
-                                    <Printer className="w-3.5 h-3.5" />
-                                </button>
+                            {/* Results Import Section */}
+                            <div>
+                                <div className="px-3 py-2 bg-slate-50/50">
+                                    <div className="flex items-center gap-1.5">
+                                        <FlaskConical className="w-3.5 h-3.5 text-purple-500" />
+                                        <span className="text-[10px] font-bold text-slate-600 uppercase">Results</span>
+                                    </div>
+                                </div>
+                                <div className="p-2">
+                                    <div className="grid grid-cols-2 gap-1.5">
+                                        <button
+                                            onClick={() => insertResultIntoPlan('Labs', 'Reviewed, within normal limits')}
+                                            className="px-2 py-2 text-[10px] bg-white hover:bg-purple-50 rounded border border-slate-100 hover:border-purple-200 transition-all flex flex-col items-center gap-1"
+                                        >
+                                            <FlaskConical className="w-4 h-4 text-purple-500" />
+                                            <span className="text-slate-600">Labs</span>
+                                        </button>
+                                        <button
+                                            onClick={() => insertResultIntoPlan('Imaging', 'Reviewed, findings noted')}
+                                            className="px-2 py-2 text-[10px] bg-white hover:bg-purple-50 rounded border border-slate-100 hover:border-purple-200 transition-all flex flex-col items-center gap-1"
+                                        >
+                                            <FileImage className="w-4 h-4 text-purple-500" />
+                                            <span className="text-slate-600">Imaging</span>
+                                        </button>
+                                        <button
+                                            onClick={() => insertResultIntoPlan('Echo', 'Reviewed, EF []%')}
+                                            className="px-2 py-2 text-[10px] bg-white hover:bg-rose-50 rounded border border-slate-100 hover:border-rose-200 transition-all flex flex-col items-center gap-1"
+                                        >
+                                            <Heart className="w-4 h-4 text-rose-500" />
+                                            <span className="text-slate-600">Echo</span>
+                                        </button>
+                                        <button
+                                            onClick={() => insertResultIntoPlan('EKG', 'Reviewed, normal sinus rhythm')}
+                                            className="px-2 py-2 text-[10px] bg-white hover:bg-rose-50 rounded border border-slate-100 hover:border-rose-200 transition-all flex flex-col items-center gap-1"
+                                        >
+                                            <Waves className="w-4 h-4 text-rose-500" />
+                                            <span className="text-slate-600">EKG</span>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    )}
-                </div>
-            </div >
+                    </div>
+                )}
+            </div>
+            {/* End of flex container */}
 
             {/* Modals */}
             {/* Premium Diagnosis Picker Modal */}
@@ -2859,16 +3069,32 @@ const VisitNote = () => {
                 />
             )}
 
-            {/* Chart Review Modal - Quick Patient Summary */}
+            {/* Chart Review Modal - Note Focused */}
             {showChartReview && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60]" onClick={() => setShowChartReview(false)}>
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
-                        {/* Header */}
-                        <div className="px-6 py-4 bg-gradient-to-r from-slate-900 to-slate-800 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <Eye className="w-5 h-5 text-white" />
-                                <h2 className="text-lg font-bold text-white">Chart Review</h2>
-                                <span className="text-[11px] font-bold uppercase text-slate-400 bg-slate-700 px-2 py-0.5 rounded">Quick Summary</span>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
+                        {/* Header with Tabs */}
+                        <div className="px-4 py-3 bg-gradient-to-r from-slate-900 to-slate-800 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                    <Eye className="w-5 h-5 text-white" />
+                                    <h2 className="text-lg font-bold text-white">Chart Review</h2>
+                                </div>
+                                {/* Tab Buttons */}
+                                <div className="flex gap-1 bg-slate-700/50 rounded-lg p-1">
+                                    {['Notes', 'Labs', 'Imaging', 'Echo', 'EKG'].map((tab) => (
+                                        <button
+                                            key={tab}
+                                            onClick={() => setChartReviewData(prev => ({ ...prev, activeTab: tab }))}
+                                            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${(chartReviewData.activeTab || 'Notes') === tab
+                                                    ? 'bg-white text-slate-900 shadow'
+                                                    : 'text-slate-300 hover:text-white hover:bg-slate-600'
+                                                }`}
+                                        >
+                                            {tab}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                             <button onClick={() => setShowChartReview(false)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
                                 <X className="w-5 h-5 text-white" />
@@ -2876,133 +3102,220 @@ const VisitNote = () => {
                         </div>
 
                         {/* Content */}
-                        <div className="flex-1 overflow-y-auto p-6">
+                        <div className="flex-1 flex overflow-hidden">
                             {chartReviewData.loading ? (
-                                <div className="flex items-center justify-center py-16">
+                                <div className="flex-1 flex items-center justify-center">
                                     <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
                                 </div>
-                            ) : (
-                                <div className="grid grid-cols-3 gap-6">
-                                    {/* Left Column - Active Problems & Key History */}
-                                    <div className="space-y-6">
-                                        {/* Active Problems */}
-                                        <div className="bg-rose-50 rounded-xl p-4 border border-rose-100">
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <AlertCircle className="w-4 h-4 text-rose-600" />
-                                                <h3 className="text-sm font-bold text-rose-900 uppercase tracking-wide">Active Problems</h3>
-                                            </div>
-                                            <div className="space-y-2">
-                                                {(patientData?.problems || []).filter(p => p.status === 'active').slice(0, 8).map((p, i) => (
-                                                    <div key={i} className="flex items-start gap-2 text-sm">
-                                                        <span className="text-rose-400 mt-0.5">•</span>
-                                                        <div>
-                                                            <div className="font-semibold text-rose-900">{p.problem_name}</div>
-                                                            {p.icd10_code && <div className="text-[10px] text-rose-500 font-mono">{p.icd10_code}</div>}
+                            ) : (chartReviewData.activeTab || 'Notes') === 'Notes' ? (
+                                <>
+                                    {/* Left: Visit List */}
+                                    <div className="w-56 border-r border-slate-200 bg-slate-50 flex flex-col">
+                                        <div className="p-3 border-b border-slate-200">
+                                            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Visit History</div>
+                                            <div className="text-[10px] text-slate-400">{chartReviewData.visits.length} visits</div>
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto custom-scrollbar">
+                                            {chartReviewData.visits.map((visit, idx) => {
+                                                const noteText = visit.note_draft || '';
+                                                const ccMatch = noteText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n|$)/i);
+                                                const cc = ccMatch ? ccMatch[1].trim().substring(0, 40) : 'Visit';
+
+                                                return (
+                                                    <button
+                                                        key={visit.id}
+                                                        onClick={() => setChartReviewData(prev => ({ ...prev, selectedVisitId: visit.id }))}
+                                                        className={`w-full text-left p-3 border-b border-slate-100 transition-all ${(chartReviewData.selectedVisitId || chartReviewData.visits[0]?.id) === visit.id
+                                                                ? 'bg-white border-l-4 border-l-primary-500 shadow-sm'
+                                                                : 'hover:bg-white/70'
+                                                            }`}
+                                                    >
+                                                        <div className="flex items-center gap-1.5 mb-0.5">
+                                                            <span className="text-xs font-bold text-slate-900">
+                                                                {format(new Date(visit.visit_date), 'MMM d, yyyy')}
+                                                            </span>
+                                                            {visit.locked && <Lock className="w-2.5 h-2.5 text-slate-400" />}
                                                         </div>
-                                                    </div>
-                                                )) || <div className="text-sm text-rose-400 italic">No active problems</div>}
-                                            </div>
-                                        </div>
-
-                                        {/* Current Medications */}
-                                        <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <Pill className="w-4 h-4 text-emerald-600" />
-                                                <h3 className="text-sm font-bold text-emerald-900 uppercase tracking-wide">Medications</h3>
-                                            </div>
-                                            <div className="space-y-2">
-                                                {(patientData?.medications || []).filter(m => m.active).slice(0, 8).map((m, i) => (
-                                                    <div key={i} className="text-sm">
-                                                        <div className="font-semibold text-emerald-900">{m.medication_name}</div>
-                                                        <div className="text-[11px] text-emerald-600">{m.dosage} {m.frequency && `• ${m.frequency}`}</div>
-                                                    </div>
-                                                )) || <div className="text-sm text-emerald-400 italic">No medications</div>}
-                                            </div>
-                                        </div>
-
-                                        {/* Allergies */}
-                                        <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <AlertCircle className="w-4 h-4 text-amber-600" />
-                                                <h3 className="text-sm font-bold text-amber-900 uppercase tracking-wide">Allergies</h3>
-                                            </div>
-                                            <div className="space-y-1">
-                                                {(patientData?.allergies || []).length > 0 ? patientData.allergies.map((a, i) => (
-                                                    <div key={i} className="text-sm font-semibold text-amber-900">
-                                                        {a.allergen} {a.reaction && <span className="font-normal text-amber-600">- {a.reaction}</span>}
-                                                    </div>
-                                                )) : <div className="text-sm font-bold text-emerald-600">NKDA</div>}
-                                            </div>
+                                                        <div className="text-[10px] text-slate-500 truncate">{cc}</div>
+                                                        <div className="text-[9px] text-slate-400 uppercase mt-0.5">
+                                                            {visit.provider_last_name || 'Provider'}
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
                                         </div>
                                     </div>
 
-                                    {/* Middle & Right Columns - Visit Timeline */}
-                                    <div className="col-span-2">
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <ScrollText className="w-4 h-4 text-slate-600" />
-                                            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Recent Visits</h3>
-                                            <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">{chartReviewData.visits.length} visits</span>
-                                        </div>
+                                    {/* Center: Full Note View */}
+                                    <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                                        {(() => {
+                                            const selectedVisit = chartReviewData.visits.find(v => v.id === (chartReviewData.selectedVisitId || chartReviewData.visits[0]?.id));
+                                            if (!selectedVisit) return <div className="text-center text-slate-400 py-12">Select a visit</div>;
 
-                                        <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-                                            {chartReviewData.visits.map((visit, idx) => {
-                                                // Parse chief complaint from note
-                                                const noteText = visit.note_draft || '';
-                                                const ccMatch = noteText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n|$)/i);
-                                                const chiefComplaint = ccMatch ? ccMatch[1].trim() : 'Routine Visit';
+                                            const noteText = selectedVisit.note_draft || '';
+                                            const decoded = decodeHtmlEntities(noteText);
 
-                                                // Parse assessment
-                                                const assessmentMatch = noteText.match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\nPlan|$)/is);
-                                                const assessment = assessmentMatch ? assessmentMatch[1].trim().substring(0, 200) : '';
+                                            // Parse sections
+                                            const ccMatch = decoded.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History):|$)/is);
+                                            const hpiMatch = decoded.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment):|$)/is);
+                                            const rosMatch = decoded.match(/(?:ROS|Review of Systems):\s*(.+?)(?:\n\n|\n(?:PE|Physical|Assessment):|$)/is);
+                                            const peMatch = decoded.match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Assessment|A):|$)/is);
+                                            const assessmentMatch = decoded.match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):|$)/is);
+                                            const planMatch = decoded.match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n(?:Care Plan|Follow):|$)/is);
+                                            const carePlanMatch = decoded.match(/(?:Care Plan|CP):\s*(.+?)(?:\n\n|$)/is);
 
-                                                return (
-                                                    <div key={visit.id} className={`p-4 rounded-xl border transition-all ${idx === 0 ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 border-slate-200 hover:border-slate-300'}`}>
-                                                        <div className="flex items-start justify-between mb-2">
-                                                            <div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className={`text-sm font-bold ${idx === 0 ? 'text-blue-900' : 'text-slate-900'}`}>
-                                                                        {format(new Date(visit.visit_date), 'MMM d, yyyy')}
+                                            return (
+                                                <div className="space-y-4">
+                                                    {/* Visit Header */}
+                                                    <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-lg font-bold text-slate-900">
+                                                                    {format(new Date(selectedVisit.visit_date), 'MMMM d, yyyy')}
+                                                                </span>
+                                                                {selectedVisit.locked && (
+                                                                    <span className="text-[10px] font-bold uppercase bg-green-100 text-green-700 px-2 py-0.5 rounded flex items-center gap-1">
+                                                                        <Lock className="w-3 h-3" /> Signed
                                                                     </span>
-                                                                    {visit.locked && <Lock className="w-3 h-3 text-slate-400" />}
-                                                                    {idx === 0 && <span className="text-[9px] font-bold uppercase bg-blue-600 text-white px-1.5 py-0.5 rounded">Current</span>}
-                                                                </div>
-                                                                <div className="text-[11px] text-slate-500 uppercase font-medium">
-                                                                    {visit.visit_type?.replace('_', ' ') || 'Office Visit'} • {visit.provider_last_name || 'Provider'}
-                                                                </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-sm text-slate-500">
+                                                                {selectedVisit.visit_type?.replace('_', ' ') || 'Office Visit'} • {selectedVisit.provider_last_name || 'Provider'}
                                                             </div>
                                                         </div>
-
-                                                        <div className="mt-2">
-                                                            <div className="text-[10px] font-bold uppercase text-slate-400 mb-1">Chief Complaint</div>
-                                                            <div className="text-sm font-semibold text-slate-800 line-clamp-2">{chiefComplaint}</div>
-                                                        </div>
-
-                                                        {assessment && (
-                                                            <div className="mt-3 pt-3 border-t border-slate-200">
-                                                                <div className="text-[10px] font-bold uppercase text-slate-400 mb-1">Assessment</div>
-                                                                <div className="text-xs text-slate-600 line-clamp-3">{assessment}...</div>
-                                                            </div>
-                                                        )}
                                                     </div>
-                                                );
-                                            })}
 
-                                            {chartReviewData.visits.length === 0 && (
-                                                <div className="text-center py-12 text-slate-400">
-                                                    <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                                                    <p className="text-sm font-medium">No previous visits found</p>
+                                                    {/* CC */}
+                                                    <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                                                        <div className="text-[10px] font-bold text-blue-600 uppercase tracking-wide mb-1">Chief Complaint</div>
+                                                        <div className="text-sm font-semibold text-blue-900">{ccMatch ? ccMatch[1].trim() : 'Not documented'}</div>
+                                                    </div>
+
+                                                    {/* HPI */}
+                                                    {hpiMatch && (
+                                                        <div className="bg-white rounded-xl p-4 border border-slate-200">
+                                                            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">History of Present Illness</div>
+                                                            <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{hpiMatch[1].trim()}</div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* ROS - Collapsed by default */}
+                                                    {rosMatch && (
+                                                        <details className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+                                                            <summary className="p-3 cursor-pointer text-[10px] font-bold text-slate-500 uppercase tracking-wide hover:bg-slate-100">
+                                                                Review of Systems ▾
+                                                            </summary>
+                                                            <div className="p-4 pt-0 text-xs text-slate-600 whitespace-pre-wrap">{rosMatch[1].trim()}</div>
+                                                        </details>
+                                                    )}
+
+                                                    {/* PE - Collapsed by default */}
+                                                    {peMatch && (
+                                                        <details className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+                                                            <summary className="p-3 cursor-pointer text-[10px] font-bold text-slate-500 uppercase tracking-wide hover:bg-slate-100">
+                                                                Physical Exam ▾
+                                                            </summary>
+                                                            <div className="p-4 pt-0 text-xs text-slate-600 whitespace-pre-wrap">{peMatch[1].trim()}</div>
+                                                        </details>
+                                                    )}
+
+                                                    {/* Assessment */}
+                                                    {assessmentMatch && (
+                                                        <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+                                                            <div className="text-[10px] font-bold text-amber-700 uppercase tracking-wide mb-2">Assessment</div>
+                                                            <div className="text-sm text-amber-900 whitespace-pre-wrap leading-relaxed">{assessmentMatch[1].trim()}</div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Plan */}
+                                                    {planMatch && (
+                                                        <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
+                                                            <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide mb-2">Plan</div>
+                                                            <div className="text-sm text-emerald-900 whitespace-pre-wrap leading-relaxed">{planMatch[1].trim()}</div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Care Plan */}
+                                                    {carePlanMatch && (
+                                                        <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
+                                                            <div className="text-[10px] font-bold text-purple-700 uppercase tracking-wide mb-2">Care Plan</div>
+                                                            <div className="text-sm text-purple-900 whitespace-pre-wrap leading-relaxed">{carePlanMatch[1].trim()}</div>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
+                                            );
+                                        })()}
+                                    </div>
+
+                                    {/* Right: Quick Info */}
+                                    <div className="w-56 border-l border-slate-200 bg-slate-50 p-3 overflow-y-auto custom-scrollbar">
+                                        <div className="space-y-4">
+                                            {/* Active Problems */}
+                                            <div>
+                                                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">Active Problems</div>
+                                                <div className="space-y-1">
+                                                    {(patientData?.problems || []).filter(p => p.status === 'active').slice(0, 6).map((p, i) => (
+                                                        <div key={i} className="text-[11px] text-slate-700 flex items-start gap-1">
+                                                            <span className="text-slate-400">•</span>
+                                                            <span>{p.problem_name}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            {/* Medications */}
+                                            <div>
+                                                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">Medications</div>
+                                                <div className="space-y-1">
+                                                    {(patientData?.medications || []).filter(m => m.active !== false).slice(0, 6).map((m, i) => (
+                                                        <div key={i} className="text-[11px] text-slate-700">
+                                                            {m.medication_name}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            {/* Allergies */}
+                                            <div>
+                                                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">Allergies</div>
+                                                {(patientData?.allergies || []).length > 0 ? (
+                                                    <div className="space-y-1">
+                                                        {patientData.allergies.map((a, i) => (
+                                                            <div key={i} className="text-[11px] text-red-600 font-medium">{a.allergen}</div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-[11px] text-emerald-600 font-medium">NKDA</div>
+                                                )}
+                                            </div>
                                         </div>
+                                    </div>
+                                </>
+                            ) : (
+                                /* Labs / Imaging / Echo / EKG tabs */
+                                <div className="flex-1 flex items-center justify-center p-8">
+                                    <div className="text-center">
+                                        <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                                            {(chartReviewData.activeTab) === 'Labs' && <FlaskConical className="w-8 h-8 text-purple-500" />}
+                                            {(chartReviewData.activeTab) === 'Imaging' && <FileImage className="w-8 h-8 text-blue-500" />}
+                                            {(chartReviewData.activeTab) === 'Echo' && <Heart className="w-8 h-8 text-rose-500" />}
+                                            {(chartReviewData.activeTab) === 'EKG' && <Waves className="w-8 h-8 text-rose-500" />}
+                                        </div>
+                                        <h3 className="text-lg font-bold text-slate-900 mb-1">{chartReviewData.activeTab}</h3>
+                                        <p className="text-sm text-slate-500 mb-4">Results will be displayed here</p>
+                                        <button
+                                            onClick={() => { setShowChartReview(false); setPatientChartTab('results'); setShowPatientChart(true); }}
+                                            className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors"
+                                        >
+                                            View in Full Chart
+                                        </button>
                                     </div>
                                 </div>
                             )}
                         </div>
 
                         {/* Footer */}
-                        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                        <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
                             <div className="text-xs text-slate-500">
-                                Review past encounters to understand patient history
+                                Navigate between visits to review patient history
                             </div>
                             <button
                                 onClick={() => { setShowChartReview(false); setPatientChartTab('history'); setShowPatientChart(true); }}
