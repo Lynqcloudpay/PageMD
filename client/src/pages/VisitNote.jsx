@@ -5,7 +5,7 @@ import {
     Sparkles, ArrowLeft, Zap, Search, X, Printer, History,
     Activity, CheckSquare, Square, Trash2, Pill, Users, UserCircle, ChevronRight,
     DollarSign, Eye, Calendar, AlertCircle, Stethoscope, ScrollText, Copy, RotateCcw,
-    PanelRight, RefreshCw, StopCircle, FileImage, FlaskConical, Heart, Waves
+    PanelRight, RefreshCw, StopCircle, FileImage, FlaskConical, Heart, Waves, FilePlus
 } from 'lucide-react';
 import Toast from '../components/ui/Toast';
 import { OrderModal, PrescriptionModal, ReferralModal } from '../components/ActionModals';
