@@ -30,11 +30,11 @@ import ResultImportModal from '../components/ResultImportModal';
 import DiagnosisLinkModal from '../components/DiagnosisLinkModal';
 
 // Image preview component for protected documents
-const ResultImage = ({ docId, filename }) => {
+const ResultImage = ({ doc }) => {
     const [src, setSrc] = useState(null);
     useEffect(() => {
         let active = true;
-        documentsAPI.getFile(docId).then(res => {
+        documentsAPI.getFile(doc.id).then(res => {
             if (active) {
                 const url = URL.createObjectURL(res.data);
                 setSrc(url);
@@ -43,14 +43,25 @@ const ResultImage = ({ docId, filename }) => {
         return () => {
             active = false;
         };
-    }, [docId]);
+    }, [doc.id]);
 
-    if (!src) return <div className="h-32 bg-gray-50 flex items-center justify-center text-xs text-gray-400 rounded-lg border border-gray-100 animate-pulse">Loading image...</div>;
+    const interpretationTag = (doc.tags || []).find(t => t.startsWith('interpretation:'));
+    const interpretation = interpretationTag ? interpretationTag.replace('interpretation:', '') : null;
+
+    if (!src) return <div className="h-32 bg-gray-50 flex items-center justify-center text-[10px] text-gray-400 rounded-lg border border-gray-100 animate-pulse">Loading image...</div>;
     return (
-        <a href={src} target="_blank" rel="noopener noreferrer" className="block group relative">
-            <img src={src} alt={filename} className="w-full h-32 object-cover rounded-lg border border-gray-200 shadow-sm group-hover:shadow-md transition-all" />
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors rounded-lg" />
-        </a>
+        <div className="flex flex-col gap-1.5">
+            <a href={src} target="_blank" rel="noopener noreferrer" className="block group relative">
+                <img src={src} alt={doc.filename} className="w-full h-32 object-cover rounded-lg border border-gray-200 shadow-sm group-hover:shadow-md transition-all" />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors rounded-lg" />
+            </a>
+            {interpretation && (
+                <div className="bg-blue-50/30 border border-blue-100/50 p-2 rounded-md">
+                    <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest block mb-0.5">Interpretation</span>
+                    <div className="text-[11px] font-bold text-gray-700 leading-tight italic line-clamp-2">"{interpretation}"</div>
+                </div>
+            )}
+        </div>
     );
 };
 
@@ -2669,7 +2680,7 @@ const VisitNote = () => {
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                                         {visitDocuments.map(doc => (
                                             <div key={doc.id} className="relative group">
-                                                <ResultImage docId={doc.id} filename={doc.filename} />
+                                                <ResultImage doc={doc} />
                                                 <div className="flex justify-between items-center mt-1 px-0.5">
                                                     <p className="text-[10px] text-gray-500 truncate max-w-[80%]">{doc.filename}</p>
                                                     <button
