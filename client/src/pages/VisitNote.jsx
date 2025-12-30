@@ -2695,15 +2695,7 @@ const VisitNote = () => {
                                         </div>
                                     </div>
                                 )}
-                                {/* Always show textarea - sync changes to structured plan on blur */}
-                                {!isSigned && (
-                                    <textarea
-                                        value={noteData.plan || ''}
-                                        readOnly={true} // Restricted per user request
-                                        className="w-full text-xs text-neutral-500 bg-neutral-50 border border-neutral-300 rounded-md p-2 mt-2 min-h-[100px] cursor-not-allowed focus:ring-0"
-                                        placeholder="Plan items must be added via Orders or Prescriptions..."
-                                    />
-                                )}
+
                                 {isSigned && (
                                     <div className="p-2 border border-neutral-200 rounded-md bg-neutral-50 text-xs">
                                         <PlanDisplay plan={noteData.plan} />
@@ -3090,6 +3082,15 @@ const VisitNote = () => {
                 />
 
                 {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+                {/* Result Import Modal */}
+                <ResultImportModal
+                    isOpen={showResultImportModal}
+                    onClose={() => setShowResultImportModal(false)}
+                    onImport={handleResultImport}
+                    patientId={id}
+                    resultType={resultImportType}
+                />
 
                 {/* Diagnosis Link Modal for Meds */}
                 <DiagnosisLinkModal
