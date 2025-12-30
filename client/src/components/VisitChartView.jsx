@@ -685,22 +685,11 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                     </div>
                                 </div>
 
-                                {/* META HEADER (CC & ALLERGIES) */}
-                                <div className="avoid-cut mb-6 pt-2 pb-2 border-y border-slate-100 flex gap-8 items-center bg-slate-50/30 px-4 rounded-lg">
+                                {/* META HEADER (CHIEF COMPLAINT) */}
+                                <div className="avoid-cut mb-6 pt-2 pb-2 border-b border-slate-100 flex gap-8 items-center px-4">
                                     <div className="flex gap-3 items-center shrink-0">
                                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Chief Complaint</span>
-                                        <div className="text-[12px] font-black text-slate-900 uppercase">{noteData.chiefComplaint || visit?.reason || 'Routine follow-up'}</div>
-                                    </div>
-                                    <div className="w-px h-6 bg-slate-200" />
-                                    <div className="flex gap-3 items-center overflow-hidden">
-                                        <span className="text-[10px] font-black text-rose-500/70 uppercase tracking-widest">Allergies</span>
-                                        <div className="flex flex-wrap gap-2 text-[11px]">
-                                            {allergies.length > 0 ? (
-                                                allergies.map((a, i) => <span key={i} className="font-black text-rose-600 px-2 py-0.5 bg-rose-50 rounded border border-rose-100">! {a.allergen}</span>)
-                                            ) : (
-                                                <span className="font-black text-emerald-600 uppercase tracking-tighter">Negative / NKDA</span>
-                                            )}
-                                        </div>
+                                        <div className="text-[12px] font-extrabold text-slate-900 uppercase tracking-tight">{noteData.chiefComplaint || visit?.reason || 'Routine follow-up'}</div>
                                     </div>
                                 </div>
 
@@ -716,6 +705,18 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                     <div className="mt-8 pt-6 border-t border-slate-100 avoid-cut">
                                         <span className="section-label">Review of Systems</span>
                                         <div className="text-[13px] leading-relaxed text-slate-600 columns-2 gap-12" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.rosNotes) }} />
+                                    </div>
+
+                                    {/* ALLERGIES BAR (Post-ROS) */}
+                                    <div className="avoid-cut mt-6 py-2.5 px-4 bg-rose-50/30 rounded-xl border border-rose-100/50 flex gap-4 items-center">
+                                        <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest shrink-0">Allergies</span>
+                                        <div className="flex flex-wrap gap-2 text-[11px]">
+                                            {allergies.length > 0 ? (
+                                                allergies.map((a, i) => <span key={i} className="font-black text-rose-700">! {a.allergen}</span>)
+                                            ) : (
+                                                <span className="font-black text-emerald-600 uppercase tracking-tighter italic">Negative / NKDA</span>
+                                            )}
+                                        </div>
                                     </div>
 
                                     {/* COMPACT 3-COLUMN CLINICAL HISTORY (PMHx, Meds, Social) */}

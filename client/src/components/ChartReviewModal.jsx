@@ -26,6 +26,7 @@ const ChartReviewModal = ({
     const [records, setRecords] = useState([]);
     const [recordsLoading, setRecordsLoading] = useState(false);
     const [recordsError, setRecordsError] = useState(null);
+    const [selectedItem, setSelectedItem] = useState(null);
 
     // Filter keywords helper
     const getFilterKeywords = (type) => {
@@ -44,6 +45,7 @@ const ChartReviewModal = ({
     useEffect(() => {
         if (isOpen && patientData?.id) {
             loadRecords(patientData.id);
+            setSelectedItem(null);
         }
     }, [isOpen, patientData?.id]);
 
@@ -125,11 +127,11 @@ const ChartReviewModal = ({
                     const text = (d.filename + ' ' + comment + ' ' + docType + ' ' + tags.join(' ')).toLowerCase();
 
                     if (getFilterKeywords('Labs').some(k => text.includes(k))) category = 'Labs';
-                    else if (getFilterKeywords('Imaging').some(k => text.includes(k))) category = 'Imaging';
                     else if (getFilterKeywords('Echo').some(k => text.includes(k)) || docType === 'echo') category = 'Echo';
                     else if (getFilterKeywords('EKG').some(k => text.includes(k)) || docType === 'ekg') category = 'EKG';
                     else if (getFilterKeywords('Cath').some(k => text.includes(k)) || docType === 'cardiac_cath') category = 'Cath';
                     else if (getFilterKeywords('Stress').some(k => text.includes(k)) || docType === 'stress') category = 'Stress';
+                    else if (getFilterKeywords('Imaging').some(k => text.includes(k))) category = 'Imaging';
 
                     const interpretationTag = tags.find(t => t.startsWith('interpretation:'));
                     const interpretation = interpretationTag ? interpretationTag.replace('interpretation:', '') : null;
@@ -450,6 +452,118 @@ const ChartReviewModal = ({
         );
     };
 
+    // Document Preview Component
+    const DocumentPreview = ({ item, onClose }) => {
+        const [src, setSrc] = useState(null);
+        const [loading, setLoading] = useState(true);
+
+        useEffect(() => {
+            if (item.type === 'document') {
+                setLoading(true);
+                documentsAPI.getFile(item.source.id).then(res => {
+                    setSrc(URL.createObjectURL(res.data));
+                }).catch(err => {
+                    console.error("Error loading document:", err);
+                }).finally(() => {
+                    setLoading(false);
+                });
+            }
+        }, [item]);
+
+        const tags = Array.isArray(item.source.tags) ? item.source.tags : [];
+        const interpretationTag = tags.find(t => t.startsWith('interpretation:'));
+        const interpretation = interpretationTag ? interpretationTag.replace('interpretation:', '') : null;
+
+        const metrics = tags.filter(t => t.includes(':') && !t.startsWith('interpretation:') && !t.startsWith('date:'))
+            .map(t => {
+                const [key, ...valParts] = t.split(':');
+                const value = valParts.join(':');
+                const label = key.replace(/_/g, ' ').toUpperCase();
+                return { label, value };
+            });
+
+        return (
+            <div className="flex-1 flex flex-col bg-slate-50 border-l border-slate-200 overflow-auto custom-scrollbar">
+                <div className="p-4 bg-white border-b border-slate-100 flex items-center justify-between sticky top-0 z-10">
+                    <div>
+                        <h4 className="font-bold text-slate-900">{item.title}</h4>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                            {item.date ? format(new Date(item.date), 'MMMM dd, yyyy') : 'No Date'}
+                        </p>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg text-slate-400">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                <div className="p-6">
+                    {item.type === 'document' ? (
+                        <div className="space-y-6">
+                            {loading ? (
+                                <div className="h-64 flex items-center justify-center bg-white rounded-xl border-2 border-dashed border-slate-200">
+                                    <div className="flex flex-col items-center animate-pulse">
+                                        <FileImage className="w-12 h-12 text-slate-200 mb-2" />
+                                        <span className="text-xs text-slate-400 font-bold uppercase">Loading Image...</span>
+                                    </div>
+                                </div>
+                            ) : src ? (
+                                <div className="bg-white p-2 rounded-2xl shadow-sm border border-slate-200/50">
+                                    <img src={src} className="w-full h-auto rounded-xl shadow-lg cursor-zoom-in" alt="Document" onClick={() => window.open(src, '_blank')} />
+                                </div>
+                            ) : (
+                                <div className="h-32 flex items-center justify-center bg-rose-50 rounded-xl border border-rose-100 text-rose-500 font-bold text-xs">
+                                    Failed to load image
+                                </div>
+                            )}
+
+                            {(metrics.length > 0 || interpretation) && (
+                                <div className="grid gap-6">
+                                    {metrics.length > 0 && (
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {metrics.map((m, i) => (
+                                                <div key={i} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">{m.label}</span>
+                                                    <span className="text-[13px] font-bold text-slate-800">{m.value}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {interpretation && (
+                                        <div className="bg-blue-600 p-5 rounded-2xl shadow-blue-200 shadow-xl">
+                                            <span className="text-[9px] font-black text-blue-100 uppercase tracking-widest block mb-2 opacity-80">Physician Interpretation</span>
+                                            <div className="text-[15px] font-bold text-white leading-relaxed italic">"{interpretation}"</div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200/50">
+                            <h5 className="font-black text-[10px] text-slate-400 uppercase tracking-widest mb-4">Order Details</h5>
+                            <div className="space-y-4">
+                                <div>
+                                    <div className="text-[10px] font-bold text-slate-400 mb-0.5">Description</div>
+                                    <div className="text-sm text-slate-800 font-medium">{item.description || 'No description provided'}</div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
+                                    <div>
+                                        <div className="text-[10px] font-bold text-slate-400">Status</div>
+                                        <div className="text-sm font-bold text-blue-600">{item.status}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-[10px] font-bold text-slate-400">Category</div>
+                                        <div className="text-sm font-bold text-slate-800">{item.category}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
     const renderResultsTab = (type) => {
         const filteredRecords = records.filter(r => r.category === type || (type === 'Docs' && r.type === 'document'));
 
@@ -489,8 +603,8 @@ const ChartReviewModal = ({
             );
         }
 
-        return (
-            <div className="flex-1 flex flex-col overflow-hidden bg-white">
+        <div className="flex-1 flex overflow-hidden">
+            <div className={`${selectedItem ? 'w-1/2' : 'w-full'} flex flex-col overflow-hidden`}>
                 <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                     <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
                         {type} History
@@ -500,30 +614,34 @@ const ChartReviewModal = ({
                 <div className="flex-1 overflow-auto custom-scrollbar p-0">
                     <div className="divide-y divide-slate-100">
                         {filteredRecords.map(item => (
-                            <div key={item.id} className="p-4 hover:bg-slate-50 transition-colors flex items-start gap-4">
+                            <div
+                                key={item.id}
+                                onClick={() => setSelectedItem(item)}
+                                className={`p-4 cursor-pointer transition-all flex items-start gap-4 hover:bg-slate-50 ${selectedItem?.id === item.id ? 'bg-blue-50/50 border-r-4 border-blue-500' : ''}`}
+                            >
                                 <div className="mt-1">
                                     {item.type === 'record' && <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center"><CheckCircle className="w-5 h-5 text-emerald-600" /></div>}
                                     {item.type === 'order' && <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center"><Activity className="w-5 h-5 text-blue-600" /></div>}
                                     {item.type === 'document' && <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center"><FileText className="w-5 h-5 text-amber-600" /></div>}
                                 </div>
-                                <div className="flex-1">
+                                <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between mb-1">
-                                        <h4 className="font-semibold text-slate-900">{item.title}</h4>
-                                        <span className="text-xs text-slate-500 flex items-center gap-1">
+                                        <h4 className="font-semibold text-slate-900 truncate">{item.title}</h4>
+                                        <span className="text-[10px] text-slate-500 flex items-center gap-1 shrink-0 ml-2">
                                             <Clock className="w-3 h-3" />
-                                            {item.date ? format(new Date(item.date), 'MM/dd/yyyy') : 'No Date'}
+                                            {item.date ? format(new Date(item.date), 'MM/dd/yy') : '--'}
                                         </span>
                                     </div>
-                                    <p className="text-sm text-slate-600 mb-2">{item.description}</p>
+                                    <p className="text-xs text-slate-600 mb-2 truncate">{item.description}</p>
                                     <div className="flex items-center gap-2">
-                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border
-                                            ${item.type === 'record' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-black border uppercase tracking-tighter
+                                                    ${item.type === 'record' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
                                                 item.type === 'order' ? 'bg-blue-50 text-blue-700 border-blue-100' :
                                                     'bg-amber-50 text-amber-700 border-amber-100'
                                             }`}>
-                                            {item.type.toUpperCase()}
+                                            {item.type}
                                         </span>
-                                        {item.status && <span className="text-[10px] text-slate-400 uppercase">{item.status}</span>}
+                                        {item.status && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.status}</span>}
                                     </div>
                                 </div>
                             </div>
@@ -531,7 +649,11 @@ const ChartReviewModal = ({
                     </div>
                 </div>
             </div>
-        );
+
+            {selectedItem && (
+                <DocumentPreview item={selectedItem} onClose={() => setSelectedItem(null)} />
+            )}
+        </div>
     };
 
     return (
