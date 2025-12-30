@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, FileText, Activity, FlaskConical, Stethoscope, RefreshCw, AlertCircle, Clock, CheckCircle, FileImage, Heart, Waves } from 'lucide-react';
-import { ordersAPI, documentsAPI } from '../services/api';
+import { ordersAPI, documentsAPI, patientsAPI } from '../services/api';
 import { format } from 'date-fns';
 
 const ResultImportModal = ({ isOpen, onClose, onImport, patientId, resultType }) => {
@@ -27,15 +27,61 @@ const ResultImportModal = ({ isOpen, onClose, onImport, patientId, resultType })
         setLoading(true);
         setError(null);
         try {
-            // Fetch both orders and documents in parallel
-            const [ordersRes, docsRes] = await Promise.allSettled([
+            // Fetch orders, documents, AND full patient data (for arrays like ekgs, imaging, etc.)
+            const [ordersRes, docsRes, patientRes] = await Promise.allSettled([
                 ordersAPI.getByPatient(patientId),
-                documentsAPI.getByPatient(patientId)
+                documentsAPI.getByPatient(patientId),
+                patientsAPI.get(patientId) // This returns the "mother chart" data
             ]);
 
             let combinedItems = [];
 
-            // Process Orders
+            // 1. Process "Mother Chart" Data (Direct Arrays)
+            if (patientRes.status === 'fulfilled' && patientRes.value.data) {
+                const pData = patientRes.value.data;
+                let specificItems = [];
+
+                // Select the correct array based on resultType
+                // Note: The property names must match what the backend/Snapshot uses
+                switch (resultType) {
+                    case 'Labs':
+                        if (Array.isArray(pData.labs)) specificItems = pData.labs;
+                        break;
+                    case 'Imaging':
+                        if (Array.isArray(pData.imaging)) specificItems = pData.imaging;
+                        break;
+                    case 'Echo':
+                        if (Array.isArray(pData.echos)) specificItems = pData.echos;
+                        break;
+                    case 'EKG':
+                        if (Array.isArray(pData.ekgs)) specificItems = pData.ekgs;
+                        else if (Array.isArray(pData.ekg)) specificItems = pData.ekg;
+                        break;
+                    case 'Cath':
+                        if (Array.isArray(pData.cardiac_caths)) specificItems = pData.cardiac_caths;
+                        else if (Array.isArray(pData.caths)) specificItems = pData.caths;
+                        break;
+                    case 'Stress':
+                        if (Array.isArray(pData.stress_tests)) specificItems = pData.stress_tests;
+                        break;
+                    default:
+                        break;
+                }
+
+                const mappedSpecifics = specificItems.map((item, idx) => ({
+                    id: `pat-${idx}-${item.id || idx}`,
+                    type: 'record', // From patient record directly
+                    title: item.type || item.name || item.study_type || `${resultType} Record`,
+                    description: item.result || item.impression || item.summary || 'See full chart for details',
+                    date: item.date || item.created_at || item.study_date,
+                    status: 'Completed',
+                    source: item
+                }));
+
+                combinedItems = [...combinedItems, ...mappedSpecifics];
+            }
+
+            // 2. Process Orders
             if (ordersRes.status === 'fulfilled' && ordersRes.value.data) {
                 const orders = ordersRes.value.data.filter(o => {
                     const typeMatch = o.type?.toUpperCase() === resultType.toUpperCase(); // Direct match?
@@ -58,7 +104,7 @@ const ResultImportModal = ({ isOpen, onClose, onImport, patientId, resultType })
                 combinedItems = [...combinedItems, ...orders];
             }
 
-            // Process Documents
+            // 3. Process Documents
             if (docsRes.status === 'fulfilled' && docsRes.value.data) {
                 const docs = docsRes.value.data.filter(d => {
                     const keywords = getFilterKeywords(resultType);
@@ -100,7 +146,7 @@ const ResultImportModal = ({ isOpen, onClose, onImport, patientId, resultType })
         // Format the import string
         // Ex: Labs (10/24/2024): CBC - Completed. 
         const dateStr = item.date ? format(new Date(item.date), 'MM/dd/yyyy') : 'Unknown Date';
-        const content = `${item.title} - ${item.status || 'Status unknown'}`;
+        const content = item.description || `${item.title} - ${item.status || 'Completed'}`;
         // Note: The parent component adds the generic header, but we want specific data.
         // Actually, let's pass the specific content content back
         onImport(content, dateStr);
@@ -179,6 +225,7 @@ const ResultImportModal = ({ isOpen, onClose, onImport, patientId, resultType })
                                 >
                                     <div className="flex items-start justify-between mb-1">
                                         <div className="font-semibold text-sm text-gray-800 group-hover:text-primary-800">{item.title}</div>
+                                        {item.type === 'record' && <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded border border-emerald-100 uppercase">Record</span>}
                                         {item.type === 'order' && <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 uppercase">Order</span>}
                                         {item.type === 'document' && <span className="text-[10px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded border border-amber-100 uppercase">Doc</span>}
                                     </div>

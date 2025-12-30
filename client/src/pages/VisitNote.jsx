@@ -1704,10 +1704,19 @@ const VisitNote = () => {
 
         // If not found, adding it to assessment and structured plan
         if (targetIndex === -1) {
-            // Add to Assessment text
-            const newAssessment = noteData.assessment
-                ? `${noteData.assessment}\n${diagnoses.length + 1}. ${diagnosisText}`
-                : `1. ${diagnosisText}`;
+            // Add to Assessment text ONLY if not already present
+            // Use a flexible check or exact check depending on preference. 
+            // Note: 'diagnoses' contains clean strings. 
+            const alreadyInAssessment = diagnoses.some(d => d.trim().toLowerCase() === diagnosisText.trim().toLowerCase())
+                || (noteData.assessment && noteData.assessment.toLowerCase().includes(diagnosisText.toLowerCase()));
+
+            let newAssessment = noteData.assessment;
+
+            if (!alreadyInAssessment) {
+                newAssessment = noteData.assessment
+                    ? `${noteData.assessment}\n${(diagnoses.length || 0) + 1}. ${diagnosisText}`
+                    : `1. ${diagnosisText}`;
+            }
 
             // Add new structured entry
             const newEntry = { diagnosis: diagnosisText, orders: [actionText] };
