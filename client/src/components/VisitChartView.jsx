@@ -185,7 +185,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [patientRes, visitRes, allergiesRes, medicationsRes, problemsRes, familyHistoryRes, socialHistoryRes, practiceRes, allVisitsRes] = await Promise.all([
+            const [patientRes, visitRes, allergiesRes, medicationsRes, problemsRes, familyHistoryRes, socialHistoryRes, practiceRes, allVisitsRes, documentsRes] = await Promise.all([
                 patientsAPI.get(patientId),
                 visitsAPI.get(activeVisitId),
                 patientsAPI.getAllergies(patientId).catch(() => ({ data: [] })),
@@ -208,7 +208,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
             setAllVisits(allVisitsRes.data || []);
 
             // Filter documents for this visit
-            const allDocs = arguments[0][9]?.data || [];
+            const allDocs = documentsRes?.data || [];
             const linkedDocs = allDocs.filter(d => d.visit_id === activeVisitId);
             setVisitDocuments(linkedDocs);
 
