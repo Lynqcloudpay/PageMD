@@ -973,22 +973,36 @@ router.post('/:id/addendum', requirePermission('notes:edit'), async (req, res) =
 });
 
 // Delete visit
+// Delete visit
 router.delete('/:id', requirePermission('notes:edit'), async (req, res) => {
+  const client = await pool.connect();
   try {
     const { id } = req.params;
 
-    const result = await pool.query('DELETE FROM visits WHERE id = $1 RETURNING *', [id]);
+    await client.query('BEGIN');
+
+    // 1. Unlink any documents associated with this visit (avoid FK violation)
+    await client.query('UPDATE documents SET visit_id = NULL WHERE visit_id = $1', [id]);
+
+    // 2. Delete the visit
+    const result = await client.query('DELETE FROM visits WHERE id = $1 RETURNING *', [id]);
 
     if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Visit not found' });
     }
+
+    await client.query('COMMIT');
 
     await logAudit(req.user.id, 'delete_visit', 'visit', id, {}, req.ip);
 
     res.json({ message: 'Visit deleted successfully' });
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Error deleting visit:', error);
-    res.status(500).json({ error: 'Failed to delete visit' });
+    res.status(500).json({ error: 'Failed to delete visit', details: error.message });
+  } finally {
+    client.release();
   }
 });
 
