@@ -27,6 +27,7 @@ import { ProblemInput, MedicationInput, AllergyInput, FamilyHistoryInput } from 
 
 import PrintOrdersModal from '../components/PrintOrdersModal';
 import ResultImportModal from '../components/ResultImportModal';
+import DiagnosisLinkModal from '../components/DiagnosisLinkModal';
 
 // Collapsible Section Component
 const Section = ({ title, children, defaultOpen = true }) => {
@@ -207,6 +208,10 @@ const VisitNote = () => {
     // Result Import Modal
     const [showResultImportModal, setShowResultImportModal] = useState(false);
     const [resultImportType, setResultImportType] = useState(null);
+
+    // Diagnosis Link Modal (for Meds)
+    const [showDiagnosisLinkModal, setShowDiagnosisLinkModal] = useState(false);
+    const [pendingMedAction, setPendingMedAction] = useState(null); // { med, action }
 
     // Quick Actions Panel
     const [showQuickActions, setShowQuickActions] = useState(true);
@@ -1669,17 +1674,68 @@ const VisitNote = () => {
     };
 
     // Add medication action to plan
+    // Updated: Trigger Diagnosis Link Modal instead of direct add
     const addMedicationToPlan = (med, action) => {
+        setPendingMedAction({ med, action });
+        setShowDiagnosisLinkModal(true);
+    };
+
+    // Callback when diagnosis is selected for the medication
+    const handleMedicationDiagnosisSelect = (diagnosisText) => {
+        if (!pendingMedAction) return;
+
+        const { med, action } = pendingMedAction;
         const actionText = action === 'continue'
             ? `Continue ${med.medication_name} ${med.dosage || ''} ${med.frequency || ''}`
             : action === 'refill'
                 ? `Refill ${med.medication_name} ${med.dosage || ''} - 90 day supply`
                 : `Discontinue ${med.medication_name}`;
 
-        // Add to plan as text
-        const newPlan = noteData.plan ? `${noteData.plan}\n- ${actionText}` : `- ${actionText}`;
-        setNoteData(prev => ({ ...prev, plan: newPlan }));
-        showToast(`${action === 'stop' ? 'Stopped' : action === 'refill' ? 'Refill added' : 'Continued'}: ${med.medication_name}`, 'success');
+        // 1. Ensure diagnosis exists in assessment/planStructured
+        // If it's a new diagnosis from search, we might need to add it to assessment first? 
+        // Typically, yes. Let's add it if not present.
+
+        let targetIndex = -1;
+
+        // Check if diagnosis is already in our structured plan
+        if (noteData.planStructured) {
+            targetIndex = noteData.planStructured.findIndex(item => item.diagnosis === diagnosisText);
+        }
+
+        // If not found, adding it to assessment and structured plan
+        if (targetIndex === -1) {
+            // Add to Assessment text
+            const newAssessment = noteData.assessment
+                ? `${noteData.assessment}\n${diagnoses.length + 1}. ${diagnosisText}`
+                : `1. ${diagnosisText}`;
+
+            // Add new structured entry
+            const newEntry = { diagnosis: diagnosisText, orders: [actionText] };
+
+            setNoteData(prev => ({
+                ...prev,
+                assessment: newAssessment,
+                planStructured: [...(prev.planStructured || []), newEntry],
+                // Also update the simple text plan for backup/legacy view
+                plan: prev.plan ? `${prev.plan}\n\n${diagnosisText}\n- ${actionText}` : `${diagnosisText}\n- ${actionText}`
+            }));
+        } else {
+            // Add to existing structured entry
+            const updatedStructured = [...(noteData.planStructured || [])];
+            updatedStructured[targetIndex].orders.push(actionText);
+
+            setNoteData(prev => ({
+                ...prev,
+                planStructured: updatedStructured,
+                // Also update the simple text plan for backup/legacy view (append to end likely, or smarter rebuild?)
+                // For simplicity, we append. Rebuilding strictly from structured might be better but risky if user edited text.
+                plan: prev.plan ? `${prev.plan}\n- ${actionText} (for ${diagnosisText})` : `- ${actionText} (for ${diagnosisText})`
+            }));
+        }
+
+        setShowDiagnosisLinkModal(false);
+        setPendingMedAction(null);
+        showToast(`Added ${action} for ${med.medication_name}`, 'success');
     };
 
     // Insert HPI template
@@ -2643,9 +2699,9 @@ const VisitNote = () => {
                                 {!isSigned && (
                                     <textarea
                                         value={noteData.plan || ''}
-                                        onChange={(e) => setNoteData({ ...noteData, plan: e.target.value })}
-                                        className="w-full text-xs text-neutral-900 border border-neutral-300 rounded-md p-2 mt-2 min-h-[100px] focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                                        placeholder="Additional plan notes or imported results..."
+                                        readOnly={true} // Restricted per user request
+                                        className="w-full text-xs text-neutral-500 bg-neutral-50 border border-neutral-300 rounded-md p-2 mt-2 min-h-[100px] cursor-not-allowed focus:ring-0"
+                                        placeholder="Plan items must be added via Orders or Prescriptions..."
                                     />
                                 )}
                                 {isSigned && (
@@ -3034,6 +3090,16 @@ const VisitNote = () => {
                 />
 
                 {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+                {/* Diagnosis Link Modal for Meds */}
+                <DiagnosisLinkModal
+                    isOpen={showDiagnosisLinkModal}
+                    onClose={() => setShowDiagnosisLinkModal(false)}
+                    onSelect={handleMedicationDiagnosisSelect}
+                    activeDiagnoses={diagnoses} // Extracted from assessment
+                    medicationName={pendingMedAction?.med?.medication_name}
+                    actionType={pendingMedAction?.action}
+                />
 
                 {/* Dot Phrase Modal */}
                 {
