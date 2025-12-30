@@ -3,7 +3,7 @@ set -x
 # Ultra-fast deployment script (Robust Version)
 # Builds frontend locally and rsyncs it to the server
 
-HOST="bemypcp.com"
+HOST="pagemdemr.com"
 USER="ubuntu"
 DIR="/home/ubuntu/emr"
 INPUT_KEY_PATH="$1"

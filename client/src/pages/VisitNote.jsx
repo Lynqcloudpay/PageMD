@@ -1836,7 +1836,33 @@ const VisitNote = () => {
         if (isNotAvailable) {
             entry = `${resultImportType}: Not available in current records.`;
         } else {
-            entry = `${resultImportType} (${timestamp}): ${content}`;
+            // Enrich content with interpretation if available
+            let richContent = content;
+            if (item) {
+                const details = [];
+                const source = item.source || item;
+
+                // Check common fields for interpretation/results
+                const extraInfo = source.impression || source.interpretation || source.result || source.summary || source.result_value;
+
+                // If extraInfo exists and is substantial and not already in content
+                if (extraInfo && typeof extraInfo === 'string' && extraInfo.length > 0 && !content.includes(extraInfo)) {
+                    details.push(`Interpretation: ${extraInfo}`);
+                }
+
+                // Check comments for documents (often used for interpretation notes)
+                if (source.comments && Array.isArray(source.comments) && source.comments.length > 0) {
+                    const commentsText = source.comments.map(c => `${c.userName}: ${c.comment}`).join('; ');
+                    if (commentsText) details.push(`Notes: ${commentsText}`);
+                } else if (source.comment) {
+                    details.push(`Note: ${source.comment}`);
+                }
+
+                if (details.length > 0) {
+                    richContent += `\n   ${details.join('\n   ')}`;
+                }
+            }
+            entry = `${resultImportType} (${timestamp}): ${richContent}`;
         }
 
         setNoteData(prev => ({
