@@ -330,24 +330,35 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     };
 
     // Result Image Component (Inline)
-    const ResultImageView = ({ docId, filename }) => {
+    const ResultImageView = ({ doc }) => {
         const [src, setSrc] = useState(null);
         useEffect(() => {
             let active = true;
-            documentsAPI.getFile(docId).then(res => {
+            documentsAPI.getFile(doc.id).then(res => {
                 if (active) {
                     setSrc(URL.createObjectURL(res.data));
                 }
             }).catch(e => console.error(e));
             return () => { active = false; };
-        }, [docId]);
+        }, [doc.id]);
 
-        if (!src) return <div className="h-24 bg-slate-50 flex items-center justify-center text-[10px] text-slate-400 border border-slate-100 rounded">Loading...</div>;
+        const interpretationTag = (doc.tags || []).find(t => t.startsWith('interpretation:'));
+        const interpretation = interpretationTag ? interpretationTag.replace('interpretation:', '') : null;
+
+        if (!src) return <div className="h-48 bg-slate-50 flex items-center justify-center text-[10px] text-slate-400 border border-slate-100 rounded-xl">Loading...</div>;
         return (
-            <a href={src} target="_blank" rel="noopener noreferrer" className="block group relative">
-                <img src={src} alt={filename} className="w-full h-32 object-cover rounded border border-slate-200 shadow-sm" />
-                <div className="mt-1 text-[9px] text-slate-500 truncate">{filename}</div>
-            </a>
+            <div className="flex flex-col gap-3 avoid-cut">
+                <a href={src} target="_blank" rel="noopener noreferrer" className="block group relative">
+                    <img src={src} alt={doc.filename} className="w-full h-64 object-cover rounded-xl border border-slate-200 shadow-sm transition-transform hover:scale-[1.01]" />
+                    <div className="mt-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{doc.filename}</div>
+                </a>
+                {interpretation && (
+                    <div className="bg-slate-50/50 border border-slate-100 p-4 rounded-xl">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2 opacity-70">Clinical Interpretation</span>
+                        <div className="text-[13px] font-bold text-slate-800 leading-relaxed italic">"{interpretation}"</div>
+                    </div>
+                )}
+            </div>
         );
     };
 
@@ -749,11 +760,11 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                     {(noteData.results || visitDocuments.length > 0) && (
                                         <div className="mt-8 pt-6 border-t border-slate-100 avoid-cut">
                                             <span className="section-label">Results & Data</span>
-                                            {noteData.results && <div className="text-[14px] leading-relaxed text-slate-700 whitespace-pre-wrap mb-4">{noteData.results}</div>}
+                                            {noteData.results && <div className="text-[14px] leading-relaxed text-slate-700 whitespace-pre-wrap mb-8">{noteData.results}</div>}
                                             {visitDocuments.length > 0 && (
-                                                <div className="grid grid-cols-4 gap-4 mt-4">
+                                                <div className="grid grid-cols-2 gap-10 mt-4">
                                                     {visitDocuments.map(doc => (
-                                                        <ResultImageView key={doc.id} docId={doc.id} filename={doc.filename} />
+                                                        <ResultImageView key={doc.id} doc={doc} />
                                                     ))}
                                                 </div>
                                             )}

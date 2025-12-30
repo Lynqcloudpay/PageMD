@@ -119,22 +119,27 @@ const ChartReviewModal = ({
             if (docsRes.status === 'fulfilled' && docsRes.value.data) {
                 const docs = docsRes.value.data.map(d => {
                     let category = 'Docs';
-                    const keywords = getFilterKeywords('Labs'); // Default check or loop
-                    const text = (d.filename + ' ' + d.description + ' ' + d.type + ' ' + (d.tags || []).join(' ')).toLowerCase();
+                    const docType = (d.doc_type || '').toLowerCase();
+                    const tags = Array.isArray(d.tags) ? d.tags : [];
+                    const comment = d.comment || '';
+                    const text = (d.filename + ' ' + comment + ' ' + docType + ' ' + tags.join(' ')).toLowerCase();
 
                     if (getFilterKeywords('Labs').some(k => text.includes(k))) category = 'Labs';
                     else if (getFilterKeywords('Imaging').some(k => text.includes(k))) category = 'Imaging';
-                    else if (getFilterKeywords('Echo').some(k => text.includes(k))) category = 'Echo';
-                    else if (getFilterKeywords('EKG').some(k => text.includes(k))) category = 'EKG';
-                    else if (getFilterKeywords('Cath').some(k => text.includes(k))) category = 'Cath';
-                    else if (getFilterKeywords('Stress').some(k => text.includes(k))) category = 'Stress';
+                    else if (getFilterKeywords('Echo').some(k => text.includes(k)) || docType === 'echo') category = 'Echo';
+                    else if (getFilterKeywords('EKG').some(k => text.includes(k)) || docType === 'ekg') category = 'EKG';
+                    else if (getFilterKeywords('Cath').some(k => text.includes(k)) || docType === 'cardiac_cath') category = 'Cath';
+                    else if (getFilterKeywords('Stress').some(k => text.includes(k)) || docType === 'stress') category = 'Stress';
+
+                    const interpretationTag = tags.find(t => t.startsWith('interpretation:'));
+                    const interpretation = interpretationTag ? interpretationTag.replace('interpretation:', '') : null;
 
                     return {
                         id: `doc-${d.id}`,
                         category,
                         type: 'document',
-                        title: d.description || d.filename || 'Untitled Document',
-                        description: d.filename,
+                        title: d.filename || 'Untitled Document',
+                        description: interpretation ? `Interpretation: ${interpretation}` : (comment || d.filename),
                         date: d.created_at || d.uploaded_at,
                         status: 'Uploaded',
                         source: d

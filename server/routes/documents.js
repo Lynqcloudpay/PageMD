@@ -53,12 +53,27 @@ router.get('/patient/:patientId', requirePermission('patients:view_chart'), asyn
 
 // Upload document
 router.post('/', requirePermission('patients:view_chart'), upload.single('file'), async (req, res) => {
+  const requestId = req.headers['x-request-id'] || Math.random().toString(36).substring(7);
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
     let { patientId, visitId, docType, tags } = req.body;
+
+    // Safety: Trim IDs to prevent potential FK issues with whitespace
+    if (patientId) patientId = patientId.trim();
+    if (visitId) visitId = visitId.trim();
+
+    console.log(`[DOC-UPLOAD][${requestId}] Request: patientId=${patientId}, visitId=${visitId}, docType=${docType}, file=${req.file.originalname}`);
+
+    // Check DB Context
+    const dbClient = pool._currentClient;
+    if (!dbClient) {
+      console.warn(`[DOC-UPLOAD][${requestId}] WARNING: No transactional client found in dbStorage. Using fallback pool.`);
+    } else {
+      console.log(`[DOC-UPLOAD][${requestId}] Using transactional client for schema: ${dbClient.tenantSchema}`);
+    }
 
     // Sanitize docType to match DB CHECK constraint: ('imaging', 'consult', 'lab', 'other')
     const validDocTypes = ['imaging', 'consult', 'lab', 'other'];
@@ -92,22 +107,30 @@ router.post('/', requirePermission('patients:view_chart'), upload.single('file')
         urlPath, // Store URL path instead of filesystem path
         req.file.mimetype,
         req.file.size,
-        tags && typeof tags === 'string' ? tags.split(',') : [],
+        tags && typeof tags === 'string' ? tags.split(',') : (Array.isArray(tags) ? tags : []),
       ]
     );
 
     try {
       await logAudit(req.user.id, 'upload_document', 'document', result.rows[0].id, { docType }, req.ip);
     } catch (auditError) {
-      console.error('Audit log failed:', auditError);
+      console.error(`[DOC-UPLOAD][${requestId}] Audit log failed:`, auditError.message);
     }
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Error uploading document:', error);
+    console.error(`[DOC-UPLOAD][${requestId}] Error uploading document:`, error);
+    console.error(`[DOC-UPLOAD][${requestId}] Error details:`, {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      constraint: error.constraint,
+      table: error.table
+    });
     res.status(500).json({
       error: 'Failed to upload document',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      code: error.code
     });
   }
 });
