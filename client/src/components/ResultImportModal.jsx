@@ -148,14 +148,13 @@ const ResultImportModal = ({ isOpen, onClose, onImport, patientId, resultType })
         // Ex: Labs (10/24/2024): CBC - Completed. 
         const dateStr = item.date ? format(new Date(item.date), 'MM/dd/yyyy') : 'Unknown Date';
         const content = item.description || `${item.title} - ${item.status || 'Completed'}`;
-        // Note: The parent component adds the generic header, but we want specific data.
-        // Actually, let's pass the specific content content back
-        onImport(content, dateStr);
+        // Pass specific content AND the full item object
+        onImport(content, dateStr, item);
         onClose();
     };
 
     const handleNotAvailable = () => {
-        onImport('Not available in records');
+        onImport('Not available in records', format(new Date(), 'MM/dd/yyyy'), null);
         onClose();
     };
 
