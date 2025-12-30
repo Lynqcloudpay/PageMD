@@ -2391,13 +2391,13 @@ const VisitNote = () => {
                     <Section title="Assessment" defaultOpen={true}>
                         {/* Quick Add from Problem List */}
                         {!isSigned && (patientData?.problems || []).filter(p => p.status === 'active').length > 0 && (
-                            <div className="mb-3 p-3 bg-gradient-to-r from-rose-50 to-orange-50 rounded-lg border border-rose-100">
+                            <div className="mb-3 p-3 bg-slate-50/80 rounded-lg border border-slate-200">
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-2">
-                                        <AlertCircle className="w-4 h-4 text-rose-600" />
-                                        <span className="text-xs font-bold text-rose-900 uppercase tracking-wide">Quick Add from Problem List</span>
+                                        <ClipboardList className="w-4 h-4 text-slate-500" />
+                                        <span className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Quick Add from Problem List</span>
                                     </div>
-                                    <span className="text-[10px] text-rose-500">Click to add to assessment</span>
+                                    <span className="text-[10px] text-slate-400">Click to add</span>
                                 </div>
                                 <div className="flex flex-wrap gap-1.5">
                                     {(patientData?.problems || [])
@@ -2407,11 +2407,11 @@ const VisitNote = () => {
                                             <button
                                                 key={idx}
                                                 onClick={() => addProblemToAssessment(p)}
-                                                className="px-2.5 py-1 text-[11px] font-medium bg-white text-rose-700 rounded-full border border-rose-200 hover:bg-rose-100 hover:border-rose-300 transition-all flex items-center gap-1.5 shadow-sm"
+                                                className="px-2.5 py-1 text-[11px] font-medium bg-white text-slate-700 rounded-full border border-slate-200 hover:bg-primary-50 hover:border-primary-300 hover:text-primary-700 transition-all flex items-center gap-1.5 shadow-sm"
                                             >
                                                 <Plus className="w-3 h-3" />
                                                 {p.problem_name}
-                                                {p.icd10_code && <span className="text-rose-400 font-mono text-[9px]">({p.icd10_code})</span>}
+                                                {p.icd10_code && <span className="text-slate-400 font-mono text-[9px]">({p.icd10_code})</span>}
                                             </button>
                                         ))
                                     }
