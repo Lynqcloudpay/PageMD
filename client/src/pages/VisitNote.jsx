@@ -24,7 +24,9 @@ import { ordersCatalogAPI, visitsAPI, codesAPI, patientsAPI, icd10API, superbill
 import { format } from 'date-fns';
 import { hpiDotPhrases } from '../data/hpiDotPhrases';
 import { ProblemInput, MedicationInput, AllergyInput, FamilyHistoryInput } from '../components/PAMFOSInputs';
+
 import PrintOrdersModal from '../components/PrintOrdersModal';
+import ResultImportModal from '../components/ResultImportModal';
 
 // Collapsible Section Component
 const Section = ({ title, children, defaultOpen = true }) => {
@@ -201,6 +203,10 @@ const VisitNote = () => {
     const [carryForwardField, setCarryForwardField] = useState(null); // 'hpi', 'ros', 'pe', 'assessment'
     const [previousVisits, setPreviousVisits] = useState([]);
     const [loadingPrevVisits, setLoadingPrevVisits] = useState(false);
+
+    // Result Import Modal
+    const [showResultImportModal, setShowResultImportModal] = useState(false);
+    const [resultImportType, setResultImportType] = useState(null);
 
     // Quick Actions Panel
     const [showQuickActions, setShowQuickActions] = useState(true);
@@ -1695,17 +1701,32 @@ const VisitNote = () => {
 
     // Insert result into plan
     // Updated to insert into Results section with billing disclaimer
-    const insertResultIntoResults = (resultType, resultText) => {
-        const timestamp = format(new Date(), 'MM/dd/yyyy');
-        // Simulate "Actual Result" structure if not provided
-        const content = resultText || 'Reviewed, within normal limits';
-        const entry = `${resultType} (${timestamp}): ${content} *Reviewed for billing purposes.*`;
+    // Updated to insert into Results section
+    const handleResultImport = (content, dateStr) => {
+        if (!resultImportType) return;
+
+        // If content is "Not available", handle gracefully
+        const isNotAvailable = content === 'Not available in records';
+        const timestamp = dateStr || format(new Date(), 'MM/dd/yyyy');
+
+        let entry;
+        if (isNotAvailable) {
+            entry = `${resultImportType}: Not available in current records.`;
+        } else {
+            entry = `${resultImportType} (${timestamp}): ${content}`;
+        }
 
         setNoteData(prev => ({
             ...prev,
             results: prev.results ? `${prev.results}\n${entry}` : entry
         }));
-        showToast(`${resultType} imported to Results/Data`, 'success');
+        showToast(`${resultImportType} imported`, 'success');
+        setResultImportType(null);
+    };
+
+    const openResultImport = (type) => {
+        setResultImportType(type);
+        setShowResultImportModal(true);
     };
 
     if (loading) {
@@ -2907,42 +2928,42 @@ const VisitNote = () => {
                                     <div className="p-2">
                                         <div className="grid grid-cols-2 gap-1.5">
                                             <button
-                                                onClick={() => insertResultIntoResults('Labs', 'CMP, CBC, Lipid Panel reviewed. No acute abnormalities.')}
+                                                onClick={() => openResultImport('Labs')}
                                                 className="px-2 py-2 text-[10px] bg-white hover:bg-purple-50 rounded border border-slate-100 hover:border-purple-200 transition-all flex flex-col items-center gap-1"
                                             >
                                                 <FlaskConical className="w-4 h-4 text-purple-500" />
                                                 <span className="text-slate-600">Labs</span>
                                             </button>
                                             <button
-                                                onClick={() => insertResultIntoResults('Imaging', 'CXR reviewed. Clear lungs.')}
+                                                onClick={() => openResultImport('Imaging')}
                                                 className="px-2 py-2 text-[10px] bg-white hover:bg-blue-50 rounded border border-slate-100 hover:border-blue-200 transition-all flex flex-col items-center gap-1"
                                             >
                                                 <FileImage className="w-4 h-4 text-blue-500" />
                                                 <span className="text-slate-600">Image</span>
                                             </button>
                                             <button
-                                                onClick={() => insertResultIntoResults('Echo', 'TTE reviewed. EF 55-60%.')}
+                                                onClick={() => openResultImport('Echo')}
                                                 className="px-2 py-2 text-[10px] bg-white hover:bg-rose-50 rounded border border-slate-100 hover:border-rose-200 transition-all flex flex-col items-center gap-1"
                                             >
                                                 <Heart className="w-4 h-4 text-rose-500" />
                                                 <span className="text-slate-600">Echo</span>
                                             </button>
                                             <button
-                                                onClick={() => insertResultIntoResults('EKG', 'NSR @ 72 bpm. No acute ST changes.')}
+                                                onClick={() => openResultImport('EKG')}
                                                 className="px-2 py-2 text-[10px] bg-white hover:bg-rose-50 rounded border border-slate-100 hover:border-rose-200 transition-all flex flex-col items-center gap-1"
                                             >
                                                 <Waves className="w-4 h-4 text-rose-500" />
                                                 <span className="text-slate-600">EKG</span>
                                             </button>
                                             <button
-                                                onClick={() => insertResultIntoResults('Cath', 'Cardiac cath report reviewed. Patent coronaries.')}
+                                                onClick={() => openResultImport('Cath')}
                                                 className="px-2 py-2 text-[10px] bg-white hover:bg-red-50 rounded border border-slate-100 hover:border-red-200 transition-all flex flex-col items-center gap-1"
                                             >
                                                 <Stethoscope className="w-4 h-4 text-red-500" />
                                                 <span className="text-slate-600">Cath</span>
                                             </button>
                                             <button
-                                                onClick={() => insertResultIntoResults('Stress', 'Stress test report reviewed. No ischemia.')}
+                                                onClick={() => openResultImport('Stress')}
                                                 className="px-2 py-2 text-[10px] bg-white hover:bg-orange-50 rounded border border-slate-100 hover:border-orange-200 transition-all flex flex-col items-center gap-1"
                                             >
                                                 <Activity className="w-4 h-4 text-orange-500" />
