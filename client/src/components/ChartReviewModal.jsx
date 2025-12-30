@@ -269,7 +269,8 @@ const ChartReviewModal = ({
                                         }
                                     }
 
-                                    const bp = v.bp || (v.systolic && v.diastolic ? `${v.systolic}/${v.diastolic}` : '-');
+                                    const rawBP = v.bp || (v.systolic && v.diastolic ? `${v.systolic}/${v.diastolic}` : '-');
+                                    const bp = decodeHtmlEntities(rawBP);
                                     const hr = v.pulse || v.hr || '-';
                                     const temp = v.temp ? `${v.temp}` : '-';
                                     const rr = v.resp || v.rr || '-';

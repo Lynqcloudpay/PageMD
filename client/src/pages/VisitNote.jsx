@@ -1747,7 +1747,7 @@ const VisitNote = () => {
 
     return (
         <div className="min-h-screen bg-white py-8">
-            <div className="max-w-5xl mx-auto px-6">
+            <div className="w-full max-w-[98%] mx-auto px-4">
                 {/* Master Back Button */}
                 <div className="mb-4">
                     <button onClick={() => navigate(`/patient/${id}/snapshot`)} className="flex items-center space-x-2 text-gray-600 hover:text-primary-900 transition-colors">
@@ -2623,7 +2623,14 @@ const VisitNote = () => {
                                     </div>
                                 )}
                                 {/* Always show textarea - sync changes to structured plan on blur */}
-                                {/* Free text plan removed per request */}
+                                {!isSigned && (
+                                    <textarea
+                                        value={noteData.plan || ''}
+                                        onChange={(e) => setNoteData({ ...noteData, plan: e.target.value })}
+                                        className="w-full text-xs text-neutral-900 border border-neutral-300 rounded-md p-2 mt-2 min-h-[100px] focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                        placeholder="Additional plan notes or imported results..."
+                                    />
+                                )}
                                 {isSigned && (
                                     <div className="p-2 border border-neutral-200 rounded-md bg-neutral-50 text-xs">
                                         <PlanDisplay plan={noteData.plan} />
@@ -2930,6 +2937,20 @@ const VisitNote = () => {
                                             >
                                                 <Waves className="w-4 h-4 text-rose-500" />
                                                 <span className="text-slate-600">EKG</span>
+                                            </button>
+                                            <button
+                                                onClick={() => insertResultIntoPlan('Cath', 'Cardiac cath report reviewed. []')}
+                                                className="px-2 py-2 text-[10px] bg-white hover:bg-red-50 rounded border border-slate-100 hover:border-red-200 transition-all flex flex-col items-center gap-1"
+                                            >
+                                                <Stethoscope className="w-4 h-4 text-red-500" />
+                                                <span className="text-slate-600">Cath</span>
+                                            </button>
+                                            <button
+                                                onClick={() => insertResultIntoPlan('Stress', 'Stress test report reviewed. []')}
+                                                className="px-2 py-2 text-[10px] bg-white hover:bg-orange-50 rounded border border-slate-100 hover:border-orange-200 transition-all flex flex-col items-center gap-1"
+                                            >
+                                                <Activity className="w-4 h-4 text-orange-500" />
+                                                <span className="text-slate-600">Stress</span>
                                             </button>
                                         </div>
                                     </div>
