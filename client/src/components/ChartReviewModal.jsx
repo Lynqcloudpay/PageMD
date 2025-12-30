@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
     Eye, X, Lock, Activity, FlaskConical, FileImage,
-    Heart, Waves, Stethoscope, FileText
+    Heart, Waves, Stethoscope, FileText, RefreshCw, AlertCircle, Clock, CheckCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { ordersAPI, documentsAPI, patientsAPI } from '../services/api';
 
 const decodeHtmlEntities = (text) => {
     const textArea = document.createElement('textarea');
@@ -17,11 +18,143 @@ const ChartReviewModal = ({
     visits = [],
     patientData = {},
     onViewFullChart,
-    onOpenVisit, // Optional callback to open a specific visit in full editor
+    onOpenVisit,
     isLoading = false
 }) => {
     const [activeTab, setActiveTab] = useState('Notes');
     const [selectedVisitId, setSelectedVisitId] = useState(null);
+    const [records, setRecords] = useState([]);
+    const [recordsLoading, setRecordsLoading] = useState(false);
+    const [recordsError, setRecordsError] = useState(null);
+
+    // Filter keywords helper
+    const getFilterKeywords = (type) => {
+        switch (type) {
+            case 'Labs': return ['lab', 'blood', 'urine', 'panel', 'culture', 'bmp', 'cmp', 'cbc'];
+            case 'Imaging': return ['x-ray', 'ct', 'mri', 'ultrasound', 'scan', 'radiology', 'imaging'];
+            case 'Echo': return ['echo', 'tte', 'tee', 'echocardiogram'];
+            case 'EKG': return ['ekg', 'ecg', 'electrocardiogram'];
+            case 'Cath': return ['cath', 'angiogram', 'pci', 'coronary'];
+            case 'Stress': return ['stress', 'exercise', 'nuclear', 'treadmill'];
+            default: return [];
+        }
+    };
+
+    // Load records when modal opens or patient changes
+    useEffect(() => {
+        if (isOpen && patientData?.id) {
+            loadRecords(patientData.id);
+        }
+    }, [isOpen, patientData?.id]);
+
+    const loadRecords = async (patientId) => {
+        setRecordsLoading(true);
+        setRecordsError(null);
+        try {
+            const [ordersRes, docsRes, fullPatientRes] = await Promise.allSettled([
+                ordersAPI.getByPatient(patientId),
+                documentsAPI.getByPatient(patientId),
+                patientsAPI.get(patientId)
+            ]);
+
+            let combinedItems = [];
+
+            // 1. Mother Chart Data
+            if (fullPatientRes.status === 'fulfilled' && fullPatientRes.value.data) {
+                const pData = fullPatientRes.value.data;
+                // Helper to map robustly
+                const mapRecord = (list, type, defaultLabel) => {
+                    if (!Array.isArray(list)) return [];
+                    return list.map((item, idx) => ({
+                        id: `pat-${type}-${item.id || idx}`,
+                        category: type,
+                        type: 'record',
+                        title: item.type || item.name || item.study_type || defaultLabel,
+                        description: item.result || item.impression || item.summary || 'See full chart',
+                        date: item.date || item.created_at || item.study_date,
+                        status: 'Completed',
+                        source: item
+                    }));
+                };
+
+                combinedItems = [
+                    ...combinedItems,
+                    ...mapRecord(pData.labs, 'Labs', 'Lab Result'),
+                    ...mapRecord(pData.imaging, 'Imaging', 'Imaging Result'),
+                    ...mapRecord(pData.echos, 'Echo', 'Echo Report'),
+                    ...mapRecord(pData.ekgs || pData.ekg, 'EKG', 'EKG Report'),
+                    ...mapRecord(pData.cardiac_caths || pData.caths, 'Cath', 'Cath Report'),
+                    ...mapRecord(pData.stress_tests, 'Stress', 'Stress Test')
+                ];
+            }
+
+            // 2. Orders
+            if (ordersRes.status === 'fulfilled' && ordersRes.value.data) {
+                const orders = ordersRes.value.data.map(o => {
+                    // Try to guess category
+                    let category = 'Other';
+                    const text = (o.name + ' ' + o.description + ' ' + o.type).toLowerCase();
+                    if (getFilterKeywords('Labs').some(k => text.includes(k))) category = 'Labs';
+                    else if (getFilterKeywords('Imaging').some(k => text.includes(k))) category = 'Imaging';
+                    else if (getFilterKeywords('Echo').some(k => text.includes(k))) category = 'Echo';
+                    else if (getFilterKeywords('EKG').some(k => text.includes(k))) category = 'EKG';
+                    else if (getFilterKeywords('Cath').some(k => text.includes(k))) category = 'Cath';
+                    else if (getFilterKeywords('Stress').some(k => text.includes(k))) category = 'Stress';
+
+                    return {
+                        id: `ord-${o.id}`,
+                        category,
+                        type: 'order',
+                        title: o.name || o.description || 'Untitled Order',
+                        description: o.description,
+                        date: o.created_at || o.order_date,
+                        status: o.status,
+                        source: o
+                    };
+                });
+                combinedItems = [...combinedItems, ...orders];
+            }
+
+            // 3. Documents
+            if (docsRes.status === 'fulfilled' && docsRes.value.data) {
+                const docs = docsRes.value.data.map(d => {
+                    let category = 'Docs';
+                    const keywords = getFilterKeywords('Labs'); // Default check or loop
+                    const text = (d.filename + ' ' + d.description + ' ' + d.type + ' ' + (d.tags || []).join(' ')).toLowerCase();
+
+                    if (getFilterKeywords('Labs').some(k => text.includes(k))) category = 'Labs';
+                    else if (getFilterKeywords('Imaging').some(k => text.includes(k))) category = 'Imaging';
+                    else if (getFilterKeywords('Echo').some(k => text.includes(k))) category = 'Echo';
+                    else if (getFilterKeywords('EKG').some(k => text.includes(k))) category = 'EKG';
+                    else if (getFilterKeywords('Cath').some(k => text.includes(k))) category = 'Cath';
+                    else if (getFilterKeywords('Stress').some(k => text.includes(k))) category = 'Stress';
+
+                    return {
+                        id: `doc-${d.id}`,
+                        category,
+                        type: 'document',
+                        title: d.description || d.filename || 'Untitled Document',
+                        description: d.filename,
+                        date: d.created_at || d.uploaded_at,
+                        status: 'Uploaded',
+                        source: d
+                    };
+                });
+                combinedItems = [...combinedItems, ...docs];
+            }
+
+            // Sort
+            combinedItems.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+            setRecords(combinedItems);
+
+        } catch (err) {
+            console.error('Error loading chart records:', err);
+            setRecordsError('Failed to load chart records.');
+        } finally {
+            setRecordsLoading(false);
+        }
+    };
+
 
     // Reset state when modal opens
     useEffect(() => {
@@ -278,7 +411,6 @@ const ChartReviewModal = ({
                                     const bmi = v.bmi || '-';
                                     const weight = v.weight ? `${v.weight} ${v.weightUnit || 'lbs'}` : '-';
 
-                                    // Highlight abnormal values roughly
                                     const isHighBP = (v.systolic && parseInt(v.systolic) > 140) || (v.diastolic && parseInt(v.diastolic) > 90);
 
                                     return (
@@ -307,6 +439,90 @@ const ChartReviewModal = ({
                                 )}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const renderResultsTab = (type) => {
+        const filteredRecords = records.filter(r => r.category === type || (type === 'Docs' && r.type === 'document'));
+
+        if (recordsLoading) {
+            return (
+                <div className="flex-1 flex flex-col items-center justify-center py-12">
+                    <RefreshCw className="w-8 h-8 text-primary-500 animate-spin mb-2" />
+                    <p className="text-slate-500">Loading {type}...</p>
+                </div>
+            );
+        }
+
+        if (recordsError) {
+            return (
+                <div className="flex-1 flex flex-col items-center justify-center py-12">
+                    <AlertCircle className="w-8 h-8 text-red-500 mb-2" />
+                    <p className="text-red-500">{recordsError}</p>
+                </div>
+            );
+        }
+
+        if (filteredRecords.length === 0) {
+            return (
+                <div className="flex-1 flex flex-col items-center justify-center py-12 text-center p-8">
+                    <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                        {type === 'Labs' && <FlaskConical className="w-8 h-8 text-slate-300" />}
+                        {type === 'Imaging' && <FileImage className="w-8 h-8 text-slate-300" />}
+                        {type === 'Echo' && <Heart className="w-8 h-8 text-slate-300" />}
+                        {type === 'EKG' && <Waves className="w-8 h-8 text-slate-300" />}
+                        {type === 'Cath' && <Stethoscope className="w-8 h-8 text-slate-300" />}
+                        {type === 'Stress' && <Activity className="w-8 h-8 text-slate-300" />}
+                        {type === 'Docs' && <FileText className="w-8 h-8 text-slate-300" />}
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900 mb-1">No {type} Found</h3>
+                    <p className="text-sm text-slate-500">No records found for this category.</p>
+                </div>
+            );
+        }
+
+        return (
+            <div className="flex-1 flex flex-col overflow-hidden bg-white">
+                <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                        {type} History
+                    </h3>
+                    <div className="text-xs text-slate-400">{filteredRecords.length} records</div>
+                </div>
+                <div className="flex-1 overflow-auto custom-scrollbar p-0">
+                    <div className="divide-y divide-slate-100">
+                        {filteredRecords.map(item => (
+                            <div key={item.id} className="p-4 hover:bg-slate-50 transition-colors flex items-start gap-4">
+                                <div className="mt-1">
+                                    {item.type === 'record' && <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center"><CheckCircle className="w-5 h-5 text-emerald-600" /></div>}
+                                    {item.type === 'order' && <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center"><Activity className="w-5 h-5 text-blue-600" /></div>}
+                                    {item.type === 'document' && <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center"><FileText className="w-5 h-5 text-amber-600" /></div>}
+                                </div>
+                                <div className="flex-1">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <h4 className="font-semibold text-slate-900">{item.title}</h4>
+                                        <span className="text-xs text-slate-500 flex items-center gap-1">
+                                            <Clock className="w-3 h-3" />
+                                            {item.date ? format(new Date(item.date), 'MM/dd/yyyy') : 'No Date'}
+                                        </span>
+                                    </div>
+                                    <p className="text-sm text-slate-600 mb-2">{item.description}</p>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border
+                                            ${item.type === 'record' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                                                item.type === 'order' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                                                    'bg-amber-50 text-amber-700 border-amber-100'
+                                            }`}>
+                                            {item.type.toUpperCase()}
+                                        </span>
+                                        {item.status && <span className="text-[10px] text-slate-400 uppercase">{item.status}</span>}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
@@ -355,37 +571,16 @@ const ChartReviewModal = ({
                     ) : activeTab === 'Vitals' ? (
                         renderVitalsTab()
                     ) : (
-                        /* Labs / Imaging / Echo / EKG tabs - Placeholders for now */
-                        <div className="flex-1 flex items-center justify-center p-8">
-                            <div className="text-center">
-                                <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                                    {activeTab === 'Labs' && <FlaskConical className="w-8 h-8 text-purple-500" />}
-                                    {activeTab === 'Imaging' && <FileImage className="w-8 h-8 text-blue-500" />}
-                                    {activeTab === 'Echo' && <Heart className="w-8 h-8 text-rose-500" />}
-                                    {activeTab === 'EKG' && <Waves className="w-8 h-8 text-rose-500" />}
-                                    {activeTab === 'Stress' && <Activity className="w-8 h-8 text-orange-500" />}
-                                    {activeTab === 'Cath' && <Stethoscope className="w-8 h-8 text-red-500" />}
-                                    {activeTab === 'Docs' && <FileText className="w-8 h-8 text-slate-500" />}
-                                </div>
-                                <h3 className="text-lg font-bold text-slate-900 mb-1">{activeTab}</h3>
-                                <p className="text-sm text-slate-500 mb-4">Results will be displayed here</p>
-                                {onViewFullChart && (
-                                    <button
-                                        onClick={onViewFullChart}
-                                        className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors"
-                                    >
-                                        View in Full Chart
-                                    </button>
-                                )}
-                            </div>
-                        </div>
+                        renderResultsTab(activeTab)
                     )}
                 </div>
 
                 {/* Footer */}
                 <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between flex-shrink-0">
                     <div className="text-xs text-slate-500">
-                        {activeTab === 'Notes' ? 'Navigate between visits to review patient history' : 'Review historical data'}
+                        {activeTab === 'Notes' ? 'Navigate between visits to review patient history' :
+                            activeTab === 'Vitals' ? 'Review vital signs across visits' :
+                                'Reviewing imported results and documents'}
                     </div>
                     {onViewFullChart && (
                         <button

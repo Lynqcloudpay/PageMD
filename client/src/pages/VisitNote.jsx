@@ -1691,6 +1691,9 @@ const VisitNote = () => {
                 ? `Refill ${med.medication_name} ${med.dosage || ''} - 90 day supply`
                 : `Discontinue ${med.medication_name}`;
 
+        // Strip leading numbers "1. "
+        const cleanDiagnosis = diagnosisText.replace(/^\d+\.\s*/, '').trim();
+
         // 1. Ensure diagnosis exists in assessment/planStructured
         // If it's a new diagnosis from search, we might need to add it to assessment first? 
         // Typically, yes. Let's add it if not present.
@@ -1699,34 +1702,35 @@ const VisitNote = () => {
 
         // Check if diagnosis is already in our structured plan
         if (noteData.planStructured) {
-            targetIndex = noteData.planStructured.findIndex(item => item.diagnosis === diagnosisText);
+            targetIndex = noteData.planStructured.findIndex(item => item.diagnosis === cleanDiagnosis || item.diagnosis === diagnosisText);
         }
 
         // If not found, adding it to assessment and structured plan
         if (targetIndex === -1) {
             // Add to Assessment text ONLY if not already present
             // Use a flexible check or exact check depending on preference. 
-            // Note: 'diagnoses' contains clean strings. 
-            const alreadyInAssessment = diagnoses.some(d => d.trim().toLowerCase() === diagnosisText.trim().toLowerCase())
-                || (noteData.assessment && noteData.assessment.toLowerCase().includes(diagnosisText.toLowerCase()));
+            // Note: 'diagnoses' contains clean strings (from split). 
+            const diagnoses = noteData.assessment ? noteData.assessment.split('\n').filter(l => l.trim()) : [];
+            const alreadyInAssessment = diagnoses.some(d => d.replace(/^\d+\.\s*/, '').trim().toLowerCase() === cleanDiagnosis.toLowerCase())
+                || (noteData.assessment && noteData.assessment.toLowerCase().includes(cleanDiagnosis.toLowerCase()));
 
             let newAssessment = noteData.assessment;
 
             if (!alreadyInAssessment) {
                 newAssessment = noteData.assessment
-                    ? `${noteData.assessment}\n${(diagnoses.length || 0) + 1}. ${diagnosisText}`
-                    : `1. ${diagnosisText}`;
+                    ? `${noteData.assessment}\n${(diagnoses.length || 0) + 1}. ${cleanDiagnosis}`
+                    : `1. ${cleanDiagnosis}`;
             }
 
             // Add new structured entry
-            const newEntry = { diagnosis: diagnosisText, orders: [actionText] };
+            const newEntry = { diagnosis: cleanDiagnosis, orders: [actionText] };
 
             setNoteData(prev => ({
                 ...prev,
                 assessment: newAssessment,
                 planStructured: [...(prev.planStructured || []), newEntry],
                 // Also update the simple text plan for backup/legacy view
-                plan: prev.plan ? `${prev.plan}\n\n${diagnosisText}\n- ${actionText}` : `${diagnosisText}\n- ${actionText}`
+                plan: prev.plan ? `${prev.plan}\n\n${cleanDiagnosis}\n- ${actionText}` : `${cleanDiagnosis}\n- ${actionText}`
             }));
         } else {
             // Add to existing structured entry

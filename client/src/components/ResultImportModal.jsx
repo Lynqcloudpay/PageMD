@@ -111,7 +111,8 @@ const ResultImportModal = ({ isOpen, onClose, onImport, patientId, resultType })
                     return keywords.some(k =>
                         d.filename?.toLowerCase().includes(k) ||
                         d.description?.toLowerCase().includes(k) ||
-                        d.type?.toLowerCase().includes(k)
+                        d.type?.toLowerCase().includes(k) ||
+                        (d.tags && Array.isArray(d.tags) && d.tags.some(t => t.toLowerCase().includes(k)))
                     );
                 }).map(d => ({
                     id: `doc-${d.id}`,
