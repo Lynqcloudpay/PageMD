@@ -92,16 +92,24 @@ router.post('/', requirePermission('patients:view_chart'), upload.single('file')
         urlPath, // Store URL path instead of filesystem path
         req.file.mimetype,
         req.file.size,
-        tags ? tags.split(',') : [],
+        req.file.size,
+        tags && typeof tags === 'string' ? tags.split(',') : [],
       ]
     );
 
-    await logAudit(req.user.id, 'upload_document', 'document', result.rows[0].id, { docType }, req.ip);
+    try {
+      await logAudit(req.user.id, 'upload_document', 'document', result.rows[0].id, { docType }, req.ip);
+    } catch (auditError) {
+      console.error('Audit log failed:', auditError);
+    }
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Error uploading document:', error);
-    res.status(500).json({ error: 'Failed to upload document' });
+    res.status(500).json({
+      error: 'Failed to upload document',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
