@@ -31,6 +31,8 @@ http://bemypcp.com {
 # Main Site (pagemdemr.com AND bemypcp.com)
 # ================================================================
 https://pagemdemr.com, https://bemypcp.com {
+    root * /usr/share/caddy
+
     # Performance: Enable compression
     encode zstd gzip
 
@@ -40,12 +42,14 @@ https://pagemdemr.com, https://bemypcp.com {
         X-Content-Type-Options "nosniff"
         X-XSS-Protection "1; mode=block"
         X-Frame-Options "DENY"
-        # CSP: connect-src updated to include both domains
         Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' blob: https://pagemdemr.com https://bemypcp.com; frame-ancestors 'none';"
         Referrer-Policy "strict-origin-when-cross-origin"
         Permissions-Policy "geolocation=(), microphone=(), camera=(self)"
         -Server
     }
+
+    # Performance: Cache static assets (Vite generates hashed names)
+    header /assets/* Cache-Control "public, max-age=31536000, immutable"
 
     # API reverse proxy
     handle /api/* {
@@ -64,14 +68,8 @@ https://pagemdemr.com, https://bemypcp.com {
         }
     }
 
-    # Performance: Cache static assets (Vite generates hashed names)
-    handle /assets/* {
-        header Cache-Control "public, max-age=31536000, immutable"
-    }
-
     # Serve static frontend (SPA)
     handle {
-        root * /usr/share/caddy
         try_files {path} /index.html
         file_server
     }
