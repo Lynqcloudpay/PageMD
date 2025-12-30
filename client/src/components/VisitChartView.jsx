@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, FileText, Printer, X, AlertCircle, CheckCircle2, User, Phone, Mail, MapPin, Building2, Stethoscope, CreditCard, Users, FilePlus, Receipt, DollarSign, Globe, Clock, Heart, Thermometer, Wind, Pill, Lock, ClipboardList, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { visitsAPI, patientsAPI, billingAPI, codesAPI, superbillsAPI, settingsAPI } from '../services/api';
+import { visitsAPI, patientsAPI, billingAPI, codesAPI, superbillsAPI, settingsAPI, documentsAPI } from '../services/api';
 import { format } from 'date-fns';
 import PatientChartPanel from './PatientChartPanel';
 
@@ -20,8 +20,9 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     const [loading, setLoading] = useState(true);
     const [vitals, setVitals] = useState(null);
     const [noteData, setNoteData] = useState({
-        chiefComplaint: '', hpi: '', rosNotes: '', peNotes: '', assessment: '', plan: '', planStructured: []
+        chiefComplaint: '', hpi: '', rosNotes: '', peNotes: '', results: '', assessment: '', plan: '', planStructured: []
     });
+    const [visitDocuments, setVisitDocuments] = useState([]);
     const [addendums, setAddendums] = useState([]);
     const [showAddendumModal, setShowAddendumModal] = useState(false);
     const [addendumText, setAddendumText] = useState('');
@@ -73,8 +74,11 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
         const rosMatch = decodedText.match(/(?:ROS|Review of Systems):\s*(.+?)(?:\n\n|\n(?:PE|Physical|Assessment|Plan):)/is);
         const rosNotes = rosMatch ? decodeHtmlEntities(rosMatch[1].trim()) : '';
 
-        const peMatch = decodedText.match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):)/is);
+        const peMatch = decodedText.match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Results|Assessment|Plan):)/is);
         const peNotes = peMatch ? decodeHtmlEntities(peMatch[1].trim()) : '';
+
+        const resultsMatch = decodedText.match(/(?:Results|Results \/ Data):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):)/is);
+        const results = resultsMatch ? decodeHtmlEntities(resultsMatch[1].trim()) : '';
 
         let assessment = '';
         const assessmentIndex = decodedText.search(/(?:Assessment|A):\s*/i);
@@ -113,7 +117,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
         const followUp = followUpMatch ? decodeHtmlEntities(followUpMatch[1].trim()) : '';
 
         return {
-            chiefComplaint, hpi, rosNotes, peNotes,
+            chiefComplaint, hpi, rosNotes, peNotes, results,
             assessment: decodeHtmlEntities(assessment),
             plan: decodeHtmlEntities(plan),
             carePlan, followUp
@@ -190,7 +194,8 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                 patientsAPI.getFamilyHistory(patientId).catch(() => ({ data: [] })),
                 patientsAPI.getSocialHistory(patientId).catch(() => ({ data: null })),
                 settingsAPI.getPractice().catch(() => ({ data: null })),
-                visitsAPI.getByPatient(patientId).catch(() => ({ data: [] }))
+                visitsAPI.getByPatient(patientId).catch(() => ({ data: [] })),
+                documentsAPI.getByPatient(patientId).catch(() => ({ data: [] }))
             ]);
 
             setPatient(patientRes.data);
@@ -201,6 +206,11 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
             setFamilyHistory(familyHistoryRes.data || []);
             setSocialHistory(socialHistoryRes.data);
             setAllVisits(allVisitsRes.data || []);
+
+            // Filter documents for this visit
+            const allDocs = arguments[0][9]?.data || [];
+            const linkedDocs = allDocs.filter(d => d.visit_id === activeVisitId);
+            setVisitDocuments(linkedDocs);
 
             if (practiceRes?.data) {
                 const p = practiceRes.data;
@@ -245,6 +255,10 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                 setNoteData({
                     ...parsed,
                     planStructured
+                });
+            } else {
+                setNoteData({
+                    chiefComplaint: '', hpi: '', rosNotes: '', peNotes: '', results: '', assessment: '', plan: '', planStructured: []
                 });
             }
         } catch (error) {
@@ -311,8 +325,30 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     const getChiefComplaint = (visitObj) => {
         if (!visitObj?.note_draft) return 'No Chief Complaint';
         const text = decodeHtmlEntities(visitObj.note_draft);
-        const chiefComplaintMatch = text.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):)/is);
+        const chiefComplaintMatch = text.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Results|Assessment|Plan):)/is);
         return chiefComplaintMatch ? chiefComplaintMatch[1].trim() : 'Routine Visit';
+    };
+
+    // Result Image Component (Inline)
+    const ResultImageView = ({ docId, filename }) => {
+        const [src, setSrc] = useState(null);
+        useEffect(() => {
+            let active = true;
+            documentsAPI.getFile(docId).then(res => {
+                if (active) {
+                    setSrc(URL.createObjectURL(res.data));
+                }
+            }).catch(e => console.error(e));
+            return () => { active = false; };
+        }, [docId]);
+
+        if (!src) return <div className="h-24 bg-slate-50 flex items-center justify-center text-[10px] text-slate-400 border border-slate-100 rounded">Loading...</div>;
+        return (
+            <a href={src} target="_blank" rel="noopener noreferrer" className="block group relative">
+                <img src={src} alt={filename} className="w-full h-32 object-cover rounded border border-slate-200 shadow-sm" />
+                <div className="mt-1 text-[9px] text-slate-500 truncate">{filename}</div>
+            </a>
+        );
     };
 
     if (loading || !patient || !visit) {
@@ -708,6 +744,21 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                         <span className="section-label">Physical Examination</span>
                                         <div className="text-[14px] leading-relaxed text-slate-700 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.peNotes) }} />
                                     </div>
+
+                                    {/* RESULTS / DATA */}
+                                    {(noteData.results || visitDocuments.length > 0) && (
+                                        <div className="mt-8 pt-6 border-t border-slate-100 avoid-cut">
+                                            <span className="section-label">Results & Data</span>
+                                            {noteData.results && <div className="text-[14px] leading-relaxed text-slate-700 whitespace-pre-wrap mb-4">{noteData.results}</div>}
+                                            {visitDocuments.length > 0 && (
+                                                <div className="grid grid-cols-4 gap-4 mt-4">
+                                                    {visitDocuments.map(doc => (
+                                                        <ResultImageView key={doc.id} docId={doc.id} filename={doc.filename} />
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
 
                                     {/* ASSESSMENT */}
                                     <div className="mt-8 pt-6 border-t border-slate-100 avoid-cut">
