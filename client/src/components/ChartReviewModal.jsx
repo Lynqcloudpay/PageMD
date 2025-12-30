@@ -603,57 +603,59 @@ const ChartReviewModal = ({
             );
         }
 
-        <div className="flex-1 flex overflow-hidden">
-            <div className={`${selectedItem ? 'w-1/2' : 'w-full'} flex flex-col overflow-hidden`}>
-                <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                    <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                        {type} History
-                    </h3>
-                    <div className="text-xs text-slate-400">{filteredRecords.length} records</div>
-                </div>
-                <div className="flex-1 overflow-auto custom-scrollbar p-0">
-                    <div className="divide-y divide-slate-100">
-                        {filteredRecords.map(item => (
-                            <div
-                                key={item.id}
-                                onClick={() => setSelectedItem(item)}
-                                className={`p-4 cursor-pointer transition-all flex items-start gap-4 hover:bg-slate-50 ${selectedItem?.id === item.id ? 'bg-blue-50/50 border-r-4 border-blue-500' : ''}`}
-                            >
-                                <div className="mt-1">
-                                    {item.type === 'record' && <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center"><CheckCircle className="w-5 h-5 text-emerald-600" /></div>}
-                                    {item.type === 'order' && <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center"><Activity className="w-5 h-5 text-blue-600" /></div>}
-                                    {item.type === 'document' && <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center"><FileText className="w-5 h-5 text-amber-600" /></div>}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between mb-1">
-                                        <h4 className="font-semibold text-slate-900 truncate">{item.title}</h4>
-                                        <span className="text-[10px] text-slate-500 flex items-center gap-1 shrink-0 ml-2">
-                                            <Clock className="w-3 h-3" />
-                                            {item.date ? format(new Date(item.date), 'MM/dd/yy') : '--'}
-                                        </span>
+        return (
+            <div className="flex-1 flex overflow-hidden">
+                <div className={`${selectedItem ? 'w-1/2' : 'w-full'} flex flex-col overflow-hidden`}>
+                    <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                            {type} History
+                        </h3>
+                        <div className="text-xs text-slate-400">{filteredRecords.length} records</div>
+                    </div>
+                    <div className="flex-1 overflow-auto custom-scrollbar p-0">
+                        <div className="divide-y divide-slate-100">
+                            {filteredRecords.map(item => (
+                                <div
+                                    key={item.id}
+                                    onClick={() => setSelectedItem(item)}
+                                    className={`p-4 cursor-pointer transition-all flex items-start gap-4 hover:bg-slate-50 ${selectedItem?.id === item.id ? 'bg-blue-50/50 border-r-4 border-blue-500' : ''}`}
+                                >
+                                    <div className="mt-1">
+                                        {item.type === 'record' && <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center"><CheckCircle className="w-5 h-5 text-emerald-600" /></div>}
+                                        {item.type === 'order' && <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center"><Activity className="w-5 h-5 text-blue-600" /></div>}
+                                        {item.type === 'document' && <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center"><FileText className="w-5 h-5 text-amber-600" /></div>}
                                     </div>
-                                    <p className="text-xs text-slate-600 mb-2 truncate">{item.description}</p>
-                                    <div className="flex items-center gap-2">
-                                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-black border uppercase tracking-tighter
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <h4 className="font-semibold text-slate-900 truncate">{item.title}</h4>
+                                            <span className="text-[10px] text-slate-500 flex items-center gap-1 shrink-0 ml-2">
+                                                <Clock className="w-3 h-3" />
+                                                {item.date ? format(new Date(item.date), 'MM/dd/yy') : '--'}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-slate-600 mb-2 truncate">{item.description}</p>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`text-[9px] px-1.5 py-0.5 rounded font-black border uppercase tracking-tighter
                                                     ${item.type === 'record' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                                                item.type === 'order' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                                                    'bg-amber-50 text-amber-700 border-amber-100'
-                                            }`}>
-                                            {item.type}
-                                        </span>
-                                        {item.status && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.status}</span>}
+                                                    item.type === 'order' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                                                        'bg-amber-50 text-amber-700 border-amber-100'
+                                                }`}>
+                                                {item.type}
+                                            </span>
+                                            {item.status && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.status}</span>}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {selectedItem && (
-                <DocumentPreview item={selectedItem} onClose={() => setSelectedItem(null)} />
-            )}
-        </div>
+                {selectedItem && (
+                    <DocumentPreview item={selectedItem} onClose={() => setSelectedItem(null)} />
+                )}
+            </div>
+        );
     };
 
     return (
