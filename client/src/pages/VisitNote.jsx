@@ -4,7 +4,7 @@ import {
     Save, Lock, FileText, ChevronDown, ChevronUp, Plus, ClipboardList,
     Sparkles, ArrowLeft, Zap, Search, X, Printer, History,
     Activity, CheckSquare, Square, Trash2, Pill, Users, UserCircle, ChevronRight,
-    DollarSign
+    DollarSign, Eye, Calendar, AlertCircle, Stethoscope, ScrollText, Copy, RotateCcw
 } from 'lucide-react';
 import Toast from '../components/ui/Toast';
 import { OrderModal, PrescriptionModal, ReferralModal } from '../components/ActionModals';
@@ -189,6 +189,16 @@ const VisitNote = () => {
     const [patientData, setPatientData] = useState(null);
     const [editingDiagnosisIndex, setEditingDiagnosisIndex] = useState(null);
     const [selectedDiagnosis, setSelectedDiagnosis] = useState(null);
+
+    // Chart Review Modal
+    const [showChartReview, setShowChartReview] = useState(false);
+    const [chartReviewData, setChartReviewData] = useState({ visits: [], loading: true });
+
+    // Carry Forward Modal
+    const [showCarryForward, setShowCarryForward] = useState(false);
+    const [carryForwardField, setCarryForwardField] = useState(null); // 'hpi', 'ros', 'pe', 'assessment'
+    const [previousVisits, setPreviousVisits] = useState([]);
+    const [loadingPrevVisits, setLoadingPrevVisits] = useState(false);
 
     // Auto-save tracking
     const autoSaveTimeoutRef = useRef(null);
@@ -1552,6 +1562,94 @@ const VisitNote = () => {
             .map(key => ({ key, template: hpiDotPhrases[key] }));
     }, [hpiDotPhraseSearch]);
 
+    // Open Carry Forward Modal - fetches previous visits for pulling data
+    const openCarryForward = async (field) => {
+        setCarryForwardField(field);
+        setShowCarryForward(true);
+        setLoadingPrevVisits(true);
+        try {
+            const res = await visitsAPI.getByPatient(id);
+            const visits = (res.data || [])
+                .filter(v => v.id !== currentVisitId && v.note_draft)
+                .sort((a, b) => new Date(b.visit_date) - new Date(a.visit_date))
+                .slice(0, 10);
+            setPreviousVisits(visits);
+        } catch (e) {
+            console.error('Error fetching previous visits:', e);
+            setPreviousVisits([]);
+        } finally {
+            setLoadingPrevVisits(false);
+        }
+    };
+
+    // Extract section from note text
+    const extractSectionFromNote = (noteText, section) => {
+        if (!noteText) return '';
+        const decoded = decodeHtmlEntities(noteText);
+        let match;
+        switch (section) {
+            case 'hpi':
+                match = decoded.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
+                break;
+            case 'ros':
+                match = decoded.match(/(?:ROS|Review of Systems):\s*(.+?)(?:\n\n|\n(?:PE|Physical|Assessment|Plan):|$)/is);
+                break;
+            case 'pe':
+                match = decoded.match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):|$)/is);
+                break;
+            case 'assessment':
+                match = decoded.match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):|$)/is);
+                break;
+            default:
+                return '';
+        }
+        return match ? match[1].trim() : '';
+    };
+
+    // Insert carried forward content
+    const insertCarryForward = (content) => {
+        if (!carryForwardField || !content) return;
+
+        if (carryForwardField === 'hpi') {
+            setNoteData(prev => ({ ...prev, hpi: content }));
+        } else if (carryForwardField === 'ros') {
+            setNoteData(prev => ({ ...prev, rosNotes: content }));
+        } else if (carryForwardField === 'pe') {
+            setNoteData(prev => ({ ...prev, peNotes: content }));
+        } else if (carryForwardField === 'assessment') {
+            setNoteData(prev => ({ ...prev, assessment: content }));
+        }
+
+        setShowCarryForward(false);
+        showToast(`${carryForwardField.toUpperCase()} pulled from previous visit`, 'success');
+    };
+
+    // Add problem directly to assessment (with ICD-10 code if available)
+    const addProblemToAssessment = (problem) => {
+        const diagText = problem.icd10_code
+            ? `${problem.problem_name} (${problem.icd10_code})`
+            : problem.problem_name;
+
+        // Check if already in assessment
+        if (diagnoses.some(d => d.toLowerCase().includes(problem.problem_name.toLowerCase()))) {
+            showToast('Already in assessment', 'info');
+            return;
+        }
+
+        const newAssessment = noteData.assessment
+            ? `${noteData.assessment}\n${diagnoses.length + 1}. ${diagText}`
+            : `1. ${diagText}`;
+        setNoteData(prev => ({ ...prev, assessment: newAssessment }));
+
+        // Also add to planStructured
+        setNoteData(prev => ({
+            ...prev,
+            planStructured: [...(prev.planStructured || []), { diagnosis: diagText, orders: [] }]
+        }));
+
+        showToast(`Added: ${problem.problem_name}`, 'success');
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-white flex items-center justify-center">
@@ -1628,6 +1726,24 @@ const VisitNote = () => {
                             >
                                 <History className="w-3.5 h-3.5" />
                                 <span>Chart</span>
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    setShowChartReview(true);
+                                    setChartReviewData({ visits: [], loading: true });
+                                    try {
+                                        const res = await visitsAPI.getByPatient(id);
+                                        setChartReviewData({ visits: res.data || [], loading: false });
+                                    } catch (e) {
+                                        console.error('Error fetching visits for chart review:', e);
+                                        setChartReviewData({ visits: [], loading: false });
+                                    }
+                                }}
+                                className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md transition-colors text-xs font-medium border bg-slate-900 text-white hover:bg-slate-800"
+                                title="Quick Chart Review"
+                            >
+                                <Eye className="w-3.5 h-3.5" />
+                                <span>Review</span>
                             </button>
                             {isSigned && (
                                 <div className="flex items-center space-x-2 text-green-700 text-xs font-medium">
@@ -1896,11 +2012,17 @@ const VisitNote = () => {
                                 </div>
                             )}
                         </div>
-                        <div className="mt-1.5 flex items-center space-x-1.5 text-xs text-neutral-500">
+                        <div className="mt-1.5 flex items-center space-x-3 text-xs text-neutral-500">
                             <button onClick={() => { setActiveTextArea('hpi'); setShowDotPhraseModal(true); }} className="flex items-center space-x-1 text-primary-600 hover:text-primary-700 transition-colors">
                                 <Zap className="w-3.5 h-3.5" />
                                 <span className="text-xs font-medium">Dot Phrases (F2)</span>
                             </button>
+                            {!isSigned && (
+                                <button onClick={() => openCarryForward('hpi')} className="flex items-center space-x-1 text-slate-600 hover:text-slate-800 transition-colors">
+                                    <RotateCcw className="w-3.5 h-3.5" />
+                                    <span className="text-xs font-medium">Pull Prior</span>
+                                </button>
+                            )}
                         </div>
                     </Section>
 
@@ -1941,18 +2063,26 @@ const VisitNote = () => {
                                 className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px]"
                                 placeholder="ROS notes..."
                             />
-                            <button onClick={() => {
-                                const allRos = {};
-                                Object.keys(noteData.ros).forEach(key => { allRos[key] = true; });
-                                let rosText = '';
-                                Object.keys(rosFindings).forEach(key => {
-                                    const systemName = key.charAt(0).toUpperCase() + key.slice(1);
-                                    rosText += `${systemName}: ${rosFindings[key]}\n`;
-                                });
-                                setNoteData({ ...noteData, ros: allRos, rosNotes: rosText.trim() });
-                            }} disabled={isSigned} className="mt-1.5 px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
-                                Pre-fill Normal ROS
-                            </button>
+                            <div className="mt-1.5 flex items-center gap-2">
+                                <button onClick={() => {
+                                    const allRos = {};
+                                    Object.keys(noteData.ros).forEach(key => { allRos[key] = true; });
+                                    let rosText = '';
+                                    Object.keys(rosFindings).forEach(key => {
+                                        const systemName = key.charAt(0).toUpperCase() + key.slice(1);
+                                        rosText += `${systemName}: ${rosFindings[key]}\n`;
+                                    });
+                                    setNoteData({ ...noteData, ros: allRos, rosNotes: rosText.trim() });
+                                }} disabled={isSigned} className="px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
+                                    Pre-fill Normal ROS
+                                </button>
+                                {!isSigned && (
+                                    <button onClick={() => openCarryForward('ros')} className="px-2 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors flex items-center gap-1">
+                                        <RotateCcw className="w-3 h-3" />
+                                        Pull Prior
+                                    </button>
+                                )}
+                            </div>
                         </Section>
 
                         {/* Physical Exam */}
@@ -1990,18 +2120,26 @@ const VisitNote = () => {
                                 className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px]"
                                 placeholder="PE findings..."
                             />
-                            <button onClick={() => {
-                                const allPe = {};
-                                Object.keys(noteData.pe).forEach(key => { allPe[key] = true; });
-                                let peText = '';
-                                Object.keys(peFindings).forEach(key => {
-                                    const systemName = key.replace(/([A-Z])/g, ' $1').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-                                    peText += `${systemName}: ${peFindings[key]}\n`;
-                                });
-                                setNoteData({ ...noteData, pe: allPe, peNotes: peText.trim() });
-                            }} disabled={isSigned} className="mt-1.5 px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
-                                Pre-fill Normal PE
-                            </button>
+                            <div className="mt-1.5 flex items-center gap-2">
+                                <button onClick={() => {
+                                    const allPe = {};
+                                    Object.keys(noteData.pe).forEach(key => { allPe[key] = true; });
+                                    let peText = '';
+                                    Object.keys(peFindings).forEach(key => {
+                                        const systemName = key.replace(/([A-Z])/g, ' $1').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+                                        peText += `${systemName}: ${peFindings[key]}\n`;
+                                    });
+                                    setNoteData({ ...noteData, pe: allPe, peNotes: peText.trim() });
+                                }} disabled={isSigned} className="px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
+                                    Pre-fill Normal PE
+                                </button>
+                                {!isSigned && (
+                                    <button onClick={() => openCarryForward('pe')} className="px-2 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors flex items-center gap-1">
+                                        <RotateCcw className="w-3 h-3" />
+                                        Pull Prior
+                                    </button>
+                                )}
+                            </div>
                         </Section>
                     </div>
 
@@ -2251,6 +2389,36 @@ const VisitNote = () => {
 
                     {/* Assessment */}
                     <Section title="Assessment" defaultOpen={true}>
+                        {/* Quick Add from Problem List */}
+                        {!isSigned && (patientData?.problems || []).filter(p => p.status === 'active').length > 0 && (
+                            <div className="mb-3 p-3 bg-gradient-to-r from-rose-50 to-orange-50 rounded-lg border border-rose-100">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <AlertCircle className="w-4 h-4 text-rose-600" />
+                                        <span className="text-xs font-bold text-rose-900 uppercase tracking-wide">Quick Add from Problem List</span>
+                                    </div>
+                                    <span className="text-[10px] text-rose-500">Click to add to assessment</span>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {(patientData?.problems || [])
+                                        .filter(p => p.status === 'active')
+                                        .slice(0, 8)
+                                        .map((p, idx) => (
+                                            <button
+                                                key={idx}
+                                                onClick={() => addProblemToAssessment(p)}
+                                                className="px-2.5 py-1 text-[11px] font-medium bg-white text-rose-700 rounded-full border border-rose-200 hover:bg-rose-100 hover:border-rose-300 transition-all flex items-center gap-1.5 shadow-sm"
+                                            >
+                                                <Plus className="w-3 h-3" />
+                                                {p.problem_name}
+                                                {p.icd10_code && <span className="text-rose-400 font-mono text-[9px]">({p.icd10_code})</span>}
+                                            </button>
+                                        ))
+                                    }
+                                </div>
+                            </div>
+                        )}
+
                         {/* ICD-10 Search - Show first for easy access */}
                         {hasPrivilege('search_icd10') && (
                             <div className="mb-2">
@@ -2689,6 +2857,256 @@ const VisitNote = () => {
                     isOpen={showPrintOrdersModal}
                     onClose={() => setShowPrintOrdersModal(false)}
                 />
+            )}
+
+            {/* Chart Review Modal - Quick Patient Summary */}
+            {showChartReview && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60]" onClick={() => setShowChartReview(false)}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className="px-6 py-4 bg-gradient-to-r from-slate-900 to-slate-800 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <Eye className="w-5 h-5 text-white" />
+                                <h2 className="text-lg font-bold text-white">Chart Review</h2>
+                                <span className="text-[11px] font-bold uppercase text-slate-400 bg-slate-700 px-2 py-0.5 rounded">Quick Summary</span>
+                            </div>
+                            <button onClick={() => setShowChartReview(false)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                                <X className="w-5 h-5 text-white" />
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto p-6">
+                            {chartReviewData.loading ? (
+                                <div className="flex items-center justify-center py-16">
+                                    <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-3 gap-6">
+                                    {/* Left Column - Active Problems & Key History */}
+                                    <div className="space-y-6">
+                                        {/* Active Problems */}
+                                        <div className="bg-rose-50 rounded-xl p-4 border border-rose-100">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <AlertCircle className="w-4 h-4 text-rose-600" />
+                                                <h3 className="text-sm font-bold text-rose-900 uppercase tracking-wide">Active Problems</h3>
+                                            </div>
+                                            <div className="space-y-2">
+                                                {(patientData?.problems || []).filter(p => p.status === 'active').slice(0, 8).map((p, i) => (
+                                                    <div key={i} className="flex items-start gap-2 text-sm">
+                                                        <span className="text-rose-400 mt-0.5">•</span>
+                                                        <div>
+                                                            <div className="font-semibold text-rose-900">{p.problem_name}</div>
+                                                            {p.icd10_code && <div className="text-[10px] text-rose-500 font-mono">{p.icd10_code}</div>}
+                                                        </div>
+                                                    </div>
+                                                )) || <div className="text-sm text-rose-400 italic">No active problems</div>}
+                                            </div>
+                                        </div>
+
+                                        {/* Current Medications */}
+                                        <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <Pill className="w-4 h-4 text-emerald-600" />
+                                                <h3 className="text-sm font-bold text-emerald-900 uppercase tracking-wide">Medications</h3>
+                                            </div>
+                                            <div className="space-y-2">
+                                                {(patientData?.medications || []).filter(m => m.active).slice(0, 8).map((m, i) => (
+                                                    <div key={i} className="text-sm">
+                                                        <div className="font-semibold text-emerald-900">{m.medication_name}</div>
+                                                        <div className="text-[11px] text-emerald-600">{m.dosage} {m.frequency && `• ${m.frequency}`}</div>
+                                                    </div>
+                                                )) || <div className="text-sm text-emerald-400 italic">No medications</div>}
+                                            </div>
+                                        </div>
+
+                                        {/* Allergies */}
+                                        <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <AlertCircle className="w-4 h-4 text-amber-600" />
+                                                <h3 className="text-sm font-bold text-amber-900 uppercase tracking-wide">Allergies</h3>
+                                            </div>
+                                            <div className="space-y-1">
+                                                {(patientData?.allergies || []).length > 0 ? patientData.allergies.map((a, i) => (
+                                                    <div key={i} className="text-sm font-semibold text-amber-900">
+                                                        {a.allergen} {a.reaction && <span className="font-normal text-amber-600">- {a.reaction}</span>}
+                                                    </div>
+                                                )) : <div className="text-sm font-bold text-emerald-600">NKDA</div>}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Middle & Right Columns - Visit Timeline */}
+                                    <div className="col-span-2">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <ScrollText className="w-4 h-4 text-slate-600" />
+                                            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Recent Visits</h3>
+                                            <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">{chartReviewData.visits.length} visits</span>
+                                        </div>
+
+                                        <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+                                            {chartReviewData.visits.map((visit, idx) => {
+                                                // Parse chief complaint from note
+                                                const noteText = visit.note_draft || '';
+                                                const ccMatch = noteText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n|$)/i);
+                                                const chiefComplaint = ccMatch ? ccMatch[1].trim() : 'Routine Visit';
+
+                                                // Parse assessment
+                                                const assessmentMatch = noteText.match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\nPlan|$)/is);
+                                                const assessment = assessmentMatch ? assessmentMatch[1].trim().substring(0, 200) : '';
+
+                                                return (
+                                                    <div key={visit.id} className={`p-4 rounded-xl border transition-all ${idx === 0 ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 border-slate-200 hover:border-slate-300'}`}>
+                                                        <div className="flex items-start justify-between mb-2">
+                                                            <div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className={`text-sm font-bold ${idx === 0 ? 'text-blue-900' : 'text-slate-900'}`}>
+                                                                        {format(new Date(visit.visit_date), 'MMM d, yyyy')}
+                                                                    </span>
+                                                                    {visit.locked && <Lock className="w-3 h-3 text-slate-400" />}
+                                                                    {idx === 0 && <span className="text-[9px] font-bold uppercase bg-blue-600 text-white px-1.5 py-0.5 rounded">Current</span>}
+                                                                </div>
+                                                                <div className="text-[11px] text-slate-500 uppercase font-medium">
+                                                                    {visit.visit_type?.replace('_', ' ') || 'Office Visit'} • {visit.provider_last_name || 'Provider'}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="mt-2">
+                                                            <div className="text-[10px] font-bold uppercase text-slate-400 mb-1">Chief Complaint</div>
+                                                            <div className="text-sm font-semibold text-slate-800 line-clamp-2">{chiefComplaint}</div>
+                                                        </div>
+
+                                                        {assessment && (
+                                                            <div className="mt-3 pt-3 border-t border-slate-200">
+                                                                <div className="text-[10px] font-bold uppercase text-slate-400 mb-1">Assessment</div>
+                                                                <div className="text-xs text-slate-600 line-clamp-3">{assessment}...</div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+
+                                            {chartReviewData.visits.length === 0 && (
+                                                <div className="text-center py-12 text-slate-400">
+                                                    <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                                                    <p className="text-sm font-medium">No previous visits found</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                            <div className="text-xs text-slate-500">
+                                Review past encounters to understand patient history
+                            </div>
+                            <button
+                                onClick={() => { setShowChartReview(false); setPatientChartTab('history'); setShowPatientChart(true); }}
+                                className="px-4 py-2 bg-slate-900 text-white text-sm font-bold rounded-lg hover:bg-slate-800 transition-colors"
+                            >
+                                Open Full Chart →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Carry Forward Modal */}
+            {showCarryForward && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60]" onClick={() => setShowCarryForward(false)}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className="px-6 py-4 bg-gradient-to-r from-slate-700 to-slate-600 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <RotateCcw className="w-5 h-5 text-white" />
+                                <h2 className="text-lg font-bold text-white">Pull from Previous Visit</h2>
+                                <span className="text-[11px] font-bold uppercase text-slate-300 bg-slate-500 px-2 py-0.5 rounded">
+                                    {carryForwardField?.toUpperCase()}
+                                </span>
+                            </div>
+                            <button onClick={() => setShowCarryForward(false)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                                <X className="w-5 h-5 text-white" />
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto p-6">
+                            {loadingPrevVisits ? (
+                                <div className="flex items-center justify-center py-16">
+                                    <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                                </div>
+                            ) : previousVisits.length === 0 ? (
+                                <div className="text-center py-12 text-slate-400">
+                                    <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                                    <p className="text-sm font-medium">No previous visits with notes found</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <p className="text-xs text-slate-500 mb-4">
+                                        Select a visit below to pull its <strong>{carryForwardField?.toUpperCase()}</strong> content into the current note.
+                                    </p>
+                                    {previousVisits.map((visit) => {
+                                        const sectionContent = extractSectionFromNote(visit.note_draft, carryForwardField);
+                                        const hasContent = sectionContent && sectionContent.trim().length > 0;
+
+                                        return (
+                                            <div key={visit.id} className={`p-4 rounded-xl border transition-all ${hasContent ? 'bg-white border-slate-200 hover:border-primary-300 hover:shadow-md cursor-pointer' : 'bg-slate-50 border-slate-100 opacity-60'}`}>
+                                                <div className="flex items-start justify-between mb-2">
+                                                    <div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-sm font-bold text-slate-900">
+                                                                {format(new Date(visit.visit_date), 'MMM d, yyyy')}
+                                                            </span>
+                                                            {visit.locked && <Lock className="w-3 h-3 text-slate-400" />}
+                                                        </div>
+                                                        <div className="text-[11px] text-slate-500 uppercase font-medium">
+                                                            {visit.visit_type?.replace('_', ' ') || 'Office Visit'} • {visit.provider_last_name || 'Provider'}
+                                                        </div>
+                                                    </div>
+                                                    {hasContent && (
+                                                        <button
+                                                            onClick={() => insertCarryForward(sectionContent)}
+                                                            className="px-3 py-1.5 bg-primary-600 text-white text-xs font-bold rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-1.5"
+                                                        >
+                                                            <Copy className="w-3.5 h-3.5" />
+                                                            Use This
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                {hasContent ? (
+                                                    <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                                                        <div className="text-[10px] font-bold uppercase text-slate-400 mb-1">
+                                                            {carryForwardField?.toUpperCase()} Content
+                                                        </div>
+                                                        <div className="text-xs text-slate-700 whitespace-pre-wrap line-clamp-4">
+                                                            {sectionContent}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="mt-2 text-xs text-slate-400 italic">
+                                                        No {carryForwardField?.toUpperCase()} content found in this visit
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="px-6 py-3 bg-slate-50 border-t border-slate-200">
+                            <div className="text-xs text-slate-500">
+                                Content will replace the current {carryForwardField?.toUpperCase()} field
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div >
     );

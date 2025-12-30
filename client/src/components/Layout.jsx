@@ -232,7 +232,7 @@ const Layout = ({ children }) => {
                         <Link to="/dashboard" className="flex items-center space-x-3 group">
                             <img
                                 src="/logo.png"
-                                alt="myHEART Cardiology Logo"
+                                alt="PageMD Logo"
                                 className="h-10 w-auto object-contain max-w-[180px]"
                                 onError={(e) => {
                                     // Hide broken image, show fallback text
@@ -244,7 +244,7 @@ const Layout = ({ children }) => {
                     {sidebarCollapsed && (
                         <img
                             src="/logo.png"
-                            alt="myHEART Cardiology"
+                            alt="PageMD"
                             className="h-10 w-auto object-contain mx-auto"
                             onError={(e) => {
                                 // Hide broken image

@@ -67,7 +67,7 @@ const Login = () => {
                 <div className="flex items-center justify-center mb-8">
                     <img
                         src="/logo.png"
-                        alt="myHEART Cardiology Logo"
+                        alt="PageMD Logo"
                         className="h-16 w-auto object-contain max-w-[200px]"
                         onError={(e) => {
                             // Hide broken image
