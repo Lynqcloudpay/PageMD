@@ -915,6 +915,135 @@ CREATE INDEX IF NOT EXISTS idx_superbill_diagnoses_superbill ON superbill_diagno
 CREATE INDEX IF NOT EXISTS idx_superbill_lines_superbill ON superbill_lines(superbill_id);
 CREATE INDEX IF NOT EXISTS idx_suggested_lines_superbill ON superbill_suggested_lines(superbill_id);
 CREATE INDEX IF NOT EXISTS idx_audit_superbill ON superbill_audit_logs(superbill_id);
+
+-- ============================================
+-- E-PRESCRIBING SYSTEM
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS pharmacies (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ncpdp_id VARCHAR(10) UNIQUE,
+    npi VARCHAR(10),
+    name VARCHAR(255) NOT NULL,
+    phone VARCHAR(20),
+    fax VARCHAR(20),
+    email VARCHAR(255),
+    address_line1 VARCHAR(255),
+    address_line2 VARCHAR(255),
+    city VARCHAR(100),
+    state VARCHAR(50),
+    zip VARCHAR(20),
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
+    pharmacy_type VARCHAR(50),
+    active BOOLEAN DEFAULT true,
+    integration_enabled BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_pharmacies_location ON pharmacies(latitude, longitude) WHERE latitude IS NOT NULL AND longitude IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_pharmacies_ncpdp ON pharmacies(ncpdp_id) WHERE ncpdp_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS medication_database (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    rxcui VARCHAR(20) UNIQUE,
+    name VARCHAR(500) NOT NULL,
+    synonym VARCHAR(500),
+    tty VARCHAR(50),
+    strength VARCHAR(100),
+    form VARCHAR(100),
+    route VARCHAR(100),
+    ndc VARCHAR(20),
+    fda_drug_code VARCHAR(20),
+    controlled_substance BOOLEAN DEFAULT false,
+    schedule VARCHAR(10),
+    drug_class VARCHAR(255),
+    drug_category VARCHAR(255),
+    fda_approved BOOLEAN DEFAULT true,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    search_vector tsvector GENERATED ALWAYS AS (
+        to_tsvector('english', 
+            COALESCE(name, '') || ' ' || 
+            COALESCE(synonym, '') || ' ' || 
+            COALESCE(strength, '') || ' ' || 
+            COALESCE(form, '')
+        )
+    ) STORED
+);
+
+CREATE INDEX IF NOT EXISTS idx_medication_search ON medication_database USING GIN(search_vector);
+CREATE INDEX IF NOT EXISTS idx_medication_rxcui ON medication_database(rxcui) WHERE rxcui IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS prescriptions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    visit_id UUID REFERENCES visits(id) ON DELETE SET NULL,
+    prescriber_id UUID NOT NULL REFERENCES users(id),
+    prescriber_npi VARCHAR(10),
+    prescriber_dea VARCHAR(20),
+    medication_rxcui VARCHAR(20),
+    medication_name VARCHAR(500) NOT NULL,
+    medication_ndc VARCHAR(20),
+    strength VARCHAR(100),
+    quantity INTEGER NOT NULL,
+    quantity_unit VARCHAR(20) DEFAULT 'EA',
+    days_supply INTEGER,
+    sig TEXT NOT NULL,
+    sig_structured JSONB,
+    refills INTEGER DEFAULT 0,
+    refills_remaining INTEGER DEFAULT 0,
+    substitution_allowed BOOLEAN DEFAULT true,
+    pharmacy_id UUID REFERENCES pharmacies(id) ON DELETE SET NULL,
+    pharmacy_ncpdp_id VARCHAR(10),
+    pharmacy_name VARCHAR(255),
+    pharmacy_address TEXT,
+    pharmacy_phone VARCHAR(20),
+    status VARCHAR(50) DEFAULT 'draft' CHECK (status IN (
+      'draft', 'pending', 'sent', 'accepted', 'in_process',
+      'ready', 'picked_up', 'expired', 'cancelled', 'denied'
+    )),
+    transmission_method VARCHAR(50),
+    transmission_id VARCHAR(100),
+    transmission_status VARCHAR(50),
+    transmission_error TEXT,
+    sent_at TIMESTAMP WITH TIME ZONE,
+    received_at TIMESTAMP WITH TIME ZONE,
+    filled_at TIMESTAMP WITH TIME ZONE,
+    prior_auth_required BOOLEAN DEFAULT false,
+    prior_auth_number VARCHAR(100),
+    prior_auth_status VARCHAR(50),
+    clinical_notes TEXT,
+    patient_instructions TEXT,
+    prescriber_notes TEXT,
+    is_controlled BOOLEAN DEFAULT false,
+    schedule VARCHAR(10),
+    written_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    start_date DATE,
+    end_date DATE,
+    expires_date DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID NOT NULL REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_prescriptions_patient ON prescriptions(patient_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_prescriptions_status ON prescriptions(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_prescriptions_prescriber ON prescriptions(prescriber_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS prescription_interactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    prescription_id UUID NOT NULL REFERENCES prescriptions(id) ON DELETE CASCADE,
+    interaction_type VARCHAR(50),
+    severity VARCHAR(50),
+    description TEXT,
+    medication_name VARCHAR(500),
+    medication_rxcui VARCHAR(20),
+    detected_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_interactions_prescription ON prescription_interactions(prescription_id);
 `;
 
 module.exports = tenantSchemaSQL;

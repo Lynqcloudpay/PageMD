@@ -77,7 +77,7 @@ router.get('/status', async (req, res) => {
  * Requires: clinician or admin role
  */
 router.post('/session', requirePermission('meds:prescribe'), async (req, res) => {
-  const client = await pool.connect();
+  const dbClient = req.dbClient || pool;
 
   try {
     const { patientId, returnUrl } = req.body;
@@ -88,13 +88,12 @@ router.post('/session', requirePermission('meds:prescribe'), async (req, res) =>
     }
 
     // Verify patient access
-    const patientCheck = await client.query(
+    const patientCheck = await dbClient.query(
       `SELECT id FROM patients WHERE id = $1`,
       [patientId]
     );
 
     if (patientCheck.rows.length === 0) {
-      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Patient not found' });
     }
 
@@ -131,8 +130,6 @@ router.post('/session', requirePermission('meds:prescribe'), async (req, res) =>
       userId: req.user.id
     });
     res.status(500).json({ error: 'Failed to create ePrescribing session' });
-  } finally {
-    client.release();
   }
 });
 
@@ -142,7 +139,7 @@ router.post('/session', requirePermission('meds:prescribe'), async (req, res) =>
  * Requires: patient access permission
  */
 router.get('/patient/:id/prescriptions', requirePermission('prescriptions:view'), async (req, res) => {
-  const client = await pool.connect();
+  const dbClient = req.dbClient || pool;
 
   try {
     const { id: patientId } = req.params;
@@ -150,7 +147,7 @@ router.get('/patient/:id/prescriptions', requirePermission('prescriptions:view')
 
     // Verify patient access (same logic as notes)
     console.log('[DEBUG] Fetching prescriptions for patient:', patientId, 'User:', userId);
-    const patientCheck = await client.query(
+    const patientCheck = await dbClient.query(
       `SELECT id FROM patients WHERE id = $1`,
       [patientId]
     );
@@ -161,7 +158,7 @@ router.get('/patient/:id/prescriptions', requirePermission('prescriptions:view')
     }
 
     // Get prescriptions
-    const result = await client.query(
+    const result = await dbClient.query(
       `SELECT 
         p.id, p.patient_id, p.prescriber_id as prescriber_user_id, p.medication_name, p.sig,
         p.quantity, p.days_supply, p.refills, p.status, p.transmission_id as vendor_message_id,
@@ -188,8 +185,6 @@ router.get('/patient/:id/prescriptions', requirePermission('prescriptions:view')
       patientId: req.params.id
     });
     res.status(500).json({ error: 'Failed to fetch prescriptions' });
-  } finally {
-    client.release();
   }
 });
 
@@ -199,11 +194,9 @@ router.get('/patient/:id/prescriptions', requirePermission('prescriptions:view')
  * Requires: prescriptions:create permission
  */
 router.post('/patient/:id/prescriptions', requirePermission('meds:prescribe'), async (req, res) => {
-  const client = await pool.connect();
+  const dbClient = req.dbClient || pool;
 
   try {
-    await client.query('BEGIN');
-
     const { id: patientId } = req.params;
     const userId = req.user.id;
     const {
@@ -218,35 +211,30 @@ router.post('/patient/:id/prescriptions', requirePermission('meds:prescribe'), a
 
     // Validation
     if (!medicationDisplay && !medicationName) {
-      await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Medication name is required' });
     }
 
     if (!sig) {
-      await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Prescription instructions (sig) are required' });
     }
 
     if (!quantity || quantity <= 0) {
-      await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Valid quantity is required' });
     }
 
     // Verify patient access
-    const patientCheck = await client.query(
+    const patientCheck = await dbClient.query(
       `SELECT id FROM patients WHERE id = $1`,
       [patientId]
     );
 
     if (patientCheck.rows.length === 0) {
-      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Patient not found' });
     }
 
     const service = getEPrescribeService();
 
     if (!service.isDoseSpotEnabled()) {
-      await client.query('ROLLBACK');
       return res.status(503).json({ error: 'DoseSpot e-prescribing service is not enabled. Set EPRESCRIBE_PROVIDER=dosespot' });
     }
 
@@ -257,7 +245,6 @@ router.post('/patient/:id/prescriptions', requirePermission('meds:prescribe'), a
         req.user
       );
       if (!epcsValidation.valid) {
-        await client.query('ROLLBACK');
         return res.status(400).json({ error: epcsValidation.error });
       }
     }
@@ -274,8 +261,6 @@ router.post('/patient/:id/prescriptions', requirePermission('meds:prescribe'), a
       refills: refills ? parseInt(refills) : 0,
       pharmacyVendorId
     });
-
-    await client.query('COMMIT');
 
     // Log audit
     try {
@@ -294,15 +279,12 @@ router.post('/patient/:id/prescriptions', requirePermission('meds:prescribe'), a
       status: 'DRAFT'
     });
   } catch (error) {
-    await client.query('ROLLBACK');
     safeLogger.error('[ePrescribe] Failed to create prescription draft', {
       error: error.message,
       patientId: req.params.id,
       userId: req.user.id
     });
     res.status(500).json({ error: 'Failed to create prescription draft' });
-  } finally {
-    client.release();
   }
 });
 
@@ -312,24 +294,21 @@ router.post('/patient/:id/prescriptions', requirePermission('meds:prescribe'), a
  * Requires: prescriptions:create permission (only clinicians/admins can send)
  */
 router.post('/prescriptions/:id/send', requirePermission('meds:prescribe'), async (req, res) => {
-  const client = await pool.connect();
+  const dbClient = req.dbClient || pool;
 
   try {
-    await client.query('BEGIN');
-
     const { id: prescriptionId } = req.params;
     const userId = req.user.id;
 
     // Verify prescription exists and user has access
-    const prescCheck = await client.query(
-      `SELECT p.id, p.patient_id, p.status, p.prescriber_user_id
+    const prescCheck = await dbClient.query(
+      `SELECT p.id, p.patient_id, p.status, p.prescriber_id as prescriber_user_id
        FROM prescriptions p
        WHERE p.id = $1`,
       [prescriptionId]
     );
 
     if (prescCheck.rows.length === 0) {
-      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Prescription not found' });
     }
 
@@ -337,26 +316,21 @@ router.post('/prescriptions/:id/send', requirePermission('meds:prescribe'), asyn
 
     // Only prescriber or admin can send
     if (prescription.prescriber_user_id !== userId && !req.user.is_admin) {
-      await client.query('ROLLBACK');
       return res.status(403).json({ error: 'Not authorized to send this prescription' });
     }
 
     if (prescription.status !== 'DRAFT' && prescription.status !== 'draft') {
-      await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Only draft prescriptions can be sent' });
     }
 
     const service = getEPrescribeService();
 
     if (!service.isDoseSpotEnabled()) {
-      await client.query('ROLLBACK');
       return res.status(503).json({ error: 'DoseSpot e-prescribing service is not enabled' });
     }
 
     // Send prescription
     const result = await service.sendPrescription(prescriptionId);
-
-    await client.query('COMMIT');
 
     // Log audit
     try {
@@ -373,15 +347,12 @@ router.post('/prescriptions/:id/send', requirePermission('meds:prescribe'), asyn
       status: result.status
     });
   } catch (error) {
-    await client.query('ROLLBACK');
     safeLogger.error('[ePrescribe] Failed to send prescription', {
       error: error.message,
       prescriptionId: req.params.id,
       userId: req.user.id
     });
     res.status(500).json({ error: 'Failed to send prescription' });
-  } finally {
-    client.release();
   }
 });
 
@@ -391,25 +362,22 @@ router.post('/prescriptions/:id/send', requirePermission('meds:prescribe'), asyn
  * Requires: prescriptions:create permission
  */
 router.post('/prescriptions/:id/cancel', requirePermission('meds:prescribe'), async (req, res) => {
-  const client = await pool.connect();
+  const dbClient = req.dbClient || pool;
 
   try {
-    await client.query('BEGIN');
-
     const { id: prescriptionId } = req.params;
     const { reason } = req.body;
     const userId = req.user.id;
 
     // Verify prescription exists and user has access
-    const prescCheck = await client.query(
-      `SELECT p.id, p.patient_id, p.status, p.prescriber_user_id
+    const prescCheck = await dbClient.query(
+      `SELECT p.id, p.patient_id, p.status, p.prescriber_id as prescriber_user_id
        FROM prescriptions p
        WHERE p.id = $1`,
       [prescriptionId]
     );
 
     if (prescCheck.rows.length === 0) {
-      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Prescription not found' });
     }
 
@@ -417,21 +385,17 @@ router.post('/prescriptions/:id/cancel', requirePermission('meds:prescribe'), as
 
     // Only prescriber or admin can cancel
     if (prescription.prescriber_user_id !== userId && !req.user.is_admin) {
-      await client.query('ROLLBACK');
       return res.status(403).json({ error: 'Not authorized to cancel this prescription' });
     }
 
     const service = getEPrescribeService();
 
     if (!service.isDoseSpotEnabled()) {
-      await client.query('ROLLBACK');
       return res.status(503).json({ error: 'DoseSpot e-prescribing service is not enabled' });
     }
 
     // Cancel prescription
     const result = await service.cancelPrescription(prescriptionId, reason || 'Prescriber request');
-
-    await client.query('COMMIT');
 
     // Log audit
     try {
@@ -449,15 +413,12 @@ router.post('/prescriptions/:id/cancel', requirePermission('meds:prescribe'), as
       status: result.status
     });
   } catch (error) {
-    await client.query('ROLLBACK');
     safeLogger.error('[ePrescribe] Failed to cancel prescription', {
       error: error.message,
       prescriptionId: req.params.id,
       userId: req.user.id
     });
     res.status(500).json({ error: 'Failed to cancel prescription' });
-  } finally {
-    client.release();
   }
 });
 

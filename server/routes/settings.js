@@ -218,12 +218,13 @@ adminRouter.put('/practice', [
     }
 
     // Fallback/Legacy local update
-    const existing = await pool.query('SELECT id FROM practice_settings LIMIT 1');
+    const dbClient = req.dbClient || pool;
+    const existing = await dbClient.query('SELECT id FROM practice_settings LIMIT 1');
 
     let result;
     if (existing.rows.length > 0) {
       // Update existing
-      result = await pool.query(`
+      result = await dbClient.query(`
         UPDATE practice_settings SET
           practice_name = COALESCE($1, practice_name),
           practice_type = COALESCE($2, practice_type),
@@ -255,7 +256,7 @@ adminRouter.put('/practice', [
       ]);
     } else {
       // Create new
-      result = await pool.query(`
+      result = await dbClient.query(`
         INSERT INTO practice_settings (
           practice_name, practice_type, tax_id, npi,
           address_line1, address_line2, city, state, zip,
@@ -275,8 +276,16 @@ adminRouter.put('/practice', [
     await logAudit(req.user.id, 'practice_settings_updated', 'settings', result.rows[0].id, {}, req.ip);
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Error updating practice settings:', error);
-    res.status(500).json({ error: 'Failed to update practice settings' });
+    console.error('[SETTINGS] Error updating practice settings:', {
+      message: error.message,
+      stack: error.stack,
+      clinic: req.clinic?.slug,
+      user: req.user?.id
+    });
+    res.status(500).json({
+      error: 'Failed to update practice settings',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
@@ -300,14 +309,15 @@ adminRouter.post('/practice/logo', upload.single('logo'), async (req, res) => {
       );
     } else {
       // Update local DB
-      const existing = await pool.query('SELECT id FROM practice_settings LIMIT 1');
+      const dbClient = req.dbClient || pool;
+      const existing = await dbClient.query('SELECT id FROM practice_settings LIMIT 1');
       if (existing.rows.length > 0) {
-        await pool.query(
+        await dbClient.query(
           'UPDATE practice_settings SET logo_url = $1, updated_at = CURRENT_TIMESTAMP, updated_by = $2 WHERE id = $3',
           [logoUrl, req.user.id, existing.rows[0].id]
         );
       } else {
-        await pool.query(
+        await dbClient.query(
           'INSERT INTO practice_settings (logo_url, updated_by) VALUES ($1, $2)',
           [logoUrl, req.user.id]
         );
@@ -316,7 +326,7 @@ adminRouter.post('/practice/logo', upload.single('logo'), async (req, res) => {
 
     res.json({ logo_url: logoUrl });
   } catch (error) {
-    console.error('Error uploading practice logo:', error);
+    console.error('[SETTINGS] Error uploading practice logo:', error);
     res.status(500).json({ error: 'Failed to upload practice logo' });
   }
 });
