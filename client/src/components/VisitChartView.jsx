@@ -342,20 +342,42 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
             return () => { active = false; };
         }, [doc.id]);
 
-        const interpretationTag = (doc.tags || []).find(t => t.startsWith('interpretation:'));
+        const tags = Array.isArray(doc.tags) ? doc.tags : [];
+        const interpretationTag = tags.find(t => t.startsWith('interpretation:'));
         const interpretation = interpretationTag ? interpretationTag.replace('interpretation:', '') : null;
+
+        // Extract other metrics from tags
+        const metrics = tags.filter(t => t.includes(':') && !t.startsWith('interpretation:') && !t.startsWith('date:'))
+            .map(t => {
+                const [key, ...valParts] = t.split(':');
+                const value = valParts.join(':');
+                const label = key.replace(/_/g, ' ').toUpperCase();
+                return { label, value };
+            });
 
         if (!src) return <div className="h-48 bg-slate-50 flex items-center justify-center text-[10px] text-slate-400 border border-slate-100 rounded-xl">Loading...</div>;
         return (
-            <div className="flex flex-col gap-3 avoid-cut">
+            <div className="flex flex-col gap-4 bg-white p-4 rounded-xl border border-slate-100 shadow-sm avoid-cut mb-6">
                 <a href={src} target="_blank" rel="noopener noreferrer" className="block group relative">
-                    <img src={src} alt={doc.filename} className="w-full h-64 object-cover rounded-xl border border-slate-200 shadow-sm transition-transform hover:scale-[1.01]" />
+                    <img src={src} alt={doc.filename} className="w-full h-auto max-h-[500px] object-contain rounded-lg border border-slate-200 shadow-sm transition-transform hover:scale-[1.01]" />
                     <div className="mt-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{doc.filename}</div>
                 </a>
+
+                {metrics.length > 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mt-2">
+                        {metrics.map((m, i) => (
+                            <div key={i} className="bg-slate-50 p-2.5 rounded-lg border border-slate-100/50">
+                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block leading-none mb-1.5 opacity-70">{m.label}</span>
+                                <span className="text-[13px] font-bold text-slate-800 tabular-nums">{m.value}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                 {interpretation && (
-                    <div className="bg-slate-50/50 border border-slate-100 p-4 rounded-xl">
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2 opacity-70">Clinical Interpretation</span>
-                        <div className="text-[13px] font-bold text-slate-800 leading-relaxed italic">"{interpretation}"</div>
+                    <div className="bg-blue-50/50 border border-blue-100/50 p-5 rounded-xl mt-2">
+                        <span className="text-[9px] font-black text-blue-500/70 uppercase tracking-widest block mb-1.5">Lead Physician Interpretation</span>
+                        <div className="text-[15px] font-bold text-slate-800 leading-relaxed italic">"{interpretation}"</div>
                     </div>
                 )}
             </div>
@@ -760,9 +782,11 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                     {(noteData.results || visitDocuments.length > 0) && (
                                         <div className="mt-8 pt-6 border-t border-slate-100 avoid-cut">
                                             <span className="section-label">Results & Data</span>
-                                            {noteData.results && <div className="text-[14px] leading-relaxed text-slate-700 whitespace-pre-wrap mb-8">{noteData.results}</div>}
+                                            {noteData.results && !noteData.results.includes('Imported results will appear here') && (
+                                                <div className="text-[14px] leading-relaxed text-slate-700 whitespace-pre-wrap mb-8">{noteData.results}</div>
+                                            )}
                                             {visitDocuments.length > 0 && (
-                                                <div className="grid grid-cols-2 gap-10 mt-4">
+                                                <div className="space-y-8 mt-4">
                                                     {visitDocuments.map(doc => (
                                                         <ResultImageView key={doc.id} doc={doc} />
                                                     ))}

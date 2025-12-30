@@ -45,20 +45,42 @@ const ResultImage = ({ doc }) => {
         };
     }, [doc.id]);
 
-    const interpretationTag = (doc.tags || []).find(t => t.startsWith('interpretation:'));
+    const tags = Array.isArray(doc.tags) ? doc.tags : [];
+    const interpretationTag = tags.find(t => t.startsWith('interpretation:'));
     const interpretation = interpretationTag ? interpretationTag.replace('interpretation:', '') : null;
 
-    if (!src) return <div className="h-32 bg-gray-50 flex items-center justify-center text-[10px] text-gray-400 rounded-lg border border-gray-100 animate-pulse">Loading image...</div>;
+    // Extract other metrics from tags
+    const metrics = tags.filter(t => t.includes(':') && !t.startsWith('interpretation:') && !t.startsWith('date:'))
+        .map(t => {
+            const [key, ...valParts] = t.split(':');
+            const value = valParts.join(':');
+            const label = key.replace(/_/g, ' ').toUpperCase();
+            return { label, value };
+        });
+
+    if (!src) return <div className="h-48 bg-gray-50 flex items-center justify-center text-[10px] text-gray-400 rounded-lg border border-gray-100 animate-pulse">Loading image...</div>;
     return (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-3 bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
             <a href={src} target="_blank" rel="noopener noreferrer" className="block group relative">
-                <img src={src} alt={doc.filename} className="w-full h-32 object-cover rounded-lg border border-gray-200 shadow-sm group-hover:shadow-md transition-all" />
+                <img src={src} alt={doc.filename} className="w-full h-48 object-cover rounded-lg border border-gray-200 shadow-sm group-hover:shadow-md transition-all" />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors rounded-lg" />
             </a>
+
+            {metrics.length > 0 && (
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                    {metrics.map((m, i) => (
+                        <div key={i} className="bg-gray-50 p-2 rounded-md border border-gray-100/50">
+                            <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest block leading-none mb-1">{m.label}</span>
+                            <span className="text-[11px] font-bold text-gray-800 tabular-nums">{m.value}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+
             {interpretation && (
-                <div className="bg-blue-50/30 border border-blue-100/50 p-2 rounded-md">
-                    <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest block mb-0.5">Interpretation</span>
-                    <div className="text-[11px] font-bold text-gray-700 leading-tight italic line-clamp-2">"{interpretation}"</div>
+                <div className="bg-blue-50/30 border border-blue-100/50 p-3 rounded-lg mt-1">
+                    <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest block mb-1">Clinical Interpretation</span>
+                    <div className="text-[12px] font-bold text-gray-700 leading-tight italic">"{interpretation}"</div>
                 </div>
             )}
         </div>
@@ -2667,39 +2689,43 @@ const VisitNote = () => {
 
                         {/* Results / Data Section */}
                         <Section title="Results / Data" defaultOpen={true}>
-                            <textarea
-                                value={noteData.results}
-                                onChange={(e) => setNoteData({ ...noteData, results: e.target.value })}
-                                disabled={isSigned}
-                                className="w-full h-32 p-2 text-xs border border-gray-200 rounded-md focus:ring-1 focus:ring-primary-500 focus:border-primary-500 resize-y"
-                                placeholder="Imported results will appear here..."
-                            />
+                            {visitDocuments.length === 0 && (
+                                <div className="py-12 border-2 border-dashed border-gray-100 rounded-xl flex flex-col items-center justify-center text-gray-300">
+                                    <FilePlus className="w-10 h-10 mb-3 opacity-20" />
+                                    <p className="text-xs font-bold uppercase tracking-widest opacity-40">No Laboratory or Imaging Findings Linked</p>
+                                    <p className="text-[10px] mt-1 opacity-40">Upload files via the patient chart to see results here.</p>
+                                </div>
+                            )}
+
                             {visitDocuments.length > 0 && (
-                                <div className="mt-3">
-                                    <h5 className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2">Attached Images</h5>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                                        {visitDocuments.map(doc => (
-                                            <div key={doc.id} className="relative group">
-                                                <ResultImage doc={doc} />
-                                                <div className="flex justify-between items-center mt-1 px-0.5">
-                                                    <p className="text-[10px] text-gray-500 truncate max-w-[80%]">{doc.filename}</p>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (confirm('Remove image from note?')) {
-                                                                // Unlink
-                                                                documentsAPIUpdate.update(doc.id, { visit_id: null })
-                                                                    .then(() => setVisitDocuments(prev => prev.filter(d => d.id !== doc.id)));
-                                                            }
-                                                        }}
-                                                        className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    >
-                                                        <Trash2 className="w-3 h-3" />
-                                                    </button>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    {visitDocuments.map(doc => (
+                                        <div key={doc.id} className="relative group">
+                                            <ResultImage doc={doc} />
+                                            <div className="flex justify-between items-center mt-2 px-1">
+                                                <div className="flex flex-col">
+                                                    <p className="text-[10px] font-bold text-gray-900 truncate max-w-[200px]">{doc.filename}</p>
+                                                    <p className="text-[8px] text-gray-400 uppercase font-black tracking-tighter">
+                                                        Uploaded {format(new Date(doc.created_at || new Date()), 'MMM d, yyyy')}
+                                                    </p>
                                                 </div>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (confirm('Remove image from note?')) {
+                                                            // Unlink
+                                                            documentsAPI.update(doc.id, { visit_id: null })
+                                                                .then(() => setVisitDocuments(prev => prev.filter(d => d.id !== doc.id)));
+                                                        }
+                                                    }}
+                                                    className="p-2 bg-rose-50 text-rose-500 rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-100 shadow-sm"
+                                                    title="Unlink from visit"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
                                             </div>
-                                        ))}
-                                    </div>
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                         </Section>

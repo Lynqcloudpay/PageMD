@@ -881,14 +881,17 @@ const Snapshot = ({ showNotesOnly = false }) => {
             const formData = new FormData();
             formData.append('file', ekgFile);
             formData.append('patientId', id);
-            formData.append('docType', 'imaging');  // Use 'imaging' - 'ekg' is not a valid doc_type. Type is distinguished via tags.
-            // Tags for EKG data
+            formData.append('docType', 'imaging');
+            // Tags for EKG data - interpretation is the user notes
             const tags = [
                 'ekg',
                 `date:${ekgData.date}`,
                 `rhythm:${ekgData.rhythm}`,
                 `rate:${ekgData.rate}`,
-                `qtc:${ekgData.qtc}`,
+                `interval_pr:${ekgData.pr}`,
+                `interval_qrs:${ekgData.qrs}`,
+                `interval_qtc:${ekgData.qtc}`,
+                `axis:${ekgData.axis}`,
                 `interpretation:${ekgData.interpretation}`
             ].filter(Boolean);
             formData.append('tags', tags.join(','));
@@ -919,7 +922,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 `ef:${echoData.ef}%`,
                 `la_size:${echoData.la_size}`,
                 `lv_size:${echoData.lv_size}`,
-                `valve_findings:${echoData.valve_findings}`
+                `rv_size:${echoData.rv_size}`,
+                `valve_findings:${echoData.valve_findings}`,
+                `interpretation:${echoData.notes}`
             ].filter(Boolean);
             formData.append('tags', tags.join(','));
 
@@ -946,9 +951,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 'stress_test',
                 `type:${stressTestData.type}`,
                 `stressor:${stressTestData.stressor}`,
+                `date:${stressTestData.date}`,
                 `mets:${stressTestData.mets}`,
                 `peak_hr:${stressTestData.peak_hr}`,
-                `bp_response:${stressTestData.bp_response}`
+                `bp_response:${stressTestData.bp_response}`,
+                `interpretation:${stressTestData.notes}`
             ].filter(Boolean);
             formData.append('tags', tags.join(','));
 
@@ -973,9 +980,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
             formData.append('docType', 'imaging');
             const tags = [
                 'cardiac_cath',
+                `date:${cardiacCathData.date}`,
                 `facility:${cardiacCathData.facility}`,
                 `findings:${cardiacCathData.findings}`,
-                `ef:${cardiacCathData.ef}%`
+                `ef:${cardiacCathData.ef}%`,
+                `interpretation:${cardiacCathData.notes}`
             ].filter(Boolean);
             formData.append('tags', tags.join(','));
 
