@@ -245,6 +245,7 @@ const VisitNote = () => {
             skin: false
         },
         peNotes: '',
+        results: '',
         assessment: '',
         plan: '',
         planStructured: [], // Array of {diagnosis: string, orders: string[]}
@@ -379,7 +380,8 @@ const VisitNote = () => {
         const chiefComplaintMatch = decodedText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
         const hpiMatch = decodedText.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
         const rosMatch = decodedText.match(/(?:ROS|Review of Systems):\s*(.+?)(?:\n\n|\n(?:PE|Physical|Assessment|Plan):|$)/is);
-        const peMatch = decodedText.match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):|$)/is);
+        const peMatch = decodedText.match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Results|Data|Assessment|Plan):|$)/is);
+        const resultsMatch = decodedText.match(/(?:Results|Data):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):|$)/is);
         const assessmentMatch = decodedText.match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):|$)/is);
         const planMatch = decodedText.match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n(?:Care Plan|CP|Follow Up|FU):|$)/is);
         const carePlanMatch = decodedText.match(/(?:Care Plan|CP):\s*(.+?)(?:\n\n|\n(?:Follow Up|FU):|$)/is);
@@ -390,6 +392,7 @@ const VisitNote = () => {
             hpi: hpiMatch ? decodeHtmlEntities(hpiMatch[1].trim()) : '',
             rosNotes: rosMatch ? decodeHtmlEntities(rosMatch[1].trim()) : '',
             peNotes: peMatch ? decodeHtmlEntities(peMatch[1].trim()) : '',
+            results: resultsMatch ? decodeHtmlEntities(resultsMatch[1].trim()) : '',
             assessment: assessmentMatch ? decodeHtmlEntities(assessmentMatch[1].trim()) : '',
             plan: planMatch ? decodeHtmlEntities(planMatch[1].trim()) : '',
             carePlan: carePlanMatch ? decodeHtmlEntities(carePlanMatch[1].trim()) : '',
@@ -478,6 +481,10 @@ const VisitNote = () => {
         // PE - use peNotes directly (pe checkbox object may not exist)
         if (noteData.peNotes) {
             sections.push(`Physical Exam: ${noteData.peNotes}`);
+        }
+
+        if (noteData.results) {
+            sections.push(`Results: ${noteData.results}`);
         }
 
         if (noteData.assessment) sections.push(`Assessment: ${noteData.assessment}`);
@@ -1687,12 +1694,18 @@ const VisitNote = () => {
     ];
 
     // Insert result into plan
-    const insertResultIntoPlan = (resultType, resultText) => {
-        const newPlan = noteData.plan
-            ? `${noteData.plan}\n- ${resultType}: ${resultText}`
-            : `- ${resultType}: ${resultText}`;
-        setNoteData(prev => ({ ...prev, plan: newPlan }));
-        showToast(`${resultType} noted in plan`, 'success');
+    // Updated to insert into Results section with billing disclaimer
+    const insertResultIntoResults = (resultType, resultText) => {
+        const timestamp = format(new Date(), 'MM/dd/yyyy');
+        // Simulate "Actual Result" structure if not provided
+        const content = resultText || 'Reviewed, within normal limits';
+        const entry = `${resultType} (${timestamp}): ${content} *Reviewed for billing purposes.*`;
+
+        setNoteData(prev => ({
+            ...prev,
+            results: prev.results ? `${prev.results}\n${entry}` : entry
+        }));
+        showToast(`${resultType} imported to Results/Data`, 'success');
     };
 
     if (loading) {
@@ -2448,37 +2461,20 @@ const VisitNote = () => {
                             </div>
                         </Section>
 
+                        {/* Results / Data Section */}
+                        <Section title="Results / Data" defaultOpen={true}>
+                            <textarea
+                                value={noteData.results}
+                                onChange={(e) => setNoteData({ ...noteData, results: e.target.value })}
+                                disabled={isSigned}
+                                className="w-full h-32 p-2 text-xs border border-gray-200 rounded-md focus:ring-1 focus:ring-primary-500 focus:border-primary-500 resize-y"
+                                placeholder="Imported results will appear here..."
+                            />
+                        </Section>
+
                         {/* Assessment */}
                         <Section title="Assessment" defaultOpen={true}>
-                            {/* Quick Add from Problem List */}
-                            {!isSigned && (patientData?.problems || []).filter(p => p.status === 'active').length > 0 && (
-                                <div className="mb-3 p-3 bg-slate-50/80 rounded-lg border border-slate-200">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                            <ClipboardList className="w-4 h-4 text-slate-500" />
-                                            <span className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Quick Add from Problem List</span>
-                                        </div>
-                                        <span className="text-[10px] text-slate-400">Click to add</span>
-                                    </div>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {(patientData?.problems || [])
-                                            .filter(p => p.status === 'active')
-                                            .slice(0, 8)
-                                            .map((p, idx) => (
-                                                <button
-                                                    key={idx}
-                                                    onClick={() => addProblemToAssessment(p)}
-                                                    className="px-2.5 py-1 text-[11px] font-medium bg-white text-slate-700 rounded-full border border-slate-200 hover:bg-primary-50 hover:border-primary-300 hover:text-primary-700 transition-all flex items-center gap-1.5 shadow-sm"
-                                                >
-                                                    <Plus className="w-3 h-3" />
-                                                    {p.problem_name}
-                                                    {p.icd10_code && <span className="text-slate-400 font-mono text-[9px]">({p.icd10_code})</span>}
-                                                </button>
-                                            ))
-                                        }
-                                    </div>
-                                </div>
-                            )}
+                            {/* Quick Add block removed */}
 
                             {/* ICD-10 Search - Show first for easy access */}
                             {hasPrivilege('search_icd10') && (
@@ -2911,42 +2907,42 @@ const VisitNote = () => {
                                     <div className="p-2">
                                         <div className="grid grid-cols-2 gap-1.5">
                                             <button
-                                                onClick={() => insertResultIntoPlan('Labs', 'Reviewed, within normal limits')}
+                                                onClick={() => insertResultIntoResults('Labs', 'CMP, CBC, Lipid Panel reviewed. No acute abnormalities.')}
                                                 className="px-2 py-2 text-[10px] bg-white hover:bg-purple-50 rounded border border-slate-100 hover:border-purple-200 transition-all flex flex-col items-center gap-1"
                                             >
                                                 <FlaskConical className="w-4 h-4 text-purple-500" />
                                                 <span className="text-slate-600">Labs</span>
                                             </button>
                                             <button
-                                                onClick={() => insertResultIntoPlan('Imaging', 'Reviewed, findings noted')}
-                                                className="px-2 py-2 text-[10px] bg-white hover:bg-purple-50 rounded border border-slate-100 hover:border-purple-200 transition-all flex flex-col items-center gap-1"
+                                                onClick={() => insertResultIntoResults('Imaging', 'CXR reviewed. Clear lungs.')}
+                                                className="px-2 py-2 text-[10px] bg-white hover:bg-blue-50 rounded border border-slate-100 hover:border-blue-200 transition-all flex flex-col items-center gap-1"
                                             >
-                                                <FileImage className="w-4 h-4 text-purple-500" />
-                                                <span className="text-slate-600">Imaging</span>
+                                                <FileImage className="w-4 h-4 text-blue-500" />
+                                                <span className="text-slate-600">Image</span>
                                             </button>
                                             <button
-                                                onClick={() => insertResultIntoPlan('Echo', 'Reviewed, EF []%')}
+                                                onClick={() => insertResultIntoResults('Echo', 'TTE reviewed. EF 55-60%.')}
                                                 className="px-2 py-2 text-[10px] bg-white hover:bg-rose-50 rounded border border-slate-100 hover:border-rose-200 transition-all flex flex-col items-center gap-1"
                                             >
                                                 <Heart className="w-4 h-4 text-rose-500" />
                                                 <span className="text-slate-600">Echo</span>
                                             </button>
                                             <button
-                                                onClick={() => insertResultIntoPlan('EKG', 'Reviewed, normal sinus rhythm')}
+                                                onClick={() => insertResultIntoResults('EKG', 'NSR @ 72 bpm. No acute ST changes.')}
                                                 className="px-2 py-2 text-[10px] bg-white hover:bg-rose-50 rounded border border-slate-100 hover:border-rose-200 transition-all flex flex-col items-center gap-1"
                                             >
                                                 <Waves className="w-4 h-4 text-rose-500" />
                                                 <span className="text-slate-600">EKG</span>
                                             </button>
                                             <button
-                                                onClick={() => insertResultIntoPlan('Cath', 'Cardiac cath report reviewed. []')}
+                                                onClick={() => insertResultIntoResults('Cath', 'Cardiac cath report reviewed. Patent coronaries.')}
                                                 className="px-2 py-2 text-[10px] bg-white hover:bg-red-50 rounded border border-slate-100 hover:border-red-200 transition-all flex flex-col items-center gap-1"
                                             >
                                                 <Stethoscope className="w-4 h-4 text-red-500" />
                                                 <span className="text-slate-600">Cath</span>
                                             </button>
                                             <button
-                                                onClick={() => insertResultIntoPlan('Stress', 'Stress test report reviewed. []')}
+                                                onClick={() => insertResultIntoResults('Stress', 'Stress test report reviewed. No ischemia.')}
                                                 className="px-2 py-2 text-[10px] bg-white hover:bg-orange-50 rounded border border-slate-100 hover:border-orange-200 transition-all flex flex-col items-center gap-1"
                                             >
                                                 <Activity className="w-4 h-4 text-orange-500" />
