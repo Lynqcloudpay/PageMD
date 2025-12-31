@@ -309,6 +309,15 @@ function App() {
                                                     </ErrorBoundary>
                                                 </ProtectedRoute>
                                             } />
+                                            <Route path="/patient/:id/superbill/:visitId" element={
+                                                <ProtectedRoute>
+                                                    <ErrorBoundary>
+                                                        <Layout>
+                                                            <FeeSheet />
+                                                        </Layout>
+                                                    </ErrorBoundary>
+                                                </ProtectedRoute>
+                                            } />
                                             <Route path="/patient/:id/snapshot" element={
                                                 <ProtectedRoute>
                                                     <ErrorBoundary>

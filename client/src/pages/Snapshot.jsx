@@ -544,13 +544,13 @@ const Snapshot = ({ showNotesOnly = false }) => {
                         const rawNote = visit.note_draft || "";
                         const noteText = typeof rawNote === 'string' ? rawNote : (typeof rawNote === 'object' ? JSON.stringify(rawNote) : String(rawNote));
 
-                        const hpiMatch = noteText.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):)/is);
-                        const planMatch = noteText.match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n(?:Care Plan|CP|Follow Up|FU):|$)/is);
-                        const assessmentMatch = noteText.match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):)/is);
-                        const carePlanMatch = noteText.match(/(?:Care Plan|CP):\s*(.+?)(?:\n\n|\n(?:Follow Up|FU):|$)/is);
-                        const followUpMatch = noteText.match(/(?:Follow Up|FU):\s*(.+?)(?:\n\n|$)/is);
+                        const hpiMatch = String(noteText).match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):)/is);
+                        const planMatch = String(noteText).match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n(?:Care Plan|CP|Follow Up|FU):|$)/is);
+                        const assessmentMatch = String(noteText).match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):)/is);
+                        const carePlanMatch = String(noteText).match(/(?:Care Plan|CP):\s*(.+?)(?:\n\n|\n(?:Follow Up|FU):|$)/is);
+                        const followUpMatch = String(noteText).match(/(?:Follow Up|FU):\s*(.+?)(?:\n\n|$)/is);
                         // Extract chief complaint
-                        const ccMatch = noteText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
+                        const ccMatch = String(noteText).match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
                         const chiefComplaint = ccMatch ? ccMatch[1].trim() : null;
 
                         // Format date and time for display
@@ -635,7 +635,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const extractPlan = (noteText) => {
         if (!noteText) return '';
         const text = typeof noteText === 'string' ? noteText : String(noteText);
-        const planMatch = text.match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n[A-Z]:|$)/is);
+        const safeText = String(text || '');
+        const planMatch = safeText.match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n[A-Z]:|$)/is);
         return planMatch ? planMatch[1].trim() : '';
     };
 
@@ -665,7 +666,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 const formattedNotes = response.data.map(visit => {
                     const rawNote = visit.note_draft || "";
                     const noteText = typeof rawNote === 'string' ? rawNote : (typeof rawNote === 'object' ? JSON.stringify(rawNote) : String(rawNote));
-                    const ccMatch = noteText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
+                    const ccMatch = String(noteText).match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
                     const chiefComplaint = ccMatch ? ccMatch[1].trim() : null;
                     const visitDateObj = new Date(visit.visit_date);
                     const createdDateObj = visit.created_at ? new Date(visit.created_at) : visitDateObj;
@@ -1323,16 +1324,6 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 <UserCircle className="w-3.5 h-3.5 text-green-600" />
                                 <span>Patient Hub</span>
                             </button>
-                            <button
-                                onClick={() => {
-                                    setPatientChartTab('data');
-                                    setShowPatientChart(true);
-                                }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
-                            >
-                                <Database className="w-3.5 h-3.5 text-orange-600" />
-                                <span>Patient Data</span>
-                            </button>
                             <div className="w-px h-6 bg-gray-300 mx-1"></div>
                             <button
                                 onClick={() => {
@@ -1400,21 +1391,6 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     <span>e-Prescribe</span>
                                 </button>
                             )}
-                            <button
-                                onClick={() => {
-                                    setPatientChartTab('prescriptions');
-                                    setShowPatientChart(true);
-                                }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
-                            >
-                                <Pill className="w-3.5 h-3.5 text-primary-600" />
-                                <span>Prescription Log</span>
-                                {orders.filter(o => o.order_type === 'rx').length > 0 && (
-                                    <span className="bg-primary-100 text-primary-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">
-                                        {orders.filter(o => o.order_type === 'rx').length}
-                                    </span>
-                                )}
-                            </button>
                             <button
                                 onClick={() => setShowPrintOrdersModal(true)}
                                 className="flex items-center gap-1 px-2.5 py-1 bg-white text-primary-600 hover:bg-primary-50 text-[11px] font-bold rounded-full border border-primary-200 transition-all"

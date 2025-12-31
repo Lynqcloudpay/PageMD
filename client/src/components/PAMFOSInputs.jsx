@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { codesAPI, medicationsAPI } from '../services/api';
 
-const ProblemInput = ({ onSave, onCancel }) => {
+const ProblemInput = ({ onSave, onCancel, existingItems = [] }) => {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -38,9 +38,23 @@ const ProblemInput = ({ onSave, onCancel }) => {
 
     const handleSave = () => {
         if (!query) return;
+        const name = selected ? selected.description : query;
+        const code = selected ? selected.code : null;
+
+        // Check for duplicates
+        const isDuplicate = existingItems.some(item =>
+            (item.icd10Code && item.icd10Code === code) ||
+            (item.problemName?.toLowerCase() === name.toLowerCase())
+        );
+
+        if (isDuplicate) {
+            alert('This problem is already in the list.');
+            return;
+        }
+
         onSave({
-            problemName: selected ? selected.description : query,
-            icd10Code: selected ? selected.code : null,
+            problemName: name,
+            icd10Code: code,
             onsetDate: onsetDate || new Date().toISOString(),
             status
         });
@@ -101,7 +115,7 @@ const ProblemInput = ({ onSave, onCancel }) => {
     );
 };
 
-const MedicationInput = ({ onSave, onCancel }) => {
+const MedicationInput = ({ onSave, onCancel, existingItems = [] }) => {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -138,6 +152,18 @@ const MedicationInput = ({ onSave, onCancel }) => {
 
     const handleSave = () => {
         if (!query) return;
+
+        // Check for duplicates
+        const isDuplicate = existingItems.some(item =>
+            item.medicationName?.toLowerCase() === query.toLowerCase() &&
+            item.active !== false
+        );
+
+        if (isDuplicate) {
+            alert('This medication is already in the active list.');
+            return;
+        }
+
         onSave({
             medicationName: query,
             ...details,

@@ -5,7 +5,7 @@ import {
     ArrowRight, Plus, MessageSquare, ClipboardList, Zap, BarChart3,
     Video, Bell, CheckCircle2, XCircle, AlertTriangle, Pill
 } from 'lucide-react';
-import { reportsAPI, appointmentsAPI } from '../services/api';
+import { reportsAPI, appointmentsAPI, inboxAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { format } from 'date-fns';
@@ -22,6 +22,8 @@ const Dashboard = () => {
     const [todayAppointments, setTodayAppointments] = useState([]);
     const [loadingAppointments, setLoadingAppointments] = useState(true);
     const [activeDesktopTab, setActiveDesktopTab] = useState('inbox');
+    const [inboxItems, setInboxItems] = useState([]);
+    const [loadingInbox, setLoadingInbox] = useState(false);
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -66,7 +68,22 @@ const Dashboard = () => {
                 setLoadingAppointments(false);
             }
         };
+
+        const fetchInbox = async () => {
+            if (!user) return;
+            try {
+                setLoadingInbox(true);
+                const response = await inboxAPI.getAll({ status: 'new', assignedTo: 'me' });
+                setInboxItems(response.data || []);
+            } catch (error) {
+                console.error('Error fetching inbox:', error);
+            } finally {
+                setLoadingInbox(false);
+            }
+        };
+
         fetchTodayAppointments();
+        fetchInbox();
     }, [user, can, scope]);
 
     if (loading) {
@@ -269,21 +286,41 @@ const Dashboard = () => {
                             <div className="p-4 min-h-[300px]">
                                 {activeDesktopTab === 'inbox' && (
                                     <div className="space-y-3">
-                                        {[
-                                            { patient: 'David Smith', title: 'Medication Refill Needed', time: '10m ago', urgent: true },
-                                            { patient: 'Alice Johnson', title: 'New Lab Results Available', time: '1h ago', urgent: false },
-                                            { patient: 'System', title: 'Reminder: Sign 3 Draft Notes', time: '4h ago', urgent: false },
-                                        ].map((item, i) => (
-                                            <div key={i} className="p-3 bg-white border border-gray-100 rounded-lg hover:border-blue-200 cursor-pointer shadow-sm group">
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">{item.time}</span>
-                                                    {item.urgent && <span className="bg-red-100 text-red-700 text-[10px] font-black px-1.5 py-0.5 rounded uppercase">Urgent</span>}
-                                                </div>
-                                                <p className="text-sm font-bold text-gray-900 group-hover:text-blue-600">{item.patient}</p>
-                                                <p className="text-xs text-gray-600">{item.title}</p>
+                                        {loadingInbox ? (
+                                            <div className="flex flex-col items-center justify-center py-10">
+                                                <div className="spinner text-blue-600 w-6 h-6 mb-2"></div>
+                                                <p className="text-xs text-gray-500">Loading inbox...</p>
                                             </div>
-                                        ))}
-                                        <button className="w-full py-2 text-[11px] font-bold text-blue-600 uppercase tracking-widest hover:bg-blue-50 rounded-lg transition-colors">
+                                        ) : inboxItems.length > 0 ? (
+                                            inboxItems.slice(0, 5).map((item, i) => {
+                                                // Calculate time ago
+                                                const createdAt = new Date(item.created_at);
+                                                const diffMs = new Date() - createdAt;
+                                                const diffMins = Math.floor(diffMs / 60000);
+                                                const timeStr = diffMins < 60 ? `${diffMins}m ago` :
+                                                    diffMins < 1440 ? `${Math.floor(diffMins / 60)}h ago` :
+                                                        `${Math.floor(diffMins / 1440)}d ago`;
+
+                                                return (
+                                                    <div key={item.id} className="p-3 bg-white border border-gray-100 rounded-lg hover:border-blue-200 cursor-pointer shadow-sm group" onClick={() => item.patient_id && navigate(`/patient/${item.patient_id}/snapshot`)}>
+                                                        <div className="flex items-center justify-between mb-1">
+                                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">{timeStr}</span>
+                                                            {item.priority === 'stat' && <span className="bg-red-100 text-red-700 text-[10px] font-black px-1.5 py-0.5 rounded uppercase">Urgent</span>}
+                                                        </div>
+                                                        <p className="text-sm font-bold text-gray-900 group-hover:text-blue-600">
+                                                            {item.patient_name || 'System'}
+                                                        </p>
+                                                        <p className="text-xs text-gray-600">{item.subject}</p>
+                                                    </div>
+                                                );
+                                            })
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center py-10 text-center text-gray-400">
+                                                <Bell className="w-8 h-8 opacity-20 mb-2" />
+                                                <p className="text-xs font-semibold">Inbox is clear</p>
+                                            </div>
+                                        )}
+                                        <button onClick={() => navigate('/tasks')} className="w-full py-2 text-[11px] font-bold text-blue-600 uppercase tracking-widest hover:bg-blue-50 rounded-lg transition-colors">
                                             View Full Inbox →
                                         </button>
                                     </div>

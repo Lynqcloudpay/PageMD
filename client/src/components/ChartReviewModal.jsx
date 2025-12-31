@@ -209,8 +209,8 @@ const ChartReviewModal = ({
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
                         {visits.map((visit) => {
                             const vNoteRaw = visit.note_draft || visit.fullNote || '';
-                            const vNoteText = typeof vNoteRaw === 'string' ? vNoteRaw : String(vNoteRaw);
-                            const vCCMatch = vNoteText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n|$)/i);
+                            const vNoteText = typeof vNoteRaw === 'string' ? vNoteRaw : String(vNoteRaw || '');
+                            const vCCMatch = String(vNoteText).match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n|$)/i);
                             const cc = vCCMatch ? vCCMatch[1].trim().substring(0, 40) : 'Visit';
                             const date = visit.visit_date ? new Date(visit.visit_date) : new Date();
 

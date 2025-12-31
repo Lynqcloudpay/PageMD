@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import DoseSpotPrescribe from './DoseSpotPrescribe';
 import VisitChartView from './VisitChartView';
 import PrintOrdersModal from './PrintOrdersModal';
+import { ProblemInput, MedicationInput, AllergyInput, FamilyHistoryInput } from './PAMFOSInputs';
 
 const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview' }) => {
     const navigate = useNavigate();
@@ -588,25 +589,28 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                         </div>
 
                                         {showAddProbForm && (
-                                            <form onSubmit={handleQuickAddProb} className="bg-orange-50/50 p-4 rounded-xl border border-orange-100 space-y-3 animate-fade-in">
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <div className="col-span-2">
-                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Problem Name</label>
-                                                        <input required type="text" value={probForm.problemName} onChange={e => setProbForm({ ...probForm, problemName: e.target.value })} className="w-full px-3 py-2 text-sm border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none" placeholder="e.g. Type 2 Diabetes" />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">ICD-10 Code</label>
-                                                        <input type="text" value={probForm.icd10Code} onChange={e => setProbForm({ ...probForm, icd10Code: e.target.value })} className="w-full px-3 py-2 text-sm border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none" placeholder="e.g. E11.9" />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Onset Date</label>
-                                                        <input type="date" value={probForm.onsetDate} onChange={e => setProbForm({ ...probForm, onsetDate: e.target.value })} className="w-full px-3 py-2 text-sm border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none" />
-                                                    </div>
-                                                </div>
-                                                <div className="flex justify-end pt-2">
-                                                    <button type="submit" className="px-4 py-2 bg-orange-600 text-white text-xs font-bold rounded-lg hover:bg-orange-700 shadow-sm transition-all">Save Problem</button>
-                                                </div>
-                                            </form>
+                                            <div className="bg-orange-50/50 p-4 rounded-xl border border-orange-100 animate-fade-in mb-4">
+                                                <ProblemInput
+                                                    onSave={async (item) => {
+                                                        try {
+                                                            await patientsAPI.addProblem(patientId, {
+                                                                problem_name: item.problemName,
+                                                                icd10_code: item.icd10Code,
+                                                                onset_date: item.onsetDate,
+                                                                status: item.status
+                                                            });
+                                                            setShowAddProbForm(false);
+                                                            window.dispatchEvent(new CustomEvent('patient-data-updated'));
+                                                            fetchAllData();
+                                                        } catch (error) {
+                                                            console.error('Add prob error:', error);
+                                                            alert('Failed to add problem');
+                                                        }
+                                                    }}
+                                                    onCancel={() => setShowAddProbForm(false)}
+                                                    existingItems={problems}
+                                                />
+                                            </div>
                                         )}
 
 
@@ -763,9 +767,9 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                 <div className="p-5">
                                                     {(() => {
                                                         const rawNote = notes[0]?.note_draft || '';
-                                                        const noteText = decodeHtmlEntities(typeof rawNote === 'string' ? rawNote : String(rawNote));
-                                                        const ccMatch = noteText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Assessment|Plan):|$)/is);
-                                                        const hpiMatch = noteText.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Assessment|Plan):|$)/is);
+                                                        const noteText = decodeHtmlEntities(typeof rawNote === 'string' ? rawNote : String(rawNote || ''));
+                                                        const ccMatch = String(noteText).match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Assessment|Plan):|$)/is);
+                                                        const hpiMatch = String(noteText).match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Assessment|Plan):|$)/is);
                                                         const cc = ccMatch ? ccMatch[1].trim() : null;
                                                         const hpi = hpiMatch ? hpiMatch[1].trim().substring(0, 300) : null;
 
@@ -813,9 +817,9 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                         ) : (
                                             notes.map(note => {
                                                 const rawNote = note.note_draft || "";
-                                                const noteText = decodeHtmlEntities(typeof rawNote === 'string' ? rawNote : String(rawNote));
+                                                const noteText = decodeHtmlEntities(typeof rawNote === 'string' ? rawNote : String(rawNote || ''));
                                                 // Extract chief complaint
-                                                const ccMatch = noteText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
+                                                const ccMatch = String(noteText).match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
                                                 const chiefComplaint = ccMatch ? ccMatch[1].trim() : "No Chief Complaint";
 
                                                 return (
@@ -860,7 +864,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                                 {(() => {
                                                                     // Parse note sections
                                                                     const parseNote = (textRaw) => {
-                                                                        const text = typeof textRaw === 'string' ? textRaw : String(textRaw || '');
+                                                                        const text = String(textRaw || '');
                                                                         const ccMatch = text.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
                                                                         const hpiMatch = text.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
                                                                         const assessMatch = text.match(/(?:Assessment):\s*(.+?)(?:\n\n|\n(?:Plan):|$)/is);
@@ -941,31 +945,34 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                     </button>
                                                 )}
                                                 <button onClick={() => setShowAddMedForm(!showAddMedForm)} className="px-3 py-1.5 bg-gray-100 text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-200 transition-all border border-gray-200">
-                                                    {showAddMedForm ? 'Cancel' : 'Add Home Med'}
+                                                    {showAddMedForm ? 'Cancel' : 'Add Medication'}
                                                 </button>
                                             </div>
                                         </div>
 
                                         {showAddMedForm && (
-                                            <form onSubmit={handleQuickAddMed} className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 space-y-3 animate-fade-in">
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <div className="col-span-2">
-                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Medication Name</label>
-                                                        <input required type="text" value={medForm.medicationName} onChange={e => setMedForm({ ...medForm, medicationName: e.target.value })} className="w-full px-3 py-2 text-sm border border-emerald-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="e.g. Lisartan 50mg" />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Dosage</label>
-                                                        <input type="text" value={medForm.dosage} onChange={e => setMedForm({ ...medForm, dosage: e.target.value })} className="w-full px-3 py-2 text-sm border border-emerald-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="e.g. 50mg" />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Frequency</label>
-                                                        <input type="text" value={medForm.frequency} onChange={e => setMedForm({ ...medForm, frequency: e.target.value })} className="w-full px-3 py-2 text-sm border border-emerald-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="e.g. Once daily" />
-                                                    </div>
-                                                </div>
-                                                <div className="flex justify-end pt-2">
-                                                    <button type="submit" className="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 shadow-sm transition-all">Save Medication</button>
-                                                </div>
-                                            </form>
+                                            <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 animate-fade-in mb-4">
+                                                <MedicationInput
+                                                    existingItems={medications}
+                                                    onSave={async (item) => {
+                                                        try {
+                                                            await patientsAPI.addMedication(patientId, {
+                                                                medication_name: item.medicationName,
+                                                                dosage: item.dosage,
+                                                                frequency: item.frequency,
+                                                                route: item.route,
+                                                                start_date: new Date().toISOString()
+                                                            });
+                                                            await fetchPatientData();
+                                                            setShowAddMedForm(false);
+                                                        } catch (error) {
+                                                            console.error('Failed to add medication:', error);
+                                                            alert('Failed to add medication.');
+                                                        }
+                                                    }}
+                                                    onCancel={() => setShowAddMedForm(false)}
+                                                />
+                                            </div>
                                         )}
 
 
@@ -1309,7 +1316,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                 <div className="grid grid-cols-1 gap-2">
                                                     {[...stressTests, ...cardiacCaths].map(study => {
                                                         const isStress = study.doc_type === 'stress_test';
-                                                        const tagsStr = typeof study.tags === 'string' ? study.tags : String(study.tags || '');
+                                                        const tagsStr = String(study.tags || '');
                                                         const mets = tagsStr.match(/mets:([^,]+)/)?.[1];
                                                         const ef = tagsStr.match(/ef:([^,]+)/)?.[1];
                                                         return (
@@ -1689,13 +1696,14 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                     <div key={note.id} className="bg-white p-3 rounded-lg border border-gray-100 flex items-center justify-between hover:border-blue-200 transition-all">
                                                         <div>
                                                             <div className="text-sm font-bold text-gray-900">{format(new Date(note.visit_date || note.created_at), 'MMMM d, yyyy')}</div>
-                                                            <div className="text-xs text-gray-500">{note.visit_type || 'Office Visit'}</div>
+                                                            <div className="text-xs text-gray-400 font-mono">Ref: {note.id}</div>
+                                                            <div className="text-[10px] text-gray-500">{note.visit_type || 'Office Visit'}</div>
                                                         </div>
                                                         <button
-                                                            onClick={() => navigate(`/patient/${patientId}/fee-sheet/${note.id}`)}
-                                                            className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-lg hover:bg-blue-700 transition-all uppercase tracking-wider"
+                                                            onClick={() => navigate(`/patient/${patientId}/superbill/${note.id}`)}
+                                                            className="px-4 py-2 bg-blue-600 text-white text-[10px] font-bold rounded-lg hover:bg-blue-700 transition-all uppercase tracking-widest shadow-sm"
                                                         >
-                                                            Open Fee Sheet
+                                                            Open Superbill
                                                         </button>
                                                     </div>
                                                 ))

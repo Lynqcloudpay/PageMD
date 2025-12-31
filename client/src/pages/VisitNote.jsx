@@ -1676,6 +1676,7 @@ const VisitNote = () => {
         if (!noteText) return '';
         const decoded = decodeHtmlEntities(noteText);
         const safeDecoded = typeof decoded === 'string' ? decoded : String(decoded || '');
+        let match;
         switch (section) {
             case 'hpi':
                 match = safeDecoded.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
