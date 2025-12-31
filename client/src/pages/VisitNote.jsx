@@ -2514,11 +2514,19 @@ const VisitNote = () => {
 
                                             // Only show medications started BEFORE this visit
                                             // Home medications = what patient was taking before today
-                                            if (visitData?.visit_date && m.start_date) {
+                                            if (visitData?.visit_date) {
                                                 const visitDate = new Date(visitData.visit_date);
-                                                const medStartDate = new Date(m.start_date);
-                                                // Only include if medication was started before this visit
-                                                return medStartDate < visitDate;
+                                                visitDate.setHours(0, 0, 0, 0); // Set to start of day
+
+                                                if (m.start_date) {
+                                                    const medStartDate = new Date(m.start_date);
+                                                    medStartDate.setHours(0, 0, 0, 0); // Set to start of day
+
+                                                    // Only include if medication was started before this visit
+                                                    const shouldShow = medStartDate < visitDate;
+                                                    console.log(`[HomeMeds] ${m.medication_name}: medStart=${medStartDate.toISOString()}, visitDate=${visitDate.toISOString()}, show=${shouldShow}`);
+                                                    return shouldShow;
+                                                }
                                             }
 
                                             // If no dates available, default to showing it
