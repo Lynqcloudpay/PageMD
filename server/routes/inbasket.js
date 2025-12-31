@@ -15,7 +15,7 @@ async function syncInboxItems(tenantId) {
     INSERT INTO inbox_items (
       id, tenant_id, patient_id, type, priority, status, 
       subject, body, reference_id, reference_table, 
-      created_by, created_at, updated_at
+      created_by, assigned_user_id, created_at, updated_at
     )
     SELECT 
       gen_random_uuid(), $1, patient_id, 'lab', 
@@ -24,7 +24,7 @@ async function syncInboxItems(tenantId) {
       COALESCE(order_payload->>'test_name', 'Lab Result'),
       'New lab result ready for review',
       id, 'orders',
-      ordered_by, created_at, created_at
+      ordered_by, ordered_by, created_at, created_at
     FROM orders 
     WHERE order_type = 'lab' 
       AND (status = 'completed' OR result_value IS NOT NULL)
@@ -40,7 +40,7 @@ async function syncInboxItems(tenantId) {
     INSERT INTO inbox_items (
       id, tenant_id, patient_id, type, priority, status, 
       subject, body, reference_id, reference_table, 
-      created_by, created_at, updated_at
+      created_by, assigned_user_id, created_at, updated_at
     )
     SELECT 
       gen_random_uuid(), $1, patient_id, 'imaging', 'normal',
@@ -48,7 +48,7 @@ async function syncInboxItems(tenantId) {
       COALESCE(order_payload->>'study_name', 'Imaging Result'),
       'New imaging result ready for review',
       id, 'orders',
-      ordered_by, created_at, created_at
+      ordered_by, ordered_by, created_at, created_at
     FROM orders 
     WHERE order_type = 'imaging'
       AND (status = 'completed' OR result_value IS NOT NULL)
