@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     Save, X, Plus, Trash2, Search, Info, ChevronRight,
-    AlertTriangle, CheckCircle, RefreshCw, FileText, TrendingUp
+    AlertTriangle, CheckCircle, RefreshCw, FileText, TrendingUp, Pill
 } from 'lucide-react';
 import { feeSheetAPI, codesAPI, authAPI, feeSheetCategoriesAPI, patientsAPI, visitsAPI } from '../services/api';
 import CodeSearchModal from '../components/CodeSearchModal';
