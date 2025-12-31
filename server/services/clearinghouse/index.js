@@ -71,10 +71,24 @@ class ClearinghouseFactory {
                 const isRetryable = this.isRetryableError(e);
 
                 if (!isRetryable || attempt === maxRetries) {
-                    // For dev/sandbox mode, return demo data if auth fails
-                    if (process.env.NODE_ENV !== 'production' &&
-                        (e.message.includes('auth') || e.message.includes('401') || e.message.includes('credentials'))) {
-                        console.warn("Real Auth failed, returning Sandbox Mock data for demonstration...");
+                    // PRODUCTION HARD BLOCK: Never return demo data in prod mode
+                    const isProdMode = process.env.CLEARINGHOUSE_MODE === 'prod' ||
+                        process.env.NODE_ENV === 'production';
+
+                    if (isProdMode) {
+                        // In production, throw actionable, PHI-safe error
+                        console.error('Clearinghouse eligibility failed in PROD mode:', e.message);
+                        throw new Error('Eligibility verification unavailable. Please contact support. (Code: ELIG_FAIL)');
+                    }
+
+                    // SANDBOX/DEV ONLY: Return demo data for testing UI flow
+                    const isAuthError = e.message.includes('auth') ||
+                        e.message.includes('401') ||
+                        e.message.includes('credentials') ||
+                        e.message.includes('ENOTFOUND');
+
+                    if (isAuthError) {
+                        console.warn('[SANDBOX] Auth failed, returning demo eligibility data for UI testing...');
                         return {
                             status: 'Active',
                             payer: 'Sandbox Demo',
@@ -89,7 +103,8 @@ class ClearinghouseFactory {
                                 outOfPocketMax: '6000.00'
                             },
                             timestamp: new Date().toISOString(),
-                            isDemo: true
+                            isDemo: true,
+                            warning: 'This is demo data. Configure clearinghouse credentials for real eligibility.'
                         };
                     }
                     throw e;
@@ -105,14 +120,21 @@ class ClearinghouseFactory {
 
     /**
      * Check if error is retryable (transient)
+     * DO NOT retry: 400 (bad request), 401 (auth), 403 (forbidden)
      */
     isRetryableError(e) {
-        // Retry on timeouts, rate limits, and server errors
-        const retryableCodes = [408, 429, 500, 502, 503, 504];
         const status = e.response?.status;
 
+        // Explicitly DO NOT retry client errors
+        const nonRetryableCodes = [400, 401, 403, 404, 422];
+        if (status && nonRetryableCodes.includes(status)) return false;
+
+        // Retry on timeouts, rate limits, and server errors
+        const retryableCodes = [408, 429, 500, 502, 503, 504];
         if (status && retryableCodes.includes(status)) return true;
-        if (e.code === 'ECONNRESET' || e.code === 'ETIMEDOUT') return true;
+
+        // Network errors - retry
+        if (e.code === 'ECONNRESET' || e.code === 'ETIMEDOUT' || e.code === 'ECONNREFUSED') return true;
         if (e.message?.includes('timeout')) return true;
 
         return false;
