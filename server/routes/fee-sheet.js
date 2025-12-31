@@ -8,6 +8,24 @@ const { requirePermission } = require('../services/authorization');
 router.use(authenticate);
 
 /**
+ * GET /api/fee-sheet/price/:codeType/:code
+ * Gets the price for a code given a price level
+ * NOTE: This must come BEFORE /:visitId to avoid conflict
+ */
+router.get('/price/:codeType/:code', requirePermission('billing:view'), async (req, res) => {
+    try {
+        const { codeType, code } = req.params;
+        const { priceLevel } = req.query;
+
+        const price = await billingService.getPrice(codeType, code, priceLevel);
+        res.json({ price });
+    } catch (error) {
+        console.error('Error fetching price:', error);
+        res.status(500).json({ error: 'Failed to fetch price' });
+    }
+});
+
+/**
  * GET /api/fee-sheet/:visitId
  * Loads all billing and product items for an encounter
  */
@@ -46,24 +64,13 @@ router.post('/:visitId/save', requirePermission('billing:edit'), async (req, res
         res.json(result);
     } catch (error) {
         console.error('Error saving fee sheet:', error);
+        if (error.code === 'CONCURRENCY_ERROR') {
+            return res.status(409).json({ error: error.message, code: 'CONCURRENCY_ERROR' });
+        }
+        if (error.code === 'INSUFFICIENT_STOCK') {
+            return res.status(400).json({ error: error.message, code: 'INSUFFICIENT_STOCK' });
+        }
         res.status(500).json({ error: 'Failed to save fee sheet data' });
-    }
-});
-
-/**
- * GET /api/fee-sheet/price/:codeType/:code
- * Gets the price for a code given a price level
- */
-router.get('/price/:codeType/:code', requirePermission('billing:view'), async (req, res) => {
-    try {
-        const { codeType, code } = req.params;
-        const { priceLevel } = req.query;
-
-        const price = await billingService.getPrice(codeType, code, priceLevel);
-        res.json({ price });
-    } catch (error) {
-        console.error('Error fetching price:', error);
-        res.status(500).json({ error: 'Failed to fetch price' });
     }
 });
 
