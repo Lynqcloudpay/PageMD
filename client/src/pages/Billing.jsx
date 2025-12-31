@@ -159,6 +159,13 @@ const Billing = () => {
                         <Plus className="w-4 h-4" />
                         <span>Open Fee Sheet</span>
                     </button>
+                    <button
+                        onClick={() => navigate('/billing/reports/collections')}
+                        className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center space-x-2"
+                    >
+                        <FileText className="w-4 h-4" />
+                        <span>Reports</span>
+                    </button>
                     <button className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center space-x-2">
                         <Download className="w-4 h-4" />
                         <span>Export</span>
