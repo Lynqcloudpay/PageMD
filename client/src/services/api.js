@@ -64,7 +64,10 @@ api.interceptors.response.use(
 
 // Patients
 export const patientsAPI = {
-  search: (query) => api.get('/patients', { params: { search: query } }),
+  search: (search) => {
+    const params = typeof search === 'string' ? { search } : search;
+    return api.get('/patients', { params });
+  },
   get: (id) => api.get(`/patients/${id}`),
   getSnapshot: (id) => api.get(`/patients/${id}/snapshot`),
   create: (data) => api.post('/patients', data),

@@ -403,7 +403,13 @@ const Cancellations = () => {
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3 flex-1 min-w-0">
                                             <div className="flex items-center gap-2">
-                                                <span className="font-semibold text-sm text-gray-900">
+                                                <span
+                                                    className="font-semibold text-sm text-blue-600 hover:text-blue-800 hover:underline decoration-blue-200 underline-offset-4 transition-colors"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        navigate(`/patient/${followup.patient_id || followup.appointment?.patientId}/snapshot`);
+                                                    }}
+                                                >
                                                     {followup.patientName}
                                                 </span>
                                                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${followup.appointmentStatus === 'no_show'

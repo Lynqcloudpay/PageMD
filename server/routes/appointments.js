@@ -19,6 +19,7 @@ router.get('/', requirePermission('schedule:view'), async (req, res) => {
              p.encryption_metadata,
              p.encryption_metadata as patient_encryption_metadata,
              p.id as patient_id,
+             p.dob as patient_dob,
              u.first_name as provider_first_name,
              u.last_name as provider_last_name,
              u.id as provider_id
@@ -105,7 +106,8 @@ router.get('/', requirePermission('schedule:view'), async (req, res) => {
         arrival_time: row.arrival_time ?? null,
         current_room: row.current_room ?? null,
         checkout_time: row.checkout_time ?? null,
-        cancellation_reason: row.cancellation_reason ?? null
+        cancellation_reason: row.cancellation_reason ?? null,
+        patient_dob: row.patient_dob
       };
     }));
 

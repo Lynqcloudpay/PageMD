@@ -115,8 +115,25 @@ router.get('/dashboard', requirePermission('reports:view'), async (req, res) => 
         console.warn('Error fetching unread messages:', msgError);
         stats.unreadMessages = 0;
       }
+
+      // Unread Labs (completed labs assigned to user or created by user that are not reviewed)
+      try {
+        const unreadLabs = await pool.query(
+          `SELECT COUNT(*) as count FROM orders 
+           WHERE order_type = 'lab' 
+           AND status = 'completed' 
+           AND (reviewed = false OR reviewed IS NULL)
+           AND (ordered_by = $1 OR reviewed_by = $1)`,
+          [req.user.id]
+        );
+        stats.unreadLabs = parseInt(unreadLabs.rows[0]?.count || 0);
+      } catch (labError) {
+        console.warn('Error fetching unread labs:', labError);
+        stats.unreadLabs = 0;
+      }
     } else {
       stats.unreadMessages = 0;
+      stats.unreadLabs = 0;
     }
 
     res.json(stats);

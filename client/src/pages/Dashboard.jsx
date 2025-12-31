@@ -136,10 +136,10 @@ const Dashboard = () => {
                         </div>
                         <ClipboardList className="w-5 h-5 text-orange-500 opacity-80" />
                     </div>
-                    <div className="bg-white p-3 rounded-lg border border-gray-200 flex items-center justify-between shadow-sm hover:border-green-300 transition-colors cursor-pointer">
+                    <div className="bg-white p-3 rounded-lg border border-gray-200 flex items-center justify-between shadow-sm hover:border-green-300 transition-colors cursor-pointer" onClick={() => navigate('/tasks')}>
                         <div>
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Unread Labs</p>
-                            <p className="text-xl font-bold text-gray-900">12</p>
+                            <p className="text-xl font-bold text-gray-900">{stats?.unreadLabs || 0}</p>
                         </div>
                         <Activity className="w-5 h-5 text-green-500 opacity-80" />
                     </div>
@@ -196,11 +196,11 @@ const Dashboard = () => {
                                 <table className="w-full text-left border-collapse">
                                     <thead className="bg-[#FAFBFC] text-gray-400 text-[10px] uppercase tracking-wider font-bold">
                                         <tr>
-                                            <th className="px-5 py-3 border-b border-gray-100 font-bold">Time</th>
-                                            <th className="px-5 py-3 border-b border-gray-100 font-bold">Patient</th>
-                                            <th className="px-5 py-3 border-b border-gray-100 font-bold">Reason/Type</th>
-                                            <th className="px-5 py-3 border-b border-gray-100 font-bold">Status</th>
-                                            <th className="px-5 py-3 border-b border-gray-100 font-bold">Actions</th>
+                                            <th className="px-5 py-2 border-b border-gray-100 font-bold">Time</th>
+                                            <th className="px-5 py-2 border-b border-gray-100 font-bold">Patient</th>
+                                            <th className="px-5 py-2 border-b border-gray-100 font-bold">Reason/Type</th>
+                                            <th className="px-5 py-2 border-b border-gray-100 font-bold">Status</th>
+                                            <th className="px-5 py-2 border-b border-gray-100 font-bold">Provider</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-50">
@@ -208,27 +208,27 @@ const Dashboard = () => {
                                             .sort((a, b) => a.time.localeCompare(b.time))
                                             .map((appt) => (
                                                 <tr key={appt.id} className="hover:bg-blue-50/30 transition-colors group cursor-pointer" onClick={() => navigate(`/patient/${appt.patientId}/snapshot`)}>
-                                                    <td className="px-5 py-4 whitespace-nowrap">
-                                                        <span className="text-sm font-bold text-gray-900 bg-gray-100 px-2 py-1 rounded">
+                                                    <td className="px-5 py-2 whitespace-nowrap">
+                                                        <span className="text-xs font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
                                                             {appt.time}
                                                         </span>
                                                     </td>
-                                                    <td className="px-5 py-4">
+                                                    <td className="px-5 py-2">
                                                         <div className="flex flex-col">
-                                                            <span className="text-[15px] font-bold text-gray-900 group-hover:text-blue-700">{appt.patientName}</span>
-                                                            <span className="text-xs text-gray-500 flex items-center gap-1">
-                                                                #{appt.patientId?.substring(0, 8).toUpperCase()} • DOB: 05/12/1984
+                                                            <span className="text-sm font-bold text-gray-900 group-hover:text-blue-700">{appt.patientName}</span>
+                                                            <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                                                                #{appt.patientId?.substring(0, 8).toUpperCase()} • {appt.patient_dob ? format(new Date(appt.patient_dob), 'MM/dd/yyyy') : 'DOB: Unknown'}
                                                             </span>
                                                         </div>
                                                     </td>
-                                                    <td className="px-5 py-4">
+                                                    <td className="px-5 py-2">
                                                         <div className="flex flex-col">
-                                                            <span className="text-sm font-medium text-gray-700">{appt.type || 'Office Visit'}</span>
-                                                            <span className="text-[11px] text-gray-400">Duration: 30m</span>
+                                                            <span className="text-xs font-medium text-gray-700">{appt.type || 'Office Visit'}</span>
+                                                            <span className="text-[10px] text-gray-400">Duration: {appt.duration || 30}m</span>
                                                         </div>
                                                     </td>
-                                                    <td className="px-5 py-4">
-                                                        <span className={`inline-flex items-center px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-tight
+                                                    <td className="px-5 py-2">
+                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-tight
                                                             ${appt.status === 'scheduled' ? 'bg-blue-50 text-blue-700' :
                                                                 appt.status === 'checked-in' ? 'bg-green-50 text-green-700' :
                                                                     appt.status === 'in-room' ? 'bg-purple-50 text-purple-700' : 'bg-gray-50 text-gray-600'}
@@ -236,15 +236,10 @@ const Dashboard = () => {
                                                             {appt.status || 'Scheduled'}
                                                         </span>
                                                     </td>
-                                                    <td className="px-5 py-4">
-                                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <button className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border border-blue-100 shadow-sm" title="Start Note">
-                                                                <FileText className="w-4 h-4" />
-                                                            </button>
-                                                            <button className="p-1.5 text-green-600 hover:bg-green-100 rounded-lg transition-colors border border-green-100 shadow-sm" title="Chart Snapshot">
-                                                                <Activity className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
+                                                    <td className="px-5 py-2">
+                                                        <span className="text-xs font-semibold text-gray-600 italic">
+                                                            {appt.providerName || 'Staff'}
+                                                        </span>
                                                     </td>
                                                 </tr>
                                             ))}

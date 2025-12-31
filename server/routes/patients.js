@@ -75,14 +75,49 @@ router.get('/', async (req, res) => {
       console.log('[PATIENTS-GET] No clinic_id filtering');
     }
 
-    // Handle search parameter - check if search is provided and not empty
+    // Handle structured search parameters
+    const { firstName, lastName, dob, phone, email, mrn } = req.query;
+
+    if (firstName) {
+      paramCount++;
+      query += ` AND first_name ILIKE $${paramCount}`;
+      params.push(`%${firstName}%`);
+    }
+    if (lastName) {
+      paramCount++;
+      query += ` AND last_name ILIKE $${paramCount}`;
+      params.push(`%${lastName}%`);
+    }
+    if (dob) {
+      paramCount++;
+      // Handle both MM/DD/YYYY and YYYY-MM-DD
+      query += ` AND (to_char(dob, 'MM/DD/YYYY') = $${paramCount} OR to_char(dob, 'YYYY-MM-DD') = $${paramCount})`;
+      params.push(dob);
+    }
+    if (phone) {
+      paramCount++;
+      query += ` AND (phone ILIKE $${paramCount} OR phone_cell ILIKE $${paramCount} OR phone_secondary ILIKE $${paramCount})`;
+      params.push(`%${phone}%`);
+    }
+    if (email) {
+      paramCount++;
+      query += ` AND email ILIKE $${paramCount}`;
+      params.push(`%${email}%`);
+    }
+    if (mrn) {
+      paramCount++;
+      query += ` AND mrn ILIKE $${paramCount}`;
+      params.push(`%${mrn}%`);
+    }
+
+    // Handle generic search parameter - check if search is provided and not empty
     if (search && search.trim()) {
       const searchTerm = search.trim();
-      console.log(`[PATIENTS-GET] Adding search filter: ${searchTerm}`);
+      console.log(`[PATIENTS-GET] Adding generic search filter: ${searchTerm}`);
       paramCount++;
       // Search by name (including full name), MRN, Phone, DOB, and Email
       query += ` AND (
-        (first_name || ' ' || last_name) ILIKE $${paramCount} OR 
+        concat_ws(' ', first_name, last_name) ILIKE $${paramCount} OR 
         first_name ILIKE $${paramCount} OR 
         last_name ILIKE $${paramCount} OR 
         mrn ILIKE $${paramCount} OR 

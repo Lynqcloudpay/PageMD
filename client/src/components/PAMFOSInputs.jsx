@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { codesAPI, medicationsAPI } from '../services/api';
+import CodedMedicationSearch from './CodedMedicationSearch';
 
 const ProblemInput = ({ onSave, onCancel, existingItems = [] }) => {
     const [query, setQuery] = useState('');
@@ -116,46 +117,21 @@ const ProblemInput = ({ onSave, onCancel, existingItems = [] }) => {
 };
 
 const MedicationInput = ({ onSave, onCancel, existingItems = [] }) => {
-    const [query, setQuery] = useState('');
-    const [results, setResults] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [selected, setSelected] = useState(null);
     const [details, setDetails] = useState({ dosage: '', frequency: '', route: '' });
-
-    useEffect(() => {
-        if (!query || selected) {
-            setResults([]);
-            return;
-        }
-        const search = async () => {
-            if (query.length < 2) return;
-            setLoading(true);
-            try {
-                const res = await medicationsAPI.search(query);
-                setResults(res.data || []);
-            } catch (e) {
-                console.error(e);
-            } finally {
-                setLoading(false);
-            }
-        };
-        const timeout = setTimeout(search, 500);
-        return () => clearTimeout(timeout);
-    }, [query, selected]);
+    const [selectedMed, setSelectedMed] = useState(null);
 
     const handleSelect = (item) => {
-        setSelected(item);
-        // Uses synonym or name or conceptName based on RxNorm response
-        setQuery(item.synonym || item.name || item.conceptName);
-        setResults([]);
+        setSelectedMed(item);
     };
 
     const handleSave = () => {
-        if (!query) return;
+        if (!selectedMed) return;
+
+        const medName = selectedMed.name || selectedMed.description;
 
         // Check for duplicates
         const isDuplicate = existingItems.some(item =>
-            item.medicationName?.toLowerCase() === query.toLowerCase() &&
+            item.medicationName?.toLowerCase() === medName.toLowerCase() &&
             item.active !== false
         );
 
@@ -165,7 +141,8 @@ const MedicationInput = ({ onSave, onCancel, existingItems = [] }) => {
         }
 
         onSave({
-            medicationName: query,
+            medicationName: medName,
+            rxNormCode: selectedMed.code,
             ...details,
             startDate: new Date().toISOString(),
             active: true
@@ -174,34 +151,17 @@ const MedicationInput = ({ onSave, onCancel, existingItems = [] }) => {
 
     return (
         <div className="bg-gray-50 p-2 rounded border border-gray-200 space-y-2">
-            <div className="relative">
-                <input
-                    type="text"
-                    value={query}
-                    onChange={(e) => {
-                        setQuery(e.target.value);
-                        setSelected(null);
-                    }}
-                    placeholder="Search medication..."
-                    className="w-full text-sm border-gray-300 rounded focus:ring-primary-500 focus:border-primary-500 p-1.5"
-                    autoFocus
-                />
-                {loading && <div className="absolute right-2 top-2 text-xs text-gray-400">Loading...</div>}
-
-                {results.length > 0 && !selected && (
-                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-y-auto z-10">
-                        {results.map((r, i) => (
-                            <button
-                                key={r.rxcui || i}
-                                onClick={() => handleSelect(r)}
-                                className="w-full text-left px-2 py-1.5 hover:bg-gray-50 text-xs truncate"
-                            >
-                                {r.synonym || r.name || r.conceptName}
-                            </button>
-                        ))}
-                    </div>
-                )}
-            </div>
+            <CodedMedicationSearch
+                onSelect={handleSelect}
+                label={null}
+                placeholder="Search medication..."
+            />
+            {selectedMed && (
+                <div className="text-xs text-green-700 bg-green-50 px-2 py-1 rounded border border-green-100 mb-2">
+                    Selected: <strong>{selectedMed.name}</strong>
+                    {selectedMed.code && <span className="ml-1 text-gray-500">({selectedMed.code})</span>}
+                </div>
+            )}
 
             <div className="grid grid-cols-3 gap-2">
                 <input
@@ -229,7 +189,7 @@ const MedicationInput = ({ onSave, onCancel, existingItems = [] }) => {
 
             <div className="flex justify-end gap-2 pt-1 border-t border-gray-200">
                 <button onClick={onCancel} className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1">Cancel</button>
-                <button onClick={handleSave} disabled={!query} className="text-xs bg-primary-600 text-white px-3 py-1 rounded hover:bg-primary-700 disabled:opacity-50">Save</button>
+                <button onClick={handleSave} disabled={!selectedMed} className="text-xs bg-primary-600 text-white px-3 py-1 rounded hover:bg-primary-700 disabled:opacity-50">Save</button>
             </div>
         </div>
     );
