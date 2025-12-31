@@ -194,6 +194,7 @@ const billingRoutes = require('./routes/billing');
 const feeSheetRoutes = require('./routes/fee-sheet');
 app.use('/api/billing', billingRoutes);
 app.use('/api/fee-sheet', feeSheetRoutes);
+app.use('/api/billing-openemr', require('./routes/billing-openemr'));
 
 // User management endpoints
 const userRoutes = require('./routes/users');

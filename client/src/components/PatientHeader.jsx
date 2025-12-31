@@ -429,6 +429,18 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                 {patient.insurance_subscriber_name && <div>Sub: {patient.insurance_subscriber_name}</div>}
                             </div>
                         )}
+                        <button
+                            onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                    const { data } = await api.get(`/billing-openemr/insurance/verify/${patient.id}`);
+                                    alert(`Status: ${data.status}\nMessage: ${data.message}\nPayer: ${data.details?.payer}`);
+                                } catch (err) { alert("Verification Failed"); }
+                            }}
+                            className="mt-2 text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-200 hover:bg-blue-100 block w-full text-center"
+                        >
+                            Verify Eligibility
+                        </button>
                     </InfoItem>
                 </div>
                 {/* Pharmacy */}

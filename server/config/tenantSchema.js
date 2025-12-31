@@ -314,6 +314,7 @@ CREATE TABLE IF NOT EXISTS visits (
     encounter_date DATE,
     note_type VARCHAR(100),
     clinic_id UUID,
+    last_level_billed INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -517,19 +518,42 @@ CREATE INDEX IF NOT EXISTS idx_fee_schedule_code ON fee_schedule(code_type, code
 
 CREATE TABLE IF NOT EXISTS claims (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    visit_id UUID REFERENCES visits(id),
-    patient_id UUID NOT NULL REFERENCES patients(id),
-    diagnosis_codes JSONB,
-    procedure_codes JSONB,
-    total_amount DECIMAL(10, 2),
-    status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'submitted', 'paid', 'denied', 'cancelled')),
-    insurance_provider VARCHAR(255),
-    claim_number VARCHAR(100),
-    submitted_at TIMESTAMP,
-    paid_at TIMESTAMP,
-    created_by UUID NOT NULL REFERENCES users(id),
+    patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    encounter_id UUID NOT NULL REFERENCES visits(id) ON DELETE CASCADE,
+    version INTEGER NOT NULL DEFAULT 1,
+    payer_id UUID, -- References insurance_policies or similar
+    status INTEGER DEFAULT 0,
+    payer_type INTEGER DEFAULT 0,
+    bill_process INTEGER DEFAULT 0,
+    bill_time TIMESTAMP,
+    process_time TIMESTAMP,
+    process_file VARCHAR(255),
+    target VARCHAR(30),
+    x12_partner_id INTEGER,
+    submitted_claim TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(patient_id, encounter_id, version)
+);
+
+CREATE TABLE IF NOT EXISTS x12_partners (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255),
+    id_number VARCHAR(255),
+    x12_sender_id VARCHAR(255),
+    x12_receiver_id VARCHAR(255),
+    processing_format VARCHAR(50),
+    x12_isa01 VARCHAR(2) DEFAULT '00',
+    x12_isa02 VARCHAR(10) DEFAULT '          ',
+    x12_isa03 VARCHAR(2) DEFAULT '00',
+    x12_isa04 VARCHAR(10) DEFAULT '          ',
+    x12_isa05 CHAR(2) DEFAULT 'ZZ',
+    x12_isa07 CHAR(2) DEFAULT 'ZZ',
+    x12_isa14 CHAR(1) DEFAULT '0',
+    x12_isa15 CHAR(1) DEFAULT 'P',
+    x12_gs02 VARCHAR(15),
+    x12_gs03 VARCHAR(15),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_claims_patient ON claims(patient_id);
@@ -1062,6 +1086,7 @@ CREATE TABLE IF NOT EXISTS ar_session (
     patient_id UUID REFERENCES patients(id),
     encounter UUID REFERENCES visits(id), -- Linked encounter for copays
     payment_method VARCHAR(25),
+    idempotency_key UUID UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -1093,6 +1118,39 @@ CREATE TABLE IF NOT EXISTS ar_activity (
 );
 
 CREATE INDEX IF NOT EXISTS idx_ar_activity_encounter ON ar_activity(pid, encounter);
+
+CREATE TABLE IF NOT EXISTS claims (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID REFERENCES patients(id),
+    encounter_id UUID REFERENCES visits(id),
+    status INTEGER DEFAULT 0, -- 0=Ready, 1=Billed
+    payer_id INTEGER, -- X12 Partner ID
+    bill_date TIMESTAMP,
+    process_date TIMESTAMP,
+    process_file VARCHAR(255),
+    submitted_claim TEXT, -- X12 content
+    target VARCHAR(30),
+    version INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID REFERENCES users(id),
+    idempotency_key UUID UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS billing_event_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_type VARCHAR(50) NOT NULL,
+    actor_id UUID REFERENCES users(id),
+    visit_id UUID REFERENCES visits(id),
+    claim_id UUID REFERENCES claims(id),
+    session_id UUID REFERENCES ar_session(id),
+    details JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_billing_log_visit ON billing_event_log(visit_id);
+CREATE INDEX IF NOT EXISTS idx_billing_log_claim ON billing_event_log(claim_id);
+CREATE INDEX IF NOT EXISTS idx_billing_log_session ON billing_event_log(session_id);
 
 -- ============================================
 -- E-PRESCRIBING SYSTEM

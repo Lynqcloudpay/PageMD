@@ -22,8 +22,14 @@ import Analytics from './pages/Analytics'
 import Messages from './pages/Messages'
 import Telehealth from './pages/Telehealth'
 import Billing from './pages/Billing'
-import UserManagement from './pages/UserManagement'
+import BillingManager from './pages/BillingManager'
+import PaymentPosting from './pages/PaymentPosting'
+import BillingReports from './pages/BillingReports'
+import PatientStatements from './pages/PatientStatements'
+import ClaimViewer from './pages/ClaimViewer'
 import AdminSettings from './pages/AdminSettings'
+
+import UserManagement from './pages/UserManagement'
 import Cancellations from './pages/Cancellations'
 import Profile from './pages/Profile'
 import FeeSheet from './pages/FeeSheet'
@@ -195,6 +201,48 @@ function App() {
                                                 <ProtectedRoute>
                                                     <ErrorBoundary>
                                                         <Layout><Billing /></Layout>
+                                                    </ErrorBoundary>
+                                                </ProtectedRoute>
+                                            } />
+                                            <Route path="/billing/manager" element={
+                                                <ProtectedRoute>
+                                                    <ErrorBoundary>
+                                                        <Layout><BillingManager /></Layout>
+                                                    </ErrorBoundary>
+                                                </ProtectedRoute>
+                                            } />
+                                            <Route path="/claims/:id" element={
+                                                <ProtectedRoute>
+                                                    <ErrorBoundary>
+                                                        <Layout><ClaimViewer /></Layout>
+                                                    </ErrorBoundary>
+                                                </ProtectedRoute>
+                                            } />
+                                            <Route path="/billing/posting" element={
+                                                <ProtectedRoute>
+                                                    <ErrorBoundary>
+                                                        <Layout><PaymentPosting /></Layout>
+                                                    </ErrorBoundary>
+                                                </ProtectedRoute>
+                                            } />
+                                            <Route path="/billing/reports/ar-aging" element={
+                                                <ProtectedRoute>
+                                                    <ErrorBoundary>
+                                                        <Layout><BillingReports /></Layout>
+                                                    </ErrorBoundary>
+                                                </ProtectedRoute>
+                                            } />
+                                            <Route path="/billing/reports/collections" element={
+                                                <ProtectedRoute>
+                                                    <ErrorBoundary>
+                                                        <Layout><BillingReports /></Layout>
+                                                    </ErrorBoundary>
+                                                </ProtectedRoute>
+                                            } />
+                                            <Route path="/billing/statements" element={
+                                                <ProtectedRoute>
+                                                    <ErrorBoundary>
+                                                        <Layout><PatientStatements /></Layout>
                                                     </ErrorBoundary>
                                                 </ProtectedRoute>
                                             } />
