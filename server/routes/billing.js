@@ -466,6 +466,9 @@ router.get('/claims', requirePermission('billing:view'), async (req, res) => {
     const params = [];
     let paramIndex = 1;
 
+    // Import decryption service
+    const { decryptPatientPHI } = require('../services/patientEncryptionService');
+
     // 1. Fetch Existing Claims (if table exists)
     const tableExistsResult = await pool.query(`
       SELECT EXISTS (
@@ -476,13 +479,14 @@ router.get('/claims', requirePermission('billing:view'), async (req, res) => {
     `);
 
     if (tableExistsResult.rows[0].exists) {
-      // Basic query for claims
+      // Basic query for claims - include encryption_metadata for decryption
       let query = `
         SELECT c.*, 
                v.visit_date, v.visit_type,
                p.first_name as patient_first_name, 
                p.last_name as patient_last_name, 
                p.mrn as patient_mrn,
+               p.encryption_metadata,
                u.first_name || ' ' || u.last_name as created_by_name,
                'submitted' as record_type
         FROM claims c
@@ -514,25 +518,37 @@ router.get('/claims', requirePermission('billing:view'), async (req, res) => {
 
       query += ` ORDER BY c.created_at DESC`;
 
-      // NOTE: We don't apply limit/offset here yet because we need to merge unbilled
-      // unless status is strictly 'submitted' type. 
-      // For now, fetch generic batch and merge in memory (limit 100 is small enough).
-
       const result = await pool.query(query, params);
+
+      // Decrypt patient names
+      for (const claim of result.rows) {
+        if (claim.encryption_metadata) {
+          try {
+            const decrypted = await decryptPatientPHI({
+              first_name: claim.patient_first_name,
+              last_name: claim.patient_last_name,
+              encryption_metadata: claim.encryption_metadata
+            });
+            claim.patient_first_name = decrypted.first_name;
+            claim.patient_last_name = decrypted.last_name;
+          } catch (e) {
+            // Keep original if decryption fails
+          }
+          delete claim.encryption_metadata;
+        }
+      }
+
       claims = result.rows.map(claim => ({
         ...claim,
         id: claim.id,
-        status: claim.status || 'pending', // Db status
+        status: claim.status || 'pending',
         diagnosis_codes: typeof claim.diagnosis_codes === 'string' ? JSON.parse(claim.diagnosis_codes || '[]') : claim.diagnosis_codes,
         procedure_codes: typeof claim.procedure_codes === 'string' ? JSON.parse(claim.procedure_codes || '[]') : claim.procedure_codes
       }));
     }
 
     // 2. Fetch Unbilled Encounters
-    // Only if status filter allows 'unbilled' or is empty
     if (!status || status === 'unbilled') {
-      // Find visits that have billing activity but NO claim linked
-      // Note: checking for claims.visit_id
       let unbilledQuery = `
             SELECT 
                 v.id as visit_id, 
@@ -542,6 +558,7 @@ router.get('/claims', requirePermission('billing:view'), async (req, res) => {
                 p.first_name as patient_first_name, 
                 p.last_name as patient_last_name, 
                 p.mrn as patient_mrn,
+                p.encryption_metadata,
                 SUM(b.fee * b.units) as calculated_total,
                 MIN(b.date) as first_billing_date
             FROM visits v
@@ -569,12 +586,29 @@ router.get('/claims', requirePermission('billing:view'), async (req, res) => {
         unbilledParams.push(dateTo);
       }
 
-      unbilledQuery += ` GROUP BY v.id, p.id, v.visit_date, v.visit_type, p.first_name, p.last_name, p.mrn`;
+      unbilledQuery += ` GROUP BY v.id, p.id, v.visit_date, v.visit_type, p.first_name, p.last_name, p.mrn, p.encryption_metadata`;
 
       const unbilledRes = await pool.query(unbilledQuery, unbilledParams);
 
+      // Decrypt patient names for unbilled
+      for (const row of unbilledRes.rows) {
+        if (row.encryption_metadata) {
+          try {
+            const decrypted = await decryptPatientPHI({
+              first_name: row.patient_first_name,
+              last_name: row.patient_last_name,
+              encryption_metadata: row.encryption_metadata
+            });
+            row.patient_first_name = decrypted.first_name;
+            row.patient_last_name = decrypted.last_name;
+          } catch (e) {
+            // Keep original if decryption fails
+          }
+        }
+      }
+
       const unbilledItems = unbilledRes.rows.map(row => ({
-        id: 'draft-' + row.visit_id, // Virtual ID
+        id: 'draft-' + row.visit_id,
         visit_id: row.visit_id,
         claim_number: 'DRAFT',
         status: 'unbilled',
@@ -591,11 +625,8 @@ router.get('/claims', requirePermission('billing:view'), async (req, res) => {
       claims = [...claims, ...unbilledItems];
     }
 
-    // 3. Sort and Paginate in Memory
-    // Sort by date desc
+    // 3. Sort and Paginate
     claims.sort((a, b) => new Date(b.created_at || b.visit_date) - new Date(a.created_at || a.visit_date));
-
-    // Apply pagination
     const paginatedClaims = claims.slice(parseInt(offset), parseInt(offset) + parseInt(limit));
 
     res.json(paginatedClaims);

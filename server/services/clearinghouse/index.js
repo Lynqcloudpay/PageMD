@@ -56,44 +56,70 @@ class ClearinghouseFactory {
     }
 
     /**
-     * Verify Eligibility (Public Facade)
+     * Verify Eligibility (Public Facade) with retry logic
      */
     async verifyEligibility(params) {
-        // params header should contain tenant info if needed, but usually we just get provider
-        // for valid connection.
         const provider = await this.getProvider(params.tenantId);
 
-        // Since we don't have real credentials, we might fail here in real execution.
-        // User said: "If you don't know yet... tell Antigravity to implement pluggable interface + start with one provider's sandbox"
-        // Availity Sandbox usually allows auth with test credentials.
+        const maxRetries = 3;
+        const baseDelayMs = 1000;
 
-        // However, if we fail to auth, we should handle it gracefully or return a "Simulated Real Response" 
-        // if we are in "Demo/Sandbox" mode without real keys, to prevent the app from breaking during this transition.
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                return await provider.verifyEligibility270(params);
+            } catch (e) {
+                const isRetryable = this.isRetryableError(e);
 
-        try {
-            return await provider.verifyEligibility270(params);
-        } catch (e) {
-            // For the purpose of this task (Make it Real), we try the real path.
-            // If it fails (e.g. 401), we throw real error.
-            // But if we are in local dev and just want to see the UI "working" with "Real Logic" structure:
-            if (process.env.NODE_ENV !== 'production' && (e.message.includes('auth') || e.message.includes('401'))) {
-                console.warn("Real Auth failed, returning Sandbox Mock data for demonstration...");
-                return {
-                    status: 'Active',
-                    payer: 'Availity Sandbox',
-                    planName: 'Gold Plan PPO',
-                    memberId: params.memberId,
-                    coverage: {
-                        active: true,
-                        copay: '25.00',
-                        deductible: '1000.00',
-                        coinsurance: '20%'
-                    },
-                    timestamp: new Date().toISOString()
-                };
+                if (!isRetryable || attempt === maxRetries) {
+                    // For dev/sandbox mode, return demo data if auth fails
+                    if (process.env.NODE_ENV !== 'production' &&
+                        (e.message.includes('auth') || e.message.includes('401') || e.message.includes('credentials'))) {
+                        console.warn("Real Auth failed, returning Sandbox Mock data for demonstration...");
+                        return {
+                            status: 'Active',
+                            payer: 'Sandbox Demo',
+                            planName: 'Gold Plan PPO (Demo)',
+                            memberId: params.memberId,
+                            coverage: {
+                                active: true,
+                                copay: '25.00',
+                                deductible: '1000.00',
+                                deductibleRemaining: '750.00',
+                                coinsurance: '20%',
+                                outOfPocketMax: '6000.00'
+                            },
+                            timestamp: new Date().toISOString(),
+                            isDemo: true
+                        };
+                    }
+                    throw e;
+                }
+
+                // Exponential backoff: 1s, 2s, 4s
+                const delay = baseDelayMs * Math.pow(2, attempt - 1);
+                console.warn(`Eligibility attempt ${attempt} failed, retrying in ${delay}ms...`);
+                await this.sleep(delay);
             }
-            throw e;
         }
+    }
+
+    /**
+     * Check if error is retryable (transient)
+     */
+    isRetryableError(e) {
+        // Retry on timeouts, rate limits, and server errors
+        const retryableCodes = [408, 429, 500, 502, 503, 504];
+        const status = e.response?.status;
+
+        if (status && retryableCodes.includes(status)) return true;
+        if (e.code === 'ECONNRESET' || e.code === 'ETIMEDOUT') return true;
+        if (e.message?.includes('timeout')) return true;
+
+        return false;
+    }
+
+    sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 }
 

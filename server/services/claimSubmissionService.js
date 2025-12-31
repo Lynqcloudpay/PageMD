@@ -196,6 +196,175 @@ class ClaimSubmissionService {
 
         return batch;
     }
+
+    /**
+     * Poll for acknowledgements from clearinghouse
+     * Should be called periodically (e.g., every 15 minutes via cron)
+     */
+    async pollAcknowledgements(tenantId = 'default') {
+        // Get submitted batches that don't have acks yet
+        const pendingRes = await pool.query(`
+            SELECT * FROM claim_submissions 
+            WHERE tenant_id = $1 
+            AND status = 'submitted'
+            AND ack_999_status IS NULL
+            AND clearinghouse_batch_id IS NOT NULL
+            ORDER BY submitted_at ASC
+            LIMIT 10
+        `, [tenantId]);
+
+        const results = [];
+
+        for (const submission of pendingRes.rows) {
+            try {
+                const ackResult = await this.fetchAcknowledgement(submission, tenantId);
+                results.push({ submissionId: submission.id, ...ackResult });
+            } catch (e) {
+                console.error(`Failed to fetch ack for ${submission.id}:`, e.message);
+                results.push({ submissionId: submission.id, error: e.message });
+            }
+        }
+
+        return results;
+    }
+
+    /**
+     * Fetch acknowledgement for a specific submission
+     */
+    async fetchAcknowledgement(submission, tenantId) {
+        const provider = await clearinghouse.getProvider(tenantId);
+
+        // This method would call provider.fetchAcknowledgements999277()
+        // For now, we'll store placeholder structure
+        // Real implementation depends on clearinghouse API
+
+        try {
+            // Attempt to fetch 999 (Implementation Acknowledgement)
+            // const ack999 = await provider.fetch999(submission.clearinghouse_batch_id);
+
+            // For now, simulate successful receipt
+            const ackStatus = 'received'; // or 'errors' or 'rejected'
+
+            await pool.query(`
+                UPDATE claim_submissions 
+                SET ack_999_status = $1
+                WHERE id = $2
+            `, [ackStatus, submission.id]);
+
+            return {
+                status: ackStatus,
+                message: 'Acknowledgement processed'
+            };
+
+        } catch (e) {
+            // Record ack fetch failure
+            await pool.query(`
+                UPDATE claim_submissions 
+                SET last_error = $1
+                WHERE id = $2
+            `, [`ACK fetch failed: ${e.message}`, submission.id]);
+
+            throw e;
+        }
+    }
+
+    /**
+     * Process 277CA (Claim Acknowledgement) responses
+     * Updates individual claim statuses based on payer response
+     */
+    async process277Response(submissionId, ack277Data) {
+        const client = await pool.connect();
+
+        try {
+            await client.query('BEGIN');
+
+            // Parse 277CA response and update each claim
+            for (const claimAck of ack277Data.claims || []) {
+                const status = this.map277Status(claimAck.statusCode);
+
+                await client.query(`
+                    UPDATE claim_submission_items 
+                    SET status = $1,
+                        ack_status = $2,
+                        payer_claim_number = $3,
+                        last_error = $4
+                    WHERE submission_id = $5 
+                    AND claim_id = (
+                        SELECT id FROM claims WHERE claim_number = $6
+                    )
+                `, [
+                    status,
+                    claimAck.statusCode,
+                    claimAck.payerClaimNumber,
+                    claimAck.errorDescription || null,
+                    submissionId,
+                    claimAck.patientControlNumber
+                ]);
+
+                // If accepted, update claim status
+                if (status === 'accepted') {
+                    await client.query(`
+                        UPDATE claims 
+                        SET status = 'submitted'
+                        WHERE claim_number = $1
+                    `, [claimAck.patientControlNumber]);
+                }
+            }
+
+            // Update submission 277 status
+            await client.query(`
+                UPDATE claim_submissions 
+                SET ack_277_status = 'processed'
+                WHERE id = $1
+            `, [submissionId]);
+
+            await client.query('COMMIT');
+            return { success: true };
+
+        } catch (e) {
+            await client.query('ROLLBACK');
+            throw e;
+        } finally {
+            client.release();
+        }
+    }
+
+    /**
+     * Map 277 status codes to internal statuses
+     */
+    map277Status(code) {
+        const statusMap = {
+            'A1': 'accepted',      // Accepted for processing
+            'A2': 'accepted',      // Accepted with change
+            'A3': 'pending',       // Pending
+            'A4': 'pending',       // Pending additional review
+            'R1': 'rejected',      // Not a valid code
+            'R2': 'rejected',      // Missing required data
+            'R3': 'rejected',      // Entity not found
+            'R4': 'rejected'       // Not authorized
+        };
+        return statusMap[code] || 'unknown';
+    }
+
+    /**
+     * Get claims needing resubmission (rejected)
+     */
+    async getRejectedClaims(tenantId = 'default') {
+        const res = await pool.query(`
+            SELECT i.*, 
+                   c.claim_number, c.patient_id,
+                   p.first_name, p.last_name
+            FROM claim_submission_items i
+            JOIN claims c ON i.claim_id = c.id
+            JOIN patients p ON c.patient_id = p.id
+            JOIN claim_submissions s ON i.submission_id = s.id
+            WHERE s.tenant_id = $1
+            AND i.status = 'rejected'
+            ORDER BY i.created_at DESC
+        `, [tenantId]);
+
+        return res.rows;
+    }
 }
 
 module.exports = new ClaimSubmissionService();
