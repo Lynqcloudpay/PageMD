@@ -240,6 +240,17 @@ export const superbillsAPI = {
   export837P: (id) => api.get(`/superbills/${id}/export/837p`),
 };
 
+// Fee Sheet Categories (OpenEMR-style quick code groups)
+export const feeSheetCategoriesAPI = {
+  getAll: () => api.get('/fee-sheet-categories'),
+  get: (id) => api.get(`/fee-sheet-categories/${id}`),
+  create: (data) => api.post('/fee-sheet-categories', data),
+  update: (id, data) => api.put(`/fee-sheet-categories/${id}`, data),
+  delete: (id) => api.delete(`/fee-sheet-categories/${id}`),
+  addToSuperbill: (categoryId, superbillId) => api.post(`/fee-sheet-categories/${categoryId}/add-to-superbill`, { superbill_id: superbillId }),
+  seedDefaults: () => api.post('/fee-sheet-categories/seed-defaults'),
+};
+
 // Reports
 export const reportsAPI = {
   getRegistry: (condition, search) => api.get(`/reports/registry/${condition}`, { params: { search } }),

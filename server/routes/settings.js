@@ -214,10 +214,11 @@ adminRouter.put('/practice', [
         WHERE clinic_id = $4
       `, [timezone, date_format, time_format, req.clinic.id]);
 
-      return res.json({ message: 'Clinic settings updated successfully in Control DB' });
+      // Continue to update local tenant DB to keep tables in sync
+      console.log(`[SETTINGS] Synchronizing control DB updates to tenant ${req.clinic.schema_name}`);
     }
 
-    // Fallback/Legacy local update
+    // Fallback/Legacy local update - ALWAYS update this to keep tenant DB in sync
     const dbClient = req.dbClient || pool;
     const existing = await dbClient.query('SELECT id FROM practice_settings LIMIT 1');
 
@@ -307,21 +308,21 @@ adminRouter.post('/practice/logo', upload.single('logo'), async (req, res) => {
         'UPDATE clinics SET logo_url = $1 WHERE id = $2',
         [logoUrl, req.clinic.id]
       );
+    }
+
+    // ALWAYS Update local DB to keep persistent branding in sync
+    const dbClient = req.dbClient || pool;
+    const existing = await dbClient.query('SELECT id FROM practice_settings LIMIT 1');
+    if (existing.rows.length > 0) {
+      await dbClient.query(
+        'UPDATE practice_settings SET logo_url = $1, updated_at = CURRENT_TIMESTAMP, updated_by = $2 WHERE id = $3',
+        [logoUrl, req.user.id, existing.rows[0].id]
+      );
     } else {
-      // Update local DB
-      const dbClient = req.dbClient || pool;
-      const existing = await dbClient.query('SELECT id FROM practice_settings LIMIT 1');
-      if (existing.rows.length > 0) {
-        await dbClient.query(
-          'UPDATE practice_settings SET logo_url = $1, updated_at = CURRENT_TIMESTAMP, updated_by = $2 WHERE id = $3',
-          [logoUrl, req.user.id, existing.rows[0].id]
-        );
-      } else {
-        await dbClient.query(
-          'INSERT INTO practice_settings (logo_url, updated_by) VALUES ($1, $2)',
-          [logoUrl, req.user.id]
-        );
-      }
+      await dbClient.query(
+        'INSERT INTO practice_settings (logo_url, updated_by) VALUES ($1, $2)',
+        [logoUrl, req.user.id]
+      );
     }
 
     res.json({ logo_url: logoUrl });

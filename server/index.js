@@ -211,6 +211,9 @@ app.use('/api/settings', settingsRoutes);
 const reportsRoutes = require('./routes/reports');
 app.use('/api/reports', reportsRoutes);
 
+// Fee Sheet Categories (OpenEMR-style quick code selection)
+app.use('/api/fee-sheet-categories', require('./routes/fee-sheet-categories'));
+
 // Super Admin (Platform Management)
 app.use('/api/platform-auth', require('./routes/platformAuth'));
 app.use('/api/super', require('./routes/superAdmin'));

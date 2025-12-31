@@ -127,11 +127,11 @@ const resolveTenant = async (req, res, next) => {
             prescribing_locked
         };
 
-        // 5. Run Request within Context
-        // Use enterWith to ensure context persists through Express's asynchronous middleware ticks
+        // 5. Run Request within Context using the safer .run() method
+        // This ensures the context is preserved across 모든 (all) async continuations 
+        // triggered by the downstream middleware/routes.
         client.tenantSchema = schema_name;
-        req.dbClient = client; // Attach for direct use if AsyncLocalStorage loses context
-        pool.dbStorage.enterWith(client);
+        req.dbClient = client;
 
         const cleanup = async () => {
             try {
@@ -152,10 +152,11 @@ const resolveTenant = async (req, res, next) => {
             if (!res.writableEnded) await cleanup();
         });
 
-        const status = await client.query('SELECT current_schema() as sch, current_setting(\'search_path\') as path');
-        console.log(`[Tenant] Established persistent context for ${schema_name} (slug: ${slug}). Current Schema: ${status.rows[0].sch}, Path: ${status.rows[0].path}`);
-
-        return next();
+        return pool.dbStorage.run(client, async () => {
+            const status = await client.query('SELECT current_schema() as sch, current_setting(\'search_path\') as path');
+            console.log(`[Tenant] Context active for ${schema_name} (slug: ${slug}). Schema: ${status.rows[0].sch}`);
+            return next();
+        });
     } catch (error) {
         console.error('[Tenant] Resolution failed:', error);
         if (client) {

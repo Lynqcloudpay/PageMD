@@ -43,11 +43,20 @@ const poolProxy = {
   query: async (text, params) => {
     const client = dbStorage.getStore();
     if (client) {
-      // console.log(`[DB] Using transactional client for query: ${text.substring(0, 50)}...`);
       return client.query(text, params);
     }
-    // console.log(`[DB] Falling back to controlPool for query: ${text.substring(0, 50)}...`);
+
+    // In production, fallback to controlPool is usually for global lookups.
+    // If it happens during a clinical request, it might indicate context loss.
+    if (process.env.NODE_ENV === 'production') {
+      // console.warn(`[DB] Fallback to controlPool for query: ${text.substring(0, 50)}...`);
+    }
     return controlPool.query(text, params);
+  },
+
+  // Helper to ensure we have a client for the current context
+  getClient: () => {
+    return dbStorage.getStore() || controlPool;
   },
 
   // Legacy/Pool compat methods

@@ -788,6 +788,39 @@ CREATE TABLE IF NOT EXISTS payer_policies (
     active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+-- ============================================
+-- FEE SHEET CATEGORIES (OpenEMR Feature)
+-- Quick-access code groups like "New Patient", "Established Patient"
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS fee_sheet_categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    display_order INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS fee_sheet_category_codes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    category_id UUID NOT NULL REFERENCES fee_sheet_categories(id) ON DELETE CASCADE,
+    code_type VARCHAR(20) NOT NULL CHECK (code_type IN ('CPT', 'HCPCS', 'ICD10')),
+    code VARCHAR(20) NOT NULL,
+    description TEXT,
+    default_modifier VARCHAR(20),
+    default_units INTEGER DEFAULT 1,
+    default_fee DECIMAL(12, 2),
+    display_order INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(category_id, code_type, code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_fee_sheet_categories_active ON fee_sheet_categories(is_active, display_order);
+CREATE INDEX IF NOT EXISTS idx_fee_sheet_category_codes_category ON fee_sheet_category_codes(category_id);
 
 CREATE TABLE IF NOT EXISTS superbills (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -795,7 +828,9 @@ CREATE TABLE IF NOT EXISTS superbills (
     visit_id UUID NOT NULL UNIQUE REFERENCES visits(id) ON DELETE CASCADE,
     note_id UUID,
     status superbill_status DEFAULT 'DRAFT',
+    version INTEGER DEFAULT 1,
     service_date_from DATE NOT NULL,
+
     service_date_to DATE NOT NULL,
     place_of_service VARCHAR(10) NOT NULL DEFAULT '11',
     claim_frequency_code VARCHAR(1) DEFAULT '1',

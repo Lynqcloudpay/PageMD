@@ -95,12 +95,11 @@ const ProtectedRoute = ({ children }) => {
 
 function App() {
     return (
-
-        <PlatformAdminProvider>
-            <AuthProvider>
-                <PatientProvider>
-                    <TaskProvider>
-                        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <Router>
+            <PlatformAdminProvider>
+                <AuthProvider>
+                    <PatientProvider>
+                        <TaskProvider>
                             <KeyboardShortcutsProvider>
                                 <PatientTabsProvider>
                                     <div className="min-h-screen font-sans bg-white">
@@ -282,12 +281,11 @@ function App() {
                                     </div>
                                 </PatientTabsProvider>
                             </KeyboardShortcutsProvider>
-                        </Router>
-                    </TaskProvider>
-                </PatientProvider>
-            </AuthProvider>
-        </PlatformAdminProvider>
-
+                        </TaskProvider>
+                    </PatientProvider>
+                </AuthProvider>
+            </PlatformAdminProvider>
+        </Router>
     )
 }
 

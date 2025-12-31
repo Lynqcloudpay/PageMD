@@ -4,9 +4,9 @@ import {
     Save, CheckCircle, Printer, FileDown, Trash2, Plus,
     Search, Shield, Building, User, Calendar, Info,
     ChevronRight, AlertTriangle, X, FileText, ArrowLeft, RefreshCw,
-    Send, Lock, TrendingUp
+    Send, Lock, TrendingUp, Folder
 } from 'lucide-react';
-import { superbillsAPI, codesAPI, authAPI, settingsAPI } from '../services/api';
+import { superbillsAPI, codesAPI, authAPI, settingsAPI, feeSheetCategoriesAPI } from '../services/api';
 import { format } from 'date-fns';
 import CodeSearchModal from '../components/CodeSearchModal';
 import { useAuth } from '../context/AuthContext';
@@ -26,6 +26,8 @@ const Superbill = () => {
     const [validationErrors, setValidationErrors] = useState([]);
     const [showClinicalNote, setShowClinicalNote] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [feeSheetCategories, setFeeSheetCategories] = useState([]);
+    const [addingFromCategory, setAddingFromCategory] = useState(false);
 
     const handleSync = async () => {
         setIsSyncing(true);
@@ -65,6 +67,14 @@ const Superbill = () => {
 
             const locRes = await settingsAPI.getLocations();
             setLocations(locRes.data || []);
+
+            // Fetch fee sheet categories (OpenEMR feature)
+            try {
+                const catRes = await feeSheetCategoriesAPI.getAll();
+                setFeeSheetCategories(catRes.data || []);
+            } catch (catError) {
+                console.log('Fee sheet categories not available:', catError.message);
+            }
         } catch (error) {
             console.error('Error fetching support data:', error);
         }
@@ -318,6 +328,27 @@ const Superbill = () => {
         } catch (error) {
             console.error(error);
             alert('Failed to reject suggestion');
+        }
+    };
+
+    // Handler for adding all codes from a fee sheet category (OpenEMR feature)
+    const handleAddFromCategory = async (categoryId) => {
+        if (!categoryId) return;
+
+        setAddingFromCategory(true);
+        try {
+            const result = await feeSheetCategoriesAPI.addToSuperbill(categoryId, superbillId);
+            if (result.data.lines_added > 0) {
+                alert(`✅ Added ${result.data.lines_added} codes from category`);
+                fetchData();
+            } else {
+                alert('No codes were added from this category');
+            }
+        } catch (error) {
+            console.error('Error adding from category:', error);
+            alert(error.response?.data?.error || 'Failed to add codes from category');
+        } finally {
+            setAddingFromCategory(false);
         }
     };
 
@@ -718,12 +749,32 @@ const Superbill = () => {
                                         <FileText className="w-4 h-4 text-blue-500" /> Procedures & Services (CPT)
                                     </h3>
                                     {!isLocked && (
-                                        <button
-                                            onClick={() => setShowCPTModal(true)}
-                                            className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-                                        >
-                                            <Plus className="w-3.5 h-3.5" /> Add Row
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            {/* Fee Sheet Category Quick-Select (OpenEMR Feature) */}
+                                            {feeSheetCategories.length > 0 && (
+                                                <select
+                                                    onChange={(e) => handleAddFromCategory(e.target.value)}
+                                                    disabled={addingFromCategory}
+                                                    value=""
+                                                    className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                >
+                                                    <option value="">
+                                                        {addingFromCategory ? 'Adding...' : '📁 Quick Add Category'}
+                                                    </option>
+                                                    {feeSheetCategories.map(cat => (
+                                                        <option key={cat.id} value={cat.id}>
+                                                            {cat.name} ({cat.codes?.length || 0} codes)
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            )}
+                                            <button
+                                                onClick={() => setShowCPTModal(true)}
+                                                className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                                            >
+                                                <Plus className="w-3.5 h-3.5" /> Add Row
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
                                 <div className="overflow-x-auto">

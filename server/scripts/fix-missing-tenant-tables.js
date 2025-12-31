@@ -12,11 +12,13 @@ require('dotenv').config();
 const tenantSchemaSQL = require('../config/tenantSchema');
 
 const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
     host: process.env.DB_HOST || 'localhost',
     port: process.env.DB_PORT || 5432,
     database: process.env.DB_NAME || 'paper_emr',
     user: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD || 'postgres',
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
 async function fix() {
@@ -51,10 +53,10 @@ async function fix() {
                 await client.query('COMMIT');
                 console.log(`✅ Finished schema: ${schema}`);
             } catch (err) {
-                await client.query('ROLLBACK');
+                if (client) await client.query('ROLLBACK');
                 console.error(`❌ Failed schema ${schema}:`, err.message);
             } finally {
-                client.release();
+                if (client) client.release();
             }
         }
 
@@ -62,6 +64,7 @@ async function fix() {
 
     } catch (error) {
         console.error('💥 Global error:', error.message);
+        if (error.stack) console.error(error.stack);
     } finally {
         await pool.end();
     }

@@ -378,13 +378,26 @@ router.put('/:id', requirePermission('billing:edit'), async (req, res) => {
             accident_related_employment, accident_related_auto, accident_related_other,
             accident_state, accident_date,
             insurance_provider_override, insurance_id_override,
-            billing_notes, denial_reason, claim_status
+            billing_notes, denial_reason, claim_status,
+            expected_version // New: for concurrency control
         } = req.body;
 
-        // Check if finalized
-        const existing = await client.query('SELECT status FROM superbills WHERE id = $1', [id]);
-        if (existing.rows[0]?.status === 'FINALIZED' && !req.user.role === 'admin') {
+        // Check if finalized and get current version
+        const existing = await client.query('SELECT status, version FROM superbills WHERE id = $1', [id]);
+        if (existing.rows.length === 0) {
+            return res.status(404).json({ error: 'Superbill not found' });
+        }
+
+        if (existing.rows[0]?.status === 'FINALIZED' && req.user.role !== 'admin') {
             return res.status(403).json({ error: 'Cannot edit finalized superbill' });
+        }
+
+        // Concurrency control: Check version if provided
+        if (expected_version !== undefined && existing.rows[0].version !== expected_version) {
+            return res.status(409).json({
+                error: 'This superbill has been modified by another user. Please refresh and try again.',
+                current_version: existing.rows[0].version
+            });
         }
 
         await client.query('BEGIN');
@@ -411,6 +424,7 @@ router.put('/:id', requirePermission('billing:edit'), async (req, res) => {
         billing_notes = COALESCE($18, billing_notes),
         denial_reason = COALESCE($19, denial_reason),
         claim_status = COALESCE($20, claim_status),
+        version = version + 1,
         updated_by = $21,
         updated_at = NOW()
       WHERE id = $22
