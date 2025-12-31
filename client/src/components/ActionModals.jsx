@@ -1213,7 +1213,14 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                 <div key={med.id} className="bg-white p-2 rounded border border-gray-200 shadow-sm">
                                                     <div className="flex justify-between items-start mb-2">
                                                         <div>
-                                                            <div className="font-bold text-sm text-gray-800">{med.medication_name}</div>
+                                                            <div className="font-bold text-sm text-gray-800">
+                                                                {(med.medication_name || '')
+                                                                    .replace(/&amp;/g, '&')
+                                                                    .replace(/&#x2f;/gi, '/')
+                                                                    .replace(/&#47;/g, '/')
+                                                                    .replace(/&quot;/g, '"')
+                                                                    .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
+                                                            </div>
                                                             <div className="text-xs text-gray-500">{med.dosage} {med.frequency}</div>
                                                         </div>
                                                     </div>
@@ -1292,7 +1299,14 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                         >
                                                             <Pill className="w-4 h-4 text-primary-400 group-hover:text-primary-600" />
                                                             <div>
-                                                                <p className="text-sm font-semibold text-gray-900 leading-tight">{m.name}</p>
+                                                                <p className="text-sm font-semibold text-gray-900 leading-tight">
+                                                                    {(m.name || '')
+                                                                        .replace(/&amp;/g, '&')
+                                                                        .replace(/&#x2f;/gi, '/')
+                                                                        .replace(/&#47;/g, '/')
+                                                                        .replace(/&quot;/g, '"')
+                                                                        .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
+                                                                </p>
                                                                 {m.strength && <p className="text-[10px] text-gray-500">{m.strength}</p>}
                                                             </div>
                                                         </button>
@@ -1313,7 +1327,14 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                     ) : (
                                         <div className="space-y-4 animate-in slide-in-from-top-2">
                                             <div className="p-3 bg-primary-50 border border-primary-100 rounded-lg flex justify-between items-center text-primary-900">
-                                                <span className="font-bold text-sm truncate">{currentMed.name}</span>
+                                                <span className="font-bold text-sm truncate">
+                                                    {(currentMed.name || '')
+                                                        .replace(/&amp;/g, '&')
+                                                        .replace(/&#x2f;/gi, '/')
+                                                        .replace(/&#47;/g, '/')
+                                                        .replace(/&quot;/g, '"')
+                                                        .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
+                                                </span>
                                                 <button onClick={() => setCurrentMed({ ...currentMed, name: '' })} className="p-1 hover:bg-white rounded-full transition-colors"><X className="w-4 h-4" /></button>
                                             </div>
 
@@ -1505,7 +1526,14 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                                 <span className={`${typeInfo.color} text-white text-[8px] font-bold w-4 h-4 rounded flex items-center justify-center flex-shrink-0`}>
                                                                     {typeInfo.label}
                                                                 </span>
-                                                                <span className="text-xs text-gray-700 flex-1 truncate">{item.name}</span>
+                                                                <span className="text-xs text-gray-700 flex-1 truncate">
+                                                                    {(item.name || '')
+                                                                        .replace(/&amp;/g, '&')
+                                                                        .replace(/&#x2f;/gi, '/')
+                                                                        .replace(/&#47;/g, '/')
+                                                                        .replace(/&quot;/g, '"')
+                                                                        .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
+                                                                </span>
 
                                                                 {/* Diagnosis Re-linker */}
                                                                 {availableDiagnoses.length > 0 && (

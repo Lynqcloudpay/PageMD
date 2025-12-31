@@ -885,14 +885,12 @@ const VisitNote = () => {
                 const reloadResponse = await visitsAPI.get(visitId);
                 setVisitData(reloadResponse.data);
 
-                // Reload parsed data to ensure planStructured is reconstructed from saved plan
+                // Reload parsed data to ensure text sections are synced, but preserve planStructured
                 if (reloadResponse.data.note_draft) {
                     const parsed = parseNoteText(reloadResponse.data.note_draft);
-                    const planStructured = parsed.plan ? parsePlanText(parsed.plan) : (noteData.planStructured || []);
                     setNoteData(prev => ({
                         ...prev,
                         plan: parsed.plan || prev.plan,
-                        planStructured: planStructured.length > 0 ? planStructured : prev.planStructured
                     }));
                 }
 
@@ -1061,10 +1059,15 @@ const VisitNote = () => {
                         for (const diag of diagnoses) {
                             // Parse "Code - Description" or just Description
                             // match: ["Code - Description", "Code", "Description"]
-                            const safeDiag = typeof diag === 'string' ? diag : String(diag || '');
-                            const match = safeDiag.match(/^([A-Z][0-9.]+)\s*-\s*(.+)$/);
+                            const cleanDiag = (typeof diag === 'string' ? diag : String(diag || ''))
+                                .replace(/^\d+(\.\d+)*\.?\s*/, '')
+                                .trim();
+
+                            if (!cleanDiag) continue;
+
+                            const match = cleanDiag.match(/^([A-Z][0-9.]+)\s*-\s*(.+)$/);
                             let icd10Code = null;
-                            let problemName = diag;
+                            let problemName = cleanDiag;
 
                             if (match) {
                                 icd10Code = match[1];
@@ -1397,10 +1400,38 @@ const VisitNote = () => {
     const handleUpdatePlan = (updatedPlanStructured) => {
         setNoteData(prev => {
             const formattedPlan = formatPlanText(updatedPlanStructured);
+
+            // Extract all unique diagnoses from the updated plan
+            const planDiagnoses = updatedPlanStructured
+                .map(item => item.diagnosis)
+                .filter(d => d && d !== 'Unassigned');
+
+            // Current assessments
+            let currentAssessment = prev.assessment || '';
+            const existingDxLines = currentAssessment.split('\n').map(l => l.trim()).filter(Boolean);
+            const existingDxClean = existingDxLines.map(l => l.replace(/^\d+\.\s*/, '').trim().toLowerCase());
+
+            let assessmentUpdated = false;
+            let newAssessment = currentAssessment;
+
+            planDiagnoses.forEach(dx => {
+                const cleanDx = dx.replace(/^\d+\.\s*/, '').trim();
+                if (!existingDxClean.includes(cleanDx.toLowerCase())) {
+                    // Add missing diagnosis to assessment
+                    const nextNum = existingDxLines.length + 1;
+                    if (newAssessment && !newAssessment.endsWith('\n')) newAssessment += '\n';
+                    newAssessment += `${nextNum}. ${cleanDx}`;
+                    existingDxLines.push(`${nextNum}. ${cleanDx}`);
+                    existingDxClean.push(cleanDx.toLowerCase());
+                    assessmentUpdated = true;
+                }
+            });
+
             return {
                 ...prev,
                 planStructured: updatedPlanStructured,
-                plan: formattedPlan
+                plan: formattedPlan,
+                assessment: assessmentUpdated ? newAssessment : prev.assessment
             };
         });
     };
@@ -1430,7 +1461,8 @@ const VisitNote = () => {
         // 2. Update frontend note data
         setNoteData(prev => {
             const currentPlan = prev.planStructured || [];
-            const dxIndex = currentPlan.findIndex(p => p.diagnosis === diagnosisToUse);
+            const diagnosisToUseClean = diagnosisToUse.replace(/^\d+\.\s*/, '').trim();
+            const dxIndex = currentPlan.findIndex(p => p.diagnosis === diagnosisToUse || p.diagnosis === diagnosisToUseClean);
 
             let updatedPlan;
             if (dxIndex >= 0) {
@@ -1440,11 +1472,31 @@ const VisitNote = () => {
                     orders: [...updatedPlan[dxIndex].orders, orderText]
                 };
             } else {
-                updatedPlan = [...currentPlan, { diagnosis: diagnosisToUse, orders: [orderText] }];
+                updatedPlan = [...currentPlan, { diagnosis: diagnosisToUseClean, orders: [orderText] }];
+            }
+
+            // Sync with Assessment
+            let currentAssessment = prev.assessment || '';
+            const existingDxLines = currentAssessment.split('\n').map(l => l.trim()).filter(Boolean);
+            const existingDxClean = existingDxLines.map(l => l.replace(/^\d+\.\s*/, '').trim().toLowerCase());
+
+            let assessmentUpdated = false;
+            let newAssessment = currentAssessment;
+
+            if (diagnosisToUseClean !== 'Unassigned' && !existingDxClean.includes(diagnosisToUseClean.toLowerCase())) {
+                const nextNum = existingDxLines.length + 1;
+                if (newAssessment && !newAssessment.endsWith('\n')) newAssessment += '\n';
+                newAssessment += `${nextNum}. ${diagnosisToUseClean}`;
+                assessmentUpdated = true;
             }
 
             const formattedPlan = formatPlanText(updatedPlan);
-            return { ...prev, planStructured: updatedPlan, plan: formattedPlan };
+            return {
+                ...prev,
+                planStructured: updatedPlan,
+                plan: formattedPlan,
+                assessment: assessmentUpdated ? newAssessment : prev.assessment
+            };
         });
 
         setShowOrderPicker(false);
@@ -1762,9 +1814,6 @@ const VisitNote = () => {
         const cleanDiagnosis = diagnosisText.replace(/^\d+\.\s*/, '').trim();
 
         // 1. Ensure diagnosis exists in assessment/planStructured
-        // If it's a new diagnosis from search, we might need to add it to assessment first? 
-        // Typically, yes. Let's add it if not present.
-
         let targetIndex = -1;
 
         // Check if diagnosis is already in our structured plan
@@ -1774,18 +1823,14 @@ const VisitNote = () => {
 
         // If not found, adding it to assessment and structured plan
         if (targetIndex === -1) {
-            // Add to Assessment text ONLY if not already present
-            // Use a flexible check or exact check depending on preference. 
-            // Note: 'diagnoses' contains clean strings (from split). 
-            const diagnoses = noteData.assessment ? noteData.assessment.split('\n').filter(l => l.trim()) : [];
-            const alreadyInAssessment = diagnoses.some(d => d.replace(/^\d+\.\s*/, '').trim().toLowerCase() === cleanDiagnosis.toLowerCase())
+            const currentDiagnoses = noteData.assessment ? noteData.assessment.split('\n').filter(l => l.trim()) : [];
+            const alreadyInAssessment = currentDiagnoses.some(d => d.replace(/^\d+\.\s*/, '').trim().toLowerCase() === cleanDiagnosis.toLowerCase())
                 || (noteData.assessment && noteData.assessment.toLowerCase().includes(cleanDiagnosis.toLowerCase()));
 
             let newAssessment = noteData.assessment;
-
             if (!alreadyInAssessment) {
                 newAssessment = noteData.assessment
-                    ? `${noteData.assessment}\n${(diagnoses.length || 0) + 1}. ${cleanDiagnosis}`
+                    ? `${noteData.assessment}\n${(currentDiagnoses.length || 0) + 1}. ${cleanDiagnosis}`
                     : `1. ${cleanDiagnosis}`;
             }
 
@@ -1793,41 +1838,38 @@ const VisitNote = () => {
             const newEntry = { diagnosis: cleanDiagnosis, orders: [actionText] };
 
             setNoteData(prev => {
-                // Assuming formatPlanText is a helper function that converts planStructured to a text string
-                // If not, you'll need to define it or use a simpler concatenation for 'plan'
-                const newPlanText = formatPlanText([...(prev.planStructured || []), newEntry]);
+                const updatedPlan = [...(prev.planStructured || []), newEntry];
+                const newPlanText = formatPlanText(updatedPlan);
                 return {
                     ...prev,
                     assessment: newAssessment,
-                    planStructured: [...(prev.planStructured || []), newEntry],
+                    planStructured: updatedPlan,
                     plan: newPlanText
                 };
             });
-            // Open Order Modal for further editing if needed, focusing on this new diagnosis
+
             setSelectedDiagnosis(cleanDiagnosis);
-            setOrderModalTab('meds'); // or 'rx' depending on modal tab names
+            setOrderModalTab('meds');
             setShowOrderModal(true);
 
         } else {
-            // Diagnosis already exists. 
-            // We want to add this order to it, BUT we should let the user edit it in the modal first.
-            // So we don't push to state yet? Or we push and then open modal?
-            // User requested: "open the odermodal so we can properly order the medications"
-
-            // Just opening the modal with the diagnosis selected is good, but we want the med pre-filled?
-            // The OrderModal usually manages its own "new order" state or displays existing orders.
-            // If we add it to state first, it will show up in the modal as an existing order item.
-
-            const updatedStructured = [...(noteData.planStructured || [])];
-            updatedStructured[targetIndex].orders.push(actionText);
-
+            // Diagnosis already exists. Use immutable update.
             setNoteData(prev => {
-                // Assuming formatPlanText is a helper function that converts planStructured to a text string
-                // If not, you'll need to define it or use a simpler concatenation for 'plan'
-                const newPlanText = formatPlanText(updatedStructured);
+                const currentPlan = prev.planStructured || [];
+                const updatedPlan = currentPlan.map((item, idx) => {
+                    if (idx === targetIndex) {
+                        return {
+                            ...item,
+                            orders: [...item.orders, actionText]
+                        };
+                    }
+                    return item;
+                });
+
+                const newPlanText = formatPlanText(updatedPlan);
                 return {
                     ...prev,
-                    planStructured: updatedStructured,
+                    planStructured: updatedPlan,
                     plan: newPlanText
                 };
             });
@@ -2442,7 +2484,13 @@ const VisitNote = () => {
                                         renderItem={(problem) => (
                                             <div className="flex justify-between items-start w-full">
                                                 <div>
-                                                    <span className="font-medium text-gray-900">{problem.problem_name}</span>
+                                                    <span className="font-medium text-gray-900">
+                                                        {(problem.problem_name || '')
+                                                            .replace(/^(\d+(\.\d+)*\.?\s*)+/, '')
+                                                            .replace(/&amp;/g, '&')
+                                                            .replace(/&#x2f;/gi, '/')
+                                                            .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
+                                                    </span>
                                                     {problem.icd10_code && <span className="text-gray-500 ml-2 text-xs">({problem.icd10_code})</span>}
                                                 </div>
                                                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${problem.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
@@ -2536,9 +2584,12 @@ const VisitNote = () => {
                                         emptyMessage="No active medications"
                                         renderItem={(med) => {
                                             // Decode HTML entities in medication name
-                                            const decodedName = med.medication_name ?
-                                                med.medication_name.replace(/&#x2f;/gi, '/').replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))
-                                                : '';
+                                            const decodedName = (med.medication_name || '')
+                                                .replace(/&amp;/g, '&')
+                                                .replace(/&#x2f;/gi, '/')
+                                                .replace(/&#47;/g, '/')
+                                                .replace(/&quot;/g, '"')
+                                                .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
                                             return (
                                                 <div className="flex justify-between items-start w-full">
                                                     <span className="font-medium text-gray-900">{decodedName}</span>
@@ -3082,17 +3133,34 @@ const VisitNote = () => {
                                     <div className="p-2 max-h-40 overflow-y-auto custom-scrollbar">
                                         {(patientData?.problems || []).filter(p => p.status === 'active').length > 0 ? (
                                             <div className="space-y-1">
-                                                {(patientData?.problems || []).filter(p => p.status === 'active').slice(0, 10).map((p, idx) => (
-                                                    <button
-                                                        key={idx}
-                                                        onClick={() => addProblemToAssessment(p)}
-                                                        className="w-full text-left px-2 py-1.5 text-[11px] bg-white hover:bg-primary-50 rounded border border-slate-100 hover:border-primary-200 transition-all flex items-center gap-1.5 group"
-                                                    >
-                                                        <Plus className="w-3 h-3 text-slate-400 group-hover:text-primary-600" />
-                                                        <span className="truncate flex-1 text-slate-700 group-hover:text-primary-700">{p.problem_name}</span>
-                                                        {p.icd10_code && <span className="text-[9px] text-slate-400 font-mono">{p.icd10_code}</span>}
-                                                    </button>
-                                                ))}
+                                                {(() => {
+                                                    const seen = new Set();
+                                                    return (patientData?.problems || [])
+                                                        .filter(p => p.status === 'active')
+                                                        .filter(p => {
+                                                            const cleanName = (p.problem_name || p.name || '')
+                                                                .replace(/^[\d.\s]+/, '')
+                                                                .toLowerCase()
+                                                                .trim();
+                                                            if (seen.has(cleanName)) return false;
+                                                            seen.add(cleanName);
+                                                            return true;
+                                                        })
+                                                        .slice(0, 10)
+                                                        .map((p, idx) => (
+                                                            <button
+                                                                key={idx}
+                                                                onClick={() => addProblemToAssessment(p)}
+                                                                className="w-full text-left px-2 py-1.5 text-[11px] bg-white hover:bg-primary-50 rounded border border-slate-100 hover:border-primary-200 transition-all flex items-center gap-1.5 group"
+                                                            >
+                                                                <Plus className="w-3 h-3 text-slate-400 group-hover:text-primary-600" />
+                                                                <span className="truncate flex-1 text-slate-700 group-hover:text-primary-700">
+                                                                    {(p.problem_name || '').replace(/^[\d.\s]+/, '')}
+                                                                </span>
+                                                                {p.icd10_code && <span className="text-[9px] text-slate-400 font-mono">{p.icd10_code}</span>}
+                                                            </button>
+                                                        ));
+                                                })()}
                                             </div>
                                         ) : (
                                             <div className="text-[10px] text-slate-400 italic text-center py-2">No active problems</div>
@@ -3113,7 +3181,14 @@ const VisitNote = () => {
                                             <div className="space-y-1.5">
                                                 {(patientData?.medications || []).filter(m => m.active !== false).slice(0, 8).map((m, idx) => (
                                                     <div key={idx} className="px-2 py-1.5 bg-white rounded border border-slate-100">
-                                                        <div className="text-[11px] font-medium text-slate-800 truncate">{m.medication_name}</div>
+                                                        <div className="text-[11px] font-medium text-slate-800 truncate">
+                                                            {(m.medication_name || '')
+                                                                .replace(/&amp;/g, '&')
+                                                                .replace(/&#x2f;/gi, '/')
+                                                                .replace(/&#47;/g, '/')
+                                                                .replace(/&quot;/g, '"')
+                                                                .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
+                                                        </div>
                                                         <div className="text-[9px] text-slate-500">{m.dosage} {m.frequency}</div>
                                                         <div className="flex gap-1 mt-1">
                                                             <button onClick={() => addMedicationToPlan(m, 'continue')} className="px-1.5 py-0.5 text-[9px] bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100 transition-colors">

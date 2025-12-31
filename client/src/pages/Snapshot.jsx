@@ -1771,12 +1771,21 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         <div className="p-2 max-h-[200px] overflow-y-auto">
                                             {medications.filter(m => m.active !== false).length > 0 ? (
                                                 <div className="space-y-1.5">
-                                                    {medications.filter(m => m.active !== false).slice(0, 10).map(med => (
-                                                        <div key={med.id} className="pb-1 border-b border-gray-50 last:border-b-0">
-                                                            <p className="font-bold text-xs text-gray-900 truncate">{med.medication_name}</p>
-                                                            <p className="text-[10px] text-gray-600">{med.dosage} {med.frequency}</p>
-                                                        </div>
-                                                    ))}
+                                                    {medications.filter(m => m.active !== false).slice(0, 10).map(med => {
+                                                        const decodedName = (med.medication_name || '')
+                                                            .replace(/&amp;/g, '&')
+                                                            .replace(/&#x2f;/gi, '/')
+                                                            .replace(/&#47;/g, '/')
+                                                            .replace(/&quot;/g, '"')
+                                                            .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
+
+                                                        return (
+                                                            <div key={med.id} className="pb-1 border-b border-gray-50 last:border-b-0">
+                                                                <p className="font-bold text-xs text-gray-900 truncate">{decodedName}</p>
+                                                                <p className="text-[10px] text-gray-600">{med.dosage} {med.frequency}</p>
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
                                             ) : (
                                                 <p className="text-xs text-gray-500 text-center py-6">No active medications</p>
@@ -1797,12 +1806,30 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         <div className="p-2 max-h-[200px] overflow-y-auto">
                                             {problems.length > 0 ? (
                                                 <div className="space-y-1.5">
-                                                    {problems.filter(p => p.status === 'active').slice(0, 10).map(prob => (
-                                                        <div key={prob.id} className="pb-1 border-b border-gray-50 last:border-b-0 flex items-center justify-between gap-2">
-                                                            <p className="font-bold text-xs text-gray-900 truncate">{prob.name || prob.problem_name}</p>
-                                                            <span className="text-[9px] bg-green-100 text-green-700 px-1 rounded font-bold uppercase">Active</span>
-                                                        </div>
-                                                    ))}
+                                                    {(() => {
+                                                        const seen = new Set();
+                                                        return problems
+                                                            .filter(p => p.status === 'active')
+                                                            .filter(p => {
+                                                                const name = (p.name || p.problem_name || '')
+                                                                    .replace(/^[\d.\s]+/, '') // Strip leading numbers
+                                                                    .replace(/\s*\([A-Z][0-9.]+\)\s*$/, '') // Strip trailing (ICD-10)
+                                                                    .toLowerCase()
+                                                                    .trim();
+                                                                if (seen.has(name)) return false;
+                                                                seen.add(name);
+                                                                return true;
+                                                            })
+                                                            .slice(0, 10)
+                                                            .map(prob => (
+                                                                <div key={prob.id} className="pb-1 border-b border-gray-50 last:border-b-0 flex items-center justify-between gap-2">
+                                                                    <p className="font-bold text-xs text-gray-900 truncate">
+                                                                        {(prob.name || prob.problem_name || '').replace(/^[\d.\s]+/, '')}
+                                                                    </p>
+                                                                    <span className="text-[9px] bg-green-100 text-green-700 px-1 rounded font-bold uppercase">Active</span>
+                                                                </div>
+                                                            ));
+                                                    })()}
                                                 </div>
                                             ) : (
                                                 <p className="text-xs text-gray-500 text-center py-6">No active problems</p>
