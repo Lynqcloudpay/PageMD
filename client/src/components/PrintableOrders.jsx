@@ -80,13 +80,14 @@ const PrintableOrders = ({ visitId, patientId, patientName, visitDate, planStruc
       .filter(item => item && item.diagnosis && Array.isArray(item.orders) && item.orders.length > 0)
       .flatMap(item =>
         item.orders
-          .filter(orderText => orderText && orderText.trim())
+          .filter(orderText => orderText && typeof orderText === 'string' && orderText.trim())
           .map(orderText => ({
             diagnosis: item.diagnosis,
             orderText: orderText.trim(),
             // Extract ICD-10 code if present (format: "I25.3 - Aneurysm of heart")
             diagnosisObj: (() => {
-              const diagMatch = item.diagnosis.match(/^([A-Z]\d{2}\.\d+)\s*-\s*(.+)$/);
+              const safeDiagnosis = typeof item.diagnosis === 'string' ? item.diagnosis : String(item.diagnosis || '');
+              const diagMatch = safeDiagnosis.match(/^([A-Z]\d{2}\.\d+)\s*-\s*(.+)$/);
               return {
                 name: diagMatch ? diagMatch[2] : item.diagnosis,
                 icd10Code: diagMatch ? diagMatch[1] : null
@@ -94,14 +95,14 @@ const PrintableOrders = ({ visitId, patientId, patientName, visitDate, planStruc
             })()
           }))
       );
-    
+
     if (process.env.NODE_ENV === 'development') {
       console.log('=== PrintableOrders Debug ===');
       console.log('planStructured:', planStructured);
       console.log('ordersToPrint (from planStructured):', orders);
       console.log('Total orders to print:', orders.length);
     }
-    
+
     return orders;
   }, [planStructured]);
 
@@ -114,31 +115,32 @@ const PrintableOrders = ({ visitId, patientId, patientName, visitDate, planStruc
     let planCode = null;
     let planCPT = null;
     let planTestName = null;
-    
+
     // Lab pattern: "Lab: Complete Blood Count (CBC) [Quest: 6399, CPT: 85025]"
     // or "Lab: Comprehensive Metabolic Panel (CMP) [Quest: 10231, CPT: 80053]"
-    const labMatch = orderText.match(/Lab:\s*([^[]+?)(?:\s*\[(?:Quest|LabCorp):\s*(\d+)(?:,\s*CPT:\s*(\d+))?\])?/i);
+    const safeOrderText = typeof orderText === 'string' ? orderText : String(orderText || '');
+    const labMatch = safeOrderText.match(/Lab:\s*([^[]+?)(?:\s*\[(?:Quest|LabCorp):\s*(\d+)(?:,\s*CPT:\s*(\d+))?\])?/i);
     if (labMatch) {
       planTestName = labMatch[1].trim().toLowerCase().replace(/\s+/g, ' ');
       planCode = labMatch[2];
       planCPT = labMatch[3];
     }
-    
+
     // Find matching order with EXACT code/CPT match first, then exact name match
     // Priority: code > CPT > exact name match
     for (const order of databaseOrders) {
       // Skip if already used (prevent duplicate matches)
       if (usedOrderIds.has(order.id)) continue;
-      
-      const payload = typeof order.order_payload === 'string' 
-        ? JSON.parse(order.order_payload) 
+
+      const payload = typeof order.order_payload === 'string'
+        ? JSON.parse(order.order_payload)
         : (order.order_payload || {});
-      
+
       if (order.order_type === 'lab') {
         const code = (payload.code || '').toString();
         const cpt = (payload.cpt || '').toString();
         const testName = (payload.testName || payload.test_name || payload.name || '').trim().toLowerCase().replace(/\s+/g, ' ');
-        
+
         // EXACT code match (highest priority - most reliable)
         if (planCode && code && planCode === code) {
           if (process.env.NODE_ENV === 'development') {
@@ -164,9 +166,10 @@ const PrintableOrders = ({ visitId, patientId, patientName, visitDate, planStruc
       } else if (order.order_type === 'imaging') {
         const cpt = (payload.cpt || '').toString();
         const studyName = (payload.studyName || payload.name || '').toLowerCase().replace(/\s+/g, ' ');
-        const imagingCPT = orderText.match(/CPT:\s*(\d+)/i)?.[1];
-        const imagingName = orderText.match(/Imaging:\s*([^[]+)/i)?.[1]?.trim().toLowerCase().replace(/\s+/g, ' ');
-        
+        const safeOrderTextMatch = typeof orderText === 'string' ? orderText : String(orderText || '');
+        const imagingCPT = safeOrderTextMatch.match(/CPT:\s*(\d+)/i)?.[1];
+        const imagingName = safeOrderTextMatch.match(/Imaging:\s*([^[]+)/i)?.[1]?.trim().toLowerCase().replace(/\s+/g, ' ');
+
         if (imagingCPT && cpt && imagingCPT === cpt) {
           return order;
         }
@@ -175,25 +178,27 @@ const PrintableOrders = ({ visitId, patientId, patientName, visitDate, planStruc
         }
       } else if (order.order_type === 'referral') {
         const specialist = (payload.specialist || payload.recipientName || payload.recipientSpecialty || '').toLowerCase().replace(/\s+/g, ' ');
-        const referralSpecialist = orderText.match(/Referral:\s*([^-]+)/i)?.[1]?.trim().toLowerCase().replace(/\s+/g, ' ');
-        
+        const safeOrderTextMatch = typeof orderText === 'string' ? orderText : String(orderText || '');
+        const referralSpecialist = safeOrderTextMatch.match(/Referral:\s*([^-]+)/i)?.[1]?.trim().toLowerCase().replace(/\s+/g, ' ');
+
         if (referralSpecialist && specialist && referralSpecialist === specialist) {
           return order;
         }
       } else if (order.order_type === 'prescription' || order.order_type === 'rx') {
         const medication = (payload.medication || payload.medicationName || '').toLowerCase().replace(/\s+/g, ' ');
-        const rxMedication = orderText.match(/(?:Rx|Prescription):\s*(.+)/i)?.[1]?.trim().toLowerCase().replace(/\s+/g, ' ');
-        
+        const safeOrderTextMatch = typeof orderText === 'string' ? orderText : String(orderText || '');
+        const rxMedication = safeOrderTextMatch.match(/(?:Rx|Prescription):\s*(.+)/i)?.[1]?.trim().toLowerCase().replace(/\s+/g, ' ');
+
         if (rxMedication && medication && rxMedication === medication) {
           return order;
         }
       }
     }
-    
+
     if (process.env.NODE_ENV === 'development') {
       console.log('❌ No match found for:', orderText);
     }
-    
+
     return null;
   };
 
@@ -205,7 +210,7 @@ const PrintableOrders = ({ visitId, patientId, patientName, visitDate, planStruc
       window.print();
       return;
     }
-    
+
     // Clone the print content instead of moving it (to avoid React DOM issues)
     const printClone = printContent.cloneNode(true);
     printClone.id = 'print-orders-clone';
@@ -217,16 +222,16 @@ const PrintableOrders = ({ visitId, patientId, patientName, visitDate, planStruc
     printClone.style.zIndex = '99999';
     printClone.style.display = 'block';
     printClone.style.visibility = 'visible';
-    
+
     // Add clone to body
     document.body.appendChild(printClone);
-    
+
     // Hide all other content temporarily using CSS classes
     document.body.classList.add('printing-orders');
-    
+
     // Trigger print
     window.print();
-    
+
     // Restore after print
     setTimeout(() => {
       // Remove clone
@@ -234,7 +239,7 @@ const PrintableOrders = ({ visitId, patientId, patientName, visitDate, planStruc
       if (clone && clone.parentNode) {
         clone.parentNode.removeChild(clone);
       }
-      
+
       // Remove printing class
       document.body.classList.remove('printing-orders');
     }, 100);
@@ -288,7 +293,7 @@ const PrintableOrders = ({ visitId, patientId, patientName, visitDate, planStruc
       : 'Provider',
     npi: user?.npi || null
   };
-  
+
   const clinic = {
     name: 'Medical Center',
     address: '123 Medical Center Drive, Suite 100',
@@ -328,7 +333,7 @@ const PrintableOrders = ({ visitId, patientId, patientName, visitDate, planStruc
                 {Object.values(ordersByDiagnosis).map((group, groupIndex) => {
                   const diagnosis = group.diagnosis;
                   const diagnosisOrders = group.orders;
-                  
+
                   return (
                     <div key={diagnosis.icd10Code || diagnosis.name || groupIndex} className="break-after-page">
                       {/* Diagnosis Header */}
@@ -346,12 +351,12 @@ const PrintableOrders = ({ visitId, patientId, patientName, visitDate, planStruc
                         {diagnosisOrders.map(({ orderText }, orderIndex) => {
                           // Try to find matching database order for form component
                           const matchingOrder = findMatchingDatabaseOrder(orderText, usedOrderIdsRef.current);
-                          
+
                           // Mark this order as used if found
                           if (matchingOrder) {
                             usedOrderIdsRef.current.add(matchingOrder.id);
                           }
-                          
+
                           if (process.env.NODE_ENV === 'development') {
                             console.log('Rendering order from plan:', {
                               orderText,
@@ -360,17 +365,17 @@ const PrintableOrders = ({ visitId, patientId, patientName, visitDate, planStruc
                               matchingOrderType: matchingOrder?.order_type
                             });
                           }
-                          
+
                           if (matchingOrder) {
                             // Use form component if we have a matching database order
                             if (matchingOrder.order_type === 'lab') {
                               return (
                                 <div key={`${diagnosis.name}-${orderIndex}`} className={orderIndex < diagnosisOrders.length - 1 ? "mb-2" : ""}>
-                                  <LabRequisitionForm 
-                                    order={matchingOrder} 
-                                    patient={patient} 
-                                    provider={provider} 
-                                    clinic={clinic} 
+                                  <LabRequisitionForm
+                                    order={matchingOrder}
+                                    patient={patient}
+                                    provider={provider}
+                                    clinic={clinic}
                                     compact={true}
                                   />
                                 </div>
@@ -378,11 +383,11 @@ const PrintableOrders = ({ visitId, patientId, patientName, visitDate, planStruc
                             } else if (matchingOrder.order_type === 'imaging') {
                               return (
                                 <div key={`${diagnosis.name}-${orderIndex}`} className={orderIndex < diagnosisOrders.length - 1 ? "mb-2" : ""}>
-                                  <ImagingRequisitionForm 
-                                    order={matchingOrder} 
-                                    patient={patient} 
-                                    provider={provider} 
-                                    clinic={clinic} 
+                                  <ImagingRequisitionForm
+                                    order={matchingOrder}
+                                    patient={patient}
+                                    provider={provider}
+                                    clinic={clinic}
                                     compact={true}
                                   />
                                 </div>
@@ -390,22 +395,23 @@ const PrintableOrders = ({ visitId, patientId, patientName, visitDate, planStruc
                             } else if (matchingOrder.order_type === 'referral') {
                               return (
                                 <div key={`${diagnosis.name}-${orderIndex}`} className={orderIndex < diagnosisOrders.length - 1 ? "mb-2" : ""}>
-                                  <ReferralForm 
-                                    order={matchingOrder} 
-                                    patient={patient} 
-                                    provider={provider} 
-                                    clinic={clinic} 
+                                  <ReferralForm
+                                    order={matchingOrder}
+                                    patient={patient}
+                                    provider={provider}
+                                    clinic={clinic}
                                     compact={true}
                                   />
                                 </div>
                               );
                             }
                           }
-                          
+
                           // Fallback: render as text if no matching database order found
                           // Parse order type from text
-                          const orderType = orderText.match(/^(Lab|Imaging|Referral|Rx|Prescription):/i)?.[1]?.toLowerCase() || 'order';
-                          
+                          const safeOrderText = typeof orderText === 'string' ? orderText : String(orderText || '');
+                          const orderType = safeOrderText.match(/^(Lab|Imaging|Referral|Rx|Prescription):/i)?.[1]?.toLowerCase() || 'order';
+
                           return (
                             <div key={`${diagnosis.name}-${orderIndex}`} className={`text-xs py-1 ${orderIndex < diagnosisOrders.length - 1 ? "border-b border-gray-200" : ""}`}>
                               <div className="flex items-center justify-between">
@@ -413,9 +419,9 @@ const PrintableOrders = ({ visitId, patientId, patientName, visitDate, planStruc
                                   <span className="font-semibold text-gray-900">
                                     {orderText.split(':')[1]?.trim() || orderText}
                                   </span>
-                                  {orderText.match(/\(CPT:\s*(\d+)\)/i) && (
+                                  {safeOrderText.match(/\(CPT:\s*(\d+)\)/i) && (
                                     <span className="text-gray-500 ml-2">
-                                      (CPT: {orderText.match(/\(CPT:\s*(\d+)\)/i)[1]})
+                                      (CPT: {safeOrderText.match(/\(CPT:\s*(\d+)\)/i)[1]})
                                     </span>
                                   )}
                                 </div>

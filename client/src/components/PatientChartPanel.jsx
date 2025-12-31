@@ -1309,7 +1309,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                 <div className="grid grid-cols-1 gap-2">
                                                     {[...stressTests, ...cardiacCaths].map(study => {
                                                         const isStress = study.doc_type === 'stress_test';
-                                                        const tagsStr = study.tags || '';
+                                                        const tagsStr = typeof study.tags === 'string' ? study.tags : String(study.tags || '');
                                                         const mets = tagsStr.match(/mets:([^,]+)/)?.[1];
                                                         const ef = tagsStr.match(/ef:([^,]+)/)?.[1];
                                                         return (

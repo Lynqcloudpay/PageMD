@@ -445,18 +445,18 @@ const VisitNote = () => {
             return { chiefComplaint: '', hpi: '', assessment: '', plan: '', rosNotes: '', peNotes: '', carePlan: '', followUp: '' };
         }
         const decodedText = decodeHtmlEntities(text);
-        // console.log('parseNoteText: Decoded text length:', decodedText.length, 'Preview:', decodedText.substring(0, 100));
+        const safeDecodedText = typeof decodedText === 'string' ? decodedText : String(decodedText || '');
 
         // More flexible regex patterns that handle various formats (including end of string)
-        const chiefComplaintMatch = decodedText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
-        const hpiMatch = decodedText.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
-        const rosMatch = decodedText.match(/(?:ROS|Review of Systems):\s*(.+?)(?:\n\n|\n(?:PE|Physical|Assessment|Plan):|$)/is);
-        const peMatch = decodedText.match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Results|Data|Assessment|Plan):|$)/is);
-        const resultsMatch = decodedText.match(/(?:Results|Data):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):|$)/is);
-        const assessmentMatch = decodedText.match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):|$)/is);
-        const planMatch = decodedText.match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n(?:Care Plan|CP|Follow Up|FU):|$)/is);
-        const carePlanMatch = decodedText.match(/(?:Care Plan|CP):\s*(.+?)(?:\n\n|\n(?:Follow Up|FU):|$)/is);
-        const followUpMatch = decodedText.match(/(?:Follow Up|FU):\s*(.+?)(?:\n\n|$)/is);
+        const chiefComplaintMatch = safeDecodedText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
+        const hpiMatch = safeDecodedText.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
+        const rosMatch = safeDecodedText.match(/(?:ROS|Review of Systems):\s*(.+?)(?:\n\n|\n(?:PE|Physical|Assessment|Plan):|$)/is);
+        const peMatch = safeDecodedText.match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Results|Data|Assessment|Plan):|$)/is);
+        const resultsMatch = safeDecodedText.match(/(?:Results|Data):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):|$)/is);
+        const assessmentMatch = safeDecodedText.match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):|$)/is);
+        const planMatch = safeDecodedText.match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n(?:Care Plan|CP|Follow Up|FU):|$)/is);
+        const carePlanMatch = safeDecodedText.match(/(?:Care Plan|CP):\s*(.+?)(?:\n\n|\n(?:Follow Up|FU):|$)/is);
+        const followUpMatch = safeDecodedText.match(/(?:Follow Up|FU):\s*(.+?)(?:\n\n|$)/is);
 
         const result = {
             chiefComplaint: chiefComplaintMatch ? decodeHtmlEntities(chiefComplaintMatch[1].trim()) : '',
@@ -495,7 +495,8 @@ const VisitNote = () => {
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
             // Check if line is a diagnosis (starts with number and period)
-            const diagnosisMatch = line.match(/^(\d+)\.\s*(.+)$/);
+            const safeLine = typeof line === 'string' ? line : String(line || '');
+            const diagnosisMatch = safeLine.match(/^(\d+)\.\s*(.+)$/);
             if (diagnosisMatch) {
                 // Save previous diagnosis if exists
                 if (currentDiagnosis) {
@@ -1060,7 +1061,8 @@ const VisitNote = () => {
                         for (const diag of diagnoses) {
                             // Parse "Code - Description" or just Description
                             // match: ["Code - Description", "Code", "Description"]
-                            const match = diag.match(/^([A-Z][0-9.]+)\s*-\s*(.+)$/);
+                            const safeDiag = typeof diag === 'string' ? diag : String(diag || '');
+                            const match = safeDiag.match(/^([A-Z][0-9.]+)\s*-\s*(.+)$/);
                             let icd10Code = null;
                             let problemName = diag;
 
@@ -1673,19 +1675,19 @@ const VisitNote = () => {
     const extractSectionFromNote = (noteText, section) => {
         if (!noteText) return '';
         const decoded = decodeHtmlEntities(noteText);
-        let match;
+        const safeDecoded = typeof decoded === 'string' ? decoded : String(decoded || '');
         switch (section) {
             case 'hpi':
-                match = decoded.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
+                match = safeDecoded.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
                 break;
             case 'ros':
-                match = decoded.match(/(?:ROS|Review of Systems):\s*(.+?)(?:\n\n|\n(?:PE|Physical|Assessment|Plan):|$)/is);
+                match = safeDecoded.match(/(?:ROS|Review of Systems):\s*(.+?)(?:\n\n|\n(?:PE|Physical|Assessment|Plan):|$)/is);
                 break;
             case 'pe':
-                match = decoded.match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):|$)/is);
+                match = safeDecoded.match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):|$)/is);
                 break;
             case 'assessment':
-                match = decoded.match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):|$)/is);
+                match = safeDecoded.match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):|$)/is);
                 break;
             default:
                 return '';

@@ -25,10 +25,11 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
     }, [isOpen, patient?.id]);
 
     const parseOrdersFromNote = (noteText, visitId) => {
-        if (!noteText) return [];
+        const safeNoteText = typeof noteText === 'string' ? noteText : (typeof noteText === 'object' ? JSON.stringify(noteText) : String(noteText || ''));
+        if (!safeNoteText) return [];
 
         // Extract the Plan section
-        const planMatch = noteText.match(/(?:Plan|P):[\s\n]*([\s\S]+?)(?:\n\n|\n(?:Care Plan|CP|Follow Up|FU):|$)/i);
+        const planMatch = safeNoteText.match(/(?:Plan|P):[\s\n]*([\s\S]+?)(?:\n\n|\n(?:Care Plan|CP|Follow Up|FU):|$)/i);
         if (!planMatch) return [];
 
         const planText = planMatch[1];
@@ -41,7 +42,8 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
             if (!trimmed) return;
 
             // Check if it's a diagnosis line (e.g., "1. Hypertension")
-            const diagMatch = trimmed.match(/^(\d+)\.\s*(.+)$/);
+            const safeTrimmed = typeof trimmed === 'string' ? trimmed : String(trimmed || '');
+            const diagMatch = safeTrimmed.match(/^(\d+)\.\s*(.+)$/);
             if (diagMatch) {
                 currentDiagnosis = diagMatch[2].trim();
                 return;

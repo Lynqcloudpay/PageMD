@@ -423,15 +423,10 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
             setSearchQuery('');
             setSearchResults([]);
             setActiveTab(initialTab);
-            setSearchResults([]);
-            setActiveTab(initialTab);
 
             // Default select first available diagnosis if none selected
             if (diagnoses.length > 0 && !selectedDiagnosis) {
                 setSelectedDiagnosis(diagnoses[0]);
-            } else if (!selectedDiagnosis) {
-                // If no diagnoses, maybe prompt to add new?
-                // For now, leave empty/unassigned but show controls
             }
 
             setIsDiagnosisDropdownOpen(false);
@@ -473,13 +468,14 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                 type = 'medications';
                                 const prefix = orderStr.includes(': ') ? 'Prescription: ' : 'Prescription ';
                                 // Prescription: Name - Sig, Dispense: #
-                                const match = orderStr.match(/(?:Prescription: |Prescription )(.*?) - (.*?), Dispense: (.*)/);
+                                const safeOrderStr = typeof orderStr === 'string' ? orderStr : (typeof orderStr === 'object' ? JSON.stringify(orderStr) : String(orderStr));
+                                const match = safeOrderStr.match(/(?:Prescription: |Prescription )(.*?) - (.*?), Dispense: (.*)/);
                                 if (match) {
                                     name = match[1].trim();
                                     sig = match[2].trim();
                                     dispense = match[3].trim();
                                 } else {
-                                    name = orderStr.substring(prefix.length).trim();
+                                    name = safeOrderStr.substring(prefix.length).trim();
                                 }
                             } else if (orderStr === 'Lab' || orderStr === 'Imaging' || orderStr === 'Procedure') {
                                 // Handle edge case where only the header was captured

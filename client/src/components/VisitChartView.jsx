@@ -134,7 +134,8 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
-            const diagnosisMatch = line.match(/^(\d+)\.\s*(.+)$/);
+            const safeLine = typeof line === 'string' ? line : String(line || '');
+            const diagnosisMatch = safeLine.match(/^(\d+)\.\s*(.+)$/);
             if (diagnosisMatch) {
                 if (currentDiagnosis) {
                     structured.push({ diagnosis: currentDiagnosis, orders: [...currentOrders] });

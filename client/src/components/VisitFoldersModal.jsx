@@ -19,12 +19,12 @@ const VisitFoldersModal = ({ isOpen, onClose, visits, onViewVisit, onDeleteVisit
         filtered.sort((a, b) => {
             try {
                 // Use visitDate if available (original date object), otherwise parse the formatted date
-                const dateA = a.visitDate ? new Date(a.visitDate) : 
-                    (typeof a.date === 'string' ? 
+                const dateA = a.visitDate ? new Date(a.visitDate) :
+                    (typeof a.date === 'string' ?
                         (parse(a.date, 'MM/dd/yyyy', new Date()) || parse(a.date, 'M/d/yyyy', new Date()) || new Date(a.date)) :
                         new Date(a.date));
-                const dateB = b.visitDate ? new Date(b.visitDate) : 
-                    (typeof b.date === 'string' ? 
+                const dateB = b.visitDate ? new Date(b.visitDate) :
+                    (typeof b.date === 'string' ?
                         (parse(b.date, 'MM/dd/yyyy', new Date()) || parse(b.date, 'M/d/yyyy', new Date()) || new Date(b.date)) :
                         new Date(b.date));
                 return compareDesc(dateA, dateB);
@@ -40,11 +40,11 @@ const VisitFoldersModal = ({ isOpen, onClose, visits, onViewVisit, onDeleteVisit
     if (!isOpen) return null;
 
     return (
-        <div 
+        <div
             className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
             onClick={onClose}
         >
-            <div 
+            <div
                 className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col"
                 onClick={(e) => e.stopPropagation()}
             >
@@ -67,31 +67,28 @@ const VisitFoldersModal = ({ isOpen, onClose, visits, onViewVisit, onDeleteVisit
                     <div className="flex items-center space-x-2">
                         <button
                             onClick={() => setFilter('all')}
-                            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                                filter === 'all'
+                            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${filter === 'all'
                                     ? 'bg-primary-100 text-primary-700 border-b-2 border-primary-600'
                                     : 'text-neutral-600 hover:text-neutral-900'
-                            }`}
+                                }`}
                         >
                             All ({visits.length})
                         </button>
                         <button
                             onClick={() => setFilter('draft')}
-                            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                                filter === 'draft'
+                            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${filter === 'draft'
                                     ? 'bg-orange-100 text-orange-700 border-b-2 border-orange-600'
                                     : 'text-neutral-600 hover:text-neutral-900'
-                            }`}
+                                }`}
                         >
                             Draft ({visits.filter(v => !v.signed).length})
                         </button>
                         <button
                             onClick={() => setFilter('signed')}
-                            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                                filter === 'signed'
+                            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${filter === 'signed'
                                     ? 'bg-green-100 text-green-700 border-b-2 border-green-600'
                                     : 'text-neutral-600 hover:text-neutral-900'
-                            }`}
+                                }`}
                         >
                             Signed ({visits.filter(v => v.signed).length})
                         </button>
@@ -116,7 +113,7 @@ const VisitFoldersModal = ({ isOpen, onClose, visits, onViewVisit, onDeleteVisit
                                     const visitDateObj = new Date(visit.visitDate);
                                     const createdDateObj = visit.createdAt ? new Date(visit.createdAt) : visitDateObj;
                                     const dateStr = visitDateObj.toLocaleDateString();
-                                    
+
                                     // Check if visit_date has time component
                                     const hasTime = visitDateObj.getHours() !== 0 || visitDateObj.getMinutes() !== 0 || visitDateObj.getSeconds() !== 0;
                                     const timeSource = hasTime ? visitDateObj : createdDateObj;
@@ -128,10 +125,11 @@ const VisitFoldersModal = ({ isOpen, onClose, visits, onViewVisit, onDeleteVisit
 
                                 // Get chief complaint if available
                                 let chiefComplaint = visit.chiefComplaint || null;
-                                
+
                                 // If not directly available, try to parse from fullNote or summary
                                 if (!chiefComplaint && visit.fullNote) {
-                                    const ccMatch = visit.fullNote.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
+                                    const fullNoteText = typeof visit.fullNote === 'string' ? visit.fullNote : (typeof visit.fullNote === 'object' ? JSON.stringify(visit.fullNote) : String(visit.fullNote));
+                                    const ccMatch = fullNoteText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
                                     chiefComplaint = ccMatch ? ccMatch[1].trim() : null;
                                 }
 
@@ -140,7 +138,7 @@ const VisitFoldersModal = ({ isOpen, onClose, visits, onViewVisit, onDeleteVisit
                                     if (!window.confirm('Are you sure you want to delete this draft note? This action cannot be undone.')) {
                                         return;
                                     }
-                                    
+
                                     try {
                                         await visitsAPI.delete(visit.id);
                                         if (onDeleteVisit) {
