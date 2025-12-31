@@ -62,13 +62,21 @@ async function fix() {
                   ALTER TABLE billing ADD COLUMN IF NOT EXISTS modifier2 VARCHAR(12) DEFAULT '';
                   ALTER TABLE billing ADD COLUMN IF NOT EXISTS modifier3 VARCHAR(12) DEFAULT '';
                   ALTER TABLE billing ADD COLUMN IF NOT EXISTS modifier4 VARCHAR(12) DEFAULT '';
+                  ALTER TABLE fee_schedule ADD COLUMN IF NOT EXISTS price_level VARCHAR(31) DEFAULT 'Standard';
                   
-                  -- New Hardening Indexes/Constraints
-                  ALTER TABLE drug_inventory ADD CONSTRAINT chk_drug_inventory_non_negative CHECK (on_hand >= 0);
-                  CREATE INDEX IF NOT EXISTS idx_drug_inventory_fifo ON drug_inventory(drug_id, expiration, id);
-                  CREATE UNIQUE INDEX IF NOT EXISTS uniq_ar_session_patient_copay_per_encounter ON ar_session(encounter) WHERE payment_type = 'Patient Payment';
-                  CREATE UNIQUE INDEX IF NOT EXISTS uniq_billing_encounter_code_once ON billing(encounter, code, COALESCE(modifier1,'')) WHERE activity = true;
+                  -- New Hardening Indexes/Constraints (ignore errors if already exist)
                 `);
+
+                // Try to add constraints separately since they can fail if already exist
+                try {
+                    await client.query(`ALTER TABLE drug_inventory ADD CONSTRAINT chk_drug_inventory_non_negative CHECK (on_hand >= 0)`);
+                } catch (e) { /* constraint may already exist */ }
+
+                try {
+                    await client.query(`CREATE INDEX IF NOT EXISTS idx_drug_inventory_fifo ON drug_inventory(drug_id, expiration, id)`);
+                    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS uniq_ar_session_patient_copay_per_encounter ON ar_session(encounter) WHERE payment_type = 'Patient Payment'`);
+                    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS uniq_billing_encounter_code_once ON billing(encounter, code, COALESCE(modifier1,'')) WHERE activity = true`);
+                } catch (e) { console.log('Index creation note:', e.message); }
 
                 await client.query('COMMIT');
                 console.log(`✅ Finished schema: ${schema}`);
