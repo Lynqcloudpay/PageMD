@@ -464,7 +464,27 @@ adminRouter.put('/clinical', async (req, res) => {
   try {
     const existing = await pool.query('SELECT id FROM clinical_settings LIMIT 1');
 
-    const updates = { ...req.body };
+    // Whitelist of valid clinical setting fields
+    const validFields = [
+      'require_dx_on_visit',
+      'require_vitals_on_visit',
+      'enable_clinical_alerts',
+      'enable_drug_interaction_check',
+      'enable_allergy_alerts',
+      'default_visit_duration_minutes'
+    ];
+
+    const updates = {};
+    validFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    });
+
+    if (Object.keys(updates).length === 0) {
+      return res.json(existing.rows[0] || {});
+    }
+
     const values = [];
     const setClauses = [];
     let paramIndex = 1;
@@ -475,7 +495,7 @@ adminRouter.put('/clinical', async (req, res) => {
       paramIndex++;
     });
 
-    setClauses.push('updated_at = CURRENT_TIMESTAMP');
+    setClauses.push(`updated_at = CURRENT_TIMESTAMP`);
     setClauses.push(`updated_by = $${paramIndex}`);
     values.push(req.user.id);
     paramIndex++;
@@ -486,17 +506,18 @@ adminRouter.put('/clinical', async (req, res) => {
       values.push(existing.rows[0].id);
 
       result = await pool.query(`
-        UPDATE clinical_settings SET ${setClauses.join(', ')} RETURNING *
+        UPDATE clinical_settings SET ${setClauses.filter(c => !c.startsWith('WHERE')).join(', ')} WHERE id = $${paramIndex}
+        RETURNING *
       `, values);
     } else {
       // Insert new with all fields
-      const allFields = Object.keys(updates);
-      const fieldValues = allFields.map(() => `$${paramIndex++}`);
-      fieldValues.push(`$${paramIndex++}`); // updated_by
+      const fields = Object.keys(updates);
+      const placeholders = fields.map((_, i) => `$${i + 1}`);
+      const updatedByPlaceholder = `$${fields.length + 1}`;
 
       result = await pool.query(`
-        INSERT INTO clinical_settings (${allFields.join(', ')}, updated_by)
-        VALUES (${fieldValues.join(', ')})
+        INSERT INTO clinical_settings (${fields.join(', ')}, updated_by)
+        VALUES (${placeholders.join(', ')}, ${updatedByPlaceholder})
         RETURNING *
       `, [...Object.values(updates), req.user.id]);
     }

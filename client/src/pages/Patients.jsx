@@ -128,7 +128,7 @@ const Patients = () => {
                         <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10" />
                         <input
                             type="text"
-                            placeholder="Search patients by name or MRN..."
+                            placeholder="Search patients by name, MRN, phone, email, or DOB (MM/DD/YYYY)..."
                             className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm text-gray-700 placeholder:text-gray-400"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
