@@ -116,6 +116,7 @@ const Layout = ({ children }) => {
     // Navigation items with icons and badges (gated by permissions)
     // Use defensive checks to prevent crashes if permissions undefined
     const navigationSection = [
+        { path: '/dashboard', icon: BarChart3, label: 'Dashboard', badge: null },
         // Schedule - requires schedule:view permission
         ...(canViewSchedule ? [
             { path: '/schedule', icon: Calendar, label: 'Schedule', badge: null },

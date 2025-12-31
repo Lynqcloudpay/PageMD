@@ -77,10 +77,22 @@ router.get('/', async (req, res) => {
 
     // Handle search parameter - check if search is provided and not empty
     if (search && search.trim()) {
-      console.log(`[PATIENTS-GET] Adding search filter: ${search}`);
+      const searchTerm = search.trim();
+      console.log(`[PATIENTS-GET] Adding search filter: ${searchTerm}`);
       paramCount++;
-      query += ` AND (first_name ILIKE $${paramCount} OR last_name ILIKE $${paramCount} OR mrn ILIKE $${paramCount})`;
-      params.push(`%${search.trim()}%`);
+      // Search by name (including full name), MRN, Phone, DOB, and Email
+      query += ` AND (
+        (first_name || ' ' || last_name) ILIKE $${paramCount} OR 
+        first_name ILIKE $${paramCount} OR 
+        last_name ILIKE $${paramCount} OR 
+        mrn ILIKE $${paramCount} OR 
+        phone ILIKE $${paramCount} OR
+        phone_cell ILIKE $${paramCount} OR
+        email ILIKE $${paramCount} OR
+        to_char(dob, 'MM/DD/YYYY') ILIKE $${paramCount} OR
+        to_char(dob, 'YYYY-MM-DD') ILIKE $${paramCount}
+      )`;
+      params.push(`%${searchTerm}%`);
     }
 
     query += ` ORDER BY last_name, first_name LIMIT $${++paramCount} OFFSET $${++paramCount}`;

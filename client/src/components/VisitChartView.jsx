@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, FileText, Printer, X, AlertCircle, CheckCircle2, User, Phone, Mail, MapPin, Building2, Stethoscope, CreditCard, Users, FilePlus, Receipt, DollarSign, Globe, Clock, Heart, Thermometer, Wind, Pill, Lock, ClipboardList, ChevronDown } from 'lucide-react';
+import { Activity, FileText, Printer, X, AlertCircle, CheckCircle2, User, UserCircle, Calendar, Database, Phone, Mail, MapPin, Building2, Stethoscope, CreditCard, Users, FilePlus, Receipt, DollarSign, Globe, Clock, Heart, Thermometer, Wind, Pill, Lock, ClipboardList, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { visitsAPI, patientsAPI, billingAPI, codesAPI, settingsAPI, documentsAPI } from '../services/api';
 import { format } from 'date-fns';
@@ -217,7 +217,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
             if (practiceRes?.data) {
                 const p = practiceRes.data;
                 // Default "NO LOGO" placeholder SVG - building icon with text
-                const defaultLogoUrl = `data: image / svg + xml,% 3Csvg xmlns = 'http://www.w3.org/2000/svg' width = '200' height = '200' viewBox = '0 0 200 200' % 3E % 3Crect width = '200' height = '200' fill = '%23f8fafc' rx = '8' /% 3E % 3Crect x = '60' y = '45' width = '80' height = '90' fill = 'none' stroke = '%23cbd5e1' stroke - width='3' rx = '4' /% 3E % 3Crect x = '75' y = '60' width = '20' height = '15' fill = '%23cbd5e1' rx = '2' /% 3E % 3Crect x = '105' y = '60' width = '20' height = '15' fill = '%23cbd5e1' rx = '2' /% 3E % 3Crect x = '75' y = '85' width = '20' height = '15' fill = '%23cbd5e1' rx = '2' /% 3E % 3Crect x = '105' y = '85' width = '20' height = '15' fill = '%23cbd5e1' rx = '2' /% 3E % 3Crect x = '88' y = '110' width = '24' height = '25' fill = '%23cbd5e1' rx = '2' /% 3E % 3Ctext x = '100' y = '165' text - anchor='middle' font - family='Arial,sans-serif' font - size='14' font - weight='600' fill = '%2394a3b8' % 3ENO LOGO % 3C / text % 3E % 3C / svg % 3E`;
+                const defaultLogoUrl = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8fafc' rx='8'/%3E%3Crect x='60' y='45' width='80' height='90' fill='none' stroke='%23cbd5e1' stroke-width='3' rx='4'/%3E%3Crect x='75' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='75' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='88' y='110' width='24' height='25' fill='%23cbd5e1' rx='2'/%3E%3Ctext x='100' y='165' text-anchor='middle' font-family='Arial,sans-serif' font-size='14' font-weight='600' fill='%2394a3b8'%3ENO LOGO%3C/text%3E%3C/svg%3E`;
                 setClinicInfo({
                     name: p.practice_name || p.display_name || "My Practice",
                     address: [p.address_line1, p.address_line2, `${p.city || ''} ${p.state || ''} ${p.zip || ''} `.trim()].filter(Boolean).join('\n') || "",
@@ -443,8 +443,8 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                 display: block;
             }
         `}</style>
-            <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-0 backdrop-blur-sm animate-fade-in print:bg-white print:p-0 print:static">
-                <div className="bg-[#F8FAFC] shadow-2xl w-full h-screen overflow-hidden flex border-none animate-slide-up print:block print:h-auto print:max-w-none print:border-none print:bg-white">
+            <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 md:p-8 backdrop-blur-md animate-fade-in print:bg-white print:p-0 print:static">
+                <div className="bg-[#F8FAFC] shadow-[0_32px_128px_-16px_rgba(0,0,0,0.5)] w-full max-w-[1600px] h-[95vh] rounded-3xl overflow-hidden flex border border-white/20 animate-slide-up print:block print:h-auto print:max-w-none print:border-none print:bg-white print:rounded-none">
 
                     {/* EPIC STORYBOARD (Left Sidebar - High Density) */}
                     <div className="w-[300px] shrink-0 border-r border-slate-200 flex flex-col bg-white overflow-y-auto overflow-x-hidden no-print">
@@ -461,10 +461,10 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                     <ClipboardList className="w-4 h-4" />
                                 </button>
                             </div>
-                            <div className="mt-2 flex flex-wrap gap-x-2 text-[12px] font-bold text-slate-500 uppercase tracking-tight">
-                                <span>{patientAge}Y / {patient.sex || 'U'}</span>
-                                <span className="text-slate-300">|</span>
-                                <span>MRN: {patient.mrn}</span>
+                            <div className="mt-2 grid grid-cols-2 gap-y-1 gap-x-3 text-[11px] font-bold text-slate-500 uppercase tracking-tight">
+                                <div className="flex items-center gap-1.5"><Calendar className="w-3 h-3 text-slate-300" /> {patientAge}Y / {patient.sex || 'U'}</div>
+                                <div className="flex items-center gap-1.5"><Database className="w-3 h-3 text-slate-300" /> {patient.mrn}</div>
+                                <div className="flex items-center gap-1.5 col-span-2"><CreditCard className="w-3 h-3 text-slate-300" /> {patient.insurance_provider || 'Not Verified'}</div>
                             </div>
                         </div>
 
@@ -633,13 +633,27 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                         </div>
                                         <div className="leading-tight">
                                             <div className="flex items-baseline gap-4 mb-2">
-                                                <h1 className="text-[28px] font-black text-slate-800 tracking-tightest uppercase">{clinicInfo.name}</h1>
-                                                <span className="text-[9px] bg-slate-900 text-white px-2.5 py-1 rounded-sm font-black tracking-widest uppercase">Clinical Record</span>
+                                                <h1 className="text-[28px] font-black text-slate-800 tracking-tightest">{clinicInfo.name}</h1>
+                                                <span className="text-[9px] bg-blue-600 text-white px-2.5 py-1 rounded-sm font-black tracking-widest uppercase shadow-sm">Clinical Record</span>
                                             </div>
-                                            <div className="text-[12px] text-slate-400 font-bold uppercase tracking-tight flex items-center gap-3">
-                                                <span>{clinicInfo.address.replace(/\n/g, ' • ')}</span>
-                                                <div className="w-1 h-1 rounded-full bg-slate-300" />
-                                                <span className="text-slate-600 font-black">PH: {clinicInfo.phone}</span>
+                                            <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-[11px] text-slate-400 font-bold tracking-tight">
+                                                <div className="flex items-center gap-2">
+                                                    <MapPin className="w-3.5 h-3.5 text-slate-300" />
+                                                    <span>{clinicInfo.address.replace(/\n/g, ' • ')}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Phone className="w-3.5 h-3.5 text-slate-300" />
+                                                    <span className="text-slate-600 font-extrabold">{clinicInfo.phone}</span>
+                                                    {clinicInfo.fax && <span className="text-slate-400 ml-2">F: {clinicInfo.fax}</span>}
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Globe className="w-3.5 h-3.5 text-slate-300" />
+                                                    <span className="lowercase">{clinicInfo.website || 'www.pagemdemr.com'}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Mail className="w-3.5 h-3.5 text-slate-300" />
+                                                    <span className="lowercase">{clinicInfo.email || 'records@practice.com'}</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -654,32 +668,58 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
 
                                 {/* 2. COMPACT PATIENT DEMOGRAPHICS */}
                                 <div className="relative avoid-cut py-5 px-8 my-4 bg-slate-50/50 rounded-xl border border-slate-100/80 flex gap-10 overflow-hidden">
-                                    <div className="flex-1 grid grid-cols-3 gap-x-12 relative z-10 text-[11px]">
+                                    <div className="flex-1 grid grid-cols-3 gap-x-8 relative z-10 text-[10px]">
                                         <div className="space-y-3">
                                             <div>
-                                                <div className="text-slate-400 font-bold uppercase text-[8px] tracking-tight mb-0.5">Patient Profile</div>
-                                                <div className="font-extrabold text-slate-900 text-[15px] leading-tight tracking-tight">{patient.last_name}, {patient.first_name}</div>
-                                                <div className="text-[11px] text-slate-500 font-bold tabular-nums">MRN: {patient.mrn}</div>
+                                                <div className="text-slate-400 font-bold uppercase text-[7px] tracking-widest mb-0.5 opacity-60">Identification</div>
+                                                <div className="font-extrabold text-slate-900 text-[14px] leading-tight tracking-tight uppercase">{patient.last_name}, {patient.first_name}</div>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <span className="bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-[4px] font-black text-[9px]">MRN: {patient.mrn}</span>
+                                                    <span className="text-slate-400 font-bold">{patient.sex || 'U'}</span>
+                                                </div>
                                             </div>
-                                            <div className="font-extrabold text-slate-800 text-[13px]">{patientDOB} <span className="text-slate-300 mx-1">/</span> {patientAge}Y <span className="text-slate-300 mx-1">/</span> {patient.sex}</div>
-                                        </div>
-
-                                        <div className="space-y-3 border-x border-slate-100/60 px-8">
                                             <div>
-                                                <div className="text-slate-400 font-bold uppercase text-[8px] tracking-tight mb-1">Billing & Provider</div>
-                                                <div className="font-bold text-slate-800 uppercase text-[11px] mb-1">{patient.insurance_name || 'Self-Pay'}</div>
-                                                <div className="font-extrabold text-blue-600 text-[12px] tracking-tight">{providerName}</div>
-                                            </div>
-                                            <div className="flex flex-col gap-0.5 text-slate-600 font-bold text-[10px]">
-                                                <span>{patient.phone}</span>
+                                                <div className="font-extrabold text-slate-700 text-[11px] tabular-nums">
+                                                    DOB: {patientDOB} <span className="text-slate-300 mx-1">•</span> AGE: {patientAge}Y
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <div className="space-y-2 pl-6">
-                                            <div className="text-slate-400 font-bold uppercase text-[8px] tracking-tight mb-1">Primary Residence</div>
-                                            <div className="text-slate-700 font-bold text-[10px] leading-tight opacity-70">
-                                                {patient.street_address}<br />
-                                                {[patient.city, patient.state, patient.zip].filter(Boolean).join(', ')}
+                                        <div className="space-y-3 border-x border-slate-100 px-6">
+                                            <div>
+                                                <div className="text-slate-400 font-bold uppercase text-[7px] tracking-widest mb-1 opacity-60">Coverage & Attending</div>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                                                    <div className="font-black text-slate-800 uppercase text-[10px]">{patient.insurance_provider || 'Self-Pay'}</div>
+                                                </div>
+                                                <div className="font-extrabold text-blue-600 text-[11px] flex items-center gap-1.5">
+                                                    <UserCircle className="w-3 h-3 text-blue-400" />
+                                                    {providerName}
+                                                </div>
+                                            </div>
+                                            <div className="bg-blue-50/50 p-1.5 rounded-lg border border-blue-100/30">
+                                                <div className="text-slate-400 font-bold uppercase text-[7px] mb-0.5">Emergency Contact</div>
+                                                <div className="text-slate-700 font-black tabular-nums leading-none truncate">{patient.emergency_contact_name || 'None Listed'}</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3 pl-4">
+                                            <div>
+                                                <div className="text-slate-400 font-bold uppercase text-[7px] tracking-widest mb-1 opacity-60">Contact Details</div>
+                                                <div className="text-slate-700 font-bold text-[9px] leading-tight tabular-nums flex flex-col gap-0.5">
+                                                    <span className="flex items-center gap-1.5"><Phone className="w-2.5 h-2.5 text-slate-300" /> {patient.phone || 'No Phone'}</span>
+                                                    <span className="flex items-center gap-1.5"><Mail className="w-2.5 h-2.5 text-slate-300" /> {patient.email || 'No Email'}</span>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div className="text-slate-400 font-bold uppercase text-[7px] mb-1 opacity-60">Address</div>
+                                                <div className="text-slate-600 font-bold text-[9px] leading-tight flex items-start gap-1.5">
+                                                    <MapPin className="w-2.5 h-2.5 text-slate-300 mt-0.5" />
+                                                    <span>
+                                                        {patient.street_address || patient.address_line1}<br />
+                                                        {[patient.city, patient.state, patient.zip].filter(Boolean).join(', ')}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
