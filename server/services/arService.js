@@ -379,7 +379,7 @@ class ARService {
             WITH encounter_balances AS (
                 SELECT 
                     v.patient_id,
-                    p.first_name, p.last_name, p.mrn,
+                    p.first_name, p.last_name, p.mrn, p.encryption_metadata,
                     v.id as encounter_id,
                     v.visit_date,
                     (
@@ -402,7 +402,20 @@ class ARService {
             ORDER BY last_name, visit_date
         `;
         const res = await pool.query(query, [asOfDate || null]);
-        return res.rows;
+
+        // Decrypt PHI
+        const { decryptPatientPHI } = require('./patientEncryptionService');
+        const decryptedRows = await Promise.all(res.rows.map(async (row) => {
+            // Reconstruct a mini "patient object" for decryption if needed, 
+            // but decryptPatientPHI expects keys like first_name, last_name, encryption_metadata.
+            // Our query returns p.encryption_metadata (implied by SELECT * FROM encounter_balances which joins p)
+            // Wait, the CTE selects specific columns: p.first_name, p.last_name, p.mrn.
+            // It might NOT be selecting encryption_metadata!
+            // We need to fetch encryption_metadata in the query.
+            return await decryptPatientPHI(row);
+        }));
+
+        return decryptedRows;
     }
 
     /**
@@ -412,7 +425,7 @@ class ARService {
     async getCollectionsReport({ from, to, method, payerType }) {
         let query = `
             SELECT s.*, 
-                   p.first_name as patient_first, p.last_name as patient_last, p.mrn,
+                   p.first_name as patient_first, p.last_name as patient_last, p.mrn, p.encryption_metadata,
                    u.first_name as user_first, u.last_name as user_last
             FROM ar_session s
             LEFT JOIN patients p ON s.patient_id = p.id
@@ -447,7 +460,30 @@ class ARService {
         query += ` ORDER BY s.check_date DESC`;
 
         const res = await pool.query(query, params);
-        return res.rows;
+
+        const { decryptPatientPHI } = require('./patientEncryptionService');
+        const decryptedRows = await Promise.all(res.rows.map(async (row) => {
+            // Decrypt patient names (aliased columns)
+            if (row.encryption_metadata) {
+                const tempP = {
+                    first_name: row.patient_first,
+                    last_name: row.patient_last,
+                    encryption_metadata: row.encryption_metadata
+                };
+                try {
+                    const decP = await decryptPatientPHI(tempP);
+                    row.patient_first = decP.first_name;
+                    row.patient_last = decP.last_name;
+                } catch (e) {
+                    // Ignore decryption errors, keep original
+                }
+                // Don't leak metadata in response if not needed
+                delete row.encryption_metadata;
+            }
+            return row;
+        }));
+
+        return decryptedRows;
     }
 
     /**
