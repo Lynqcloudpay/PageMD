@@ -787,6 +787,10 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
 
                             if (item.action === 'continue') continue;
 
+                            // DISABLED: Don't add to patient medication record until note is signed
+                            // Per user requirement: Home medications = meds started BEFORE today
+                            // Newly ordered meds should NOT appear in home meds until note is signed
+                            /*
                             // 1. ALWAYS add to patient medication record first (Mother Database)
                             if (!item.action || item.action === 'refill') {
                                 try {
@@ -808,6 +812,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                     }
                                 }
                             }
+                            */
 
                             // 2. Separately handle E-Rx Draft (don't let failure here block the record save)
                             try {
