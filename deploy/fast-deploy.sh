@@ -18,6 +18,7 @@ echo "🔨 Building with cache (fast rebuild)..."
 docker compose -f docker-compose.prod.yml build api web
 
 echo "🚀 Starting containers..."
+docker rm -f emr-web 2>/dev/null || true
 docker compose -f docker-compose.prod.yml up -d --force-recreate api web
 
 echo "📋 Updating static files..."
