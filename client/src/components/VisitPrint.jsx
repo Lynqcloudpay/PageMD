@@ -100,7 +100,8 @@ const VisitPrint = ({ visitId, patientId, onClose }) => {
         window.print();
     };
 
-    const parseNoteText = (noteText) => {
+    const parseNoteText = (textRaw) => {
+        const noteText = typeof textRaw === 'string' ? textRaw : String(textRaw || '');
         if (!noteText) return { hpi: '', assessment: '', plan: '', ros: '', pe: '', vitals: '' };
 
         const sections = {

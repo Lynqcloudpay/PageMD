@@ -46,7 +46,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     }, [activeVisitId, patientId]);
 
     const decodeHtmlEntities = (text) => {
-        if (!text) return '';
+        if (typeof text !== 'string') return String(text || '');
         return text
             .replace(/&amp;#x2F;/g, '/')
             .replace(/&#x2F;/g, '/')
@@ -57,12 +57,13 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     };
 
     const formatMarkdownBold = (text) => {
-        if (!text) return '';
+        if (typeof text !== 'string') return String(text || '');
         return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     };
 
-    const parseNoteText = (text) => {
-        if (!text || !text.trim()) return { chiefComplaint: '', hpi: '', assessment: '', plan: '', rosNotes: '', peNotes: '' };
+    const parseNoteText = (textRaw) => {
+        const text = typeof textRaw === 'string' ? textRaw : String(textRaw || '');
+        if (!text.trim()) return { chiefComplaint: '', hpi: '', assessment: '', plan: '', rosNotes: '', peNotes: '' };
         const decodedText = decodeHtmlEntities(text);
 
         const chiefComplaintMatch = decodedText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):)/is);

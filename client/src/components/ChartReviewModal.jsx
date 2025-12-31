@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { ordersAPI, documentsAPI, patientsAPI } from '../services/api';
 
 const decodeHtmlEntities = (text) => {
+    if (typeof text !== 'string') return String(text || '');
     const textArea = document.createElement('textarea');
     textArea.innerHTML = text;
     return textArea.value;
@@ -185,17 +186,17 @@ const ChartReviewModal = ({
         const selectedVisit = visits.find(v => v.id === selectedVisitId) || visits[0];
         if (!selectedVisit) return <div className="text-center text-slate-400 py-12">No visits found</div>;
 
-        const noteText = selectedVisit.note_draft || selectedVisit.fullNote || '';
+        const noteText = typeof selectedVisit.note_draft === 'string' ? selectedVisit.note_draft : (selectedVisit.fullNote || '');
         const decoded = decodeHtmlEntities(noteText);
 
         // Parse sections for display
-        const ccMatch = decoded.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History):|$)/is);
-        const hpiMatch = decoded.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment):|$)/is);
-        const rosMatch = decoded.match(/(?:ROS|Review of Systems):\s*(.+?)(?:\n\n|\n(?:PE|Physical|Assessment):|$)/is);
-        const peMatch = decoded.match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Assessment|A):|$)/is);
-        const assessmentMatch = decoded.match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):|$)/is);
-        const planMatch = decoded.match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n(?:Care Plan|Follow):|$)/is);
-        const carePlanMatch = decoded.match(/(?:Care Plan|CP):\s*(.+?)(?:\n\n|$)/is);
+        const ccMatch = String(decoded).match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History):|$)/is);
+        const hpiMatch = String(decoded).match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment):|$)/is);
+        const rosMatch = String(decoded).match(/(?:ROS|Review of Systems):\s*(.+?)(?:\n\n|\n(?:PE|Physical|Assessment):|$)/is);
+        const peMatch = String(decoded).match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Assessment|A):|$)/is);
+        const assessmentMatch = String(decoded).match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):|$)/is);
+        const planMatch = String(decoded).match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n(?:Care Plan|Follow):|$)/is);
+        const carePlanMatch = String(decoded).match(/(?:Care Plan|CP):\s*(.+?)(?:\n\n|$)/is);
 
         return (
             <>
@@ -207,7 +208,8 @@ const ChartReviewModal = ({
                     </div>
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
                         {visits.map((visit) => {
-                            const vNoteText = visit.note_draft || visit.fullNote || '';
+                            const vNoteRaw = visit.note_draft || visit.fullNote || '';
+                            const vNoteText = typeof vNoteRaw === 'string' ? vNoteRaw : String(vNoteRaw);
                             const vCCMatch = vNoteText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n|$)/i);
                             const cc = vCCMatch ? vCCMatch[1].trim().substring(0, 40) : 'Visit';
                             const date = visit.visit_date ? new Date(visit.visit_date) : new Date();

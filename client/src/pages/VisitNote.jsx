@@ -415,8 +415,9 @@ const VisitNote = () => {
     };
 
     // Decode HTML entities (handles double-encoding)
-    const decodeHtmlEntities = (text) => {
-        if (!text) return text;
+    const decodeHtmlEntities = (rawText) => {
+        if (!rawText) return rawText;
+        const text = typeof rawText === 'string' ? rawText : String(rawText);
         // Handle double-encoded entities like &amp;amp;#x2F;
         let decoded = text
             .replace(/&amp;amp;/g, '&')
@@ -720,11 +721,11 @@ const VisitNote = () => {
                             heightUnit: v.heightUnit || 'in'
                         });
                     }
-                    // Always try to parse note_draft, even if it appears empty
                     if (visit.note_draft) {
-                        console.log('Loading note_draft, length:', visit.note_draft.length);
-                        console.log('Note_draft preview:', visit.note_draft.substring(0, 200));
-                        const parsed = parseNoteText(visit.note_draft);
+                        const noteDraftText = typeof visit.note_draft === 'string' ? visit.note_draft : (typeof visit.note_draft === 'object' ? JSON.stringify(visit.note_draft) : String(visit.note_draft));
+                        console.log('Loading note_draft, length:', noteDraftText.length);
+                        console.log('Note_draft preview:', noteDraftText.substring(0, 200));
+                        const parsed = parseNoteText(noteDraftText);
                         console.log('Parsed note sections:', {
                             cc: parsed.chiefComplaint?.length || 0,
                             hpi: parsed.hpi?.length || 0,

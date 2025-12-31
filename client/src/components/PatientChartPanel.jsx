@@ -97,7 +97,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
 
     // Helper to decode HTML entities like &#x2F; and &amp;#x2F;
     const decodeHtmlEntities = (text) => {
-        if (!text) return '';
+        if (typeof text !== 'string') return String(text || '');
         let str = text;
         // Iteratively decode to handle double-encoding
         for (let i = 0; i < 5; i++) {
@@ -762,7 +762,8 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                 </div>
                                                 <div className="p-5">
                                                     {(() => {
-                                                        const noteText = decodeHtmlEntities(notes[0].note_draft || '');
+                                                        const rawNote = notes[0]?.note_draft || '';
+                                                        const noteText = decodeHtmlEntities(typeof rawNote === 'string' ? rawNote : String(rawNote));
                                                         const ccMatch = noteText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Assessment|Plan):|$)/is);
                                                         const hpiMatch = noteText.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Assessment|Plan):|$)/is);
                                                         const cc = ccMatch ? ccMatch[1].trim() : null;
@@ -811,7 +812,8 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                             <div className="text-center py-12 text-gray-400">No visit history found.</div>
                                         ) : (
                                             notes.map(note => {
-                                                const noteText = decodeHtmlEntities(note.note_draft || "");
+                                                const rawNote = note.note_draft || "";
+                                                const noteText = decodeHtmlEntities(typeof rawNote === 'string' ? rawNote : String(rawNote));
                                                 // Extract chief complaint
                                                 const ccMatch = noteText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
                                                 const chiefComplaint = ccMatch ? ccMatch[1].trim() : "No Chief Complaint";
@@ -857,7 +859,8 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                             <div className="px-4 pb-4 pt-2 border-t border-gray-100 bg-gray-50/30">
                                                                 {(() => {
                                                                     // Parse note sections
-                                                                    const parseNote = (text) => {
+                                                                    const parseNote = (textRaw) => {
+                                                                        const text = typeof textRaw === 'string' ? textRaw : String(textRaw || '');
                                                                         const ccMatch = text.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
                                                                         const hpiMatch = text.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
                                                                         const assessMatch = text.match(/(?:Assessment):\s*(.+?)(?:\n\n|\n(?:Plan):|$)/is);

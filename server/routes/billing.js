@@ -610,6 +610,7 @@ router.get('/claims', requirePermission('billing:view'), async (req, res) => {
       const unbilledItems = unbilledRes.rows.map(row => ({
         id: 'draft-' + row.visit_id,
         visit_id: row.visit_id,
+        patient_id: row.patient_id,
         claim_number: 'DRAFT',
         status: 'unbilled',
         visit_date: row.visit_date,

@@ -541,7 +541,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 if (response.data && response.data.length > 0) {
                     // Show all visits for this patient in Visit History (both signed and drafts)
                     const formattedNotes = response.data.map(visit => {
-                        const noteText = visit.note_draft || "";
+                        const rawNote = visit.note_draft || "";
+                        const noteText = typeof rawNote === 'string' ? rawNote : (typeof rawNote === 'object' ? JSON.stringify(rawNote) : String(rawNote));
+
                         const hpiMatch = noteText.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):)/is);
                         const planMatch = noteText.match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n(?:Care Plan|CP|Follow Up|FU):|$)/is);
                         const assessmentMatch = noteText.match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):)/is);
@@ -631,7 +633,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
     }, [id]);
 
     const extractPlan = (noteText) => {
-        const planMatch = noteText.match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n[A-Z]:|$)/is);
+        if (!noteText) return '';
+        const text = typeof noteText === 'string' ? noteText : String(noteText);
+        const planMatch = text.match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n[A-Z]:|$)/is);
         return planMatch ? planMatch[1].trim() : '';
     };
 
@@ -659,7 +663,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
             if (response.data && response.data.length > 0) {
                 // Format notes using the same logic as in fetchNotes, but include all visits
                 const formattedNotes = response.data.map(visit => {
-                    const noteText = visit.note_draft || "";
+                    const rawNote = visit.note_draft || "";
+                    const noteText = typeof rawNote === 'string' ? rawNote : (typeof rawNote === 'object' ? JSON.stringify(rawNote) : String(rawNote));
                     const ccMatch = noteText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
                     const chiefComplaint = ccMatch ? ccMatch[1].trim() : null;
                     const visitDateObj = new Date(visit.visit_date);
@@ -1407,21 +1412,6 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 {orders.filter(o => o.order_type === 'rx').length > 0 && (
                                     <span className="bg-primary-100 text-primary-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">
                                         {orders.filter(o => o.order_type === 'rx').length}
-                                    </span>
-                                )}
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setPatientChartTab('referrals');
-                                    setShowPatientChart(true);
-                                }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
-                            >
-                                <ExternalLink className="w-3.5 h-3.5 text-primary-600" />
-                                <span>Referral Log</span>
-                                {(referrals.length > 0 || orders.filter(o => o.order_type === 'referral').length > 0) && (
-                                    <span className="bg-primary-100 text-primary-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">
-                                        {referrals.length + orders.filter(o => o.order_type === 'referral').length}
                                     </span>
                                 )}
                             </button>

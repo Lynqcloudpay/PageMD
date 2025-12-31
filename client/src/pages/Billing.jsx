@@ -342,8 +342,12 @@ const Billing = () => {
                                                 </button>
                                                 <button
                                                     onClick={() => {
-                                                        setSelectedClaim(claim);
-                                                        setShowEditClaimModal(true);
+                                                        if (claim.status === 'unbilled' && claim.visit_id) {
+                                                            navigate(`/patient/${claim.patient_id}/superbill/${claim.visit_id}`);
+                                                        } else {
+                                                            setSelectedClaim(claim);
+                                                            setShowEditClaimModal(true);
+                                                        }
                                                     }}
                                                     className="text-gray-600 hover:text-gray-700"
                                                     title="Edit"
@@ -380,6 +384,22 @@ const Billing = () => {
                     onSuccess={() => {
                         fetchAllClaims();
                         setShowSuperbillModal(false);
+                    }}
+                />
+            )}
+
+            {/* Edit Claim Modal */}
+            {showEditClaimModal && selectedClaim && (
+                <EditClaimModal
+                    claim={selectedClaim}
+                    isOpen={showEditClaimModal}
+                    onClose={() => {
+                        setShowEditClaimModal(false);
+                        setSelectedClaim(null);
+                    }}
+                    onSuccess={() => {
+                        fetchAllClaims();
+                        setShowEditClaimModal(false);
                     }}
                 />
             )}
@@ -812,6 +832,104 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
                     </div>
                 </div>
 
+            </div>
+        </Modal>
+    );
+};
+
+// Edit Claim Modal Component
+const EditClaimModal = ({ claim, isOpen, onClose, onSuccess }) => {
+    const [loading, setLoading] = useState(false);
+    const [claimData, setClaimData] = useState({
+        status: claim.status || 'pending',
+        claim_number: claim.claim_number || '',
+        total_amount: claim.total_amount || 0,
+        billing_notes: claim.billing_notes || ''
+    });
+
+    const handleSave = async () => {
+        setLoading(true);
+        try {
+            if (claim.status === 'unbilled') {
+                // For unbilled, maybe we just update amount or something?
+                // Most users should use the Superbill for this.
+                alert('For unbilled encounters, please use the Superbill editor to make changes.');
+                onClose();
+                return;
+            }
+            await billingAPI.updateClaim(claim.id, claimData);
+            onSuccess();
+        } catch (error) {
+            console.error('Error updating claim:', error);
+            alert('Failed to update claim.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Edit Claim" size="md">
+            <div className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">Claim Number</label>
+                    <input
+                        type="text"
+                        value={claimData.claim_number}
+                        onChange={(e) => setClaimData({ ...claimData, claim_number: e.target.value })}
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                        disabled={claim.status === 'unbilled'}
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">Status</label>
+                    <select
+                        value={claimData.status}
+                        onChange={(e) => setClaimData({ ...claimData, status: e.target.value })}
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                        disabled={claim.status === 'unbilled'}
+                    >
+                        <option value="pending">Pending</option>
+                        <option value="submitted">Submitted</option>
+                        <option value="paid">Paid</option>
+                        <option value="denied">Denied</option>
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">Total Amount</label>
+                    <input
+                        type="number"
+                        step="0.01"
+                        value={claimData.total_amount}
+                        onChange={(e) => setClaimData({ ...claimData, total_amount: parseFloat(e.target.value) })}
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                        disabled={claim.status === 'unbilled'}
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">Internal Billing Notes</label>
+                    <textarea
+                        value={claimData.billing_notes}
+                        onChange={(e) => setClaimData({ ...claimData, billing_notes: e.target.value })}
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                        rows={3}
+                    />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleSave}
+                        disabled={loading}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                    >
+                        {loading ? 'Saving...' : 'Save Changes'}
+                    </button>
+                </div>
             </div>
         </Modal>
     );

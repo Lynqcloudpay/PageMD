@@ -354,7 +354,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                 className="cursor-pointer hover:text-blue-800 transition-colors"
                                 onClick={() => navigate(`/patient/${patient?.id || id}/snapshot`)}
                             >
-                                {patient.first_name} {patient.last_name}
+                                {patient.first_name || ''} {patient.last_name || ''}
                             </span>
                             <button
                                 onClick={handleEditClick}
@@ -433,9 +433,24 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                             onClick={async (e) => {
                                 e.stopPropagation();
                                 try {
-                                    const { data } = await api.get(`/billing-openemr/insurance/verify/${patient.id}`);
-                                    alert(`Status: ${data.status}\nMessage: ${data.message}\nPayer: ${data.details?.payer}`);
-                                } catch (err) { alert("Verification Failed"); }
+                                    // Use new eligibility endpoint with required fields
+                                    const { data } = await api.post('/eligibility/verify', {
+                                        patientId: patient.id,
+                                        payerId: patient.insurance_payer_id || 'UNKNOWN',
+                                        memberId: patient.insurance_id || '',
+                                        groupNumber: patient.insurance_group_number || '',
+                                        // DOB and name will be fetched from patient on backend
+                                    });
+
+                                    if (data.isDemo) {
+                                        alert(`⚠️ Demo Mode\n\nStatus: ${data.status}\nPlan: ${data.planName}\nCopay: $${data.coverage?.copay}\nDeductible: $${data.coverage?.deductible}\n\n${data.warning || ''}`);
+                                    } else {
+                                        alert(`✅ Eligibility Verified\n\nStatus: ${data.status}\nPayer: ${data.payer}\nPlan: ${data.planName}\nCopay: $${data.coverage?.copay}\nDeductible Remaining: $${data.coverage?.deductibleRemaining}`);
+                                    }
+                                } catch (err) {
+                                    const errMsg = err.response?.data?.error || err.response?.data?.missing?.join(', ') || 'Verification Failed';
+                                    alert(`❌ Eligibility Check Failed\n\n${errMsg}`);
+                                }
                             }}
                             className="mt-2 text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-200 hover:bg-blue-100 block w-full text-center"
                         >
