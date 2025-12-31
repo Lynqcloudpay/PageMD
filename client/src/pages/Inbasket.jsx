@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Inbox, CheckCircle, Clock, AlertTriangle, MessageSquare, FileText,
     Pill, FlaskConical, Image, Send, RefreshCw, Filter, Search,
@@ -23,6 +23,7 @@ const TASK_CATEGORIES = [
 const Inbasket = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
 
     // Data State
     const [items, setItems] = useState([]);
@@ -101,6 +102,22 @@ const Inbasket = () => {
         const poll = setInterval(() => fetchData(true), 30000);
         return () => clearInterval(poll);
     }, [fetchData]);
+
+    // Handle initial selection from URL query param (?id=...)
+    useEffect(() => {
+        const searchParams = new URLSearchParams(location.search);
+        const itemId = searchParams.get('id');
+
+        if (itemId && items.length > 0) {
+            const item = items.find(i => String(i.id) === String(itemId));
+            if (item) {
+                setSelectedItem(item);
+                // Also set filter status to 'all' or the item's status to ensure it shows up in list
+                if (item.status === 'completed') setFilterStatus('completed');
+                else setFilterStatus('new');
+            }
+        }
+    }, [location.search, items]);
 
     // Fetch details when item selected
     useEffect(() => {

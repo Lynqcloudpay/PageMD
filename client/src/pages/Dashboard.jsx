@@ -302,7 +302,7 @@ const Dashboard = () => {
                                                         `${Math.floor(diffMins / 1440)}d ago`;
 
                                                 return (
-                                                    <div key={item.id} className="p-3 bg-white border border-gray-100 rounded-lg hover:border-blue-200 cursor-pointer shadow-sm group" onClick={() => item.patient_id && navigate(`/patient/${item.patient_id}/snapshot`)}>
+                                                    <div key={item.id} className="p-3 bg-white border border-gray-100 rounded-lg hover:border-blue-200 cursor-pointer shadow-sm group" onClick={() => navigate(`/tasks?id=${item.id}`)}>
                                                         <div className="flex items-center justify-between mb-1">
                                                             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">{timeStr}</span>
                                                             {item.priority === 'stat' && <span className="bg-red-100 text-red-700 text-[10px] font-black px-1.5 py-0.5 rounded uppercase">Urgent</span>}
@@ -310,7 +310,7 @@ const Dashboard = () => {
                                                         <p className="text-sm font-bold text-gray-900 group-hover:text-blue-600">
                                                             {item.patient_name || 'System'}
                                                         </p>
-                                                        <p className="text-xs text-gray-600">{item.subject}</p>
+                                                        <p className="text-xs text-gray-600 truncate">{item.subject}</p>
                                                     </div>
                                                 );
                                             })

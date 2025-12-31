@@ -444,7 +444,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
             }
         `}</style>
             <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 md:p-8 backdrop-blur-md animate-fade-in print:bg-white print:p-0 print:static">
-                <div className="bg-[#F8FAFC] shadow-[0_32px_128px_-16px_rgba(0,0,0,0.5)] w-full max-w-[1600px] h-[95vh] rounded-3xl overflow-hidden flex border border-white/20 animate-slide-up print:block print:h-auto print:max-w-none print:border-none print:bg-white print:rounded-none">
+                <div className="bg-[#F8FAFC] shadow-[0_32px_128px_-16px_rgba(0,0,0,0.5)] w-full max-w-[1200px] h-[90vh] rounded-3xl overflow-hidden flex border border-white/20 animate-slide-up print:block print:h-auto print:max-w-none print:border-none print:bg-white print:rounded-none">
 
                     {/* EPIC STORYBOARD (Left Sidebar - High Density) */}
                     <div className="w-[300px] shrink-0 border-r border-slate-200 flex flex-col bg-white overflow-y-auto overflow-x-hidden no-print">
@@ -622,19 +622,19 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                         </div>
 
                         {/* The Professional Clinical Note (A3 Optimized) */}
-                        <div id="visit-chart-view" className="flex-1 overflow-y-auto p-12 print:p-0">
-                            <div className="max-w-[1400px] mx-auto bg-white shadow-sm border border-slate-200 min-h-full p-16 space-y-12 print-document-sheet print:border-0 print:shadow-none print:max-w-none">
+                        <div id="visit-chart-view" className="flex-1 overflow-y-auto p-6 print:p-0">
+                            <div className="max-w-[1000px] mx-auto bg-white shadow-sm border border-slate-200 min-h-full p-10 space-y-8 print-document-sheet print:border-0 print:shadow-none print:max-w-none">
 
                                 {/* 1. REFINED CLINIC HEADER */}
                                 <div className="flex justify-between items-center pb-8 border-b-2 border-slate-100 avoid-cut">
-                                    <div className="flex items-center gap-10">
-                                        <div className="w-32 h-32 flex items-center justify-center shrink-0">
+                                    <div className="flex items-center gap-6">
+                                        <div className="w-20 h-20 flex items-center justify-center shrink-0">
                                             <img src={clinicInfo.logo || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8fafc' rx='8'/%3E%3Crect x='60' y='45' width='80' height='90' fill='none' stroke='%23cbd5e1' stroke-width='3' rx='4'/%3E%3Crect x='75' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='75' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='88' y='110' width='24' height='25' fill='%23cbd5e1' rx='2'/%3E%3Ctext x='100' y='165' text-anchor='middle' font-family='Arial,sans-serif' font-size='14' font-weight='600' fill='%2394a3b8'%3ENO LOGO%3C/text%3E%3C/svg%3E"} alt="Logo" className="max-w-full max-h-full object-contain filter drop-shadow-sm" />
                                         </div>
                                         <div className="leading-tight">
-                                            <div className="flex items-baseline gap-4 mb-2">
-                                                <h1 className="text-[28px] font-black text-slate-800 tracking-tightest">{clinicInfo.name}</h1>
-                                                <span className="text-[9px] bg-blue-600 text-white px-2.5 py-1 rounded-sm font-black tracking-widest uppercase shadow-sm">Clinical Record</span>
+                                            <div className="flex items-baseline gap-3 mb-1">
+                                                <h1 className="text-[22px] font-black text-slate-800 tracking-tightest">{clinicInfo.name}</h1>
+                                                <span className="text-[8px] bg-blue-600 text-white px-2 py-0.5 rounded-sm font-black tracking-widest uppercase shadow-sm">Clinical Record</span>
                                             </div>
                                             <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-[11px] text-slate-400 font-bold tracking-tight">
                                                 <div className="flex items-center gap-2">
@@ -868,26 +868,26 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                     )}
 
                                     {/* FOLLOW UP */}
-                                    <div className="pt-10 border-t border-slate-100 avoid-cut">
-                                        <div className="inline-block bg-slate-900 px-8 py-3 rounded text-white shadow-xl">
-                                            <span className="text-[11px] uppercase font-bold tracking-widest block opacity-50">Follow Up Instruction</span>
-                                            <span className="text-[18px] font-bold italic">{noteData.followUp || visit.follow_up_instructions || 'PRN / AS NEEDED'}</span>
+                                    <div className="pt-6 border-t border-slate-100 avoid-cut">
+                                        <div className="inline-block bg-slate-100 px-6 py-2 rounded-lg border border-slate-200">
+                                            <span className="text-[10px] uppercase font-bold tracking-widest block text-slate-400">Follow Up Instruction</span>
+                                            <span className="text-[14px] font-bold text-slate-900 italic">{noteData.followUp || visit.follow_up_instructions || 'PRN / AS NEEDED'}</span>
                                         </div>
                                     </div>
 
                                     {/* AUTHENTICATION FOOTER */}
-                                    <div className="mt-20 pt-8 border-t-2 border-slate-900 avoid-cut">
+                                    <div className="mt-12 pt-6 border-t border-slate-200 avoid-cut">
                                         <div className="flex justify-between items-end">
-                                            <div className="space-y-2">
-                                                <div className="text-2xl font-bold italic text-slate-900 tracking-tight">/s/ {providerName}</div>
-                                                <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest flex items-center gap-1.5 bg-emerald-50 px-3 py-1 rounded">
-                                                    <CheckCircle2 className="w-3.5 h-3.5" /> VERIFIED ELECTRONIC SIGNATURE {isSigned && `• ${format(new Date(isSigned), 'MM/dd/yyyy HH:mm')}`}
+                                            <div className="space-y-1.5">
+                                                <div className="text-xl font-bold italic text-slate-900 tracking-tight">/s/ {providerName}</div>
+                                                <div className="text-[9px] font-bold text-emerald-700 uppercase tracking-widest flex items-center gap-1.5 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                                                    <CheckCircle2 className="w-3 h-3" /> VERIFIED SIGNATURE {isSigned && `• ${format(new Date(isSigned), 'MM/dd/yyyy HH:mm')}`}
                                                 </div>
-                                                <div className="text-[8px] font-bold text-slate-400 uppercase tracking-tight pl-3">Unique Authentication Hash: {patientId?.substring(0, 8)}-{activeVisitId?.substring(0, 8)}-SECURE-SIG</div>
+                                                <div className="text-[7px] font-bold text-slate-400 uppercase tracking-tight pl-2">Hash: {patientId?.substring(0, 8)}-{activeVisitId?.substring(0, 8)}-SECURE-SIG</div>
                                             </div>
-                                            <div className="text-right flex flex-col items-end opacity-30">
-                                                <span className="text-2xl font-black italic text-slate-900 tracking-tighter">PageMD EMR</span>
-                                                <span className="text-[8px] font-bold text-slate-500 mt-1">Generated: {format(new Date(), 'MM/dd/yyyy HH:mm:ss')}</span>
+                                            <div className="text-right flex flex-col items-end opacity-40">
+                                                <span className="text-xl font-black italic text-slate-900 tracking-tighter">PageMD EMR</span>
+                                                <span className="text-[7px] font-bold text-slate-500 mt-1">Generated: {format(new Date(), 'MM/dd/yyyy HH:mm')}</span>
                                             </div>
                                         </div>
                                         <div className="mt-8 text-center text-[8px] font-bold text-slate-300 uppercase tracking-[0.2em] border-t border-slate-50 pt-4">
