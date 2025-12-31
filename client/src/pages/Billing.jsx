@@ -476,6 +476,19 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
     const { hasPrivilege } = usePrivileges();
     const navigate = useNavigate();
 
+    // Missing state variables added to fix ReferenceErrors
+    const [step, setStep] = useState(1);
+    const [diagnosisCodes, setDiagnosisCodes] = useState([]);
+    const [procedureCodes, setProcedureCodes] = useState([]);
+    const [visitNote, setVisitNote] = useState(null);
+    const [showAddDiagnosis, setShowAddDiagnosis] = useState(false);
+    const [showAddProcedure, setShowAddProcedure] = useState(false);
+    const [showNotePreview, setShowNotePreview] = useState(false);
+    const [billingNotes, setBillingNotes] = useState([]);
+    const [qualityMeasures, setQualityMeasures] = useState([]);
+    const [availableDiagnosisCodes, setAvailableDiagnosisCodes] = useState([]);
+    const [feeSchedule, setFeeSchedule] = useState([]);
+
     useEffect(() => {
         if (isOpen) {
             fetchFeeSchedule();
