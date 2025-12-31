@@ -10,10 +10,9 @@ router.use(authenticate);
 // Syncs external items (orders, documents) into the inbox_items table
 // This ensures we have a unified, real-table representation for everything
 // Schema self-healing state
-let _schemaEnsured = false;
-
 async function ensureSchema() {
-  if (_schemaEnsured) return;
+  // Always attempt to create schema (IF NOT EXISTS handles idempotency)
+  // This is required because this code runs in different tenant contexts (via search_path)
   try {
     await pool.query('BEGIN');
     await pool.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
@@ -60,7 +59,6 @@ async function ensureSchema() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_inbox_reference ON inbox_items(reference_id)`);
 
     await pool.query('COMMIT');
-    _schemaEnsured = true;
   } catch (error) {
     await pool.query('ROLLBACK');
     console.error('Error ensuring inbasket schema:', error);
