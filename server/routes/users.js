@@ -19,6 +19,31 @@ const router = express.Router();
 router.use(authenticate);
 
 /**
+ * GET /users/directory
+ * Get simplified list of users for messaging/assignments (available to all)
+ */
+router.get('/directory', async (req, res) => {
+  try {
+    const result = await userService.getAllUsers({ limit: 1000, status: 'active' });
+    const users = result.users || [];
+
+    // Return simplified objects
+    const simplified = users.map(u => ({
+      id: u.id,
+      first_name: u.first_name,
+      last_name: u.last_name,
+      role: u.role_name || u.role, // Fallback
+      email: u.email
+    }));
+
+    res.json(simplified);
+  } catch (error) {
+    console.error('Error fetching user directory:', error);
+    res.status(500).json({ error: 'Failed to fetch directory' });
+  }
+});
+
+/**
  * GET /users
  * Get all users (admin only)
  */

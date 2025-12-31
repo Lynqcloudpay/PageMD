@@ -426,6 +426,7 @@ export const authAPI = {
 
 // Users
 export const usersAPI = {
+  getDirectory: () => api.get('/users/directory'),
   getAll: (params) => api.get('/users', { params }),
   get: (id) => api.get(`/users/${id}`),
   create: (data) => api.post('/users', data),

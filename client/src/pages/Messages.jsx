@@ -81,7 +81,7 @@ const Messages = () => {
 
   useEffect(() => {
     fetchConversations();
-    usersAPI.getAll({ limit: 100 }).then(res => setAvailableUsers(res.data || []));
+    usersAPI.getDirectory().then(res => setAvailableUsers(res.data || []));
   }, []);
 
   useEffect(() => {
