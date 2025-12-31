@@ -115,7 +115,7 @@ const Layout = ({ children }) => {
 
     // Navigation items with icons and badges (gated by permissions)
     // Use defensive checks to prevent crashes if permissions undefined
-    const navItems = [
+    const navigationSection = [
         // Schedule - requires schedule:view permission
         ...(canViewSchedule ? [
             { path: '/schedule', icon: Calendar, label: 'Schedule', badge: null },
@@ -128,6 +128,9 @@ const Layout = ({ children }) => {
         ...(canViewPatients ? [
             { path: '/patients', icon: Users, label: 'Patients', badge: null }
         ] : []),
+    ].filter(Boolean);
+
+    const workflowSection = [
         { path: '/tasks', icon: Inbox, label: 'In Basket', badge: inboxCount > 0 ? inboxCount : null },
         { path: '/pending-notes', icon: Clock, label: 'Pending Notes', badge: pendingNotesCount > 0 ? pendingNotesCount : null },
         // Billing - requires billing:view permission
@@ -140,7 +143,7 @@ const Layout = ({ children }) => {
             { path: '/users', icon: Shield, label: 'User Management', badge: null },
             { path: '/admin-settings', icon: Settings, label: 'Settings', badge: null }
         ] : []),
-    ].filter(Boolean); // Filter out any undefined/null items
+    ].filter(Boolean);
 
     useEffect(() => {
         if (searchQuery.trim()) {
@@ -302,7 +305,7 @@ const Layout = ({ children }) => {
                             </div>
                         </div>
                         <div className="space-y-0.5">
-                            {(navItems || []).slice(0, 4).map((item) => {
+                            {navigationSection.map((item) => {
                                 const Icon = item.icon;
                                 const active = isActive(item.path);
                                 return (
@@ -358,7 +361,7 @@ const Layout = ({ children }) => {
                             </div>
                         </div>
                         <div className="space-y-0.5">
-                            {(navItems || []).slice(4).map((item) => {
+                            {workflowSection.map((item) => {
                                 const Icon = item.icon;
                                 const active = isActive(item.path);
                                 return (
