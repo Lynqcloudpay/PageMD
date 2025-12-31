@@ -86,10 +86,17 @@ router.get('/', requirePermission('schedule:view'), async (req, res) => {
       };
       const decryptedPatient = await preparePatientForResponse(patientData);
 
+      // Handle null/undefined patient names gracefully
+      const firstName = decryptedPatient.first_name || '';
+      const lastName = decryptedPatient.last_name || '';
+      const patientName = (firstName && lastName)
+        ? `${firstName} ${lastName}`.trim()
+        : firstName || lastName || 'Unknown Patient';
+
       return {
         id: row.id,
         patientId: row.patient_id,
-        patientName: `${decryptedPatient.first_name} ${decryptedPatient.last_name}`,
+        patientName,
         providerId: row.provider_id,
         providerName: `${row.provider_first_name} ${row.provider_last_name}`,
         date: row.appointment_date,
@@ -170,10 +177,17 @@ router.get('/:id', requirePermission('schedule:view'), async (req, res) => {
     };
     const decryptedPatient = await preparePatientForResponse(patientData);
 
+    // Handle null/undefined patient names gracefully
+    const firstName = decryptedPatient.first_name || '';
+    const lastName = decryptedPatient.last_name || '';
+    const patientName = (firstName && lastName)
+      ? `${firstName} ${lastName}`.trim()
+      : firstName || lastName || 'Unknown Patient';
+
     const appointment = {
       id: row.id,
       patientId: row.patient_id,
-      patientName: `${decryptedPatient.first_name} ${decryptedPatient.last_name}`,
+      patientName,
       providerId: row.provider_id,
       providerName: `${row.provider_first_name} ${row.provider_last_name}`,
       date: row.appointment_date,
@@ -287,10 +301,17 @@ router.post('/', requirePermission('schedule:edit'), async (req, res) => {
     };
     const decryptedPatient = await preparePatientForResponse(patientData);
 
+    // Handle null/undefined patient names gracefully
+    const firstName = decryptedPatient.first_name || '';
+    const lastName = decryptedPatient.last_name || '';
+    const patientName = (firstName && lastName)
+      ? `${firstName} ${lastName}`.trim()
+      : firstName || lastName || 'Unknown Patient';
+
     const appointment = {
       id: row.id,
       patientId: row.patient_id,
-      patientName: `${decryptedPatient.first_name} ${decryptedPatient.last_name}`,
+      patientName,
       providerId: row.provider_id,
       providerName: `${row.provider_first_name} ${row.provider_last_name}`,
       date: row.appointment_date,
@@ -658,10 +679,17 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
     };
     const decryptedPatient = await preparePatientForResponse(patientData);
 
+    // Handle null/undefined patient names gracefully
+    const firstName = decryptedPatient.first_name || '';
+    const lastName = decryptedPatient.last_name || '';
+    const patientName = (firstName && lastName)
+      ? `${firstName} ${lastName}`.trim()
+      : firstName || lastName || 'Unknown Patient';
+
     const appointment = {
       id: row.id,
       patientId: row.patient_id,
-      patientName: `${decryptedPatient.first_name} ${decryptedPatient.last_name}`,
+      patientName,
       providerId: row.provider_id,
       providerName: `${row.provider_first_name} ${row.provider_last_name}`,
       date: row.appointment_date,
