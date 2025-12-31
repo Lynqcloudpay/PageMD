@@ -235,7 +235,8 @@ const alertsRoutes = require('./routes/alerts');
 app.use('/api/alerts', alertsRoutes);
 
 // Inbox
-const inboxRoutes = require('./routes/inbox');
+// Uses commercial-grade inbasket implementation (server/routes/inbasket.js)
+const inboxRoutes = require('./routes/inbasket');
 app.use('/api/inbox', inboxRoutes);
 
 // Appointments

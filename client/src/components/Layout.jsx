@@ -4,14 +4,14 @@ import {
     Calendar, Users, FileText, Settings, LogOut, Search, X, Activity,
     Clock, History, User, ClipboardList, BarChart3,
     MessageSquare, Video, Moon, Sun, Menu, ChevronRight, Bell,
-    Zap, Command, DollarSign, Shield, AlertCircle, HelpCircle
+    Zap, Command, DollarSign, Shield, AlertCircle, HelpCircle, Inbox
 } from 'lucide-react';
 import { usePatient } from '../context/PatientContext';
 import { useAuth } from '../context/AuthContext';
 import { usePatientTabs } from '../context/PatientTabsContext';
 import { useTasks } from '../context/TaskContext';
 import { usePermissions } from '../hooks/usePermissions';
-import { patientsAPI, messagesAPI, visitsAPI, followupsAPI } from '../services/api';
+import { patientsAPI, messagesAPI, visitsAPI, followupsAPI, inboxAPI } from '../services/api';
 import PatientTabs from './PatientTabs';
 import MobileMenu from './MobileMenu';
 import SupportModal from './SupportModal';
@@ -32,6 +32,7 @@ const Layout = ({ children }) => {
 
     const [pendingNotesCount, setPendingNotesCount] = useState(0);
     const [pendingCancellationsCount, setPendingCancellationsCount] = useState(0);
+    const [inboxCount, setInboxCount] = useState(0);
 
     const isActive = (path) => {
         return location.pathname.startsWith(path);
@@ -70,16 +71,29 @@ const Layout = ({ children }) => {
             }
         };
 
+        // Fetch inbox count
+        const fetchInboxCount = async () => {
+            try {
+                const response = await inboxAPI.getStats();
+                setInboxCount(response.data?.my_count || 0);
+            } catch (error) {
+                console.error('Error fetching inbox count', error);
+                setInboxCount(0);
+            }
+        };
+
         // Initial fetch
 
         fetchPendingNotesCount();
         fetchPendingCancellationsCount();
+        fetchInboxCount();
 
         // Refresh counts periodically (every 30 seconds)
         const interval = setInterval(() => {
 
             fetchPendingNotesCount();
             fetchPendingCancellationsCount();
+            fetchInboxCount();
         }, 30000);
 
         return () => clearInterval(interval);
@@ -114,6 +128,7 @@ const Layout = ({ children }) => {
         ...(canViewPatients ? [
             { path: '/patients', icon: Users, label: 'Patients', badge: null }
         ] : []),
+        { path: '/tasks', icon: Inbox, label: 'In Basket', badge: inboxCount > 0 ? inboxCount : null },
         { path: '/pending-notes', icon: Clock, label: 'Pending Notes', badge: pendingNotesCount > 0 ? pendingNotesCount : null },
         // Billing - requires billing:view permission
         ...(canViewBilling ? [

@@ -17,7 +17,7 @@ import ContactPage from './pages/ContactPage'
 import AboutPage from './pages/AboutPage'
 import Dashboard from './pages/Dashboard'
 import PendingNotes from './pages/PendingNotes'
-import TaskManager from './pages/TaskManager'
+import Inbasket from './pages/Inbasket'
 import Analytics from './pages/Analytics'
 import Messages from './pages/Messages'
 import Telehealth from './pages/Telehealth'
@@ -172,10 +172,12 @@ function App() {
                                             <Route path="/tasks" element={
                                                 <ProtectedRoute>
                                                     <ErrorBoundary>
-                                                        <Layout><TaskManager /></Layout>
+                                                        <Layout><Inbasket /></Layout>
                                                     </ErrorBoundary>
                                                 </ProtectedRoute>
                                             } />
+                                            {/* Alias /inbox to /tasks */}
+                                            <Route path="/inbox" element={<Navigate to="/tasks" replace />} />
                                             <Route path="/analytics" element={
                                                 <ProtectedRoute>
                                                     <ErrorBoundary>

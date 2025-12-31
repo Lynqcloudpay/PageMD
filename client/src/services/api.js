@@ -153,14 +153,21 @@ export const messagesAPI = {
 // Labs
 export const labsAPI = {
   getByPatient: (patientId) => api.get(`/labs/patient/${patientId}`),
+  getLabTrend: (patientId, testName) => api.get(`/labs/trend/${patientId}/${encodeURIComponent(testName)}`),
 };
 
-// Inbox
+// Inbox (Commercial-Grade Inbasket)
 export const inboxAPI = {
   getAll: (params) => api.get('/inbox', { params }),
-  getLabTrend: (patientId, testName) => api.get(`/inbox/lab-trend/${patientId}/${encodeURIComponent(testName)}`),
-  markReviewed: (type, id, data) => api.put(`/inbox/${type}/${id}/reviewed`, data),
-  saveComment: (type, id, data) => api.put(`/inbox/${type}/${id}/comment`, data),
+  getStats: () => api.get('/inbox/stats'),
+  getDetails: (id) => api.get(`/inbox/${id}`),
+  create: (data) => api.post('/inbox', data),
+  update: (id, data) => api.put(`/inbox/${id}`, data),
+  addNote: (id, note) => api.post(`/inbox/${id}/notes`, { note }),
+
+  // Legacy aliases (mapped to new endpoints)
+  markReviewed: (type, id, data) => api.put(`/inbox/${id}`, { status: 'completed', ...data }), // Note: backend handles status update
+  saveComment: (type, id, data) => api.post(`/inbox/${id}/notes`, { note: data.comment }),
 };
 
 // Appointments

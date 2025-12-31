@@ -1,0 +1,465 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+    Inbox, CheckCircle, Clock, AlertTriangle, MessageSquare, FileText,
+    Pill, FlaskConical, Image, Send, RefreshCw, Filter, Search,
+    ChevronRight, X, Bell, User, Calendar, Phone, Paperclip
+} from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { format } from 'date-fns';
+import { inboxAPI, usersAPI } from '../services/api';
+import { showError, showSuccess } from '../utils/toast';
+import { getPatientDisplayName } from '../utils/patientNameUtils';
+
+// Task categories like Epic's InBasket
+const TASK_CATEGORIES = [
+    { id: 'results', label: 'Results', icon: FlaskConical, color: 'blue', types: ['lab', 'imaging'] },
+    { id: 'messages', label: 'Messages', icon: MessageSquare, color: 'purple', types: ['message'] },
+    { id: 'documents', label: 'Documents', icon: FileText, color: 'orange', types: ['document'] },
+    { id: 'tasks', label: 'Tasks', icon: CheckCircle, color: 'green', types: ['task'] },
+    { id: 'refills', label: 'Rx Requests', icon: Pill, color: 'red', types: ['refill'] },
+];
+
+const Inbasket = () => {
+    const { user } = useAuth();
+    const navigate = useNavigate();
+
+    // Data State
+    const [items, setItems] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [stats, setStats] = useState({});
+    const [users, setUsers] = useState([]);
+
+    // Filter State
+    const [selectedCategory, setSelectedCategory] = useState('all');
+    const [filterStatus, setFilterStatus] = useState('new'); // 'new', 'completed', 'all'
+    const [assignedFilter, setAssignedFilter] = useState('all'); // 'all', 'me'
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // Selected Item State
+    const [selectedItem, setSelectedItem] = useState(null);
+    const [details, setDetails] = useState(null); // Full details including thread
+    const [loadingDetails, setLoadingDetails] = useState(false);
+    const [replyText, setReplyText] = useState('');
+
+    // Assignment Modal
+    const [showAssignModal, setShowAssignModal] = useState(false);
+
+    // --- Data Fetching ---
+
+    const fetchData = useCallback(async (isRefresh = false) => {
+        if (isRefresh) setRefreshing(true);
+        else setLoading(true);
+
+        try {
+            // 1. Fetch Items
+            const params = {
+                status: filterStatus,
+                assignedTo: assignedFilter,
+            };
+
+            const response = await inboxAPI.getAll(params);
+            setItems(response.data || []);
+
+            // 2. Fetch Stats
+            const statsRes = await inboxAPI.getStats();
+            setStats(statsRes.data || {});
+
+            // 3. Fetch Users (for assignment) if not already loaded
+            if (users.length === 0) {
+                const usersRes = await usersAPI.getAll();
+                setUsers(usersRes.data?.data || usersRes.data || []);
+            }
+
+        } catch (error) {
+            console.error('Error fetching inbasket:', error);
+            showError('Failed to load In Basket');
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }, [filterStatus, assignedFilter]);
+
+    useEffect(() => {
+        fetchData();
+        // Poll every 30s
+        const poll = setInterval(() => fetchData(true), 30000);
+        return () => clearInterval(poll);
+    }, [fetchData]);
+
+    // Fetch details when item selected
+    useEffect(() => {
+        if (!selectedItem) {
+            setDetails(null);
+            return;
+        }
+
+        const loadDetails = async () => {
+            setLoadingDetails(true);
+            try {
+                const res = await inboxAPI.getDetails(selectedItem.id);
+                setDetails(res.data);
+            } catch (e) {
+                console.error('Error loading details:', e);
+                showError('Could not load item details');
+            } finally {
+                setLoadingDetails(false);
+            }
+        };
+
+        loadDetails();
+    }, [selectedItem]);
+
+    // --- Filtering ---
+
+    const filteredItems = items.filter(item => {
+        // 1. Category Filter
+        if (selectedCategory !== 'all') {
+            const cat = TASK_CATEGORIES.find(c => c.id === selectedCategory);
+            if (!cat?.types.includes(item.type)) return false;
+        }
+
+        // 2. Search Filter
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            const patientName = getPatientDisplayName(item).toLowerCase();
+            return (
+                patientName.includes(q) ||
+                item.subject?.toLowerCase().includes(q) ||
+                item.body?.toLowerCase().includes(q)
+            );
+        }
+
+        return true;
+    });
+
+    // --- Actions ---
+
+    const handleAction = async (action, note = null) => {
+        if (!selectedItem) return;
+
+        try {
+            if (action === 'complete') {
+                await inboxAPI.update(selectedItem.id, { status: 'completed' });
+                showSuccess('Item marked as completed');
+                setSelectedItem(null);
+                fetchData(true); // Refresh list
+            } else if (action === 'reply' && note) {
+                await inboxAPI.addNote(selectedItem.id, note);
+                showSuccess('Note added');
+                setReplyText('');
+                // Refresh details only
+                const res = await inboxAPI.getDetails(selectedItem.id);
+                setDetails(res.data);
+            } else if (action === 'assign') {
+                // handled by modal
+            }
+        } catch (e) {
+            console.error('Action failed:', e);
+            showError('Action failed');
+        }
+    };
+
+    const assignItem = async (userId) => {
+        if (!selectedItem) return;
+        try {
+            await inboxAPI.update(selectedItem.id, { assignedUserId: userId });
+            showSuccess(`Assigned to ${users.find(u => u.id === userId)?.last_name || 'user'}`);
+            setShowAssignModal(false);
+            fetchData(true);
+        } catch (e) {
+            showError('Failed to assign');
+        }
+    };
+
+    const openPatientChart = (item) => {
+        if (item.patient_id || item.patientId) {
+            navigate(`/patient/${item.patient_id || item.patientId}/snapshot`);
+        } else {
+            showError('No patient attached to this item');
+        }
+    };
+
+    // --- Helpers ---
+
+    const getPriorityColor = (p) => {
+        if (p === 'stat' || p === 'urgent') return 'text-red-600 bg-red-50 border-red-200';
+        return 'text-blue-600 bg-blue-50 border-blue-200';
+    };
+
+    const getCategoryIcon = (type) => {
+        const cat = TASK_CATEGORIES.find(c => c.types.includes(type));
+        const Icon = cat?.icon || Inbox;
+        return <Icon className={`w-4 h-4 text-${cat?.color || 'gray'}-500`} />;
+    };
+
+    return (
+        <div className="h-[calc(100vh-64px)] flex bg-gray-50 overflow-hidden">
+            {/* Sidebar */}
+            <div className="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 z-10">
+                <div className="p-4 border-b border-gray-100">
+                    <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <Inbox className="w-5 h-5" /> In Basket
+                    </h2>
+                    <div className="mt-4 flex gap-2 text-xs">
+                        <button
+                            onClick={() => setAssignedFilter('all')}
+                            className={`flex-1 py-1 px-2 rounded-md ${assignedFilter === 'all' ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-500 hover:bg-gray-50'}`}
+                        >
+                            All Items
+                        </button>
+                        <button
+                            onClick={() => setAssignedFilter('me')}
+                            className={`flex-1 py-1 px-2 rounded-md ${assignedFilter === 'me' ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-500 hover:bg-gray-50'}`}
+                        >
+                            My Items ({stats.my_count || 0})
+                        </button>
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                    <button
+                        onClick={() => setSelectedCategory('all')}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${selectedCategory === 'all' ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                    >
+                        <span className="flex items-center gap-2"><Inbox className="w-4 h-4" /> All Categories</span>
+                        <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-xs">{items.length}</span>
+                    </button>
+
+                    {TASK_CATEGORIES.map(cat => (
+                        <button
+                            key={cat.id}
+                            onClick={() => setSelectedCategory(cat.id)}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${selectedCategory === cat.id ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                        >
+                            <span className="flex items-center gap-2">
+                                <cat.icon className={`w-4 h-4 text-${cat.color}-500`} />
+                                {cat.label}
+                            </span>
+                            {/* Note: counting locally based on types, or use stats if available per type */}
+                            <span className="bg-gray-50 text-gray-400 px-2 py-0.5 rounded-full text-xs">
+                                {items.filter(i => cat.types.includes(i.type)).length}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+
+                <div className="p-4 border-t border-gray-100">
+                    <h3 className="text-xs font-bold text-gray-400 uppercase mb-2">View</h3>
+                    <div className="space-y-1">
+                        <button onClick={() => setFilterStatus('new')} className={`w-full text-left px-2 py-1 text-sm rounded ${filterStatus === 'new' ? 'bg-blue-50 text-blue-700' : 'text-gray-600'}`}>Current</button>
+                        <button onClick={() => setFilterStatus('completed')} className={`w-full text-left px-2 py-1 text-sm rounded ${filterStatus === 'completed' ? 'bg-blue-50 text-blue-700' : 'text-gray-600'}`}>Completed</button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Main List */}
+            <div className="flex-1 flex flex-col min-w-0 bg-white">
+                <div className="h-14 border-b border-gray-200 flex items-center px-4 justify-between bg-white">
+                    <div className="relative max-w-md w-full">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            placeholder="Search..."
+                            className="w-full pl-9 pr-4 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
+                    <button onClick={() => fetchData(true)} className={`p-2 text-gray-500 hover:bg-gray-100 rounded-full ${refreshing ? 'animate-spin' : ''}`}>
+                        <RefreshCw className="w-5 h-5" />
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto">
+                    {loading && !refreshing && items.length === 0 ? (
+                        <div className="flex justify-center items-center h-full text-gray-400">Loading...</div>
+                    ) : filteredItems.length === 0 ? (
+                        <div className="flex flex-col justify-center items-center h-full text-gray-400">
+                            <Inbox className="w-12 h-12 mb-2 opacity-20" />
+                            <p>No items found</p>
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-gray-100">
+                            {filteredItems.map(item => (
+                                <div
+                                    key={item.id}
+                                    onClick={() => setSelectedItem(item)}
+                                    className={`flex items-start gap-4 p-4 cursor-pointer hover:bg-gray-50 transition-colors ${selectedItem?.id === item.id ? 'bg-blue-50/50 ring-1 ring-inset ring-blue-100' : ''} ${item.status === 'new' ? 'border-l-4 border-l-blue-500 pl-3' : 'border-l-4 border-l-transparent pl-3'}`}
+                                >
+                                    <div className="mt-1">{getCategoryIcon(item.type)}</div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between items-start">
+                                            <h3 className={`text-sm truncate pr-2 ${item.status === 'new' ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
+                                                {item.subject || 'No Subject'}
+                                            </h3>
+                                            <span className="text-xs text-gray-500 whitespace-nowrap">{format(new Date(item.created_at || item.createdAt), 'MMM d, h:mm a')}</span>
+                                        </div>
+                                        <p className="text-sm text-gray-600 truncate mt-0.5">
+                                            {getPatientDisplayName(item)}
+                                            <span className="text-gray-400 mx-1">•</span>
+                                            {item.body || item.description}
+                                        </p>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${getPriorityColor(item.priority)} uppercase font-bold tracking-wider`}>
+                                                {item.priority || 'Normal'}
+                                            </span>
+                                            {item.assigned_first_name && (
+                                                <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                                                    <User className="w-3 h-3" /> {item.assigned_first_name}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Detail Pane (Right) */}
+            {selectedItem && (
+                <div className="w-[450px] bg-white border-l border-gray-200 flex flex-col shadow-xl z-20">
+                    {/* Detail Header */}
+                    <div className="p-4 border-b border-gray-200 bg-gray-50/50">
+                        <div className="flex justify-between items-start mb-3">
+                            <div className="flex items-center gap-2">
+                                <span className={`text-xs px-2 py-0.5 rounded-full border ${getPriorityColor(selectedItem.priority)} uppercase font-bold`}>
+                                    {selectedItem.priority}
+                                </span>
+                                <span className="text-xs text-gray-500 capitalize">{selectedItem.type.replace('_', ' ')}</span>
+                            </div>
+                            <button onClick={() => setSelectedItem(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+                        </div>
+                        <h2 className="text-lg font-bold text-gray-900 leading-tight mb-1">{selectedItem.subject}</h2>
+                        <button onClick={() => openPatientChart(selectedItem)} className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1">
+                            {getPatientDisplayName(selectedItem)}
+                            <ChevronRight className="w-4 h-4" />
+                        </button>
+                    </div>
+
+                    {/* Detail Content */}
+                    <div className="flex-1 overflow-y-auto p-4">
+                        {loadingDetails ? (
+                            <div className="flex justify-center p-8"><RefreshCw className="w-6 h-6 animate-spin text-gray-300" /></div>
+                        ) : (
+                            <div className="space-y-6">
+                                {/* Main Body */}
+                                <div className="prose prose-sm max-w-none text-gray-800">
+                                    <p className="whitespace-pre-wrap">{details?.body || selectedItem.body}</p>
+                                </div>
+
+                                {/* Attachments / Reference */}
+                                {/* Logic to show PDF/Image if reference exists would go here - for now simplified */}
+                                {(details?.reference_table === 'documents' || details?.type === 'document' || details?.type === 'imaging') && (
+                                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-center gap-3">
+                                        <FileText className="w-8 h-8 text-orange-400" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-gray-900 truncate">{details?.subject || 'Document'}</p>
+                                            <p className="text-xs text-gray-500">Document/Result Attachment</p>
+                                        </div>
+                                        <button onClick={() => openPatientChart(selectedItem)} className="text-blue-600 text-xs font-medium whitespace-nowrap">View</button>
+                                    </div>
+                                )}
+
+                                {/* Thread / Notes */}
+                                {details?.notes && details.notes.length > 0 && (
+                                    <div className="border-t border-gray-100 pt-4 mt-6">
+                                        <h3 className="text-xs font-bold text-gray-400 uppercase mb-3">Activity</h3>
+                                        <div className="space-y-4">
+                                            {details.notes.map(note => (
+                                                <div key={note.id} className="flex gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xs font-bold flex-shrink-0">
+                                                        {note.first_name ? note.first_name[0] : 'U'}
+                                                    </div>
+                                                    <div>
+                                                        <div className="flex items-baseline gap-2">
+                                                            <span className="text-sm font-bold text-gray-900">{note.first_name} {note.last_name}</span>
+                                                            <span className="text-xs text-gray-400">{format(new Date(note.created_at), 'MMM d, h:mm a')}</span>
+                                                        </div>
+                                                        <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{note.note}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Reply / Actions Box */}
+                    <div className="p-4 border-t border-gray-200 bg-gray-50">
+                        <textarea
+                            value={replyText}
+                            onChange={e => setReplyText(e.target.value)}
+                            placeholder="Write a note or reply..."
+                            className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-2 h-20 resize-none"
+                        />
+                        <div className="flex justify-between items-center">
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setShowAssignModal(true)}
+                                    className="p-2 text-gray-500 hover:bg-gray-200 rounded-md"
+                                    title="Assign to someone else"
+                                >
+                                    <User className="w-4 h-4" />
+                                </button>
+                            </div>
+                            <div className="flex gap-2">
+                                <button
+                                    disabled={!replyText.trim()}
+                                    onClick={() => handleAction('reply', replyText)}
+                                    className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 font-medium text-sm rounded-md hover:bg-gray-50 disabled:opacity-50"
+                                >
+                                    Add Note
+                                </button>
+                                <button
+                                    onClick={() => handleAction('complete')}
+                                    className="px-3 py-1.5 bg-green-600 text-white font-medium text-sm rounded-md hover:bg-green-700 shadow-sm flex items-center gap-1"
+                                >
+                                    <CheckCircle className="w-4 h-4" /> Done
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Assignment Modal */}
+            {showAssignModal && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+                    <div className="bg-white rounded-xl shadow-2xl p-6 w-96">
+                        <h3 className="text-lg font-bold mb-4">Assign Task</h3>
+                        <div className="space-y-2 max-h-60 overflow-y-auto mb-4">
+                            <button
+                                onClick={() => assignItem(user.id)}
+                                className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded-lg text-sm flex items-center gap-2"
+                            >
+                                <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xs font-bold">Me</div>
+                                Myself
+                            </button>
+                            {users.filter(u => u.id !== user.id).map(u => (
+                                <button
+                                    key={u.id}
+                                    onClick={() => assignItem(u.id)}
+                                    className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded-lg text-sm flex items-center gap-2"
+                                >
+                                    <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 text-xs font-bold">
+                                        {u.first_name ? u.first_name[0] : 'U'}
+                                    </div>
+                                    {u.first_name} {u.last_name}
+                                </button>
+                            ))}
+                        </div>
+                        <button onClick={() => setShowAssignModal(false)} className="w-full py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default Inbasket;
