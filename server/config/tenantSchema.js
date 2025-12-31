@@ -557,7 +557,7 @@ CREATE TABLE IF NOT EXISTS x12_partners (
 );
 
 CREATE INDEX IF NOT EXISTS idx_claims_patient ON claims(patient_id);
-CREATE INDEX IF NOT EXISTS idx_claims_visit ON claims(visit_id);
+CREATE INDEX IF NOT EXISTS idx_claims_visit ON claims(encounter_id);
 
 CREATE TABLE IF NOT EXISTS insurance_plans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
