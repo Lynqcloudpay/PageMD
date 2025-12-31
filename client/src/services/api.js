@@ -218,6 +218,38 @@ export const billingAPI = {
   getStatistics: (params) => api.get('/billing/statistics', { params }),
 };
 
+// Real Eligibility API (270/271)
+export const eligibilityAPI = {
+  verify: (data) => api.post('/eligibility/verify', data),
+};
+
+// Claim Submissions API (837P)
+export const claimSubmissionsAPI = {
+  getAll: () => api.get('/claim-submissions'),
+  get: (id) => api.get(`/claim-submissions/${id}`),
+  create: (claimIds) => api.post('/claim-submissions', { claimIds }),
+  generate: (id, options = {}) => api.post(`/claim-submissions/${id}/generate`, { options }),
+  submit: (id) => api.post(`/claim-submissions/${id}/submit`),
+  resubmit: (claimId) => api.post(`/claim-submissions/resubmit/${claimId}`),
+  downloadX12: (id) => api.get(`/claim-submissions/${id}/x12`, { responseType: 'blob' }),
+};
+
+// ERA API (835)
+export const eraAPI = {
+  getAll: (status) => api.get('/era', { params: { status } }),
+  get: (id) => api.get(`/era/${id}`),
+  upload: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/era/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+  match: (eraClaimId, claimId) => api.post(`/era/${eraClaimId}/match`, { claimId }),
+  post: (id) => api.post(`/era/${id}/post`),
+  void: (id, reason) => api.post(`/era/${id}/void`, { reason }),
+};
+
 // Fee Sheet Categories (OpenEMR-style quick code groups)
 export const feeSheetCategoriesAPI = {
   getAll: () => api.get('/fee-sheet-categories'),

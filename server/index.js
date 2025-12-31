@@ -195,6 +195,8 @@ const feeSheetRoutes = require('./routes/fee-sheet');
 app.use('/api/billing', billingRoutes);
 app.use('/api/fee-sheet', feeSheetRoutes);
 app.use('/api/billing-openemr', require('./routes/billing-openemr'));
+app.use('/api/claim-submissions', require('./routes/claim-submissions'));
+app.use('/api/era', require('./routes/era'));
 
 // User management endpoints
 const userRoutes = require('./routes/users');
@@ -226,6 +228,7 @@ app.use('/api/hl7', hl7Routes);
 // Insurance management
 const insuranceRoutes = require('./routes/insurance');
 app.use('/api/insurance', insuranceRoutes);
+app.use('/api/eligibility', require('./routes/eligibility'));
 
 // Clinical alerts
 const alertsRoutes = require('./routes/alerts');

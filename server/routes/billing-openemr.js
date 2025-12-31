@@ -4,11 +4,13 @@ const { authenticate } = require('../middleware/auth');
 const { requirePermission } = require('../services/authorization');
 const billingService = require('../services/billingService');
 const arService = require('../services/arService');
-const insuranceService = require('../services/insuranceService');
+// const insuranceService = require('../services/insuranceService'); // DEPRECATED
 
 // Apply authentication
 router.use(authenticate);
 
+/* 
+// DEPRECATED: Use /api/eligibility/verify
 router.get('/insurance/verify/:id', requirePermission('billing:view'), async (req, res) => {
     try {
         const result = await insuranceService.verify(req.params.id);
@@ -17,6 +19,7 @@ router.get('/insurance/verify/:id', requirePermission('billing:view'), async (re
         res.status(500).json({ error: e.message });
     }
 });
+*/
 
 /**
  * GET /api/billing-openemr/reports
