@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Loader2, AlertCircle } from 'lucide-react';
-import { ordersCatalogAPI } from '../services/api';
+import { medicationsAPI } from '../services/api';
 
 const CodedMedicationSearch = ({ onSelect, label = "Medication Search", placeholder = "Search for medication (e.g. Lisinopril, Metformin)..." }) => {
     const [query, setQuery] = useState('');
@@ -25,7 +25,7 @@ const CodedMedicationSearch = ({ onSelect, label = "Medication Search", placehol
             if (query.trim().length >= 2) {
                 setLoading(true);
                 try {
-                    const response = await ordersCatalogAPI.search(query, 'medication');
+                    const response = await medicationsAPI.search(query);
                     // Handle response being array or { data: [...] }
                     const data = Array.isArray(response) ? response : (response.data || []);
                     setResults(data);
@@ -78,15 +78,15 @@ const CodedMedicationSearch = ({ onSelect, label = "Medication Search", placehol
                         <div className="divide-y divide-gray-100">
                             {results.map((med) => (
                                 <button
-                                    key={med.id}
+                                    key={med.id || med.rxcui || med.code}
                                     onClick={() => handleSelect(med)}
                                     className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors flex flex-col gap-0.5 group"
                                 >
                                     <div className="flex items-center justify-between">
                                         <span className="font-medium text-gray-900 group-hover:text-primary-600">{med.name}</span>
-                                        {med.code && (
+                                        {(med.rxcui || med.code) && (
                                             <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-mono">
-                                                {med.code_type}: {med.code}
+                                                {med.rxcui ? `RXCUI: ${med.rxcui}` : `${med.code_type || 'CODE'}: ${med.code}`}
                                             </span>
                                         )}
                                     </div>

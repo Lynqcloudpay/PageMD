@@ -128,6 +128,7 @@ const MedicationInput = ({ onSave, onCancel, existingItems = [] }) => {
         if (!selectedMed) return;
 
         const medName = selectedMed.name || selectedMed.description;
+        const medCode = selectedMed.rxcui || selectedMed.code;
 
         // Check for duplicates
         const isDuplicate = existingItems.some(item =>
@@ -142,7 +143,7 @@ const MedicationInput = ({ onSave, onCancel, existingItems = [] }) => {
 
         onSave({
             medicationName: medName,
-            rxNormCode: selectedMed.code,
+            rxNormCode: medCode,
             ...details,
             startDate: new Date().toISOString(),
             active: true
