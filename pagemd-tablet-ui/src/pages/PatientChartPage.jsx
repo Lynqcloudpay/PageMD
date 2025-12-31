@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useParams, useSearchParams, useNavigate, Outlet } from 'react-router-dom';
-import { patientsApi, visitsApi } from '../api/client';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { patientsAPI, visitsAPI } from '../api/client';
 import { PatientHeader } from '../components/PatientHeader';
-import { cn } from '../utils/helpers';
 import {
     History,
     FileText,
@@ -38,8 +37,8 @@ export function PatientChartPage() {
             setLoading(true);
             try {
                 const [patientRes, visitsRes] = await Promise.all([
-                    patientsApi.getSnapshot(patientId),
-                    visitId ? visitsApi.getById(visitId) : Promise.resolve(null)
+                    patientsAPI.getSnapshot(patientId),
+                    visitId ? visitsAPI.get(visitId) : Promise.resolve(null)
                 ]);
                 setPatient(patientRes.data?.patient || patientRes.data);
                 if (visitsRes?.data) setVisit(visitsRes.data);

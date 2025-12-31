@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { patientsApi } from '../api/client';
+import { patientsAPI } from '../api/client';
 import { Button } from '../components/Button';
-import { cn, getInitials, formatAge } from '../utils/helpers';
+import { getInitials, formatAge } from '../utils/helpers';
 import { Search, User, ChevronRight, UserPlus } from 'lucide-react';
 
 export function PatientsPage() {
@@ -17,7 +17,7 @@ export function PatientsPage() {
 
         setLoading(true);
         try {
-            const response = await patientsApi.search(query);
+            const response = await patientsAPI.search(query);
             setPatients(response.data || []);
         } catch (err) {
             console.error('Search failed:', err);

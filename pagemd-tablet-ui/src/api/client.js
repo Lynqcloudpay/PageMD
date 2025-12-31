@@ -1,81 +1,91 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const api = axios.create({
     baseURL: API_BASE_URL,
-    timeout: 30000,
     headers: {
         'Content-Type': 'application/json',
     },
 });
 
-// Request interceptor - attach auth token
-api.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem('authToken');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => Promise.reject(error)
-);
+// Add auth token and clinic slug to requests (same as main EMR)
+api.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
 
-// Response interceptor - handle auth errors
+    // HIPAA: Clinic slug is used for multi-tenant routing
+    const clinicSlug = localStorage.getItem('clinic_slug');
+    if (clinicSlug) {
+        config.headers['x-clinic-slug'] = clinicSlug;
+    }
+
+    return config;
+});
+
+// Handle response errors (same as main EMR)
 api.interceptors.response.use(
     (response) => response,
     (error) => {
+        // Handle 401 Unauthorized - token invalid or missing
         if (error.response?.status === 401) {
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('user');
-            window.location.href = '/login';
+            if (!error.config?.url?.includes('/auth/login')) {
+                console.warn('401 Unauthorized - clearing token');
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            }
         }
+
+        // Handle 403 Forbidden
+        if (error.response?.status === 403) {
+            console.warn('403 Forbidden:', error.response?.data?.message);
+        }
+
         return Promise.reject(error);
     }
 );
 
 export default api;
 
-// Auth API
-export const authApi = {
+// Expose the same API structure as main EMR's api.js
+export const authAPI = {
     login: (email, password) => api.post('/auth/login', { email, password }),
-    logout: () => api.post('/auth/logout'),
-    me: () => api.get('/auth/me'),
+    getMe: () => api.get('/auth/me'),
+    getProviders: () => api.get('/auth/providers'),
 };
 
-// Patients API
-export const patientsApi = {
+export const appointmentsAPI = {
+    get: (params) => api.get('/appointments', { params }),
+    getById: (id) => api.get(`/appointments/${id}`),
+    update: (id, data) => api.put(`/appointments/${id}`, data),
+};
+
+export const patientsAPI = {
     search: (query) => api.get('/patients', { params: { search: query } }),
-    getById: (id) => api.get(`/patients/${id}`),
+    get: (id) => api.get(`/patients/${id}`),
     getSnapshot: (id) => api.get(`/patients/${id}/snapshot`),
+    getAllergies: (patientId) => api.get(`/patients/${patientId}/allergies`),
+    getMedications: (patientId) => api.get(`/patients/${patientId}/medications`),
+    getProblems: (patientId) => api.get(`/patients/${patientId}/problems`),
 };
 
-// Visits API
-export const visitsApi = {
-    getToday: () => api.get('/visits', { params: { date: new Date().toISOString().split('T')[0] } }),
-    getAll: () => api.get('/visits'),
-    getById: (id) => api.get(`/visits/${id}`),
-    updateStatus: (id, status) => api.patch(`/visits/${id}/status`, { status }),
-    getByPatient: (patientId) => api.get(`/patients/${patientId}/visits`),
+export const visitsAPI = {
+    get: (id) => api.get(`/visits/${id}`),
+    getByPatient: (patientId) => api.get('/visits', { params: { patientId } }),
+    getPending: (providerId) => api.get('/visits/pending', { params: { providerId } }),
+    openToday: (patientId, noteType = 'office_visit', providerId) =>
+        api.post(`/visits/open-today/${patientId}`, { noteType, providerId }),
 };
 
-// Orders API
-export const ordersApi = {
-    getByVisit: (visitId) => api.get(`/visits/${visitId}/orders`),
-    create: (visitId, orderData) => api.post(`/visits/${visitId}/orders`, orderData),
-    search: (query) => api.get('/orders/catalog', { params: { search: query } }),
+export const ordersAPI = {
+    getByPatient: (patientId) => api.get(`/orders/patient/${patientId}`),
+    create: (data) => api.post('/orders', data),
 };
 
-// Notes/Documentation API
-export const notesApi = {
-    getByVisit: (visitId) => api.get(`/visits/${visitId}/notes`),
-    save: (visitId, noteData) => api.post(`/visits/${visitId}/notes`, noteData),
-    sign: (visitId, noteId) => api.patch(`/visits/${visitId}/notes/${noteId}/sign`),
-};
-
-// Vitals API
-export const vitalsApi = {
-    getByVisit: (visitId) => api.get(`/visits/${visitId}/vitals`),
-    save: (visitId, vitalsData) => api.post(`/visits/${visitId}/vitals`, vitalsData),
+export const vitalsAPI = {
+    getByPatient: (patientId) => api.get(`/vitals/patient/${patientId}`),
+    save: (visitId, data) => api.post(`/visits/${visitId}/vitals`, data),
 };

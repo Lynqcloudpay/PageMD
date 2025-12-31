@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { authApi } from '../api/client';
+import { authAPI } from '../api/client';
 
 const AuthContext = createContext(null);
 
@@ -12,14 +12,14 @@ export function AuthProvider({ children }) {
 
     // Check for existing session on mount
     useEffect(() => {
-        const token = localStorage.getItem('authToken');
+        const token = localStorage.getItem('token');
         const storedUser = localStorage.getItem('user');
 
         if (token && storedUser) {
             try {
                 setUser(JSON.parse(storedUser));
             } catch (e) {
-                localStorage.removeItem('authToken');
+                localStorage.removeItem('token');
                 localStorage.removeItem('user');
             }
         }
@@ -51,10 +51,10 @@ export function AuthProvider({ children }) {
     }, [user, lastActivity]);
 
     const login = useCallback(async (email, password) => {
-        const response = await authApi.login(email, password);
+        const response = await authAPI.login(email, password);
         const { token, user: userData } = response.data;
 
-        localStorage.setItem('authToken', token);
+        localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(userData));
         setUser(userData);
         setLastActivity(Date.now());
@@ -63,7 +63,7 @@ export function AuthProvider({ children }) {
     }, []);
 
     const logout = useCallback(() => {
-        localStorage.removeItem('authToken');
+        localStorage.removeItem('token');
         localStorage.removeItem('user');
         setUser(null);
     }, []);
