@@ -172,12 +172,12 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     const renderSection = (key, condition, title, content, className = "") => {
         if (!condition) return null;
         return (
-            <div key={key} className={`py-12 border-b border-slate-100/60 last:border-0 ${className}`}>
-                <h2 className="text-[13px] font-black text-blue-600/70 uppercase tracking-[0.25em] mb-8 flex items-center gap-3">
-                    <span className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.4)]"></span>
+            <div key={key} className={`py-6 border-b border-blue-50 last:border-0 ${className}`}>
+                <h2 className="text-[12px] font-bold text-blue-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
                     {title}
                 </h2>
-                <div className="text-slate-700 leading-relaxed text-[16px] font-medium selection:bg-blue-100">
+                <div className="text-slate-600 leading-relaxed text-[15px] selection:bg-blue-100">
                     {content}
                 </div>
             </div>
@@ -625,59 +625,58 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                         <div id="visit-chart-view" className="flex-1 overflow-y-auto p-6 print:p-0">
                             <div className="max-w-4xl mx-auto bg-white shadow-sm border border-slate-200 min-h-full p-10 space-y-6 print-document-sheet print:border-0 print:shadow-none print:max-w-none">
 
-                                {/* 1. REFINED CLINIC HEADER */}
-                                <div className="flex justify-between items-center pb-8 border-b-2 border-slate-100 avoid-cut">
-                                    <div className="flex items-center gap-10">
-                                        <div className="w-32 h-32 flex items-center justify-center shrink-0">
-                                            <img src={clinicInfo.logo || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8fafc' rx='8'/%3E%3Crect x='60' y='45' width='80' height='90' fill='none' stroke='%23cbd5e1' stroke-width='3' rx='4'/%3E%3Crect x='75' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='75' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='88' y='110' width='24' height='25' fill='%23cbd5e1' rx='2'/%3E%3Ctext x='100' y='165' text-anchor='middle' font-family='Arial,sans-serif' font-size='14' font-weight='600' fill='%2394a3b8'%3ENO LOGO%3C/text%3E%3C/svg%3E"} alt="Logo" className="max-w-full max-h-full object-contain filter drop-shadow-sm" />
+                                {/* 1. REFINED CLINIC HEADER (Azure Theme) */}
+                                <div className="flex justify-between items-center pb-6 border-b border-blue-100 avoid-cut">
+                                    <div className="flex items-center gap-6">
+                                        <div className="w-20 h-20 flex items-center justify-center shrink-0 bg-white rounded-lg border border-blue-50 p-2">
+                                            <img src={clinicInfo.logo || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8fafc' rx='8'/%3E%3Crect x='60' y='45' width='80' height='90' fill='none' stroke='%23cbd5e1' stroke-width='3' rx='4'/%3E%3Crect x='75' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='75' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='88' y='110' width='24' height='25' fill='%23cbd5e1' rx='2'/%3E%3Ctext x='100' y='165' text-anchor='middle' font-family='Arial,sans-serif' font-size='14' font-weight='600' fill='%2394a3b8'%3ENO LOGO%3C/text%3E%3C/svg%3E"} alt="Logo" className="max-w-full max-h-full object-contain" />
                                         </div>
-                                        <div className="leading-tight">
-                                            <div className="flex items-baseline gap-4 mb-2">
-                                                <h1 className="text-[28px] font-black text-slate-800 tracking-tightest">{clinicInfo.name}</h1>
-                                                <span className="text-[9px] bg-slate-900 text-white px-2.5 py-1 rounded-sm font-black tracking-widest uppercase">Clinical Record</span>
-                                            </div>
-                                            <div className="text-[12px] text-slate-400 font-bold uppercase tracking-tight flex items-center gap-3">
-                                                <span>{clinicInfo.address.replace(/\n/g, ' • ')}</span>
-                                                <div className="w-1 h-1 rounded-full bg-slate-300" />
-                                                <span className="text-slate-600 font-black">PH: {clinicInfo.phone}</span>
+                                        <div>
+                                            <h1 className="text-2xl font-bold text-blue-900 tracking-tight mb-1">{clinicInfo.name}</h1>
+                                            <div className="text-[11px] text-slate-500 font-medium flex flex-col gap-0.5">
+                                                <span>{clinicInfo.address.replace(/\n/g, ', ')}</span>
+                                                <span className="text-blue-600 font-semibold">PH: {clinicInfo.phone}</span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="text-right flex flex-col items-end">
-                                        <div className="bg-slate-50 px-4 py-2 rounded-lg border border-slate-100 mb-2">
-                                            <div className="text-[18px] font-black text-slate-900 tracking-tight">{visitDate}</div>
-                                            <div className="text-[8px] text-slate-400 font-black uppercase tracking-widest text-right mt-0.5">Examination Date</div>
+                                    <div className="text-right flex flex-col items-end gap-2">
+                                        <div className="bg-blue-50/50 text-blue-700 px-3 py-1 rounded-md border border-blue-100/50">
+                                            <span className="text-[10px] font-bold uppercase tracking-wider">Clinical Record</span>
                                         </div>
-                                        <div className="text-[10px] text-slate-300 font-mono tracking-tighter">REF: {activeVisitId?.substring(0, 14).toUpperCase()}</div>
+                                        <div>
+                                            <div className="text-[15px] font-bold text-slate-700 tracking-tight">{visitDate}</div>
+                                            <div className="text-[9px] text-slate-400 uppercase tracking-wider">Examination Date</div>
+                                        </div>
+                                        <div className="text-[9px] text-slate-300 font-mono tracking-tight mt-1">REF: {activeVisitId?.substring(0, 14).toUpperCase()}</div>
                                     </div>
                                 </div>
 
                                 {/* 2. COMPACT PATIENT DEMOGRAPHICS */}
-                                <div className="relative avoid-cut py-5 px-8 my-4 bg-slate-50/50 rounded-xl border border-slate-100/80 flex gap-10 overflow-hidden">
-                                    <div className="flex-1 grid grid-cols-3 gap-x-12 relative z-10 text-[11px]">
-                                        <div className="space-y-3">
+                                <div className="relative avoid-cut py-4 px-6 my-4 bg-blue-50/20 rounded-lg border border-blue-100/50 flex gap-8 overflow-hidden">
+                                    <div className="flex-1 grid grid-cols-3 gap-x-8 relative z-10 text-[11px]">
+                                        <div className="space-y-2">
                                             <div>
-                                                <div className="text-slate-400 font-bold uppercase text-[8px] tracking-tight mb-0.5">Patient Profile</div>
-                                                <div className="font-extrabold text-slate-900 text-[15px] leading-tight tracking-tight">{patient.last_name}, {patient.first_name}</div>
-                                                <div className="text-[11px] text-slate-500 font-bold tabular-nums">MRN: {patient.mrn}</div>
+                                                <div className="text-blue-400 font-bold uppercase text-[9px] tracking-wide mb-0.5">Patient</div>
+                                                <div className="font-bold text-blue-950 text-[14px] leading-tight tracking-tight">{patient.last_name}, {patient.first_name}</div>
+                                                <div className="text-[11px] text-slate-500 font-medium">MRN: {patient.mrn}</div>
                                             </div>
-                                            <div className="font-extrabold text-slate-800 text-[13px]">{patientDOB} <span className="text-slate-300 mx-1">/</span> {patientAge}Y <span className="text-slate-300 mx-1">/</span> {patient.sex}</div>
+                                            <div className="font-semibold text-slate-600 text-[12px]">{patientDOB} <span className="text-slate-300 mx-1">/</span> {patientAge}Y <span className="text-slate-300 mx-1">/</span> {patient.sex}</div>
                                         </div>
 
-                                        <div className="space-y-3 border-x border-slate-100/60 px-8">
+                                        <div className="space-y-2 border-l border-blue-100/60 pl-6">
                                             <div>
-                                                <div className="text-slate-400 font-bold uppercase text-[8px] tracking-tight mb-1">Billing & Provider</div>
-                                                <div className="font-bold text-slate-800 uppercase text-[11px] mb-1">{patient.insurance_name || 'Self-Pay'}</div>
-                                                <div className="font-extrabold text-blue-600 text-[12px] tracking-tight">{providerName}</div>
+                                                <div className="text-blue-400 font-bold uppercase text-[9px] tracking-wide mb-0.5">Billing & Payer</div>
+                                                <div className="font-semibold text-slate-700 uppercase text-[11px] mb-0.5">{patient.insurance_name || 'Self-Pay'}</div>
+                                                <div className="font-medium text-blue-600 text-[11px]">PR: {providerName}</div>
                                             </div>
-                                            <div className="flex flex-col gap-0.5 text-slate-600 font-bold text-[10px]">
+                                            <div className="flex flex-col gap-0.5 text-slate-500 font-medium text-[10px]">
                                                 <span>{patient.phone}</span>
                                             </div>
                                         </div>
 
-                                        <div className="space-y-2 pl-6">
-                                            <div className="text-slate-400 font-bold uppercase text-[8px] tracking-tight mb-1">Primary Residence</div>
-                                            <div className="text-slate-700 font-bold text-[10px] leading-tight opacity-70">
+                                        <div className="space-y-1 pl-6 border-l border-blue-100/60">
+                                            <div className="text-blue-400 font-bold uppercase text-[9px] tracking-wide mb-0.5">Address</div>
+                                            <div className="text-slate-600 font-medium text-[10px] leading-snug">
                                                 {patient.street_address}<br />
                                                 {[patient.city, patient.state, patient.zip].filter(Boolean).join(', ')}
                                             </div>
@@ -686,10 +685,10 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                 </div>
 
                                 {/* META HEADER (CHIEF COMPLAINT) */}
-                                <div className="avoid-cut mb-6 pt-2 pb-2 border-b border-slate-100 flex gap-8 items-center px-4">
-                                    <div className="flex gap-3 items-center shrink-0">
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Chief Complaint</span>
-                                        <div className="text-[12px] font-extrabold text-slate-900 uppercase tracking-tight">{noteData.chiefComplaint || visit?.reason || 'Routine follow-up'}</div>
+                                <div className="avoid-cut mb-4 pt-2 pb-2 border-b border-blue-50 flex gap-4 items-center px-2">
+                                    <div className="flex gap-2 items-center shrink-0">
+                                        <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Reason for Visit:</span>
+                                        <div className="text-[12px] font-bold text-slate-700 uppercase tracking-wide">{noteData.chiefComplaint || visit?.reason || 'Routine follow-up'}</div>
                                     </div>
                                 </div>
 
@@ -720,27 +719,27 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                     </div>
 
                                     {/* COMPACT 3-COLUMN CLINICAL HISTORY (PMHx, Meds, Social) */}
-                                    <div className="grid grid-cols-3 gap-10 mt-6 pt-4 border-t border-slate-100 avoid-cut">
+                                    <div className="grid grid-cols-3 gap-8 mt-4 pt-4 border-t border-blue-50 avoid-cut">
                                         <div className="space-y-2">
-                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Observation & History</span>
-                                            <ul className="text-[11px] font-bold text-slate-600 space-y-0.5">
-                                                {problems.length > 0 ? problems.map((p, i) => <li key={i} className="flex items-center gap-1.5 opacity-80"> • {p.problem_name}</li>) : <li className="italic text-slate-400 font-medium">Non-contributory.</li>}
+                                            <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest block mb-1">Observation & History</span>
+                                            <ul className="text-[11px] font-medium text-slate-600 space-y-0.5">
+                                                {problems.length > 0 ? problems.map((p, i) => <li key={i} className="flex items-center gap-1.5"> • {p.problem_name}</li>) : <li className="italic text-slate-400">Non-contributory.</li>}
                                             </ul>
                                         </div>
-                                        <div className="space-y-2 border-x border-slate-50 px-8">
-                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Home Medications</span>
-                                            <ul className="text-[11px] font-extrabold text-slate-800 space-y-1.5">
-                                                {medications.length > 0 ? medications.map((m, i) => <li key={i} className="flex flex-col border-b border-slate-50/50 pb-0.5 leading-tight"><span>{m.medication_name}</span> <span className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">{m.dosage}</span></li>) : <li className="italic text-slate-400 font-medium">No active medications.</li>}
+                                        <div className="space-y-2 border-l border-r border-blue-50 px-6">
+                                            <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest block mb-1">Home Medications</span>
+                                            <ul className="text-[11px] font-semibold text-slate-700 space-y-1">
+                                                {medications.length > 0 ? medications.map((m, i) => <li key={i} className="flex flex-col border-b border-blue-50/50 pb-0.5"><span>{m.medication_name}</span> <span className="text-[9px] text-slate-400 font-medium uppercase">{m.dosage}</span></li>) : <li className="italic text-slate-400">No active medications.</li>}
                                             </ul>
                                         </div>
                                         <div className="space-y-2">
-                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Psychosocial & Family</span>
-                                            <div className="text-[11px] font-bold text-slate-600 space-y-2.5 opacity-90">
-                                                <div className="bg-slate-50/50 p-2 rounded-lg border border-slate-100/50">
-                                                    <div>Tobacco: <span className="text-slate-900">{socialHistory?.smoking_status || 'Never'}</span> / EtOh: <span className="text-slate-900">{socialHistory?.alcohol_use || 'None'}</span></div>
+                                            <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest block mb-1">Social & Family</span>
+                                            <div className="text-[11px] font-medium text-slate-600 space-y-2">
+                                                <div className="bg-blue-50/30 p-2 rounded border border-blue-50">
+                                                    <div>Tobacco: <span className="text-slate-800">{socialHistory?.smoking_status || 'Never'}</span> / EtOh: <span className="text-slate-800">{socialHistory?.alcohol_use || 'None'}</span></div>
                                                 </div>
                                                 <div className="text-[10px] leading-tight">
-                                                    <span className="text-emerald-600/70 font-black uppercase text-[8px] mr-1">Family History:</span>
+                                                    <span className="text-blue-500 font-bold uppercase text-[8px] mr-1">Family History:</span>
                                                     {familyHistory.length > 0 ? familyHistory.map(f => f.condition).join(', ') : 'Non-contributory.'}
                                                 </div>
                                             </div>
@@ -748,19 +747,19 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                     </div>
 
                                     {/* VITALS */}
-                                    <div className="mt-8 pt-6 border-t border-slate-100 avoid-cut">
-                                        <span className="section-label">Physical Observations (Vitals)</span>
-                                        <div className="grid grid-cols-5 gap-6 mt-2">
+                                    <div className="mt-8 pt-6 border-t border-blue-50 avoid-cut">
+                                        <span className="section-label text-blue-400 text-[10px] mb-2">Physical Observations (Vitals)</span>
+                                        <div className="grid grid-cols-5 gap-4 mt-2">
                                             {[
                                                 { label: 'B/P', value: vitals?.bp, unit: 'mmHg' },
-                                                { label: 'PULSE', value: vitals?.pulse, unit: 'bpm' },
-                                                { label: 'TEMP', value: vitals?.temp, unit: '°F' },
-                                                { label: 'O2 SAT', value: vitals?.o2sat, unit: '%' },
+                                                { label: 'Pulse', value: vitals?.pulse, unit: 'bpm' },
+                                                { label: 'Temp', value: vitals?.temp, unit: '°F' },
+                                                { label: 'O2 Sat', value: vitals?.o2sat, unit: '%' },
                                                 { label: 'BMI', value: vitals?.bmi, unit: '' }
                                             ].map((v, i) => (
-                                                <div key={i} className="border-l border-slate-100 pl-3 space-y-1">
-                                                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{v.label}</div>
-                                                    <div className="text-[15px] font-bold text-slate-800 tabular-nums">{v.value || '--'} <span className="text-[10px] font-normal text-slate-400">{v.unit}</span></div>
+                                                <div key={i} className="bg-blue-50/30 border border-blue-50 rounded px-3 py-2 text-center">
+                                                    <div className="text-[9px] font-bold text-blue-400 uppercase tracking-wider">{v.label}</div>
+                                                    <div className="text-[14px] font-bold text-slate-700 tabular-nums">{v.value || '--'} <span className="text-[10px] font-medium text-slate-400">{v.unit}</span></div>
                                                 </div>
                                             ))}
                                         </div>
@@ -836,21 +835,21 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                     </div>
 
                                     {/* AUTHENTICATION FOOTER */}
-                                    <div className="mt-8 pt-4 border-t-2 border-slate-900 avoid-cut">
+                                    <div className="mt-8 pt-4 border-t border-blue-100 avoid-cut">
                                         <div className="flex justify-between items-end">
                                             <div className="space-y-1">
-                                                <div className="text-lg font-bold italic text-slate-900 tracking-tight">/s/ {providerName}</div>
-                                                <div className="text-[9px] font-bold text-emerald-700 uppercase tracking-widest flex items-center gap-1.5 bg-emerald-50 px-2 py-0.5 rounded">
-                                                    <CheckCircle2 className="w-3 h-3" /> VERIFIED ELECTRONIC SIGNATURE {isSigned && `• ${format(new Date(isSigned), 'MM/dd/yyyy HH:mm')}`}
+                                                <div className="text-[16px] font-bold italic text-blue-900 tracking-tight">/s/ {providerName}</div>
+                                                <div className="text-[9px] font-bold text-blue-600 uppercase tracking-widest flex items-center gap-1.5 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                                                    <CheckCircle2 className="w-3 h-3" /> Electronic Signature Verified {isSigned && `• ${format(new Date(isSigned), 'MM/dd/yyyy HH:mm')}`}
                                                 </div>
-                                                <div className="text-[8px] font-bold text-slate-400 uppercase tracking-tight pl-1">Hash: {patientId?.substring(0, 8)}-{activeVisitId?.substring(0, 8)}</div>
+                                                <div className="text-[8px] font-medium text-slate-400 uppercase tracking-tight pl-1">Hash: {patientId?.substring(0, 8)}-{activeVisitId?.substring(0, 8)}</div>
                                             </div>
-                                            <div className="text-right flex flex-col items-end opacity-30">
-                                                <span className="text-lg font-black italic text-slate-900 tracking-tighter">PageMD</span>
+                                            <div className="text-right flex flex-col items-end opacity-40">
+                                                <span className="text-lg font-bold italic text-blue-900 tracking-tighter">PageMD</span>
                                             </div>
                                         </div>
-                                        <div className="mt-4 text-center text-[7px] font-bold text-slate-300 uppercase tracking-[0.2em] border-t border-slate-50 pt-2">
-                                            Confidential Patient Record • Unauthorized Disclosure Prohibited by HIPAA Federal Law
+                                        <div className="mt-4 text-center text-[8px] font-bold text-slate-300 uppercase tracking-widest border-t border-slate-50 pt-2">
+                                            Confidential Patient Record • HIPAA Compliant
                                         </div>
                                     </div>
                                 </div>
