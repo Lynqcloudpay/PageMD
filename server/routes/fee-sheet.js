@@ -54,7 +54,7 @@ router.post('/:visitId/save', requirePermission('billing:edit'), async (req, res
             patientId,
             bill,
             prod,
-            providerId,
+            providerId: providerId || null,
             userId: req.user.id,
             copay,
             paymentMethod,

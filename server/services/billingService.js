@@ -53,7 +53,7 @@ class BillingService {
             ) RETURNING *
         `;
         const values = [
-            date, code_type, code, pid, encounter, provider_id, user_id,
+            date, code_type, code, pid, encounter, provider_id || null, user_id || null,
             authorized, code_text, modifier1, modifier2, modifier3, modifier4,
             units, fee, justify, pricelevel, ndc_info
         ];
