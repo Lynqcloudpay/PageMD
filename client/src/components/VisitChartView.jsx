@@ -628,7 +628,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                 {/* 1. REFINED CLINIC HEADER (Azure Theme) */}
                                 <div className="flex justify-between items-center pb-6 border-b border-blue-100 avoid-cut">
                                     <div className="flex items-center gap-6">
-                                        <div className="w-20 h-20 flex items-center justify-center shrink-0 bg-white rounded-lg border border-blue-50 p-2">
+                                        <div className="w-40 h-24 flex items-center justify-center shrink-0 bg-white rounded-lg border border-blue-50 p-1">
                                             <img src={clinicInfo.logo || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8fafc' rx='8'/%3E%3Crect x='60' y='45' width='80' height='90' fill='none' stroke='%23cbd5e1' stroke-width='3' rx='4'/%3E%3Crect x='75' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='75' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='88' y='110' width='24' height='25' fill='%23cbd5e1' rx='2'/%3E%3Ctext x='100' y='165' text-anchor='middle' font-family='Arial,sans-serif' font-size='14' font-weight='600' fill='%2394a3b8'%3ENO LOGO%3C/text%3E%3C/svg%3E"} alt="Logo" className="max-w-full max-h-full object-contain" />
                                         </div>
                                         <div>
@@ -695,15 +695,15 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                 {/* 3. CLINICAL NARRATIVE */}
                                 <div className="space-y-12 pb-16">
                                     {/* HPI */}
-                                    <div className="mt-8 pt-6 border-t border-slate-100 avoid-cut">
+                                    <div className="mt-8 pt-6 border-t border-blue-50 avoid-cut">
                                         <span className="section-label">History of Present Illness</span>
-                                        <div className="text-[14px] leading-relaxed text-slate-700 whitespace-pre-wrap">{noteData.hpi || 'No HPI recorded.'}</div>
+                                        <div className="text-[13px] leading-relaxed text-slate-700 whitespace-pre-wrap">{noteData.hpi || 'No HPI recorded.'}</div>
                                     </div>
 
                                     {/* ROS */}
-                                    <div className="mt-8 pt-6 border-t border-slate-100 avoid-cut">
+                                    <div className="mt-8 pt-6 border-t border-blue-50 avoid-cut">
                                         <span className="section-label">Review of Systems</span>
-                                        <div className="text-[13px] leading-relaxed text-slate-600 columns-2 gap-12" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.rosNotes) }} />
+                                        <div className="text-[13px] leading-relaxed text-slate-700" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.rosNotes) }} />
                                     </div>
 
                                     {/* ALLERGIES BAR (Post-ROS) */}
@@ -766,17 +766,17 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                     </div>
 
                                     {/* PE */}
-                                    <div className="mt-8 pt-6 border-t border-slate-100 avoid-cut">
+                                    <div className="mt-8 pt-6 border-t border-blue-50 avoid-cut">
                                         <span className="section-label">Physical Examination</span>
-                                        <div className="text-[14px] leading-relaxed text-slate-700 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.peNotes) }} />
+                                        <div className="text-[13px] leading-relaxed text-slate-700 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.peNotes) }} />
                                     </div>
 
                                     {/* RESULTS / DATA */}
                                     {(noteData.results || visitDocuments.length > 0) && (
-                                        <div className="mt-8 pt-6 border-t border-slate-100 avoid-cut">
+                                        <div className="mt-8 pt-6 border-t border-blue-50 avoid-cut">
                                             <span className="section-label">Results & Data</span>
                                             {noteData.results && !noteData.results.includes('Imported results will appear here') && (
-                                                <div className="text-[14px] leading-relaxed text-slate-700 whitespace-pre-wrap mb-8">{noteData.results}</div>
+                                                <div className="text-[13px] leading-relaxed text-slate-700 whitespace-pre-wrap mb-8">{noteData.results}</div>
                                             )}
                                             {visitDocuments.length > 0 && (
                                                 <div className="grid grid-cols-2 gap-8 mt-4">
@@ -789,9 +789,9 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                     )}
 
                                     {/* ASSESSMENT */}
-                                    <div className="mt-8 pt-6 border-t border-slate-100 avoid-cut">
+                                    <div className="mt-8 pt-6 border-t border-blue-50 avoid-cut">
                                         <span className="section-label text-slate-900 border-none">Assessment & Diagnoses</span>
-                                        <div className="space-y-1.5 font-bold text-[14px] text-slate-900">
+                                        <div className="space-y-1.5 font-bold text-[13px] text-slate-700">
                                             {noteData.assessment ? noteData.assessment.split('\n').filter(line => line.trim()).map((line, i) => (
                                                 <div key={i} className="flex gap-2.5">
                                                     <span className="text-slate-400 font-medium">{i + 1}.</span>
@@ -802,27 +802,27 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                     </div>
 
                                     {/* PLAN */}
-                                    <div className="space-y-6 pt-8 mt-8 border-t border-slate-900/10 avoid-cut">
+                                    <div className="space-y-6 pt-8 mt-8 border-t border-blue-50 avoid-cut">
                                         <span className="section-label">Medical Plan & Interventions</span>
                                         <div className="space-y-8 pl-3">
                                             {noteData.planStructured?.length > 0 ? noteData.planStructured.map((p, i) => (
                                                 <div key={i} className="space-y-3">
-                                                    <div className="text-[15px] font-bold text-slate-800 border-b border-slate-100 pb-1.5">{p.diagnosis}</div>
+                                                    <div className="text-[13px] font-bold text-slate-800 border-b border-blue-50 pb-1.5">{p.diagnosis}</div>
                                                     <ul className="pl-8 space-y-1.5">
                                                         {p.orders.map((o, j) => (
-                                                            <li key={j} className="text-[14px] text-slate-600 font-medium flex items-center gap-2.5"><div className="w-1.5 h-1.5 bg-slate-400 rounded-full"></div> {o}</li>
+                                                            <li key={j} className="text-[13px] text-slate-700 font-medium flex items-center gap-2.5"><div className="w-1.5 h-1.5 bg-blue-300 rounded-full"></div> {o}</li>
                                                         ))}
                                                     </ul>
                                                 </div>
-                                            )) : <div className="text-[14px] text-slate-600 whitespace-pre-wrap">{noteData.plan || 'No specific clinical orders recorded.'}</div>}
+                                            )) : <div className="text-[13px] text-slate-700 whitespace-pre-wrap">{noteData.plan || 'No specific clinical orders recorded.'}</div>}
                                         </div>
                                     </div>
 
                                     {/* PLAN OF CARE */}
                                     {noteData.carePlan && (
-                                        <div className="space-y-6 pt-8 mt-8 border-t border-slate-900/10 avoid-cut">
+                                        <div className="space-y-6 pt-8 mt-8 border-t border-blue-50 avoid-cut">
                                             <span className="section-label">Plan of Care</span>
-                                            <div className="text-[14px] leading-relaxed text-slate-600 pl-3 whitespace-pre-wrap">{noteData.carePlan}</div>
+                                            <div className="text-[13px] leading-relaxed text-slate-700 pl-3 whitespace-pre-wrap">{noteData.carePlan}</div>
                                         </div>
                                     )}
 
