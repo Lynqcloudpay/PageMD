@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
-import { inboxAPI, usersAPI } from '../services/api';
+import { inboxAPI, usersAPI, patientsAPI } from '../services/api';
 import { showError, showSuccess } from '../utils/toast';
 import { getPatientDisplayName } from '../utils/patientNameUtils';
 
@@ -43,6 +43,20 @@ const Inbasket = () => {
     const [loadingDetails, setLoadingDetails] = useState(false);
     const [replyText, setReplyText] = useState('');
 
+    // Compose State
+    const [showCompose, setShowCompose] = useState(false);
+    const [composeData, setComposeData] = useState({
+        type: 'task',
+        subject: '',
+        body: '',
+        patientId: '',
+        priority: 'normal',
+        assignedUserId: user?.id
+    });
+    const [patientQuery, setPatientQuery] = useState('');
+    const [patientResults, setPatientResults] = useState([]);
+    const [isSearchingPatients, setIsSearchingPatients] = useState(false);
+
     // Assignment Modal
     const [showAssignModal, setShowAssignModal] = useState(false);
 
@@ -68,8 +82,8 @@ const Inbasket = () => {
 
             // 3. Fetch Users (for assignment) if not already loaded
             if (users.length === 0) {
-                const usersRes = await usersAPI.getAll();
-                setUsers(usersRes.data?.data || usersRes.data || []);
+                const usersRes = await usersAPI.getDirectory();
+                setUsers(usersRes.data || []);
             }
 
         } catch (error) {
@@ -174,10 +188,46 @@ const Inbasket = () => {
     };
 
     const openPatientChart = (item) => {
-        if (item.patient_id || item.patientId) {
-            navigate(`/patient/${item.patient_id || item.patientId}/snapshot`);
+        const pid = item.patient_id || item.patientId;
+        if (pid) {
+            navigate(`/patient/${pid}/snapshot`);
         } else {
             showError('No patient attached to this item');
+        }
+    };
+
+    const handlePatientSearch = async (query) => {
+        setPatientQuery(query);
+        if (query.length < 2) {
+            setPatientResults([]);
+            return;
+        }
+        setIsSearchingPatients(true);
+        try {
+            const res = await patientsAPI.search(query);
+            setPatientResults(res.data || []);
+        } catch (e) {
+            console.error('Patient search error:', e);
+        } finally {
+            setIsSearchingPatients(false);
+        }
+    };
+
+    const handleComposeSubmit = async () => {
+        if (!composeData.subject || (!composeData.assignedUserId && composeData.type === 'task')) {
+            showError('Subject and recipient are required');
+            return;
+        }
+        try {
+            await inboxAPI.create(composeData);
+            showSuccess('Item created');
+            setShowCompose(false);
+            setComposeData({ type: 'task', subject: '', body: '', patientId: '', priority: 'normal', assignedUserId: user?.id });
+            setPatientQuery('');
+            setPatientResults([]);
+            fetchData(true);
+        } catch (e) {
+            showError('Failed to create item');
         }
     };
 
@@ -199,10 +249,18 @@ const Inbasket = () => {
             {/* Sidebar */}
             <div className="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 z-10">
                 <div className="p-4 border-b border-gray-100">
-                    <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-4">
                         <Inbox className="w-5 h-5" /> In Basket
                     </h2>
-                    <div className="mt-4 flex gap-2 text-xs">
+
+                    <button
+                        onClick={() => setShowCompose(true)}
+                        className="w-full mb-4 py-2 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg flex items-center justify-center gap-2 font-bold shadow-sm hover:shadow-md transition-all active:scale-95"
+                    >
+                        <Plus className="w-5 h-5" /> Compose New
+                    </button>
+
+                    <div className="flex gap-2 text-xs">
                         <button
                             onClick={() => setAssignedFilter('all')}
                             className={`flex-1 py-1 px-2 rounded-md ${assignedFilter === 'all' ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-500 hover:bg-gray-50'}`}
@@ -455,6 +513,129 @@ const Inbasket = () => {
                             ))}
                         </div>
                         <button onClick={() => setShowAssignModal(false)} className="w-full py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+                    </div>
+                </div>
+            )}
+            {/* Compose Modal */}
+            {showCompose && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+                            <h3 className="text-lg font-bold">New Task / Message</h3>
+                            <button onClick={() => setShowCompose(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+                        </div>
+
+                        <div className="p-6 space-y-4 overflow-y-auto">
+                            <div className="flex gap-4">
+                                <div className="flex-1">
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Type</label>
+                                    <select
+                                        value={composeData.type}
+                                        onChange={e => setComposeData({ ...composeData, type: e.target.value })}
+                                        className="w-full border border-gray-300 rounded-lg p-2 text-sm"
+                                    >
+                                        <option value="task">Clinical Task</option>
+                                        <option value="message">Staff Message</option>
+                                        <option value="refill">Rx Request</option>
+                                    </select>
+                                </div>
+                                <div className="flex-1">
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Priority</label>
+                                    <select
+                                        value={composeData.priority}
+                                        onChange={e => setComposeData({ ...composeData, priority: e.target.value })}
+                                        className="w-full border border-gray-300 rounded-lg p-2 text-sm"
+                                    >
+                                        <option value="normal">Normal</option>
+                                        <option value="urgent">Urgent</option>
+                                        <option value="stat">STAT</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Assign To</label>
+                                <select
+                                    value={composeData.assignedUserId}
+                                    onChange={e => setComposeData({ ...composeData, assignedUserId: e.target.value })}
+                                    className="w-full border border-gray-300 rounded-lg p-2 text-sm"
+                                >
+                                    <option value="">Unassigned</option>
+                                    {users.map(u => (
+                                        <option key={u.id} value={u.id}>{u.first_name} {u.last_name} ({u.role})</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="relative">
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Attached Patient (Optional)</label>
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search patient name..."
+                                        value={patientQuery}
+                                        onChange={e => handlePatientSearch(e.target.value)}
+                                        className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm"
+                                    />
+                                </div>
+
+                                {patientResults.length > 0 && (
+                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 shadow-lg rounded-lg z-10 max-h-40 overflow-y-auto">
+                                        {patientResults.map(p => (
+                                            <button
+                                                key={p.id}
+                                                onClick={() => {
+                                                    setComposeData({ ...composeData, patientId: p.id });
+                                                    setPatientQuery(`${p.first_name} ${p.last_name}`);
+                                                    setPatientResults([]);
+                                                }}
+                                                className="w-full text-left p-2 hover:bg-gray-50 text-sm border-b border-gray-100"
+                                            >
+                                                <span className="font-bold">{p.first_name} {p.last_name}</span>
+                                                <span className="text-gray-400 ml-2">DOB: {p.dob ? format(new Date(p.dob), 'MM/dd/yyyy') : 'N/A'}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Subject</label>
+                                <input
+                                    type="text"
+                                    placeholder="Brief title of the task/message"
+                                    value={composeData.subject}
+                                    onChange={e => setComposeData({ ...composeData, subject: e.target.value })}
+                                    className="w-full border border-gray-300 rounded-lg p-2 text-sm"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Instructions / Body</label>
+                                <textarea
+                                    placeholder="Provide detailed instructions or the message content..."
+                                    value={composeData.body}
+                                    onChange={e => setComposeData({ ...composeData, body: e.target.value })}
+                                    className="w-full border border-gray-300 rounded-lg p-2 text-sm h-32 resize-none"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowCompose(false)}
+                                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-100"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleComposeSubmit}
+                                className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700"
+                            >
+                                Send / Create
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
