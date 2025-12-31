@@ -30,7 +30,13 @@ ls -la "$KEY_PATH"
 echo "🏗️  Building frontend locally..."
 cd "$PROJECT_ROOT/client" || { echo "❌ Cannot cd to client dir"; exit 1; }
 
+# Clean any existing env files to ensure fresh build config
+rm -f .env .env.local .env.production .env.production.local
+
 echo "VITE_API_URL=https://pagemdemr.com/api" > .env.production.local
+echo "Content of .env.production.local:"
+cat .env.production.local
+
 npm run build || { echo "❌ Build failed"; exit 1; }
 
 cd "$PROJECT_ROOT"
