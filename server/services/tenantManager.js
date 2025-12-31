@@ -69,12 +69,12 @@ class TenantManager {
                 const passwordHash = await bcrypt.hash(adminUser.password, 10);
 
                 // Get the admin role_id we just created in this schema
-                const roleRes = await client.query(`SELECT id FROM ${schemaName}.roles WHERE name = 'admin'`);
-                const roleId = roleRes.rows[0]?.id;
+                const roleRes = await client.query(`SELECT id FROM ${schemaName}.roles WHERE name = 'Admin'`);
+                const roleId = roleRes.rows[0]?.id || null;
 
                 await client.query(`
                     INSERT INTO ${schemaName}.users (email, password_hash, first_name, last_name, role, role_id, is_admin, status)
-                    VALUES ($1, $2, $3, $4, 'admin', $5, true, 'active')
+                    VALUES ($1, $2, $3, $4, 'Admin', $5, true, 'active')
                 `, [adminUser.email, passwordHash, adminUser.firstName, adminUser.lastName, roleId]);
 
                 // 5b. Add to Global User Lookup (for recognition by email)
