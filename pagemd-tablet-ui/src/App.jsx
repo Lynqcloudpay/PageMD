@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage';
 import { TodaySchedulePage } from './pages/TodaySchedulePage';
 import { PatientsPage } from './pages/PatientsPage';
 import { PatientChartPage } from './pages/PatientChartPage';
+import { VisitNotePage } from './pages/VisitNotePage';
 import { SettingsPage } from './pages/SettingsPage';
 
 function App() {
@@ -22,6 +23,8 @@ function App() {
             <Route path="/patients" element={<PatientsPage />} />
             <Route path="/patient/:patientId" element={<PatientChartPage />} />
             <Route path="/patient/:patientId/snapshot" element={<PatientChartPage />} />
+            <Route path="/patient/:patientId/note" element={<VisitNotePage />} />
+            <Route path="/patient/:patientId/visit/:visitId" element={<VisitNotePage />} />
             <Route path="/cancellations" element={<PlaceholderPage title="Cancellations" />} />
             <Route path="/pending-notes" element={<PlaceholderPage title="Pending Notes" />} />
             <Route path="/telehealth" element={<PlaceholderPage title="Telehealth" />} />
