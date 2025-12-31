@@ -11,12 +11,19 @@ router.use(authenticate);
 // This ensures we have a unified, real-table representation for everything
 // Schema self-healing state
 async function ensureSchema() {
-  // Always attempt to create schema (IF NOT EXISTS handles idempotency)
-  // This is required because this code runs in different tenant contexts (via search_path)
+  // 1. Try to create extensions (separately, ignored if fails due to permissions)
   try {
-    await pool.query('BEGIN');
     await pool.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
     await pool.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
+  } catch (e) {
+    // Ignore extension creation errors (likely permission issues or already exists)
+    // Postgres 13+ has gen_random_uuid() built-in anyway
+    console.warn('Note: Could not create extensions (might already exist):', e.message);
+  }
+
+  // 2. Create Tables
+  try {
+    await pool.query('BEGIN');
 
     await pool.query(`
             CREATE TABLE IF NOT EXISTS inbox_items (
@@ -62,6 +69,8 @@ async function ensureSchema() {
   } catch (error) {
     await pool.query('ROLLBACK');
     console.error('Error ensuring inbasket schema:', error);
+    // Don't throw, let the query fail naturally if table doesn't exist, 
+    // but at least we tried our best.
   }
 }
 
