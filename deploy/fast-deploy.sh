@@ -20,6 +20,10 @@ docker compose -f docker-compose.prod.yml build api web
 echo "🚀 Starting containers..."
 docker compose -f docker-compose.prod.yml up -d --force-recreate api web
 
+echo "📋 Updating static files..."
+mkdir -p static
+docker cp emr-web:/usr/share/caddy/. ./static/ 2>/dev/null || echo "⚠️ Copy failed (check if web container is running)"
+
 echo "✅ Fast deployment complete!"
 docker compose -f docker-compose.prod.yml ps
 
