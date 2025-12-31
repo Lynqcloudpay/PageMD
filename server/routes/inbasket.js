@@ -61,7 +61,6 @@ async function ensureSchema() {
 
     await pool.query('COMMIT');
     _schemaEnsured = true;
-    console.log('Inbasket schema verified.');
   } catch (error) {
     await pool.query('ROLLBACK');
     console.error('Error ensuring inbasket schema:', error);
