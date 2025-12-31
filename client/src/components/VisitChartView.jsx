@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, FileText, Printer, X, AlertCircle, CheckCircle2, User, UserCircle, Calendar, Database, Phone, Mail, MapPin, Building2, Stethoscope, CreditCard, Users, FilePlus, Receipt, DollarSign, Globe, Clock, Heart, Thermometer, Wind, Pill, Lock, ClipboardList, ChevronDown } from 'lucide-react';
+import { Activity, FileText, Printer, X, AlertCircle, CheckCircle2, User, Phone, Mail, MapPin, Building2, Stethoscope, CreditCard, Users, FilePlus, Receipt, DollarSign, Globe, Clock, Heart, Thermometer, Wind, Pill, Lock, ClipboardList, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { visitsAPI, patientsAPI, billingAPI, codesAPI, settingsAPI, documentsAPI } from '../services/api';
 import { format } from 'date-fns';
@@ -217,7 +217,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
             if (practiceRes?.data) {
                 const p = practiceRes.data;
                 // Default "NO LOGO" placeholder SVG - building icon with text
-                const defaultLogoUrl = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8fafc' rx='8'/%3E%3Crect x='60' y='45' width='80' height='90' fill='none' stroke='%23cbd5e1' stroke-width='3' rx='4'/%3E%3Crect x='75' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='75' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='88' y='110' width='24' height='25' fill='%23cbd5e1' rx='2'/%3E%3Ctext x='100' y='165' text-anchor='middle' font-family='Arial,sans-serif' font-size='14' font-weight='600' fill='%2394a3b8'%3ENO LOGO%3C/text%3E%3C/svg%3E`;
+                const defaultLogoUrl = `data: image / svg + xml,% 3Csvg xmlns = 'http://www.w3.org/2000/svg' width = '200' height = '200' viewBox = '0 0 200 200' % 3E % 3Crect width = '200' height = '200' fill = '%23f8fafc' rx = '8' /% 3E % 3Crect x = '60' y = '45' width = '80' height = '90' fill = 'none' stroke = '%23cbd5e1' stroke - width='3' rx = '4' /% 3E % 3Crect x = '75' y = '60' width = '20' height = '15' fill = '%23cbd5e1' rx = '2' /% 3E % 3Crect x = '105' y = '60' width = '20' height = '15' fill = '%23cbd5e1' rx = '2' /% 3E % 3Crect x = '75' y = '85' width = '20' height = '15' fill = '%23cbd5e1' rx = '2' /% 3E % 3Crect x = '105' y = '85' width = '20' height = '15' fill = '%23cbd5e1' rx = '2' /% 3E % 3Crect x = '88' y = '110' width = '24' height = '25' fill = '%23cbd5e1' rx = '2' /% 3E % 3Ctext x = '100' y = '165' text - anchor='middle' font - family='Arial,sans-serif' font - size='14' font - weight='600' fill = '%2394a3b8' % 3ENO LOGO % 3C / text % 3E % 3C / svg % 3E`;
                 setClinicInfo({
                     name: p.practice_name || p.display_name || "My Practice",
                     address: [p.address_line1, p.address_line2, `${p.city || ''} ${p.state || ''} ${p.zip || ''} `.trim()].filter(Boolean).join('\n') || "",
@@ -392,25 +392,25 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     const isSigned = visit?.note_signed_at || visit?.locked;
 
     return (
-
-        <>
-            <style>{`
+        <><style>{`
             @media print {
                 @page { 
                     size: A4; 
-                    margin: 20mm; 
+                    margin: 40mm 30mm; 
                 }
                 
                 html, body { 
                     height: auto !important; 
                     overflow: visible !important; 
                     background: white !important;
-                    font-size: 10pt !important;
+                    font-family: 'Inter', system-ui, sans-serif !important;
+                    font-size: 11pt !important;
                     padding: 0 !important;
                     margin: 0 !important;
                 }
 
                 .print-container {
+                    padding: 40px 40px 0 40px !important; /* Safety padding for head room and side margins */
                     width: 100% !important;
                     background: white !important;
                 }
@@ -427,203 +427,440 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                 .avoid-cut { 
                     break-inside: avoid !important; 
                     page-break-inside: avoid !important; 
-                    margin-bottom: 1.5rem !important;
+                    margin-bottom: 2.5rem !important;
                 }
                 
                 .no-print { display: none !important; }
                 body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             }
             .section-label {
-                font-size: 10px;
+                font-size: 11px;
                 font-weight: 700;
-                color: #94a3b8;
+                color: #94a3b8; /* Slate-400 */
                 text-transform: uppercase;
                 letter-spacing: 0.05em;
-                margin-bottom: 0.4rem;
+                margin-bottom: 0.5rem;
                 display: block;
             }
         `}</style>
+            <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-0 backdrop-blur-sm animate-fade-in print:bg-white print:p-0 print:static">
+                <div className="bg-[#F8FAFC] shadow-2xl w-full h-screen overflow-hidden flex border-none animate-slide-up print:block print:h-auto print:max-w-none print:border-none print:bg-white">
 
-            <div className="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-md animate-fade-in print:bg-white print:p-0 print:static">
-                <div className="bg-white shadow-[0_32px_128px_-16px_rgba(0,0,0,0.5)] w-full max-w-[1000px] h-[85vh] rounded-2xl overflow-hidden flex flex-col border border-white/20 animate-slide-up print:block print:h-auto print:max-w-none print:border-none print:bg-white print:rounded-none">
-
-                    {/* Utility Header */}
-                    <div className="h-12 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-20 no-print shrink-0">
-                        <div className="flex items-center gap-6">
-                            <div className="flex items-center gap-3 text-[12px] font-semibold text-slate-600">
-                                <span className="uppercase text-[10px] text-slate-400 tracking-widest">Provider:</span>
-                                <span>{providerName}</span>
-                            </div>
-                            <span className="text-slate-200">|</span>
-
-                            <div className="relative">
+                    {/* EPIC STORYBOARD (Left Sidebar - High Density) */}
+                    <div className="w-[300px] shrink-0 border-r border-slate-200 flex flex-col bg-white overflow-y-auto overflow-x-hidden no-print">
+                        <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+                            <div className="flex justify-between items-start">
+                                <h2 className="text-[18px] font-bold text-slate-900 leading-tight">
+                                    {patient.last_name}, {patient.first_name}
+                                </h2>
                                 <button
-                                    onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-                                    className="flex items-center gap-2 px-3 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors"
+                                    onClick={() => setShowPatientChart(true)}
+                                    className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                                    title="Open Full Chart Panel"
                                 >
-                                    <div className="text-left">
-                                        <div className="text-[9px] text-slate-400 uppercase font-black leading-tight">Switch Note</div>
-                                        <div className="text-[11px] font-bold text-slate-800 leading-tight flex items-center gap-2">
-                                            {visitDate} <ChevronDown className={`w-3 h-3 transition-transform ${isHistoryOpen ? 'rotate-180' : ''}`} />
-                                        </div>
-                                    </div>
+                                    <ClipboardList className="w-4 h-4" />
                                 </button>
-
-                                {isHistoryOpen && (
-                                    <>
-                                        <div className="fixed inset-0 z-30" onClick={() => setIsHistoryOpen(false)} />
-                                        <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-slate-200 rounded-xl shadow-2xl z-40 overflow-hidden animate-slide-up">
-                                            <div className="p-2 bg-slate-50 border-b border-slate-200 text-[9px] font-black uppercase text-slate-400 tracking-widest">
-                                                Visit History
-                                            </div>
-                                            <div className="max-h-[50vh] overflow-y-auto">
-                                                {allVisits.map((v) => (
-                                                    <button
-                                                        key={v.id}
-                                                        onClick={() => { setActiveVisitId(v.id); setIsHistoryOpen(false); }}
-                                                        className={`w-full text-left p-3 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 ${activeVisitId === v.id ? 'bg-blue-50/50' : ''}`}
-                                                    >
-                                                        <div className="flex justify-between items-start">
-                                                            <span className={`text-[11px] font-black ${activeVisitId === v.id ? 'text-blue-600' : 'text-slate-900'}`}>
-                                                                {format(new Date(v.visit_date), 'MMM d, yyyy')}
-                                                            </span>
-                                                        </div>
-                                                        <div className="text-[10px] text-slate-500 truncate mt-0.5">{getChiefComplaint(v)}</div>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
+                            </div>
+                            <div className="mt-2 flex flex-wrap gap-x-2 text-[12px] font-bold text-slate-500 uppercase tracking-tight">
+                                <span>{patientAge}Y / {patient.sex || 'U'}</span>
+                                <span className="text-slate-300">|</span>
+                                <span>MRN: {patient.mrn}</span>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                            <button onClick={handlePrint} className="px-4 py-1.5 bg-slate-900 text-white rounded text-[11px] font-bold uppercase tracking-wider flex items-center gap-2 shadow-sm active:scale-95 transition-all">
-                                <Printer className="w-3.5 h-3.5" /> Print
-                            </button>
-                            <button onClick={onClose} className="p-1.5 bg-slate-50 text-slate-400 hover:text-rose-500 rounded-lg border border-slate-200">
-                                <X className="w-5 h-5" />
-                            </button>
+                        <div className="flex-1 p-6 space-y-8">
+                            {/* ALLERGIES */}
+                            <div>
+                                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center justify-between">
+                                    Allergies <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
+                                </div>
+                                <div className="space-y-1.5">
+                                    {allergies.length > 0 ? allergies.map((a, i) => (
+                                        <div key={i} className="px-3 py-1.5 bg-rose-50 text-rose-700 text-[12px] font-bold rounded-sm border border-rose-100">{a.allergen}</div>
+                                    )) : <div className="text-[12px] font-semibold text-emerald-600">NKDA</div>}
+                                </div>
+                            </div>
+
+                            {/* VITALS SNAPSHOT */}
+                            <div>
+                                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Vitals</div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {[
+                                        { l: 'BP', v: vitals?.bp },
+                                        { l: 'Pulse', v: vitals?.pulse },
+                                        { l: 'Temp', v: vitals?.temp },
+                                        { l: 'O2', v: vitals?.o2sat }
+                                    ].map((v, i) => (
+                                        <div key={i} className="p-2 bg-slate-50 border border-slate-100 rounded text-center">
+                                            <div className="text-[10px] font-bold text-slate-400 uppercase">{v.l}</div>
+                                            <div className="text-[13px] font-bold text-slate-800 tabular-nums">{v.v || '--'}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* PROBLEMS */}
+                            <div>
+                                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Problem List</div>
+                                <div className="space-y-1.5">
+                                    {problems.slice(0, 5).map((p, i) => (
+                                        <div key={i} className="text-[12px] font-medium text-slate-600 line-clamp-1 flex items-start gap-1">
+                                            <span className="text-slate-300 mt-1">•</span> {p.problem_name}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* MEDICATIONS */}
+                            <div>
+                                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center justify-between">
+                                    Medications <Pill className="w-3.5 h-3.5 text-slate-400" />
+                                </div>
+                                <div className="space-y-2">
+                                    {medications.length > 0 ? medications.map((m, i) => (
+                                        <div key={i} className="text-[12px] font-medium text-slate-600 line-clamp-1 flex flex-col">
+                                            <div className="flex items-start gap-1">
+                                                <span className="text-slate-300 mt-1">•</span> {m.medication_name}
+                                            </div>
+                                            <div className="pl-4 text-[10px] text-slate-400 italic uppercase">{m.dosage}</div>
+                                        </div>
+                                    )) : <div className="text-[12px] italic text-slate-400">None listed</div>}
+                                </div>
+                            </div>
+
+                            {/* CONTACT */}
+                            <div className="pt-6 border-t border-slate-50 space-y-3">
+                                <div className="flex items-center gap-2.5 text-[12px] font-medium text-slate-500">
+                                    <Phone className="w-3.5 h-3.5 text-slate-300" /> {patient.phone || 'N/A'}
+                                </div>
+                                <div className="flex items-center gap-2.5 text-[12px] font-medium text-slate-500">
+                                    <Mail className="w-3.5 h-3.5 text-slate-300" /> {patient.email || 'N/A'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-6 border-t border-slate-100">
+                            <button onClick={onClose} className="w-full py-3 bg-slate-50 hover:bg-slate-100 text-slate-500 text-[12px] font-bold uppercase tracking-wider rounded border border-slate-200 transition-colors">Close View</button>
                         </div>
                     </div>
 
-                    {/* Main Content Area */}
-                    <div id="visit-chart-view" className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50/30 print:p-0 print:bg-white">
-                        <div className="max-w-[800px] mx-auto bg-white shadow-sm border border-slate-200/60 p-6 md:p-10 flex flex-col font-serif print:p-0 print:shadow-none print:border-none">
+                    {/* CLINICAL DOCUMENT LANE */}
+                    <div className="flex-1 flex flex-col bg-slate-100 relative">
+                        {/* Compact Utility Header */}
+                        <div className="h-14 bg-white border-b border-slate-200 px-8 flex items-center justify-between z-20 no-print sticky top-0">
+                            <div className="flex items-center gap-6">
+                                <div className="flex items-center gap-3 text-[13px] font-semibold text-slate-600">
+                                    <span className="uppercase text-[11px] text-slate-400 tracking-widest">Provider:</span>
+                                    <span>{providerName}</span>
+                                </div>
+                                <span className="text-slate-200">|</span>
 
-                            {/* Clinic Header */}
-                            <div className="flex flex-col items-center mb-6 pb-6 border-b border-slate-100">
-                                <img src={clinicInfo.logo} alt="Logo" className="w-16 h-16 object-contain mb-3" />
-                                <div className="text-center">
-                                    <h1 className="text-[20px] font-black text-slate-800 tracking-tight">{clinicInfo.name}</h1>
-                                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
-                                        Clinical Document Reference • {visitDate}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Patient Info Bar */}
-                            <div className="grid grid-cols-3 gap-6 py-4 px-6 bg-slate-50 rounded-lg border border-slate-100 mb-8 text-[11px]">
-                                <div className="space-y-1">
-                                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Patient</div>
-                                    <div className="font-extrabold text-slate-900 uppercase">{patient.last_name}, {patient.first_name}</div>
-                                    <div className="text-slate-500 font-bold">MRN: {patient.mrn}</div>
-                                </div>
-                                <div className="space-y-1 border-x border-slate-200 px-6">
-                                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Demographics</div>
-                                    <div className="font-bold text-slate-700">DOB: {patientDOB}</div>
-                                    <div className="text-slate-500 font-bold">AGE: {patientAge}Y / {patient.sex}</div>
-                                </div>
-                                <div className="space-y-1 pl-6">
-                                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Provider</div>
-                                    <div className="font-bold text-slate-800">{providerName}</div>
-                                    <div className="text-slate-500 truncate">{clinicInfo.phone}</div>
-                                </div>
-                            </div>
-
-                            {/* Clinical Sections */}
-                            <div className="space-y-10">
-                                {/* Chief Complaint */}
-                                <div className="avoid-cut border-b border-slate-50 pb-2">
-                                    <span className="section-label">Chief Complaint</span>
-                                    <div className="text-sm font-bold text-slate-900 uppercase tracking-tight">{noteData.chiefComplaint || visit?.reason || 'Routine Visit'}</div>
-                                </div>
-
-                                {/* Narrative */}
-                                <div className="avoid-cut">
-                                    <span className="section-label">History of Present Illness</span>
-                                    <div className="text-[13px] leading-relaxed text-slate-700 whitespace-pre-wrap">{noteData.hpi || 'No HPI recorded.'}</div>
-                                </div>
-
-                                <div className="avoid-cut">
-                                    <span className="section-label">Review of Systems</span>
-                                    <div className="text-[12px] leading-relaxed text-slate-600 columns-2" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.rosNotes) }} />
-                                </div>
-
-                                <div className="avoid-cut">
-                                    <span className="section-label">Physical Examination</span>
-                                    <div className="text-[13px] leading-relaxed text-slate-700 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.peNotes) }} />
-                                </div>
-
-                                {/* Diagnoses */}
-                                <div className="avoid-cut bg-slate-50/50 p-4 rounded-lg border border-slate-100">
-                                    <span className="section-label">Assessment & Diagnoses (ICD-10)</span>
-                                    <div className="space-y-1 text-[13px] font-bold text-slate-900">
-                                        {noteData.assessment ? noteData.assessment.split('\n').filter(l => l.trim()).map((line, i) => (
-                                            <div key={i} className="flex gap-2">
-                                                <span className="text-slate-400 font-medium">{i + 1}.</span> {line}
+                                {/* VISIT NAVIGATOR DROPDOWN */}
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors"
+                                    >
+                                        <div className="text-left">
+                                            <div className="text-[10px] text-slate-400 uppercase font-black leading-tight">Switch Note</div>
+                                            <div className="text-[12px] font-bold text-slate-800 leading-tight flex items-center gap-2">
+                                                {visitDate} <ChevronDown className={`w-3 h-3 transition-transform ${isHistoryOpen ? 'rotate-180' : ''}`} />
                                             </div>
-                                        )) : <div className="italic text-slate-400">Stable chronic conditions.</div>}
-                                    </div>
-                                </div>
+                                        </div>
+                                    </button>
 
-                                {/* Plan */}
-                                <div className="avoid-cut">
-                                    <span className="section-label">Medical Plan & Orders</span>
-                                    <div className="space-y-4 pl-2">
-                                        {noteData.planStructured?.length > 0 ? noteData.planStructured.map((p, i) => (
-                                            <div key={i}>
-                                                <div className="text-[13px] font-bold text-slate-800 mb-1">{p.diagnosis}</div>
-                                                <ul className="pl-6 space-y-1">
-                                                    {p.orders.map((o, j) => (
-                                                        <li key={j} className="text-[12px] text-slate-600 flex items-center gap-2">• {o}</li>
+                                    {isHistoryOpen && (
+                                        <>
+                                            <div className="fixed inset-0 z-30" onClick={() => setIsHistoryOpen(false)} />
+                                            <div className="absolute top-full left-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-2xl z-40 overflow-hidden animate-slide-up">
+                                                <div className="p-3 bg-slate-50 border-b border-slate-200 text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                                                    Visit Timeline ({allVisits.length})
+                                                </div>
+                                                <div className="max-h-[60vh] overflow-y-auto custom-scrollbar">
+                                                    {allVisits.map((v) => (
+                                                        <button
+                                                            key={v.id}
+                                                            onClick={() => {
+                                                                setActiveVisitId(v.id);
+                                                                setIsHistoryOpen(false);
+                                                            }}
+                                                            className={`w-full text-left p-4 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 ${activeVisitId === v.id ? 'bg-blue-50/50' : ''}`}
+                                                        >
+                                                            <div className="flex justify-between items-start">
+                                                                <span className={`text-[12px] font-black ${activeVisitId === v.id ? 'text-blue-600' : 'text-slate-900'}`}>
+                                                                    {format(new Date(v.visit_date), 'MMM d, yyyy')}
+                                                                </span>
+                                                                {v.locked && <Lock className="w-3 h-3 text-slate-300" />}
+                                                            </div>
+                                                            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter mt-1 truncate">
+                                                                {getChiefComplaint(v)}
+                                                            </div>
+                                                            <div className="text-[9px] text-slate-400 uppercase mt-0.5 font-medium">
+                                                                {v.visit_type?.replace('_', ' ') || 'Office Visit'} • {v.provider_last_name || 'MD'}
+                                                            </div>
+                                                        </button>
                                                     ))}
-                                                </ul>
+                                                </div>
                                             </div>
-                                        )) : <div className="text-[12px] text-slate-600 whitespace-pre-wrap">{noteData.plan || 'No changes.'}</div>}
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                <button onClick={handlePrint} className="px-5 py-2 bg-slate-900 text-white rounded text-[12px] font-bold uppercase tracking-wider flex items-center gap-2 shadow-sm active:scale-95 transition-all">
+                                    <Printer className="w-4 h-4" /> Print (A3 Format)
+                                </button>
+                                <button
+                                    onClick={onClose}
+                                    className="p-2.5 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-all border border-rose-100"
+                                    title="Close View"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* The Professional Clinical Note (A3 Optimized) */}
+                        <div id="visit-chart-view" className="flex-1 overflow-y-auto p-12 print:p-0">
+                            <div className="max-w-[1400px] mx-auto bg-white shadow-sm border border-slate-200 min-h-full p-16 space-y-12 print-document-sheet print:border-0 print:shadow-none print:max-w-none">
+
+                                {/* 1. REFINED CLINIC HEADER */}
+                                <div className="flex justify-between items-center pb-8 border-b-2 border-slate-100 avoid-cut">
+                                    <div className="flex items-center gap-10">
+                                        <div className="w-32 h-32 flex items-center justify-center shrink-0">
+                                            <img src={clinicInfo.logo || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8fafc' rx='8'/%3E%3Crect x='60' y='45' width='80' height='90' fill='none' stroke='%23cbd5e1' stroke-width='3' rx='4'/%3E%3Crect x='75' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='75' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='88' y='110' width='24' height='25' fill='%23cbd5e1' rx='2'/%3E%3Ctext x='100' y='165' text-anchor='middle' font-family='Arial,sans-serif' font-size='14' font-weight='600' fill='%2394a3b8'%3ENO LOGO%3C/text%3E%3C/svg%3E"} alt="Logo" className="max-w-full max-h-full object-contain filter drop-shadow-sm" />
+                                        </div>
+                                        <div className="leading-tight">
+                                            <div className="flex items-baseline gap-4 mb-2">
+                                                <h1 className="text-[28px] font-black text-slate-800 tracking-tightest uppercase">{clinicInfo.name}</h1>
+                                                <span className="text-[9px] bg-slate-900 text-white px-2.5 py-1 rounded-sm font-black tracking-widest uppercase">Clinical Record</span>
+                                            </div>
+                                            <div className="text-[12px] text-slate-400 font-bold uppercase tracking-tight flex items-center gap-3">
+                                                <span>{clinicInfo.address.replace(/\n/g, ' • ')}</span>
+                                                <div className="w-1 h-1 rounded-full bg-slate-300" />
+                                                <span className="text-slate-600 font-black">PH: {clinicInfo.phone}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="text-right flex flex-col items-end">
+                                        <div className="bg-slate-50 px-4 py-2 rounded-lg border border-slate-100 mb-2">
+                                            <div className="text-[18px] font-black text-slate-900 tracking-tight">{visitDate}</div>
+                                            <div className="text-[8px] text-slate-400 font-black uppercase tracking-widest text-right mt-0.5">Examination Date</div>
+                                        </div>
+                                        <div className="text-[10px] text-slate-300 font-mono tracking-tighter">REF: {activeVisitId?.substring(0, 14).toUpperCase()}</div>
                                     </div>
                                 </div>
 
-                                {/* Follow Up */}
-                                <div className="avoid-cut pt-4 border-t border-slate-100">
-                                    <div className="inline-block bg-slate-50 px-4 py-1.5 rounded-lg border border-slate-100">
-                                        <span className="section-label !mb-0 text-[8px]">Next Appointment / Follow Up</span>
-                                        <div className="text-xs font-bold text-slate-900 italic uppercase">
-                                            {noteData.followUp || visit.follow_up_instructions || 'PRN / AS NEEDED'}
+                                {/* 2. COMPACT PATIENT DEMOGRAPHICS */}
+                                <div className="relative avoid-cut py-5 px-8 my-4 bg-slate-50/50 rounded-xl border border-slate-100/80 flex gap-10 overflow-hidden">
+                                    <div className="flex-1 grid grid-cols-3 gap-x-12 relative z-10 text-[11px]">
+                                        <div className="space-y-3">
+                                            <div>
+                                                <div className="text-slate-400 font-bold uppercase text-[8px] tracking-tight mb-0.5">Patient Profile</div>
+                                                <div className="font-extrabold text-slate-900 text-[15px] leading-tight tracking-tight">{patient.last_name}, {patient.first_name}</div>
+                                                <div className="text-[11px] text-slate-500 font-bold tabular-nums">MRN: {patient.mrn}</div>
+                                            </div>
+                                            <div className="font-extrabold text-slate-800 text-[13px]">{patientDOB} <span className="text-slate-300 mx-1">/</span> {patientAge}Y <span className="text-slate-300 mx-1">/</span> {patient.sex}</div>
+                                        </div>
+
+                                        <div className="space-y-3 border-x border-slate-100/60 px-8">
+                                            <div>
+                                                <div className="text-slate-400 font-bold uppercase text-[8px] tracking-tight mb-1">Billing & Provider</div>
+                                                <div className="font-bold text-slate-800 uppercase text-[11px] mb-1">{patient.insurance_name || 'Self-Pay'}</div>
+                                                <div className="font-extrabold text-blue-600 text-[12px] tracking-tight">{providerName}</div>
+                                            </div>
+                                            <div className="flex flex-col gap-0.5 text-slate-600 font-bold text-[10px]">
+                                                <span>{patient.phone}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2 pl-6">
+                                            <div className="text-slate-400 font-bold uppercase text-[8px] tracking-tight mb-1">Primary Residence</div>
+                                            <div className="text-slate-700 font-bold text-[10px] leading-tight opacity-70">
+                                                {patient.street_address}<br />
+                                                {[patient.city, patient.state, patient.zip].filter(Boolean).join(', ')}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Signature */}
-                                <div className="mt-12 pt-4 border-t border-slate-100 avoid-cut flex justify-between items-end">
-                                    <div className="space-y-1">
-                                        <div className="text-lg font-bold italic text-slate-900">/s/ {providerName}</div>
-                                        <div className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 inline-flex items-center gap-1">
-                                            <CheckCircle2 className="w-3 h-3" /> VERIFIED SIGNATURE {isSigned && `• ${format(new Date(isSigned), 'MM/dd/yyyy')}`}
-                                        </div>
-                                    </div>
-                                    <div className="text-right opacity-30">
-                                        <div className="text-sm font-black italic text-slate-900">PageMD EMR</div>
-                                        <div className="text-[6px] font-bold text-slate-500 uppercase tracking-widest mt-1">Generated: {format(new Date(), 'MM/dd/yyyy HH:mm')}</div>
+                                {/* META HEADER (CHIEF COMPLAINT) */}
+                                <div className="avoid-cut mb-6 pt-2 pb-2 border-b border-slate-100 flex gap-8 items-center px-4">
+                                    <div className="flex gap-3 items-center shrink-0">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Chief Complaint</span>
+                                        <div className="text-[12px] font-extrabold text-slate-900 uppercase tracking-tight">{noteData.chiefComplaint || visit?.reason || 'Routine follow-up'}</div>
                                     </div>
                                 </div>
 
+                                {/* 3. CLINICAL NARRATIVE */}
+                                <div className="space-y-12 pb-16">
+                                    {/* HPI */}
+                                    <div className="mt-8 pt-6 border-t border-slate-100 avoid-cut">
+                                        <span className="section-label">History of Present Illness</span>
+                                        <div className="text-[14px] leading-relaxed text-slate-700 whitespace-pre-wrap">{noteData.hpi || 'No HPI recorded.'}</div>
+                                    </div>
+
+                                    {/* ROS */}
+                                    <div className="mt-8 pt-6 border-t border-slate-100 avoid-cut">
+                                        <span className="section-label">Review of Systems</span>
+                                        <div className="text-[13px] leading-relaxed text-slate-600 columns-2 gap-12" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.rosNotes) }} />
+                                    </div>
+
+                                    {/* ALLERGIES BAR (Post-ROS) */}
+                                    <div className="avoid-cut mt-6 py-2.5 px-4 bg-rose-50/30 rounded-xl border border-rose-100/50 flex gap-4 items-center">
+                                        <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest shrink-0">Allergies</span>
+                                        <div className="flex flex-wrap gap-2 text-[11px]">
+                                            {allergies.length > 0 ? (
+                                                allergies.map((a, i) => <span key={i} className="font-black text-rose-700">! {a.allergen}</span>)
+                                            ) : (
+                                                <span className="font-black text-emerald-600 uppercase tracking-tighter italic">Negative / NKDA</span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* COMPACT 3-COLUMN CLINICAL HISTORY (PMHx, Meds, Social) */}
+                                    <div className="grid grid-cols-3 gap-10 mt-6 pt-4 border-t border-slate-100 avoid-cut">
+                                        <div className="space-y-2">
+                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Observation & History</span>
+                                            <ul className="text-[11px] font-bold text-slate-600 space-y-0.5">
+                                                {problems.length > 0 ? problems.map((p, i) => <li key={i} className="flex items-center gap-1.5 opacity-80"> • {p.problem_name}</li>) : <li className="italic text-slate-400 font-medium">Non-contributory.</li>}
+                                            </ul>
+                                        </div>
+                                        <div className="space-y-2 border-x border-slate-50 px-8">
+                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Home Medications</span>
+                                            <ul className="text-[11px] font-extrabold text-slate-800 space-y-1.5">
+                                                {medications.length > 0 ? medications.map((m, i) => <li key={i} className="flex flex-col border-b border-slate-50/50 pb-0.5 leading-tight"><span>{m.medication_name}</span> <span className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">{m.dosage}</span></li>) : <li className="italic text-slate-400 font-medium">No active medications.</li>}
+                                            </ul>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Psychosocial & Family</span>
+                                            <div className="text-[11px] font-bold text-slate-600 space-y-2.5 opacity-90">
+                                                <div className="bg-slate-50/50 p-2 rounded-lg border border-slate-100/50">
+                                                    <div>Tobacco: <span className="text-slate-900">{socialHistory?.smoking_status || 'Never'}</span> / EtOh: <span className="text-slate-900">{socialHistory?.alcohol_use || 'None'}</span></div>
+                                                </div>
+                                                <div className="text-[10px] leading-tight">
+                                                    <span className="text-emerald-600/70 font-black uppercase text-[8px] mr-1">Family History:</span>
+                                                    {familyHistory.length > 0 ? familyHistory.map(f => f.condition).join(', ') : 'Non-contributory.'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* VITALS */}
+                                    <div className="mt-8 pt-6 border-t border-slate-100 avoid-cut">
+                                        <span className="section-label">Physical Observations (Vitals)</span>
+                                        <div className="grid grid-cols-5 gap-6 mt-2">
+                                            {[
+                                                { label: 'B/P', value: vitals?.bp, unit: 'mmHg' },
+                                                { label: 'PULSE', value: vitals?.pulse, unit: 'bpm' },
+                                                { label: 'TEMP', value: vitals?.temp, unit: '°F' },
+                                                { label: 'O2 SAT', value: vitals?.o2sat, unit: '%' },
+                                                { label: 'BMI', value: vitals?.bmi, unit: '' }
+                                            ].map((v, i) => (
+                                                <div key={i} className="border-l border-slate-100 pl-3 space-y-1">
+                                                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{v.label}</div>
+                                                    <div className="text-[15px] font-bold text-slate-800 tabular-nums">{v.value || '--'} <span className="text-[10px] font-normal text-slate-400">{v.unit}</span></div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* PE */}
+                                    <div className="mt-8 pt-6 border-t border-slate-100 avoid-cut">
+                                        <span className="section-label">Physical Examination</span>
+                                        <div className="text-[14px] leading-relaxed text-slate-700 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.peNotes) }} />
+                                    </div>
+
+                                    {/* RESULTS / DATA */}
+                                    {(noteData.results || visitDocuments.length > 0) && (
+                                        <div className="mt-8 pt-6 border-t border-slate-100 avoid-cut">
+                                            <span className="section-label">Results & Data</span>
+                                            {noteData.results && !noteData.results.includes('Imported results will appear here') && (
+                                                <div className="text-[14px] leading-relaxed text-slate-700 whitespace-pre-wrap mb-8">{noteData.results}</div>
+                                            )}
+                                            {visitDocuments.length > 0 && (
+                                                <div className="grid grid-cols-2 gap-8 mt-4">
+                                                    {visitDocuments.map(doc => (
+                                                        <ResultImageView key={doc.id} doc={doc} />
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* ASSESSMENT */}
+                                    <div className="mt-8 pt-6 border-t border-slate-100 avoid-cut">
+                                        <span className="section-label text-slate-900 border-none">Assessment & Diagnoses</span>
+                                        <div className="space-y-1.5 font-bold text-[14px] text-slate-900">
+                                            {noteData.assessment ? noteData.assessment.split('\n').filter(line => line.trim()).map((line, i) => (
+                                                <div key={i} className="flex gap-2.5">
+                                                    <span className="text-slate-400 font-medium">{i + 1}.</span>
+                                                    {line}
+                                                </div>
+                                            )) : <div className="text-slate-400 italic">No diagnostic data.</div>}
+                                        </div>
+                                    </div>
+
+                                    {/* PLAN */}
+                                    <div className="space-y-6 pt-8 mt-8 border-t border-slate-900/10 avoid-cut">
+                                        <span className="section-label">Medical Plan & Interventions</span>
+                                        <div className="space-y-8 pl-3">
+                                            {noteData.planStructured?.length > 0 ? noteData.planStructured.map((p, i) => (
+                                                <div key={i} className="space-y-3">
+                                                    <div className="text-[15px] font-bold text-slate-800 border-b border-slate-100 pb-1.5">{p.diagnosis}</div>
+                                                    <ul className="pl-8 space-y-1.5">
+                                                        {p.orders.map((o, j) => (
+                                                            <li key={j} className="text-[14px] text-slate-600 font-medium flex items-center gap-2.5"><div className="w-1.5 h-1.5 bg-slate-400 rounded-full"></div> {o}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )) : <div className="text-[14px] text-slate-600 whitespace-pre-wrap">{noteData.plan || 'No specific clinical orders recorded.'}</div>}
+                                        </div>
+                                    </div>
+
+                                    {/* PLAN OF CARE */}
+                                    {noteData.carePlan && (
+                                        <div className="space-y-6 pt-8 mt-8 border-t border-slate-900/10 avoid-cut">
+                                            <span className="section-label">Plan of Care</span>
+                                            <div className="text-[14px] leading-relaxed text-slate-600 pl-3 whitespace-pre-wrap">{noteData.carePlan}</div>
+                                        </div>
+                                    )}
+
+                                    {/* FOLLOW UP */}
+                                    <div className="pt-10 border-t border-slate-100 avoid-cut">
+                                        <div className="inline-block bg-slate-900 px-8 py-3 rounded text-white shadow-xl">
+                                            <span className="text-[11px] uppercase font-bold tracking-widest block opacity-50">Follow Up Instruction</span>
+                                            <span className="text-[18px] font-bold italic">{noteData.followUp || visit.follow_up_instructions || 'PRN / AS NEEDED'}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* AUTHENTICATION FOOTER */}
+                                    <div className="mt-20 pt-8 border-t-2 border-slate-900 avoid-cut">
+                                        <div className="flex justify-between items-end">
+                                            <div className="space-y-2">
+                                                <div className="text-2xl font-bold italic text-slate-900 tracking-tight">/s/ {providerName}</div>
+                                                <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest flex items-center gap-1.5 bg-emerald-50 px-3 py-1 rounded">
+                                                    <CheckCircle2 className="w-3.5 h-3.5" /> VERIFIED ELECTRONIC SIGNATURE {isSigned && `• ${format(new Date(isSigned), 'MM/dd/yyyy HH:mm')}`}
+                                                </div>
+                                                <div className="text-[8px] font-bold text-slate-400 uppercase tracking-tight pl-3">Unique Authentication Hash: {patientId?.substring(0, 8)}-{activeVisitId?.substring(0, 8)}-SECURE-SIG</div>
+                                            </div>
+                                            <div className="text-right flex flex-col items-end opacity-30">
+                                                <span className="text-2xl font-black italic text-slate-900 tracking-tighter">PageMD EMR</span>
+                                                <span className="text-[8px] font-bold text-slate-500 mt-1">Generated: {format(new Date(), 'MM/dd/yyyy HH:mm:ss')}</span>
+                                            </div>
+                                        </div>
+                                        <div className="mt-8 text-center text-[8px] font-bold text-slate-300 uppercase tracking-[0.2em] border-t border-slate-50 pt-4">
+                                            Confidential Patient Record • Unauthorized Disclosure Prohibited by HIPAA Federal Law
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+
             {/* Redesigned Modal Containers */}
             {showAddendumModal && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4" onClick={() => setShowAddendumModal(false)}>
@@ -679,7 +916,7 @@ const BillingModal = ({ patientId, isOpen, onClose }) => {
                             <div className="space-y-1">
                                 <div className="text-sm font-black text-slate-800 tracking-tight">{format(new Date(c.visit_date), 'MMMM dd, yyyy')}</div>
                                 <div className="flex items-center gap-3">
-                                    <div className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${c.status === 'Paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-white border border-slate-200 text-slate-400'} `}>{c.status}</div>
+                                    <div className={`px - 2 py - 0.5 rounded - lg text - [9px] font - black uppercase tracking - widest ${c.status === 'Paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-white border border-slate-200 text-slate-400'} `}>{c.status}</div>
                                     <div className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">{c.visit_type || 'Clinical Service'}</div>
                                 </div>
                             </div>

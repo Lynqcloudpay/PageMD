@@ -98,6 +98,12 @@ ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST << EOF
   echo "🔒 Running Phase 3 Audit Hashing Migration..."
   docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-audit-hashing.js || echo "⚠️ Warning: Phase 3 Audit migration failed."
 
+  echo "💊 Running Orders Catalog Migration..."
+  docker compose -f docker-compose.prod.yml exec -T api node scripts/create_orders_catalog.js || echo "⚠️ Warning: Orders Catalog migration failed."
+
+  echo "🏥 Running Clinic ID User Migration..."
+  docker compose -f docker-compose.prod.yml exec -T api node scripts/add_clinic_id_to_users.js || echo "⚠️ Warning: Clinic ID migration failed."
+
   echo "🧹 Cleanup..."
   docker image prune -f
 EOF

@@ -78,6 +78,109 @@ router.get('/', async (req, res) => {
     // Handle structured search parameters
     const { firstName, lastName, dob, phone, email, mrn } = req.query;
 
+    // Check if encryption is enabled (string 'true')
+    const encryptionEnabled = process.env.ENABLE_PHI_ENCRYPTION === 'true';
+    const hasSearchTerms = search || firstName || lastName || phone || email;
+
+    // STRATEGY:
+    // If PHI encryption is enabled and we are searching by encrypted fields (name, email, phone),
+    // we CANNOT use SQL ILIKE. We must fetch all patients for the clinic, decrypt them, 
+    // and filter in memory. (Feasible for < 5000 patients).
+    // MRN and DOB are plaintext, so they can be searched efficiently in SQL if they are the ONLY search terms.
+
+    if (encryptionEnabled && hasSearchTerms) {
+      console.log('[PATIENTS-GET] Encryption enabled + Search terms present -> Performing In-Memory Search');
+
+      // 1. Fetch ALL patients for this clinic (without offset/limit yet)
+      // We still respect MRN search in SQL since it's plaintext and effectively filters down to 1 row
+      if (mrn) {
+        paramCount++;
+        query += ` AND mrn ILIKE $${paramCount}`;
+        params.push(`%${mrn}%`);
+      }
+
+      // Optimize: If ONLY searching by DOB, we can do that in SQL too
+      if (dob && !search && !firstName && !lastName && !phone && !email) {
+        paramCount++;
+        query += ` AND (to_char(dob, 'MM/DD/YYYY') = $${paramCount} OR to_char(dob, 'YYYY-MM-DD') = $${paramCount})`;
+        params.push(dob);
+      }
+
+      query += ` ORDER BY last_name, first_name`; // Sort full result
+
+      const result = await pool.query(query, params);
+
+      // 2. Decrypt ALL fetched rows
+      const decryptedAll = await patientEncryptionService.decryptPatientsPHI(result.rows);
+
+      // 3. Filter in Memory
+      let filtered = decryptedAll;
+
+      if (search && search.trim()) {
+        const term = search.trim().toLowerCase();
+        filtered = filtered.filter(p => {
+          const fullName = `${p.first_name || ''} ${p.last_name || ''}`.toLowerCase();
+          const dobStr = p.dob ? new Date(p.dob).toLocaleDateString() : ''; // Basic format check
+          // Check all searchable fields
+          return (
+            (p.first_name && p.first_name.toLowerCase().includes(term)) ||
+            (p.last_name && p.last_name.toLowerCase().includes(term)) ||
+            fullName.includes(term) ||
+            (p.mrn && p.mrn.toLowerCase().includes(term)) ||
+            (p.phone && p.phone.includes(term)) ||
+            (p.email && p.email.toLowerCase().includes(term)) ||
+            dobStr.includes(term)
+          );
+        });
+      }
+
+      if (firstName) {
+        const term = firstName.toLowerCase();
+        filtered = filtered.filter(p => p.first_name && p.first_name.toLowerCase().includes(term));
+      }
+      if (lastName) {
+        const term = lastName.toLowerCase();
+        filtered = filtered.filter(p => p.last_name && p.last_name.toLowerCase().includes(term));
+      }
+      if (phone) {
+        filtered = filtered.filter(p =>
+          (p.phone && p.phone.includes(phone)) ||
+          (p.phone_cell && p.phone_cell.includes(phone))
+        );
+      }
+      if (email) {
+        const term = email.toLowerCase();
+        filtered = filtered.filter(p => p.email && p.email.toLowerCase().includes(term));
+      }
+      // DOB check if generic search didn't cover it (and it wasn't SQL filtered)
+      if (dob && (search || firstName || lastName || phone || email)) {
+        // Basic date string match for simplicity in legacy support
+        filtered = filtered.filter(p => p.dob && (p.dob === dob || new Date(p.dob).toISOString().startsWith(dob)));
+      }
+
+      console.log(`[PATIENTS-GET] In-Memory Filter Result: ${filtered.length} matches`);
+
+      // 4. Manual Pagination
+      const limitNum = parseInt(limit);
+      const offsetNum = parseInt(offset);
+      const paginated = filtered.slice(offsetNum, offsetNum + limitNum);
+
+      // Log Audit
+      try {
+        const requestId = req.headers['x-request-id'] || crypto.randomUUID();
+        await logAudit(
+          req.user.id, 'patient.list', 'patient', null,
+          { search: search ? '[REDACTED]' : null, count: paginated.length, mode: 'in-memory' },
+          req.ip, req.get('user-agent'), 'success', requestId, req.sessionId
+        );
+      } catch (e) { }
+
+      return res.json(paginated);
+
+    }
+
+    // --- SQL SEARCH (Encryption Disabled or No Search Terms) ---
+
     if (firstName) {
       paramCount++;
       query += ` AND first_name ILIKE $${paramCount}`;
