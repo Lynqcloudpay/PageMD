@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     Inbox, CheckCircle, Clock, AlertTriangle, MessageSquare, FileText,
     Pill, FlaskConical, Image, Send, RefreshCw, Filter, Search,
-    ChevronRight, X, Plus, Bell, User, Calendar, Phone, Paperclip
+    ChevronRight, X, Plus as PlusIcon, Bell, User, Calendar, Phone, Paperclip
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
@@ -257,7 +257,7 @@ const Inbasket = () => {
                         onClick={() => setShowCompose(true)}
                         className="w-full mb-4 py-2 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg flex items-center justify-center gap-2 font-bold shadow-sm hover:shadow-md transition-all active:scale-95"
                     >
-                        <Plus className="w-5 h-5" /> Compose New
+                        <PlusIcon className="w-5 h-5" /> Compose New
                     </button>
 
                     <div className="flex gap-2 text-xs">
