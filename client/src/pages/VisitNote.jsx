@@ -20,7 +20,7 @@ import OrderPicker from '../components/OrderPicker';
 import OrderDetailsModal from '../components/OrderDetailsModal';
 import { usePrivileges } from '../hooks/usePrivileges';
 import { useAuth } from '../context/AuthContext';
-import { ordersCatalogAPI, visitsAPI, codesAPI, patientsAPI, icd10API, superbillsAPI, documentsAPI, documentsAPIUpdate } from '../services/api';
+import { ordersCatalogAPI, visitsAPI, codesAPI, patientsAPI, icd10API, documentsAPI, documentsAPIUpdate } from '../services/api';
 import { format } from 'date-fns';
 import { hpiDotPhrases } from '../data/hpiDotPhrases';
 import { ProblemInput, MedicationInput, AllergyInput, FamilyHistoryInput } from '../components/PAMFOSInputs';
@@ -912,23 +912,12 @@ const VisitNote = () => {
     }, [id, currentVisitId, urlVisitId, isSigned, isSaving, noteData, vitals, combineNoteSections, parseNoteText, parsePlanText, showToast]);
 
     const handleCreateSuperbill = async () => {
-        console.log('handleCreateSuperbill called in VisitNote');
-        console.log('Origin navigate type:', typeof navigate);
         if (!currentVisitId || currentVisitId === 'new') {
             showToast('Please save the visit first', 'error');
             return;
         }
-        try {
-            setLoading(true);
-            const response = await superbillsAPI.fromVisit(currentVisitId);
-            const superbillId = response.data.id;
-            navigate(`/patient/${id}/superbill/${superbillId}`);
-        } catch (error) {
-            console.error('Error creating superbill:', error);
-            showToast('Failed to create superbill: ' + (error.response?.data?.error || error.message), 'error');
-        } finally {
-            setLoading(false);
-        }
+        // Ported OpenEMR Fee Sheet uses visitId directly
+        navigate(`/patient/${id}/fee-sheet/${currentVisitId}`);
     };
 
     // Debounced auto-save function

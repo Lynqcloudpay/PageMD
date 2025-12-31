@@ -7,7 +7,7 @@ import {
     LayoutDashboard, ChevronRight, Search, FilePlus, ChevronDown, HeartPulse, ActivitySquare, Zap, Waves,
     Edit2, RotateCcw, Calendar, AlertCircle, Users, Receipt
 } from 'lucide-react';
-import { visitsAPI, documentsAPI, ordersAPI, referralsAPI, patientsAPI, eprescribeAPI, superbillsAPI } from '../services/api';
+import { visitsAPI, documentsAPI, ordersAPI, referralsAPI, patientsAPI, eprescribeAPI } from '../services/api';
 import { format } from 'date-fns';
 import DoseSpotPrescribe from './DoseSpotPrescribe';
 import VisitChartView from './VisitChartView';
@@ -51,7 +51,6 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
         pharmacyPhone: ''
     });
 
-    const [superbills, setSuperbills] = useState([]);
 
     const [problems, setProblems] = useState([]);
     const [medications, setMedications] = useState([]);
@@ -147,8 +146,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                 referralsRes,
                 eprescribeStatusRes,
                 docsRes,
-                activeMedsRes,
-                superbillsRes
+                activeMedsRes
             ] = await Promise.allSettled([
                 patientsAPI.get(patientId),
                 visitsAPI.getByPatient(patientId),
@@ -156,8 +154,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                 referralsAPI.getByPatient(patientId),
                 eprescribeAPI.getStatus(),
                 documentsAPI.getByPatient(patientId),
-                patientsAPI.getMedications(patientId),
-                superbillsAPI.getByPatient(patientId)
+                patientsAPI.getMedications(patientId)
             ]);
 
             // Process Patient Data
@@ -282,10 +279,6 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                 setHubDocuments(docs);
             }
 
-            // Process Superbills
-            if (superbillsRes?.status === 'fulfilled') {
-                setSuperbills(superbillsRes.value.data || []);
-            }
 
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -1673,75 +1666,34 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                     <div className="space-y-6">
                                         <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                                             <div className="flex items-center gap-3">
-                                                <div className="bg-indigo-100 p-2 rounded-lg"><Receipt className="w-5 h-5 text-indigo-600" /></div>
+                                                <div className="bg-blue-100 p-2 rounded-lg"><Receipt className="w-5 h-5 text-blue-600" /></div>
                                                 <div>
-                                                    <span className="text-sm font-bold text-gray-900">Commercial Superbills</span>
-                                                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Insurance billing and claims</p>
+                                                    <span className="text-sm font-bold text-gray-900">Billing & Fee Sheets</span>
+                                                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">OpenEMR Billing System</p>
                                                 </div>
                                             </div>
-                                            <button
-                                                onClick={() => {
-                                                    // This usually creates from the most recent visit if not already created
-                                                    const recentVisit = notes[0];
-                                                    if (recentVisit) {
-                                                        console.log('Creating superbill from PatientChartPanel');
-                                                        console.log('Type of navigate:', typeof navigate);
-                                                        superbillsAPI.fromVisit(recentVisit.id).then(res => {
-                                                            navigate(`/patient/${patientId}/superbill/${res.data.id}`);
-                                                        });
-                                                    } else {
-                                                        alert("No visit found to create superbill from.");
-                                                    }
-                                                }}
-                                                className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-all shadow-sm"
-                                            >
-                                                <Plus className="w-3.5 h-3.5" />New Superbill
-                                            </button>
                                         </div>
 
+                                        {/* List visits with a link to Fee Sheet */}
                                         <div className="space-y-3">
-                                            {superbills.length === 0 ? (
-                                                <div className="text-center py-12 bg-white rounded-xl border border-dashed border-gray-200 text-gray-400">
-                                                    No superbills found for this patient.
+                                            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Recent Visits</h4>
+                                            {notes.length === 0 ? (
+                                                <div className="text-center py-8 bg-gray-50/50 rounded-xl border border-dashed border-gray-200 text-gray-400 text-sm">
+                                                    No visits found for this patient.
                                                 </div>
                                             ) : (
-                                                superbills.map(sb => (
-                                                    <div
-                                                        key={sb.id}
-                                                        className="group bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all cursor-pointer"
-                                                        onClick={() => navigate(`/patient/${patientId}/superbill/${sb.id}`)}
-                                                    >
-                                                        <div className="flex justify-between items-start">
-                                                            <div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="font-bold text-gray-900">Superbill #{sb.id.toString().padStart(6, '0')}</span>
-                                                                    <span className={`px-2 py-0.5 rounded-[4px] text-[10px] font-bold uppercase tracking-wider ${sb.status === 'FINALIZED' ? 'bg-green-100 text-green-700' :
-                                                                        sb.status === 'VOID' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-                                                                        }`}>
-                                                                        {sb.status}
-                                                                    </span>
-                                                                </div>
-                                                                <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
-                                                                    <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {format(new Date(sb.service_date_from), 'MMM d, yyyy')}</span>
-                                                                    <span>•</span>
-                                                                    <span>{sb.provider_last_name ? `Dr. ${sb.provider_last_name}` : 'No Provider'}</span>
-                                                                    {sb.visit_type && (
-                                                                        <>
-                                                                            <span>•</span>
-                                                                            <span className="italic">{sb.visit_type}</span>
-                                                                        </>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                            <div className="text-right">
-                                                                <div className="text-lg font-bold text-gray-900">${parseFloat(sb.total_charges || 0).toFixed(2)}</div>
-                                                                <div className="text-[10px] text-gray-400 font-medium uppercase tracking-tighter">Total Charges</div>
-                                                            </div>
+                                                notes.slice(0, 10).map(note => (
+                                                    <div key={note.id} className="bg-white p-3 rounded-lg border border-gray-100 flex items-center justify-between hover:border-blue-200 transition-all">
+                                                        <div>
+                                                            <div className="text-sm font-bold text-gray-900">{format(new Date(note.visit_date || note.created_at), 'MMMM d, yyyy')}</div>
+                                                            <div className="text-xs text-gray-500">{note.visit_type || 'Office Visit'}</div>
                                                         </div>
-                                                        <div className="mt-3 pt-3 border-t border-gray-50 flex justify-between items-center bg-gray-50/50 -mx-4 -mb-4 px-4 py-2 rounded-b-xl opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <span className="text-[10px] font-bold text-gray-400 uppercase">Click to open editor</span>
-                                                            <ChevronRight className="w-4 h-4 text-gray-300" />
-                                                        </div>
+                                                        <button
+                                                            onClick={() => navigate(`/patient/${patientId}/fee-sheet/${note.id}`)}
+                                                            className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-lg hover:bg-blue-700 transition-all uppercase tracking-wider"
+                                                        >
+                                                            Open Fee Sheet
+                                                        </button>
                                                     </div>
                                                 ))
                                             )}

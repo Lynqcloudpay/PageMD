@@ -25,12 +25,12 @@ async function fix() {
     console.log('🚀 Starting fix for missing tenant tables...');
 
     try {
-        // 1. Get all tenant schemas
+        // 1. Get all tenant schemas from clinics table
         const schemasRes = await pool.query(`
-      SELECT schema_name 
-      FROM information_schema.schemata 
-      WHERE schema_name LIKE 'tenant_%'
-    `);
+          SELECT DISTINCT schema_name 
+          FROM clinics 
+          WHERE status = 'active'
+        `);
 
         const schemas = schemasRes.rows.map(r => r.schema_name);
         console.log(`Found ${schemas.length} tenant schemas: ${schemas.join(', ')}`);
@@ -42,6 +42,10 @@ async function fix() {
             try {
                 await client.query('BEGIN');
 
+                // Ensure schema exists
+                console.log(`Ensuring schema ${schema} exists...`);
+                await client.query(`CREATE SCHEMA IF NOT EXISTS ${schema}`);
+
                 // Set search path to this tenant
                 console.log(`Setting search_path to ${schema}`);
                 await client.query(`SET search_path TO ${schema}, public`);
@@ -49,6 +53,22 @@ async function fix() {
                 // Run the complete tenant schema with IF NOT EXISTS
                 console.log(`Running core schema migration for ${schema}...`);
                 await client.query(tenantSchemaSQL);
+
+                // Manual column migrations for port parity
+                console.log(`Ensuring new columns exist in ${schema}...`);
+                await client.query(`
+                  ALTER TABLE ar_session ADD COLUMN IF NOT EXISTS encounter UUID REFERENCES visits(id);
+                  ALTER TABLE billing ADD COLUMN IF NOT EXISTS modifier1 VARCHAR(12) DEFAULT '';
+                  ALTER TABLE billing ADD COLUMN IF NOT EXISTS modifier2 VARCHAR(12) DEFAULT '';
+                  ALTER TABLE billing ADD COLUMN IF NOT EXISTS modifier3 VARCHAR(12) DEFAULT '';
+                  ALTER TABLE billing ADD COLUMN IF NOT EXISTS modifier4 VARCHAR(12) DEFAULT '';
+                  
+                  -- New Hardening Indexes/Constraints
+                  ALTER TABLE drug_inventory ADD CONSTRAINT chk_drug_inventory_non_negative CHECK (on_hand >= 0);
+                  CREATE INDEX IF NOT EXISTS idx_drug_inventory_fifo ON drug_inventory(drug_id, expiration, id);
+                  CREATE UNIQUE INDEX IF NOT EXISTS uniq_ar_session_patient_copay_per_encounter ON ar_session(encounter) WHERE payment_type = 'Patient Payment';
+                  CREATE UNIQUE INDEX IF NOT EXISTS uniq_billing_encounter_code_once ON billing(encounter, code, COALESCE(modifier1,'')) WHERE activity = true;
+                `);
 
                 await client.query('COMMIT');
                 console.log(`✅ Finished schema: ${schema}`);

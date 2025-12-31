@@ -498,10 +498,19 @@ CREATE TABLE IF NOT EXISTS fee_schedule (
     code VARCHAR(50) NOT NULL,
     description TEXT,
     fee_amount DECIMAL(10, 2),
+    price_level VARCHAR(20) DEFAULT 'Standard',
     active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(code_type, code)
+    UNIQUE(code_type, code, price_level)
+);
+
+CREATE TABLE IF NOT EXISTS billing_modifiers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code VARCHAR(5) NOT NULL UNIQUE,
+    description TEXT,
+    is_standard BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_fee_schedule_code ON fee_schedule(code_type, code);
@@ -664,6 +673,7 @@ CREATE TABLE IF NOT EXISTS practice_settings (
     timezone VARCHAR(50) DEFAULT 'America/New_York',
     date_format VARCHAR(20) DEFAULT 'MM/DD/YYYY',
     time_format VARCHAR(10) DEFAULT '12h',
+    default_price_level VARCHAR(20) DEFAULT 'Standard',
     updated_by UUID,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -950,6 +960,139 @@ CREATE INDEX IF NOT EXISTS idx_superbill_diagnoses_superbill ON superbill_diagno
 CREATE INDEX IF NOT EXISTS idx_superbill_lines_superbill ON superbill_lines(superbill_id);
 CREATE INDEX IF NOT EXISTS idx_suggested_lines_superbill ON superbill_suggested_lines(superbill_id);
 CREATE INDEX IF NOT EXISTS idx_audit_superbill ON superbill_audit_logs(superbill_id);
+
+-- ============================================
+-- OPENEMR PORT: CORE BILLING TABLES
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS billing (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    code_type VARCHAR(15) NOT NULL, -- 1=ICD9, 2=ICD10, 3=CPT4, 4=HCPCS, etc.
+    code VARCHAR(20) NOT NULL,
+    pid UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    encounter UUID NOT NULL REFERENCES visits(id) ON DELETE CASCADE,
+    provider_id UUID REFERENCES users(id),
+    user_id UUID REFERENCES users(id),
+    groupname VARCHAR(255),
+    authorized BOOLEAN DEFAULT FALSE,
+    code_text TEXT,
+    billed BOOLEAN DEFAULT FALSE,
+    activity BOOLEAN DEFAULT TRUE,
+    payer_id UUID, -- References payer_policies(id) or similar
+    bill_process SMALLINT DEFAULT 0,
+    bill_date TIMESTAMP,
+    process_date TIMESTAMP,
+    process_file VARCHAR(255),
+    modifier1 VARCHAR(12) DEFAULT '',
+    modifier2 VARCHAR(12) DEFAULT '',
+    modifier3 VARCHAR(12) DEFAULT '',
+    modifier4 VARCHAR(12) DEFAULT '',
+    units INTEGER DEFAULT 1,
+    fee DECIMAL(12, 2) DEFAULT 0.00,
+    justify VARCHAR(255), -- Colon-separated diagnosis pointers
+    target VARCHAR(30),
+    x12_partner_id INTEGER,
+    ndc_info VARCHAR(255),
+    notecodes VARCHAR(25) DEFAULT '',
+    external_id VARCHAR(50),
+    pricelevel VARCHAR(31) DEFAULT '',
+    revenue_code VARCHAR(6) DEFAULT '',
+    chargecat VARCHAR(31) DEFAULT ''
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_billing_encounter_code_once
+ON billing(encounter, code, COALESCE(modifier1,''))
+WHERE activity = true;
+
+CREATE TABLE IF NOT EXISTS drug_inventory (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    drug_id UUID NOT NULL, -- References medication_database(id)
+    warehouse_id UUID,
+    on_hand INTEGER DEFAULT 0,
+    cost DECIMAL(12, 2) DEFAULT 0.00,
+    lot_number VARCHAR(255),
+    expiration DATE,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_drug_inventory_non_negative CHECK (on_hand >= 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_drug_inventory_drug ON drug_inventory(drug_id);
+CREATE INDEX IF NOT EXISTS idx_drug_inventory_fifo ON drug_inventory(drug_id, expiration, id);
+
+CREATE INDEX IF NOT EXISTS idx_billing_encounter ON billing(encounter);
+CREATE INDEX IF NOT EXISTS idx_billing_patient ON billing(pid);
+
+CREATE TABLE IF NOT EXISTS drug_sales (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    drug_id UUID, -- References medication_database(id) or drugs(id)
+    inventory_id UUID,
+    prescription_id UUID REFERENCES prescriptions(id),
+    pid UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    encounter UUID NOT NULL REFERENCES visits(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id),
+    sale_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    quantity INTEGER DEFAULT 0,
+    fee DECIMAL(12, 2) DEFAULT 0.00,
+    billed BOOLEAN DEFAULT FALSE,
+    notes VARCHAR(255),
+    bill_date TIMESTAMP,
+    pricelevel VARCHAR(31) DEFAULT '',
+    selector VARCHAR(255),
+    trans_type SMALLINT DEFAULT 1, -- 1=sale, 2=purchase, 3=return, 4=transfer, 5=adjustment
+    chargecat VARCHAR(31) DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS ar_session (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    payer_id UUID, -- NULL=patient, else references insurance_companies.id
+    user_id UUID NOT NULL REFERENCES users(id),
+    closed BOOLEAN DEFAULT FALSE,
+    reference VARCHAR(255) DEFAULT '',
+    check_date DATE,
+    deposit_date DATE,
+    pay_total DECIMAL(12, 2) DEFAULT 0.00,
+    global_amount DECIMAL(12, 2) DEFAULT 0.00,
+    payment_type VARCHAR(50),
+    description TEXT,
+    adjustment_code VARCHAR(50),
+    post_to_date DATE,
+    patient_id UUID REFERENCES patients(id),
+    encounter UUID REFERENCES visits(id), -- Linked encounter for copays
+    payment_method VARCHAR(25),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_ar_session_patient_copay_per_encounter
+ON ar_session(encounter)
+WHERE payment_type = 'Patient Payment';
+
+CREATE TABLE IF NOT EXISTS ar_activity (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    pid UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    encounter UUID NOT NULL REFERENCES visits(id) ON DELETE CASCADE,
+    sequence_no INTEGER NOT NULL,
+    code_type VARCHAR(12) DEFAULT '',
+    code VARCHAR(20) DEFAULT '',
+    modifier VARCHAR(12) DEFAULT '',
+    payer_type INTEGER DEFAULT 0, -- 0=pt, 1=ins1, 2=ins2, etc.
+    post_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    post_user UUID REFERENCES users(id),
+    session_id UUID REFERENCES ar_session(id),
+    memo VARCHAR(255) DEFAULT '',
+    pay_amount DECIMAL(12, 2) DEFAULT 0.00,
+    adj_amount DECIMAL(12, 2) DEFAULT 0.00,
+    follow_up CHAR(1),
+    follow_up_note TEXT,
+    account_code VARCHAR(15),
+    reason_code VARCHAR(255),
+    deleted TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_ar_activity_encounter ON ar_activity(pid, encounter);
 
 -- ============================================
 -- E-PRESCRIBING SYSTEM

@@ -6,7 +6,7 @@ import {
     Lightbulb, Zap, Info, ChevronRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { billingAPI, patientsAPI, visitsAPI, codesAPI, superbillsAPI } from '../services/api';
+import { billingAPI, patientsAPI, visitsAPI, codesAPI } from '../services/api';
 import { format } from 'date-fns';
 import Modal from '../components/ui/Modal';
 import CodeSearchModal from '../components/CodeSearchModal';
@@ -157,7 +157,7 @@ const Billing = () => {
                         onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                     >
                         <Plus className="w-4 h-4" />
-                        <span>Create Superbill</span>
+                        <span>Open Fee Sheet</span>
                     </button>
                     <button className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center space-x-2">
                         <Download className="w-4 h-4" />
@@ -278,7 +278,7 @@ const Billing = () => {
                             onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
                             onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                         >
-                            Create First Superbill
+                            Open First Fee Sheet
                         </button>
                     </div>
                 ) : (
@@ -455,7 +455,7 @@ const ClaimDetailModal = ({ claim, isOpen, onClose }) => {
     );
 };
 
-// Superbill Modal Component - Commercial Grade
+// Fee Sheet Modal Component - Ported from OpenEMR
 const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
     const [selectedPatient, setSelectedPatient] = useState(null);
     const [selectedVisit, setSelectedVisit] = useState(null);
@@ -573,11 +573,9 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
                 setSelectedPatient(patient);
             }
 
-            // Also fetch existing superbills
-            const sbRes = await superbillsAPI.getByPatient(patientToUse.id);
-            setExistingSuperbills(sbRes.data || []);
+            setExistingSuperbills([]);
         } catch (error) {
-            console.error('Error fetching visits/superbills:', error);
+            console.error('Error fetching visits:', error);
             setVisits([]);
         }
     };
@@ -610,34 +608,17 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
             return;
         }
 
-        setLoading(true);
-        try {
-            // Create the commercial superbill from the visit
-            // This will auto-prepopulate from notes and orders
-            const response = await superbillsAPI.fromVisit(selectedVisit.id);
-            const sbId = response.data.id;
-
-            // Optionally, we could add the manual codes selected in Step 2 here,
-            // but the new Superbill editor is better for that.
-            // For now, let's just navigate to the full editor.
-
-            navigate(`/patient/${selectedPatient.id}/superbill/${sbId}`);
-            onSuccess();
-        } catch (error) {
-            console.error('Error creating superbill:', error);
-            alert('Failed to create superbill: ' + (error.response?.data?.error || error.message));
-        } finally {
-            setLoading(false);
-        }
+        navigate(`/patient/${selectedPatient.id}/fee-sheet/${selectedVisit.id}`);
+        onSuccess();
     };
 
     if (!isOpen) return null;
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Create Superbill" size="xl">
+        <Modal isOpen={isOpen} onClose={onClose} title="Open Fee Sheet" size="xl">
             <div className="space-y-6">
                 {/* Step Indicator Removed - Direct Creation */}
-                <div className="mb-4 text-sm text-gray-500">Select a patient and visit to initialize the superbill.</div>
+                <div className="mb-4 text-sm text-gray-500">Select a patient and visit to open the fee sheet.</div>
 
                 <div className="space-y-4">
                     <div className="relative">

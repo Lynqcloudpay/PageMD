@@ -26,7 +26,7 @@ import UserManagement from './pages/UserManagement'
 import AdminSettings from './pages/AdminSettings'
 import Cancellations from './pages/Cancellations'
 import Profile from './pages/Profile'
-import Superbill from './pages/Superbill'
+import FeeSheet from './pages/FeeSheet'
 import Layout from './components/Layout'
 import ErrorBoundary from './components/ErrorBoundary'
 import { PatientProvider } from './context/PatientContext'
@@ -250,11 +250,11 @@ function App() {
                                                     </ErrorBoundary>
                                                 </ProtectedRoute>
                                             } />
-                                            <Route path="/patient/:id/superbill/:superbillId" element={
+                                            <Route path="/patient/:id/fee-sheet/:visitId" element={
                                                 <ProtectedRoute>
                                                     <ErrorBoundary>
                                                         <Layout>
-                                                            <Superbill />
+                                                            <FeeSheet />
                                                         </Layout>
                                                     </ErrorBoundary>
                                                 </ProtectedRoute>

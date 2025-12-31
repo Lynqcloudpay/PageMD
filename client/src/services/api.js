@@ -218,28 +218,6 @@ export const billingAPI = {
   getStatistics: (params) => api.get('/billing/statistics', { params }),
 };
 
-// Superbills
-export const superbillsAPI = {
-  fromVisit: (visitId) => api.post(`/superbills/from-visit/${visitId}`),
-  getByPatient: (patientId) => api.get(`/superbills/patient/${patientId}`),
-  get: (id) => api.get(`/superbills/${id}`),
-  update: (id, data) => api.put(`/superbills/${id}`, data),
-  addDiagnosis: (id, data) => api.post(`/superbills/${id}/diagnoses`, data),
-  addLine: (id, data) => api.post(`/superbills/${id}/lines`, data),
-  updateLine: (id, lineId, data) => api.put(`/superbills/${id}/lines/${lineId}`, data),
-  deleteDiagnosis: (id, diagId) => api.delete(`/superbills/${id}/diagnoses/${diagId}`),
-  deleteLine: (id, lineId) => api.delete(`/superbills/${id}/lines/${lineId}`),
-  finalize: (id) => api.post(`/superbills/${id}/finalize`),
-  void: (id) => api.post(`/superbills/${id}/void`),
-  markReady: (id) => api.post(`/superbills/${id}/ready`),
-  unmarkReady: (id) => api.post(`/superbills/${id}/unready`),
-  sync: (id) => api.post(`/superbills/${id}/sync`),
-  deleteSuggestedLine: (id, lineId) => api.delete(`/superbills/${id}/suggested-lines/${lineId}`),
-  printUrl: (id) => `${API_BASE_URL}/superbills/${id}/print`,
-  exportCMS1500: (id) => api.get(`/superbills/${id}/export/cms1500`),
-  export837P: (id) => api.get(`/superbills/${id}/export/837p`),
-};
-
 // Fee Sheet Categories (OpenEMR-style quick code groups)
 export const feeSheetCategoriesAPI = {
   getAll: () => api.get('/fee-sheet-categories'),
@@ -247,8 +225,14 @@ export const feeSheetCategoriesAPI = {
   create: (data) => api.post('/fee-sheet-categories', data),
   update: (id, data) => api.put(`/fee-sheet-categories/${id}`, data),
   delete: (id) => api.delete(`/fee-sheet-categories/${id}`),
-  addToSuperbill: (categoryId, superbillId) => api.post(`/fee-sheet-categories/${categoryId}/add-to-superbill`, { superbill_id: superbillId }),
   seedDefaults: () => api.post('/fee-sheet-categories/seed-defaults'),
+};
+
+// Fee Sheet (OpenEMR Port)
+export const feeSheetAPI = {
+  get: (visitId) => api.get(`/fee-sheet/${visitId}`),
+  save: (visitId, data) => api.post(`/fee-sheet/${visitId}/save`, data),
+  getPrice: (codeType, code, priceLevel) => api.get(`/fee-sheet/price/${codeType}/${code}`, { params: { priceLevel } }),
 };
 
 // Reports

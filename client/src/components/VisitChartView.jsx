@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, FileText, Printer, X, AlertCircle, CheckCircle2, User, Phone, Mail, MapPin, Building2, Stethoscope, CreditCard, Users, FilePlus, Receipt, DollarSign, Globe, Clock, Heart, Thermometer, Wind, Pill, Lock, ClipboardList, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { visitsAPI, patientsAPI, billingAPI, codesAPI, superbillsAPI, settingsAPI, documentsAPI } from '../services/api';
+import { visitsAPI, patientsAPI, billingAPI, codesAPI, settingsAPI, documentsAPI } from '../services/api';
 import { format } from 'date-fns';
 import PatientChartPanel from './PatientChartPanel';
 
@@ -312,13 +312,8 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     };
 
     const handleCreateSuperbill = async () => {
-        try {
-            const response = await superbillsAPI.fromVisit(activeVisitId);
-            onClose();
-            navigate(`/patient/${patientId}/superbill/${response.data.id}`);
-        } catch (error) {
-            console.error('Error creating superbill:', error);
-        }
+        onClose();
+        navigate(`/patient/${patientId}/fee-sheet/${activeVisitId}`);
     };
 
     if (loading) return <div className="fixed inset-0 bg-slate-900/10 backdrop-blur-md flex items-center justify-center z-[100]"><div className="bg-white p-8 rounded-[2rem] shadow-2xl flex items-center gap-4 font-black text-slate-900 tracking-tighter border border-slate-100"><div className="w-6 h-6 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>Retrieving Clinical Record...</div></div>;

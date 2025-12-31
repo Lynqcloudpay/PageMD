@@ -191,9 +191,9 @@ app.use('/api/medications', medicationRoutes);
 
 // Billing endpoints
 const billingRoutes = require('./routes/billing');
-const superbillRoutes = require('./routes/superbills');
+const feeSheetRoutes = require('./routes/fee-sheet');
 app.use('/api/billing', billingRoutes);
-app.use('/api/superbills', superbillRoutes);
+app.use('/api/fee-sheet', feeSheetRoutes);
 
 // User management endpoints
 const userRoutes = require('./routes/users');
