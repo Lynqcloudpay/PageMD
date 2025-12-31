@@ -41,14 +41,10 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
   'https://pagemdemr.com',
   'https://www.pagemdemr.com',
-  'https://tablet.pagemdemr.com',  // Tablet UI
   'https://admin.pagemdemr.com',
   'http://localhost:5173',
-  'http://localhost:3000',
-  'http://localhost:5174'  // Tablet UI local dev
+  'http://localhost:3000'
 ].filter(Boolean);
-
-
 
 app.use(cors({
   origin: (origin, callback) => {

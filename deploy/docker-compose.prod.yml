@@ -115,7 +115,6 @@ services:
       - caddy_data:/data
       - caddy_config:/config
       - ./static:/usr/share/caddy:ro
-      - ../tablet-ui:/usr/share/tablet:ro
     networks:
       - emr-network
     depends_on:

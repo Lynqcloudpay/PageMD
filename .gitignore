@@ -6,7 +6,6 @@ server/node_modules/
 # env files / secrets
 .env
 .env.*
-!pagemd-tablet-ui/.env.example
 *.pem
 *.key
 PRODUCTION_CREDENTIALS.md
