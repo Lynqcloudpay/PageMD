@@ -2508,7 +2508,23 @@ const VisitNote = () => {
                                     <HistoryList
                                         title="Home Medications"
                                         icon={<Pill className="w-4 h-4 text-blue-600" />}
-                                        items={(patientData?.medications || []).filter(m => m.active !== false)}
+                                        items={(patientData?.medications || []).filter(m => {
+                                            // Only show active medications
+                                            if (m.active === false) return false;
+
+                                            // Only show medications started BEFORE this visit
+                                            // Home medications = what patient was taking before today
+                                            if (visitData?.visit_date && m.start_date) {
+                                                const visitDate = new Date(visitData.visit_date);
+                                                const medStartDate = new Date(m.start_date);
+                                                // Only include if medication was started before this visit
+                                                return medStartDate < visitDate;
+                                            }
+
+                                            // If no dates available, default to showing it
+                                            // (this handles legacy data without dates)
+                                            return true;
+                                        })}
                                         emptyMessage="No active medications"
                                         renderItem={(med) => (
                                             <div className="flex justify-between items-start w-full">
