@@ -461,7 +461,12 @@ router.post('/claims', requirePermission('billing:edit'), async (req, res) => {
 
 router.get('/claims', requirePermission('billing:view'), async (req, res) => {
   try {
-    // Check if claims table exists
+    const { status, patientId, dateFrom, dateTo, limit = 100, offset = 0 } = req.query;
+    let claims = [];
+    const params = [];
+    let paramIndex = 1;
+
+    // 1. Fetch Existing Claims (if table exists)
     const tableExistsResult = await pool.query(`
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
@@ -470,97 +475,132 @@ router.get('/claims', requirePermission('billing:view'), async (req, res) => {
       );
     `);
 
-    if (!tableExistsResult.rows[0].exists) {
-      // Table doesn't exist yet, return empty array
-      return res.json([]);
-    }
+    if (tableExistsResult.rows[0].exists) {
+      // Basic query for claims
+      let query = `
+        SELECT c.*, 
+               v.visit_date, v.visit_type,
+               p.first_name as patient_first_name, 
+               p.last_name as patient_last_name, 
+               p.mrn as patient_mrn,
+               u.first_name || ' ' || u.last_name as created_by_name,
+               'submitted' as record_type
+        FROM claims c
+        JOIN visits v ON c.visit_id = v.id
+        JOIN patients p ON v.patient_id = p.id
+        LEFT JOIN users u ON c.created_by = u.id
+        WHERE 1=1
+      `;
 
-    const { status, patientId, dateFrom, dateTo, limit = 100, offset = 0 } = req.query;
-
-    let query = `
-      SELECT c.*, 
-             v.visit_date, v.visit_type,
-             p.first_name as patient_first_name, 
-             p.last_name as patient_last_name, 
-             p.mrn as patient_mrn,
-             u.first_name || ' ' || u.last_name as created_by_name
-      FROM claims c
-      JOIN visits v ON c.visit_id = v.id
-      JOIN patients p ON v.patient_id = p.id
-      LEFT JOIN users u ON c.created_by = u.id
-      WHERE 1=1
-    `;
-
-    const params = [];
-    let paramIndex = 1;
-
-    if (status) {
-      params.push(status);
-      query += ` AND c.status = $${paramIndex++}`;
-    }
-
-    if (patientId) {
-      params.push(patientId);
-      query += ` AND c.patient_id = $${paramIndex++}`;
-    }
-
-    // Check if service_date_start column exists before using it
-    if (dateFrom || dateTo) {
-      const hasServiceDateColumn = await pool.query(`
-        SELECT EXISTS (
-          SELECT FROM information_schema.columns 
-          WHERE table_schema = 'public' 
-          AND table_name = 'claims'
-          AND column_name = 'service_date_start'
-        );
-      `);
-
-      if (hasServiceDateColumn.rows[0].exists) {
-        if (dateFrom) {
-          params.push(dateFrom);
-          query += ` AND (c.service_date_start >= $${paramIndex++} OR c.created_at >= $${paramIndex})`;
-          paramIndex++;
-        }
-
-        if (dateTo) {
-          params.push(dateTo);
-          query += ` AND (c.service_date_start <= $${paramIndex++} OR c.created_at <= $${paramIndex})`;
-          paramIndex++;
-        }
-      } else {
-        // Fallback to created_at if service_date_start doesn't exist
-        if (dateFrom) {
-          params.push(dateFrom);
-          query += ` AND c.created_at >= $${paramIndex++}`;
-        }
-
-        if (dateTo) {
-          params.push(dateTo);
-          query += ` AND c.created_at <= $${paramIndex++}`;
-        }
+      if (status && status !== 'unbilled') {
+        params.push(status);
+        query += ` AND c.status = $${paramIndex++}`;
       }
+
+      if (patientId) {
+        params.push(patientId);
+        query += ` AND c.patient_id = $${paramIndex++}`;
+      }
+
+      // Date filters...
+      if (dateFrom) {
+        params.push(dateFrom);
+        query += ` AND c.created_at >= $${paramIndex++}`;
+      }
+      if (dateTo) {
+        params.push(dateTo);
+        query += ` AND c.created_at <= $${paramIndex++}`;
+      }
+
+      query += ` ORDER BY c.created_at DESC`;
+
+      // NOTE: We don't apply limit/offset here yet because we need to merge unbilled
+      // unless status is strictly 'submitted' type. 
+      // For now, fetch generic batch and merge in memory (limit 100 is small enough).
+
+      const result = await pool.query(query, params);
+      claims = result.rows.map(claim => ({
+        ...claim,
+        id: claim.id,
+        status: claim.status || 'pending', // Db status
+        diagnosis_codes: typeof claim.diagnosis_codes === 'string' ? JSON.parse(claim.diagnosis_codes || '[]') : claim.diagnosis_codes,
+        procedure_codes: typeof claim.procedure_codes === 'string' ? JSON.parse(claim.procedure_codes || '[]') : claim.procedure_codes
+      }));
     }
 
-    query += ` ORDER BY c.created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
-    params.push(parseInt(limit), parseInt(offset));
+    // 2. Fetch Unbilled Encounters
+    // Only if status filter allows 'unbilled' or is empty
+    if (!status || status === 'unbilled') {
+      // Find visits that have billing activity but NO claim linked
+      // Note: checking for claims.visit_id
+      let unbilledQuery = `
+            SELECT 
+                v.id as visit_id, 
+                v.visit_date, 
+                v.visit_type,
+                p.id as patient_id,
+                p.first_name as patient_first_name, 
+                p.last_name as patient_last_name, 
+                p.mrn as patient_mrn,
+                SUM(b.fee * b.units) as calculated_total,
+                MIN(b.date) as first_billing_date
+            FROM visits v
+            JOIN patients p ON v.patient_id = p.id
+            JOIN billing b ON v.id = b.encounter
+            LEFT JOIN claims c ON v.id = c.visit_id
+            WHERE b.activity = true 
+            AND c.id IS NULL
+        `;
 
-    const result = await pool.query(query, params);
+      const unbilledParams = [];
+      let ubIdx = 1;
 
-    // Parse JSONB fields
-    const claims = result.rows.map(claim => ({
-      ...claim,
-      diagnosis_codes: typeof claim.diagnosis_codes === 'string'
-        ? JSON.parse(claim.diagnosis_codes)
-        : claim.diagnosis_codes,
-      procedure_codes: typeof claim.procedure_codes === 'string'
-        ? JSON.parse(claim.procedure_codes)
-        : claim.procedure_codes
-    }));
+      if (patientId) {
+        unbilledQuery += ` AND v.patient_id = $${ubIdx++}`;
+        unbilledParams.push(patientId);
+      }
 
-    res.json(claims);
+      if (dateFrom) {
+        unbilledQuery += ` AND v.visit_date >= $${ubIdx++}`;
+        unbilledParams.push(dateFrom);
+      }
+      if (dateTo) {
+        unbilledQuery += ` AND v.visit_date <= $${ubIdx++}`;
+        unbilledParams.push(dateTo);
+      }
+
+      unbilledQuery += ` GROUP BY v.id, p.id, v.visit_date, v.visit_type, p.first_name, p.last_name, p.mrn`;
+
+      const unbilledRes = await pool.query(unbilledQuery, unbilledParams);
+
+      const unbilledItems = unbilledRes.rows.map(row => ({
+        id: 'draft-' + row.visit_id, // Virtual ID
+        visit_id: row.visit_id,
+        claim_number: 'DRAFT',
+        status: 'unbilled',
+        visit_date: row.visit_date,
+        visit_type: row.visit_type,
+        patient_first_name: row.patient_first_name,
+        patient_last_name: row.patient_last_name,
+        patient_mrn: row.patient_mrn,
+        total_amount: row.calculated_total || 0,
+        created_at: row.first_billing_date || row.visit_date,
+        record_type: 'unbilled'
+      }));
+
+      claims = [...claims, ...unbilledItems];
+    }
+
+    // 3. Sort and Paginate in Memory
+    // Sort by date desc
+    claims.sort((a, b) => new Date(b.created_at || b.visit_date) - new Date(a.created_at || a.visit_date));
+
+    // Apply pagination
+    const paginatedClaims = claims.slice(parseInt(offset), parseInt(offset) + parseInt(limit));
+
+    res.json(paginatedClaims);
   } catch (error) {
     console.error('Error fetching claims:', error);
-    console.error('Error details:', error.message, error.stack);
     res.status(500).json({
       error: 'Failed to fetch claims',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
