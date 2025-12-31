@@ -614,6 +614,7 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
       `SELECT a.*,
       p.first_name as patient_first_name,
       p.last_name as patient_last_name,
+      p.encryption_metadata as patient_encryption_metadata,
       p.id as patient_id,
       u.first_name as provider_first_name,
       u.last_name as provider_last_name,
@@ -647,10 +648,18 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
       }
     }
 
+    // Decrypt patient name
+    const patientData = {
+      first_name: row.patient_first_name,
+      last_name: row.patient_last_name,
+      encryption_metadata: row.patient_encryption_metadata
+    };
+    const decryptedPatient = await preparePatientForResponse(patientData);
+
     const appointment = {
       id: row.id,
       patientId: row.patient_id,
-      patientName: `${row.patient_first_name} ${row.patient_last_name}`,
+      patientName: `${decryptedPatient.first_name} ${decryptedPatient.last_name}`,
       providerId: row.provider_id,
       providerName: `${row.provider_first_name} ${row.provider_last_name}`,
       date: row.appointment_date,
