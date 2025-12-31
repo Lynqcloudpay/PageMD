@@ -1029,45 +1029,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS uniq_billing_encounter_code_once
 ON billing(encounter, code, COALESCE(modifier1,''))
 WHERE activity = true;
 
-CREATE TABLE IF NOT EXISTS drug_inventory (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    drug_id UUID NOT NULL, -- References medication_database(id)
-    warehouse_id UUID,
-    on_hand INTEGER DEFAULT 0,
-    cost DECIMAL(12, 2) DEFAULT 0.00,
-    lot_number VARCHAR(255),
-    expiration DATE,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT chk_drug_inventory_non_negative CHECK (on_hand >= 0)
-);
 
-CREATE INDEX IF NOT EXISTS idx_drug_inventory_drug ON drug_inventory(drug_id);
-CREATE INDEX IF NOT EXISTS idx_drug_inventory_fifo ON drug_inventory(drug_id, expiration, id);
 
 CREATE INDEX IF NOT EXISTS idx_billing_encounter ON billing(encounter);
 CREATE INDEX IF NOT EXISTS idx_billing_patient ON billing(pid);
 
-CREATE TABLE IF NOT EXISTS drug_sales (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    drug_id UUID, -- References medication_database(id) or drugs(id)
-    inventory_id UUID,
-    prescription_id UUID REFERENCES prescriptions(id),
-    pid UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
-    encounter UUID NOT NULL REFERENCES visits(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES users(id),
-    sale_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    quantity INTEGER DEFAULT 0,
-    fee DECIMAL(12, 2) DEFAULT 0.00,
-    billed BOOLEAN DEFAULT FALSE,
-    notes VARCHAR(255),
-    bill_date TIMESTAMP,
-    pricelevel VARCHAR(31) DEFAULT '',
-    selector VARCHAR(255),
-    trans_type SMALLINT DEFAULT 1, -- 1=sale, 2=purchase, 3=return, 4=transfer, 5=adjustment
-    chargecat VARCHAR(31) DEFAULT '',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+
 
 CREATE TABLE IF NOT EXISTS ar_session (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1280,6 +1247,45 @@ CREATE TABLE IF NOT EXISTS prescription_interactions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_interactions_prescription ON prescription_interactions(prescription_id);
+
+
+CREATE TABLE IF NOT EXISTS drug_inventory (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    drug_id UUID NOT NULL, -- References medication_database(id)
+    warehouse_id UUID,
+    on_hand INTEGER DEFAULT 0,
+    cost DECIMAL(12, 2) DEFAULT 0.00,
+    lot_number VARCHAR(255),
+    expiration DATE,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_drug_inventory_non_negative CHECK (on_hand >= 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_drug_inventory_drug ON drug_inventory(drug_id);
+CREATE INDEX IF NOT EXISTS idx_drug_inventory_fifo ON drug_inventory(drug_id, expiration, id);
+
+CREATE TABLE IF NOT EXISTS drug_sales (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    drug_id UUID, -- References medication_database(id) or drugs(id)
+    inventory_id UUID,
+    prescription_id UUID REFERENCES prescriptions(id),
+    pid UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    encounter UUID NOT NULL REFERENCES visits(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id),
+    sale_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    quantity INTEGER DEFAULT 0,
+    fee DECIMAL(12, 2) DEFAULT 0.00,
+    billed BOOLEAN DEFAULT FALSE,
+    notes VARCHAR(255),
+    bill_date TIMESTAMP,
+    pricelevel VARCHAR(31) DEFAULT '',
+    selector VARCHAR(255),
+    trans_type SMALLINT DEFAULT 1, -- 1=sale, 2=purchase, 3=return, 4=transfer, 5=adjustment
+    chargecat VARCHAR(31) DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 `;
 
 module.exports = tenantSchemaSQL;
