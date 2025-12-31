@@ -146,7 +146,7 @@ const Billing = () => {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Billing & Claims</h1>
-                    <p className="text-sm text-gray-600 mt-1">Manage claims, superbills, and billing operations</p>
+                    <p className="text-sm text-gray-600 mt-1">Manage claims, fee sheets, and billing operations</p>
                 </div>
                 <div className="flex items-center space-x-2">
                     <button

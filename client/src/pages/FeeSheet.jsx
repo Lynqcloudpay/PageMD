@@ -78,6 +78,31 @@ const FeeSheet = () => {
         }
     };
 
+    const handlePriceLevelChange = async (newLevel) => {
+        setPriceLevel(newLevel);
+        setLoading(true); // Briefly show loading state during repricing
+        try {
+            const updatedBill = await Promise.all(bill.map(async (item) => {
+                if (item.code_type === 'CPT' || item.code_type === 'HCPCS') {
+                    try {
+                        const res = await feeSheetAPI.getPrice(item.code_type, item.code, newLevel);
+                        if (res.data && res.data.price !== undefined) {
+                            return { ...item, fee: res.data.price };
+                        }
+                    } catch (e) {
+                        console.error(`Failed to reprice code ${item.code}`, e);
+                    }
+                }
+                return item;
+            }));
+            setBill(updatedBill);
+        } catch (error) {
+            console.error("Error updating price level:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleSave = async (stay = false) => {
         setSaving(true);
         try {
@@ -542,7 +567,7 @@ const FeeSheet = () => {
                             <select
                                 className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-100 outline-none"
                                 value={priceLevel}
-                                onChange={(e) => setPriceLevel(e.target.value)}
+                                onChange={(e) => handlePriceLevelChange(e.target.value)}
                             >
                                 <option value="Standard">Standard</option>
                                 <option value="Level 1">Level 1</option>
