@@ -9,7 +9,67 @@ router.use(authenticate);
 // --- HELPER: Sync Logic ---
 // Syncs external items (orders, documents) into the inbox_items table
 // This ensures we have a unified, real-table representation for everything
+// Schema self-healing state
+let _schemaEnsured = false;
+
+async function ensureSchema() {
+  if (_schemaEnsured) return;
+  try {
+    await pool.query('BEGIN');
+    await pool.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
+    await pool.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
+
+    await pool.query(`
+            CREATE TABLE IF NOT EXISTS inbox_items (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                tenant_id UUID,
+                patient_id UUID REFERENCES patients(id),
+                type VARCHAR(50) NOT NULL,
+                priority VARCHAR(20) DEFAULT 'normal',
+                status VARCHAR(50) DEFAULT 'new',
+                subject VARCHAR(255),
+                body TEXT,
+                reference_id UUID,
+                reference_table VARCHAR(50),
+                assigned_user_id UUID REFERENCES users(id),
+                assigned_role VARCHAR(50),
+                created_by UUID REFERENCES users(id),
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                completed_at TIMESTAMP WITH TIME ZONE,
+                completed_by UUID REFERENCES users(id)
+            )
+        `);
+
+    await pool.query(`
+            CREATE TABLE IF NOT EXISTS inbox_notes (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                item_id UUID REFERENCES inbox_items(id) ON DELETE CASCADE,
+                user_id UUID REFERENCES users(id),
+                user_name VARCHAR(100),
+                note TEXT NOT NULL,
+                is_internal BOOLEAN DEFAULT true,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+    // Indexes
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_inbox_assigned_user ON inbox_items(assigned_user_id) WHERE status != 'completed'`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_inbox_patient ON inbox_items(patient_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_inbox_status ON inbox_items(status)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_inbox_reference ON inbox_items(reference_id)`);
+
+    await pool.query('COMMIT');
+    _schemaEnsured = true;
+    console.log('Inbasket schema verified.');
+  } catch (error) {
+    await pool.query('ROLLBACK');
+    console.error('Error ensuring inbasket schema:', error);
+  }
+}
+
 async function syncInboxItems(tenantId) {
+  await ensureSchema();
   // 1. Sync Lab Orders
   await pool.query(`
     INSERT INTO inbox_items (
@@ -91,7 +151,11 @@ async function syncInboxItems(tenantId) {
     )
     SELECT 
       gen_random_uuid(), $1, patient_id, 
-      CASE WHEN message_type = 'task' THEN 'task' ELSE 'message' END,
+      CASE 
+        WHEN message_type = 'task' THEN 'task'
+        WHEN message_type = 'refill' THEN 'refill'
+        ELSE 'message' 
+      END,
       COALESCE(priority, 'normal'),
       CASE 
         WHEN task_status = 'completed' THEN 'completed'
@@ -175,6 +239,7 @@ router.get('/', async (req, res) => {
 // GET /stats - Counters for sidebar
 router.get('/stats', async (req, res) => {
   try {
+    await ensureSchema();
     const counts = await pool.query(`
       SELECT 
         COUNT(*) FILTER (WHERE status NOT IN ('completed', 'archived')) as all_count,
