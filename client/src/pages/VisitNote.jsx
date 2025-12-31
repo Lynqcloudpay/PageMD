@@ -2534,14 +2534,20 @@ const VisitNote = () => {
                                             return true;
                                         })}
                                         emptyMessage="No active medications"
-                                        renderItem={(med) => (
-                                            <div className="flex justify-between items-start w-full">
-                                                <span className="font-medium text-gray-900">{med.medication_name}</span>
-                                                <span className="text-gray-500 text-xs">
-                                                    {[med.dosage, med.frequency, med.route].filter(Boolean).join(' ')}
-                                                </span>
-                                            </div>
-                                        )}
+                                        renderItem={(med) => {
+                                            // Decode HTML entities in medication name
+                                            const decodedName = med.medication_name ?
+                                                med.medication_name.replace(/&#x2f;/gi, '/').replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))
+                                                : '';
+                                            return (
+                                                <div className="flex justify-between items-start w-full">
+                                                    <span className="font-medium text-gray-900">{decodedName}</span>
+                                                    <span className="text-gray-500 text-xs">
+                                                        {[med.dosage, med.frequency, med.route].filter(Boolean).join(' ')}
+                                                    </span>
+                                                </div>
+                                            );
+                                        }}
                                         renderInput={(props) => <MedicationInput {...props} />}
                                         onAdd={async (data) => {
                                             try {
