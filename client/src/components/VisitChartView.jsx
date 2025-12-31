@@ -633,7 +633,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                         </div>
                                         <div className="leading-tight">
                                             <div className="flex items-baseline gap-4 mb-2">
-                                                <h1 className="text-[28px] font-black text-slate-800 tracking-tightest uppercase">{clinicInfo.name}</h1>
+                                                <h1 className="text-[28px] font-black text-slate-800 tracking-tightest">{clinicInfo.name}</h1>
                                                 <span className="text-[9px] bg-slate-900 text-white px-2.5 py-1 rounded-sm font-black tracking-widest uppercase">Clinical Record</span>
                                             </div>
                                             <div className="text-[12px] text-slate-400 font-bold uppercase tracking-tight flex items-center gap-3">
@@ -829,9 +829,9 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
 
                                     {/* FOLLOW UP */}
                                     <div className="pt-6 border-t border-slate-100 avoid-cut">
-                                        <div className="inline-block bg-slate-900 px-4 py-2 rounded text-white shadow-md">
-                                            <span className="text-[10px] uppercase font-bold tracking-widest block opacity-50">Follow Up</span>
-                                            <span className="text-[13px] font-bold italic">{noteData.followUp || visit.follow_up_instructions || 'PRN / AS NEEDED'}</span>
+                                        <div className="inline-block bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm">
+                                            <span className="text-[9px] font-medium text-slate-400 block mb-0.5">Follow Up Instruction</span>
+                                            <span className="text-[12px] font-bold text-slate-700 italic">{noteData.followUp || visit.follow_up_instructions || 'PRN / AS NEEDED'}</span>
                                         </div>
                                     </div>
 
