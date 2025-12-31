@@ -67,12 +67,12 @@ const sanitizeInput = (req, res, next) => {
 };
 
 // HIPAA-compliant password policy validation
-// Minimum 12 characters, uppercase, lowercase, digit, symbol
+// Minimum 8 characters, uppercase, lowercase, digit, symbol
 const validatePassword = (password) => {
   const errors = [];
 
-  if (!password || password.length < 12) {
-    errors.push('Password must be at least 12 characters long');
+  if (!password || password.length < 8) {
+    errors.push('Password must be at least 8 characters long');
   }
   if (!/[A-Z]/.test(password)) {
     errors.push('Password must contain at least one uppercase letter');

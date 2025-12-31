@@ -534,9 +534,25 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
       }
     } else if (activeTab === 'settings') {
       if (!formData.roleId) newErrors.roleId = 'Role is required';
-      if (!formData.password) newErrors.password = 'Password is required';
-      else if (formData.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
-      if (formData.password !== formData.confirmPassword) {
+      if (!formData.password) {
+        newErrors.password = 'Password is required';
+      } else {
+        // Comprehensive password validation
+        if (formData.password.length < 8) {
+          newErrors.password = 'Password must be at least 8 characters';
+        } else if (!/[A-Z]/.test(formData.password)) {
+          newErrors.password = 'Password must contain at least one uppercase letter';
+        } else if (!/[a-z]/.test(formData.password)) {
+          newErrors.password = 'Password must contain at least one lowercase letter';
+        } else if (!/[0-9]/.test(formData.password)) {
+          newErrors.password = 'Password must contain at least one number';
+        } else if (!/[!@#$%^&*(),.?":{}|<>_+\-=\[\]\\;',./]/.test(formData.password)) {
+          newErrors.password = 'Password must contain at least one special character';
+        }
+      }
+      if (!formData.confirmPassword) {
+        newErrors.confirmPassword = 'Please confirm your password';
+      } else if (formData.password !== formData.confirmPassword) {
         newErrors.confirmPassword = 'Passwords do not match';
       }
     }
@@ -584,8 +600,25 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
       return;
     }
 
+    // Password validation (comprehensive)
     if (formData.password.length < 8) {
-      setErrors({ password: 'Password must be at least 8 characters' });
+      setErrors({ password: 'Password must be at least 8 characters long' });
+      return;
+    }
+    if (!/[A-Z]/.test(formData.password)) {
+      setErrors({ password: 'Password must contain at least one uppercase letter' });
+      return;
+    }
+    if (!/[a-z]/.test(formData.password)) {
+      setErrors({ password: 'Password must contain at least one lowercase letter' });
+      return;
+    }
+    if (!/[0-9]/.test(formData.password)) {
+      setErrors({ password: 'Password must contain at least one number' });
+      return;
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>_+\-=\[\]\\;',./]/.test(formData.password)) {
+      setErrors({ password: 'Password must contain at least one special character' });
       return;
     }
 
@@ -1128,13 +1161,13 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
                     <input
                       type="password"
                       required
-                      minLength={12}
+                      minLength={8}
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                       className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${errors.password ? 'border-red-300' : 'border-gray-300'
                         }`}
                     />
-                    <p className="text-xs text-gray-500 mt-1">Min 12 chars, uppercase, lowercase, number, special character</p>
+                    <p className="text-xs text-gray-500 mt-1">Min 8 chars, uppercase, lowercase, number, special character</p>
                     {errors.password && <p className="text-xs text-red-600 mt-1">{errors.password}</p>}
                   </div>
 
