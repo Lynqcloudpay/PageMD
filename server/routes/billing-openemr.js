@@ -84,21 +84,11 @@ router.post('/claims/generate', requirePermission('billing:edit'), async (req, r
 router.post('/collections/send', requirePermission('billing:edit'), async (req, res) => {
     try {
         const { encounterId, agency } = req.body;
-        const pool = require('../db');
-        // Note: Using direct pool query or service. Ideally service. 
-        // Accessing pool directly here for brevity in Phase 4.
-
-        // Skipping direct table update for safety as column schema varies.
-        // Relying on billing_event_log (below) for audit trail of this action.
-        // await pool.query(`UPDATE visits SET billing_notes = ...`);
-
-        await pool.query(`
-            INSERT INTO billing_event_log (event_type, actor_id, visit_id, details)
-            VALUES ('sent_collections', $1, $2, $3)
-        `, [req.user.id, encounterId, JSON.stringify({ agency })]);
-
+        // Use service method which handles DB interaction and validation
+        await arService.sendToCollections(encounterId, agency, req.user.id);
         res.json({ status: 'sent' });
     } catch (e) {
+        console.error("Error sending to collections:", e);
         res.status(500).json({ error: e.message });
     }
 });

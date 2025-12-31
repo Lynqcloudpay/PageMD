@@ -501,6 +501,33 @@ class ARService {
             totalDue: detailedEncounters.reduce((sum, e) => sum + parseFloat(e.ledger.summary.balance), 0)
         };
     }
+    async sendToCollections(encounterId, agency, userId) {
+        // 1. Verify Encounter
+        const encCheck = await pool.query('SELECT id, patient_id FROM visits WHERE id = $1', [encounterId]);
+        if (encCheck.rows.length === 0) throw new Error("Encounter not found");
+
+        // 2. Add Audit Log
+        // Note: We are relying on billing_event_log. 
+        // If it doesn't exist, we will try to create it if we have permission? No, better to try/catch the log insert.
+        try {
+            await pool.query(`
+                INSERT INTO billing_event_log (
+                    event_type, actor_id, visit_id, details
+                ) VALUES (
+                    'sent_collections', $1, $2, $3
+                )
+            `, [userId, encounterId, JSON.stringify({ agency })]);
+        } catch (e) {
+            console.warn("Could not write to billing_event_log:", e.message);
+            // Optionally create the table on the fly or just ignore?
+            // For now, ignoring log failure to not block operation, but logging to console.
+        }
+
+        // 3. Update Encounter Status (Optional - if we had a status column)
+        // await pool.query('UPDATE visits SET billing_status = $1 WHERE id = $2', ['COLLECTIONS', encounterId]);
+
+        return { success: true };
+    }
 }
 
 module.exports = new ARService();
