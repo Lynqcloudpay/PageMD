@@ -39,15 +39,15 @@ if (!fs.existsSync(patientPhotosDir)) {
 // This allows preflight OPTIONS requests to work properly
 const allowedOrigins = [
   process.env.FRONTEND_URL,
-  'https://bemypcp.com',
-  'https://www.bemypcp.com',
-  'https://tablet.bemypcp.com',  // Tablet UI
   'https://pagemdemr.com',
   'https://www.pagemdemr.com',
+  'https://tablet.pagemdemr.com',  // Tablet UI
   'https://admin.pagemdemr.com',
   'http://localhost:5173',
-  'http://localhost:3000'
+  'http://localhost:3000',
+  'http://localhost:5174'  // Tablet UI local dev
 ].filter(Boolean);
+
 
 
 app.use(cors({
