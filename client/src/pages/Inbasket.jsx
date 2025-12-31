@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     Inbox, CheckCircle, Clock, AlertTriangle, MessageSquare, FileText,
     Pill, FlaskConical, Image, Send, RefreshCw, Filter, Search,
-    ChevronRight, X, Bell, User, Calendar, Phone, Paperclip
+    ChevronRight, X, Plus, Bell, User, Calendar, Phone, Paperclip
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
