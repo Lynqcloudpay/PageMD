@@ -151,6 +151,7 @@ class TenantManager {
 
             // Explicitly delete related records that might otherwise be SET NULL
             await client.query('DELETE FROM payment_history WHERE clinic_id = $1', [clinicId]);
+            await client.query('DELETE FROM platform_support_tickets WHERE clinic_id = $1', [clinicId]);
             await client.query('DELETE FROM support_tickets WHERE clinic_id = $1', [clinicId]);
 
             // 3. Delete Clinic Record

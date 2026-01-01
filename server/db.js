@@ -8,15 +8,22 @@ const dbStorage = new AsyncLocalStorage();
 // Override DATE parser
 types.setTypeParser(1082, (stringValue) => stringValue);
 
-/**
- * Control Pool: Main entry point for the application.
- * Used for:
- * 1. Control queries (clinics table)
- * 2. Acquiring clients for tenant transactions
- */
+const controlPoolConfig = (process.env.CONTROL_DATABASE_URL || process.env.DATABASE_URL)
+  ? {
+    connectionString: process.env.CONTROL_DATABASE_URL || process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  }
+  : {
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 5432,
+    database: process.env.DB_NAME || 'paper_emr',
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || 'postgres',
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  };
+
 const controlPool = new Pool({
-  connectionString: process.env.CONTROL_DATABASE_URL || process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ...controlPoolConfig,
   max: 20, // Increased for transaction handling
   idleTimeoutMillis: 30000,
 });
