@@ -165,18 +165,18 @@ async function syncRole(clinicId, roleKey, adminId) {
             WHERE t.role_key = $1
         `, [roleKey]);
 
-        if (tplRes.rows.length === 0) throw new Error('TEMPLATE_NOT_FOUND');
         const targetPrivs = tplRes.rows.map(r => r.privilege_name);
         const tplVersion = tplRes.rows[0].version;
         const tplId = tplRes.rows[0].id;
+        const tplDisplayName = tplRes.rows[0].display_name;
 
         // 1. Ensure role exists in clinic (Match by source_template_id first, then name)
-        let rRes = await client.query(`SELECT id FROM ${schema_name}.roles WHERE source_template_id = $1`, [tplId]);
+        let rRes = await client.query(`SELECT id, name FROM ${schema_name}.roles WHERE source_template_id = $1`, [tplId]);
         let roleId;
 
         if (rRes.rows.length === 0) {
-            // Fallback: Check by name
-            rRes = await client.query(`SELECT id FROM ${schema_name}.roles WHERE name = $1`, [roleKey]);
+            // Fallback: Check by name (either the key or the display name)
+            rRes = await client.query(`SELECT id, name FROM ${schema_name}.roles WHERE name = $1 OR name = $2`, [roleKey, tplDisplayName]);
         }
 
         if (rRes.rows.length === 0) {
@@ -184,12 +184,12 @@ async function syncRole(clinicId, roleKey, adminId) {
                 INSERT INTO ${schema_name}.roles (name, description, is_system_role, source_template_id) 
                 VALUES ($1, $2, TRUE, $3) 
                 RETURNING id
-            `, [roleKey, `System Role: ${roleKey}`, tplId]);
+            `, [tplDisplayName, `Standard platform role: ${tplDisplayName}`, tplId]);
             roleId = newRole.rows[0].id;
         } else {
             roleId = rRes.rows[0].id;
-            // Ensure source_template_id is linked if we matched by name
-            await client.query(`UPDATE ${schema_name}.roles SET source_template_id = $1 WHERE id = $2`, [tplId, roleId]);
+            // Ensure source_template_id is linked and name is standard
+            await client.query(`UPDATE ${schema_name}.roles SET source_template_id = $1, name = $2 WHERE id = $3`, [tplId, tplDisplayName, roleId]);
         }
 
         // 2. Identify Current State for audit logs
