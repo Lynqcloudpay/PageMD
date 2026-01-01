@@ -100,19 +100,30 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
     const decodeHtmlEntities = (text) => {
         if (typeof text !== 'string') return String(text || '');
         let str = text;
-        // Iteratively decode to handle double-encoding
-        for (let i = 0; i < 5; i++) {
-            const prev = str;
+
+        // Browser environment: use textarea for robust decoding
+        if (typeof document !== 'undefined') {
+            const txt = document.createElement('textarea');
+            // Loop to handle double-encoding
+            for (let i = 0; i < 4; i++) {
+                const prev = str;
+                txt.innerHTML = str;
+                str = txt.value;
+                // Manual backup for typically stubborn entities if textarea fails? 
+                // Usually textarea works, but explicit replace checks don't hurt.
+                str = str.replace(/&#x2F;/ig, '/').replace(/&#47;/g, '/');
+                if (str === prev) break;
+            }
+        } else {
+            // Server-side / fallback
             str = str
-                .replace(/&amp;#x2F;/g, '/')
-                .replace(/&#x2F;/g, '/')
                 .replace(/&amp;/g, '&')
                 .replace(/&lt;/g, '<')
                 .replace(/&gt;/g, '>')
-                .replace(/&#47;/g, '/')
                 .replace(/&quot;/g, '"')
-                .replace(/&#39;/g, "'");
-            if (str === prev) break;
+                .replace(/&#39;/g, "'")
+                .replace(/&#x2F;/ig, '/')
+                .replace(/&#47;/g, '/');
         }
         return str;
     };

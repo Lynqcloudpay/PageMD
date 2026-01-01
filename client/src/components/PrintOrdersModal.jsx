@@ -24,6 +24,22 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
         }
     }, [isOpen, patient?.id]);
 
+    const decodeHtmlEntities = (text) => {
+        if (typeof text !== 'string') return String(text || '');
+        let str = text;
+        if (typeof document !== 'undefined') {
+            const txt = document.createElement('textarea');
+            for (let i = 0; i < 4; i++) {
+                const prev = str;
+                txt.innerHTML = str;
+                str = txt.value;
+                str = str.replace(/&#x2F;/ig, '/').replace(/&#47;/g, '/');
+                if (str === prev) break;
+            }
+        }
+        return str;
+    };
+
     const parseOrdersFromNote = (noteText, visitId) => {
         const safeNoteText = typeof noteText === 'string' ? noteText : (typeof noteText === 'object' ? JSON.stringify(noteText) : String(noteText || ''));
         if (!safeNoteText) return [];
@@ -142,7 +158,7 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                 const hasRealMatch = self.some(other =>
                     other.type !== 'virtual' &&
                     other.visit_id === item.visit_id &&
-                    (String(other.medication_name || '').toLowerCase().includes(item.display_title.toLowerCase()) ||
+                    (decodeHtmlEntities(other.medication_name || '').toLowerCase().includes(item.display_title.toLowerCase()) ||
                         String(other.order_payload?.test_name || '').toLowerCase().includes(item.display_title.toLowerCase()) ||
                         String(other.recipient_specialty || '').toLowerCase().includes(item.display_title.toLowerCase()))
                 );
@@ -597,7 +613,7 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                                     <tbody>
                                         ${prescriptions.map(p => `
                                             <tr>
-                                                <td><strong>${p.type === 'virtual' ? p.display_title : p.medication_name}</strong></td>
+                                                <td><strong>${p.type === 'virtual' ? p.display_title : decodeHtmlEntities(p.medication_name)}</strong></td>
                                                 <td>${p.sig || 'As directed'}</td>
                                                 <td>${p.quantity || '-'}${p.refills ? ` / ${p.refills} refills` : ''}</td>
                                             </tr>
@@ -657,7 +673,7 @@ const PrintOrdersModal = ({ patient, isOpen, onClose }) => {
                 </div>
                 <div className="flex-1 min-w-0">
                     <div className={`text-sm font-bold truncate ${isSelected ? 'text-primary-900' : 'text-gray-700'}`}>
-                        {order.type === 'virtual' ? order.display_title : order.category === 'prescription' ? order.medication_name : order.order_payload?.test_name || order.order_payload?.name || order.recipient_specialty || 'Untitled Order'}
+                        {order.type === 'virtual' ? order.display_title : order.category === 'prescription' ? decodeHtmlEntities(order.medication_name) : order.order_payload?.test_name || order.order_payload?.name || order.recipient_specialty || 'Untitled Order'}
                     </div>
                     <div className="text-[10px] text-gray-500 font-medium uppercase truncate flex items-center gap-2">
                         <span>{order.category === 'referral' ? 'Specialist Referral' : order.category}</span>

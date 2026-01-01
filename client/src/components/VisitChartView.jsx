@@ -47,13 +47,20 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
 
     const decodeHtmlEntities = (text) => {
         if (typeof text !== 'string') return String(text || '');
-        return text
-            .replace(/&amp;#x2F;/g, '/')
-            .replace(/&#x2F;/g, '/')
-            .replace(/&#47;/g, '/')
-            .replace(/&amp;/g, '&')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>');
+        let str = text;
+        if (typeof document !== 'undefined') {
+            const txt = document.createElement('textarea');
+            for (let i = 0; i < 4; i++) {
+                const prev = str;
+                txt.innerHTML = str;
+                str = txt.value;
+                str = str.replace(/&#x2F;/ig, '/').replace(/&#47;/g, '/');
+                if (str === prev) break;
+            }
+        } else {
+            str = str.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#x2F;/ig, '/');
+        }
+        return str;
     };
 
     const formatMarkdownBold = (text) => {
@@ -520,7 +527,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                     {medications.length > 0 ? medications.map((m, i) => (
                                         <div key={i} className="text-[12px] font-medium text-slate-600 line-clamp-1 flex flex-col">
                                             <div className="flex items-start gap-1">
-                                                <span className="text-slate-300 mt-1">•</span> {m.medication_name}
+                                                <span className="text-slate-300 mt-1">•</span> {decodeHtmlEntities(m.medication_name)}
                                             </div>
                                             <div className="pl-4 text-[10px] text-slate-400 italic uppercase">{m.dosage}</div>
                                         </div>
@@ -729,7 +736,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                         <div className="space-y-2 border-l border-r border-blue-50 px-6">
                                             <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest block mb-1">Home Medications</span>
                                             <ul className="text-[11px] font-semibold text-slate-700 space-y-1">
-                                                {medications.length > 0 ? medications.map((m, i) => <li key={i} className="flex flex-col border-b border-blue-50/50 pb-0.5"><span>{m.medication_name}</span> <span className="text-[9px] text-slate-400 font-medium uppercase">{m.dosage}</span></li>) : <li className="italic text-slate-400">No active medications.</li>}
+                                                {medications.length > 0 ? medications.map((m, i) => <li key={i} className="flex flex-col border-b border-blue-50/50 pb-0.5"><span>{decodeHtmlEntities(m.medication_name)}</span> <span className="text-[9px] text-slate-400 font-medium uppercase">{m.dosage}</span></li>) : <li className="italic text-slate-400">No active medications.</li>}
                                             </ul>
                                         </div>
                                         <div className="space-y-2">

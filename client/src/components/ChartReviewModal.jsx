@@ -8,9 +8,18 @@ import { ordersAPI, documentsAPI, patientsAPI } from '../services/api';
 
 const decodeHtmlEntities = (text) => {
     if (typeof text !== 'string') return String(text || '');
-    const textArea = document.createElement('textarea');
-    textArea.innerHTML = text;
-    return textArea.value;
+    let str = text;
+    if (typeof document !== 'undefined') {
+        const txt = document.createElement('textarea');
+        for (let i = 0; i < 4; i++) {
+            const prev = str;
+            txt.innerHTML = str;
+            str = txt.value;
+            str = str.replace(/&#x2F;/ig, '/').replace(/&#47;/g, '/');
+            if (str === prev) break;
+        }
+    }
+    return str;
 };
 
 const ChartReviewModal = ({
@@ -339,7 +348,7 @@ const ChartReviewModal = ({
                                 {(patientData?.problems || []).filter(p => p.status === 'active').slice(0, 6).map((p, i) => (
                                     <div key={i} className="text-[11px] text-slate-700 flex items-start gap-1">
                                         <span className="text-slate-400">•</span>
-                                        <span>{p.problem_name || p.name}</span>
+                                        <span>{decodeHtmlEntities(p.problem_name || p.name)}</span>
                                     </div>
                                 ))}
                             </div>
@@ -350,7 +359,7 @@ const ChartReviewModal = ({
                             <div className="space-y-1">
                                 {(patientData?.medications || []).filter(m => m.active !== false).slice(0, 6).map((m, i) => (
                                     <div key={i} className="text-[11px] text-slate-700">
-                                        {m.medication_name || m.name}
+                                        {decodeHtmlEntities(m.medication_name || m.name)}
                                     </div>
                                 ))}
                             </div>
@@ -361,7 +370,7 @@ const ChartReviewModal = ({
                             {(patientData?.allergies || []).length > 0 ? (
                                 <div className="space-y-1">
                                     {patientData.allergies.map((a, i) => (
-                                        <div key={i} className="text-[11px] text-red-600 font-medium">{a.allergen || a.name}</div>
+                                        <div key={i} className="text-[11px] text-red-600 font-medium">{decodeHtmlEntities(a.allergen || a.name)}</div>
                                     ))}
                                 </div>
                             ) : (
