@@ -1047,18 +1047,20 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                     <div className="w-1/2 flex flex-col border-r border-gray-200 bg-white">
                         <div className="p-4 border-b border-gray-100">
 
-                            {/* Search Input */}
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                <input
-                                    type="text"
-                                    placeholder={`Search ${activeTab}...`}
-                                    className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    autoFocus
-                                />
-                            </div>
+                            {/* Search Input - hide for medications tab which has its own search */}
+                            {activeTab !== 'medications' && (
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                    <input
+                                        type="text"
+                                        placeholder={`Search ${activeTab}...`}
+                                        className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        autoFocus
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         {/* Search Results / Browse Content */}
