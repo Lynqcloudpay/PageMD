@@ -22,6 +22,12 @@ const controlPoolConfig = (process.env.CONTROL_DATABASE_URL || process.env.DATAB
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   };
 
+console.log(`[DB] Initializing Pool with host: ${controlPoolConfig.host || 'unknown'} and database: ${controlPoolConfig.database || 'unknown'}`);
+if (controlPoolConfig.connectionString) {
+  const maskedUrl = controlPoolConfig.connectionString.replace(/:[^:@]+@/, ':****@');
+  console.log(`[DB] Initializing Pool with Connection String: ${maskedUrl}`);
+}
+
 const controlPool = new Pool({
   ...controlPoolConfig,
   max: 20, // Increased for transaction handling

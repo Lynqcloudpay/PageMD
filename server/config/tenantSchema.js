@@ -23,7 +23,13 @@ CREATE TABLE IF NOT EXISTS roles (
 INSERT INTO roles (name, description, is_system_role) VALUES 
     ('Admin', 'Clinic Administrator with full access', true),
     ('Physician', 'Licensed physician with full clinical privileges', true),
-    ('staff', 'Clinic Staff', true)
+    ('Nurse Practitioner', 'Nurse practitioner with clinical privileges', true),
+    ('Physician Assistant', 'Physician assistant with clinical privileges', true),
+    ('Nurse', 'Registered nurse or licensed practical nurse', true),
+    ('Medical Assistant', 'Medical assistant supporting clinical workflow', true),
+    ('Front Desk', 'Front desk and scheduling staff', true),
+    ('Billing Specialist', 'Billing and insurance coordination', true),
+    ('staff', 'Clinic Staff (General)', true)
 ON CONFLICT (name) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS privileges (

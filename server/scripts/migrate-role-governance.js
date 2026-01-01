@@ -1,25 +1,4 @@
-/**
- * Phase 2 Migration: Role Governance & Permission Integrity
- * Creates standard role templates and enabling drift detection.
- */
-const { Pool } = require('pg');
-require('dotenv').config();
-
-const pool = new Pool(
-    (process.env.CONTROL_DATABASE_URL || process.env.DATABASE_URL)
-        ? {
-            connectionString: process.env.CONTROL_DATABASE_URL || process.env.DATABASE_URL,
-            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-        }
-        : {
-            host: process.env.DB_HOST || 'localhost',
-            port: process.env.DB_PORT || 5432,
-            database: process.env.DB_NAME || 'paper_emr',
-            user: process.env.DB_USER || 'postgres',
-            password: process.env.DB_PASSWORD || 'postgres',
-            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-        }
-);
+const pool = require('../db');
 
 async function migrate() {
     const client = await pool.connect();
@@ -62,7 +41,7 @@ async function migrate() {
         const templates = [
             {
                 key: 'CLINIC_ADMIN',
-                display: 'Clinic Admin',
+                display: 'Admin',
                 required: true,
                 privs: [
                     'patients:view_list', 'patients:view_chart', 'patients:view_demographics',
@@ -95,12 +74,46 @@ async function migrate() {
                 ]
             },
             {
-                key: 'FRONT_DESK',
-                display: 'Front Desk',
+                key: 'NURSE_PRACTITIONER',
+                display: 'Nurse Practitioner',
                 required: false,
                 privs: [
-                    'patients:view_list', 'patients:view_demographics', 'patients:create',
-                    'schedule:view', 'schedule:edit', 'schedule:status_update', 'schedule:assign_provider'
+                    'patients:view_list', 'patients:view_chart', 'patients:view_demographics',
+                    'patients:edit_demographics', 'patients:create',
+                    'visits:create', 'visits:edit', 'visits:sign',
+                    'notes:create', 'notes:edit', 'notes:sign',
+                    'orders:create', 'orders:edit', 'orders:view',
+                    'prescriptions:create', 'prescriptions:edit', 'prescriptions:view', 'meds:prescribe',
+                    'referrals:create', 'referrals:edit', 'referrals:view',
+                    'schedule:view', 'schedule:edit', 'schedule:status_update',
+                    'billing:view', 'reports:view'
+                ]
+            },
+            {
+                key: 'PHYSICIAN_ASSISTANT',
+                display: 'Physician Assistant',
+                required: false,
+                privs: [
+                    'patients:view_list', 'patients:view_chart', 'patients:view_demographics',
+                    'patients:edit_demographics', 'patients:create',
+                    'visits:create', 'visits:edit', 'visits:sign',
+                    'notes:create', 'notes:edit', 'notes:sign',
+                    'orders:create', 'orders:edit', 'orders:view',
+                    'prescriptions:create', 'prescriptions:edit', 'prescriptions:view', 'meds:prescribe',
+                    'referrals:create', 'referrals:edit', 'referrals:view',
+                    'schedule:view', 'schedule:edit', 'schedule:status_update',
+                    'billing:view', 'reports:view'
+                ]
+            },
+            {
+                key: 'NURSE',
+                display: 'Nurse',
+                required: false,
+                privs: [
+                    'patients:view_list', 'patients:view_chart', 'patients:view_demographics',
+                    'visits:create', 'visits:edit', 'orders:view',
+                    'schedule:view', 'schedule:edit', 'schedule:status_update',
+                    'billing:view'
                 ]
             },
             {
@@ -111,6 +124,15 @@ async function migrate() {
                     'patients:view_list', 'patients:view_chart', 'patients:view_demographics',
                     'visits:create', 'visits:edit', 'orders:view',
                     'schedule:view', 'schedule:status_update'
+                ]
+            },
+            {
+                key: 'FRONT_DESK',
+                display: 'Front Desk',
+                required: false,
+                privs: [
+                    'patients:view_list', 'patients:view_demographics', 'patients:create',
+                    'schedule:view', 'schedule:edit', 'schedule:status_update', 'schedule:assign_provider'
                 ]
             },
             {
