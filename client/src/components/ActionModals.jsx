@@ -561,28 +561,39 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
             const searchTimer = setTimeout(async () => {
                 setSearchingMed(true);
                 try {
-                    const response = await medicationsAPI.search(query);
-                    let results = Array.isArray(response.data) ? response.data : (Array.isArray(response) ? response : []);
-                    if (results.length === 0) {
-                        try {
-                            const rxnormResponse = await axios.get('https://rxnav.nlm.nih.gov/REST/drugs.json', { params: { name: query } });
-                            if (rxnormResponse?.data?.drugGroup?.conceptGroup) {
-                                const rxResults = [];
-                                rxnormResponse.data.drugGroup.conceptGroup.forEach(group => {
-                                    if (group.conceptProperties) {
-                                        group.conceptProperties.forEach(drug => {
-                                            rxResults.push({ name: drug.name, rxcui: drug.rxcui });
-                                        });
-                                    }
-                                });
-                                setMedResults(rxResults.slice(0, 15));
-                            }
-                        } catch (err) {
-                            console.warn('External RxNorm search failed:', err);
-                        }
-                    } else {
-                        setMedResults(results);
+                    // Search BOTH sources in parallel for faster, more comprehensive results
+                    const [localResponse, rxnormResponse] = await Promise.allSettled([
+                        medicationsAPI.search(query),
+                        axios.get('https://rxnav.nlm.nih.gov/REST/drugs.json', { params: { name: query } })
+                    ]);
+
+                    // Process local results
+                    let localResults = [];
+                    if (localResponse.status === 'fulfilled') {
+                        const data = localResponse.value?.data;
+                        localResults = Array.isArray(data) ? data : (Array.isArray(localResponse.value) ? localResponse.value : []);
                     }
+
+                    // Process RxNorm results
+                    let rxResults = [];
+                    if (rxnormResponse.status === 'fulfilled' && rxnormResponse.value?.data?.drugGroup?.conceptGroup) {
+                        rxnormResponse.value.data.drugGroup.conceptGroup.forEach(group => {
+                            if (group.conceptProperties) {
+                                group.conceptProperties.forEach(drug => {
+                                    rxResults.push({ name: drug.name, rxcui: drug.rxcui, source: 'rxnorm' });
+                                });
+                            }
+                        });
+                    }
+
+                    // Combine and deduplicate: local results first, then RxNorm
+                    const seenNames = new Set(localResults.map(r => (r.name || '').toLowerCase()));
+                    const combinedResults = [
+                        ...localResults,
+                        ...rxResults.filter(r => !seenNames.has((r.name || '').toLowerCase()))
+                    ].slice(0, 20);
+
+                    setMedResults(combinedResults);
                 } catch (e) {
                     console.error('Medication search error:', e);
                 } finally {
@@ -1369,13 +1380,33 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                             <div className="grid grid-cols-12 gap-3">
                                                 <div className="col-span-8">
                                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sig / Instructions</label>
-                                                    <input
-                                                        className="w-full p-2 border border-gray-300 rounded-md text-sm outline-none focus:ring-1 focus:ring-primary-500"
+                                                    <select
+                                                        className="w-full p-2 border border-gray-300 rounded-md text-sm outline-none focus:ring-1 focus:ring-primary-500 bg-white"
                                                         value={currentMed.sig}
                                                         onChange={e => setCurrentMed({ ...currentMed, sig: e.target.value })}
-                                                        placeholder="e.g. 1 tab PO daily"
                                                         autoFocus
-                                                    />
+                                                    >
+                                                        <option value="">Select frequency...</option>
+                                                        <option value="1 tab PO daily">1 tab PO daily (QD)</option>
+                                                        <option value="1 tab PO BID">1 tab PO BID (twice daily)</option>
+                                                        <option value="1 tab PO TID">1 tab PO TID (3x daily)</option>
+                                                        <option value="1 tab PO QID">1 tab PO QID (4x daily)</option>
+                                                        <option value="1 tab PO at bedtime">1 tab PO at bedtime (QHS)</option>
+                                                        <option value="1 tab PO every morning">1 tab PO every morning (QAM)</option>
+                                                        <option value="1 tab PO PRN">1 tab PO PRN (as needed)</option>
+                                                        <option value="1 tab PO q6h">1 tab PO q6h</option>
+                                                        <option value="1 tab PO q8h">1 tab PO q8h</option>
+                                                        <option value="1 tab PO q12h">1 tab PO q12h</option>
+                                                        <option value="2 tabs PO daily">2 tabs PO daily</option>
+                                                        <option value="1/2 tab PO daily">1/2 tab PO daily</option>
+                                                        <option value="1 cap PO daily">1 cap PO daily</option>
+                                                        <option value="1 cap PO BID">1 cap PO BID</option>
+                                                        <option value="Apply topically daily">Apply topically daily</option>
+                                                        <option value="Apply topically BID">Apply topically BID</option>
+                                                        <option value="Inject subcutaneously daily">Inject subcutaneously daily</option>
+                                                        <option value="Inject subcutaneously weekly">Inject subcutaneously weekly</option>
+                                                        <option value="As directed">As directed</option>
+                                                    </select>
                                                 </div>
                                                 <div className="col-span-2">
                                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Dispense</label>
