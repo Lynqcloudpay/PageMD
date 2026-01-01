@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Check, X, HelpCircle, ArrowRight } from 'lucide-react';
+import LandingNav from '../components/LandingNav';
 
 const PricingPage = () => {
     const currentYear = new Date().getFullYear();
@@ -114,27 +115,7 @@ const PricingPage = () => {
 
     return (
         <div className="min-h-screen bg-white">
-            {/* Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
-                <div className="max-w-7xl mx-auto px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        <Link to="/" className="flex items-center gap-3">
-                            <img src="/logo.png" alt="PageMD" className="h-10 w-auto" />
-                        </Link>
-                        <div className="hidden md:flex items-center gap-8">
-                            <Link to="/" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">Home</Link>
-                            <Link to="/features" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">Features</Link>
-                            <Link to="/security" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">Security</Link>
-                            <Link to="/pricing" className="text-sm font-medium text-blue-600">Pricing</Link>
-                            <Link to="/about" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">About</Link>
-                            <Link to="/contact" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">Contact</Link>
-                        </div>
-                        <Link to="/login" className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
-                            Sign In
-                        </Link>
-                    </div>
-                </div>
-            </nav>
+            <LandingNav />
 
             {/* Hero */}
             <section className="pt-28 pb-16 px-6 bg-gradient-to-b from-gray-50 to-white">
