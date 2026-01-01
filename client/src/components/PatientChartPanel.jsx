@@ -957,11 +957,11 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                     onSave={async (item) => {
                                                         try {
                                                             await patientsAPI.addMedication(patientId, {
-                                                                medication_name: item.medicationName,
+                                                                medicationName: item.medicationName,
                                                                 dosage: item.dosage,
                                                                 frequency: item.frequency,
                                                                 route: item.route,
-                                                                start_date: new Date().toISOString()
+                                                                startDate: new Date().toISOString()
                                                             });
                                                             await fetchPatientData();
                                                             setShowAddMedForm(false);

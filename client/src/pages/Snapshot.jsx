@@ -289,17 +289,13 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 setProblems([]);
             }
 
-            // Set medications
-            if (snapshot.medications && snapshot.medications.length > 0) {
-                setMedications(snapshot.medications);
-            } else {
-                try {
-                    const medsResponse = await patientsAPI.getMedications(id);
-                    setMedications(medsResponse?.data || []);
-                } catch (e) {
-                    console.warn('Error fetching medications:', e);
-                    setMedications([]);
-                }
+            // Always fetch fresh medications directly from API to ensure latest data
+            try {
+                const medsResponse = await patientsAPI.getMedications(id);
+                setMedications(medsResponse?.data || []);
+            } catch (e) {
+                console.warn('Error fetching medications:', e);
+                setMedications([]);
             }
 
             // Set allergies
@@ -388,17 +384,13 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     setProblems([]);
                 }
 
-                // Set medications
-                if (snapshot.medications && snapshot.medications.length > 0) {
-                    setMedications(snapshot.medications);
-                } else {
-                    try {
-                        const medsResponse = await patientsAPI.getMedications(id);
-                        setMedications(medsResponse?.data || []);
-                    } catch (e) {
-                        console.warn('Error fetching medications:', e);
-                        setMedications([]);
-                    }
+                // Always fetch fresh medications directly from API to ensure latest data
+                try {
+                    const medsResponse = await patientsAPI.getMedications(id);
+                    setMedications(medsResponse?.data || []);
+                } catch (e) {
+                    console.warn('Error fetching medications:', e);
+                    setMedications([]);
                 }
 
                 // Set allergies

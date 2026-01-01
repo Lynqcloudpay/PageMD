@@ -10,6 +10,7 @@ const { body, validationResult } = require('express-validator');
 const { authenticate, logAudit } = require('../middleware/auth');
 const { requireAdmin } = require('../middleware/authorization');
 const roleService = require('../services/roleService');
+const AuditService = require('../services/auditService');
 
 const router = express.Router();
 
@@ -40,7 +41,7 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const role = await roleService.getRoleById(id);
-    
+
     if (!role) {
       return res.status(404).json({ error: 'Role not found' });
     }
@@ -109,9 +110,20 @@ router.put('/:id', [
       return res.status(404).json({ error: 'Role not found' });
     }
 
-    // Cannot modify system roles
+    // Previously restricted system roles, now allowing with intentional drift logging
     if (role.is_system_role) {
-      return res.status(400).json({ error: 'Cannot modify system role' });
+      console.log(`[GOVERNANCE] Intentional drift: System role '${role.name}' (ID: ${id}) metadata is being modified by user ${req.user.id}`);
+      try {
+        await AuditService.log(null, 'ROLE_GOVERNANCE_DRIFT', req.user.clinic_id || req.clinic?.id, {
+          roleId: id,
+          roleName: role.name,
+          modifiedBy: req.user.id,
+          action: 'update_role_metadata',
+          updates
+        });
+      } catch (auditErr) {
+        console.warn('Failed to log governance drift to platform audit:', auditErr.message);
+      }
     }
 
     const updatedRole = await roleService.updateRole(id, updates);
@@ -180,12 +192,27 @@ router.put('/:id/privileges', [
       return res.status(404).json({ error: 'Role not found' });
     }
 
-    // Cannot modify system roles (except Admin which is handled in code)
-    if (role.is_system_role && role.name !== 'Admin') {
-      return res.status(400).json({ error: 'Cannot modify privileges of system role' });
+    // Previously restricted system roles, now allowing with intentional drift logging
+    if (role.is_system_role) {
+      console.log(`[GOVERNANCE] Intentional drift: System role '${role.name}' is being modified by user ${req.user.id}`);
     }
 
     await roleService.updateRolePrivileges(id, privilegeIds, req.user.id);
+
+    // Document intentional drift in platform audit logs
+    if (role.is_system_role) {
+      try {
+        await AuditService.log(null, 'ROLE_GOVERNANCE_DRIFT', req.user.clinic_id || req.clinic?.id, {
+          roleId: id,
+          roleName: role.name,
+          modifiedBy: req.user.id,
+          action: 'update_all_privileges',
+          newPrivilegeCount: privilegeIds.length
+        });
+      } catch (auditErr) {
+        console.warn('Failed to log governance drift to platform audit:', auditErr.message);
+      }
+    }
 
     await logAudit(req.user.id, 'role_privileges_updated', 'role', id, { privilegeIds }, req.ip);
 

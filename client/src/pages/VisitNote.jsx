@@ -2570,8 +2570,8 @@ const VisitNote = () => {
                                                     const medStartDate = new Date(m.start_date);
                                                     medStartDate.setHours(0, 0, 0, 0); // Set to start of day
 
-                                                    // Only include if medication was started before this visit
-                                                    const shouldShow = medStartDate < visitDate;
+                                                    // Include if medication was started before or on the day of this visit
+                                                    const shouldShow = medStartDate <= visitDate;
                                                     console.log(`[HomeMeds] ${m.medication_name}: medStart=${medStartDate.toISOString()}, visitDate=${visitDate.toISOString()}, show=${shouldShow}`);
                                                     return shouldShow;
                                                 }
@@ -2877,7 +2877,7 @@ const VisitNote = () => {
                                                         }}
                                                         className="flex-1 text-left hover:text-primary-600 hover:underline transition-colors"
                                                     >
-                                                        {diag}
+                                                        {diag.replace(/^\d+\.\s*/, '')}
                                                     </button>
                                                 </div>
                                                 <button

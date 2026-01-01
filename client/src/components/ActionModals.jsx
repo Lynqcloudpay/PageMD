@@ -787,11 +787,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
 
                             if (item.action === 'continue') continue;
 
-                            // DISABLED: Don't add to patient medication record until note is signed
-                            // Per user requirement: Home medications = meds started BEFORE today
-                            // Newly ordered meds should NOT appear in home meds until note is signed
-                            /*
-                            // 1. ALWAYS add to patient medication record first (Mother Database)
+                            // 1. ALWAYS add to patient medication record first
                             if (!item.action || item.action === 'refill') {
                                 try {
                                     console.log(`[OrderModal] Pushing NEW medication to patient record: ${item.name}`);
@@ -812,7 +808,6 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                     }
                                 }
                             }
-                            */
 
                             // 2. Separately handle E-Rx Draft (don't let failure here block the record save)
                             try {
@@ -1294,11 +1289,25 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                     medResults.map((m, i) => (
                                                         <button
                                                             key={i}
-                                                            onClick={() => setCurrentMed({ ...currentMed, name: m.name })}
+                                                            onClick={() => {
+                                                                // Directly add to cart with default values
+                                                                addToCart({
+                                                                    name: m.name,
+                                                                    sig: 'As directed',
+                                                                    dispense: '30',
+                                                                    refills: '0',
+                                                                    type: 'medications',
+                                                                    diagnosis: selectedDiagnosis,
+                                                                    pharmacy: rxMode === 'electronic' ? selectedPharmacy : null,
+                                                                    rxMode: rxMode
+                                                                });
+                                                                setSearchQuery('');
+                                                                setMedResults([]);
+                                                            }}
                                                             className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-primary-50 border border-transparent hover:border-primary-100 transition-all text-left group"
                                                         >
                                                             <Pill className="w-4 h-4 text-primary-400 group-hover:text-primary-600" />
-                                                            <div>
+                                                            <div className="flex-1">
                                                                 <p className="text-sm font-semibold text-gray-900 leading-tight">
                                                                     {(m.name || '')
                                                                         .replace(/&amp;/g, '&')
@@ -1309,16 +1318,32 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                                 </p>
                                                                 {m.strength && <p className="text-[10px] text-gray-500">{m.strength}</p>}
                                                             </div>
+                                                            <div className="text-[10px] font-bold text-primary-600 opacity-0 group-hover:opacity-100">
+                                                                Click to add →
+                                                            </div>
                                                         </button>
                                                     ))
                                                 ) : searchQuery.length > 2 && !searchingMed ? (
                                                     <div className="p-4 text-center border-2 border-dashed border-gray-100 rounded-lg">
                                                         <p className="text-sm text-gray-400 mb-2">No matching medications found</p>
                                                         <button
-                                                            onClick={() => setCurrentMed({ ...currentMed, name: searchQuery })}
+                                                            onClick={() => {
+                                                                // Allow custom medication entry
+                                                                addToCart({
+                                                                    name: searchQuery,
+                                                                    sig: 'As directed',
+                                                                    dispense: '30',
+                                                                    refills: '0',
+                                                                    type: 'medications',
+                                                                    diagnosis: selectedDiagnosis,
+                                                                    pharmacy: rxMode === 'electronic' ? selectedPharmacy : null,
+                                                                    rxMode: rxMode
+                                                                });
+                                                                setSearchQuery('');
+                                                            }}
                                                             className="text-primary-600 text-xs font-bold uppercase tracking-wider hover:underline"
                                                         >
-                                                            Use "{searchQuery}" as custom input
+                                                            Add "{searchQuery}" as custom medication
                                                         </button>
                                                     </div>
                                                 ) : null}

@@ -16,7 +16,7 @@ async function getUserAuthContext(userId) {
   try {
     // Get user basic info (clinic_id may not exist in all schemas)
     const userRes = await pool.query(
-      `SELECT u.id, u.email, u.first_name, u.last_name, u.role_id, u.role, 
+      `SELECT u.id, u.email, u.first_name, u.last_name, u.role_id, u.role, u.clinic_id, 
               COALESCE(u.is_admin, false) as is_admin,
               r.name as role_name
        FROM users u
@@ -36,29 +36,32 @@ async function getUserAuthContext(userId) {
     // Determine if this user should be treated as an admin
     const isAdminUser = user.is_admin || normalizedRole === 'ADMIN';
 
-    // Get base permissions from role - try role_privileges first (actual table name), then fall back
+    // Get permissions for this SPECIFIC role ID from the database
     let permsRes = { rows: [] };
     try {
       permsRes = await pool.query(
         `SELECT p.name AS key
          FROM role_privileges rp
          JOIN privileges p ON rp.privilege_id = p.id
-         JOIN roles r ON rp.role_id = r.id
-         WHERE r.name ILIKE $1`,
-        [normalizedRole]
+         WHERE rp.role_id = $1`,
+        [user.role_id]
       );
     } catch (err) {
-      console.warn('Could not fetch role_privileges, using defaults:', err.message);
+      console.warn('Could not fetch role_privileges for roleId:', user.role_id, err.message);
     }
 
-    // Start with default permissions for this role to ensure new format keys are present
-    const defaultPerms = getDefaultPermissionsForRole(normalizedRole);
-    const base = new Set(defaultPerms);
+    const base = new Set();
 
-    // Merge in DB permissions if any exist
-    permsRes.rows.forEach(r => {
-      if (r.key) base.add(r.key);
-    });
+    if (permsRes.rows.length > 0) {
+      // Use DB permissions as the source of truth
+      permsRes.rows.forEach(r => {
+        if (r.key) base.add(r.key);
+      });
+    } else {
+      // Fallback: Only use defaults if the database has no privileges defined for this role
+      const defaultPerms = getDefaultPermissionsForRole(normalizedRole);
+      defaultPerms.forEach(p => base.add(p));
+    }
 
     // Admin users get all permissions (both from privileges table and our hardcoded list)
     if (isAdminUser) {
@@ -87,7 +90,7 @@ async function getUserAuthContext(userId) {
       // Expose a clear isAdmin flag that combines DB flag + role
       isAdmin: isAdminUser,
       is_admin: user.is_admin, // Also include snake_case version
-      clinicId: null, // clinic_id column may not exist in all schemas
+      clinicId: user.clinic_id || null, // Capture clinic_id if present
       permissions: Array.from(base),
       scope: {
         scheduleScope: normalizedRole === 'CLINICIAN' ? 'SELF' : 'CLINIC',
