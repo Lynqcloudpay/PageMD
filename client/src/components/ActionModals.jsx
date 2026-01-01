@@ -1263,6 +1263,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                         >
                                                             <Pill className="w-5 h-5 text-primary-400 group-hover:text-primary-600 flex-shrink-0" />
                                                             <div className="flex-1 min-w-0">
+                                                                <h2 className="text-lg font-semibold text-ink-900 tracking-tight">Order Entry (v1.2)</h2>
                                                                 <p className="text-sm font-semibold text-gray-900 leading-tight truncate">
                                                                     {(m.name || '')
                                                                         .replace(/&amp;/g, '&')
