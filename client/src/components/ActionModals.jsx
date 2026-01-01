@@ -561,82 +561,16 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
             const searchTimer = setTimeout(async () => {
                 setSearchingMed(true);
                 try {
-                    let results = [];
-
-                    // Try OpenFDA API first (more reliable for drug searches)
-                    try {
-                        const openFdaResponse = await axios.get(
-                            `https://api.fda.gov/drug/drugsfda.json`,
-                            {
-                                params: {
-                                    search: `openfda.brand_name:"${query}"~2+openfda.generic_name:"${query}"~2`,
-                                    limit: 20
-                                },
-                                timeout: 5000
-                            }
-                        );
-
-                        if (openFdaResponse.data?.results) {
-                            const seenNames = new Set();
-                            openFdaResponse.data.results.forEach(drug => {
-                                // Get brand names
-                                const brandNames = drug.openfda?.brand_name || [];
-                                const genericNames = drug.openfda?.generic_name || [];
-
-                                brandNames.forEach(name => {
-                                    const lowerName = name.toLowerCase();
-                                    if (!seenNames.has(lowerName) && lowerName.includes(query.toLowerCase())) {
-                                        seenNames.add(lowerName);
-                                        results.push({ name, source: 'fda' });
-                                    }
-                                });
-
-                                genericNames.forEach(name => {
-                                    const lowerName = name.toLowerCase();
-                                    if (!seenNames.has(lowerName) && lowerName.includes(query.toLowerCase())) {
-                                        seenNames.add(lowerName);
-                                        results.push({ name, source: 'fda' });
-                                    }
-                                });
-                            });
-                        }
-                    } catch (fdaError) {
-                        console.log('OpenFDA error, trying RxNorm:', fdaError.message);
-                    }
-
-                    // If OpenFDA didn't return enough results, try RxNorm
-                    if (results.length < 5) {
-                        try {
-                            const rxnormResponse = await axios.get('https://rxnav.nlm.nih.gov/REST/approximateTerm.json', {
-                                params: { term: query, maxEntries: 20 },
-                                timeout: 5000
-                            });
-
-                            if (rxnormResponse.data?.approximateGroup?.candidate) {
-                                const seenNames = new Set(results.map(r => r.name.toLowerCase()));
-                                rxnormResponse.data.approximateGroup.candidate.forEach(drug => {
-                                    if (drug.name && !seenNames.has(drug.name.toLowerCase())) {
-                                        results.push({
-                                            name: drug.name,
-                                            rxcui: drug.rxcui,
-                                            source: 'rxnorm'
-                                        });
-                                    }
-                                });
-                            }
-                        } catch (rxError) {
-                            console.log('RxNorm error:', rxError.message);
-                        }
-                    }
-
-                    setMedResults(results.slice(0, 25));
+                    // Use backend proxy to avoid CORS and leverage robust server-side logic (OpenFDA + RxNorm + Fallback)
+                    const response = await medicationsAPI.search(query);
+                    setMedResults(response.data || []);
                 } catch (e) {
                     console.error('Medication search error:', e);
                     setMedResults([]);
                 } finally {
                     setSearchingMed(false);
                 }
-            }, 400);
+            }, 300);
             return () => clearTimeout(searchTimer);
         }
 

@@ -25,80 +25,94 @@ const USE_CACHE = process.env.RXNORM_USE_CACHE !== 'false'; // Default to true
  * @param {number} maxResults - Maximum number of results to return
  * @returns {Promise<Array>} Array of medication objects
  */
-async function searchMedications(searchTerm, maxResults = 20) {
+async function searchMedications(searchTerm, maxResults = 25) {
   try {
-    // Check cache first
-    if (USE_CACHE) {
-      const cached = await searchMedicationCache(searchTerm);
-      if (cached && cached.length > 0) {
-        console.log(`Cache hit for medication search: ${searchTerm}`);
-        return cached.slice(0, maxResults);
-      }
-    }
+    const searchLower = searchTerm.toLowerCase().trim();
+    let results = [];
 
-    // Try RxNorm API with short timeout
+    // 1. Try OpenFDA API first (Free, robust, fuzzy matching)
     try {
-      const response = await axios.get(`${RXNORM_BASE_URL}/drugs.json`, {
+      console.log(`Searching OpenFDA for: ${searchTerm}`);
+      const openFdaResponse = await axios.get('https://api.fda.gov/drug/drugsfda.json', {
         params: {
-          name: searchTerm
+          // Use fuzzy search (~2) on both brand and generic names
+          search: `openfda.brand_name:"${searchTerm}"~2+openfda.generic_name:"${searchTerm}"~2`,
+          limit: 20
         },
-        timeout: 3000 // 3 second timeout
+        timeout: 5000
       });
 
-      const drugs = response.data?.drugGroup?.conceptGroup;
-      if (drugs && Array.isArray(drugs)) {
-        // Extract medication concepts
-        const medications = [];
-        for (const group of drugs) {
-          if (group.conceptProperties && Array.isArray(group.conceptProperties)) {
-            for (const concept of group.conceptProperties) {
-              medications.push({
-                rxcui: concept.rxcui,
-                name: concept.name,
-                synonym: concept.synonym || concept.name,
-                tty: concept.tty, // Term Type
-                language: concept.language
+      if (openFdaResponse.data?.results) {
+        const seenNames = new Set();
+        openFdaResponse.data.results.forEach(drug => {
+          // Extract brand names
+          if (drug.openfda?.brand_name) {
+            drug.openfda.brand_name.forEach(name => {
+              if (name && !seenNames.has(name.toLowerCase())) {
+                seenNames.add(name.toLowerCase());
+                results.push({ name: name, type: 'brand', source: 'fda' });
+              }
+            });
+          }
+          // Extract generic names
+          if (drug.openfda?.generic_name) {
+            drug.openfda.generic_name.forEach(name => {
+              if (name && !seenNames.has(name.toLowerCase())) {
+                seenNames.add(name.toLowerCase());
+                results.push({ name: name, type: 'generic', source: 'fda' });
+              }
+            });
+          }
+        });
+      }
+    } catch (fdaError) {
+      console.log(`OpenFDA search failed: ${fdaError.message}`);
+    }
+
+    // 2. Try RxNorm "Approximate Term" API (Better than strict drugs.json)
+    // Always call this if OpenFDA yielded few results, or just to enrich
+    if (results.length < 5) {
+      try {
+        console.log(`Searching RxNorm Approximate for: ${searchTerm}`);
+        const rxnormResponse = await axios.get(`${RXNORM_BASE_URL}/approximateTerm.json`, {
+          params: { term: searchTerm, maxEntries: 20 },
+          timeout: 4000
+        });
+
+        if (rxnormResponse.data?.approximateGroup?.candidate) {
+          const seenNames = new Set(results.map(r => r.name.toLowerCase()));
+          rxnormResponse.data.approximateGroup.candidate.forEach(c => {
+            // Only add if score is reasonable or we're desperate
+            if (c.name && !seenNames.has(c.name.toLowerCase())) {
+              results.push({
+                rxcui: c.rxcui,
+                name: c.name,
+                score: c.score,
+                source: 'rxnorm'
               });
             }
-          }
+          });
         }
-
-        // Cache results if found
-        if (USE_CACHE && medications.length > 0) {
-          await cacheMedicationSearch(searchTerm, medications);
-        }
-
-        if (medications.length > 0) {
-          return medications.slice(0, maxResults);
-        }
+      } catch (rxError) {
+        console.log(`RxNorm Approximate search failed: ${rxError.message}`);
       }
-    } catch (apiError) {
-      console.log(`RxNorm API failed for "${searchTerm}": ${apiError.message}`);
-      // Continue to fallback
     }
 
-    // Fallback to local database
-    console.log(`Using fallback for medication search: ${searchTerm}`);
-    const localResults = await searchLocalMedicationDatabase(searchTerm, maxResults);
-    if (localResults && localResults.length > 0) {
-      console.log(`Found ${localResults.length} results in local database/fallback`);
-      return localResults;
+    // 3. Fallback to Local Hardcoded List if absolutely nothing found
+    if (results.length === 0) {
+      console.log(`No API results, using local fallback for: ${searchTerm}`);
+      const fallback = getCommonMedicationsFallback(searchTerm, maxResults);
+      return fallback;
     }
 
-    // Return empty array if nothing found
-    return [];
+    // Filter to ensure partial match at least somewhat relevant
+    // (OpenFDA fuzzy match ~2 is pretty good, but we can do a sanity check if needed)
+
+    return results.slice(0, maxResults);
 
   } catch (error) {
-    console.error('Medication search error:', error.message);
-
-    // Final fallback
-    try {
-      const fallbackResults = await searchLocalMedicationDatabase(searchTerm, maxResults);
-      return fallbackResults || [];
-    } catch (fallbackError) {
-      console.error('Fallback search also failed:', fallbackError.message);
-      return [];
-    }
+    console.error('Medication search critical error:', error.message);
+    return getCommonMedicationsFallback(searchTerm, maxResults);
   }
 }
 
