@@ -561,53 +561,82 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
             const searchTimer = setTimeout(async () => {
                 setSearchingMed(true);
                 try {
-                    // Use RxNorm approximateTerm API for better partial matching
-                    const rxnormResponse = await axios.get('https://rxnav.nlm.nih.gov/REST/approximateTerm.json', {
-                        params: { term: query, maxEntries: 25 }
-                    });
+                    let results = [];
 
-                    let rxResults = [];
-                    if (rxnormResponse.data?.approximateGroup?.candidate) {
-                        rxnormResponse.data.approximateGroup.candidate.forEach(drug => {
-                            if (drug.name) {
-                                rxResults.push({
-                                    name: drug.name,
-                                    rxcui: drug.rxcui,
-                                    source: 'rxnorm',
-                                    score: drug.score
-                                });
+                    // Try OpenFDA API first (more reliable for drug searches)
+                    try {
+                        const openFdaResponse = await axios.get(
+                            `https://api.fda.gov/drug/drugsfda.json`,
+                            {
+                                params: {
+                                    search: `openfda.brand_name:"${query}"~2+openfda.generic_name:"${query}"~2`,
+                                    limit: 20
+                                },
+                                timeout: 5000
                             }
-                        });
+                        );
+
+                        if (openFdaResponse.data?.results) {
+                            const seenNames = new Set();
+                            openFdaResponse.data.results.forEach(drug => {
+                                // Get brand names
+                                const brandNames = drug.openfda?.brand_name || [];
+                                const genericNames = drug.openfda?.generic_name || [];
+
+                                brandNames.forEach(name => {
+                                    const lowerName = name.toLowerCase();
+                                    if (!seenNames.has(lowerName) && lowerName.includes(query.toLowerCase())) {
+                                        seenNames.add(lowerName);
+                                        results.push({ name, source: 'fda' });
+                                    }
+                                });
+
+                                genericNames.forEach(name => {
+                                    const lowerName = name.toLowerCase();
+                                    if (!seenNames.has(lowerName) && lowerName.includes(query.toLowerCase())) {
+                                        seenNames.add(lowerName);
+                                        results.push({ name, source: 'fda' });
+                                    }
+                                });
+                            });
+                        }
+                    } catch (fdaError) {
+                        console.log('OpenFDA error, trying RxNorm:', fdaError.message);
                     }
 
-                    // If no results, try the drugs.json endpoint as fallback
-                    if (rxResults.length === 0) {
-                        const drugsResponse = await axios.get('https://rxnav.nlm.nih.gov/REST/drugs.json', {
-                            params: { name: query }
-                        });
-                        if (drugsResponse.data?.drugGroup?.conceptGroup) {
-                            drugsResponse.data.drugGroup.conceptGroup.forEach(group => {
-                                if (group.conceptProperties) {
-                                    group.conceptProperties.forEach(drug => {
-                                        rxResults.push({
+                    // If OpenFDA didn't return enough results, try RxNorm
+                    if (results.length < 5) {
+                        try {
+                            const rxnormResponse = await axios.get('https://rxnav.nlm.nih.gov/REST/approximateTerm.json', {
+                                params: { term: query, maxEntries: 20 },
+                                timeout: 5000
+                            });
+
+                            if (rxnormResponse.data?.approximateGroup?.candidate) {
+                                const seenNames = new Set(results.map(r => r.name.toLowerCase()));
+                                rxnormResponse.data.approximateGroup.candidate.forEach(drug => {
+                                    if (drug.name && !seenNames.has(drug.name.toLowerCase())) {
+                                        results.push({
                                             name: drug.name,
                                             rxcui: drug.rxcui,
                                             source: 'rxnorm'
                                         });
-                                    });
-                                }
-                            });
+                                    }
+                                });
+                            }
+                        } catch (rxError) {
+                            console.log('RxNorm error:', rxError.message);
                         }
                     }
 
-                    setMedResults(rxResults.slice(0, 25));
+                    setMedResults(results.slice(0, 25));
                 } catch (e) {
-                    console.error('RxNorm search error:', e);
+                    console.error('Medication search error:', e);
                     setMedResults([]);
                 } finally {
                     setSearchingMed(false);
                 }
-            }, 300);
+            }, 400);
             return () => clearTimeout(searchTimer);
         }
 
@@ -1444,12 +1473,26 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                     onClick={() => addToCart({
                                                         name: med.medication_name,
                                                         sig: med.frequency,
+                                                        type: 'medications',
+                                                        diagnosis: selectedDiagnosis,
+                                                        action: 'continue',
+                                                        originalString: `Continue: ${med.medication_name} ${med.frequency}`
+                                                    })}
+                                                    className="px-1.5 py-1 text-[9px] font-bold bg-green-50 text-green-700 border border-green-200 rounded hover:bg-green-100"
+                                                >
+                                                    Continue
+                                                </button>
+                                                <button
+                                                    onClick={() => addToCart({
+                                                        name: med.medication_name,
+                                                        sig: med.frequency,
                                                         dispense: '30',
                                                         type: 'medications',
                                                         diagnosis: selectedDiagnosis,
-                                                        action: 'refill'
+                                                        action: 'refill',
+                                                        originalString: `Refill: ${med.medication_name} ${med.frequency}`
                                                     })}
-                                                    className="px-2 py-1 text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100"
+                                                    className="px-1.5 py-1 text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100"
                                                 >
                                                     Refill
                                                 </button>
@@ -1458,9 +1501,10 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                         name: med.medication_name,
                                                         sig: 'DISCONTINUE',
                                                         type: 'medications',
-                                                        action: 'stop'
+                                                        action: 'stop',
+                                                        originalString: `Stop: ${med.medication_name}`
                                                     })}
-                                                    className="px-2 py-1 text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 rounded hover:bg-red-100"
+                                                    className="px-1.5 py-1 text-[9px] font-bold bg-red-50 text-red-700 border border-red-200 rounded hover:bg-red-100"
                                                 >
                                                     Stop
                                                 </button>
