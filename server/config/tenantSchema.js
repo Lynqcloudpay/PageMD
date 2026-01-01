@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS roles (
     name VARCHAR(100) UNIQUE NOT NULL,
     description TEXT,
     is_system_role BOOLEAN DEFAULT false,
+    source_template_id UUID, -- Links to platform_role_templates for governance
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

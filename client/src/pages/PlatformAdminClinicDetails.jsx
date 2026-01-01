@@ -176,6 +176,8 @@ const DriftManager = ({ clinicId, apiCall }) => {
             setDrift(data.drift);
         } catch (err) {
             console.error('Failed to load drift:', err);
+            const msg = err.response?.data?.error || err.message || 'Failed to load permission drift from server';
+            setError(msg);
         } finally {
             setLoading(false);
         }
@@ -293,6 +295,8 @@ const PlatformAuditTrail = ({ clinicId, apiCall }) => {
             setLogs(data);
         } catch (err) {
             console.error('Failed to load clinic audit logs:', err);
+            const msg = err.response?.data?.error || err.message || 'Failed to fetch platform audit logs';
+            setLogs([]); // Clear logs on error
         } finally {
             setLoading(false);
         }

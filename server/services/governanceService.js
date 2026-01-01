@@ -28,111 +28,134 @@ const PERMISSION_CATALOG = [
  * @param {string} clinicId 
  */
 async function detectDrift(clinicId) {
-    const clinicRes = await pool.controlPool.query('SELECT id, schema_name FROM clinics WHERE id = $1', [clinicId]);
-    if (clinicRes.rows.length === 0) throw new Error('Clinic not found');
-    const { schema_name } = clinicRes.rows[0];
+    try {
+        const clinicRes = await pool.controlPool.query('SELECT id, schema_name FROM clinics WHERE id = $1', [clinicId]);
+        if (clinicRes.rows.length === 0) throw new Error(`Clinic not found: ${clinicId}`);
+        const { schema_name } = clinicRes.rows[0];
 
-    // 1. Fetch templates
-    const templatesRes = await pool.controlPool.query(`
-        SELECT t.role_key, t.display_name, tp.privilege_name
-        FROM platform_role_templates t
-        JOIN platform_role_template_privileges tp ON t.id = tp.template_id
-    `);
+        if (!schema_name) throw new Error(`Clinic ${clinicId} has no schema_name assigned`);
 
-    const templates = {};
-    templatesRes.rows.forEach(r => {
-        if (!templates[r.role_key]) {
-            templates[r.role_key] = {
-                displayName: r.display_name,
-                privileges: new Set()
-            };
-        }
-        templates[r.role_key].privileges.add(r.privilege_name);
-    });
+        // 1. Fetch templates
+        const templatesRes = await pool.controlPool.query(`
+            SELECT t.role_key, t.display_name, tp.privilege_name
+            FROM platform_role_templates t
+            JOIN platform_role_template_privileges tp ON t.id = tp.template_id
+        `);
 
-    // 2. Fetch clinic roles & privileges
-    const clinicRolesRes = await pool.controlPool.query(`
-        SELECT r.id, r.name as role_name, r.source_template_id, p.name as privilege_name
-        FROM ${schema_name}.roles r
-        LEFT JOIN ${schema_name}.role_privileges rp ON r.id = rp.role_id
-        LEFT JOIN ${schema_name}.privileges p ON rp.privilege_id = p.id
-    `);
+        const templates = {};
+        templatesRes.rows.forEach(r => {
+            if (!templates[r.role_key]) {
+                templates[r.role_key] = {
+                    displayName: r.display_name,
+                    privileges: new Set()
+                };
+            }
+            templates[r.role_key].privileges.add(r.privilege_name);
+        });
 
-    const clinicRoles = {};
-    clinicRolesRes.rows.forEach(r => {
-        // Use a composite key or just store by multiple accessors?
-        // Let's store objects we can iterate over
-        if (!clinicRoles[r.role_name]) {
-            clinicRoles[r.role_name] = {
-                id: r.id,
-                name: r.role_name,
-                sourceTemplateId: r.source_template_id,
-                privileges: new Set()
-            };
-        }
-        if (r.privilege_name) clinicRoles[r.role_name].privileges.add(r.privilege_name);
-    });
+        // 2. Fetch clinic roles & privileges
+        // We catch this specifically because it's the most likely point of failure (schema mismatch)
+        let clinicRolesRes;
+        try {
+            // We use a CASE statement or separate check to handle missing source_template_id column safely
+            const columnCheck = await pool.controlPool.query(`
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_schema = $1 AND table_name = 'roles' AND column_name = 'source_template_id'
+            `, [schema_name]);
 
+            const hasSourceTemplateId = columnCheck.rows.length > 0;
+            const sourceTemplateSelect = hasSourceTemplateId ? 'r.source_template_id' : 'NULL as source_template_id';
 
-    // Map clinic roles by sourceTemplateId for reliable lookup
-    const rolesByTemplateId = new Map();
-    Object.values(clinicRoles).forEach(role => {
-        if (role.sourceTemplateId) {
-            rolesByTemplateId.set(role.sourceTemplateId, role);
-        }
-    });
-
-    const catalogSet = new Set(PERMISSION_CATALOG);
-    const driftReports = [];
-
-    // Compare Standard Roles
-    const templatesRes2 = await pool.controlPool.query('SELECT id, role_key FROM platform_role_templates');
-    const templateIds = new Map();
-    templatesRes2.rows.forEach(t => templateIds.set(t.role_key, t.id));
-
-    for (const [tplKey, tpl] of Object.entries(templates)) {
-        const tplId = templateIds.get(tplKey);
-
-        // 1. Try match by source_template_id (Hard Link)
-        let roleInClinic = rolesByTemplateId.get(tplId);
-
-        // 2. Fallback: Match by name (Soft Link)
-        if (!roleInClinic) {
-            roleInClinic = clinicRoles[tplKey] || clinicRoles[tpl.displayName];
+            clinicRolesRes = await pool.controlPool.query(`
+                SELECT r.id, r.name as role_name, ${sourceTemplateSelect}, p.name as privilege_name
+                FROM ${schema_name}.roles r
+                LEFT JOIN ${schema_name}.role_privileges rp ON r.id = rp.role_id
+                LEFT JOIN ${schema_name}.privileges p ON rp.privilege_id = p.id
+            `);
+        } catch (dbErr) {
+            console.error(`[Governance] Database error accessing schema ${schema_name}:`, dbErr.message);
+            throw new Error(`Clinical database for this clinic is not fully initialized or accessible (${dbErr.message})`);
         }
 
-        if (!roleInClinic) {
+        const clinicRoles = {};
+        clinicRolesRes.rows.forEach(r => {
+            if (!clinicRoles[r.role_name]) {
+                clinicRoles[r.role_name] = {
+                    id: r.id,
+                    name: r.role_name,
+                    sourceTemplateId: r.source_template_id,
+                    privileges: new Set()
+                };
+            }
+            if (r.privilege_name) clinicRoles[r.role_name].privileges.add(r.privilege_name);
+        });
+
+
+        // Map clinic roles by sourceTemplateId for reliable lookup
+        const rolesByTemplateId = new Map();
+        Object.values(clinicRoles).forEach(role => {
+            if (role.sourceTemplateId) {
+                rolesByTemplateId.set(role.sourceTemplateId, role);
+            }
+        });
+
+        const catalogSet = new Set(PERMISSION_CATALOG);
+        const driftReports = [];
+
+        // Compare Standard Roles
+        const templatesRes2 = await pool.controlPool.query('SELECT id, role_key FROM platform_role_templates');
+        const templateIds = new Map();
+        templatesRes2.rows.forEach(t => templateIds.set(t.role_key, t.id));
+
+        for (const [tplKey, tpl] of Object.entries(templates)) {
+            const tplId = templateIds.get(tplKey);
+
+            // 1. Try match by source_template_id (Hard Link)
+            let roleInClinic = rolesByTemplateId.get(tplId);
+
+            // 2. Fallback: Match by name (Soft Link)
+            if (!roleInClinic) {
+                roleInClinic = clinicRoles[tplKey] || clinicRoles[tpl.displayName];
+            }
+
+            if (!roleInClinic) {
+                driftReports.push({
+                    roleKey: tplKey,
+                    displayName: tpl.displayName,
+                    status: 'MISSING',
+                    missingPrivileges: Array.from(tpl.privileges),
+                    extraPrivileges: [],
+                    unknownPrivileges: []
+                });
+                continue;
+            }
+
+            const currentPrivs = roleInClinic.privileges;
+            const missing = Array.from(tpl.privileges).filter(p => !currentPrivs.has(p));
+            const extra = Array.from(currentPrivs).filter(p => !tpl.privileges.has(p));
+            const unknown = Array.from(currentPrivs).filter(p => !catalogSet.has(p));
+
+            const status = (missing.length > 0 || extra.length > 0 || unknown.length > 0) ? 'DRIFTED' : 'SYNCED';
+
             driftReports.push({
                 roleKey: tplKey,
                 displayName: tpl.displayName,
-                status: 'MISSING',
-                missingPrivileges: Array.from(tpl.privileges),
-                extraPrivileges: [],
-                unknownPrivileges: []
+                status,
+                isLinked: !!roleInClinic.sourceTemplateId,
+                missingPrivileges: missing,
+                extraPrivileges: extra,
+                unknownPrivileges: unknown
             });
-            continue;
         }
 
-        const currentPrivs = roleInClinic.privileges;
-        const missing = Array.from(tpl.privileges).filter(p => !currentPrivs.has(p));
-        const extra = Array.from(currentPrivs).filter(p => !tpl.privileges.has(p));
-        const unknown = Array.from(currentPrivs).filter(p => !catalogSet.has(p));
-
-        const status = (missing.length > 0 || extra.length > 0 || unknown.length > 0) ? 'DRIFTED' : 'SYNCED';
-
-        driftReports.push({
-            roleKey: tplKey,
-            displayName: tpl.displayName,
-            status,
-            isLinked: !!roleInClinic.sourceTemplateId,
-            missingPrivileges: missing,
-            extraPrivileges: extra,
-            unknownPrivileges: unknown
-        });
+        return driftReports;
+    } catch (error) {
+        console.error('[Governance] detectDrift failed:', error);
+        throw error;
     }
-
-    return driftReports;
 }
+
 
 /**
  * Sync a role to match template
