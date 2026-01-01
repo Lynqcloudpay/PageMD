@@ -14,9 +14,9 @@ const pool = require('../db');
  */
 async function getUserAuthContext(userId) {
   try {
-    // Get user basic info (clinic_id may not exist in all schemas)
+    // Get user basic info
     const userRes = await pool.query(
-      `SELECT u.id, u.email, u.first_name, u.last_name, u.role_id, u.role, u.clinic_id, 
+      `SELECT u.id, u.email, u.first_name, u.last_name, u.role_id, u.role, 
               COALESCE(u.is_admin, false) as is_admin,
               r.name as role_name
        FROM users u
@@ -90,7 +90,6 @@ async function getUserAuthContext(userId) {
       // Expose a clear isAdmin flag that combines DB flag + role
       isAdmin: isAdminUser,
       is_admin: user.is_admin, // Also include snake_case version
-      clinicId: user.clinic_id || null, // Capture clinic_id if present
       permissions: Array.from(base),
       scope: {
         scheduleScope: normalizedRole === 'CLINICIAN' ? 'SELF' : 'CLINIC',
