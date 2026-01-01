@@ -5,6 +5,22 @@ import { searchLabTests, searchImaging } from '../data/labCodes';
 import axios from 'axios';
 import { codesAPI, referralsAPI, eprescribeAPI, medicationsAPI, ordersCatalogAPI, ordersetsAPI, patientsAPI, icd10API } from '../services/api';
 
+const decodeHtmlEntities = (text) => {
+    if (typeof text !== 'string') return String(text || '');
+    let str = text;
+    if (typeof document !== 'undefined') {
+        const txt = document.createElement('textarea');
+        for (let i = 0; i < 4; i++) {
+            const prev = str;
+            txt.innerHTML = str;
+            str = txt.value;
+            str = str.replace(/&#x2F;/ig, '/').replace(/&#47;/g, '/');
+            if (str === prev) break;
+        }
+    }
+    return str;
+};
+
 export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [] }) => {
     const [med, setMed] = useState('');
     const [sig, setSig] = useState('');
@@ -227,7 +243,17 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
     const [groupDxResults, setGroupDxResults] = useState([]);
     const [labVendor, setLabVendor] = useState('quest');
     const [referralReason, setReferralReason] = useState('');
-    const [currentMed, setCurrentMed] = useState({ name: '', sig: '', dispense: '', refills: '0', note: '' });
+    const [currentMed, setCurrentMed] = useState({
+        name: '',
+        sig: '',
+        dose: '1',
+        unit: 'tab',
+        route: 'PO',
+        frequency: 'Daily',
+        dispense: '30',
+        refills: '0',
+        note: ''
+    });
     const [searchingMed, setSearchingMed] = useState(false);
     const [medResults, setMedResults] = useState([]);
     const [orderSets, setOrderSets] = useState([]);
@@ -737,7 +763,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
         setCart([...cart, newItem]);
         setSearchQuery('');
         setReferralReason('');
-        setCurrentMed({ name: '', sig: '', dispense: '', refills: '0', note: '' });
+        setCurrentMed({ name: '', sig: '', dose: '1', unit: 'tab', route: 'PO', frequency: 'Daily', dispense: '30', refills: '0', note: '' });
     };
 
     const removeFromCart = (id) => {
@@ -921,7 +947,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
             className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0 flex justify-between items-center group transition-colors"
         >
             <div>
-                <div className="font-medium text-gray-900 text-sm">{item.name}</div>
+                <div className="font-medium text-gray-900 text-sm">{decodeHtmlEntities(item.name)}</div>
                 <div className="text-xs text-gray-500 mt-0.5">
                     {activeTab === 'labs' && item.loinc && (
                         <span className="text-primary-600">LOINC: {item.loinc}</span>
@@ -1252,6 +1278,10 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                                 setCurrentMed({
                                                                     name: m.name,
                                                                     sig: '',
+                                                                    dose: '1',
+                                                                    unit: 'tab',
+                                                                    route: 'PO',
+                                                                    frequency: 'Daily',
                                                                     dispense: '30',
                                                                     refills: '0',
                                                                     note: ''
@@ -1265,12 +1295,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                             <div className="flex-1 min-w-0">
                                                                 <h2 className="text-lg font-semibold text-ink-900 tracking-tight">Order Entry (v1.2)</h2>
                                                                 <p className="text-sm font-semibold text-gray-900 leading-tight truncate">
-                                                                    {(m.name || '')
-                                                                        .replace(/&amp;/g, '&')
-                                                                        .replace(/&#x2f;/gi, '/')
-                                                                        .replace(/&#47;/g, '/')
-                                                                        .replace(/&quot;/g, '"')
-                                                                        .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
+                                                                    {decodeHtmlEntities(m.name || '')}
                                                                 </p>
                                                                 {m.strength && <p className="text-xs text-gray-500 mt-0.5">{m.strength}</p>}
                                                             </div>
@@ -1287,6 +1312,10 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                                 setCurrentMed({
                                                                     name: searchQuery,
                                                                     sig: '',
+                                                                    dose: '1',
+                                                                    unit: 'tab',
+                                                                    route: 'PO',
+                                                                    frequency: 'Daily',
                                                                     dispense: '30',
                                                                     refills: '0',
                                                                     note: ''
@@ -1312,53 +1341,64 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                         <div className="space-y-4 animate-in slide-in-from-top-2">
                                             <div className="p-3 bg-primary-50 border border-primary-100 rounded-lg flex justify-between items-center text-primary-900">
                                                 <span className="font-bold text-sm truncate">
-                                                    {(currentMed.name || '')
-                                                        .replace(/&amp;/g, '&')
-                                                        .replace(/&#x2f;/gi, '/')
-                                                        .replace(/&#47;/g, '/')
-                                                        .replace(/&quot;/g, '"')
-                                                        .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
+                                                    {decodeHtmlEntities(currentMed.name || '')}
                                                 </span>
-                                                <button onClick={() => setCurrentMed({ name: '', sig: '', dispense: '30', refills: '0', note: '' })} className="p-1 hover:bg-white rounded-full transition-colors"><X className="w-4 h-4" /></button>
+                                                <button onClick={() => setCurrentMed({ name: '', sig: '', dose: '1', unit: 'tab', route: 'PO', frequency: 'Daily', dispense: '30', refills: '0', note: '' })} className="p-1 hover:bg-white rounded-full transition-colors"><X className="w-4 h-4" /></button>
                                             </div>
 
                                             <div className="grid grid-cols-12 gap-3">
-                                                <div className="col-span-8">
-                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sig / Instructions</label>
+                                                <div className="col-span-3">
+                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Dose</label>
+                                                    <input
+                                                        className="w-full p-2 border border-blue-200 rounded-md text-sm outline-none focus:ring-1 focus:ring-primary-500"
+                                                        value={currentMed.dose}
+                                                        onChange={e => setCurrentMed({ ...currentMed, dose: e.target.value })}
+                                                        placeholder="e.g. 1"
+                                                    />
+                                                </div>
+                                                <div className="col-span-3">
+                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Unit</label>
                                                     <select
-                                                        className="w-full p-2 border border-gray-300 rounded-md text-sm outline-none focus:ring-1 focus:ring-primary-500 bg-white"
-                                                        value={currentMed.sig}
-                                                        onChange={e => setCurrentMed({ ...currentMed, sig: e.target.value })}
-                                                        autoFocus
+                                                        className="w-full p-2 border border-blue-200 rounded-md text-sm outline-none focus:ring-1 focus:ring-primary-500 bg-white"
+                                                        value={currentMed.unit}
+                                                        onChange={e => setCurrentMed({ ...currentMed, unit: e.target.value })}
                                                     >
-                                                        <option value="">Select frequency...</option>
-                                                        <option value="1 tab PO daily">1 tab PO daily (QD)</option>
-                                                        <option value="1 tab PO BID">1 tab PO BID</option>
-                                                        <option value="1 tab PO TID">1 tab PO TID</option>
-                                                        <option value="1 tab PO QID">1 tab PO QID</option>
-                                                        <option value="1 tab PO at bedtime">1 tab PO QHS</option>
-                                                        <option value="1 tab PO PRN">1 tab PO PRN</option>
-                                                        <option value="1 tab PO q6h">1 tab PO q6h</option>
-                                                        <option value="1 tab PO q8h">1 tab PO q8h</option>
-                                                        <option value="1 tab PO q12h">1 tab PO q12h</option>
-                                                        <option value="2 tabs PO daily">2 tabs PO daily</option>
-                                                        <option value="1/2 tab PO daily">1/2 tab PO daily</option>
-                                                        <option value="As directed">As directed</option>
+                                                        {['tab', 'cap', 'mg', 'ml', 'g', 'puff', 'app', 'patch', 'unit'].map(u => <option key={u} value={u}>{u}</option>)}
                                                     </select>
                                                 </div>
-                                                <div className="col-span-2">
+                                                <div className="col-span-3">
+                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Route</label>
+                                                    <select
+                                                        className="w-full p-2 border border-blue-200 rounded-md text-sm outline-none focus:ring-1 focus:ring-primary-500 bg-white"
+                                                        value={currentMed.route}
+                                                        onChange={e => setCurrentMed({ ...currentMed, route: e.target.value })}
+                                                    >
+                                                        {['PO', 'SL', 'SQ', 'IM', 'IV', 'Topical', 'Inhaled', 'Rectal', 'Vaginal', 'Ophthalmic', 'Otic'].map(r => <option key={r} value={r}>{r}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div className="col-span-3">
+                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Frequency</label>
+                                                    <select
+                                                        className="w-full p-2 border border-blue-200 rounded-md text-sm outline-none focus:ring-1 focus:ring-primary-500 bg-white"
+                                                        value={currentMed.frequency}
+                                                        onChange={e => setCurrentMed({ ...currentMed, frequency: e.target.value })}
+                                                    >
+                                                        {['Daily', 'BID', 'TID', 'QID', 'QHS', 'Q4H', 'Q6H', 'Q8H', 'PRN', 'As Direct.'].map(f => <option key={f} value={f}>{f}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div className="col-span-6">
                                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Qty</label>
                                                     <input
-                                                        className="w-full p-2 border border-gray-300 rounded-md text-sm outline-none focus:ring-1 focus:ring-primary-500"
+                                                        className="w-full p-2 border border-blue-200 rounded-md text-sm outline-none focus:ring-1 focus:ring-primary-500"
                                                         value={currentMed.dispense}
                                                         onChange={e => setCurrentMed({ ...currentMed, dispense: e.target.value })}
                                                         placeholder="30"
                                                     />
                                                 </div>
-                                                <div className="col-span-2">
+                                                <div className="col-span-6">
                                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Refills</label>
                                                     <select
-                                                        className="w-full p-2 border border-gray-300 rounded-md text-sm outline-none focus:ring-1 focus:ring-primary-500 bg-white"
+                                                        className="w-full p-2 border border-blue-200 rounded-md text-sm outline-none focus:ring-1 focus:ring-primary-500 bg-white"
                                                         value={currentMed.refills}
                                                         onChange={e => setCurrentMed({ ...currentMed, refills: e.target.value })}
                                                     >
@@ -1367,13 +1407,19 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                         ))}
                                                     </select>
                                                 </div>
+                                                <div className="col-span-12">
+                                                    <div className="p-2 bg-gray-50 rounded border border-gray-100 flex items-center gap-2">
+                                                        <span className="text-xs font-bold text-gray-500">Preview Sig:</span>
+                                                        <span className="text-sm font-medium text-gray-900">{`${currentMed.dose} ${currentMed.unit} ${currentMed.route} ${currentMed.frequency}`}</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                             <button
-                                                disabled={!currentMed.sig}
+                                                disabled={!currentMed.name}
                                                 onClick={() => {
                                                     addToCart({
                                                         name: currentMed.name,
-                                                        sig: currentMed.sig,
+                                                        sig: `${currentMed.dose} ${currentMed.unit} ${currentMed.route} ${currentMed.frequency}`,
                                                         dispense: currentMed.dispense,
                                                         refills: currentMed.refills,
                                                         type: 'medications',
@@ -1381,7 +1427,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                         pharmacy: rxMode === 'electronic' ? selectedPharmacy : null,
                                                         rxMode: rxMode
                                                     });
-                                                    setCurrentMed({ name: '', sig: '', dispense: '30', refills: '0', note: '' });
+                                                    setCurrentMed({ name: '', sig: '', dose: '1', unit: 'tab', route: 'PO', frequency: 'Daily', dispense: '30', refills: '0', note: '' });
                                                 }}
                                                 className="w-full py-2.5 bg-primary-600 text-white rounded-md text-sm font-bold shadow-md hover:bg-primary-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                                             >
