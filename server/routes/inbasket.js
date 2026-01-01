@@ -141,13 +141,58 @@ async function syncInboxItems(tenantId) {
       uploader_id, created_at, created_at
     FROM documents
     WHERE (reviewed IS NULL OR reviewed = false)
+    ${tenantId ? 'AND tenant_id = $1' : ''}
       AND NOT EXISTS (
         SELECT 1 FROM inbox_items 
         WHERE reference_id = documents.id AND reference_table = 'documents'
       )
   `, [tenantId]);
 
-  // 4. Sync Old Messages/Tasks
+  // 4. Sync Referrals
+  await pool.query(`
+    INSERT INTO inbox_items (
+      id, tenant_id, patient_id, type, priority, status, 
+      subject, body, reference_id, reference_table, 
+      created_by, created_at, updated_at
+    )
+    SELECT 
+      gen_random_uuid(), $1, patient_id, 'referral', 'normal',
+      'new',
+      'Referral: ' || COALESCE(recipient_name, recipient_specialty, 'New Referral'),
+      reason,
+      id, 'referrals',
+      created_by, created_at, created_at
+    FROM referrals
+    WHERE (status IS NULL OR status = 'pending' OR status = 'new')
+      AND NOT EXISTS (
+        SELECT 1 FROM inbox_items 
+        WHERE reference_id = referrals.id AND reference_table = 'referrals'
+      )
+  `, [tenantId]);
+
+  // 5. Sync Unsigned Notes (Co-signing)
+  await pool.query(`
+    INSERT INTO inbox_items (
+      id, tenant_id, patient_id, type, priority, status, 
+      subject, body, reference_id, reference_table, 
+      assigned_user_id, created_at, updated_at
+    )
+    SELECT 
+      gen_random_uuid(), $1, patient_id, 'note', 'normal',
+      'new',
+      'Sign Note: ' || COALESCE(note_type, 'Office Visit'),
+      'Visit dated ' || encounter_date,
+      id, 'visits',
+      provider_id, created_at, created_at
+    FROM visits
+    WHERE status = 'draft' AND note_signed_at IS NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM inbox_items 
+        WHERE reference_id = visits.id AND reference_table = 'visits'
+      )
+  `, [tenantId]);
+
+  // 6. Sync Old Messages/Tasks
   await pool.query(`
     INSERT INTO inbox_items (
       id, tenant_id, patient_id, type, priority, status, 

@@ -15,7 +15,9 @@ import { getPatientDisplayName } from '../utils/patientNameUtils';
 const TASK_CATEGORIES = [
     { id: 'results', label: 'Results', icon: FlaskConical, color: 'blue', types: ['lab', 'imaging'] },
     { id: 'messages', label: 'Messages', icon: MessageSquare, color: 'purple', types: ['message'] },
+    { id: 'notes', label: 'Clinical Notes', icon: FileText, color: 'emerald', types: ['note'] },
     { id: 'documents', label: 'Documents', icon: FileText, color: 'orange', types: ['document'] },
+    { id: 'referrals', label: 'Referrals', icon: Send, color: 'indigo', types: ['referral'] },
     { id: 'tasks', label: 'Tasks', icon: CheckCircle, color: 'green', types: ['task'] },
     { id: 'refills', label: 'Rx Requests', icon: Pill, color: 'red', types: ['refill'] },
 ];
@@ -427,7 +429,6 @@ const Inbasket = () => {
                                 </div>
 
                                 {/* Attachments / Reference */}
-                                {/* Logic to show PDF/Image if reference exists would go here - for now simplified */}
                                 {(details?.reference_table === 'documents' || details?.type === 'document' || details?.type === 'imaging') && (
                                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-center gap-3">
                                         <FileText className="w-8 h-8 text-orange-400" />
@@ -436,6 +437,26 @@ const Inbasket = () => {
                                             <p className="text-xs text-gray-500">Document/Result Attachment</p>
                                         </div>
                                         <button onClick={() => openPatientChart(selectedItem)} className="text-blue-600 text-xs font-medium whitespace-nowrap">View</button>
+                                    </div>
+                                )}
+                                {details?.type === 'referral' && (
+                                    <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 flex items-center gap-3">
+                                        <Send className="w-8 h-8 text-indigo-400" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-indigo-900 truncate">Outgoing Referral</p>
+                                            <p className="text-xs text-indigo-600">Patient needs specialist consultation</p>
+                                        </div>
+                                        <button onClick={() => openPatientChart(selectedItem)} className="text-indigo-600 text-xs font-bold whitespace-nowrap">View Case</button>
+                                    </div>
+                                )}
+                                {details?.type === 'note' && (
+                                    <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 flex items-center gap-3">
+                                        <FileText className="w-8 h-8 text-emerald-400" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-emerald-900 truncate">Clinical Note to Sign</p>
+                                            <p className="text-xs text-emerald-600">Unsigned draft from {details.created_at ? format(new Date(details.created_at), 'MM/dd/yyyy') : 'recent visit'}</p>
+                                        </div>
+                                        <button onClick={() => openPatientChart(selectedItem)} className="text-emerald-600 text-xs font-bold whitespace-nowrap">Sign Now</button>
                                     </div>
                                 )}
 

@@ -93,45 +93,28 @@ router.get('/dashboard', requirePermission('reports:view'), async (req, res) => 
     const visitsToday = await pool.query(visitsQuery, visitsParams);
     stats.visitsToday = parseInt(visitsToday.rows[0]?.count || 0);
 
-    // Pending orders
-    let ordersQuery = "SELECT COUNT(*) as count FROM orders WHERE status = 'pending'";
-    const ordersParams = [];
-    if (req.user?.clinic_id) {
-      ordersQuery += ' AND clinic_id = $1';
-      ordersParams.push(req.user.clinic_id);
-    }
-    const pendingOrders = await pool.query(ordersQuery, ordersParams);
-    stats.pendingOrders = parseInt(pendingOrders.rows[0]?.count || 0);
-
-    // Unread messages (only if user is authenticated)
+    // In Basket / Tasks (assigned to user)
     if (req.user?.id) {
       try {
-        const unreadMessages = await pool.query(
-          `SELECT COUNT(*) as count FROM messages WHERE to_user_id = $1 AND read_at IS NULL`,
+        const inboxStats = await pool.query(
+          `SELECT 
+            COUNT(*) FILTER (WHERE status NOT IN ('completed', 'archived') AND assigned_user_id = $1) as my_count,
+            COUNT(*) FILTER (WHERE status NOT IN ('completed', 'archived') AND type = 'lab') as labs_count,
+            COUNT(*) FILTER (WHERE status NOT IN ('completed', 'archived') AND type = 'message') as msgs_count
+           FROM inbox_items`,
           [req.user.id]
         );
-        stats.unreadMessages = parseInt(unreadMessages.rows[0]?.count || 0);
-      } catch (msgError) {
-        console.warn('Error fetching unread messages:', msgError);
+        stats.pendingOrders = parseInt(inboxStats.rows[0]?.my_count || 0);
+        stats.unreadLabs = parseInt(inboxStats.rows[0]?.labs_count || 0);
+        stats.unreadMessages = parseInt(inboxStats.rows[0]?.msgs_count || 0);
+      } catch (inboxError) {
+        console.warn('Error fetching inbox stats for dashboard:', inboxError);
+        stats.pendingOrders = 0;
         stats.unreadMessages = 0;
-      }
-
-      // Unread Labs (completed labs assigned to user or created by user that are not reviewed)
-      try {
-        const unreadLabs = await pool.query(
-          `SELECT COUNT(*) as count FROM orders 
-           WHERE order_type = 'lab' 
-           AND status = 'completed' 
-           AND (reviewed = false OR reviewed IS NULL)
-           AND (ordered_by = $1 OR reviewed_by = $1)`,
-          [req.user.id]
-        );
-        stats.unreadLabs = parseInt(unreadLabs.rows[0]?.count || 0);
-      } catch (labError) {
-        console.warn('Error fetching unread labs:', labError);
         stats.unreadLabs = 0;
       }
     } else {
+      stats.pendingOrders = 0;
       stats.unreadMessages = 0;
       stats.unreadLabs = 0;
     }

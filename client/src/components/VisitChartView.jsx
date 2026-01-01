@@ -54,7 +54,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                 const prev = str;
                 txt.innerHTML = str;
                 str = txt.value;
-                str = str.replace(/&#x2F;/ig, '/').replace(/&#47;/g, '/');
+                str = str.replace(/&#x2F;/ig, '/').replace(/&#47;/g, '/').replace(/&sol;/g, '/');
                 if (str === prev) break;
             }
         } else {

@@ -111,7 +111,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                 str = txt.value;
                 // Manual backup for typically stubborn entities if textarea fails? 
                 // Usually textarea works, but explicit replace checks don't hurt.
-                str = str.replace(/&#x2F;/ig, '/').replace(/&#47;/g, '/');
+                str = str.replace(/&#x2F;/ig, '/').replace(/&#47;/g, '/').replace(/&sol;/g, '/');
                 if (str === prev) break;
             }
         } else {

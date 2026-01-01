@@ -31,6 +31,25 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const location = useLocation();
     const { addTab } = usePatientTabs();
 
+    const decodeHtmlEntities = (text) => {
+        if (typeof text !== 'string') return String(text || '');
+        let str = text;
+        if (typeof document !== 'undefined') {
+            const txt = document.createElement('textarea');
+            for (let i = 0; i < 4; i++) {
+                const prev = str;
+                txt.innerHTML = str;
+                str = txt.value;
+                // Aggressively handle slashes and other common entities
+                str = str.replace(/&#x2F;/ig, '/').replace(/&#47;/g, '/').replace(/&sol;/g, '/');
+                if (str === prev) break;
+            }
+        } else {
+            str = str.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#x2F;/ig, '/');
+        }
+        return str;
+    };
+
     const [patient, setPatient] = useState(null);
     const [recentNotes, setRecentNotes] = useState([]);
     const [loadingNotes, setLoadingNotes] = useState(false);
@@ -1764,12 +1783,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             {medications.filter(m => m.active !== false).length > 0 ? (
                                                 <div className="space-y-1.5">
                                                     {medications.filter(m => m.active !== false).slice(0, 10).map(med => {
-                                                        const decodedName = (med.medication_name || '')
-                                                            .replace(/&amp;/g, '&')
-                                                            .replace(/&#x2f;/gi, '/')
-                                                            .replace(/&#47;/g, '/')
-                                                            .replace(/&quot;/g, '"')
-                                                            .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
+                                                        const decodedName = decodeHtmlEntities(med.medication_name);
 
                                                         return (
                                                             <div key={med.id} className="pb-1 border-b border-gray-50 last:border-b-0">
