@@ -1132,324 +1132,320 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                     )}
                                 </div>
                             ) : activeTab === 'medications' ? (
-
-                                <div className="p-4 space-y-4">
-                                    <div className="flex p-1 bg-gray-100 rounded-lg mb-4">
-                                        <button
-                                            onClick={() => setRxMode('manual')}
-                                            className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${rxMode === 'manual' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                                        >
-                                            Prescribe Rx
-                                        </button>
-                                        <button
-                                            onClick={() => setRxMode('electronic')}
-                                            className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${rxMode === 'electronic' ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                                        >
-                                            E-Prescribe
-                                        </button>
-                                    </div>
-
-                                    {rxMode === 'electronic' && (
-                                        <div className="mb-4 space-y-2 p-3 bg-blue-50/50 border border-blue-100 rounded-lg animate-in fade-in slide-in-from-top-2">
-                                            <label className="block text-xs font-bold text-blue-700 uppercase flex justify-between">
-                                                <span>Target Pharmacy</span>
-                                                <span className="text-blue-400 font-normal">Required for E-Rx</span>
-                                            </label>
-                                            {!selectedPharmacy ? (
-                                                <div className="relative">
-                                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-blue-400" />
-                                                    <input
-                                                        className="w-full pl-8 p-2 text-sm border border-blue-200 rounded focus:ring-1 focus:ring-blue-500 bg-white"
-                                                        placeholder="Search Pharmacy (e.g. CVS Miami)..."
-                                                        value={pharmacySearch}
-                                                        onChange={(e) => {
-                                                            setPharmacySearch(e.target.value);
-                                                            if (e.target.value.length > 2) {
-                                                                setSearchingPharmacies(true);
-                                                                // Mock search for now or use actual API if available in context
-                                                                // Assuming eprescribeAPI.searchPharmacies exists or similar
-                                                                eprescribeAPI.searchPharmacies(e.target.value)
-                                                                    .then(res => setPharmacyResults(res.data || []))
-                                                                    .catch(() => setPharmacyResults([]))
-                                                                    .finally(() => setSearchingPharmacies(false));
-                                                            }
-                                                        }}
-                                                    />
-                                                    {searchingPharmacies && <div className="absolute right-3 top-2.5 w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>}
-                                                    {pharmacyResults.length > 0 && (
-                                                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-y-auto">
-                                                            {pharmacyResults.map(ph => (
-                                                                <button
-                                                                    key={ph.id}
-                                                                    onClick={() => {
-                                                                        setSelectedPharmacy(ph);
-                                                                        setPharmacyResults([]);
-                                                                        setPharmacySearch('');
-                                                                    }}
-                                                                    className="w-full text-left p-2 text-xs hover:bg-gray-50 border-b border-gray-50 last:border-0"
-                                                                >
-                                                                    <div className="font-bold text-gray-800">{ph.name}</div>
-                                                                    <div className="text-gray-500">{ph.addressLine1}, {ph.city}</div>
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center justify-between bg-white p-2 border border-blue-200 rounded text-sm text-blue-800 shadow-sm">
-                                                    <div>
-                                                        <span className="font-bold block">{selectedPharmacy.name}</span>
-                                                        <span className="text-xs text-blue-600 block">{selectedPharmacy.addressLine1}, {selectedPharmacy.city}</span>
-                                                    </div>
-                                                    <button onClick={() => setSelectedPharmacy(null)} className="text-gray-400 hover:text-red-500 p-1">
-                                                        <X className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* Active Medications Section */}
-                                    {loadingActiveMeds ? (
-                                        <div className="flex justify-center p-4">
-                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500"></div>
-                                        </div>
-                                    ) : activeMedications.length > 0 && (
-                                        <div className="space-y-2 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
-                                            <h4 className="text-xs font-bold text-gray-500 uppercase">Current Medications</h4>
-                                            {activeMedications.filter(m => m.active !== false).map(med => (
-                                                <div key={med.id} className="bg-white p-2 rounded border border-gray-200 shadow-sm">
-                                                    <div className="flex justify-between items-start mb-2">
-                                                        <div>
-                                                            <div className="font-bold text-sm text-gray-800">
-                                                                {(med.medication_name || '')
-                                                                    .replace(/&amp;/g, '&')
-                                                                    .replace(/&#x2f;/gi, '/')
-                                                                    .replace(/&#47;/g, '/')
-                                                                    .replace(/&quot;/g, '"')
-                                                                    .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
-                                                            </div>
-                                                            <div className="text-xs text-gray-500">{med.dosage} {med.frequency}</div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => addToCart({
-                                                                name: med.medication_name,
-                                                                sig: med.frequency,
-                                                                dispense: '',
-                                                                type: 'medications',
-                                                                diagnosis: med.diagnosis || selectedDiagnosis,
-                                                                originalString: `Continue: ${med.medication_name} ${med.frequency}`,
-                                                                action: 'continue',
-                                                                medicationId: med.id
-                                                            })}
-                                                            className="flex-1 py-1 px-2 text-[10px] font-bold bg-green-50 text-green-700 border border-green-200 rounded hover:bg-green-100"
-                                                        >
-                                                            Continue
-                                                        </button>
-                                                        <button
-                                                            onClick={() => addToCart({
-                                                                name: med.medication_name,
-                                                                sig: med.frequency,
-                                                                dispense: '30',
-                                                                type: 'medications',
-                                                                diagnosis: med.diagnosis || selectedDiagnosis,
-                                                                originalString: `Refill: ${med.medication_name} ${med.frequency}, Qty: 30`,
-                                                                action: 'refill',
-                                                                medicationId: med.id
-                                                            })}
-                                                            className="flex-1 py-1 px-2 text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100"
-                                                        >
-                                                            Refill
-                                                        </button>
-                                                        <button
-                                                            onClick={() => addToCart({
-                                                                name: med.medication_name,
-                                                                sig: 'DISCONTINUE',
-                                                                dispense: '',
-                                                                type: 'medications',
-                                                                diagnosis: med.diagnosis || selectedDiagnosis,
-                                                                originalString: `Discontinue: ${med.medication_name}`,
-                                                                action: 'stop',
-                                                                medicationId: med.id
-                                                            })}
-                                                            className="flex-1 py-1 px-2 text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 rounded hover:bg-red-100"
-                                                        >
-                                                            Stop
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* Medication Search & Selection */}
-                                    {!currentMed.name ? (
-                                        <div className="space-y-2">
-                                            <div className="relative">
-                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                                <input
-                                                    className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
-                                                    placeholder="Search medication name..."
-                                                    value={searchQuery}
-                                                    onChange={e => setSearchQuery(e.target.value)}
-                                                    autoFocus
-                                                />
-                                                {searchingMed && <div className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin rounded-full h-4 w-4 border-b-2 border-primary-500"></div>}
-                                            </div>
-
-                                            <div className="space-y-1 max-h-[350px] overflow-y-auto">
-                                                {medResults.length > 0 ? (
-                                                    medResults.map((m, i) => (
-                                                        <button
-                                                            key={i}
-                                                            onClick={() => {
-                                                                // Select medication and show detail form
-                                                                setCurrentMed({
-                                                                    name: m.name,
-                                                                    sig: '',
-                                                                    dispense: '30',
-                                                                    refills: '0',
-                                                                    notes: ''
-                                                                });
-                                                                setSearchQuery('');
-                                                                setMedResults([]);
-                                                            }}
-                                                            className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-primary-50 border border-gray-100 hover:border-primary-200 transition-all text-left group shadow-sm hover:shadow"
-                                                        >
-                                                            <Pill className="w-5 h-5 text-primary-400 group-hover:text-primary-600 flex-shrink-0" />
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className="text-sm font-semibold text-gray-900 leading-tight truncate">
-                                                                    {(m.name || '')
-                                                                        .replace(/&amp;/g, '&')
-                                                                        .replace(/&#x2f;/gi, '/')
-                                                                        .replace(/&#47;/g, '/')
-                                                                        .replace(/&quot;/g, '"')
-                                                                        .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
-                                                                </p>
-                                                                {m.strength && <p className="text-xs text-gray-500 mt-0.5">{m.strength}</p>}
-                                                            </div>
-                                                            <div className="text-xs font-semibold text-primary-600 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                                                                Select
-                                                                <span className="text-primary-400">→</span>
-                                                            </div>
-                                                        </button>
-                                                    ))
-                                                ) : searchQuery.length > 2 && !searchingMed ? (
-                                                    <div className="p-6 text-center border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
-                                                        <p className="text-sm text-gray-500 mb-3">No matching medications found</p>
-                                                        <button
-                                                            onClick={() => {
-                                                                // Allow custom medication entry
-                                                                setCurrentMed({
-                                                                    name: searchQuery,
-                                                                    sig: '',
-                                                                    dispense: '30',
-                                                                    refills: '0',
-                                                                    notes: ''
-                                                                });
-                                                                setSearchQuery('');
-                                                            }}
-                                                            className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-xs font-bold rounded-lg transition-colors"
-                                                        >
-                                                            Add "{searchQuery}" as custom medication
-                                                        </button>
-                                                    </div>
-                                                ) : searchQuery.length === 0 ? (
-                                                    <div className="p-6 text-center text-gray-400 text-sm">
-                                                        Type to search medications...
-                                                    </div>
-                                                ) : null}
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4 animate-in slide-in-from-top-2">
-                                            <div className="p-3 bg-primary-50 border border-primary-100 rounded-lg flex justify-between items-center text-primary-900">
-                                                <span className="font-bold text-sm truncate">
-                                                    {(currentMed.name || '')
-                                                        .replace(/&amp;/g, '&')
-                                                        .replace(/&#x2f;/gi, '/')
-                                                        .replace(/&#47;/g, '/')
-                                                        .replace(/&quot;/g, '"')
-                                                        .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
-                                                </span>
-                                                <button onClick={() => setCurrentMed({ ...currentMed, name: '' })} className="p-1 hover:bg-white rounded-full transition-colors"><X className="w-4 h-4" /></button>
-                                            </div>
-
-                                            <div className="grid grid-cols-12 gap-3">
-                                                <div className="col-span-8">
-                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sig / Instructions</label>
-                                                    <select
-                                                        className="w-full p-2 border border-gray-300 rounded-md text-sm outline-none focus:ring-1 focus:ring-primary-500 bg-white"
-                                                        value={currentMed.sig}
-                                                        onChange={e => setCurrentMed({ ...currentMed, sig: e.target.value })}
-                                                        autoFocus
-                                                    >
-                                                        <option value="">Select frequency...</option>
-                                                        <option value="1 tab PO daily">1 tab PO daily (QD)</option>
-                                                        <option value="1 tab PO BID">1 tab PO BID (twice daily)</option>
-                                                        <option value="1 tab PO TID">1 tab PO TID (3x daily)</option>
-                                                        <option value="1 tab PO QID">1 tab PO QID (4x daily)</option>
-                                                        <option value="1 tab PO at bedtime">1 tab PO at bedtime (QHS)</option>
-                                                        <option value="1 tab PO every morning">1 tab PO every morning (QAM)</option>
-                                                        <option value="1 tab PO PRN">1 tab PO PRN (as needed)</option>
-                                                        <option value="1 tab PO q6h">1 tab PO q6h</option>
-                                                        <option value="1 tab PO q8h">1 tab PO q8h</option>
-                                                        <option value="1 tab PO q12h">1 tab PO q12h</option>
-                                                        <option value="2 tabs PO daily">2 tabs PO daily</option>
-                                                        <option value="1/2 tab PO daily">1/2 tab PO daily</option>
-                                                        <option value="1 cap PO daily">1 cap PO daily</option>
-                                                        <option value="1 cap PO BID">1 cap PO BID</option>
-                                                        <option value="Apply topically daily">Apply topically daily</option>
-                                                        <option value="Apply topically BID">Apply topically BID</option>
-                                                        <option value="Inject subcutaneously daily">Inject subcutaneously daily</option>
-                                                        <option value="Inject subcutaneously weekly">Inject subcutaneously weekly</option>
-                                                        <option value="As directed">As directed</option>
-                                                    </select>
-                                                </div>
-                                                <div className="col-span-2">
-                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Dispense</label>
-                                                    <input
-                                                        className="w-full p-2 border border-gray-300 rounded-md text-sm outline-none focus:ring-1 focus:ring-primary-500"
-                                                        value={currentMed.dispense}
-                                                        onChange={e => setCurrentMed({ ...currentMed, dispense: e.target.value })}
-                                                        placeholder="#"
-                                                    />
-                                                </div>
-                                                <div className="col-span-2">
-                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Refills</label>
-                                                    <select
-                                                        className="w-full p-2 border border-gray-300 rounded-md text-sm outline-none focus:ring-1 focus:ring-primary-500 bg-white"
-                                                        value={currentMed.refills}
-                                                        onChange={e => setCurrentMed({ ...currentMed, refills: e.target.value })}
-                                                    >
-                                                        {[0, 1, 2, 3, 4, 5, 11, 'PRN'].map(r => (
-                                                            <option key={r} value={r}>{r}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                                <div className="col-span-12">
-                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Note to Pharmacy</label>
-                                                    <input
-                                                        className="w-full p-2 border border-gray-300 rounded-md text-sm outline-none focus:ring-1 focus:ring-primary-500"
-                                                        value={currentMed.note}
-                                                        onChange={e => setCurrentMed({ ...currentMed, note: e.target.value })}
-                                                        placeholder="Optional notes..."
-                                                    />
-                                                </div>
-                                            </div>
+                                /* TWO-COLUMN MEDICATION LAYOUT */
+                                <div className="flex h-full">
+                                    {/* LEFT COLUMN - Search & Order (wider) */}
+                                    <div className="flex-1 p-4 overflow-y-auto">
+                                        {/* Rx Mode Toggle */}
+                                        <div className="flex p-1 bg-gray-100 rounded-lg mb-4">
                                             <button
-                                                disabled={!currentMed.sig}
-                                                onClick={() => {
-                                                    addToCart({ name: currentMed.name });
-                                                }}
-                                                className="w-full py-2.5 bg-primary-600 text-white rounded-md text-sm font-bold shadow-md hover:bg-primary-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                                                onClick={() => setRxMode('manual')}
+                                                className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${rxMode === 'manual' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                                             >
-                                                <Plus className="w-4 h-4" /> Add to Plan
+                                                Prescribe Rx
+                                            </button>
+                                            <button
+                                                onClick={() => setRxMode('electronic')}
+                                                className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${rxMode === 'electronic' ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                            >
+                                                E-Prescribe
                                             </button>
                                         </div>
-                                    )}
+
+                                        {rxMode === 'electronic' && (
+                                            <div className="mb-4 space-y-2 p-3 bg-blue-50/50 border border-blue-100 rounded-lg">
+                                                <label className="block text-xs font-bold text-blue-700 uppercase flex justify-between">
+                                                    <span>Target Pharmacy</span>
+                                                    <span className="text-blue-400 font-normal">Required for E-Rx</span>
+                                                </label>
+                                                {!selectedPharmacy ? (
+                                                    <div className="relative">
+                                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-blue-400" />
+                                                        <input
+                                                            className="w-full pl-8 p-2 text-sm border border-blue-200 rounded focus:ring-1 focus:ring-blue-500 bg-white"
+                                                            placeholder="Search Pharmacy (e.g. CVS Miami)..."
+                                                            value={pharmacySearch}
+                                                            onChange={(e) => {
+                                                                setPharmacySearch(e.target.value);
+                                                                if (e.target.value.length > 2) {
+                                                                    setSearchingPharmacies(true);
+                                                                    eprescribeAPI.searchPharmacies(e.target.value)
+                                                                        .then(res => setPharmacyResults(res.data || []))
+                                                                        .catch(() => setPharmacyResults([]))
+                                                                        .finally(() => setSearchingPharmacies(false));
+                                                                }
+                                                            }}
+                                                        />
+                                                        {searchingPharmacies && <div className="absolute right-3 top-2.5 w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>}
+                                                        {pharmacyResults.length > 0 && (
+                                                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-y-auto">
+                                                                {pharmacyResults.map(ph => (
+                                                                    <button
+                                                                        key={ph.id}
+                                                                        onClick={() => {
+                                                                            setSelectedPharmacy(ph);
+                                                                            setPharmacyResults([]);
+                                                                            setPharmacySearch('');
+                                                                        }}
+                                                                        className="w-full text-left p-2 text-xs hover:bg-gray-50 border-b border-gray-50 last:border-0"
+                                                                    >
+                                                                        <div className="font-bold text-gray-800">{ph.name}</div>
+                                                                        <div className="text-gray-500">{ph.addressLine1}, {ph.city}</div>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center justify-between bg-white p-2 border border-blue-200 rounded text-sm text-blue-800 shadow-sm">
+                                                        <div>
+                                                            <span className="font-bold block">{selectedPharmacy.name}</span>
+                                                            <span className="text-xs text-blue-600 block">{selectedPharmacy.addressLine1}, {selectedPharmacy.city}</span>
+                                                        </div>
+                                                        <button onClick={() => setSelectedPharmacy(null)} className="text-gray-400 hover:text-red-500 p-1">
+                                                            <X className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Medication Search & Selection */}
+                                        {!currentMed.name ? (
+                                            <div className="space-y-2">
+                                                <div className="relative">
+                                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                                    <input
+                                                        className="w-full pl-9 pr-4 py-3 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                                                        placeholder="Search medication name..."
+                                                        value={searchQuery}
+                                                        onChange={e => setSearchQuery(e.target.value)}
+                                                        autoFocus
+                                                    />
+                                                    {searchingMed && <div className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin rounded-full h-4 w-4 border-b-2 border-primary-500"></div>}
+                                                </div>
+
+                                                <div className="space-y-1 max-h-[400px] overflow-y-auto">
+                                                    {medResults.length > 0 ? (
+                                                        medResults.map((m, i) => (
+                                                            <button
+                                                                key={i}
+                                                                onClick={() => {
+                                                                    setCurrentMed({
+                                                                        name: m.name,
+                                                                        sig: '',
+                                                                        dispense: '30',
+                                                                        refills: '0',
+                                                                        notes: ''
+                                                                    });
+                                                                    setSearchQuery('');
+                                                                    setMedResults([]);
+                                                                }}
+                                                                className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-primary-50 border border-gray-100 hover:border-primary-200 transition-all text-left group shadow-sm hover:shadow"
+                                                            >
+                                                                <Pill className="w-5 h-5 text-primary-400 group-hover:text-primary-600 flex-shrink-0" />
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-sm font-semibold text-gray-900 leading-tight truncate">
+                                                                        {(m.name || '')
+                                                                            .replace(/&amp;/g, '&')
+                                                                            .replace(/&#x2f;/gi, '/')
+                                                                            .replace(/&#47;/g, '/')
+                                                                            .replace(/&quot;/g, '"')
+                                                                            .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
+                                                                    </p>
+                                                                    {m.strength && <p className="text-xs text-gray-500 mt-0.5">{m.strength}</p>}
+                                                                </div>
+                                                                <div className="text-xs font-semibold text-primary-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    Select →
+                                                                </div>
+                                                            </button>
+                                                        ))
+                                                    ) : searchQuery.length > 2 && !searchingMed ? (
+                                                        <div className="p-6 text-center border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
+                                                            <p className="text-sm text-gray-500 mb-3">No matching medications found</p>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setCurrentMed({
+                                                                        name: searchQuery,
+                                                                        sig: '',
+                                                                        dispense: '30',
+                                                                        refills: '0',
+                                                                        notes: ''
+                                                                    });
+                                                                    setSearchQuery('');
+                                                                }}
+                                                                className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-xs font-bold rounded-lg transition-colors"
+                                                            >
+                                                                Add "{searchQuery}" as custom medication
+                                                            </button>
+                                                        </div>
+                                                    ) : searchQuery.length === 0 ? (
+                                                        <div className="p-8 text-center text-gray-400 text-sm">
+                                                            <Pill className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                                                            <p>Type to search medications...</p>
+                                                            <p className="text-xs mt-1 text-gray-300">Results from local database + RxNorm</p>
+                                                        </div>
+                                                    ) : null}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4 animate-in slide-in-from-top-2">
+                                                <div className="p-3 bg-primary-50 border border-primary-100 rounded-lg flex justify-between items-center text-primary-900">
+                                                    <span className="font-bold text-sm truncate">
+                                                        {(currentMed.name || '')
+                                                            .replace(/&amp;/g, '&')
+                                                            .replace(/&#x2f;/gi, '/')
+                                                            .replace(/&#47;/g, '/')
+                                                            .replace(/&quot;/g, '"')
+                                                            .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
+                                                    </span>
+                                                    <button onClick={() => setCurrentMed({ ...currentMed, name: '' })} className="p-1 hover:bg-white rounded-full transition-colors"><X className="w-4 h-4" /></button>
+                                                </div>
+
+                                                <div className="grid grid-cols-12 gap-3">
+                                                    <div className="col-span-8">
+                                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sig / Instructions</label>
+                                                        <select
+                                                            className="w-full p-2 border border-gray-300 rounded-md text-sm outline-none focus:ring-1 focus:ring-primary-500 bg-white"
+                                                            value={currentMed.sig}
+                                                            onChange={e => setCurrentMed({ ...currentMed, sig: e.target.value })}
+                                                            autoFocus
+                                                        >
+                                                            <option value="">Select frequency...</option>
+                                                            <option value="1 tab PO daily">1 tab PO daily (QD)</option>
+                                                            <option value="1 tab PO BID">1 tab PO BID (twice daily)</option>
+                                                            <option value="1 tab PO TID">1 tab PO TID (3x daily)</option>
+                                                            <option value="1 tab PO QID">1 tab PO QID (4x daily)</option>
+                                                            <option value="1 tab PO at bedtime">1 tab PO at bedtime (QHS)</option>
+                                                            <option value="1 tab PO every morning">1 tab PO every morning (QAM)</option>
+                                                            <option value="1 tab PO PRN">1 tab PO PRN (as needed)</option>
+                                                            <option value="1 tab PO q6h">1 tab PO q6h</option>
+                                                            <option value="1 tab PO q8h">1 tab PO q8h</option>
+                                                            <option value="1 tab PO q12h">1 tab PO q12h</option>
+                                                            <option value="2 tabs PO daily">2 tabs PO daily</option>
+                                                            <option value="1/2 tab PO daily">1/2 tab PO daily</option>
+                                                            <option value="1 cap PO daily">1 cap PO daily</option>
+                                                            <option value="1 cap PO BID">1 cap PO BID</option>
+                                                            <option value="Apply topically daily">Apply topically daily</option>
+                                                            <option value="Apply topically BID">Apply topically BID</option>
+                                                            <option value="Inject subcutaneously daily">Inject subcutaneously daily</option>
+                                                            <option value="Inject subcutaneously weekly">Inject subcutaneously weekly</option>
+                                                            <option value="As directed">As directed</option>
+                                                        </select>
+                                                    </div>
+                                                    <div className="col-span-2">
+                                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Dispense</label>
+                                                        <input
+                                                            className="w-full p-2 border border-gray-300 rounded-md text-sm outline-none focus:ring-1 focus:ring-primary-500"
+                                                            value={currentMed.dispense}
+                                                            onChange={e => setCurrentMed({ ...currentMed, dispense: e.target.value })}
+                                                            placeholder="#"
+                                                        />
+                                                    </div>
+                                                    <div className="col-span-2">
+                                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Refills</label>
+                                                        <select
+                                                            className="w-full p-2 border border-gray-300 rounded-md text-sm outline-none focus:ring-1 focus:ring-primary-500 bg-white"
+                                                            value={currentMed.refills}
+                                                            onChange={e => setCurrentMed({ ...currentMed, refills: e.target.value })}
+                                                        >
+                                                            {[0, 1, 2, 3, 4, 5, 11, 'PRN'].map(r => (
+                                                                <option key={r} value={r}>{r}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div className="col-span-12">
+                                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Note to Pharmacy</label>
+                                                        <input
+                                                            className="w-full p-2 border border-gray-300 rounded-md text-sm outline-none focus:ring-1 focus:ring-primary-500"
+                                                            value={currentMed.note}
+                                                            onChange={e => setCurrentMed({ ...currentMed, note: e.target.value })}
+                                                            placeholder="Optional notes..."
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    disabled={!currentMed.sig}
+                                                    onClick={() => {
+                                                        addToCart({
+                                                            name: currentMed.name,
+                                                            sig: currentMed.sig,
+                                                            dispense: currentMed.dispense,
+                                                            refills: currentMed.refills,
+                                                            notes: currentMed.note,
+                                                            type: 'medications',
+                                                            diagnosis: selectedDiagnosis,
+                                                            pharmacy: rxMode === 'electronic' ? selectedPharmacy : null,
+                                                            rxMode: rxMode
+                                                        });
+                                                        setCurrentMed({ name: '', sig: '', dispense: '30', refills: '0', note: '' });
+                                                    }}
+                                                    className="w-full py-2.5 bg-primary-600 text-white rounded-md text-sm font-bold shadow-md hover:bg-primary-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                                                >
+                                                    <Plus className="w-4 h-4" /> Add to Plan
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* RIGHT COLUMN - Current Medications Sidebar */}
+                                    <div className="w-56 border-l border-gray-200 bg-gray-50 p-3 overflow-y-auto">
+                                        <h4 className="text-xs font-bold text-gray-600 uppercase mb-3 flex items-center gap-2">
+                                            <Pill className="w-3.5 h-3.5" />
+                                            Home Meds
+                                        </h4>
+                                        {loadingActiveMeds ? (
+                                            <div className="flex justify-center p-4">
+                                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-500"></div>
+                                            </div>
+                                        ) : activeMedications.length > 0 ? (
+                                            <div className="space-y-2">
+                                                {activeMedications.filter(m => m.active !== false).map(med => (
+                                                    <div key={med.id} className="bg-white p-2 rounded border border-gray-200 shadow-sm">
+                                                        <div className="font-semibold text-xs text-gray-800 leading-tight mb-1">
+                                                            {(med.medication_name || '')
+                                                                .replace(/&amp;/g, '&')
+                                                                .replace(/&#x2f;/gi, '/')
+                                                                .replace(/&#47;/g, '/')
+                                                                .replace(/&quot;/g, '"')
+                                                                .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
+                                                        </div>
+                                                        <div className="text-[10px] text-gray-500 mb-2">{med.dosage} {med.frequency}</div>
+                                                        <div className="flex gap-1">
+                                                            <button
+                                                                onClick={() => addToCart({
+                                                                    name: med.medication_name,
+                                                                    sig: med.frequency,
+                                                                    dispense: '30',
+                                                                    type: 'medications',
+                                                                    diagnosis: med.diagnosis || selectedDiagnosis,
+                                                                    action: 'refill'
+                                                                })}
+                                                                className="flex-1 py-1 text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100"
+                                                            >
+                                                                Refill
+                                                            </button>
+                                                            <button
+                                                                onClick={() => addToCart({
+                                                                    name: med.medication_name,
+                                                                    sig: 'DISCONTINUE',
+                                                                    type: 'medications',
+                                                                    action: 'stop'
+                                                                })}
+                                                                className="flex-1 py-1 text-[9px] font-bold bg-red-50 text-red-700 border border-red-200 rounded hover:bg-red-100"
+                                                            >
+                                                                Stop
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-4 text-gray-400 text-xs">
+                                                No active medications
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             ) : searchResults.length > 0 ? (
                                 <div className="divide-y divide-gray-100">
