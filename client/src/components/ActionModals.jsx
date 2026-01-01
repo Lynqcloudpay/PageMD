@@ -1489,12 +1489,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                         <div key={med.id} className="bg-gray-50 p-2 rounded border border-gray-100 flex items-center justify-between gap-2">
                                             <div className="flex-1 min-w-0">
                                                 <div className="font-medium text-xs text-gray-800 truncate">
-                                                    {(med.medication_name || '')
-                                                        .replace(/&amp;/g, '&')
-                                                        .replace(/&#x2f;/gi, '/')
-                                                        .replace(/&#47;/g, '/')
-                                                        .replace(/&quot;/g, '"')
-                                                        .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
+                                                    {decodeHtmlEntities(med.medication_name || '')}
                                                 </div>
                                                 <div className="text-[10px] text-gray-500">{med.frequency}</div>
                                             </div>
@@ -1642,12 +1637,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                                     {typeInfo.label}
                                                                 </span>
                                                                 <span className="text-xs text-gray-700 flex-1 truncate">
-                                                                    {(item.name || '')
-                                                                        .replace(/&amp;/g, '&')
-                                                                        .replace(/&#x2f;/gi, '/')
-                                                                        .replace(/&#47;/g, '/')
-                                                                        .replace(/&quot;/g, '"')
-                                                                        .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
+                                                                    {decodeHtmlEntities(item.name || '')}
                                                                 </span>
 
                                                                 {/* Diagnosis Re-linker */}
