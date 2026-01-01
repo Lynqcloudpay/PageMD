@@ -689,7 +689,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                         <div className="space-y-1">
                                                             {medications.filter(m => m.active !== false).slice(0, 5).map(med => (
                                                                 <div key={med.id} className="text-sm text-gray-700 py-1 border-b border-gray-50 last:border-b-0">
-                                                                    <span className="font-medium">{med.medication_name}</span>
+                                                                    <span className="font-medium">{decodeHtmlEntities(med.medication_name)}</span>
                                                                     {med.dosage && <span className="text-gray-500 ml-2">{med.dosage}</span>}
                                                                 </div>
                                                             ))}
@@ -986,7 +986,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                 medications.filter(m => m.active !== false).map((med) => (
                                                     <div key={med.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all group flex items-start justify-between">
                                                         <div className="flex-1">
-                                                            <div className="font-bold text-gray-900 group-hover:text-primary-600 transition-colors">{med.medication_name}</div>
+                                                            <div className="font-bold text-gray-900 group-hover:text-primary-600 transition-colors">{decodeHtmlEntities(med.medication_name)}</div>
                                                             <div className="text-sm text-gray-600 mt-0.5">
                                                                 {med.dosage && <span className="font-medium">{med.dosage} </span>}
                                                                 {med.frequency && <span>{med.frequency} </span>}
@@ -1027,7 +1027,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                 {medications.filter(m => m.active === false).map((med) => (
                                                     <div key={med.id} className="bg-gray-50 p-3 rounded-lg border border-gray-100 flex items-center justify-between opacity-70 hover:opacity-100 grayscale hover:grayscale-0 transition-all">
                                                         <div className="flex-1 min-w-0">
-                                                            <div className="text-sm font-bold text-gray-700 truncate">{med.medication_name}</div>
+                                                            <div className="text-sm font-bold text-gray-700 truncate">{decodeHtmlEntities(med.medication_name)}</div>
                                                             <div className="text-[10px] text-gray-500 flex items-center gap-2">
                                                                 <span>{med.dosage} {med.frequency}</span>
                                                                 <span className="bg-gray-200 px-1 py-0.25 rounded text-[9px] uppercase font-bold text-gray-600 border border-gray-200">{med.status || 'Inactive'}</span>
