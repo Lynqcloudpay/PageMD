@@ -557,13 +557,62 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
             return;
         }
 
+        const COMMON_MEDS_FALLBACK = [
+            { name: 'Lisinopril 10 MG Oral Tablet' }, { name: 'Lisinopril 20 MG Oral Tablet' },
+            { name: 'Atorvastatin 10 MG Oral Tablet' }, { name: 'Atorvastatin 20 MG Oral Tablet' }, { name: 'Atorvastatin 40 MG Oral Tablet' },
+            { name: 'Metformin 500 MG Oral Tablet' }, { name: 'Metformin 850 MG Oral Tablet' }, { name: 'Metformin 1000 MG Oral Tablet' },
+            { name: 'Amlodipine 5 MG Oral Tablet' }, { name: 'Amlodipine 10 MG Oral Tablet' },
+            { name: 'Levothyroxine 50 MCG Oral Tablet' }, { name: 'Levothyroxine 75 MCG Oral Tablet' }, { name: 'Levothyroxine 100 MCG Oral Tablet' },
+            { name: 'Omeprazole 20 MG Oral Capsule' }, { name: 'Omeprazole 40 MG Oral Capsule' },
+            { name: 'Losartan 25 MG Oral Tablet' }, { name: 'Losartan 50 MG Oral Tablet' }, { name: 'Losartan 100 MG Oral Tablet' },
+            { name: 'Gabapentin 100 MG Oral Capsule' }, { name: 'Gabapentin 300 MG Oral Capsule' },
+            { name: 'Hydrochlorothiazide 12.5 MG Oral Tablet' }, { name: 'Hydrochlorothiazide 25 MG Oral Tablet' },
+            { name: 'Sertraline 50 MG Oral Tablet' }, { name: 'Sertraline 100 MG Oral Tablet' },
+            { name: 'Simvastatin 20 MG Oral Tablet' }, { name: 'Simvastatin 40 MG Oral Tablet' },
+            { name: 'Montelukast 10 MG Oral Tablet' },
+            { name: 'Escitalopram 10 MG Oral Tablet' }, { name: 'Escitalopram 20 MG Oral Tablet' },
+            { name: 'Furosemide 20 MG Oral Tablet' }, { name: 'Furosemide 40 MG Oral Tablet' },
+            { name: 'Amoxicillin 500 MG Oral Capsule' }, { name: 'Amoxicillin 875 MG Oral Tablet' },
+            { name: 'Azithromycin 250 MG Oral Tablet' },
+            { name: 'Albuterol 90 MCG Inhaler' },
+            { name: 'Prednisone 10 MG Oral Tablet' }, { name: 'Prednisone 20 MG Oral Tablet' },
+            { name: 'Trazodone 50 MG Oral Tablet' }, { name: 'Trazodone 100 MG Oral Tablet' },
+            { name: 'Fluticasone 50 MCG Nasal Spray' },
+            { name: 'Tramadol 50 MG Oral Tablet' },
+            { name: 'Pantoprazole 40 MG Oral Tablet' },
+            { name: 'Meloxicam 15 MG Oral Tablet' },
+            { name: 'Rosuvastatin 10 MG Oral Tablet' }, { name: 'Rosuvastatin 20 MG Oral Tablet' },
+            { name: 'Clopidogrel 75 MG Oral Tablet' },
+            { name: 'Propranolol 10 MG Oral Tablet' }, { name: 'Propranolol 20 MG Oral Tablet' },
+            { name: 'Aspirin 81 MG Oral Tablet' },
+            { name: 'Ibuprofen 400 MG Oral Tablet' }, { name: 'Ibuprofen 600 MG Oral Tablet' }, { name: 'Ibuprofen 800 MG Oral Tablet' }
+        ];
+
         if (activeTab === 'medications') {
             const searchTimer = setTimeout(async () => {
                 setSearchingMed(true);
                 try {
-                    // Use backend proxy to avoid CORS and leverage robust server-side logic (OpenFDA + RxNorm + Fallback)
-                    const response = await medicationsAPI.search(query);
-                    setMedResults(response.data || []);
+                    // 1. Try Backend API
+                    let finalResults = [];
+                    try {
+                        const response = await medicationsAPI.search(query);
+                        if (response.data && Array.isArray(response.data)) {
+                            finalResults = response.data;
+                        }
+                    } catch (apiErr) {
+                        console.error('API Search Failed, using fallback', apiErr);
+                    }
+
+                    // 2. Client-Side Fallback if API returns empty
+                    if (finalResults.length === 0 && query.length >= 2) {
+                        const lowerQ = query.toLowerCase();
+                        const fallbackMatches = COMMON_MEDS_FALLBACK.filter(m =>
+                            m.name.toLowerCase().includes(lowerQ)
+                        );
+                        finalResults = fallbackMatches;
+                    }
+
+                    setMedResults(finalResults);
                 } catch (e) {
                     console.error('Medication search error:', e);
                     setMedResults([]);
