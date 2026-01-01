@@ -561,41 +561,31 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
             const searchTimer = setTimeout(async () => {
                 setSearchingMed(true);
                 try {
-                    // Search BOTH sources in parallel for faster, more comprehensive results
-                    const [localResponse, rxnormResponse] = await Promise.allSettled([
-                        medicationsAPI.search(query),
-                        axios.get('https://rxnav.nlm.nih.gov/REST/drugs.json', { params: { name: query } })
-                    ]);
+                    // Use RxNorm API directly for medication search
+                    const rxnormResponse = await axios.get('https://rxnav.nlm.nih.gov/REST/drugs.json', {
+                        params: { name: query }
+                    });
 
-                    // Process local results
-                    let localResults = [];
-                    if (localResponse.status === 'fulfilled') {
-                        const data = localResponse.value?.data;
-                        localResults = Array.isArray(data) ? data : (Array.isArray(localResponse.value) ? localResponse.value : []);
-                    }
-
-                    // Process RxNorm results
                     let rxResults = [];
-                    if (rxnormResponse.status === 'fulfilled' && rxnormResponse.value?.data?.drugGroup?.conceptGroup) {
-                        rxnormResponse.value.data.drugGroup.conceptGroup.forEach(group => {
+                    if (rxnormResponse.data?.drugGroup?.conceptGroup) {
+                        rxnormResponse.data.drugGroup.conceptGroup.forEach(group => {
                             if (group.conceptProperties) {
                                 group.conceptProperties.forEach(drug => {
-                                    rxResults.push({ name: drug.name, rxcui: drug.rxcui, source: 'rxnorm' });
+                                    rxResults.push({
+                                        name: drug.name,
+                                        rxcui: drug.rxcui,
+                                        source: 'rxnorm'
+                                    });
                                 });
                             }
                         });
                     }
 
-                    // Combine and deduplicate: local results first, then RxNorm
-                    const seenNames = new Set(localResults.map(r => (r.name || '').toLowerCase()));
-                    const combinedResults = [
-                        ...localResults,
-                        ...rxResults.filter(r => !seenNames.has((r.name || '').toLowerCase()))
-                    ].slice(0, 20);
-
-                    setMedResults(combinedResults);
+                    // Limit to 25 results
+                    setMedResults(rxResults.slice(0, 25));
                 } catch (e) {
-                    console.error('Medication search error:', e);
+                    console.error('RxNorm search error:', e);
+                    setMedResults([]);
                 } finally {
                     setSearchingMed(false);
                 }
