@@ -561,27 +561,45 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
             const searchTimer = setTimeout(async () => {
                 setSearchingMed(true);
                 try {
-                    // Use RxNorm API directly for medication search
-                    const rxnormResponse = await axios.get('https://rxnav.nlm.nih.gov/REST/drugs.json', {
-                        params: { name: query }
+                    // Use RxNorm approximateTerm API for better partial matching
+                    const rxnormResponse = await axios.get('https://rxnav.nlm.nih.gov/REST/approximateTerm.json', {
+                        params: { term: query, maxEntries: 25 }
                     });
 
                     let rxResults = [];
-                    if (rxnormResponse.data?.drugGroup?.conceptGroup) {
-                        rxnormResponse.data.drugGroup.conceptGroup.forEach(group => {
-                            if (group.conceptProperties) {
-                                group.conceptProperties.forEach(drug => {
-                                    rxResults.push({
-                                        name: drug.name,
-                                        rxcui: drug.rxcui,
-                                        source: 'rxnorm'
-                                    });
+                    if (rxnormResponse.data?.approximateGroup?.candidate) {
+                        rxnormResponse.data.approximateGroup.candidate.forEach(drug => {
+                            if (drug.name) {
+                                rxResults.push({
+                                    name: drug.name,
+                                    rxcui: drug.rxcui,
+                                    source: 'rxnorm',
+                                    score: drug.score
                                 });
                             }
                         });
                     }
 
-                    // Limit to 25 results
+                    // If no results, try the drugs.json endpoint as fallback
+                    if (rxResults.length === 0) {
+                        const drugsResponse = await axios.get('https://rxnav.nlm.nih.gov/REST/drugs.json', {
+                            params: { name: query }
+                        });
+                        if (drugsResponse.data?.drugGroup?.conceptGroup) {
+                            drugsResponse.data.drugGroup.conceptGroup.forEach(group => {
+                                if (group.conceptProperties) {
+                                    group.conceptProperties.forEach(drug => {
+                                        rxResults.push({
+                                            name: drug.name,
+                                            rxcui: drug.rxcui,
+                                            source: 'rxnorm'
+                                        });
+                                    });
+                                }
+                            });
+                        }
+                    }
+
                     setMedResults(rxResults.slice(0, 25));
                 } catch (e) {
                     console.error('RxNorm search error:', e);
