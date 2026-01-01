@@ -1271,44 +1271,43 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                         </div>
                                     )}
 
+                                    {/* Medication Search & Selection */}
                                     {!currentMed.name ? (
-                                        <div className="space-y-4">
+                                        <div className="space-y-2">
                                             <div className="relative">
                                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                                 <input
-                                                    className="w-full pl-9 pr-4 py-2 bg-white border border-gray-300 rounded-md text-sm outline-none focus:ring-2 focus:ring-primary-500"
+                                                    className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
                                                     placeholder="Search medication name..."
                                                     value={searchQuery}
                                                     onChange={e => setSearchQuery(e.target.value)}
+                                                    autoFocus
                                                 />
                                                 {searchingMed && <div className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin rounded-full h-4 w-4 border-b-2 border-primary-500"></div>}
                                             </div>
 
-                                            <div className="space-y-1 max-h-[300px] overflow-y-auto">
+                                            <div className="space-y-1 max-h-[350px] overflow-y-auto">
                                                 {medResults.length > 0 ? (
                                                     medResults.map((m, i) => (
                                                         <button
                                                             key={i}
                                                             onClick={() => {
-                                                                // Directly add to cart with default values
-                                                                addToCart({
+                                                                // Select medication and show detail form
+                                                                setCurrentMed({
                                                                     name: m.name,
-                                                                    sig: 'As directed',
+                                                                    sig: '',
                                                                     dispense: '30',
                                                                     refills: '0',
-                                                                    type: 'medications',
-                                                                    diagnosis: selectedDiagnosis,
-                                                                    pharmacy: rxMode === 'electronic' ? selectedPharmacy : null,
-                                                                    rxMode: rxMode
+                                                                    notes: ''
                                                                 });
                                                                 setSearchQuery('');
                                                                 setMedResults([]);
                                                             }}
-                                                            className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-primary-50 border border-transparent hover:border-primary-100 transition-all text-left group"
+                                                            className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-primary-50 border border-gray-100 hover:border-primary-200 transition-all text-left group shadow-sm hover:shadow"
                                                         >
-                                                            <Pill className="w-4 h-4 text-primary-400 group-hover:text-primary-600" />
-                                                            <div className="flex-1">
-                                                                <p className="text-sm font-semibold text-gray-900 leading-tight">
+                                                            <Pill className="w-5 h-5 text-primary-400 group-hover:text-primary-600 flex-shrink-0" />
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-sm font-semibold text-gray-900 leading-tight truncate">
                                                                     {(m.name || '')
                                                                         .replace(/&amp;/g, '&')
                                                                         .replace(/&#x2f;/gi, '/')
@@ -1316,35 +1315,37 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                                         .replace(/&quot;/g, '"')
                                                                         .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
                                                                 </p>
-                                                                {m.strength && <p className="text-[10px] text-gray-500">{m.strength}</p>}
+                                                                {m.strength && <p className="text-xs text-gray-500 mt-0.5">{m.strength}</p>}
                                                             </div>
-                                                            <div className="text-[10px] font-bold text-primary-600 opacity-0 group-hover:opacity-100">
-                                                                Click to add →
+                                                            <div className="text-xs font-semibold text-primary-600 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                                                                Select
+                                                                <span className="text-primary-400">→</span>
                                                             </div>
                                                         </button>
                                                     ))
                                                 ) : searchQuery.length > 2 && !searchingMed ? (
-                                                    <div className="p-4 text-center border-2 border-dashed border-gray-100 rounded-lg">
-                                                        <p className="text-sm text-gray-400 mb-2">No matching medications found</p>
+                                                    <div className="p-6 text-center border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
+                                                        <p className="text-sm text-gray-500 mb-3">No matching medications found</p>
                                                         <button
                                                             onClick={() => {
                                                                 // Allow custom medication entry
-                                                                addToCart({
+                                                                setCurrentMed({
                                                                     name: searchQuery,
-                                                                    sig: 'As directed',
+                                                                    sig: '',
                                                                     dispense: '30',
                                                                     refills: '0',
-                                                                    type: 'medications',
-                                                                    diagnosis: selectedDiagnosis,
-                                                                    pharmacy: rxMode === 'electronic' ? selectedPharmacy : null,
-                                                                    rxMode: rxMode
+                                                                    notes: ''
                                                                 });
                                                                 setSearchQuery('');
                                                             }}
-                                                            className="text-primary-600 text-xs font-bold uppercase tracking-wider hover:underline"
+                                                            className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-xs font-bold rounded-lg transition-colors"
                                                         >
                                                             Add "{searchQuery}" as custom medication
                                                         </button>
+                                                    </div>
+                                                ) : searchQuery.length === 0 ? (
+                                                    <div className="p-6 text-center text-gray-400 text-sm">
+                                                        Type to search medications...
                                                     </div>
                                                 ) : null}
                                             </div>
