@@ -33,12 +33,12 @@ const Dashboard = () => {
             } catch (error) {
                 console.warn('Could not fetch dashboard stats:', error);
                 setStats({
-                    totalPatients: 1247,
-                    visitsToday: 24,
-                    pendingOrders: 8,
-                    unreadMessages: 12,
-                    pendingNotes: 5,
-                    criticalAlerts: 2,
+                    totalPatients: 0,
+                    visitsToday: 0,
+                    pendingOrders: 0,
+                    unreadMessages: 0,
+                    pendingNotes: 0,
+                    criticalAlerts: 0,
                 });
             } finally {
                 setLoading(false);
@@ -132,7 +132,7 @@ const Dashboard = () => {
                     <div className="bg-white p-3 rounded-lg border border-gray-200 flex items-center justify-between shadow-sm hover:border-orange-300 transition-colors cursor-pointer" onClick={() => navigate('/tasks')}>
                         <div>
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">In Basket</p>
-                            <p className="text-xl font-bold text-gray-900">{stats?.pendingOrders || 8}</p>
+                            <p className="text-xl font-bold text-gray-900">{stats?.pendingOrders || 0}</p>
                         </div>
                         <ClipboardList className="w-5 h-5 text-orange-500 opacity-80" />
                     </div>
@@ -146,14 +146,14 @@ const Dashboard = () => {
                     <div className="bg-white p-3 rounded-lg border border-gray-200 flex items-center justify-between shadow-sm hover:border-purple-300 transition-colors cursor-pointer" onClick={() => navigate('/messages')}>
                         <div>
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Messages</p>
-                            <p className="text-xl font-bold text-gray-900">{stats?.unreadMessages || 5}</p>
+                            <p className="text-xl font-bold text-gray-900">{stats?.unreadMessages || 0}</p>
                         </div>
                         <MessageSquare className="w-5 h-5 text-purple-500 opacity-80" />
                     </div>
                     <div className="bg-white p-3 rounded-lg border border-gray-200 flex items-center justify-between shadow-sm hover:border-red-300 transition-colors cursor-pointer" onClick={() => navigate('/pending-notes')}>
                         <div>
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Unsigned Notes</p>
-                            <p className="text-xl font-bold text-gray-900">{stats?.pendingNotes || 3}</p>
+                            <p className="text-xl font-bold text-gray-900">{stats?.pendingNotes || 0}</p>
                         </div>
                         <FileText className="w-5 h-5 text-red-500 opacity-80" />
                     </div>
