@@ -159,7 +159,7 @@ async function syncRole(clinicId, roleKey, adminId) {
         const { schema_name } = clinicRes.rows[0];
 
         const tplRes = await client.query(`
-            SELECT t.id, t.version, tp.privilege_name
+            SELECT t.id, t.version, t.display_name, tp.privilege_name
             FROM platform_role_templates t
             JOIN platform_role_template_privileges tp ON t.id = tp.template_id
             WHERE t.role_key = $1
