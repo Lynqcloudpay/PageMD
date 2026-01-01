@@ -83,8 +83,8 @@ router.get('/dashboard', requirePermission('reports:view'), async (req, res) => 
     const patients = await pool.query(patientsQuery, patientsParams);
     stats.totalPatients = parseInt(patients.rows[0]?.count || 0);
 
-    // Visits today
-    let visitsQuery = 'SELECT COUNT(*) as count FROM visits WHERE DATE(visit_date) = CURRENT_DATE';
+    // Visits today (Scheduled Appointments)
+    let visitsQuery = 'SELECT COUNT(*) as count FROM appointments WHERE appointment_date = CURRENT_DATE';
     const visitsParams = [];
     if (req.user?.clinic_id) {
       visitsQuery += ' AND clinic_id = $1';
@@ -98,25 +98,29 @@ router.get('/dashboard', requirePermission('reports:view'), async (req, res) => 
       try {
         const inboxStats = await pool.query(
           `SELECT 
-            COUNT(*) FILTER (WHERE status NOT IN ('completed', 'archived') AND assigned_user_id = $1) as my_count,
-            COUNT(*) FILTER (WHERE status NOT IN ('completed', 'archived') AND type = 'lab') as labs_count,
-            COUNT(*) FILTER (WHERE status NOT IN ('completed', 'archived') AND type = 'message') as msgs_count
+            COUNT(*) FILTER (WHERE status NOT IN ('completed', 'archived') AND assigned_user_id = $1 AND type NOT IN ('lab', 'imaging', 'message', 'note')) as other_count,
+            COUNT(*) FILTER (WHERE status NOT IN ('completed', 'archived') AND type IN ('lab', 'imaging')) as labs_count,
+            COUNT(*) FILTER (WHERE status NOT IN ('completed', 'archived') AND type = 'message' AND assigned_user_id = $1) as msgs_count,
+            COUNT(*) FILTER (WHERE status NOT IN ('completed', 'archived') AND type = 'note' AND assigned_user_id = $1) as notes_count
            FROM inbox_items`,
           [req.user.id]
         );
-        stats.pendingOrders = parseInt(inboxStats.rows[0]?.my_count || 0);
+        stats.pendingOrders = parseInt(inboxStats.rows[0]?.other_count || 0);
         stats.unreadLabs = parseInt(inboxStats.rows[0]?.labs_count || 0);
         stats.unreadMessages = parseInt(inboxStats.rows[0]?.msgs_count || 0);
+        stats.pendingNotes = parseInt(inboxStats.rows[0]?.notes_count || 0);
       } catch (inboxError) {
         console.warn('Error fetching inbox stats for dashboard:', inboxError);
         stats.pendingOrders = 0;
         stats.unreadMessages = 0;
         stats.unreadLabs = 0;
+        stats.pendingNotes = 0;
       }
     } else {
       stats.pendingOrders = 0;
       stats.unreadMessages = 0;
       stats.unreadLabs = 0;
+      stats.pendingNotes = 0;
     }
 
     res.json(stats);
