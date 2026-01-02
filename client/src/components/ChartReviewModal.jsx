@@ -477,10 +477,19 @@ const ChartReviewModal = ({
         const noteText = typeof selectedVisit.note_draft === 'string' ? selectedVisit.note_draft : (selectedVisit.fullNote || '');
         const decoded = decodeHtmlEntities(noteText);
 
+        // Parse note sections
         const ccMatch = String(decoded).match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History):|$)/is);
-        const hpiMatch = String(decoded).match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment):|$)/is);
+        const hpiMatch = String(decoded).match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment|Vitals):|$)/is);
         const assessmentMatch = String(decoded).match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):|$)/is);
-        const planMatch = String(decoded).match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n(?:Care Plan|Follow):|$)/is);
+        const planMatch = String(decoded).match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n(?:Care Plan|Follow|$))/is);
+        const carePlanMatch = String(decoded).match(/(?:Care Plan):\s*(.+?)(?:\n\n|\n(?:Follow):|$)/is);
+        const followUpMatch = String(decoded).match(/(?:Follow[\s-]?up|F\/U):\s*(.+?)(?:\n\n|$)/is);
+
+        // Get vitals from visit data
+        let visitVitals = selectedVisit.vitals || {};
+        if (typeof visitVitals === 'string') {
+            try { visitVitals = JSON.parse(visitVitals); } catch (e) { visitVitals = {}; }
+        }
 
         return (
             <div className="flex flex-1 overflow-hidden bg-white text-left">
@@ -547,11 +556,11 @@ const ChartReviewModal = ({
                             )}
                         </div>
 
-                        <div className="space-y-12">
+                        <div className="space-y-6">
                             {/* CC Section */}
-                            <div className="bg-blue-50/50 rounded-3xl p-8 border border-blue-100/50">
-                                <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em] mb-4">Reason for Visit</h4>
-                                <div className="text-xl font-bold text-blue-900 leading-relaxed italic">
+                            <div className="bg-blue-50/50 rounded-xl p-4 border border-blue-100/50">
+                                <h4 className="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-2">Chief Complaint</h4>
+                                <div className="text-base font-medium text-blue-900 italic">
                                     "{ccMatch ? ccMatch[1].trim() : 'Not documented'}"
                                 </div>
                             </div>
@@ -559,32 +568,69 @@ const ChartReviewModal = ({
                             {/* HPI Section */}
                             {hpiMatch && (
                                 <div>
-                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4">History of Present Illness</h4>
-                                    <div className="text-base text-slate-700 leading-relaxed whitespace-pre-wrap font-medium">
+                                    <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">History of Present Illness</h4>
+                                    <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
                                         {hpiMatch[1].trim()}
                                     </div>
                                 </div>
                             )}
 
-                            {/* Assessment & Plan - Stacked vertically */}
-                            <div className="space-y-6 pt-6">
-                                {assessmentMatch && (
-                                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] mb-3">Clinical Assessment</h4>
-                                        <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
-                                            {assessmentMatch[1].trim()}
-                                        </div>
+                            {/* Vitals Section */}
+                            {Object.keys(visitVitals).length > 0 && (
+                                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                                    <h4 className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3">Vitals</h4>
+                                    <div className="grid grid-cols-4 gap-3 text-xs">
+                                        {visitVitals.bp && <div><span className="text-slate-400">BP:</span> <span className="font-bold">{visitVitals.bp}</span></div>}
+                                        {(visitVitals.pulse || visitVitals.hr) && <div><span className="text-slate-400">HR:</span> <span className="font-bold">{visitVitals.pulse || visitVitals.hr}</span></div>}
+                                        {visitVitals.temp && <div><span className="text-slate-400">Temp:</span> <span className="font-bold">{visitVitals.temp}</span></div>}
+                                        {visitVitals.resp && <div><span className="text-slate-400">RR:</span> <span className="font-bold">{visitVitals.resp}</span></div>}
+                                        {(visitVitals.o2sat || visitVitals.spo2) && <div><span className="text-slate-400">SpO2:</span> <span className="font-bold">{visitVitals.o2sat || visitVitals.spo2}%</span></div>}
+                                        {visitVitals.weight && <div><span className="text-slate-400">Wt:</span> <span className="font-bold">{visitVitals.weight}</span></div>}
+                                        {visitVitals.height && <div><span className="text-slate-400">Ht:</span> <span className="font-bold">{visitVitals.height}</span></div>}
+                                        {visitVitals.bmi && <div><span className="text-slate-400">BMI:</span> <span className="font-bold">{visitVitals.bmi}</span></div>}
                                     </div>
-                                )}
-                                {planMatch && (
-                                    <div className="p-6 bg-emerald-50 rounded-2xl border border-emerald-100">
-                                        <h4 className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.2em] mb-3">Treatment Plan</h4>
-                                        <div className="text-sm text-emerald-900 leading-relaxed whitespace-pre-wrap">
-                                            {planMatch[1].trim()}
-                                        </div>
+                                </div>
+                            )}
+
+                            {/* Assessment */}
+                            {assessmentMatch && (
+                                <div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
+                                    <h4 className="text-[9px] font-black text-amber-700 uppercase tracking-widest mb-2">Assessment</h4>
+                                    <div className="text-sm text-amber-900 leading-relaxed whitespace-pre-wrap">
+                                        {assessmentMatch[1].trim()}
                                     </div>
-                                )}
-                            </div>
+                                </div>
+                            )}
+
+                            {/* Plan */}
+                            {planMatch && (
+                                <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                                    <h4 className="text-[9px] font-black text-emerald-700 uppercase tracking-widest mb-2">Plan</h4>
+                                    <div className="text-sm text-emerald-900 leading-relaxed whitespace-pre-wrap">
+                                        {planMatch[1].trim()}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Care Plan */}
+                            {carePlanMatch && (
+                                <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
+                                    <h4 className="text-[9px] font-black text-purple-700 uppercase tracking-widest mb-2">Care Plan</h4>
+                                    <div className="text-sm text-purple-900 leading-relaxed whitespace-pre-wrap">
+                                        {carePlanMatch[1].trim()}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Follow-up */}
+                            {followUpMatch && (
+                                <div className="p-4 bg-cyan-50 rounded-xl border border-cyan-100">
+                                    <h4 className="text-[9px] font-black text-cyan-700 uppercase tracking-widest mb-2">Follow-up</h4>
+                                    <div className="text-sm text-cyan-900 leading-relaxed whitespace-pre-wrap">
+                                        {followUpMatch[1].trim()}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
