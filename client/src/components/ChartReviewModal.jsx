@@ -238,161 +238,172 @@ const ChartReviewModal = ({
         ].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
         return (
-            <div className="flex-1 bg-slate-50 overflow-y-auto custom-scrollbar p-8">
-                <div className="max-w-4xl mx-auto space-y-8 text-left">
-                    {/* Professional Patient Header */}
-                    <div className="relative p-10 rounded-[3rem] bg-white border border-slate-200 shadow-sm flex flex-col items-center text-center">
-                        <div className="absolute top-0 right-0 p-6 opacity-30 hover:opacity-100 cursor-pointer transition-opacity">
-                            <RefreshCw className="w-5 h-5 text-slate-400" onClick={() => loadRecords(patientData.id)} />
-                        </div>
-
-                        <div className="relative mb-6">
+            <div className="flex-1 bg-slate-50 overflow-y-auto custom-scrollbar p-4">
+                <div className="max-w-3xl mx-auto space-y-4 text-left">
+                    {/* Compact Patient Header */}
+                    <div className="relative p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div className="relative">
                             <PatientHeaderPhoto
                                 firstName={patientData.first_name}
                                 lastName={patientData.last_name}
                                 photoUrl={patientData.photo_url}
-                                className="w-28 h-28 text-4xl shadow-xl border-4 border-white ring-8 ring-blue-50"
+                                className="w-14 h-14 text-lg shadow-md border-2 border-white ring-4 ring-blue-50"
                             />
-                            <div className="absolute bottom-2 right-2 w-6 h-6 bg-emerald-500 border-4 border-white rounded-full shadow-lg"></div>
+                            <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full"></div>
                         </div>
-
-                        <h2 className="text-4xl font-black text-slate-900 mb-2">
-                            {patientData.first_name} {patientData.last_name}
-                        </h2>
-                        <div className="flex items-center gap-3 text-slate-400 text-xs font-black uppercase tracking-[0.2em]">
-                            <span>Patient #{patientData.id || '---'}</span>
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-200"></span>
-                            <span className="text-blue-600 font-extrabold">Clinical Summary</span>
+                        <div className="flex-1">
+                            <h2 className="text-xl font-bold text-slate-900">
+                                {patientData.first_name} {patientData.last_name}
+                            </h2>
+                            <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+                                <span>ID #{patientData.id || '---'}</span>
+                                <span className="w-1 h-1 rounded-full bg-slate-200"></span>
+                                <span className="text-blue-600">Summary</span>
+                            </div>
                         </div>
+                        <RefreshCw className="w-4 h-4 text-slate-300 hover:text-slate-500 cursor-pointer transition-colors" onClick={() => loadRecords(patientData.id)} />
                     </div>
 
-                    {/* Vitals Stats Grid */}
-                    <div className="grid grid-cols-3 gap-6">
+                    {/* Compact Vitals Stats */}
+                    <div className="grid grid-cols-3 gap-3">
                         {[
-                            { label: 'Heart Rate', value: latestVitals.hr, unit: 'bpm', icon: Heart, color: 'text-rose-500', bg: 'bg-rose-50', border: 'border-rose-100' },
-                            { label: 'BP Systolic', value: latestVitals.sys, unit: 'mmHg', icon: Activity, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
-                            { label: 'SpO2', value: latestVitals.spo2, unit: '%', icon: Waves, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' }
+                            { label: 'HEART RATE', value: latestVitals.hr, unit: 'bpm', icon: Heart, color: 'text-rose-500', bg: 'bg-rose-50', border: 'border-rose-100' },
+                            { label: 'BP SYSTOLIC', value: latestVitals.sys, unit: 'mmHg', icon: Activity, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
+                            { label: 'SPO2', value: latestVitals.spo2, unit: '%', icon: Waves, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' }
                         ].map((stat, i) => (
-                            <div key={i} className="p-8 rounded-[2rem] bg-white border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className={`p-2 rounded-xl ${stat.bg} ${stat.color} border ${stat.border}`}>
-                                        <stat.icon className="w-5 h-5" />
+                            <div key={i} className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm hover:shadow transition-shadow">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <div className={`p-1.5 rounded-lg ${stat.bg} ${stat.color} border ${stat.border}`}>
+                                        <stat.icon className="w-4 h-4" />
                                     </div>
-                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{stat.label}</div>
+                                    <div className="text-[9px] font-bold text-slate-400 tracking-wider">{stat.label}</div>
                                 </div>
-                                <div className="flex items-end gap-1.5">
-                                    <span className="text-4xl font-black text-slate-900 leading-none">{stat.value}</span>
-                                    <span className="text-xs font-bold text-slate-400 pb-1">{stat.unit}</span>
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-2xl font-bold text-slate-900">{stat.value}</span>
+                                    <span className="text-[10px] font-medium text-slate-400">{stat.unit}</span>
                                 </div>
                             </div>
                         ))}
                     </div>
 
-                    {/* Main Trend Chart */}
-                    <div className="p-10 rounded-[3rem] bg-white border border-slate-200 shadow-sm flex flex-col">
-                        <div className="flex items-center justify-between mb-10 text-left">
+                    {/* Compact Trend Chart */}
+                    <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+                        <div className="flex items-center justify-between mb-3">
                             <div>
-                                <h3 className="text-xl font-black text-slate-900 tracking-tight">Clinical Monitoring</h3>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Visit-over-visit trends</p>
+                                <h3 className="text-sm font-bold text-slate-900">Clinical Monitoring</h3>
+                                <p className="text-[9px] font-medium text-slate-400 uppercase tracking-wider">Visit-over-visit trends</p>
                             </div>
-                            <div className="flex gap-6">
-                                <div className="flex items-center gap-2">
+                            <div className="flex gap-4">
+                                <div className="flex items-center gap-1.5">
                                     <div className="w-2 h-2 rounded-full bg-rose-500"></div>
-                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">HR</span>
+                                    <span className="text-[9px] font-bold text-slate-400">HR</span>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1.5">
                                     <div className="w-2 h-2 rounded-full bg-blue-600"></div>
-                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">BP</span>
+                                    <span className="text-[9px] font-bold text-slate-400">BP</span>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1.5">
                                     <div className="w-2 h-2 rounded-full bg-emerald-600"></div>
-                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">O2</span>
+                                    <span className="text-[9px] font-bold text-slate-400">O2</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex-1 w-full h-[320px]">
+                        <div style={{ width: '100%', height: 180 }}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={vitalsTrendData}>
+                                <AreaChart data={vitalsTrendData.length > 0 ? vitalsTrendData : [{ name: 'No Data', hr: 0, sys: 0, spo2: 0 }]}>
+                                    <defs>
+                                        <linearGradient id="hrGradient" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                                        </linearGradient>
+                                        <linearGradient id="bpGradient" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                                        </linearGradient>
+                                        <linearGradient id="o2Gradient" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#059669" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#059669" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                     <XAxis
                                         dataKey="name"
                                         axisLine={false}
                                         tickLine={false}
-                                        tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}
-                                        dy={10}
+                                        tick={{ fill: '#94a3b8', fontSize: 9 }}
                                     />
                                     <YAxis
                                         axisLine={false}
                                         tickLine={false}
-                                        tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}
-                                        domain={['auto', 'auto']}
-                                        dx={-10}
+                                        tick={{ fill: '#94a3b8', fontSize: 9 }}
+                                        domain={[0, 'auto']}
+                                        width={30}
                                     />
                                     <Tooltip
                                         contentStyle={{
                                             backgroundColor: '#fff',
                                             border: '1px solid #e2e8f0',
-                                            borderRadius: '16px',
-                                            boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                                            padding: '12px'
+                                            borderRadius: '8px',
+                                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                                            padding: '8px',
+                                            fontSize: '11px'
                                         }}
-                                        itemStyle={{ fontSize: '11px', fontWeight: 'bold', padding: '2px 0' }}
                                     />
-                                    <Line
+                                    <Area
                                         type="monotone"
                                         dataKey="hr"
                                         name="Heart Rate"
                                         stroke="#f43f5e"
-                                        strokeWidth={4}
-                                        dot={{ fill: '#f43f5e', strokeWidth: 2, r: 4, stroke: '#fff' }}
-                                        activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }}
+                                        strokeWidth={2}
+                                        fill="url(#hrGradient)"
+                                        dot={{ fill: '#f43f5e', r: 3, strokeWidth: 0 }}
                                         connectNulls
                                     />
-                                    <Line
+                                    <Area
                                         type="monotone"
                                         dataKey="sys"
                                         name="BP Systolic"
                                         stroke="#2563eb"
-                                        strokeWidth={4}
-                                        dot={{ fill: '#2563eb', strokeWidth: 2, r: 4, stroke: '#fff' }}
-                                        activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }}
+                                        strokeWidth={2}
+                                        fill="url(#bpGradient)"
+                                        dot={{ fill: '#2563eb', r: 3, strokeWidth: 0 }}
                                         connectNulls
                                     />
-                                    <Line
+                                    <Area
                                         type="monotone"
                                         dataKey="spo2"
                                         name="SpO2"
                                         stroke="#059669"
-                                        strokeWidth={4}
-                                        dot={{ fill: '#059669', strokeWidth: 2, r: 4, stroke: '#fff' }}
-                                        activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }}
+                                        strokeWidth={2}
+                                        fill="url(#o2Gradient)"
+                                        dot={{ fill: '#059669', r: 3, strokeWidth: 0 }}
                                         connectNulls
                                     />
-                                </LineChart>
+                                </AreaChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
 
-                    {/* Timeline Section */}
-                    <div className="p-10 rounded-[3rem] bg-white border border-slate-200 shadow-sm text-left">
-                        <h3 className="text-xl font-black text-slate-900 mb-10 tracking-tight">Timeline</h3>
-                        <div className="space-y-8 relative ml-4">
-                            <div className="absolute top-0 bottom-0 left-[7px] w-0.5 bg-slate-100"></div>
+                    {/* Compact Timeline */}
+                    <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+                        <h3 className="text-sm font-bold text-slate-900 mb-4">Timeline</h3>
+                        <div className="space-y-3 relative ml-2">
+                            <div className="absolute top-0 bottom-0 left-[5px] w-0.5 bg-slate-100"></div>
 
-                            {timelineItems.length > 0 ? timelineItems.map((item, i) => (
-                                <div key={i} className="flex gap-8 items-start relative group">
-                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest w-20 pt-1.5 text-right">
-                                        {item.time}
-                                    </div>
-                                    <div className={`w-4 h-4 rounded-full ${item.color} border-4 border-white shadow-sm z-10 shrink-0 mt-1 transition-transform group-hover:scale-125`}></div>
-                                    <div className="flex-1 bg-slate-50 hover:bg-white p-5 rounded-2xl border border-transparent hover:border-slate-200 hover:shadow-xl hover:shadow-slate-200/20 transition-all cursor-pointer">
-                                        <div className="font-bold text-slate-900 text-sm">{item.title}</div>
-                                        <div className="text-xs font-medium text-slate-400 mt-1">{item.subtitle}</div>
+                            {timelineItems.length > 0 ? timelineItems.slice(0, 5).map((item, i) => (
+                                <div key={i} className="flex gap-4 items-center relative group">
+                                    <div className={`w-3 h-3 rounded-full ${item.color} border-2 border-white shadow-sm z-10 shrink-0`}></div>
+                                    <div className="flex-1 flex items-center justify-between bg-slate-50 hover:bg-white px-3 py-2 rounded-lg border border-transparent hover:border-slate-200 transition-all cursor-pointer">
+                                        <div>
+                                            <div className="font-medium text-slate-900 text-xs">{item.title}</div>
+                                            <div className="text-[10px] text-slate-400">{item.subtitle}</div>
+                                        </div>
+                                        <div className="text-[9px] font-medium text-slate-400">{item.time}</div>
                                     </div>
                                 </div>
                             )) : (
-                                <div className="py-20 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">
+                                <div className="py-8 text-center text-slate-400 font-medium text-xs">
                                     No activity recorded
                                 </div>
                             )}
