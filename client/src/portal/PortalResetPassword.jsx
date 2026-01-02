@@ -31,7 +31,7 @@ const PortalResetPassword = () => {
         setError(null);
 
         try {
-            const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+            const apiBase = import.meta.env.VITE_API_URL || '/api';
             await axios.post(`${apiBase}/portal/auth/reset`, { token, email, password });
             setSuccess(true);
         } catch (err) {

@@ -22,7 +22,7 @@ const PortalRegister = () => {
             }
 
             try {
-                const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+                const apiBase = import.meta.env.VITE_API_URL || '/api';
                 const response = await axios.get(`${apiBase}/portal/auth/invite/${token}`);
                 setInviteData(response.data);
             } catch (err) {
@@ -52,7 +52,7 @@ const PortalRegister = () => {
         setLoading(true);
 
         try {
-            const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+            const apiBase = import.meta.env.VITE_API_URL || '/api';
             await axios.post(`${apiBase}/portal/auth/register`, {
                 token,
                 password
