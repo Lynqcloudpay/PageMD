@@ -4,6 +4,11 @@ import {
     Heart, Waves, Stethoscope, FileText, RefreshCw, AlertCircle, Clock, CheckCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
+import {
+    AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
+    LineChart, Line
+} from 'recharts';
+import PatientHeaderPhoto from './PatientHeaderPhoto';
 import { ordersAPI, documentsAPI, patientsAPI } from '../services/api';
 
 const decodeHtmlEntities = (text) => {
@@ -31,7 +36,7 @@ const ChartReviewModal = ({
     onOpenVisit,
     isLoading = false
 }) => {
-    const [activeTab, setActiveTab] = useState('Notes');
+    const [activeTab, setActiveTab] = useState('Summary');
     const [selectedVisitId, setSelectedVisitId] = useState(null);
     const [records, setRecords] = useState([]);
     const [recordsLoading, setRecordsLoading] = useState(false);
@@ -176,7 +181,7 @@ const ChartReviewModal = ({
     // Reset state when modal opens
     useEffect(() => {
         if (isOpen) {
-            setActiveTab('Notes');
+            setActiveTab('Summary');
             if (visits.length > 0) {
                 setSelectedVisitId(visits[0].id);
             }
@@ -190,6 +195,202 @@ const ChartReviewModal = ({
     }, [selectedVisitId, visits]);
 
     if (!isOpen) return null;
+
+    const renderSummaryTab = () => {
+        // Data prep for Summary
+        const vitalsTrendData = [...visits].reverse().map(v => {
+            let vitals = v.vitals || {};
+            if (typeof vitals === 'string') {
+                try { vitals = JSON.parse(vitals); } catch (e) { vitals = {}; }
+            }
+            const sys = parseInt(vitals.systolic || (typeof vitals.bp === 'string' ? vitals.bp.split('/')[0] : 0)) || 0;
+            const hr = parseInt(vitals.pulse || vitals.hr || 0) || 0;
+            const spo2 = parseInt(vitals.o2sat || vitals.spo2 || 0) || 0;
+
+            return {
+                name: format(new Date(v.visit_date), 'MM/dd'),
+                hr,
+                sys,
+                spo2
+            };
+        }).filter(d => d.hr > 0 || d.sys > 0);
+
+        const latestVitals = vitalsTrendData[vitalsTrendData.length - 1] || { hr: '--', sys: '--', spo2: '--' };
+
+        const timelineItems = [
+            ...visits.map(v => ({
+                id: `v-${v.id}`,
+                time: format(new Date(v.visit_date), 'h:mm a'),
+                date: v.visit_date,
+                title: v.visit_type?.replace('_', ' ') || 'Office Visit',
+                subtitle: v.provider_last_name || 'MD',
+                color: 'bg-emerald-500'
+            })),
+            ...records.slice(0, 10).map(r => ({
+                id: r.id,
+                time: format(new Date(r.date || 0), 'h:mm a'),
+                date: r.date,
+                title: r.title,
+                subtitle: r.category,
+                color: r.type === 'order' ? 'bg-blue-500' : 'bg-amber-500'
+            }))
+        ].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+        return (
+            <div className="flex-1 bg-slate-950 overflow-y-auto custom-scrollbar p-8">
+                <div className="max-w-4xl mx-auto space-y-8">
+                    {/* Glassmorphic Patient Header */}
+                    <div className="relative p-8 rounded-[2.5rem] bg-white/5 border border-white/10 backdrop-blur-xl flex flex-col items-center text-center overflow-hidden">
+                        <div className="absolute top-0 right-0 p-4 opacity-40 hover:opacity-100 cursor-pointer">
+                            <RefreshCw className="w-5 h-5 text-white" onClick={() => loadRecords(patientData.id)} />
+                        </div>
+
+                        <div className="relative mb-4">
+                            <PatientHeaderPhoto
+                                firstName={patientData.first_name}
+                                lastName={patientData.last_name}
+                                photoUrl={patientData.photo_url}
+                                className="w-24 h-24 text-3xl shadow-2xl border-4 border-white/20 ring-4 ring-slate-900"
+                            />
+                            <div className="absolute bottom-1 right-1 w-5 h-5 bg-emerald-500 border-4 border-slate-900 rounded-full"></div>
+                        </div>
+
+                        <h2 className="text-3xl font-black text-white mb-1">
+                            {patientData.first_name} {patientData.last_name}
+                        </h2>
+                        <div className="flex items-center gap-2 text-slate-400 text-sm font-bold uppercase tracking-widest">
+                            <span>Patient #{patientData.id || '---'}</span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-700"></span>
+                            <span>Summary</span>
+                        </div>
+                    </div>
+
+                    {/* Vitals Stats Grid */}
+                    <div className="grid grid-cols-3 gap-6">
+                        {[
+                            { label: 'Heart Rate', value: latestVitals.hr, unit: 'bpm', icon: Heart, color: 'text-rose-500', trend: '+4.2%' },
+                            { label: 'BP Systolic', value: latestVitals.sys, unit: 'mmHg', icon: Activity, color: 'text-blue-500', trend: '-2.1%' },
+                            { label: 'SpO2', value: latestVitals.spo2, unit: '%', icon: Waves, color: 'text-emerald-500', trend: 'Stable' }
+                        ].map((stat, i) => (
+                            <div key={i} className="p-6 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md">
+                                <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">{stat.label}</div>
+                                <div className="flex items-end gap-2 mb-2">
+                                    <span className="text-3xl font-black text-white">{stat.value}</span>
+                                    <stat.icon className={`w-5 h-5 ${stat.color} mb-1.5`} />
+                                </div>
+                                <div className={`text-[10px] font-bold ${stat.trend.startsWith('+') ? 'text-rose-400' : stat.trend.startsWith('-') ? 'text-emerald-400' : 'text-slate-500'}`}>
+                                    {stat.trend} rate
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Main Trend Chart */}
+                    <div className="p-8 rounded-[2.5rem] bg-white/5 border border-white/10 backdrop-blur-md h-[400px] flex flex-col">
+                        <div className="flex items-center justify-between mb-8">
+                            <h3 className="text-lg font-black text-white tracking-tight">Clinical Trends</h3>
+                            <div className="flex gap-4">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-3 h-3 rounded-full bg-rose-500"></span>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase">HR</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase">BP</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase">O2</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={vitalsTrendData}>
+                                    <defs>
+                                        <linearGradient id="colorHR" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                                        </linearGradient>
+                                        <linearGradient id="colorBP" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                        </linearGradient>
+                                        <linearGradient id="colorO2" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <XAxis
+                                        dataKey="name"
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fill: '#64748b', fontSize: 10, fontWeight: 'bold' }}
+                                        dy={10}
+                                    />
+                                    <YAxis hide domain={['dataMin - 20', 'dataMax + 20']} />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', color: '#fff' }}
+                                        itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="hr"
+                                        stroke="#f43f5e"
+                                        strokeWidth={4}
+                                        fillOpacity={1}
+                                        fill="url(#colorHR)"
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="sys"
+                                        stroke="#3b82f6"
+                                        strokeWidth={4}
+                                        fillOpacity={1}
+                                        fill="url(#colorBP)"
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="spo2"
+                                        stroke="#10b981"
+                                        strokeWidth={4}
+                                        fillOpacity={1}
+                                        fill="url(#colorO2)"
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    {/* Timeline Section */}
+                    <div className="p-8 rounded-[2.5rem] bg-white/5 border border-white/10 backdrop-blur-md">
+                        <h3 className="text-xl font-black text-white mb-8 tracking-tight">Timeline</h3>
+                        <div className="space-y-6 relative ml-4">
+                            <div className="absolute top-0 bottom-0 left-[7px] w-0.5 bg-white/10"></div>
+
+                            {timelineItems.length > 0 ? timelineItems.map((item, i) => (
+                                <div key={i} className="flex gap-8 items-start relative">
+                                    <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest w-20 pt-1 text-right">
+                                        {item.time}
+                                    </div>
+                                    <div className={`w-4 h-4 rounded-full ${item.color} border-4 border-slate-900 z-10 shrink-0 mt-1`}></div>
+                                    <div className="flex-1 bg-white/5 hover:bg-white/10 p-4 rounded-2xl border border-white/5 transition-all cursor-pointer">
+                                        <div className="font-bold text-white text-sm">{item.title}</div>
+                                        <div className="text-xs text-slate-500 mt-1">{item.subtitle}</div>
+                                    </div>
+                                </div>
+                            )) : (
+                                <div className="py-12 text-center text-slate-500 font-bold uppercase tracking-widest text-xs">
+                                    No activity recorded
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     const renderNotesTab = () => {
         const selectedVisit = visits.find(v => v.id === selectedVisitId) || visits[0];
@@ -710,7 +911,7 @@ const ChartReviewModal = ({
                         </div>
                         {/* Tab Buttons */}
                         <div className="flex gap-1 bg-slate-700/50 rounded-lg p-1 overflow-x-auto max-w-[600px] scrollbar-hide">
-                            {['Notes', 'Vitals', 'Labs', 'Imaging', 'Echo', 'EKG', 'Stress', 'Cath', 'Docs'].map((tab) => (
+                            {['Summary', 'Notes', 'Vitals', 'Labs', 'Imaging', 'Echo', 'EKG', 'Stress', 'Cath', 'Docs'].map((tab) => (
                                 <button
                                     key={tab}
                                     onClick={() => setActiveTab(tab)}
@@ -735,6 +936,8 @@ const ChartReviewModal = ({
                         <div className="flex-1 flex items-center justify-center">
                             <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
                         </div>
+                    ) : activeTab === 'Summary' ? (
+                        renderSummaryTab()
                     ) : activeTab === 'Notes' ? (
                         renderNotesTab()
                     ) : activeTab === 'Vitals' ? (
