@@ -49,9 +49,10 @@ $SSH_CMD $USER@$HOST << EOF
   
   echo "📦 Building frontend (using Docker container)..."
   
-  # Use Docker to build frontend to avoid host environment issues
-  # Mount the client directory to /app in the container
+  # Ensure no stale .env files interfere with the build
+  rm -f ../client/.env ../client/.env.production ../client/.env.production.local
   
+  # Use Docker to build frontend to avoid host environment issues
   docker run --rm \
     -v "$DIR/client:/app" \
     -w /app \
