@@ -39,7 +39,8 @@ const ContactPage = () => {
         setError(null);
 
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/sales/inquiry`, {
+            const baseUrl = import.meta.env.VITE_API_URL || '';
+            const response = await fetch(`${baseUrl}/sales/inquiry`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
