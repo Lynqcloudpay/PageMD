@@ -37,6 +37,11 @@ $SSH_CMD $USER@$HOST << EOF
       sed -i 's|FRONTEND_URL=https://yourdomain.com|FRONTEND_URL=https://bemypcp.com|g' .env.prod
       sed -i 's|CORS_ORIGIN=https://yourdomain.com|CORS_ORIGIN=https://bemypcp.com|g' .env.prod
     fi
+    if ! grep -q "PATIENT_PORTAL_ENABLED" .env.prod; then
+      echo "" >> .env.prod
+      echo "PATIENT_PORTAL_ENABLED=true" >> .env.prod
+      echo "PORTAL_URL=https://bemypcp.com/portal" >> .env.prod
+    fi
   else
     cp env.prod.example .env.prod
   fi
@@ -69,6 +74,7 @@ $SSH_CMD $USER@$HOST << EOF
   docker compose -f docker-compose.prod.yml exec -T api node scripts/update_patients_schema.js || echo "⚠️ Patients schema update failed, check logs"
   docker compose -f docker-compose.prod.yml exec -T api node scripts/create_ordersets_table.js || echo "⚠️ Ordersets schema update failed, check logs"
   docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-superbill-enhancements.js || echo "⚠️ Superbill migration failed, check logs"
+  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-patient-portal.js || echo "⚠️ Patient Portal migration failed, check logs"
   
   echo "🧹 Cleaning up old images..."
   docker image prune -f
