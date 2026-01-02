@@ -84,7 +84,7 @@ Update these key variables:
 NODE_ENV=production
 PORT=3000
 DATABASE_URL=postgresql://emr_user:your_password@localhost:5432/emr_db
-FRONTEND_URL=https://bemypcp.com
+FRONTEND_URL=https://pagemdemr.com
 SESSION_SECRET=$(openssl rand -base64 32)
 JWT_SECRET=$(openssl rand -base64 32)
 ```
@@ -119,7 +119,7 @@ sudo rm /etc/nginx/sites-enabled/default
 
 # Setup SSL with Let's Encrypt
 sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d bemypcp.com -d www.bemypcp.com
+sudo certbot --nginx -d pagemdemr.com -d www.pagemdemr.com
 
 # Test and reload Nginx
 sudo nginx -t

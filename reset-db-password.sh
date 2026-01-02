@@ -1,5 +1,5 @@
 #!/bin/bash
-HOST="bemypcp.com"
+HOST="pagemdemr.com"
 USER="ubuntu"
 INPUT_KEY_PATH="$1"
 

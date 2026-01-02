@@ -66,8 +66,8 @@ const resolveTenant = async (req, res, next) => {
     // C. Subdomain / Host Resolution
     if (!slug && !lookupSchema && req.headers.host) {
         const host = req.headers.host;
-        // logic for subdomains: clinic.bemypcp.com
-        if (host.includes('bemypcp.com') || host.includes('localhost')) {
+        // logic for subdomains: clinic.pagemdemr.com
+        if (host.includes('pagemdemr.com') || host.includes('localhost')) {
             const parts = host.split('.');
             if (parts.length > 2) {
                 slug = parts[0];

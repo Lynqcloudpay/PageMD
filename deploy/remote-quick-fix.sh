@@ -13,7 +13,7 @@ if [ ! -f "$KEY_PATH" ]; then
     exit 1
 fi
 
-HOST="bemypcp.com"
+HOST="pagemdemr.com"
 USER="ubuntu"
 
 case "$COMMAND" in

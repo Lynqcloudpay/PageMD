@@ -42,8 +42,6 @@ const allowedOrigins = [
   'https://pagemdemr.com',
   'https://www.pagemdemr.com',
   'https://admin.pagemdemr.com',
-  'https://bemypcp.com',
-  'https://www.bemypcp.com',
   'http://localhost:5173',
   'http://localhost:3000'
 ].filter(Boolean);

@@ -19,16 +19,16 @@ class DoseSpotClient {
     this.clientSecret = config.clientSecret || process.env.DOSESPOT_CLIENT_SECRET;
     this.clinicId = config.clinicId || process.env.DOSESPOT_CLINIC_ID;
     this.webhookSecret = config.webhookSecret || process.env.DOSESPOT_WEBHOOK_SECRET;
-    
+
     // Timeout configuration
     this.timeout = config.timeout || 30000; // 30 seconds
     this.retryMaxAttempts = config.retryMaxAttempts || 3;
     this.retryDelay = config.retryDelay || 1000; // 1 second base delay
-    
+
     // OAuth token cache
     this.accessToken = null;
     this.tokenExpiresAt = null;
-    
+
     // Create axios instance with defaults
     this.client = axios.create({
       baseURL: this.baseURL,
@@ -61,7 +61,7 @@ class DoseSpotClient {
       (response) => response,
       async (error) => {
         const config = error.config;
-        
+
         // Don't retry if already retried or not a retryable error
         if (config.__retryCount >= this.retryMaxAttempts) {
           return Promise.reject(error);
@@ -77,7 +77,7 @@ class DoseSpotClient {
 
           // Exponential backoff
           const delay = this.retryDelay * Math.pow(2, config.__retryCount - 1);
-          
+
           // Log retry (no PHI)
           console.log(`[DoseSpot] Retrying request (attempt ${config.__retryCount}/${this.retryMaxAttempts}) after ${delay}ms`, {
             url: config.url,
@@ -86,12 +86,12 @@ class DoseSpotClient {
           });
 
           await new Promise(resolve => setTimeout(resolve, delay));
-          
+
           // Refresh token if expired
           if (error.response?.status === 401) {
             await this.authenticate();
           }
-          
+
           return this.client(config);
         }
 
@@ -187,7 +187,7 @@ class DoseSpotClient {
         clinic_id: this.clinicId,
         user_id: userId,
         patient_id: patientId,
-        return_url: returnUrl || `${process.env.FRONTEND_URL || 'https://bemypcp.com'}/patient/${patientId}`,
+        return_url: returnUrl || `${process.env.FRONTEND_URL || 'https://pagemdemr.com'}/patient/${patientId}`,
         mode: 'embedded' // Embedded iframe mode
       });
 

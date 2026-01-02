@@ -16,31 +16,31 @@ New fast scripts that use Docker's cache and skip unnecessary rebuilds.
 
 ### 1. **Quick Status Check** (5 seconds)
 ```bash
-ssh ubuntu@bemypcp.com "cd /home/ubuntu/emr/deploy && bash quick-status.sh"
+ssh ubuntu@pagemdemr.com "cd /home/ubuntu/emr/deploy && bash quick-status.sh"
 ```
 Shows container status and API health instantly.
 
 ### 2. **Fix 502 Error** (30 seconds)
 ```bash
-ssh ubuntu@bemypcp.com "cd /home/ubuntu/emr/deploy && bash fix-502.sh"
+ssh ubuntu@pagemdemr.com "cd /home/ubuntu/emr/deploy && bash fix-502.sh"
 ```
 Restarts API container and checks health.
 
 ### 3. **Quick Restart** (10 seconds)
 ```bash
-ssh ubuntu@bemypcp.com "cd /home/ubuntu/emr/deploy && bash quick-restart.sh"
+ssh ubuntu@pagemdemr.com "cd /home/ubuntu/emr/deploy && bash quick-restart.sh"
 ```
 Restarts containers without rebuilding - use for code changes that don't need rebuilds.
 
 ### 4. **Fast Deploy** (2-3 minutes instead of 5-10)
 ```bash
-ssh ubuntu@bemypcp.com "cd /home/ubuntu/emr/deploy && bash fast-deploy.sh"
+ssh ubuntu@pagemdemr.com "cd /home/ubuntu/emr/deploy && bash fast-deploy.sh"
 ```
 Pulls code, builds with cache (fast!), and restarts. Only rebuilds changed layers.
 
 ### 5. **Full Rebuild** (only when needed)
 ```bash
-ssh ubuntu@bemypcp.com "cd /home/ubuntu/emr/deploy && docker compose -f docker-compose.prod.yml build --no-cache api web && docker compose -f docker-compose.prod.yml up -d"
+ssh ubuntu@pagemdemr.com "cd /home/ubuntu/emr/deploy && docker compose -f docker-compose.prod.yml build --no-cache api web && docker compose -f docker-compose.prod.yml up -d"
 ```
 Use this only when:
 - Dependencies changed (package.json)
@@ -54,25 +54,25 @@ Use this only when:
 ### Scenario 1: 502 Error (API Down)
 ```bash
 # Quick fix
-ssh ubuntu@bemypcp.com "cd /home/ubuntu/emr/deploy && bash fix-502.sh"
+ssh ubuntu@pagemdemr.com "cd /home/ubuntu/emr/deploy && bash fix-502.sh"
 ```
 
 ### Scenario 2: Code Changed, No Dependencies
 ```bash
 # Fast deploy (uses cache)
-ssh ubuntu@bemypcp.com "cd /home/ubuntu/emr/deploy && bash fast-deploy.sh"
+ssh ubuntu@pagemdemr.com "cd /home/ubuntu/emr/deploy && bash fast-deploy.sh"
 ```
 
 ### Scenario 3: Just Need to Restart
 ```bash
 # Quick restart (no rebuild)
-ssh ubuntu@bemypcp.com "cd /home/ubuntu/emr/deploy && bash quick-restart.sh"
+ssh ubuntu@pagemdemr.com "cd /home/ubuntu/emr/deploy && bash quick-restart.sh"
 ```
 
 ### Scenario 4: Check What's Wrong
 ```bash
 # Quick status
-ssh ubuntu@bemypcp.com "cd /home/ubuntu/emr/deploy && bash quick-status.sh"
+ssh ubuntu@pagemdemr.com "cd /home/ubuntu/emr/deploy && bash quick-status.sh"
 ```
 
 ---
@@ -92,7 +92,7 @@ ssh ubuntu@bemypcp.com "cd /home/ubuntu/emr/deploy && bash quick-status.sh"
 
 If scripts aren't executable on server:
 ```bash
-ssh ubuntu@bemypcp.com "cd /home/ubuntu/emr/deploy && chmod +x *.sh"
+ssh ubuntu@pagemdemr.com "cd /home/ubuntu/emr/deploy && chmod +x *.sh"
 ```
 
 ---
@@ -102,21 +102,21 @@ ssh ubuntu@bemypcp.com "cd /home/ubuntu/emr/deploy && chmod +x *.sh"
 ### Scripts not found?
 ```bash
 # Pull latest code first
-ssh ubuntu@bemypcp.com "cd /home/ubuntu/emr && git pull origin main"
+ssh ubuntu@pagemdemr.com "cd /home/ubuntu/emr && git pull origin main"
 ```
 
 ### Still slow?
-- Check server resources: `ssh ubuntu@bemypcp.com "free -h && df -h"`
-- Check Docker: `ssh ubuntu@bemypcp.com "docker system df"`
-- Clean Docker cache: `ssh ubuntu@bemypcp.com "docker system prune -f"`
+- Check server resources: `ssh ubuntu@pagemdemr.com "free -h && df -h"`
+- Check Docker: `ssh ubuntu@pagemdemr.com "docker system df"`
+- Clean Docker cache: `ssh ubuntu@pagemdemr.com "docker system prune -f"`
 
 ### 502 still happening?
 ```bash
 # Check API logs
-ssh ubuntu@bemypcp.com "cd /home/ubuntu/emr/deploy && docker compose -f docker-compose.prod.yml logs --tail=50 api"
+ssh ubuntu@pagemdemr.com "cd /home/ubuntu/emr/deploy && docker compose -f docker-compose.prod.yml logs --tail=50 api"
 
 # Check if API is running
-ssh ubuntu@bemypcp.com "cd /home/ubuntu/emr/deploy && docker compose -f docker-compose.prod.yml ps api"
+ssh ubuntu@pagemdemr.com "cd /home/ubuntu/emr/deploy && docker compose -f docker-compose.prod.yml ps api"
 ```
 
 ---

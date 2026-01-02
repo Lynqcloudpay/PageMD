@@ -2,7 +2,7 @@
 # Script to deploy updates to Lightsail
 # Usage: ./deploy-to-lightsail.sh [path_to_key]
 
-HOST="bemypcp.com"
+HOST="pagemdemr.com"
 USER="ubuntu"
 # Default to emr directory, but allow override
 DIR="${DEPLOY_DIR:-/home/ubuntu/emr}"
@@ -33,14 +33,14 @@ $SSH_CMD $USER@$HOST << EOF
   echo "⚙️  Checking environment variables..."
   if [ -f .env.prod ]; then
     if grep -q "yourdomain.com" .env.prod; then
-      sed -i 's/yourdomain.com/bemypcp.com/g' .env.prod
-      sed -i 's|FRONTEND_URL=https://yourdomain.com|FRONTEND_URL=https://bemypcp.com|g' .env.prod
-      sed -i 's|CORS_ORIGIN=https://yourdomain.com|CORS_ORIGIN=https://bemypcp.com|g' .env.prod
+      sed -i 's/yourdomain.com/pagemdemr.com/g' .env.prod
+      sed -i 's|FRONTEND_URL=https://yourdomain.com|FRONTEND_URL=https://pagemdemr.com|g' .env.prod
+      sed -i 's|CORS_ORIGIN=https://yourdomain.com|CORS_ORIGIN=https://pagemdemr.com|g' .env.prod
     fi
     if ! grep -q "PATIENT_PORTAL_ENABLED" .env.prod; then
       echo "" >> .env.prod
       echo "PATIENT_PORTAL_ENABLED=true" >> .env.prod
-      echo "PORTAL_URL=https://bemypcp.com/portal" >> .env.prod
+      echo "PORTAL_URL=https://pagemdemr.com/portal" >> .env.prod
     fi
   else
     cp env.prod.example .env.prod
@@ -81,5 +81,5 @@ $SSH_CMD $USER@$HOST << EOF
   
   echo "✅ Deployment complete!"
   echo "🌍 Checking site status..."
-  curl -I https://bemypcp.com
+  curl -I https://pagemdemr.com
 EOF

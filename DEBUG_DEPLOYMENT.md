@@ -55,7 +55,7 @@ This means your Lightsail firewall is blocking GitHub Actions.
    chmod 600 ~/.ssh/test_lightsail_key
    
    # Test connection
-   ssh -i ~/.ssh/test_lightsail_key ubuntu@bemypcp.com
+   ssh -i ~/.ssh/test_lightsail_key ubuntu@pagemdemr.com
    ```
    
    If this works, your key is correct. If not, the key on the server might be different.
@@ -68,7 +68,7 @@ This means your Lightsail firewall is blocking GitHub Actions.
 4. **If key doesn't work, you may need to add it to the server:**
    ```bash
    # SSH into server (using a working method)
-   ssh ubuntu@bemypcp.com
+   ssh ubuntu@pagemdemr.com
    
    # Add your public key to authorized_keys
    echo "your-public-key-here" >> ~/.ssh/authorized_keys
@@ -83,7 +83,7 @@ This means your Lightsail firewall is blocking GitHub Actions.
 
 1. **Find where your app is actually located:**
    ```bash
-   ssh ubuntu@bemypcp.com
+   ssh ubuntu@pagemdemr.com
    find ~ -name "docker-compose.prod.yml" -type f
    ```
 
@@ -94,7 +94,7 @@ This means your Lightsail firewall is blocking GitHub Actions.
 
 3. **If the app doesn't exist on the server, you need to clone it first:**
    ```bash
-   ssh ubuntu@bemypcp.com
+   ssh ubuntu@pagemdemr.com
    cd /home/ubuntu
    git clone https://github.com/Lynqcloudpay/PageMD.git emr
    cd emr
@@ -110,7 +110,7 @@ This means your Lightsail firewall is blocking GitHub Actions.
    - The workflow will try to initialize it automatically
    - Or manually initialize:
      ```bash
-     ssh ubuntu@bemypcp.com
+     ssh ubuntu@pagemdemr.com
      cd /home/ubuntu/emr  # or wherever your app is
      git init
      git remote add origin https://github.com/Lynqcloudpay/PageMD.git
@@ -126,7 +126,7 @@ This means your Lightsail firewall is blocking GitHub Actions.
 
 1. **Check if Docker Compose is installed:**
    ```bash
-   ssh ubuntu@bemypcp.com
+   ssh ubuntu@pagemdemr.com
    docker compose version
    ```
    
@@ -143,7 +143,7 @@ This means your Lightsail firewall is blocking GitHub Actions.
    sudo usermod -aG docker ubuntu
    # Log out and back in
    exit
-   ssh ubuntu@bemypcp.com
+   ssh ubuntu@pagemdemr.com
    docker ps  # Should work without sudo
    ```
 
@@ -155,7 +155,7 @@ This means your Lightsail firewall is blocking GitHub Actions.
 
 1. **The workflow will create it from the example, but you need to configure it:**
    ```bash
-   ssh ubuntu@bemypcp.com
+   ssh ubuntu@pagemdemr.com
    cd /home/ubuntu/emr/deploy
    nano .env.prod
    # Fill in all required values (see env.prod.example)
@@ -186,7 +186,7 @@ The improved workflow now includes verbose SSH output. Check the workflow logs f
 ## Quick Fix Checklist
 
 - [ ] SSH key in GitHub Secrets matches the server
-- [ ] LIGHTSAIL_HOST is correct (`bemypcp.com`)
+- [ ] LIGHTSAIL_HOST is correct (`pagemdemr.com`)
 - [ ] LIGHTSAIL_USER is correct (`ubuntu`)
 - [ ] App directory exists on server (`/home/ubuntu/emr` or similar)
 - [ ] App directory is a git repository
@@ -203,7 +203,7 @@ The improved workflow now includes verbose SSH output. Check the workflow logs f
 ---
 
 **Server Info:**
-- Host: bemypcp.com (52.207.142.228)
+- Host: pagemdemr.com (52.207.142.228)
 - User: ubuntu
 - Expected App Path: /home/ubuntu/emr
 

@@ -17,20 +17,11 @@ http://pagemdemr.com {
     redir https://pagemdemr.com{uri} permanent
 }
 
-# Redirect www.bemypcp.com to root
-http://www.bemypcp.com, https://www.bemypcp.com {
-    redir https://bemypcp.com{uri} permanent
-}
-
-# Force HTTPS for bemypcp.com
-http://bemypcp.com {
-    redir https://bemypcp.com{uri} permanent
-}
 
 # ================================================================
-# Main Site (pagemdemr.com AND bemypcp.com)
+# Main Site (pagemdemr.com)
 # ================================================================
-https://pagemdemr.com, https://bemypcp.com {
+https://pagemdemr.com {
     root * /usr/share/caddy
 
     # Performance: Enable compression
@@ -42,7 +33,7 @@ https://pagemdemr.com, https://bemypcp.com {
         X-Content-Type-Options "nosniff"
         X-XSS-Protection "1; mode=block"
         X-Frame-Options "DENY"
-        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' blob: https://pagemdemr.com https://bemypcp.com https://api.fda.gov https://rxnav.nlm.nih.gov; frame-ancestors 'none';"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' blob: https://pagemdemr.com https://api.fda.gov https://rxnav.nlm.nih.gov; frame-ancestors 'none';"
         Referrer-Policy "strict-origin-when-cross-origin"
         Permissions-Policy "geolocation=(), microphone=(), camera=(self)"
         -Server
