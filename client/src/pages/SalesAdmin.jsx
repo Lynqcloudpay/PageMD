@@ -3,19 +3,24 @@ import {
     Mail, Phone, Building2, Users, Calendar, Clock,
     CheckCircle2, XCircle, MessageSquare, RefreshCw,
     Search, Filter, ChevronDown, ArrowLeft, Inbox,
-    TrendingUp, UserPlus, Eye, MoreVertical, Lock, LogOut
+    TrendingUp, UserPlus, Eye, MoreVertical, Lock, LogOut,
+    Settings, Key, Plus, User
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 
-// Simple password for sales access - change this to a secure password
-const SALES_PASSWORD = 'PageMD2026Sales!';
-
 const SalesAdmin = () => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    // Auth State
+    const [token, setToken] = useState(sessionStorage.getItem('salesToken'));
+    const [currentUser, setCurrentUser] = useState(JSON.parse(sessionStorage.getItem('salesUser') || 'null'));
+
+    // Login State
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [authLoading, setAuthLoading] = useState(false);
     const [authError, setAuthError] = useState('');
 
+    // Dashboard State
     const [inquiries, setInquiries] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -24,29 +29,75 @@ const SalesAdmin = () => {
     const [selectedInquiry, setSelectedInquiry] = useState(null);
     const [updating, setUpdating] = useState(false);
 
-    // Check if already authenticated
-    useEffect(() => {
-        const stored = sessionStorage.getItem('salesAuth');
-        if (stored === 'true') {
-            setIsAuthenticated(true);
-        }
-    }, []);
+    // Settings State
+    const [showSettings, setShowSettings] = useState(false);
+    const [settingsTab, setSettingsTab] = useState('password'); // password, users
+    const [teamUsers, setTeamUsers] = useState([]);
 
-    const handleLogin = (e) => {
+    // Change Password Form
+    const [passForm, setPassForm] = useState({ current: '', new: '', confirm: '' });
+    const [passMsg, setPassMsg] = useState({ text: '', type: '' });
+
+    // Create User Form
+    const [userForm, setUserForm] = useState({ username: '', password: '', email: '' });
+    const [userMsg, setUserMsg] = useState({ text: '', type: '' });
+
+    const baseUrl = import.meta.env.VITE_API_URL || '';
+
+    // --- Authentication ---
+
+    const handleLogin = async (e) => {
         e.preventDefault();
-        if (password === SALES_PASSWORD) {
-            setIsAuthenticated(true);
-            sessionStorage.setItem('salesAuth', 'true');
-            setAuthError('');
-        } else {
-            setAuthError('Incorrect password');
+        setAuthLoading(true);
+        setAuthError('');
+
+        try {
+            const response = await fetch(`${baseUrl}/sales/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Login failed');
+            }
+
+            setToken(data.token);
+            setCurrentUser(data.user);
+            sessionStorage.setItem('salesToken', data.token);
+            sessionStorage.setItem('salesUser', JSON.stringify(data.user));
+
+        } catch (err) {
+            setAuthError(err.message);
+        } finally {
+            setAuthLoading(false);
         }
     };
 
     const handleLogout = () => {
-        setIsAuthenticated(false);
-        sessionStorage.removeItem('salesAuth');
+        setToken(null);
+        setCurrentUser(null);
+        sessionStorage.removeItem('salesToken');
+        sessionStorage.removeItem('salesUser');
     };
+
+    const authenticatedFetch = async (url, options = {}) => {
+        const headers = {
+            ...options.headers,
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+        const response = await fetch(baseUrl + url, { ...options, headers });
+        if (response.status === 401) {
+            handleLogout();
+            throw new Error('Session expired');
+        }
+        return response;
+    };
+
+    // --- Data Fetching ---
 
     const fetchInquiries = async () => {
         try {
@@ -55,15 +106,10 @@ const SalesAdmin = () => {
             const params = new URLSearchParams();
             if (statusFilter) params.append('status', statusFilter);
 
-            // Fix: Use /sales/inquiries not /api/sales/inquiries since VITE_API_URL already includes /api
-            const baseUrl = import.meta.env.VITE_API_URL || '';
-            const response = await fetch(
-                `${baseUrl}/sales/inquiries?${params.toString()}`
-            );
+            const response = await authenticatedFetch(`/sales/inquiries?${params.toString()}`);
 
             if (!response.ok) {
-                const errData = await response.json().catch(() => ({}));
-                throw new Error(errData.error || `Server error: ${response.status}`);
+                throw new Error('Failed to fetch inquiries');
             }
 
             const data = await response.json();
@@ -76,28 +122,30 @@ const SalesAdmin = () => {
         }
     };
 
-    useEffect(() => {
-        if (isAuthenticated) {
-            fetchInquiries();
+    const fetchTeamUsers = async () => {
+        try {
+            const response = await authenticatedFetch('/sales/users');
+            if (response.ok) {
+                const data = await response.json();
+                setTeamUsers(data.users || []);
+            }
+        } catch (err) {
+            console.error('Error fetching users:', err);
         }
-    }, [statusFilter, isAuthenticated]);
+    };
+
+    // --- Actions ---
 
     const updateInquiryStatus = async (id, newStatus) => {
         try {
             setUpdating(true);
-            const baseUrl = import.meta.env.VITE_API_URL || '';
-            const response = await fetch(
-                `${baseUrl}/sales/inquiries/${id}`,
-                {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: newStatus })
-                }
-            );
+            const response = await authenticatedFetch(`/sales/inquiries/${id}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status: newStatus })
+            });
 
             if (!response.ok) throw new Error('Failed to update');
 
-            // Refresh the list
             await fetchInquiries();
             if (selectedInquiry?.id === id) {
                 setSelectedInquiry(prev => ({ ...prev, status: newStatus }));
@@ -108,6 +156,66 @@ const SalesAdmin = () => {
             setUpdating(false);
         }
     };
+
+    const handleChangePassword = async (e) => {
+        e.preventDefault();
+        if (passForm.new !== passForm.confirm) {
+            setPassMsg({ text: 'Passwords do not match', type: 'error' });
+            return;
+        }
+
+        try {
+            const response = await authenticatedFetch('/sales/auth/change-password', {
+                method: 'POST',
+                body: JSON.stringify({
+                    currentPassword: passForm.current,
+                    newPassword: passForm.new
+                })
+            });
+
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error);
+
+            setPassMsg({ text: 'Password updated successfully', type: 'success' });
+            setPassForm({ current: '', new: '', confirm: '' });
+        } catch (err) {
+            setPassMsg({ text: err.message, type: 'error' });
+        }
+    };
+
+    const handleCreateUser = async (e) => {
+        e.preventDefault();
+        try {
+            const response = await authenticatedFetch('/sales/auth/create-user', {
+                method: 'POST',
+                body: JSON.stringify(userForm)
+            });
+
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error);
+
+            setUserMsg({ text: 'User created successfully', type: 'success' });
+            setUserForm({ username: '', password: '', email: '' });
+            fetchTeamUsers();
+        } catch (err) {
+            setUserMsg({ text: err.message, type: 'error' });
+        }
+    };
+
+    useEffect(() => {
+        if (token) {
+            fetchInquiries();
+        }
+    }, [token, statusFilter]);
+
+    useEffect(() => {
+        if (showSettings && token) {
+            fetchTeamUsers();
+        }
+    }, [showSettings, token]);
+
+
+    // --- Helpers ---
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -151,41 +259,60 @@ const SalesAdmin = () => {
         converted: inquiries.filter(i => i.status === 'converted').length
     };
 
-    // Login Screen
-    if (!isAuthenticated) {
+
+    // --- UI Render ---
+
+    if (!token) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-6">
                 <div className="w-full max-w-md">
                     <div className="bg-white rounded-2xl shadow-2xl p-8">
                         <div className="text-center mb-8">
                             <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                <Lock className="w-8 h-8 text-blue-600" />
+                                <Users className="w-8 h-8 text-blue-600" />
                             </div>
-                            <h1 className="text-2xl font-bold text-slate-900">Sales Dashboard</h1>
-                            <p className="text-slate-500 mt-2">Enter password to access</p>
+                            <h1 className="text-2xl font-bold text-slate-900">Sales Team Login</h1>
+                            <p className="text-slate-500 mt-2">Sign in to manage inquiries</p>
                         </div>
 
                         <form onSubmit={handleLogin} className="space-y-4">
                             <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Username</label>
+                                <input
+                                    type="text"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="Enter username"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
                                 <input
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     placeholder="Enter password"
-                                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-lg"
-                                    autoFocus
+                                    required
                                 />
                             </div>
 
                             {authError && (
-                                <div className="text-red-500 text-sm text-center">{authError}</div>
+                                <div className="text-red-500 text-sm text-center bg-red-50 p-3 rounded-lg flex items-center justify-center gap-2">
+                                    <XCircle className="w-4 h-4" />
+                                    {authError}
+                                </div>
                             )}
 
                             <button
                                 type="submit"
-                                className="w-full py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors"
+                                disabled={authLoading}
+                                className="w-full py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                             >
-                                Access Dashboard
+                                {authLoading && <RefreshCw className="w-4 h-4 animate-spin" />}
+                                Sign In
                             </button>
                         </form>
 
@@ -201,7 +328,7 @@ const SalesAdmin = () => {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div className="min-h-screen bg-slate-50 relative">
             {/* Header */}
             <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
                 <div className="max-w-7xl mx-auto px-6 py-4">
@@ -212,10 +339,17 @@ const SalesAdmin = () => {
                             </Link>
                             <div>
                                 <h1 className="text-xl font-bold text-slate-900">Sales Dashboard</h1>
-                                <p className="text-sm text-slate-500">Manage incoming inquiries and leads</p>
+                                <p className="text-sm text-slate-500">Welcome back, {currentUser?.username}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => setShowSettings(true)}
+                                className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors"
+                            >
+                                <Settings className="w-4 h-4" />
+                                Settings
+                            </button>
                             <button
                                 onClick={fetchInquiries}
                                 disabled={loading}
@@ -247,6 +381,7 @@ const SalesAdmin = () => {
                         <div className="text-3xl font-bold text-slate-900">{stats.total}</div>
                         <div className="text-xs text-slate-500 mt-1">All inquiries</div>
                     </div>
+                    {/* ... other stats ... */}
                     <div className="bg-white rounded-xl p-5 border border-slate-200">
                         <div className="flex items-center justify-between mb-3">
                             <UserPlus className="w-5 h-5 text-blue-500" />
@@ -497,6 +632,169 @@ const SalesAdmin = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Settings Modal */}
+            {showSettings && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 h-full min-h-screen">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+                            <h2 className="text-xl font-bold text-slate-900">Settings & Team</h2>
+                            <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-slate-100 rounded-full">
+                                <XCircle className="w-6 h-6 text-slate-400" />
+                            </button>
+                        </div>
+
+                        <div className="flex border-b border-slate-100 shrink-0">
+                            <button
+                                onClick={() => setSettingsTab('password')}
+                                className={`flex-1 py-3 text-sm font-medium ${settingsTab === 'password' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
+                            >
+                                Change Password
+                            </button>
+                            <button
+                                onClick={() => setSettingsTab('users')}
+                                className={`flex-1 py-3 text-sm font-medium ${settingsTab === 'users' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
+                            >
+                                Team Management
+                            </button>
+                        </div>
+
+                        <div className="p-6 overflow-y-auto">
+                            {settingsTab === 'password' ? (
+                                <form onSubmit={handleChangePassword} className="max-w-md mx-auto space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
+                                        <input
+                                            type="password"
+                                            value={passForm.current}
+                                            onChange={(e) => setPassForm({ ...passForm, current: e.target.value })}
+                                            className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
+                                        <input
+                                            type="password"
+                                            value={passForm.new}
+                                            onChange={(e) => setPassForm({ ...passForm, new: e.target.value })}
+                                            className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                            required
+                                            minLength={8}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
+                                        <input
+                                            type="password"
+                                            value={passForm.confirm}
+                                            onChange={(e) => setPassForm({ ...passForm, confirm: e.target.value })}
+                                            className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                            required
+                                        />
+                                    </div>
+
+                                    {passMsg.text && (
+                                        <div className={`text-sm p-3 rounded-lg ${passMsg.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                            {passMsg.text}
+                                        </div>
+                                    )}
+
+                                    <button
+                                        type="submit"
+                                        className="w-full py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700"
+                                    >
+                                        Update Password
+                                    </button>
+                                </form>
+                            ) : (
+                                <div className="space-y-8">
+                                    {/* Create User */}
+                                    <div className="bg-slate-50 p-5 rounded-xl">
+                                        <h3 className="font-medium text-slate-900 mb-4 flex items-center gap-2">
+                                            <UserPlus className="w-4 h-4" />
+                                            Add New Team Member
+                                        </h3>
+                                        <form onSubmit={handleCreateUser} className="grid grid-cols-2 gap-4">
+                                            <div className="col-span-2 sm:col-span-1">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Username"
+                                                    value={userForm.username}
+                                                    onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+                                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="col-span-2 sm:col-span-1">
+                                                <input
+                                                    type="email"
+                                                    placeholder="Email"
+                                                    value={userForm.email}
+                                                    onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="col-span-2">
+                                                <input
+                                                    type="password"
+                                                    placeholder="Initial Password (min 8 chars)"
+                                                    value={userForm.password}
+                                                    onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                                                    required
+                                                    minLength={8}
+                                                />
+                                            </div>
+                                            <div className="col-span-2">
+                                                <button
+                                                    type="submit"
+                                                    className="w-full py-2 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 text-sm"
+                                                >
+                                                    Create User
+                                                </button>
+                                            </div>
+                                            {userMsg.text && (
+                                                <div className={`col-span-2 text-sm p-2 rounded ${userMsg.type === 'error' ? 'text-red-600' : 'text-emerald-600'}`}>
+                                                    {userMsg.text}
+                                                </div>
+                                            )}
+                                        </form>
+                                    </div>
+
+                                    {/* User List */}
+                                    <div>
+                                        <h3 className="font-medium text-slate-900 mb-4 text-sm uppercase tracking-wider text-slate-500">
+                                            Existing Users
+                                        </h3>
+                                        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                                            <div className="divide-y divide-slate-100">
+                                                {teamUsers.map(user => (
+                                                    <div key={user.id} className="p-4 flex items-center justify-between">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs uppercase">
+                                                                {user.username.substring(0, 2)}
+                                                            </div>
+                                                            <div>
+                                                                <div className="font-medium text-slate-900">{user.username}</div>
+                                                                <div className="text-xs text-slate-500">{user.email}</div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-xs text-slate-400">
+                                                            Last login: {user.last_login ? format(new Date(user.last_login), 'MMM d, h:mm a') : 'Never'}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
