@@ -42,6 +42,16 @@ const ChartReviewModal = ({
     const [recordsLoading, setRecordsLoading] = useState(false);
     const [recordsError, setRecordsError] = useState(null);
     const [selectedItem, setSelectedItem] = useState(null);
+    const [selectedVitals, setSelectedVitals] = useState({ hr: true, bp: true, o2: true });
+
+    const toggleVital = (vital) => setSelectedVitals(prev => ({ ...prev, [vital]: !prev[vital] }));
+
+    // Helper to get patient name (handles both naming conventions)
+    const getPatientName = () => {
+        const first = patientData.first_name || patientData.firstName || '';
+        const last = patientData.last_name || patientData.lastName || '';
+        return { first, last, full: `${first} ${last}`.trim() || 'Unknown Patient' };
+    };
 
     // Filter keywords helper
     const getFilterKeywords = (type) => {
@@ -227,32 +237,60 @@ const ChartReviewModal = ({
         }
 
         const latestVitals = vitalsTrendData[vitalsTrendData.length - 1] || { hr: '--', sys: '--', spo2: '--' };
+        const patientName = getPatientName();
+
+        // Build comprehensive timeline from all sources
+        const getEventColor = (type, category) => {
+            if (type === 'visit') return 'bg-emerald-500';
+            if (type === 'order') return 'bg-blue-500';
+            if (category?.toLowerCase().includes('lab')) return 'bg-purple-500';
+            if (category?.toLowerCase().includes('imaging') || category?.toLowerCase().includes('radiology')) return 'bg-cyan-500';
+            if (category?.toLowerCase().includes('message')) return 'bg-yellow-500';
+            if (category?.toLowerCase().includes('payment') || category?.toLowerCase().includes('billing')) return 'bg-green-500';
+            if (category?.toLowerCase().includes('ekg') || category?.toLowerCase().includes('echo')) return 'bg-rose-500';
+            return 'bg-slate-400';
+        };
+
+        const getEventIcon = (type, category) => {
+            if (type === 'visit') return '🩺';
+            if (category?.toLowerCase().includes('lab')) return '🧪';
+            if (category?.toLowerCase().includes('imaging')) return '📷';
+            if (category?.toLowerCase().includes('message')) return '💬';
+            if (category?.toLowerCase().includes('payment')) return '💳';
+            if (category?.toLowerCase().includes('ekg')) return '❤️';
+            return '📄';
+        };
 
         const timelineItems = [
             ...visits.map(v => {
                 const d = new Date(v.visit_date);
                 return {
-                    id: `v-${v.id}`,
+                    id: `visit-${v.id}`,
                     dateLabel: format(d, 'MMM d'),
                     timeLabel: format(d, 'h:mm a'),
                     date: v.visit_date,
                     title: v.visit_type?.replace('_', ' ') || 'Office Visit',
-                    provider: v.provider_last_name ? `Dr. ${v.provider_last_name}` : 'Provider',
+                    subtitle: v.provider_last_name ? `Dr. ${v.provider_last_name}` : 'Provider',
                     type: 'visit',
-                    color: 'bg-emerald-500'
+                    icon: '🩺',
+                    color: 'bg-emerald-500',
+                    onClick: () => onOpenVisit && onOpenVisit(v)
                 };
             }),
-            ...records.slice(0, 10).map(r => {
-                const d = new Date(r.date || 0);
+            ...records.map(r => {
+                const d = new Date(r.date || r.created_at || 0);
+                const category = r.category || r.type || '';
                 return {
                     id: r.id,
                     dateLabel: format(d, 'MMM d'),
                     timeLabel: format(d, 'h:mm a'),
-                    date: r.date,
-                    title: r.title,
-                    provider: r.category || 'Document',
+                    date: r.date || r.created_at,
+                    title: r.title || r.name || category,
+                    subtitle: category,
                     type: r.type,
-                    color: r.type === 'order' ? 'bg-blue-500' : 'bg-amber-500'
+                    icon: getEventIcon(r.type, category),
+                    color: getEventColor(r.type, category),
+                    onClick: () => setSelectedItem(r)
                 };
             })
         ].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
@@ -262,23 +300,23 @@ const ChartReviewModal = ({
                 <div className="grid grid-cols-5 gap-4 h-full">
                     {/* Left Column - Main Content (3/5) */}
                     <div className="col-span-3 space-y-3">
-                        {/* Patient Header - Compact horizontal */}
+                        {/* Patient Header */}
                         <div className="p-3 rounded-lg bg-white border border-slate-200 shadow-sm flex items-center gap-3">
                             <div className="relative">
                                 <PatientHeaderPhoto
-                                    firstName={patientData.first_name}
-                                    lastName={patientData.last_name}
-                                    photoUrl={patientData.photo_url}
+                                    firstName={patientName.first}
+                                    lastName={patientName.last}
+                                    photoUrl={patientData.photo_url || patientData.photoUrl}
                                     className="w-10 h-10 text-sm shadow border-2 border-white"
                                 />
                                 <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></div>
                             </div>
                             <div className="flex-1 min-w-0">
                                 <h2 className="text-base font-bold text-slate-900 truncate">
-                                    {patientData.first_name} {patientData.last_name}
+                                    {patientName.full}
                                 </h2>
                                 <div className="text-[9px] text-slate-400 uppercase tracking-wider">
-                                    ID #{patientData.id || '---'} • <span className="text-blue-600 font-bold">Summary</span>
+                                    MRN: {patientData.id || patientData.patient_id || '---'} • <span className="text-blue-600 font-bold">Active</span>
                                 </div>
                             </div>
                         </div>
@@ -286,28 +324,38 @@ const ChartReviewModal = ({
                         {/* Vitals Stats - Compact row */}
                         <div className="grid grid-cols-3 gap-2">
                             {[
-                                { label: 'HR', value: latestVitals.hr, unit: 'bpm', color: 'text-rose-500', bg: 'bg-rose-50' },
-                                { label: 'BP', value: latestVitals.sys, unit: 'mmHg', color: 'text-blue-600', bg: 'bg-blue-50' },
-                                { label: 'O2', value: latestVitals.spo2, unit: '%', color: 'text-emerald-600', bg: 'bg-emerald-50' }
-                            ].map((stat, i) => (
-                                <div key={i} className={`p-2.5 rounded-lg ${stat.bg} flex items-center justify-between`}>
+                                { key: 'hr', label: 'HR', value: latestVitals.hr, unit: 'bpm', color: 'text-rose-500', bg: 'bg-rose-50' },
+                                { key: 'bp', label: 'BP', value: latestVitals.sys, unit: 'mmHg', color: 'text-blue-600', bg: 'bg-blue-50' },
+                                { key: 'o2', label: 'O2', value: latestVitals.spo2, unit: '%', color: 'text-emerald-600', bg: 'bg-emerald-50' }
+                            ].map((stat) => (
+                                <button
+                                    key={stat.key}
+                                    onClick={() => toggleVital(stat.key)}
+                                    className={`p-2.5 rounded-lg ${stat.bg} flex items-center justify-between transition-all cursor-pointer ${selectedVitals[stat.key] ? 'ring-2 ring-offset-1 ring-' + stat.color.replace('text-', '') : 'opacity-40'}`}
+                                >
                                     <span className={`text-[9px] font-bold ${stat.color} uppercase`}>{stat.label}</span>
                                     <div className="flex items-baseline gap-0.5">
                                         <span className="text-base font-bold text-slate-900">{stat.value}</span>
                                         <span className="text-[8px] text-slate-400">{stat.unit}</span>
                                     </div>
-                                </div>
+                                </button>
                             ))}
                         </div>
 
-                        {/* Trend Chart */}
+                        {/* Trend Chart - Selectable vitals */}
                         <div className="p-3 rounded-lg bg-white border border-slate-200 shadow-sm">
                             <div className="flex items-center justify-between mb-2">
                                 <span className="text-xs font-bold text-slate-700">Vitals Trend</span>
-                                <div className="flex gap-3">
-                                    <span className="flex items-center gap-1 text-[8px] text-slate-400"><span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>HR</span>
-                                    <span className="flex items-center gap-1 text-[8px] text-slate-400"><span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>BP</span>
-                                    <span className="flex items-center gap-1 text-[8px] text-slate-400"><span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>O2</span>
+                                <div className="flex gap-1">
+                                    <button onClick={() => toggleVital('hr')} className={`flex items-center gap-1 text-[8px] px-1.5 py-0.5 rounded ${selectedVitals.hr ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-400'}`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${selectedVitals.hr ? 'bg-rose-500' : 'bg-slate-300'}`}></span>HR
+                                    </button>
+                                    <button onClick={() => toggleVital('bp')} className={`flex items-center gap-1 text-[8px] px-1.5 py-0.5 rounded ${selectedVitals.bp ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'}`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${selectedVitals.bp ? 'bg-blue-600' : 'bg-slate-300'}`}></span>BP
+                                    </button>
+                                    <button onClick={() => toggleVital('o2')} className={`flex items-center gap-1 text-[8px] px-1.5 py-0.5 rounded ${selectedVitals.o2 ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${selectedVitals.o2 ? 'bg-emerald-600' : 'bg-slate-300'}`}></span>O2
+                                    </button>
                                 </div>
                             </div>
                             <div style={{ width: '100%', height: 160 }}>
@@ -331,9 +379,9 @@ const ChartReviewModal = ({
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 9 }} />
                                         <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 9 }} domain={[0, 'dataMax + 20']} width={25} />
                                         <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 10, padding: 6 }} />
-                                        <Area type="monotone" dataKey="hr" stroke="#f43f5e" strokeWidth={2} fill="url(#hrG)" dot={{ r: 2, fill: '#f43f5e' }} />
-                                        <Area type="monotone" dataKey="sys" stroke="#2563eb" strokeWidth={2} fill="url(#bpG)" dot={{ r: 2, fill: '#2563eb' }} />
-                                        <Area type="monotone" dataKey="spo2" stroke="#059669" strokeWidth={2} fill="url(#o2G)" dot={{ r: 2, fill: '#059669' }} />
+                                        {selectedVitals.hr && <Area type="monotone" dataKey="hr" name="Heart Rate" stroke="#f43f5e" strokeWidth={2} fill="url(#hrG)" dot={{ r: 2, fill: '#f43f5e' }} />}
+                                        {selectedVitals.bp && <Area type="monotone" dataKey="sys" name="BP Systolic" stroke="#2563eb" strokeWidth={2} fill="url(#bpG)" dot={{ r: 2, fill: '#2563eb' }} />}
+                                        {selectedVitals.o2 && <Area type="monotone" dataKey="spo2" name="SpO2" stroke="#059669" strokeWidth={2} fill="url(#o2G)" dot={{ r: 2, fill: '#059669' }} />}
                                     </AreaChart>
                                 </ResponsiveContainer>
                             </div>
@@ -342,20 +390,24 @@ const ChartReviewModal = ({
 
                     {/* Right Column - Sidebar (2/5) */}
                     <div className="col-span-2 space-y-3">
-                        {/* Timeline */}
+                        {/* Timeline - Clickable events */}
                         <div className="p-3 rounded-lg bg-white border border-slate-200 shadow-sm">
                             <h3 className="text-xs font-bold text-slate-700 mb-3">Recent Activity</h3>
-                            <div className="space-y-1.5">
-                                {timelineItems.length > 0 ? timelineItems.slice(0, 8).map((item, i) => (
-                                    <div key={i} className="flex items-start gap-2 p-2 rounded-md hover:bg-slate-50 transition-colors cursor-pointer border border-transparent hover:border-slate-100">
-                                        <div className={`w-2 h-2 rounded-full ${item.color} shrink-0 mt-1`}></div>
+                            <div className="space-y-1 max-h-[280px] overflow-y-auto custom-scrollbar">
+                                {timelineItems.length > 0 ? timelineItems.slice(0, 12).map((item, i) => (
+                                    <div
+                                        key={item.id || i}
+                                        onClick={item.onClick}
+                                        className="flex items-start gap-2 p-2 rounded-md hover:bg-slate-50 transition-colors cursor-pointer border border-transparent hover:border-slate-200 group"
+                                    >
+                                        <span className="text-sm mt-0.5">{item.icon}</span>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between gap-2">
-                                                <span className="text-[11px] font-medium text-slate-900 truncate">{item.title}</span>
+                                                <span className="text-[11px] font-medium text-slate-900 truncate group-hover:text-blue-600">{item.title}</span>
                                                 <span className="text-[9px] text-slate-400 shrink-0">{item.dateLabel}</span>
                                             </div>
                                             <div className="flex items-center justify-between">
-                                                <span className="text-[9px] text-slate-500">{item.provider}</span>
+                                                <span className="text-[9px] text-slate-500">{item.subtitle}</span>
                                                 <span className="text-[8px] text-slate-400">{item.timeLabel}</span>
                                             </div>
                                         </div>
@@ -514,20 +566,20 @@ const ChartReviewModal = ({
                                 </div>
                             )}
 
-                            {/* Assessment & Plan */}
-                            <div className="grid grid-cols-2 gap-8 pt-6">
+                            {/* Assessment & Plan - Stacked vertically */}
+                            <div className="space-y-6 pt-6">
                                 {assessmentMatch && (
-                                    <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100">
-                                        <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.3em] mb-4">Clinical Assessment</h4>
-                                        <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap font-bold">
+                                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                                        <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] mb-3">Clinical Assessment</h4>
+                                        <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
                                             {assessmentMatch[1].trim()}
                                         </div>
                                     </div>
                                 )}
                                 {planMatch && (
-                                    <div className="p-8 bg-emerald-50 rounded-[2.5rem] border border-emerald-100">
-                                        <h4 className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.3em] mb-4">Treatment Plan</h4>
-                                        <div className="text-sm text-emerald-900 leading-relaxed whitespace-pre-wrap font-bold">
+                                    <div className="p-6 bg-emerald-50 rounded-2xl border border-emerald-100">
+                                        <h4 className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.2em] mb-3">Treatment Plan</h4>
+                                        <div className="text-sm text-emerald-900 leading-relaxed whitespace-pre-wrap">
                                             {planMatch[1].trim()}
                                         </div>
                                     </div>
