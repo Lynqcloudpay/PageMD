@@ -252,6 +252,9 @@ app.use('/api/followups', followupsRoutes);
 // Support
 app.use('/api/support', require('./routes/support'));
 
+// Sales inquiries (public - no auth required)
+app.use('/api/sales', require('./routes/sales'));
+
 // Root endpoint - redirect to frontend or show API info
 app.get('/', (req, res) => {
   res.json({

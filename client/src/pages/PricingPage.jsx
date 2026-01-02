@@ -1,10 +1,15 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Check, X, HelpCircle, ArrowRight } from 'lucide-react';
 import LandingNav from '../components/LandingNav';
 
 const PricingPage = () => {
+    const navigate = useNavigate();
     const currentYear = new Date().getFullYear();
+
+    const handlePlanClick = (planName) => {
+        navigate(`/contact?plan=${planName.toLowerCase()}&interest=sandbox`);
+    };
 
     const plans = [
         {
@@ -27,8 +32,9 @@ const PricingPage = () => {
                 { name: 'Analytics Dashboard', included: false },
                 { name: 'Custom Integrations', included: false },
             ],
-            cta: 'Start Free Trial',
-            ctaStyle: 'border'
+            cta: 'Request Sandbox Access',
+            ctaStyle: 'border',
+            planKey: 'starter'
         },
         {
             name: 'Professional',
@@ -50,8 +56,9 @@ const PricingPage = () => {
                 { name: 'Analytics Dashboard', included: true },
                 { name: 'Custom Integrations', included: false },
             ],
-            cta: 'Start Free Trial',
-            ctaStyle: 'primary'
+            cta: 'Request Sandbox Access',
+            ctaStyle: 'primary',
+            planKey: 'professional'
         },
         {
             name: 'Enterprise',
@@ -74,14 +81,15 @@ const PricingPage = () => {
                 { name: 'Custom Integrations', included: true },
             ],
             cta: 'Contact Sales',
-            ctaStyle: 'border'
+            ctaStyle: 'border',
+            planKey: 'enterprise'
         }
     ];
 
     const faqs = [
         {
-            question: 'What\'s included in the free trial?',
-            answer: 'The 30-day free trial includes full access to all features in your chosen plan. No credit card required to start. You can upgrade, downgrade, or cancel anytime.'
+            question: "How does sandbox access work?",
+            answer: 'Contact our sales team to get sandbox access. You\'ll get a fully functional demo environment to explore PageMD with sample data. Our team will walk you through the features and help you evaluate if it\'s right for your practice.'
         },
         {
             question: 'Can I change plans later?',
@@ -125,7 +133,7 @@ const PricingPage = () => {
                     </h1>
                     <p className="text-xl text-gray-600 leading-relaxed">
                         No hidden fees. No per-claim charges. No surprise bills.
-                        Choose the plan that fits your practice and start your free trial today.
+                        Choose the plan that fits your practice and request sandbox access today.
                     </p>
                 </div>
             </section>
@@ -167,6 +175,7 @@ const PricingPage = () => {
                                     ))}
                                 </ul>
                                 <button
+                                    onClick={() => handlePlanClick(plan.planKey)}
                                     className={`w-full py-3 font-medium rounded-lg transition-colors ${plan.ctaStyle === 'primary'
                                         ? 'bg-blue-600 text-white hover:bg-blue-700'
                                         : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
@@ -179,7 +188,7 @@ const PricingPage = () => {
                     </div>
 
                     <p className="text-center text-gray-500 text-sm mt-8">
-                        All plans include a 30-day free trial. No credit card required to start.
+                        Contact sales for sandbox access. Our team will set you up with a personalized demo environment.
                     </p>
                 </div>
             </section>
@@ -261,11 +270,14 @@ const PricingPage = () => {
                         Ready to Get Started?
                     </h2>
                     <p className="text-xl text-blue-100 mb-8">
-                        Start your free 30-day trial today. No credit card required.
+                        Request sandbox access today and see why practices love PageMD.
                     </p>
                     <div className="flex flex-wrap justify-center gap-4">
-                        <button className="px-8 py-4 bg-white text-blue-600 font-medium rounded-lg hover:bg-gray-50 transition-colors">
-                            Start Free Trial
+                        <button
+                            onClick={() => handlePlanClick('professional')}
+                            className="px-8 py-4 bg-white text-blue-600 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                            Request Sandbox Access
                         </button>
                         <Link to="/contact" className="px-8 py-4 bg-blue-500 text-white font-medium rounded-lg border border-blue-400 hover:bg-blue-400 transition-colors flex items-center gap-2">
                             Talk to Sales

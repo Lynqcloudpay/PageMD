@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Mail, Phone, MapPin, Send, Clock, MessageSquare } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Mail, Phone, MapPin, Send, Clock, MessageSquare, CheckCircle, Loader2 } from 'lucide-react';
 import LandingNav from '../components/LandingNav';
 
 const ContactPage = () => {
     const currentYear = new Date().getFullYear();
+    const [searchParams] = useSearchParams();
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitted, setSubmitted] = useState(false);
+    const [error, setError] = useState(null);
+
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -15,10 +20,47 @@ const ContactPage = () => {
         interest: 'demo'
     });
 
-    const handleSubmit = (e) => {
+    // Pre-fill from URL params (e.g., from pricing page)
+    useEffect(() => {
+        const plan = searchParams.get('plan');
+        const interest = searchParams.get('interest');
+        if (plan || interest) {
+            setFormData(prev => ({
+                ...prev,
+                interest: interest || 'sandbox',
+                message: plan ? `I'm interested in the ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan.` : prev.message
+            }));
+        }
+    }, [searchParams]);
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // Handle form submission
-        alert('Thank you for your interest! Our team will contact you within 1 business day.');
+        setIsSubmitting(true);
+        setError(null);
+
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/sales/inquiry`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...formData,
+                    source: 'contact_page'
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to submit inquiry');
+            }
+
+            setSubmitted(true);
+        } catch (err) {
+            console.error('Submit error:', err);
+            setError(err.message || 'Something went wrong. Please try again.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -72,105 +114,138 @@ const ContactPage = () => {
                     <div className="grid lg:grid-cols-2 gap-16">
                         <div>
                             <h2 className="text-2xl font-bold text-gray-900 mb-6">Get in Touch</h2>
-                            <form onSubmit={handleSubmit} className="space-y-6">
-                                <div className="grid md:grid-cols-2 gap-6">
+
+                            {submitted ? (
+                                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-8 text-center">
+                                    <CheckCircle className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
+                                    <h3 className="text-xl font-bold text-gray-900 mb-2">Thank You!</h3>
+                                    <p className="text-gray-600 mb-4">
+                                        Your inquiry has been received. Our sales team will contact you within 1 business day.
+                                    </p>
+                                    <button
+                                        onClick={() => { setSubmitted(false); setFormData({ name: '', email: '', phone: '', practice: '', providers: '', message: '', interest: 'demo' }); }}
+                                        className="text-blue-600 font-medium hover:underline"
+                                    >
+                                        Submit another inquiry
+                                    </button>
+                                </div>
+                            ) : (
+                                <form onSubmit={handleSubmit} className="space-y-6">
+                                    <div className="grid md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Your Name *</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={formData.name}
+                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                placeholder="Dr. Jane Smith"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                                            <input
+                                                type="email"
+                                                required
+                                                value={formData.email}
+                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                placeholder="jane@practice.com"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                                            <input
+                                                type="tel"
+                                                value={formData.phone}
+                                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                placeholder="(555) 123-4567"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Practice Name</label>
+                                            <input
+                                                type="text"
+                                                value={formData.practice}
+                                                onChange={(e) => setFormData({ ...formData, practice: e.target.value })}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                placeholder="Smith Family Medicine"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Number of Providers</label>
+                                            <select
+                                                value={formData.providers}
+                                                onChange={(e) => setFormData({ ...formData, providers: e.target.value })}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                            >
+                                                <option value="">Select...</option>
+                                                <option value="1">1 (Solo Practice)</option>
+                                                <option value="2-5">2-5 Providers</option>
+                                                <option value="6-10">6-10 Providers</option>
+                                                <option value="11+">11+ Providers</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">I'm interested in...</label>
+                                            <select
+                                                value={formData.interest}
+                                                onChange={(e) => setFormData({ ...formData, interest: e.target.value })}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                            >
+                                                <option value="demo">Scheduling a Demo</option>
+                                                <option value="sandbox">Sandbox Access</option>
+                                                <option value="pricing">Pricing Information</option>
+                                                <option value="enterprise">Enterprise Solutions</option>
+                                                <option value="other">Other</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Your Name *</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={formData.name}
-                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                            placeholder="Dr. Jane Smith"
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
+                                        <textarea
+                                            rows={4}
+                                            value={formData.message}
+                                            onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                                            placeholder="Tell us about your practice and what you're looking for..."
                                         />
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
-                                        <input
-                                            type="email"
-                                            required
-                                            value={formData.email}
-                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                            placeholder="jane@practice.com"
-                                        />
-                                    </div>
-                                </div>
 
-                                <div className="grid md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
-                                        <input
-                                            type="tel"
-                                            value={formData.phone}
-                                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                            placeholder="(555) 123-4567"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Practice Name</label>
-                                        <input
-                                            type="text"
-                                            value={formData.practice}
-                                            onChange={(e) => setFormData({ ...formData, practice: e.target.value })}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                            placeholder="Smith Family Medicine"
-                                        />
-                                    </div>
-                                </div>
+                                    {error && (
+                                        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                                            {error}
+                                        </div>
+                                    )}
 
-                                <div className="grid md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Number of Providers</label>
-                                        <select
-                                            value={formData.providers}
-                                            onChange={(e) => setFormData({ ...formData, providers: e.target.value })}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                        >
-                                            <option value="">Select...</option>
-                                            <option value="1">1 (Solo Practice)</option>
-                                            <option value="2-5">2-5 Providers</option>
-                                            <option value="6-10">6-10 Providers</option>
-                                            <option value="11+">11+ Providers</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">I'm interested in...</label>
-                                        <select
-                                            value={formData.interest}
-                                            onChange={(e) => setFormData({ ...formData, interest: e.target.value })}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                        >
-                                            <option value="demo">Scheduling a Demo</option>
-                                            <option value="pricing">Pricing Information</option>
-                                            <option value="trial">Starting a Free Trial</option>
-                                            <option value="enterprise">Enterprise Solutions</option>
-                                            <option value="other">Other</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
-                                    <textarea
-                                        rows={4}
-                                        value={formData.message}
-                                        onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-                                        placeholder="Tell us about your practice and what you're looking for..."
-                                    />
-                                </div>
-
-                                <button
-                                    type="submit"
-                                    className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-                                >
-                                    Send Message
-                                    <Send className="w-4 h-4" />
-                                </button>
-                            </form>
+                                    <button
+                                        type="submit"
+                                        disabled={isSubmitting}
+                                        className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        {isSubmitting ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                Submitting...
+                                            </>
+                                        ) : (
+                                            <>
+                                                Send Message
+                                                <Send className="w-4 h-4" />
+                                            </>
+                                        )}
+                                    </button>
+                                </form>
+                            )}
                         </div>
 
                         <div>
