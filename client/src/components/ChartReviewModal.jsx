@@ -42,7 +42,7 @@ const ChartReviewModal = ({
     const [recordsLoading, setRecordsLoading] = useState(false);
     const [recordsError, setRecordsError] = useState(null);
     const [selectedItem, setSelectedItem] = useState(null);
-    const [selectedVitals, setSelectedVitals] = useState({ hr: true, bp: true, o2: true });
+    const [selectedVitals, setSelectedVitals] = useState({ hr: true, bp: true, bmi: true });
 
     const toggleVital = (vital) => setSelectedVitals(prev => ({ ...prev, [vital]: !prev[vital] }));
 
@@ -207,7 +207,7 @@ const ChartReviewModal = ({
     if (!isOpen) return null;
 
     const renderSummaryTab = () => {
-        // Data prep for Summary - ensure we always have data for the chart
+        // Data prep for Summary - tracking HR, BP, and BMI
         let vitalsTrendData = [...visits].reverse().map(v => {
             let vitals = v.vitals || {};
             if (typeof vitals === 'string') {
@@ -216,27 +216,27 @@ const ChartReviewModal = ({
             const bp = vitals.bp || (vitals.systolic && vitals.diastolic ? `${vitals.systolic}/${vitals.diastolic}` : '');
             const sys = parseInt(vitals.systolic || (typeof bp === 'string' ? bp.split('/')[0] : 0)) || 0;
             const hr = parseInt(vitals.pulse || vitals.hr || 0) || 0;
-            const spo2 = parseInt(vitals.o2sat || vitals.spo2 || 0) || 0;
+            const bmi = parseFloat(vitals.bmi || 0) || 0;
 
             return {
                 name: format(new Date(v.visit_date), 'M/d'),
                 hr: hr || null,
                 sys: sys || null,
-                spo2: spo2 || null
+                bmi: bmi || null
             };
-        }).filter(d => d.hr !== null || d.sys !== null || d.spo2 !== null);
+        }).filter(d => d.hr !== null || d.sys !== null || d.bmi !== null);
 
         // Fallback sample data if no vitals exist
         if (vitalsTrendData.length === 0) {
             vitalsTrendData = [
-                { name: '11/1', hr: 72, sys: 120, spo2: 98 },
-                { name: '11/15', hr: 68, sys: 118, spo2: 99 },
-                { name: '12/1', hr: 75, sys: 122, spo2: 97 },
-                { name: '12/15', hr: 70, sys: 119, spo2: 98 }
+                { name: '11/1', hr: 72, sys: 120, bmi: 26.5 },
+                { name: '11/15', hr: 68, sys: 118, bmi: 26.2 },
+                { name: '12/1', hr: 75, sys: 122, bmi: 26.8 },
+                { name: '12/15', hr: 70, sys: 119, bmi: 26.4 }
             ];
         }
 
-        const latestVitals = vitalsTrendData[vitalsTrendData.length - 1] || { hr: '--', sys: '--', spo2: '--' };
+        const latestVitals = vitalsTrendData[vitalsTrendData.length - 1] || { hr: '--', sys: '--', bmi: '--' };
         const patientName = getPatientName();
 
         // Build comprehensive timeline from all sources
@@ -274,7 +274,7 @@ const ChartReviewModal = ({
                     type: 'visit',
                     icon: '🩺',
                     color: 'bg-emerald-500',
-                    onClick: () => onOpenVisit && onOpenVisit(v)
+                    onClick: () => { setActiveTab('Notes'); setSelectedVisitId(v.id); }
                 };
             }),
             ...records.map(r => {
@@ -326,7 +326,7 @@ const ChartReviewModal = ({
                             {[
                                 { key: 'hr', label: 'HR', value: latestVitals.hr, unit: 'bpm', color: 'text-rose-500', bg: 'bg-rose-50' },
                                 { key: 'bp', label: 'BP', value: latestVitals.sys, unit: 'mmHg', color: 'text-blue-600', bg: 'bg-blue-50' },
-                                { key: 'o2', label: 'O2', value: latestVitals.spo2, unit: '%', color: 'text-emerald-600', bg: 'bg-emerald-50' }
+                                { key: 'bmi', label: 'BMI', value: latestVitals.bmi, unit: '', color: 'text-purple-600', bg: 'bg-purple-50' }
                             ].map((stat) => (
                                 <button
                                     key={stat.key}
@@ -353,8 +353,8 @@ const ChartReviewModal = ({
                                     <button onClick={() => toggleVital('bp')} className={`flex items-center gap-1 text-[8px] px-1.5 py-0.5 rounded ${selectedVitals.bp ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'}`}>
                                         <span className={`w-1.5 h-1.5 rounded-full ${selectedVitals.bp ? 'bg-blue-600' : 'bg-slate-300'}`}></span>BP
                                     </button>
-                                    <button onClick={() => toggleVital('o2')} className={`flex items-center gap-1 text-[8px] px-1.5 py-0.5 rounded ${selectedVitals.o2 ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
-                                        <span className={`w-1.5 h-1.5 rounded-full ${selectedVitals.o2 ? 'bg-emerald-600' : 'bg-slate-300'}`}></span>O2
+                                    <button onClick={() => toggleVital('bmi')} className={`flex items-center gap-1 text-[8px] px-1.5 py-0.5 rounded ${selectedVitals.bmi ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-400'}`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${selectedVitals.bmi ? 'bg-purple-600' : 'bg-slate-300'}`}></span>BMI
                                     </button>
                                 </div>
                             </div>
@@ -370,9 +370,9 @@ const ChartReviewModal = ({
                                                 <stop offset="0%" stopColor="#2563eb" stopOpacity={0.4} />
                                                 <stop offset="100%" stopColor="#2563eb" stopOpacity={0} />
                                             </linearGradient>
-                                            <linearGradient id="o2G" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor="#059669" stopOpacity={0.4} />
-                                                <stop offset="100%" stopColor="#059669" stopOpacity={0} />
+                                            <linearGradient id="bmiG" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stopColor="#9333ea" stopOpacity={0.4} />
+                                                <stop offset="100%" stopColor="#9333ea" stopOpacity={0} />
                                             </linearGradient>
                                         </defs>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -381,9 +381,21 @@ const ChartReviewModal = ({
                                         <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 10, padding: 6 }} />
                                         {selectedVitals.hr && <Area type="monotone" dataKey="hr" name="Heart Rate" stroke="#f43f5e" strokeWidth={2} fill="url(#hrG)" dot={{ r: 2, fill: '#f43f5e' }} />}
                                         {selectedVitals.bp && <Area type="monotone" dataKey="sys" name="BP Systolic" stroke="#2563eb" strokeWidth={2} fill="url(#bpG)" dot={{ r: 2, fill: '#2563eb' }} />}
-                                        {selectedVitals.o2 && <Area type="monotone" dataKey="spo2" name="SpO2" stroke="#059669" strokeWidth={2} fill="url(#o2G)" dot={{ r: 2, fill: '#059669' }} />}
+                                        {selectedVitals.bmi && <Area type="monotone" dataKey="bmi" name="BMI" stroke="#9333ea" strokeWidth={2} fill="url(#bmiG)" dot={{ r: 2, fill: '#9333ea' }} />}
                                     </AreaChart>
                                 </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        {/* Quick Stats below chart */}
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="p-2.5 rounded-lg bg-white border border-slate-200 text-center">
+                                <div className="text-[9px] text-slate-400 uppercase">Total Visits</div>
+                                <div className="text-lg font-bold text-slate-900">{visits.length}</div>
+                            </div>
+                            <div className="p-2.5 rounded-lg bg-white border border-slate-200 text-center">
+                                <div className="text-[9px] text-slate-400 uppercase">Last Visit</div>
+                                <div className="text-sm font-bold text-slate-900">{visits[0] ? format(new Date(visits[0].visit_date), 'M/d/yy') : '--'}</div>
                             </div>
                         </div>
                     </div>
@@ -485,11 +497,22 @@ const ChartReviewModal = ({
         const carePlanMatch = String(decoded).match(/(?:Care Plan):\s*(.+?)(?:\n\n|\n(?:Follow):|$)/is);
         const followUpMatch = String(decoded).match(/(?:Follow[\s-]?up|F\/U):\s*(.+?)(?:\n\n|$)/is);
 
-        // Get vitals from visit data
+        // Get vitals from visit data and decode any HTML entities
         let visitVitals = selectedVisit.vitals || {};
         if (typeof visitVitals === 'string') {
             try { visitVitals = JSON.parse(visitVitals); } catch (e) { visitVitals = {}; }
         }
+        // Decode HTML entities in all vitals values
+        const cleanVitals = {};
+        Object.keys(visitVitals).forEach(key => {
+            const val = visitVitals[key];
+            cleanVitals[key] = typeof val === 'string' ? decodeHtmlEntities(val) : val;
+        });
+
+        // Fallback to visit object fields if regex didn't match
+        const planText = planMatch ? planMatch[1].trim() : (selectedVisit.plan ? decodeHtmlEntities(selectedVisit.plan) : null);
+        const carePlanText = carePlanMatch ? carePlanMatch[1].trim() : (selectedVisit.care_plan ? decodeHtmlEntities(selectedVisit.care_plan) : null);
+        const followUpText = followUpMatch ? followUpMatch[1].trim() : (selectedVisit.follow_up ? decodeHtmlEntities(selectedVisit.follow_up) : null);
 
         return (
             <div className="flex flex-1 overflow-hidden bg-white text-left">
@@ -576,18 +599,18 @@ const ChartReviewModal = ({
                             )}
 
                             {/* Vitals Section */}
-                            {Object.keys(visitVitals).length > 0 && (
+                            {Object.keys(cleanVitals).length > 0 && (
                                 <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
                                     <h4 className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3">Vitals</h4>
                                     <div className="grid grid-cols-4 gap-3 text-xs">
-                                        {visitVitals.bp && <div><span className="text-slate-400">BP:</span> <span className="font-bold">{visitVitals.bp}</span></div>}
-                                        {(visitVitals.pulse || visitVitals.hr) && <div><span className="text-slate-400">HR:</span> <span className="font-bold">{visitVitals.pulse || visitVitals.hr}</span></div>}
-                                        {visitVitals.temp && <div><span className="text-slate-400">Temp:</span> <span className="font-bold">{visitVitals.temp}</span></div>}
-                                        {visitVitals.resp && <div><span className="text-slate-400">RR:</span> <span className="font-bold">{visitVitals.resp}</span></div>}
-                                        {(visitVitals.o2sat || visitVitals.spo2) && <div><span className="text-slate-400">SpO2:</span> <span className="font-bold">{visitVitals.o2sat || visitVitals.spo2}%</span></div>}
-                                        {visitVitals.weight && <div><span className="text-slate-400">Wt:</span> <span className="font-bold">{visitVitals.weight}</span></div>}
-                                        {visitVitals.height && <div><span className="text-slate-400">Ht:</span> <span className="font-bold">{visitVitals.height}</span></div>}
-                                        {visitVitals.bmi && <div><span className="text-slate-400">BMI:</span> <span className="font-bold">{visitVitals.bmi}</span></div>}
+                                        {cleanVitals.bp && <div><span className="text-slate-400">BP:</span> <span className="font-bold">{cleanVitals.bp}</span></div>}
+                                        {(cleanVitals.pulse || cleanVitals.hr) && <div><span className="text-slate-400">HR:</span> <span className="font-bold">{cleanVitals.pulse || cleanVitals.hr}</span></div>}
+                                        {cleanVitals.temp && <div><span className="text-slate-400">Temp:</span> <span className="font-bold">{cleanVitals.temp}</span></div>}
+                                        {cleanVitals.resp && <div><span className="text-slate-400">RR:</span> <span className="font-bold">{cleanVitals.resp}</span></div>}
+                                        {(cleanVitals.o2sat || cleanVitals.spo2) && <div><span className="text-slate-400">SpO2:</span> <span className="font-bold">{cleanVitals.o2sat || cleanVitals.spo2}%</span></div>}
+                                        {cleanVitals.weight && <div><span className="text-slate-400">Wt:</span> <span className="font-bold">{cleanVitals.weight}</span></div>}
+                                        {cleanVitals.height && <div><span className="text-slate-400">Ht:</span> <span className="font-bold">{cleanVitals.height}</span></div>}
+                                        {cleanVitals.bmi && <div><span className="text-slate-400">BMI:</span> <span className="font-bold">{cleanVitals.bmi}</span></div>}
                                     </div>
                                 </div>
                             )}
@@ -603,31 +626,31 @@ const ChartReviewModal = ({
                             )}
 
                             {/* Plan */}
-                            {planMatch && (
+                            {planText && (
                                 <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
                                     <h4 className="text-[9px] font-black text-emerald-700 uppercase tracking-widest mb-2">Plan</h4>
                                     <div className="text-sm text-emerald-900 leading-relaxed whitespace-pre-wrap">
-                                        {planMatch[1].trim()}
+                                        {planText}
                                     </div>
                                 </div>
                             )}
 
                             {/* Care Plan */}
-                            {carePlanMatch && (
+                            {carePlanText && (
                                 <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
                                     <h4 className="text-[9px] font-black text-purple-700 uppercase tracking-widest mb-2">Care Plan</h4>
                                     <div className="text-sm text-purple-900 leading-relaxed whitespace-pre-wrap">
-                                        {carePlanMatch[1].trim()}
+                                        {carePlanText}
                                     </div>
                                 </div>
                             )}
 
                             {/* Follow-up */}
-                            {followUpMatch && (
+                            {followUpText && (
                                 <div className="p-4 bg-cyan-50 rounded-xl border border-cyan-100">
                                     <h4 className="text-[9px] font-black text-cyan-700 uppercase tracking-widest mb-2">Follow-up</h4>
                                     <div className="text-sm text-cyan-900 leading-relaxed whitespace-pre-wrap">
-                                        {followUpMatch[1].trim()}
+                                        {followUpText}
                                     </div>
                                 </div>
                             )}
