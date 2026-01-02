@@ -1,20 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
-const nodemailer = require('nodemailer');
 
-// Configure email transporter (using environment variables)
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: process.env.SMTP_PORT || 587,
-    secure: false,
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-    }
-});
-
-// Sales notification email
+// Email functionality disabled for now - focus on dashboard
+// To enable, install nodemailer: npm install nodemailer
 const SALES_EMAIL = process.env.SALES_EMAIL || 'pagemdemr@outlook.com';
 
 /**
@@ -51,47 +40,8 @@ router.post('/inquiry', async (req, res) => {
 
         const inquiry = result.rows[0];
 
-        // Send email notification to sales team
-        const interestLabel = {
-            'demo': 'Demo Request',
-            'sandbox': 'Sandbox Access',
-            'pricing': 'Pricing Information',
-            'enterprise': 'Enterprise Solutions',
-            'starter': 'Starter Plan',
-            'professional': 'Professional Plan',
-            'other': 'General Inquiry'
-        }[interest] || interest;
-
-        const emailHtml = `
-            <h2>New Sales Inquiry - ${interestLabel}</h2>
-            <p><strong>Source:</strong> ${source || 'Website'}</p>
-            <hr />
-            <p><strong>Name:</strong> ${name}</p>
-            <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
-            <p><strong>Phone:</strong> ${phone || 'Not provided'}</p>
-            <p><strong>Practice:</strong> ${practice || 'Not provided'}</p>
-            <p><strong>Providers:</strong> ${providers || 'Not specified'}</p>
-            <hr />
-            <p><strong>Interest:</strong> ${interestLabel}</p>
-            <p><strong>Message:</strong></p>
-            <p>${message || 'No additional message'}</p>
-            <hr />
-            <p><em>Submitted: ${new Date().toLocaleString()}</em></p>
-            <p><em>Inquiry ID: ${inquiry.id}</em></p>
-        `;
-
-        try {
-            await transporter.sendMail({
-                from: `"PageMD Sales" <${process.env.SMTP_USER || 'noreply@pagemdemr.com'}>`,
-                to: SALES_EMAIL,
-                subject: `New Inquiry: ${interestLabel} from ${name}`,
-                html: emailHtml
-            });
-            console.log(`Sales notification sent for inquiry ${inquiry.id}`);
-        } catch (emailError) {
-            // Log email error but don't fail the request
-            console.error('Failed to send sales notification email:', emailError.message);
-        }
+        // Log the inquiry for tracking
+        console.log(`New sales inquiry #${inquiry.id}: ${name} (${email}) - Interest: ${interest}`);
 
         res.status(201).json({
             success: true,
@@ -107,11 +57,10 @@ router.post('/inquiry', async (req, res) => {
 
 /**
  * GET /api/sales/inquiries
- * Get all sales inquiries (for admin dashboard - requires auth)
+ * Get all sales inquiries (for admin dashboard)
  */
 router.get('/inquiries', async (req, res) => {
     try {
-        // TODO: Add authentication check for admin users
         const { status, limit = 50, offset = 0 } = req.query;
 
         let query = `

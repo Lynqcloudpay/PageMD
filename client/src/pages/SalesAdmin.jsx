@@ -3,31 +3,68 @@ import {
     Mail, Phone, Building2, Users, Calendar, Clock,
     CheckCircle2, XCircle, MessageSquare, RefreshCw,
     Search, Filter, ChevronDown, ArrowLeft, Inbox,
-    TrendingUp, UserPlus, Eye, MoreVertical
+    TrendingUp, UserPlus, Eye, MoreVertical, Lock, LogOut
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 
+// Simple password for sales access - change this to a secure password
+const SALES_PASSWORD = 'PageMD2026Sales!';
+
 const SalesAdmin = () => {
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [password, setPassword] = useState('');
+    const [authError, setAuthError] = useState('');
+
     const [inquiries, setInquiries] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [statusFilter, setStatusFilter] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedInquiry, setSelectedInquiry] = useState(null);
     const [updating, setUpdating] = useState(false);
 
+    // Check if already authenticated
+    useEffect(() => {
+        const stored = sessionStorage.getItem('salesAuth');
+        if (stored === 'true') {
+            setIsAuthenticated(true);
+        }
+    }, []);
+
+    const handleLogin = (e) => {
+        e.preventDefault();
+        if (password === SALES_PASSWORD) {
+            setIsAuthenticated(true);
+            sessionStorage.setItem('salesAuth', 'true');
+            setAuthError('');
+        } else {
+            setAuthError('Incorrect password');
+        }
+    };
+
+    const handleLogout = () => {
+        setIsAuthenticated(false);
+        sessionStorage.removeItem('salesAuth');
+    };
+
     const fetchInquiries = async () => {
         try {
             setLoading(true);
+            setError(null);
             const params = new URLSearchParams();
             if (statusFilter) params.append('status', statusFilter);
 
+            // Fix: Use /sales/inquiries not /api/sales/inquiries since VITE_API_URL already includes /api
+            const baseUrl = import.meta.env.VITE_API_URL || '';
             const response = await fetch(
-                `${import.meta.env.VITE_API_URL || ''}/api/sales/inquiries?${params.toString()}`
+                `${baseUrl}/sales/inquiries?${params.toString()}`
             );
 
-            if (!response.ok) throw new Error('Failed to fetch inquiries');
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error || `Server error: ${response.status}`);
+            }
 
             const data = await response.json();
             setInquiries(data.inquiries || []);
@@ -40,14 +77,17 @@ const SalesAdmin = () => {
     };
 
     useEffect(() => {
-        fetchInquiries();
-    }, [statusFilter]);
+        if (isAuthenticated) {
+            fetchInquiries();
+        }
+    }, [statusFilter, isAuthenticated]);
 
     const updateInquiryStatus = async (id, newStatus) => {
         try {
             setUpdating(true);
+            const baseUrl = import.meta.env.VITE_API_URL || '';
             const response = await fetch(
-                `${import.meta.env.VITE_API_URL || ''}/api/sales/inquiries/${id}`,
+                `${baseUrl}/sales/inquiries/${id}`,
                 {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
@@ -111,6 +151,55 @@ const SalesAdmin = () => {
         converted: inquiries.filter(i => i.status === 'converted').length
     };
 
+    // Login Screen
+    if (!isAuthenticated) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-6">
+                <div className="w-full max-w-md">
+                    <div className="bg-white rounded-2xl shadow-2xl p-8">
+                        <div className="text-center mb-8">
+                            <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                <Lock className="w-8 h-8 text-blue-600" />
+                            </div>
+                            <h1 className="text-2xl font-bold text-slate-900">Sales Dashboard</h1>
+                            <p className="text-slate-500 mt-2">Enter password to access</p>
+                        </div>
+
+                        <form onSubmit={handleLogin} className="space-y-4">
+                            <div>
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="Enter password"
+                                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-lg"
+                                    autoFocus
+                                />
+                            </div>
+
+                            {authError && (
+                                <div className="text-red-500 text-sm text-center">{authError}</div>
+                            )}
+
+                            <button
+                                type="submit"
+                                className="w-full py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors"
+                            >
+                                Access Dashboard
+                            </button>
+                        </form>
+
+                        <div className="mt-6 text-center">
+                            <Link to="/" className="text-sm text-slate-500 hover:text-blue-600">
+                                ← Back to PageMD
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-slate-50">
             {/* Header */}
@@ -118,7 +207,7 @@ const SalesAdmin = () => {
                 <div className="max-w-7xl mx-auto px-6 py-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <Link to="/dashboard" className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                            <Link to="/" className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
                                 <ArrowLeft className="w-5 h-5 text-slate-600" />
                             </Link>
                             <div>
@@ -126,14 +215,23 @@ const SalesAdmin = () => {
                                 <p className="text-sm text-slate-500">Manage incoming inquiries and leads</p>
                             </div>
                         </div>
-                        <button
-                            onClick={fetchInquiries}
-                            disabled={loading}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                        >
-                            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                            Refresh
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={fetchInquiries}
+                                disabled={loading}
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                            >
+                                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                                Refresh
+                            </button>
+                            <button
+                                onClick={handleLogout}
+                                className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors"
+                            >
+                                <LogOut className="w-4 h-4" />
+                                Logout
+                            </button>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -220,16 +318,23 @@ const SalesAdmin = () => {
                         ) : error ? (
                             <div className="p-12 text-center text-red-500">
                                 <XCircle className="w-8 h-8 mx-auto mb-3" />
-                                {error}
+                                <div className="font-medium mb-2">Error loading inquiries</div>
+                                <p className="text-sm text-slate-500">{error}</p>
+                                <button
+                                    onClick={fetchInquiries}
+                                    className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                >
+                                    Try Again
+                                </button>
                             </div>
                         ) : filteredInquiries.length === 0 ? (
                             <div className="p-12 text-center text-slate-400">
                                 <Inbox className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-                                <div className="font-medium">No inquiries found</div>
-                                <p className="text-sm mt-1">New leads will appear here</p>
+                                <div className="font-medium">No inquiries yet</div>
+                                <p className="text-sm mt-1">New leads will appear here when someone submits a form</p>
                             </div>
                         ) : (
-                            <div className="divide-y divide-slate-100">
+                            <div className="divide-y divide-slate-100 max-h-[600px] overflow-y-auto">
                                 {filteredInquiries.map((inquiry) => (
                                     <div
                                         key={inquiry.id}
