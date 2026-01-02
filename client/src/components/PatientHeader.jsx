@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Phone, Mail, MapPin, Shield, Activity,
     AlertCircle, Edit2, Camera, X, Check,
-    ExternalLink, Calendar, FileText, Upload, Pill, Receipt
+    ExternalLink, Calendar, FileText, Upload, Pill, Receipt, Users
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
