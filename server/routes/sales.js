@@ -15,7 +15,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // Sales notification email
-const SALES_EMAIL = process.env.SALES_EMAIL || 'hello@pagemdemr.com';
+const SALES_EMAIL = process.env.SALES_EMAIL || 'pagemdemr@outlook.com';
 
 /**
  * POST /api/sales/inquiry

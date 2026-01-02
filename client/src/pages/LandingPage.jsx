@@ -32,7 +32,7 @@ const LandingPage = () => {
                 <div className="max-w-6xl mx-auto px-6 relative z-10 text-center">
                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-[10px] font-bold tracking-widest uppercase mb-8 border border-blue-100">
                         <Stethoscope className="w-3.5 h-3.5" />
-                        Designed by a Cardiologist for Independent Practices
+                        Made by a physician for physicians
                     </div>
 
                     <h1 className="text-4xl md:text-6xl font-black text-slate-900 leading-[0.95] mb-6 tracking-tight">

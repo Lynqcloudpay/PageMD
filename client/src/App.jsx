@@ -51,6 +51,7 @@ import PlatformAdminRoles from './pages/PlatformAdminRoles'
 import PlatformAdminSupport from './pages/PlatformAdminSupport'
 import PlatformAdminRevenue from './pages/PlatformAdminRevenue'
 import ImpersonateHandler from './pages/ImpersonateHandler'
+import SalesAdmin from './pages/SalesAdmin'
 
 // Patient Redirect Component - redirects /patient/:id to /patient/:id/snapshot
 const PatientRedirect = () => {
@@ -134,6 +135,7 @@ function App() {
                                             <Route path="/pricing" element={<PricingPage />} />
                                             <Route path="/contact" element={<ContactPage />} />
                                             <Route path="/about" element={<AboutPage />} />
+                                            <Route path="/sales-admin" element={<SalesAdmin />} />
                                             <Route path="/dashboard" element={
                                                 <ProtectedRoute>
                                                     <ErrorBoundary>
