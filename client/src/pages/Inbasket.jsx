@@ -15,6 +15,7 @@ import { getPatientDisplayName } from '../utils/patientNameUtils';
 const TASK_CATEGORIES = [
     { id: 'results', label: 'Results', icon: FlaskConical, color: 'blue', types: ['lab', 'imaging'] },
     { id: 'messages', label: 'Messages', icon: MessageSquare, color: 'purple', types: ['message'] },
+    { id: 'portal', label: 'Patient Portal', icon: User, color: 'blue', types: ['portal_message', 'portal_appointment'] },
     { id: 'notes', label: 'Clinical Notes', icon: FileText, color: 'emerald', types: ['note'] },
     { id: 'documents', label: 'Documents', icon: FileText, color: 'orange', types: ['document'] },
     { id: 'referrals', label: 'Referrals', icon: Send, color: 'indigo', types: ['referral'] },
@@ -457,6 +458,26 @@ const Inbasket = () => {
                                             <p className="text-xs text-emerald-600">Unsigned draft from {details.created_at ? format(new Date(details.created_at), 'MM/dd/yyyy') : 'recent visit'}</p>
                                         </div>
                                         <button onClick={() => openPatientChart(selectedItem)} className="text-emerald-600 text-xs font-bold whitespace-nowrap">Sign Now</button>
+                                    </div>
+                                )}
+                                {details?.type === 'portal_message' && (
+                                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 flex items-center gap-3">
+                                        <MessageSquare className="w-8 h-8 text-blue-400" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-blue-900">Incoming Portal Message</p>
+                                            <p className="text-xs text-blue-600">Reply to patient via the Message center</p>
+                                        </div>
+                                        <button onClick={() => openPatientChart(selectedItem)} className="text-blue-600 text-xs font-bold whitespace-nowrap">Open Thread</button>
+                                    </div>
+                                )}
+                                {details?.type === 'portal_appointment' && (
+                                    <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 flex items-center gap-3">
+                                        <Calendar className="w-8 h-8 text-amber-500" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-amber-900">Appointment Request</p>
+                                            <p className="text-xs text-amber-600">Review preferred dates and schedule</p>
+                                        </div>
+                                        <button onClick={() => navigate('/schedule')} className="text-amber-600 text-xs font-bold whitespace-nowrap">Go to Schedule</button>
                                     </div>
                                 )}
 

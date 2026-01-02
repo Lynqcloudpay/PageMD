@@ -1293,6 +1293,108 @@ CREATE TABLE IF NOT EXISTS drug_sales (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- ============================================
+-- PATIENT PORTAL TABLES
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS patient_portal_accounts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    status VARCHAR(20) DEFAULT 'invited' CHECK (status IN ('invited', 'active', 'locked')),
+    last_login_at TIMESTAMP,
+    mfa_enabled BOOLEAN DEFAULT FALSE,
+    mfa_secret_encrypted TEXT,
+    reset_token_hash TEXT,
+    reset_token_expires TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS patient_portal_invites (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    email VARCHAR(255) NOT NULL,
+    token_hash TEXT NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    used_at TIMESTAMP,
+    created_by_user_id UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS patient_portal_permissions (
+    account_id UUID PRIMARY KEY REFERENCES patient_portal_accounts(id) ON DELETE CASCADE,
+    can_view_notes BOOLEAN DEFAULT TRUE,
+    can_view_labs BOOLEAN DEFAULT TRUE,
+    can_view_documents BOOLEAN DEFAULT TRUE,
+    can_message BOOLEAN DEFAULT TRUE,
+    can_request_appointments BOOLEAN DEFAULT TRUE,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS patient_portal_audit_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    account_id UUID REFERENCES patient_portal_accounts(id) ON DELETE SET NULL,
+    patient_id UUID REFERENCES patients(id) ON DELETE CASCADE,
+    action VARCHAR(100) NOT NULL,
+    resource_type VARCHAR(50),
+    resource_id UUID,
+    ip_address INET,
+    user_agent TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS portal_appointment_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    portal_account_id UUID NOT NULL REFERENCES patient_portal_accounts(id) ON DELETE CASCADE,
+    preferred_date DATE NOT NULL,
+    preferred_time_range VARCHAR(50),
+    appointment_type VARCHAR(50),
+    reason TEXT,
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'declined', 'cancelled')),
+    staff_notes TEXT,
+    appointment_id UUID REFERENCES appointments(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_portal_appt_req_patient ON portal_appointment_requests(patient_id);
+CREATE INDEX IF NOT EXISTS idx_portal_appt_req_account ON portal_appointment_requests(portal_account_id);
+
+CREATE TABLE IF NOT EXISTS portal_message_threads (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    subject VARCHAR(255) NOT NULL,
+    status VARCHAR(20) DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+    last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS portal_messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    thread_id UUID NOT NULL REFERENCES portal_message_threads(id) ON DELETE CASCADE,
+    sender_portal_account_id UUID REFERENCES patient_portal_accounts(id),
+    sender_user_id UUID REFERENCES users(id),
+    body TEXT NOT NULL,
+    read_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CHECK (
+        (sender_portal_account_id IS NOT NULL AND sender_user_id IS NULL) OR
+        (sender_portal_account_id IS NULL AND sender_user_id IS NOT NULL)
+    )
+);
+
+CREATE INDEX IF NOT EXISTS idx_portal_threads_patient ON portal_message_threads(patient_id);
+CREATE INDEX IF NOT EXISTS idx_portal_messages_thread ON portal_messages(thread_id);
+
+CREATE INDEX IF NOT EXISTS idx_portal_accounts_patient ON patient_portal_accounts(patient_id);
+CREATE INDEX IF NOT EXISTS idx_portal_accounts_email ON patient_portal_accounts(email);
+CREATE INDEX IF NOT EXISTS idx_portal_invites_patient ON patient_portal_invites(patient_id);
+CREATE INDEX IF NOT EXISTS idx_portal_audit_patient ON patient_portal_audit_log(patient_id);
+
 `;
 
 module.exports = tenantSchemaSQL;

@@ -125,6 +125,10 @@ const staticFiles = express.static(uploadDir, {
 app.use('/api/uploads', staticMiddleware, staticFiles);
 app.use('/uploads', staticMiddleware, staticFiles);
 
+// Feature Flags
+const PATIENT_PORTAL_ENABLED = process.env.PATIENT_PORTAL_ENABLED === 'true';
+console.log(`[System] Patient Portal: ${PATIENT_PORTAL_ENABLED ? 'ENABLED' : 'DISABLED'}`);
+
 // Multi-tenancy resolver - resolves clinic specific database
 app.use('/api', resolveTenant);
 
@@ -248,6 +252,10 @@ const appointmentRoutes = require('./routes/appointments');
 const followupsRoutes = require('./routes/followups');
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/followups', followupsRoutes);
+
+// Patient Portal
+const portalRoutes = require('./routes/portal');
+app.use('/api/portal', portalRoutes);
 
 // Support
 app.use('/api/support', require('./routes/support'));

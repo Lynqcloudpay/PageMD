@@ -222,6 +222,50 @@ async function syncInboxItems(tenantId) {
         WHERE reference_id = messages.id AND reference_table = 'messages'
     )
   `, [tenantId]);
+
+  // 7. Sync Portal Messages (Unread messages from patients)
+  await pool.query(`
+    INSERT INTO inbox_items(
+      id, tenant_id, patient_id, type, priority, status,
+      subject, body, reference_id, reference_table,
+      created_at, updated_at
+    )
+  SELECT
+  gen_random_uuid(), $1, t.patient_id, 'portal_message', 'normal', 'new',
+    'Portal: ' || t.subject,
+    m.body,
+    m.id, 'portal_messages',
+    m.created_at, m.created_at
+    FROM portal_messages m
+    JOIN portal_message_threads t ON m.thread_id = t.id
+    WHERE m.sender_portal_account_id IS NOT NULL
+      AND m.staff_read_at IS NULL
+      AND NOT EXISTS(
+      SELECT 1 FROM inbox_items 
+        WHERE reference_id = m.id AND reference_table = 'portal_messages'
+    )
+    `, [tenantId]);
+
+  // 8. Sync Portal Appointment Requests
+  await pool.query(`
+    INSERT INTO inbox_items(
+      id, tenant_id, patient_id, type, priority, status,
+      subject, body, reference_id, reference_table,
+      created_at, updated_at
+    )
+  SELECT
+  gen_random_uuid(), $1, patient_id, 'portal_appointment', 'normal', 'new',
+    'Portal Appt Req: ' || appointment_type,
+    'Preferred Date: ' || preferred_date || ' (' || preferred_time_range || ')\nReason: ' || COALESCE(reason, 'N/A'),
+    id, 'portal_appointment_requests',
+    created_at, created_at
+    FROM portal_appointment_requests
+    WHERE status = 'pending'
+      AND NOT EXISTS(
+      SELECT 1 FROM inbox_items 
+        WHERE reference_id = portal_appointment_requests.id AND reference_table = 'portal_appointment_requests'
+    )
+    `, [tenantId]);
 }
 
 // --- ROUTES ---
@@ -238,13 +282,13 @@ router.get('/', async (req, res) => {
     }
 
     let query = `
-      SELECT i.*, 
-             u_assigned.first_name as assigned_first_name, u_assigned.last_name as assigned_last_name,
-             u_created.first_name as created_by_first_name, u_created.last_name as created_by_last_name
+      SELECT i.*,
+    u_assigned.first_name as assigned_first_name, u_assigned.last_name as assigned_last_name,
+    u_created.first_name as created_by_first_name, u_created.last_name as created_by_last_name
       FROM inbox_items i
       LEFT JOIN users u_assigned ON i.assigned_user_id = u_assigned.id
       LEFT JOIN users u_created ON i.created_by = u_created.id
-      WHERE 1=1
+      WHERE 1 = 1
     `;
     const params = [];
     let paramCount = 0;
@@ -253,23 +297,23 @@ router.get('/', async (req, res) => {
     if (status && status !== 'all') {
       if (status === 'completed') {
         paramCount++;
-        query += ` AND i.status = $${paramCount}`;
+        query += ` AND i.status = $${paramCount} `;
         params.push('completed');
       } else {
         // Default view: everything not completed/archived
-        query += ` AND i.status NOT IN ('completed', 'archived')`;
+        query += ` AND i.status NOT IN('completed', 'archived')`;
       }
     }
 
     if (type && type !== 'all') {
       paramCount++;
-      query += ` AND i.type = $${paramCount}`;
+      query += ` AND i.type = $${paramCount} `;
       params.push(type);
     }
 
     if (assignedTo === 'me') {
       paramCount++;
-      query += ` AND i.assigned_user_id = $${paramCount}`;
+      query += ` AND i.assigned_user_id = $${paramCount} `;
       params.push(req.user.id);
     }
 
@@ -292,14 +336,14 @@ router.get('/stats', async (req, res) => {
   try {
     await ensureSchema();
     const counts = await pool.query(`
-      SELECT 
-        COUNT(*) FILTER (WHERE status NOT IN ('completed', 'archived')) as all_count,
-        COUNT(*) FILTER (WHERE status NOT IN ('completed', 'archived') AND assigned_user_id = $1) as my_count,
-        COUNT(*) FILTER (WHERE status NOT IN ('completed', 'archived') AND type = 'lab') as labs_count,
-        COUNT(*) FILTER (WHERE status NOT IN ('completed', 'archived') AND type = 'document') as docs_count,
-        COUNT(*) FILTER (WHERE status NOT IN ('completed', 'archived') AND type = 'message') as msgs_count,
-        COUNT(*) FILTER (WHERE status NOT IN ('completed', 'archived') AND type = 'task') as tasks_count,
-        COUNT(*) FILTER (WHERE status NOT IN ('completed', 'archived') AND type = 'refill') as refills_count
+  SELECT
+  COUNT(*) FILTER(WHERE status NOT IN('completed', 'archived')) as all_count,
+    COUNT(*) FILTER(WHERE status NOT IN('completed', 'archived') AND assigned_user_id = $1) as my_count,
+      COUNT(*) FILTER(WHERE status NOT IN('completed', 'archived') AND type = 'lab') as labs_count,
+        COUNT(*) FILTER(WHERE status NOT IN('completed', 'archived') AND type = 'document') as docs_count,
+          COUNT(*) FILTER(WHERE status NOT IN('completed', 'archived') AND type = 'message') as msgs_count,
+            COUNT(*) FILTER(WHERE status NOT IN('completed', 'archived') AND type = 'task') as tasks_count,
+              COUNT(*) FILTER(WHERE status NOT IN('completed', 'archived') AND type = 'refill') as refills_count
       FROM inbox_items
     `, [req.user.id]);
 
@@ -317,8 +361,8 @@ router.get('/:id', async (req, res) => {
 
     // 1. Get Item
     const itemRes = await pool.query(`
-      SELECT i.*, 
-             u_assigned.first_name as assigned_first_name, u_assigned.last_name as assigned_last_name
+      SELECT i.*,
+    u_assigned.first_name as assigned_first_name, u_assigned.last_name as assigned_last_name
       FROM inbox_items i
       LEFT JOIN users u_assigned ON i.assigned_user_id = u_assigned.id
       WHERE i.id = $1
@@ -350,10 +394,10 @@ router.post('/', async (req, res) => {
     const { type, subject, body, patientId, priority = 'normal', assignedUserId } = req.body;
 
     const result = await pool.query(`
-      INSERT INTO inbox_items (
-        type, subject, body, patient_id, priority, assigned_user_id, created_by, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'new')
-      RETURNING *
+      INSERT INTO inbox_items(
+      type, subject, body, patient_id, priority, assigned_user_id, created_by, status
+    ) VALUES($1, $2, $3, $4, $5, $6, $7, 'new')
+  RETURNING *
     `, [type, subject, body, patientId || null, priority, assignedUserId || null, req.user.id]);
 
     await logAudit(req.user.id, 'inbasket_create', 'inbox_items', result.rows[0].id, { type });
@@ -376,7 +420,7 @@ router.put('/:id', async (req, res) => {
 
     if (status) {
       paramCount++;
-      updates.push(`status = $${paramCount}`);
+      updates.push(`status = $${paramCount} `);
       params.push(status);
 
       if (status === 'completed') {
@@ -387,20 +431,20 @@ router.put('/:id', async (req, res) => {
 
     if (assignedUserId !== undefined) { // Allow null to unassign
       paramCount++;
-      updates.push(`assigned_user_id = $${paramCount}`);
+      updates.push(`assigned_user_id = $${paramCount} `);
       params.push(assignedUserId);
     }
 
     if (priority) {
       paramCount++;
-      updates.push(`priority = $${paramCount}`);
+      updates.push(`priority = $${paramCount} `);
       params.push(priority);
     }
 
     if (updates.length === 0) return res.json({});
 
     params.push(id);
-    const query = `UPDATE inbox_items SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${params.length} RETURNING *`;
+    const query = `UPDATE inbox_items SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${params.length} RETURNING * `;
 
     const result = await pool.query(query, params);
 
@@ -428,10 +472,10 @@ router.post('/:id/notes', async (req, res) => {
     const { note } = req.body;
 
     const result = await pool.query(`
-      INSERT INTO inbox_notes (item_id, user_id, user_name, note)
-      VALUES ($1, $2, $3, $4)
-      RETURNING *
-    `, [id, req.user.id, `${req.user.first_name} ${req.user.last_name}`, note]);
+      INSERT INTO inbox_notes(item_id, user_id, user_name, note)
+  VALUES($1, $2, $3, $4)
+  RETURNING *
+    `, [id, req.user.id, `${req.user.first_name} ${req.user.last_name} `, note]);
 
     res.json(result.rows[0]);
   } catch (error) {

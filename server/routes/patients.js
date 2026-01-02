@@ -8,6 +8,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const patientEncryptionService = require('../services/patientEncryptionService');
+const emailService = require('../services/emailService');
 
 const router = express.Router();
 
@@ -480,6 +481,79 @@ router.get('/:id', requirePermission('patients:view_chart'), async (req, res) =>
         detail: error.detail
       } : undefined
     });
+  }
+});
+
+/**
+ * Invite patient to Portal
+ * POST /api/patients/:id/portal-invite
+ */
+router.post('/:id/portal-invite', requirePermission('patients:edit_demographics'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required for portal invitation' });
+    }
+
+    // 1. Check if account already exists
+    const existing = await pool.query('SELECT id FROM patient_portal_accounts WHERE patient_id = $1 OR email = $2', [id, email]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({
+        error: 'A portal account already exists for this patient or email',
+        code: 'PORTAL_ACCOUNT_EXISTS'
+      });
+    }
+
+    // 2. Generate invitation token (hashed)
+    const token = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 72); // 72 hour expiry
+
+    // 3. Store invitation
+    await pool.query(`
+      INSERT INTO patient_portal_invites (patient_id, email, token_hash, expires_at, created_by_user_id)
+      VALUES ($1, $2, $3, $4, $5)
+    `, [id, email, tokenHash, expiresAt, req.user.id]);
+
+    // 4. Update global lookup (to support global login recognition)
+    // IMPORTANT: This happens in the control DB context
+    await pool.controlPool.query(`
+      INSERT INTO platform_patient_lookup (email, clinic_id, schema_name)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (email) DO UPDATE SET 
+          clinic_id = EXCLUDED.clinic_id,
+          schema_name = EXCLUDED.schema_name
+    `, [email, req.clinic.id, req.clinic.schema_name]);
+
+    // 5. Audit
+    await logAudit(req.user.id, 'patient_portal_invited', 'patient', id, { email }, req.ip);
+
+    // 6. Send invitation email and return link
+    const portalUrl = process.env.PORTAL_URL || 'https://pagemdemr.com/portal';
+    const inviteLink = `${portalUrl}/register?token=${token}`;
+
+    try {
+      const patientResult = await pool.query('SELECT first_name, last_name FROM patients WHERE id = $1', [id]);
+      const patientName = patientResult.rows[0] ? `${patientResult.rows[0].first_name} ${patientResult.rows[0].last_name}` : 'Valued Patient';
+
+      await emailService.sendPortalInvite(email, patientName, inviteLink);
+    } catch (emailErr) {
+      console.warn('[Portal Invite] Failed to send email:', emailErr.message);
+    }
+
+    res.json({
+      success: true,
+      inviteLink,
+      expiresAt,
+      message: 'Invitation generated and sent successfully.'
+    });
+
+  } catch (error) {
+    console.error('Portal invitation error:', error);
+    res.status(500).json({ error: 'Failed to generate portal invitation' });
   }
 });
 

@@ -383,6 +383,31 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                 {/* Primary Actions */}
                 <div className="flex items-center gap-2">
                     <button
+                        onClick={async () => {
+                            if (!patient.email) {
+                                alert('An email address is required to invite a patient to the portal.');
+                                return;
+                            }
+                            if (!window.confirm(`Invite ${patient.first_name} to the Patient Portal?`)) return;
+
+                            try {
+                                const response = await api.post(`/patients/${patient.id}/portal-invite`, {
+                                    email: patient.email
+                                });
+                                if (response.data.success) {
+                                    alert(`Invitation generated!\n\nInvite Link: ${response.data.inviteLink}\n\n(In a production system, this would be emailed to ${patient.email})`);
+                                }
+                            } catch (err) {
+                                alert(err.response?.data?.error || 'Failed to send invitation');
+                            }
+                        }}
+                        className="px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 shadow-sm transition-all flex items-center gap-2"
+                        title="Invite to Patient Portal"
+                    >
+                        <Users size={16} />
+                        Portal Invite
+                    </button>
+                    <button
                         onClick={() => navigate(`/patient/${patient?.id || id}/snapshot?tab=billing`)}
                         className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 shadow-sm transition-all flex items-center gap-2"
                         title="Billing & Superbills"

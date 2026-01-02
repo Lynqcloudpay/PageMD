@@ -53,6 +53,13 @@ import PlatformAdminRevenue from './pages/PlatformAdminRevenue'
 import ImpersonateHandler from './pages/ImpersonateHandler'
 import SalesAdmin from './pages/SalesAdmin'
 
+// Patient Portal
+import PortalLogin from './portal/PortalLogin'
+import PortalDashboard from './portal/PortalDashboard'
+import PortalRegister from './portal/PortalRegister'
+import PortalForgotPassword from './portal/PortalForgotPassword'
+import PortalResetPassword from './portal/PortalResetPassword'
+
 // Patient Redirect Component - redirects /patient/:id to /patient/:id/snapshot
 const PatientRedirect = () => {
     const { id } = useParams();
@@ -136,6 +143,14 @@ function App() {
                                             <Route path="/contact" element={<ContactPage />} />
                                             <Route path="/about" element={<AboutPage />} />
                                             <Route path="/sales-admin" element={<SalesAdmin />} />
+
+                                            {/* Patient Portal Routes */}
+                                            <Route path="/portal/login" element={<PortalLogin />} />
+                                            <Route path="/portal/register" element={<PortalRegister />} />
+                                            <Route path="/portal/forgot-password" element={<PortalForgotPassword />} />
+                                            <Route path="/portal/reset-password" element={<PortalResetPassword />} />
+                                            <Route path="/portal/dashboard" element={<PortalDashboard />} />
+                                            <Route path="/portal" element={<Navigate to="/portal/dashboard" replace />} />
                                             <Route path="/dashboard" element={
                                                 <ProtectedRoute>
                                                     <ErrorBoundary>

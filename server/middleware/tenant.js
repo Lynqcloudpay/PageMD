@@ -35,6 +35,8 @@ const resolveTenant = async (req, res, next) => {
     // B. Recognition by Email (specifically for Login)
     // If it's a login attempt and we don't have a slug, try to find the clinic by email
     const isLogin = req.path === '/auth/login' || req.path === '/api/auth/login';
+    const isPortalLogin = req.path === '/portal/auth/login' || req.path === '/api/portal/auth/login';
+
     if (!slug && isLogin && req.body && req.body.email) {
         try {
             const lookup = await pool.controlPool.query(
@@ -45,7 +47,19 @@ const resolveTenant = async (req, res, next) => {
                 lookupSchema = lookup.rows[0].schema_name;
             }
         } catch (e) {
-            console.error('[Tenant] Lookup failed:', e);
+            console.error('[Tenant] Staff Lookup failed:', e);
+        }
+    } else if (!slug && isPortalLogin && req.body && req.body.email) {
+        try {
+            const lookup = await pool.controlPool.query(
+                'SELECT schema_name FROM platform_patient_lookup WHERE email = $1',
+                [req.body.email]
+            );
+            if (lookup.rows.length > 0) {
+                lookupSchema = lookup.rows[0].schema_name;
+            }
+        } catch (e) {
+            console.error('[Tenant] Patient Lookup failed:', e);
         }
     }
 
