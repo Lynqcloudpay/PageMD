@@ -569,14 +569,6 @@ const ChartReviewModal = ({
                                     </span>
                                 </div>
                             </div>
-                            {onOpenVisit && (
-                                <button
-                                    onClick={() => onOpenVisit(selectedVisit.id)}
-                                    className="px-6 py-2.5 bg-slate-50 text-slate-900 text-xs font-black uppercase tracking-widest rounded-xl border border-slate-200 hover:bg-slate-100 transition-all"
-                                >
-                                    Edit Case
-                                </button>
-                            )}
                         </div>
 
                         <div className="space-y-6">
