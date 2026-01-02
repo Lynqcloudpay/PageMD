@@ -6,7 +6,7 @@ import {
 import { format } from 'date-fns';
 import {
     AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-    LineChart, Line
+    LineChart, Line, CartesianGrid
 } from 'recharts';
 import PatientHeaderPhoto from './PatientHeaderPhoto';
 import { ordersAPI, documentsAPI, patientsAPI } from '../services/api';
@@ -203,17 +203,18 @@ const ChartReviewModal = ({
             if (typeof vitals === 'string') {
                 try { vitals = JSON.parse(vitals); } catch (e) { vitals = {}; }
             }
-            const sys = parseInt(vitals.systolic || (typeof vitals.bp === 'string' ? vitals.bp.split('/')[0] : 0)) || 0;
+            const bp = vitals.bp || (vitals.systolic && vitals.diastolic ? `${vitals.systolic}/${vitals.diastolic}` : '');
+            const sys = parseInt(vitals.systolic || (typeof bp === 'string' ? bp.split('/')[0] : 0)) || 0;
             const hr = parseInt(vitals.pulse || vitals.hr || 0) || 0;
             const spo2 = parseInt(vitals.o2sat || vitals.spo2 || 0) || 0;
 
             return {
                 name: format(new Date(v.visit_date), 'MM/dd'),
-                hr,
-                sys,
-                spo2
+                hr: hr || null,
+                sys: sys || null,
+                spo2: spo2 || null
             };
-        }).filter(d => d.hr > 0 || d.sys > 0);
+        }).filter(d => d.hr !== null || d.sys !== null);
 
         const latestVitals = vitalsTrendData[vitalsTrendData.length - 1] || { hr: '--', sys: '--', spo2: '--' };
 
@@ -237,151 +238,161 @@ const ChartReviewModal = ({
         ].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
         return (
-            <div className="flex-1 bg-slate-950 overflow-y-auto custom-scrollbar p-8">
-                <div className="max-w-4xl mx-auto space-y-8">
-                    {/* Glassmorphic Patient Header */}
-                    <div className="relative p-8 rounded-[2.5rem] bg-white/5 border border-white/10 backdrop-blur-xl flex flex-col items-center text-center overflow-hidden">
-                        <div className="absolute top-0 right-0 p-4 opacity-40 hover:opacity-100 cursor-pointer">
-                            <RefreshCw className="w-5 h-5 text-white" onClick={() => loadRecords(patientData.id)} />
+            <div className="flex-1 bg-slate-50 overflow-y-auto custom-scrollbar p-8">
+                <div className="max-w-4xl mx-auto space-y-8 text-left">
+                    {/* Professional Patient Header */}
+                    <div className="relative p-10 rounded-[3rem] bg-white border border-slate-200 shadow-sm flex flex-col items-center text-center">
+                        <div className="absolute top-0 right-0 p-6 opacity-30 hover:opacity-100 cursor-pointer transition-opacity">
+                            <RefreshCw className="w-5 h-5 text-slate-400" onClick={() => loadRecords(patientData.id)} />
                         </div>
 
-                        <div className="relative mb-4">
+                        <div className="relative mb-6">
                             <PatientHeaderPhoto
                                 firstName={patientData.first_name}
                                 lastName={patientData.last_name}
                                 photoUrl={patientData.photo_url}
-                                className="w-24 h-24 text-3xl shadow-2xl border-4 border-white/20 ring-4 ring-slate-900"
+                                className="w-28 h-28 text-4xl shadow-xl border-4 border-white ring-8 ring-blue-50"
                             />
-                            <div className="absolute bottom-1 right-1 w-5 h-5 bg-emerald-500 border-4 border-slate-900 rounded-full"></div>
+                            <div className="absolute bottom-2 right-2 w-6 h-6 bg-emerald-500 border-4 border-white rounded-full shadow-lg"></div>
                         </div>
 
-                        <h2 className="text-3xl font-black text-white mb-1">
+                        <h2 className="text-4xl font-black text-slate-900 mb-2">
                             {patientData.first_name} {patientData.last_name}
                         </h2>
-                        <div className="flex items-center gap-2 text-slate-400 text-sm font-bold uppercase tracking-widest">
+                        <div className="flex items-center gap-3 text-slate-400 text-xs font-black uppercase tracking-[0.2em]">
                             <span>Patient #{patientData.id || '---'}</span>
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-700"></span>
-                            <span>Summary</span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-200"></span>
+                            <span className="text-blue-600 font-extrabold">Clinical Summary</span>
                         </div>
                     </div>
 
                     {/* Vitals Stats Grid */}
                     <div className="grid grid-cols-3 gap-6">
                         {[
-                            { label: 'Heart Rate', value: latestVitals.hr, unit: 'bpm', icon: Heart, color: 'text-rose-500', trend: '+4.2%' },
-                            { label: 'BP Systolic', value: latestVitals.sys, unit: 'mmHg', icon: Activity, color: 'text-blue-500', trend: '-2.1%' },
-                            { label: 'SpO2', value: latestVitals.spo2, unit: '%', icon: Waves, color: 'text-emerald-500', trend: 'Stable' }
+                            { label: 'Heart Rate', value: latestVitals.hr, unit: 'bpm', icon: Heart, color: 'text-rose-500', bg: 'bg-rose-50', border: 'border-rose-100' },
+                            { label: 'BP Systolic', value: latestVitals.sys, unit: 'mmHg', icon: Activity, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
+                            { label: 'SpO2', value: latestVitals.spo2, unit: '%', icon: Waves, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' }
                         ].map((stat, i) => (
-                            <div key={i} className="p-6 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md">
-                                <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">{stat.label}</div>
-                                <div className="flex items-end gap-2 mb-2">
-                                    <span className="text-3xl font-black text-white">{stat.value}</span>
-                                    <stat.icon className={`w-5 h-5 ${stat.color} mb-1.5`} />
+                            <div key={i} className="p-8 rounded-[2rem] bg-white border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className={`p-2 rounded-xl ${stat.bg} ${stat.color} border ${stat.border}`}>
+                                        <stat.icon className="w-5 h-5" />
+                                    </div>
+                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{stat.label}</div>
                                 </div>
-                                <div className={`text-[10px] font-bold ${stat.trend.startsWith('+') ? 'text-rose-400' : stat.trend.startsWith('-') ? 'text-emerald-400' : 'text-slate-500'}`}>
-                                    {stat.trend} rate
+                                <div className="flex items-end gap-1.5">
+                                    <span className="text-4xl font-black text-slate-900 leading-none">{stat.value}</span>
+                                    <span className="text-xs font-bold text-slate-400 pb-1">{stat.unit}</span>
                                 </div>
                             </div>
                         ))}
                     </div>
 
                     {/* Main Trend Chart */}
-                    <div className="p-8 rounded-[2.5rem] bg-white/5 border border-white/10 backdrop-blur-md h-[400px] flex flex-col">
-                        <div className="flex items-center justify-between mb-8">
-                            <h3 className="text-lg font-black text-white tracking-tight">Clinical Trends</h3>
-                            <div className="flex gap-4">
+                    <div className="p-10 rounded-[3rem] bg-white border border-slate-200 shadow-sm flex flex-col">
+                        <div className="flex items-center justify-between mb-10 text-left">
+                            <div>
+                                <h3 className="text-xl font-black text-slate-900 tracking-tight">Clinical Monitoring</h3>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Visit-over-visit trends</p>
+                            </div>
+                            <div className="flex gap-6">
                                 <div className="flex items-center gap-2">
-                                    <span className="w-3 h-3 rounded-full bg-rose-500"></span>
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase">HR</span>
+                                    <div className="w-2 h-2 rounded-full bg-rose-500"></div>
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">HR</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase">BP</span>
+                                    <div className="w-2 h-2 rounded-full bg-blue-600"></div>
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">BP</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase">O2</span>
+                                    <div className="w-2 h-2 rounded-full bg-emerald-600"></div>
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">O2</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex-1 w-full">
+                        <div className="flex-1 w-full h-[320px]">
                             <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={vitalsTrendData}>
-                                    <defs>
-                                        <linearGradient id="colorHR" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
-                                        </linearGradient>
-                                        <linearGradient id="colorBP" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                                        </linearGradient>
-                                        <linearGradient id="colorO2" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
+                                <LineChart data={vitalsTrendData}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                     <XAxis
                                         dataKey="name"
                                         axisLine={false}
                                         tickLine={false}
-                                        tick={{ fill: '#64748b', fontSize: 10, fontWeight: 'bold' }}
+                                        tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}
                                         dy={10}
                                     />
-                                    <YAxis hide domain={['dataMin - 20', 'dataMax + 20']} />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', color: '#fff' }}
-                                        itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+                                    <YAxis
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}
+                                        domain={['auto', 'auto']}
+                                        dx={-10}
                                     />
-                                    <Area
+                                    <Tooltip
+                                        contentStyle={{
+                                            backgroundColor: '#fff',
+                                            border: '1px solid #e2e8f0',
+                                            borderRadius: '16px',
+                                            boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                                            padding: '12px'
+                                        }}
+                                        itemStyle={{ fontSize: '11px', fontWeight: 'bold', padding: '2px 0' }}
+                                    />
+                                    <Line
                                         type="monotone"
                                         dataKey="hr"
+                                        name="Heart Rate"
                                         stroke="#f43f5e"
                                         strokeWidth={4}
-                                        fillOpacity={1}
-                                        fill="url(#colorHR)"
+                                        dot={{ fill: '#f43f5e', strokeWidth: 2, r: 4, stroke: '#fff' }}
+                                        activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }}
+                                        connectNulls
                                     />
-                                    <Area
+                                    <Line
                                         type="monotone"
                                         dataKey="sys"
-                                        stroke="#3b82f6"
+                                        name="BP Systolic"
+                                        stroke="#2563eb"
                                         strokeWidth={4}
-                                        fillOpacity={1}
-                                        fill="url(#colorBP)"
+                                        dot={{ fill: '#2563eb', strokeWidth: 2, r: 4, stroke: '#fff' }}
+                                        activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }}
+                                        connectNulls
                                     />
-                                    <Area
+                                    <Line
                                         type="monotone"
                                         dataKey="spo2"
-                                        stroke="#10b981"
+                                        name="SpO2"
+                                        stroke="#059669"
                                         strokeWidth={4}
-                                        fillOpacity={1}
-                                        fill="url(#colorO2)"
+                                        dot={{ fill: '#059669', strokeWidth: 2, r: 4, stroke: '#fff' }}
+                                        activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }}
+                                        connectNulls
                                     />
-                                </AreaChart>
+                                </LineChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
 
                     {/* Timeline Section */}
-                    <div className="p-8 rounded-[2.5rem] bg-white/5 border border-white/10 backdrop-blur-md">
-                        <h3 className="text-xl font-black text-white mb-8 tracking-tight">Timeline</h3>
-                        <div className="space-y-6 relative ml-4">
-                            <div className="absolute top-0 bottom-0 left-[7px] w-0.5 bg-white/10"></div>
+                    <div className="p-10 rounded-[3rem] bg-white border border-slate-200 shadow-sm text-left">
+                        <h3 className="text-xl font-black text-slate-900 mb-10 tracking-tight">Timeline</h3>
+                        <div className="space-y-8 relative ml-4">
+                            <div className="absolute top-0 bottom-0 left-[7px] w-0.5 bg-slate-100"></div>
 
                             {timelineItems.length > 0 ? timelineItems.map((item, i) => (
-                                <div key={i} className="flex gap-8 items-start relative">
-                                    <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest w-20 pt-1 text-right">
+                                <div key={i} className="flex gap-8 items-start relative group">
+                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest w-20 pt-1.5 text-right">
                                         {item.time}
                                     </div>
-                                    <div className={`w-4 h-4 rounded-full ${item.color} border-4 border-slate-900 z-10 shrink-0 mt-1`}></div>
-                                    <div className="flex-1 bg-white/5 hover:bg-white/10 p-4 rounded-2xl border border-white/5 transition-all cursor-pointer">
-                                        <div className="font-bold text-white text-sm">{item.title}</div>
-                                        <div className="text-xs text-slate-500 mt-1">{item.subtitle}</div>
+                                    <div className={`w-4 h-4 rounded-full ${item.color} border-4 border-white shadow-sm z-10 shrink-0 mt-1 transition-transform group-hover:scale-125`}></div>
+                                    <div className="flex-1 bg-slate-50 hover:bg-white p-5 rounded-2xl border border-transparent hover:border-slate-200 hover:shadow-xl hover:shadow-slate-200/20 transition-all cursor-pointer">
+                                        <div className="font-bold text-slate-900 text-sm">{item.title}</div>
+                                        <div className="text-xs font-medium text-slate-400 mt-1">{item.subtitle}</div>
                                     </div>
                                 </div>
                             )) : (
-                                <div className="py-12 text-center text-slate-500 font-bold uppercase tracking-widest text-xs">
+                                <div className="py-20 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">
                                     No activity recorded
                                 </div>
                             )}
@@ -394,54 +405,46 @@ const ChartReviewModal = ({
 
     const renderNotesTab = () => {
         const selectedVisit = visits.find(v => v.id === selectedVisitId) || visits[0];
-        if (!selectedVisit) return <div className="text-center text-slate-400 py-12">No visits found</div>;
+        if (!selectedVisit) return <div className="text-center text-slate-400 py-12 font-bold uppercase tracking-widest text-xs">No visits recorded</div>;
 
         const noteText = typeof selectedVisit.note_draft === 'string' ? selectedVisit.note_draft : (selectedVisit.fullNote || '');
         const decoded = decodeHtmlEntities(noteText);
 
-        // Parse sections for display
         const ccMatch = String(decoded).match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History):|$)/is);
         const hpiMatch = String(decoded).match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment):|$)/is);
-        const rosMatch = String(decoded).match(/(?:ROS|Review of Systems):\s*(.+?)(?:\n\n|\n(?:PE|Physical|Assessment):|$)/is);
-        const peMatch = String(decoded).match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Assessment|A):|$)/is);
         const assessmentMatch = String(decoded).match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):|$)/is);
         const planMatch = String(decoded).match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n(?:Care Plan|Follow):|$)/is);
-        const carePlanMatch = String(decoded).match(/(?:Care Plan|CP):\s*(.+?)(?:\n\n|$)/is);
 
         return (
-            <>
-                {/* Left: Visit List */}
-                <div className="w-56 border-r border-slate-200 bg-slate-50 flex flex-col h-full overflow-hidden">
-                    <div className="p-3 border-b border-slate-200 flex-shrink-0">
-                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Visit History</div>
-                        <div className="text-[10px] text-slate-400">{visits.length} visits</div>
+            <div className="flex flex-1 overflow-hidden bg-white text-left">
+                {/* Visit History Sidebar */}
+                <div className="w-64 border-r border-slate-100 bg-slate-50/50 flex flex-col h-full overflow-hidden">
+                    <div className="p-4 border-b border-slate-100 flex-shrink-0">
+                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Encounter History</div>
+                        <div className="text-xs font-bold text-slate-500">{visits.length} Recorded Visits</div>
                     </div>
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
                         {visits.map((visit) => {
-                            const vNoteRaw = visit.note_draft || visit.fullNote || '';
-                            const vNoteText = typeof vNoteRaw === 'string' ? vNoteRaw : String(vNoteRaw || '');
-                            const vCCMatch = String(vNoteText).match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n|$)/i);
-                            const cc = vCCMatch ? vCCMatch[1].trim().substring(0, 40) : 'Visit';
                             const date = visit.visit_date ? new Date(visit.visit_date) : new Date();
+                            const isActive = selectedVisitId === visit.id;
 
                             return (
                                 <button
                                     key={visit.id}
                                     onClick={() => setSelectedVisitId(visit.id)}
-                                    className={`w-full text-left p-3 border-b border-slate-100 transition-all ${selectedVisitId === visit.id
-                                        ? 'bg-white border-l-4 border-l-primary-500 shadow-sm'
-                                        : 'hover:bg-white/70'
+                                    className={`w-full text-left p-4 border-b border-slate-100 transition-all ${isActive
+                                        ? 'bg-white border-l-4 border-l-blue-600 shadow-sm'
+                                        : 'hover:bg-white/60'
                                         }`}
                                 >
-                                    <div className="flex items-center gap-1.5 mb-0.5">
-                                        <span className="text-xs font-bold text-slate-900">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className={`text-sm font-black ${isActive ? 'text-slate-900' : 'text-slate-600'}`}>
                                             {format(date, 'MMM d, yyyy')}
                                         </span>
-                                        {(visit.locked || visit.signed) && <Lock className="w-2.5 h-2.5 text-slate-400" />}
+                                        {(visit.locked || visit.signed) && <Lock className="w-3 h-3 text-slate-300" />}
                                     </div>
-                                    <div className="text-[10px] text-slate-500 truncate">{cc}</div>
-                                    <div className="text-[9px] text-slate-400 uppercase mt-0.5">
-                                        {visit.provider_last_name || visit.provider || 'Provider'}
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+                                        {visit.visit_type?.replace('_', ' ') || 'Office Visit'}
                                     </div>
                                 </button>
                             );
@@ -449,138 +452,119 @@ const ChartReviewModal = ({
                     </div>
                 </div>
 
-                {/* Center: Full Note View */}
-                <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                    <div className="space-y-4">
-                        {/* Visit Header */}
-                        <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+                {/* Clinical Note Content */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar bg-white p-12">
+                    <div className="max-w-3xl">
+                        <div className="flex items-center justify-between pb-8 border-b border-slate-100 mb-10">
                             <div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-lg font-bold text-slate-900">
+                                <h1 className="text-3xl font-black text-slate-900 leading-tight">
+                                    Clinical Encounter Note
+                                </h1>
+                                <div className="flex items-center gap-2 mt-2">
+                                    <span className="text-sm font-bold text-blue-600">
                                         {format(new Date(selectedVisit.visit_date), 'MMMM d, yyyy')}
                                     </span>
-                                    {(selectedVisit.locked || selectedVisit.signed) && (
-                                        <span className="text-[10px] font-bold uppercase bg-green-100 text-green-700 px-2 py-0.5 rounded flex items-center gap-1">
-                                            <Lock className="w-3 h-3" /> Signed
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="text-sm text-slate-500">
-                                    {selectedVisit.visit_type?.replace('_', ' ') || 'Office Visit'} • {selectedVisit.provider_last_name || selectedVisit.provider || 'Provider'}
+                                    <span className="w-1 h-1 rounded-full bg-slate-200"></span>
+                                    <span className="text-sm font-medium text-slate-400">
+                                        Dr. {selectedVisit.provider_last_name || 'MD'}
+                                    </span>
                                 </div>
                             </div>
                             {onOpenVisit && (
                                 <button
                                     onClick={() => onOpenVisit(selectedVisit.id)}
-                                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg transition-colors"
+                                    className="px-6 py-2.5 bg-slate-50 text-slate-900 text-xs font-black uppercase tracking-widest rounded-xl border border-slate-200 hover:bg-slate-100 transition-all"
                                 >
-                                    Open in Editor
+                                    Edit Case
                                 </button>
                             )}
                         </div>
 
-                        {/* CC */}
-                        <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
-                            <div className="text-[10px] font-bold text-blue-600 uppercase tracking-wide mb-1">Chief Complaint</div>
-                            <div className="text-sm font-semibold text-blue-900">{ccMatch ? ccMatch[1].trim() : 'Not documented'}</div>
+                        <div className="space-y-12">
+                            {/* CC Section */}
+                            <div className="bg-blue-50/50 rounded-3xl p-8 border border-blue-100/50">
+                                <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em] mb-4">Reason for Visit</h4>
+                                <div className="text-xl font-bold text-blue-900 leading-relaxed italic">
+                                    "{ccMatch ? ccMatch[1].trim() : 'Not documented'}"
+                                </div>
+                            </div>
+
+                            {/* HPI Section */}
+                            {hpiMatch && (
+                                <div>
+                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4">History of Present Illness</h4>
+                                    <div className="text-base text-slate-700 leading-relaxed whitespace-pre-wrap font-medium">
+                                        {hpiMatch[1].trim()}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Assessment & Plan */}
+                            <div className="grid grid-cols-2 gap-8 pt-6">
+                                {assessmentMatch && (
+                                    <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100">
+                                        <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.3em] mb-4">Clinical Assessment</h4>
+                                        <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap font-bold">
+                                            {assessmentMatch[1].trim()}
+                                        </div>
+                                    </div>
+                                )}
+                                {planMatch && (
+                                    <div className="p-8 bg-emerald-50 rounded-[2.5rem] border border-emerald-100">
+                                        <h4 className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.3em] mb-4">Treatment Plan</h4>
+                                        <div className="text-sm text-emerald-900 leading-relaxed whitespace-pre-wrap font-bold">
+                                            {planMatch[1].trim()}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-
-                        {/* HPI */}
-                        {hpiMatch && (
-                            <div className="bg-white rounded-xl p-4 border border-slate-200">
-                                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">History of Present Illness</div>
-                                <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{hpiMatch[1].trim()}</div>
-                            </div>
-                        )}
-
-                        {/* ROS - Collapsed by default */}
-                        {rosMatch && (
-                            <details className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
-                                <summary className="p-3 cursor-pointer text-[10px] font-bold text-slate-500 uppercase tracking-wide hover:bg-slate-100">
-                                    Review of Systems ▾
-                                </summary>
-                                <div className="p-4 pt-0 text-xs text-slate-600 whitespace-pre-wrap">{rosMatch[1].trim()}</div>
-                            </details>
-                        )}
-
-                        {/* PE - Collapsed by default */}
-                        {peMatch && (
-                            <details className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
-                                <summary className="p-3 cursor-pointer text-[10px] font-bold text-slate-500 uppercase tracking-wide hover:bg-slate-100">
-                                    Physical Exam ▾
-                                </summary>
-                                <div className="p-4 pt-0 text-xs text-slate-600 whitespace-pre-wrap">{peMatch[1].trim()}</div>
-                            </details>
-                        )}
-
-                        {/* Assessment */}
-                        {assessmentMatch && (
-                            <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
-                                <div className="text-[10px] font-bold text-amber-700 uppercase tracking-wide mb-2">Assessment</div>
-                                <div className="text-sm text-amber-900 whitespace-pre-wrap leading-relaxed">{assessmentMatch[1].trim()}</div>
-                            </div>
-                        )}
-
-                        {/* Plan */}
-                        {planMatch && (
-                            <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
-                                <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide mb-2">Plan</div>
-                                <div className="text-sm text-emerald-900 whitespace-pre-wrap leading-relaxed">{planMatch[1].trim()}</div>
-                            </div>
-                        )}
-
-                        {/* Care Plan */}
-                        {carePlanMatch && (
-                            <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
-                                <div className="text-[10px] font-bold text-purple-700 uppercase tracking-wide mb-2">Care Plan</div>
-                                <div className="text-sm text-purple-900 whitespace-pre-wrap leading-relaxed">{carePlanMatch[1].trim()}</div>
-                            </div>
-                        )}
                     </div>
                 </div>
 
-                {/* Right: Quick Info */}
-                <div className="w-56 border-l border-slate-200 bg-slate-50 p-3 overflow-y-auto custom-scrollbar flex-shrink-0">
-                    <div className="space-y-4">
-                        {/* Active Problems */}
+                {/* Sidebar Info */}
+                <div className="w-64 border-l border-slate-100 bg-slate-50/30 p-6 overflow-y-auto custom-scrollbar h-full">
+                    <div className="space-y-10">
                         <div>
-                            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">Active Problems</div>
-                            <div className="space-y-1">
-                                {(patientData?.problems || []).filter(p => p.status === 'active').slice(0, 6).map((p, i) => (
-                                    <div key={i} className="text-[11px] text-slate-700 flex items-start gap-1">
-                                        <span className="text-slate-400">•</span>
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Conditions</h4>
+                            <div className="space-y-3">
+                                {(patientData?.problems || []).filter(p => p.status === 'active').slice(0, 5).map((p, i) => (
+                                    <div key={i} className="text-xs font-bold text-slate-700 flex items-start gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0"></div>
                                         <span>{decodeHtmlEntities(p.problem_name || p.name)}</span>
                                     </div>
                                 ))}
                             </div>
                         </div>
-                        {/* Medications */}
+
                         <div>
-                            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">Medications</div>
-                            <div className="space-y-1">
-                                {(patientData?.medications || []).filter(m => m.active !== false).slice(0, 6).map((m, i) => (
-                                    <div key={i} className="text-[11px] text-slate-700">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Medications</h4>
+                            <div className="space-y-3">
+                                {(patientData?.medications || []).filter(m => m.active !== false).slice(0, 5).map((m, i) => (
+                                    <div key={i} className="text-xs font-medium text-slate-600">
                                         {decodeHtmlEntities(m.medication_name || m.name)}
                                     </div>
                                 ))}
                             </div>
                         </div>
-                        {/* Allergies */}
+
                         <div>
-                            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">Allergies</div>
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Allergies</h4>
                             {(patientData?.allergies || []).length > 0 ? (
-                                <div className="space-y-1">
+                                <div className="space-y-2">
                                     {patientData.allergies.map((a, i) => (
-                                        <div key={i} className="text-[11px] text-red-600 font-medium">{decodeHtmlEntities(a.allergen || a.name)}</div>
+                                        <div key={i} className="px-2 py-1 bg-rose-50 text-rose-600 text-[10px] font-black rounded-lg border border-rose-100 inline-block mr-2">
+                                            {decodeHtmlEntities(a.allergen || a.name)}
+                                        </div>
                                     ))}
                                 </div>
                             ) : (
-                                <div className="text-[11px] text-emerald-600 font-medium">NKDA</div>
+                                <div className="text-[11px] font-black text-emerald-600 uppercase tracking-widest">NKDA</div>
                             )}
                         </div>
                     </div>
                 </div>
-            </>
+            </div>
         );
     };
 
@@ -900,33 +884,46 @@ const ChartReviewModal = ({
     };
 
     return (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60]" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
-                {/* Header with Tabs */}
-                <div className="px-4 py-3 bg-gradient-to-r from-slate-900 to-slate-800 flex items-center justify-between flex-shrink-0">
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                            <Eye className="w-5 h-5 text-white" />
-                            <h2 className="text-lg font-bold text-white">Chart Review</h2>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center z-[60]" onClick={onClose}>
+            <div className="bg-slate-50 rounded-[2rem] shadow-2xl w-full max-w-[1240px] h-[90vh] flex flex-col overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
+                {/* Clean Professional Header */}
+                <div className="px-8 py-5 bg-white border-b border-slate-100 flex items-center justify-between flex-shrink-0">
+                    <div className="flex items-center gap-12">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
+                                <Stethoscope className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1">Chart Review</h2>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{patientData.first_name} {patientData.last_name}</p>
+                            </div>
                         </div>
-                        {/* Tab Buttons */}
-                        <div className="flex gap-1 bg-slate-700/50 rounded-lg p-1 overflow-x-auto max-w-[600px] scrollbar-hide">
-                            {['Summary', 'Notes', 'Vitals', 'Labs', 'Imaging', 'Echo', 'EKG', 'Stress', 'Cath', 'Docs'].map((tab) => (
-                                <button
-                                    key={tab}
-                                    onClick={() => setActiveTab(tab)}
-                                    className={`px-3 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap ${(activeTab || 'Notes') === tab
-                                        ? 'bg-white text-slate-900 shadow'
-                                        : 'text-slate-300 hover:text-white hover:bg-slate-600'
-                                        }`}
-                                >
-                                    {tab}
-                                </button>
-                            ))}
+
+                        {/* Tab Navigation - Redesigned for premium look */}
+                        <div className="flex gap-1.5 p-1.5 bg-slate-100 rounded-[1.25rem] overflow-x-auto max-w-[700px] scrollbar-hide">
+                            {['Summary', 'Notes', 'Vitals', 'Labs', 'Imaging', 'Echo', 'EKG', 'Stress', 'Cath', 'Docs'].map((tab) => {
+                                const isActive = (activeTab || 'Summary') === tab;
+                                return (
+                                    <button
+                                        key={tab}
+                                        onClick={() => setActiveTab(tab)}
+                                        className={`px-5 py-2 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${isActive
+                                            ? 'bg-white text-blue-600 shadow-md shadow-slate-200 scale-105'
+                                            : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
+                                            }`}
+                                    >
+                                        {tab}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-                        <X className="w-5 h-5 text-white" />
+
+                    <button
+                        onClick={onClose}
+                        className="w-10 h-10 rounded-full bg-slate-50 hover:bg-rose-50 hover:text-rose-600 text-slate-400 flex items-center justify-center transition-all group border border-slate-100"
+                    >
+                        <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
                     </button>
                 </div>
 
@@ -947,19 +944,21 @@ const ChartReviewModal = ({
                     )}
                 </div>
 
-                {/* Footer */}
-                <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between flex-shrink-0">
-                    <div className="text-xs text-slate-500">
-                        {activeTab === 'Notes' ? 'Navigate between visits to review patient history' :
-                            activeTab === 'Vitals' ? 'Review vital signs across visits' :
-                                'Reviewing imported results and documents'}
+                {/* Professional Footer */}
+                <div className="px-8 py-6 bg-white border-t border-slate-100 flex items-center justify-between flex-shrink-0">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                        <Clock className="w-4 h-4" />
+                        {activeTab === 'Summary' ? 'Clinical Overview • Real-time Data' :
+                            activeTab === 'Notes' ? 'Encounter Logs • Patient History' :
+                                activeTab === 'Vitals' ? 'Biometric Trends • Standardized' :
+                                    'Clinical Documentation • External Records'}
                     </div>
                     {onViewFullChart && (
                         <button
                             onClick={onViewFullChart}
-                            className="px-4 py-2 bg-slate-900 text-white text-sm font-bold rounded-lg hover:bg-slate-800 transition-colors"
+                            className="px-8 py-3 bg-slate-900 text-white text-xs font-black uppercase tracking-widest rounded-2xl hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 hover:-translate-y-0.5 active:translate-y-0"
                         >
-                            Open Full Chart →
+                            Review Full Medical Chart →
                         </button>
                     )}
                 </div>
