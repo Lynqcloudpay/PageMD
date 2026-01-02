@@ -32,11 +32,10 @@ $SSH_CMD $USER@$HOST << EOF
   
   echo "⚙️  Checking environment variables..."
   if [ -f .env.prod ]; then
-    if grep -q "yourdomain.com" .env.prod; then
-      sed -i 's/yourdomain.com/pagemdemr.com/g' .env.prod
-      sed -i 's|FRONTEND_URL=https://yourdomain.com|FRONTEND_URL=https://pagemdemr.com|g' .env.prod
-      sed -i 's|CORS_ORIGIN=https://yourdomain.com|CORS_ORIGIN=https://pagemdemr.com|g' .env.prod
-    fi
+    echo "⚙️  Purging legacy domain from .env.prod..."
+    sed -i 's/yourdomain.com/pagemdemr.com/g' .env.prod
+    sed -i 's/bemypcp.com/pagemdemr.com/g' .env.prod
+    
     if ! grep -q "PATIENT_PORTAL_ENABLED" .env.prod; then
       echo "" >> .env.prod
       echo "PATIENT_PORTAL_ENABLED=true" >> .env.prod
@@ -44,6 +43,8 @@ $SSH_CMD $USER@$HOST << EOF
     fi
   else
     cp env.prod.example .env.prod
+    sed -i 's/yourdomain.com/pagemdemr.com/g' .env.prod
+    sed -i 's/pagemdemr.com/pagemdemr.com/g' .env.prod
   fi
   
   echo "📦 Building frontend (using Docker container)..."
