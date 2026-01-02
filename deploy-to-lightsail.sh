@@ -44,8 +44,10 @@ $SSH_CMD $USER@$HOST << EOF
   else
     cp env.prod.example .env.prod
     sed -i 's/yourdomain.com/pagemdemr.com/g' .env.prod
-    sed -i 's/pagemdemr.com/pagemdemr.com/g' .env.prod
   fi
+  
+  # Docker Compose reads .env by default, not .env.prod
+  cp .env.prod .env
   
   echo "📦 Building frontend (using Docker container)..."
   
