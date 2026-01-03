@@ -9,7 +9,10 @@ import {
     Clock,
     Search,
     MoreVertical,
-    CheckCircle2
+    CheckCircle2,
+    Calendar,
+    ChevronRight,
+    ArrowRight
 } from 'lucide-react';
 
 const PortalMessages = () => {
@@ -282,15 +285,24 @@ const PortalMessages = () => {
                                             : 'bg-white border border-slate-100 text-slate-800 rounded-tl-none shadow-slate-200/50'}`}>
                                             <div className="font-medium leading-relaxed">
                                                 {msg.body.split('\n').map((line, i) => {
-                                                    const suggestMatch = line.match(/\[SUGGEST_SLOT:(.+?)T(.+?)\]/);
+                                                    const suggestMatch = line.match(/\[SUGGEST_SLOT:(.+?)T(.+?)\]/i);
                                                     if (suggestMatch) {
                                                         const [_, date, time] = suggestMatch;
-                                                        const cleanLine = line.replace(/\[SUGGEST_SLOT:.+?\]/, '').trim();
+                                                        const cleanLine = line.replace(/\[SUGGEST_SLOT:.+?\]/i, '').trim();
                                                         return (
-                                                            <div key={i} className="my-2 p-3 bg-blue-50/50 border border-blue-100 rounded-xl flex items-center justify-between gap-4">
-                                                                <span className="text-blue-800 font-bold">{cleanLine}</span>
+                                                            <div key={i} className="my-4 p-5 bg-emerald-50 border border-emerald-100 rounded-[2rem] flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-in zoom-in duration-300">
+                                                                <div className="flex items-center gap-4">
+                                                                    <div className="w-12 h-12 bg-emerald-600 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-emerald-200">
+                                                                        <Calendar size={20} />
+                                                                    </div>
+                                                                    <div>
+                                                                        <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-0.5">Suggested Time</div>
+                                                                        <span className="text-emerald-900 font-bold text-sm tracking-tight">{cleanLine}</span>
+                                                                    </div>
+                                                                </div>
                                                                 <button
-                                                                    onClick={() => {
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
                                                                         const confirmText = `I accept the appointment on ${date} at ${time}. [ACCEPTED_SLOT:${date}T${time}]`;
                                                                         axios.post(`${apiBase}/portal/messages/threads/${selectedThread.id}`,
                                                                             { body: confirmText },
@@ -299,14 +311,14 @@ const PortalMessages = () => {
                                                                             fetchThreadMessages(selectedThread.id);
                                                                         });
                                                                     }}
-                                                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center gap-1 shrink-0"
+                                                                    className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-200 flex items-center gap-2 shrink-0 group"
                                                                 >
-                                                                    Select This Slot
+                                                                    Accept Slot <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                                                                 </button>
                                                             </div>
                                                         );
                                                     }
-                                                    return <p key={i}>{line}</p>;
+                                                    return <p key={i} className="mb-1">{line}</p>;
                                                 })}
                                             </div>
                                         </div>

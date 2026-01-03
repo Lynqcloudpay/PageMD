@@ -82,6 +82,12 @@ const PortalDashboard = () => {
                     newNotifs.push(`You have ${unreadCount} new message${unreadCount > 1 ? 's' : ''}`);
                 }
 
+                // NEW: Specifically check for appointment suggestions
+                const hasSuggestions = msgsRes.data.some(t => t.last_message_body?.includes('[SUGGEST_SLOT:'));
+                if (hasSuggestions) {
+                    newNotifs.push(`Action Required: Review suggested appointment slots`);
+                }
+
                 // Check appointment updates (recent updates in last 72h)
                 const threeDaysAgo = new Date();
                 threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
@@ -121,7 +127,7 @@ const PortalDashboard = () => {
             case 'messages':
                 return <PortalMessages />;
             case 'appointments':
-                return <PortalAppointments />;
+                return <PortalAppointments onMessageShortcut={(tab) => setActiveTab(tab)} />;
             case 'record':
                 return (
                     <div className="p-16 text-center bg-white/80 backdrop-blur-sm rounded-[2.5rem] border border-white shadow-xl shadow-slate-200/50 animate-in fade-in zoom-in duration-300">
@@ -144,6 +150,7 @@ const PortalDashboard = () => {
                     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
                         {/* Notifications */}
                         <Notifications notifications={activeNotifications} onClick={() => setActiveTab('messages')} />
+                        <PremiumCSS />
 
                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                             {/* Patient Info Card */}
@@ -426,5 +433,51 @@ const Notifications = ({ notifications, onClick }) => {
         </div>
     );
 };
+
+// CSS Injection for premium animations & refined input styles
+const PremiumCSS = () => (
+    <style>{`
+        @keyframes pulse-subtle {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.95; transform: scale(1.005); }
+        }
+        .animate-pulse-subtle {
+            animation: pulse-subtle 3s ease-in-out infinite;
+        }
+        .portal-input {
+            width: 100%;
+            padding: 0.875rem 1.25rem;
+            background-color: #F8FAFC;
+            border: 1px solid #F1F5F9;
+            border-radius: 1rem;
+            font-weight: 700;
+            font-size: 0.875rem;
+            color: #1E293B;
+            outline: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .portal-input:focus {
+            background-color: white;
+            border-color: #2563EB;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.05);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #E2E8F0;
+            border-radius: 10px;
+        }
+        
+        /* Modern Select Arrow Fix */
+        select.portal-input {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7' /%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1rem;
+            appearance: none;
+        }
+    `}</style>
+);
 
 export default PortalDashboard;

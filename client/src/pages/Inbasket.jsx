@@ -81,7 +81,7 @@ const Inbasket = () => {
         if (showApproveModal && selectedItem) {
             setSuggestedSlots([]); // Clear suggestions
 
-            // Default provider to assigned user or first available
+            // Default provider to assigned user (which now includes ar.provider_id from sync)
             let providerId = selectedItem.assigned_user_id || '';
 
             // Attempt to parse Date and Time from body
@@ -89,7 +89,6 @@ const Inbasket = () => {
             let date = '';
             let time = '';
 
-            // Try explicit parsing if body matches expected format
             const body = selectedItem.body || '';
             const dateMatch = body.match(/Preferred Date: (\d{4}-\d{2}-\d{2})/);
             if (dateMatch) date = dateMatch[1];
@@ -112,7 +111,7 @@ const Inbasket = () => {
                 duration: 30
             }));
         }
-    }, [showApproveModal, selectedItem]);
+    }, [showApproveModal, selectedItem, users]); // Added users as dependency
 
     // --- Data Fetching ---
 
@@ -937,7 +936,8 @@ const Inbasket = () => {
                                     sortedSlots.forEach(slot => {
                                         // Format: "Monday, Jan 3 at 9:00 AM"
                                         const d = new Date(slot.date + 'T' + slot.time);
-                                        msg += `- ${format(d, 'EEEE, MMM d')} at ${format(d, 'h:mm a')}\n`;
+                                        // Use machine-readable tag that is hidden-ish but detectable
+                                        msg += `- ${format(d, 'EEEE, MMM d')} at ${format(d, 'h:mm a')} [SUGGEST_SLOT:${slot.date}T${slot.time}]\n`;
                                     });
                                     msg += `\nPlease let us know which one works best for you.`;
                                 } else {
