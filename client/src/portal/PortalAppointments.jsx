@@ -140,6 +140,17 @@ const PortalAppointments = ({ onMessageShortcut }) => {
 
     return (
         <div className="space-y-6 pb-10 animate-in fade-in duration-700">
+            {/* TOP ACTION BAR */}
+            <div className="flex justify-between items-center">
+                <h1 className="text-xl font-bold text-slate-800">Appointments</h1>
+                <button
+                    onClick={() => setShowRequestForm(true)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-blue-100 hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                    <Plus className="w-4 h-4" /> New Request
+                </button>
+            </div>
+
             {/* COMPACT HERO SECTION */}
             {nextAppt ? (
                 <div className="relative overflow-hidden bg-gradient-to-br from-blue-700 to-indigo-800 rounded-3xl p-6 text-white shadow-xl">
@@ -296,14 +307,51 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                         <SectionLabel icon={<Clock size={14} className="text-amber-500" />} title="Pending Requests" count={pending.length} />
                         <div className="space-y-2">
                             {pending.map(req => (
-                                <CompactCard key={req.id} req={req} type="pending" onCancel={() => handleCancelRequest(req.id)} />
+                                <CompactCard
+                                    key={req.id}
+                                    req={req}
+                                    type="pending"
+                                    onCancel={() => handleCancelRequest(req.id)}
+                                    onEdit={() => {
+                                        setFormData({
+                                            preferredDate: req.preferred_date?.split('T')[0] || '',
+                                            preferredTimeRange: req.preferred_time_range || 'morning',
+                                            appointmentType: req.appointment_type || 'Follow-up',
+                                            reason: req.reason || '',
+                                            providerId: req.provider_id || '',
+                                            exactTime: ''
+                                        });
+                                        handleCancelRequest(req.id);
+                                        setShowRequestForm(true);
+                                    }}
+                                />
                             ))}
                             {pending.length === 0 && <div className="p-6 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-[10px] font-bold text-slate-300 uppercase tracking-widest">No pending requests</div>}
                         </div>
                     </div>
 
                     <div className="space-y-3">
-                        <SectionLabel icon={<XCircle size={14} className="text-red-400" />} title="Cancelled" count={cancelled.length} />
+                        <div className="flex justify-between items-center">
+                            <SectionLabel icon={<XCircle size={14} className="text-red-400" />} title="Cancelled" count={cancelled.length} />
+                            {cancelled.length > 0 && (
+                                <button
+                                    onClick={async () => {
+                                        if (!window.confirm('Clear all cancelled/denied records?')) return;
+                                        try {
+                                            await Promise.all(cancelled.map(req =>
+                                                axios.delete(`${apiBase}/portal/appointments/requests/${req.id}/clear`, { headers })
+                                            ));
+                                            fetchData();
+                                        } catch (e) {
+                                            console.error('Failed to clear:', e);
+                                        }
+                                    }}
+                                    className="text-[9px] font-bold text-red-400 hover:text-red-600 uppercase tracking-widest"
+                                >
+                                    Clear All
+                                </button>
+                            )}
+                        </div>
                         <div className="space-y-2">
                             {cancelled.map(req => (
                                 <CompactCard key={req.id} req={req} type="cancelled" />
@@ -395,7 +443,7 @@ const SectionLabel = ({ icon, title, count }) => (
     </div>
 );
 
-const CompactCard = ({ req, type, onCancel }) => {
+const CompactCard = ({ req, type, onCancel, onEdit }) => {
     const isPending = type === 'pending';
     return (
         <div className={`p-4 rounded-2xl border transition-all flex items-center justify-between ${isPending ? 'bg-white border-slate-100 shadow-sm' : 'bg-slate-50 border-transparent opacity-60'
@@ -410,13 +458,22 @@ const CompactCard = ({ req, type, onCancel }) => {
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{req.preferred_time_range}</p>
                 </div>
             </div>
-            {isPending && onCancel && (
-                <button onClick={onCancel} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
-                    <Trash2 size={13} />
-                </button>
+            {isPending && (
+                <div className="flex items-center gap-1">
+                    {onEdit && (
+                        <button onClick={onEdit} className="p-2 text-slate-300 hover:text-blue-500 transition-colors" title="Edit">
+                            <CalendarPlus size={13} />
+                        </button>
+                    )}
+                    {onCancel && (
+                        <button onClick={onCancel} className="p-2 text-slate-300 hover:text-red-500 transition-colors" title="Cancel">
+                            <Trash2 size={13} />
+                        </button>
+                    )}
+                </div>
             )}
             {!isPending && (
-                <span className="text-[8px] font-black uppercase text-slate-400">Cancelled</span>
+                <span className="text-[8px] font-black uppercase text-slate-400">{req.status === 'denied' ? 'Denied' : 'Cancelled'}</span>
             )}
         </div>
     );

@@ -214,4 +214,36 @@ router.post('/threads/:id', [
     }
 });
 
+/**
+ * Delete a message thread
+ * DELETE /api/portal/messages/threads/:id
+ */
+router.delete('/threads/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const patientId = req.portalAccount.patient_id;
+
+        // Verify thread belongs to patient
+        const threadRes = await pool.query(
+            'SELECT id FROM portal_message_threads WHERE id = $1 AND patient_id = $2',
+            [id, patientId]
+        );
+
+        if (threadRes.rows.length === 0) {
+            return res.status(404).json({ error: 'Thread not found' });
+        }
+
+        // Delete all messages first (cascade should handle this but being explicit)
+        await pool.query('DELETE FROM portal_messages WHERE thread_id = $1', [id]);
+
+        // Delete the thread
+        await pool.query('DELETE FROM portal_message_threads WHERE id = $1', [id]);
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('[Portal Messages] Error deleting thread:', error);
+        res.status(500).json({ error: 'Failed to delete thread' });
+    }
+});
+
 module.exports = router;

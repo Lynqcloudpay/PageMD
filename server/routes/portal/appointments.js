@@ -233,4 +233,29 @@ router.post('/requests/:id/accept-slot', requirePortalPermission('can_request_ap
     }
 });
 
+/**
+ * Clear/delete a cancelled or denied request
+ * DELETE /api/portal/appointments/requests/:id/clear
+ */
+router.delete('/requests/:id/clear', requirePortalPermission('can_request_appointments'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const portalAccountId = req.portalAccount.id;
+
+        const result = await pool.query(
+            "DELETE FROM portal_appointment_requests WHERE id = $1 AND portal_account_id = $2 AND status IN ('cancelled', 'denied') RETURNING *",
+            [id, portalAccountId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Request not found or cannot be deleted' });
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('[Portal Appointments] Error clearing request:', error);
+        res.status(500).json({ error: 'Failed to clear request' });
+    }
+});
+
 module.exports = router;

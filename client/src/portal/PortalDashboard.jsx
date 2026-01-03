@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import PortalMessages from './PortalMessages';
 import PortalAppointments from './PortalAppointments';
+import PortalHealthRecord from './PortalHealthRecord';
 
 const PortalDashboard = () => {
     const [patient, setPatient] = useState(null);
@@ -129,21 +130,7 @@ const PortalDashboard = () => {
             case 'appointments':
                 return <PortalAppointments onMessageShortcut={(tab) => setActiveTab(tab)} />;
             case 'record':
-                return (
-                    <div className="p-16 text-center bg-white/80 backdrop-blur-sm rounded-[2.5rem] border border-white shadow-xl shadow-slate-200/50 animate-in fade-in zoom-in duration-300">
-                        <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <FileText className="w-8 h-8 text-blue-600" />
-                        </div>
-                        <h3 className="text-xl font-bold text-slate-800 mb-2 tracking-tight">Health Record Vault</h3>
-                        <p className="text-slate-500 text-sm max-w-md mx-auto leading-relaxed">Your clinical documents and lab results are being synchronized and will be available shortly.</p>
-                        <button
-                            onClick={() => setActiveTab('overview')}
-                            className="mt-8 px-8 py-3 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
-                        >
-                            Return to Dashboard
-                        </button>
-                    </div>
-                );
+                return <PortalHealthRecord />;
             case 'overview':
             default:
                 return (

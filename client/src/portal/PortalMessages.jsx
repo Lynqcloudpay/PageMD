@@ -12,7 +12,8 @@ import {
     CheckCircle2,
     Calendar,
     ChevronRight,
-    ArrowRight
+    ArrowRight,
+    Trash2
 } from 'lucide-react';
 
 const PortalMessages = () => {
@@ -117,6 +118,22 @@ const PortalMessages = () => {
         }
     };
 
+    const handleDeleteThread = async (threadId, e) => {
+        e.stopPropagation();
+        if (!window.confirm('Delete this conversation? This cannot be undone.')) return;
+
+        try {
+            await axios.delete(`${apiBase}/portal/messages/threads/${threadId}`, { headers });
+            if (selectedThread?.id === threadId) {
+                setSelectedThread(null);
+                setMessages([]);
+            }
+            fetchThreads();
+        } catch (err) {
+            setError('Failed to delete conversation.');
+        }
+    };
+
     if (loading && threads.length === 0) return (
         <div className="flex flex-col items-center justify-center p-20">
             <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
@@ -169,9 +186,18 @@ const PortalMessages = () => {
                                     <h3 className={`font-bold tracking-tight truncate flex-1 text-xs ${thread.unread_count > 0 ? 'text-blue-600' : 'text-slate-700'}`}>
                                         {thread.subject}
                                     </h3>
-                                    <span className="text-[9px] text-slate-400 font-bold ml-2">
-                                        {new Date(thread.last_message_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[9px] text-slate-400 font-bold">
+                                            {new Date(thread.last_message_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                        </span>
+                                        <button
+                                            onClick={(e) => handleDeleteThread(thread.id, e)}
+                                            className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-red-500 transition-all"
+                                            title="Delete conversation"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
                                 </div>
                                 <p className={`text-[12px] truncate ${thread.unread_count > 0 ? 'text-slate-800 font-semibold' : 'text-slate-500'}`}>
                                     {thread.last_message_body || 'No messages'}
