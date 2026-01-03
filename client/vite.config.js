@@ -25,11 +25,20 @@ export default defineConfig({
     },
   },
   build: {
+    target: 'esnext',
+    minify: 'esbuild',
+    sourcemap: false, // Disable sourcemaps for faster, smaller builds
+    cssCodeSplit: true,
     rollupOptions: {
       output: {
-        manualChunks: undefined, // Let Vite handle chunking automatically for better stability
+        manualChunks: {
+          'vendor': ['react', 'react-dom', 'react-router-dom', 'axios'],
+          'charts': ['recharts'],
+          'icons': ['lucide-react']
+        },
       },
+      maxParallelFileOps: 2, // Reduce parallel operations to save memory
     },
-    chunkSizeWarningLimit: 1500,
+    chunkSizeWarningLimit: 2000,
   },
 })

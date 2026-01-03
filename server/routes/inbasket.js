@@ -338,14 +338,15 @@ router.get('/stats', async (req, res) => {
   try {
     await ensureSchema();
     const counts = await pool.query(`
-  SELECT
-  COUNT(*) FILTER(WHERE status NOT IN('completed', 'archived')) as all_count,
-    COUNT(*) FILTER(WHERE status NOT IN('completed', 'archived') AND assigned_user_id = $1) as my_count,
-      COUNT(*) FILTER(WHERE status NOT IN('completed', 'archived') AND type = 'lab') as labs_count,
+      SELECT
+        COUNT(*) FILTER(WHERE status NOT IN('completed', 'archived')) as all_count,
+        COUNT(*) FILTER(WHERE status NOT IN('completed', 'archived') AND assigned_user_id = $1) as my_count,
+        COUNT(*) FILTER(WHERE status NOT IN('completed', 'archived') AND type = 'lab') as labs_count,
         COUNT(*) FILTER(WHERE status NOT IN('completed', 'archived') AND type = 'document') as docs_count,
-          COUNT(*) FILTER(WHERE status NOT IN('completed', 'archived') AND type = 'message') as msgs_count,
-            COUNT(*) FILTER(WHERE status NOT IN('completed', 'archived') AND type = 'task') as tasks_count,
-              COUNT(*) FILTER(WHERE status NOT IN('completed', 'archived') AND type = 'refill') as refills_count
+        COUNT(*) FILTER(WHERE status NOT IN('completed', 'archived') AND type = 'message') as msgs_count,
+        COUNT(*) FILTER(WHERE status NOT IN('completed', 'archived') AND type = 'task') as tasks_count,
+        COUNT(*) FILTER(WHERE status NOT IN('completed', 'archived') AND type = 'refill') as refills_count,
+        COUNT(*) FILTER(WHERE status NOT IN('completed', 'archived') AND type IN ('portal_message', 'portal_appointment')) as portal_count
       FROM inbox_items
     `, [req.user.id]);
 
