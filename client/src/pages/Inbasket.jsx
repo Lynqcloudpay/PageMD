@@ -536,20 +536,28 @@ const Inbasket = () => {
                                     <div className="border-t border-gray-100 pt-4 mt-6">
                                         <h3 className="text-xs font-bold text-gray-400 uppercase mb-3">Activity</h3>
                                         <div className="space-y-4">
-                                            {details.notes.map(note => (
-                                                <div key={note.id} className="flex gap-3">
-                                                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xs font-bold flex-shrink-0">
-                                                        {note.first_name ? note.first_name[0] : 'U'}
-                                                    </div>
-                                                    <div>
-                                                        <div className="flex items-baseline gap-2">
-                                                            <span className="text-sm font-bold text-gray-900">{note.first_name} {note.last_name}</span>
-                                                            <span className="text-xs text-gray-400">{format(new Date(note.created_at), 'MMM d, h:mm a')}</span>
+                                            {details.notes.map(note => {
+                                                const isPatient = note.sender_type === 'patient';
+                                                return (
+                                                    <div key={note.id} className={`flex gap-3 ${isPatient ? 'flex-row-reverse' : ''}`}>
+                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${isPatient ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                            {note.first_name ? note.first_name[0] : 'U'}
                                                         </div>
-                                                        <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{note.note}</p>
+                                                        <div className={`flex flex-col ${isPatient ? 'items-end' : 'items-start'} max-w-[85%]`}>
+                                                            <div className={`flex items-baseline gap-2 mb-1 ${isPatient ? 'flex-row-reverse' : ''}`}>
+                                                                <span className="text-sm font-bold text-gray-900">{note.first_name} {note.last_name}</span>
+                                                                <span className="text-xs text-gray-400">{format(new Date(note.created_at), 'MMM d, h:mm a')}</span>
+                                                            </div>
+                                                            <div className={`px-4 py-2 rounded-2xl text-sm whitespace-pre-wrap ${isPatient
+                                                                    ? 'bg-emerald-600 text-white rounded-tr-none'
+                                                                    : 'bg-white border border-gray-200 text-gray-700 rounded-tl-none shadow-sm'
+                                                                }`}>
+                                                                {note.note}
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 )}
@@ -562,7 +570,19 @@ const Inbasket = () => {
                         <textarea
                             value={replyText}
                             onChange={e => setReplyText(e.target.value)}
-                            placeholder="Write a note or reply..."
+                            onKeyDown={e => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    if (!replyText.trim()) return;
+
+                                    if (selectedItem.type === 'portal_message') {
+                                        handleAction('replyExternal', replyText);
+                                    } else {
+                                        handleAction('reply', replyText);
+                                    }
+                                }
+                            }}
+                            placeholder="Write a note or reply... (Enter to send)"
                             className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-2 h-20 resize-none"
                         />
                         <div className="flex justify-between items-center">
