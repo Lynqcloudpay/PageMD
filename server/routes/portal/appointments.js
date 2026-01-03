@@ -204,8 +204,8 @@ router.post('/requests/:id/accept-slot', requirePortalPermission('can_request_ap
 
         // Create the appointment
         await client.query(`
-            INSERT INTO appointments (patient_id, provider_id, appointment_date, appointment_time, duration, appointment_type, status, notes)
-            VALUES ($1, $2, $3, $4, $5, $6, 'scheduled', $7)
+            INSERT INTO appointments (patient_id, provider_id, appointment_date, appointment_time, duration, appointment_type, status, notes, created_by)
+            VALUES ($1, $2, $3, $4, $5, $6, 'scheduled', $7, $2)
         `, [patientId, providerId, date, time, 30, request.appointment_type || 'Follow-up', 'Accepted from portal suggestions']);
 
         // Update request status

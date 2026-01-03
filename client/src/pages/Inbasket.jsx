@@ -941,7 +941,7 @@ const Inbasket = () => {
                                             setShowApproveModal(false);
                                             setSuggestedSlots([]);
                                             showSuccess('Alternative times sent to patient');
-                                            fetchItems();
+                                            fetchData(true);
                                         } catch (e) {
                                             console.error('Failed to suggest slots:', e);
                                             showError('Failed to send suggestions');
