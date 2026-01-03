@@ -24,4 +24,19 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('lucide-react')) return 'vendor-icons';
+            if (id.includes('axios')) return 'vendor-axios';
+            if (id.includes('react')) return 'vendor-react';
+            return 'vendor'; // all other node_modules
+          }
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000,
+  },
 })

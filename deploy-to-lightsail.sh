@@ -54,9 +54,10 @@ $SSH_CMD $USER@$HOST << EOF
   # Ensure no stale .env files interfere with the build
   rm -f ../client/.env ../client/.env.production ../client/.env.production.local
   
-  # Use Docker to build frontend to avoid host environment issues
+  # Use Docker to build frontend with a persistent volume for node_modules to speed up builds
   docker run --rm \
     -v "$DIR/client:/app" \
+    -v "emr_node_modules:/app/node_modules" \
     -w /app \
     node:18-alpine \
     sh -c "npm install --legacy-peer-deps && npm run build"
