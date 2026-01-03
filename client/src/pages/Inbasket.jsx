@@ -180,12 +180,20 @@ const Inbasket = () => {
                 setSelectedItem(null);
                 fetchData(true); // Refresh list
             } else if (action === 'reply' && note) {
-                await inboxAPI.addNote(selectedItem.id, note);
-                showSuccess('Note added');
+                await inboxAPI.addNote(selectedItem.id, note, false);
+                showSuccess('Internal note added');
                 setReplyText('');
                 // Refresh details only
                 const res = await inboxAPI.getDetails(selectedItem.id);
                 setDetails(res.data);
+            } else if (action === 'replyExternal' && note) {
+                await inboxAPI.addNote(selectedItem.id, note, true);
+                showSuccess('Reply sent to patient');
+                setReplyText('');
+                // Refresh details only & list (it might mark as read/complete)
+                const res = await inboxAPI.getDetails(selectedItem.id);
+                setDetails(res.data);
+                fetchData(true);
             } else if (action === 'assign') {
                 // handled by modal
             }
@@ -526,6 +534,15 @@ const Inbasket = () => {
                                 </button>
                             </div>
                             <div className="flex gap-2">
+                                {selectedItem.type === 'portal_message' && (
+                                    <button
+                                        disabled={!replyText.trim()}
+                                        onClick={() => handleAction('replyExternal', replyText)}
+                                        className="px-3 py-1.5 bg-blue-600 text-white font-medium text-sm rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1 shadow-sm"
+                                    >
+                                        <Send className="w-4 h-4" /> Reply to Patient
+                                    </button>
+                                )}
                                 <button
                                     disabled={!replyText.trim()}
                                     onClick={() => handleAction('reply', replyText)}

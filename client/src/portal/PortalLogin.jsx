@@ -40,33 +40,33 @@ const PortalLogin = () => {
                 className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-1000 scale-105"
                 style={{ backgroundImage: 'url("/portal-bg.png")' }}
             />
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-900/40 to-slate-900/60 backdrop-blur-[2px]" />
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-blue-900/40 backdrop-blur-[2px]" />
 
             {/* Login Card */}
-            <div className="relative w-full max-w-[440px] animate-scale-in">
-                <div className="bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-2xl p-8 md:p-10 border border-white/20">
+            <div className="relative w-full max-w-[420px] animate-scale-in">
+                <div className="bg-white/95 backdrop-blur-xl rounded-[2.5rem] shadow-2xl p-8 md:p-12 border border-white/40">
                     <div className="text-center mb-10">
-                        <div className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-500/20 rotate-3 transform hover:rotate-0 transition-transform duration-500">
-                            <span className="text-white text-4xl font-black">PM</span>
+                        <div className="mb-8">
+                            <img src="/logo.png" alt="PageMD Logo" className="h-12 mx-auto object-contain" />
                         </div>
-                        <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-2">Patient Portal</h1>
-                        <p className="text-slate-500 font-medium">Secure access to your health records</p>
+                        <h1 className="text-2xl font-bold text-slate-800 tracking-tight mb-2">Patient Portal</h1>
+                        <p className="text-slate-500 text-sm font-medium">Secure access to your health records</p>
                     </div>
 
                     {error && (
                         <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl mb-8 flex items-center gap-3 animate-shake">
-                            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                            <div className="w-2 h-2 bg-red-500 rounded-full" />
                             <span className="text-sm font-semibold">{error}</span>
                         </div>
                     )}
 
                     <form onSubmit={handleLogin} className="space-y-6">
                         <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
                             <input
                                 type="email"
                                 required
-                                className="w-full px-5 py-4 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all duration-300 font-medium text-slate-900"
+                                className="w-full px-5 py-3.5 rounded-2xl border border-slate-100 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all duration-300 font-medium text-slate-800"
                                 placeholder="name@example.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -75,13 +75,13 @@ const PortalLogin = () => {
 
                         <div className="space-y-2">
                             <div className="flex items-center justify-between mb-1">
-                                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Password</label>
-                                <Link to="/portal/forgot-password" size="sm" className="text-xs font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wider">Forgot Password?</Link>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Password</label>
+                                <Link to="/portal/forgot-password" size="sm" className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wider">Forgot Password?</Link>
                             </div>
                             <input
                                 type="password"
                                 required
-                                className="w-full px-5 py-4 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all duration-300 font-medium text-slate-900"
+                                className="w-full px-5 py-3.5 rounded-2xl border border-slate-100 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all duration-300 font-medium text-slate-800"
                                 placeholder="••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
@@ -91,7 +91,7 @@ const PortalLogin = () => {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black py-4 px-6 rounded-xl transition-all duration-300 shadow-xl shadow-slate-200 hover:shadow-slate-300 hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-3 group"
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 shadow-xl shadow-blue-200 hover:shadow-blue-300 hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-3 group"
                         >
                             {loading ? (
                                 <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -110,7 +110,7 @@ const PortalLogin = () => {
                     </form>
 
                     <div className="mt-10 pt-8 border-t border-slate-100 text-center">
-                        <p className="text-sm text-slate-500 font-medium">
+                        <p className="text-xs text-slate-500 font-medium">
                             Don't have access? <br />
                             <span className="text-slate-400">Please contact your healthcare provider for an invitation.</span>
                         </p>
@@ -118,15 +118,11 @@ const PortalLogin = () => {
                 </div>
 
                 {/* Footer Security Note */}
-                <div className="mt-8 flex items-center justify-center gap-6 text-[10px] font-bold text-white/60 uppercase tracking-widest">
+                <div className="mt-8 flex items-center justify-center gap-6 text-[10px] font-bold text-white/50 uppercase tracking-widest">
                     <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                        <div className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
                         HIPAA COMPLIANT
                     </div>
-                    <span>•</span>
-                    <div>ENCRYPTED SESSION</div>
-                    <span>•</span>
-                    <div>256-BIT SSL</div>
                 </div>
             </div>
         </div>

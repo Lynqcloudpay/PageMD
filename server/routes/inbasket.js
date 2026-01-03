@@ -228,22 +228,22 @@ async function syncInboxItems(tenantId) {
     INSERT INTO inbox_items(
       id, tenant_id, patient_id, type, priority, status,
       subject, body, reference_id, reference_table,
-      created_at, updated_at
+      assigned_user_id, created_at, updated_at
     )
-  SELECT
-  gen_random_uuid(), $1, t.patient_id, 'portal_message', 'normal', 'new',
-    'Portal: ' || t.subject,
-    m.body,
-    m.id, 'portal_messages',
-    m.created_at, m.created_at
+    SELECT
+      gen_random_uuid(), $1, t.patient_id, 'portal_message', 'normal', 'new',
+      'Portal: ' || t.subject,
+      m.body,
+      m.id, 'portal_messages',
+      t.assigned_user_id, m.created_at, m.created_at
     FROM portal_messages m
     JOIN portal_message_threads t ON m.thread_id = t.id
     WHERE m.sender_portal_account_id IS NOT NULL
-      AND m.staff_read_at IS NULL
+      AND m.read_at IS NULL
       AND NOT EXISTS(
-      SELECT 1 FROM inbox_items 
+        SELECT 1 FROM inbox_items 
         WHERE reference_id = m.id AND reference_table = 'portal_messages'
-    )
+      )
     `, [tenantId]);
 
   // 8. Sync Portal Appointment Requests
@@ -251,20 +251,20 @@ async function syncInboxItems(tenantId) {
     INSERT INTO inbox_items(
       id, tenant_id, patient_id, type, priority, status,
       subject, body, reference_id, reference_table,
-      created_at, updated_at
+      assigned_user_id, created_at, updated_at
     )
-  SELECT
-  gen_random_uuid(), $1, patient_id, 'portal_appointment', 'normal', 'new',
-    'Portal Appt Req: ' || appointment_type,
-    'Preferred Date: ' || preferred_date || ' (' || preferred_time_range || ')\nReason: ' || COALESCE(reason, 'N/A'),
-    id, 'portal_appointment_requests',
-    created_at, created_at
+    SELECT
+      gen_random_uuid(), $1, patient_id, 'portal_appointment', 'normal', 'new',
+      'Portal Appt Req: ' || appointment_type,
+      'Preferred Date: ' || preferred_date || ' (' || preferred_time_range || ')\nReason: ' || COALESCE(reason, 'N/A'),
+      id, 'portal_appointment_requests',
+      NULL, created_at, created_at
     FROM portal_appointment_requests
     WHERE status = 'pending'
       AND NOT EXISTS(
-      SELECT 1 FROM inbox_items 
+        SELECT 1 FROM inbox_items 
         WHERE reference_id = portal_appointment_requests.id AND reference_table = 'portal_appointment_requests'
-    )
+      )
     `, [tenantId]);
 }
 
@@ -455,6 +455,8 @@ router.put('/:id', async (req, res) => {
         await pool.query("UPDATE orders SET reviewed = true, reviewed_at = CURRENT_TIMESTAMP, reviewed_by = $1 WHERE id = $2", [req.user.id, item.reference_id]);
       } else if (item.reference_table === 'documents') {
         await pool.query("UPDATE documents SET reviewed = true, reviewed_at = CURRENT_TIMESTAMP, reviewed_by = $1 WHERE id = $2", [req.user.id, item.reference_id]);
+      } else if (item.reference_table === 'portal_messages') {
+        await pool.query("UPDATE portal_messages SET read_at = CURRENT_TIMESTAMP WHERE id = $1", [item.reference_id]);
       }
     }
 
@@ -467,20 +469,53 @@ router.put('/:id', async (req, res) => {
 
 // POST /:id/notes - Add note/reply
 router.post('/:id/notes', async (req, res) => {
+  const client = await pool.connect();
   try {
     const { id } = req.params;
-    const { note } = req.body;
+    const { note, isExternal = false } = req.body;
 
-    const result = await pool.query(`
-      INSERT INTO inbox_notes(item_id, user_id, user_name, note)
-  VALUES($1, $2, $3, $4)
-  RETURNING *
-    `, [id, req.user.id, `${req.user.first_name} ${req.user.last_name} `, note]);
+    await client.query('BEGIN');
 
+    const result = await client.query(`
+      INSERT INTO inbox_notes(item_id, user_id, user_name, note, is_internal)
+      VALUES($1, $2, $3, $4, $5)
+      RETURNING *
+    `, [id, req.user.id, `${req.user.first_name} ${req.user.last_name}`, note, !isExternal]);
+
+    // If external or a portal message reply, push to portal_messages
+    const itemRes = await client.query('SELECT * FROM inbox_items WHERE id = $1', [id]);
+    const item = itemRes.rows[0];
+
+    if (item && isExternal && item.type === 'portal_message' && item.reference_table === 'portal_messages') {
+      const msgRes = await client.query('SELECT thread_id FROM portal_messages WHERE id = $1', [item.reference_id]);
+      if (msgRes.rows.length > 0) {
+        const threadId = msgRes.rows[0].thread_id;
+
+        await client.query(`
+          INSERT INTO portal_messages (thread_id, sender_user_id, sender_type, body)
+          VALUES ($1, $2, 'staff', $3)
+        `, [threadId, req.user.id, note]);
+
+        await client.query(`
+          UPDATE portal_message_threads 
+          SET last_message_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP 
+          WHERE id = $1
+        `, [threadId]);
+
+        // Also mark the original patient message as read since we replied
+        await client.query("UPDATE portal_messages SET read_at = CURRENT_TIMESTAMP WHERE id = $1", [item.reference_id]);
+        await client.query("UPDATE inbox_items SET status = 'read', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [id]);
+      }
+    }
+
+    await client.query('COMMIT');
     res.json(result.rows[0]);
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Error adding note:', error);
     res.status(500).json({ error: 'Failed' });
+  } finally {
+    client.release();
   }
 });
 

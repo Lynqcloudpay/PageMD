@@ -82,7 +82,8 @@ router.get('/threads/:id', async (req, res) => {
  */
 router.post('/threads', [
     body('subject').notEmpty().trim().escape(),
-    body('body').notEmpty().trim()
+    body('body').notEmpty().trim(),
+    body('assigned_user_id').optional().isUUID()
 ], async (req, res) => {
     const client = await pool.connect();
     try {
@@ -91,7 +92,7 @@ router.post('/threads', [
             return res.status(400).json({ errors: errors.array() });
         }
 
-        const { subject, body } = req.body;
+        const { subject, body, assigned_user_id } = req.body;
         const patientId = req.portalAccount.patient_id;
         const portalAccountId = req.portalAccount.id;
 
@@ -99,8 +100,8 @@ router.post('/threads', [
 
         // 1. Create thread
         const threadResult = await client.query(
-            'INSERT INTO portal_message_threads (patient_id, subject) VALUES ($1, $2) RETURNING id',
-            [patientId, subject]
+            'INSERT INTO portal_message_threads (patient_id, subject, assigned_user_id) VALUES ($1, $2, $3) RETURNING id',
+            [patientId, subject, assigned_user_id]
         );
         const threadId = threadResult.rows[0].id;
 

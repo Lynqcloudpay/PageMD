@@ -175,4 +175,24 @@ router.get('/documents', requirePortalPermission('can_view_documents'), async (r
     }
 });
 
+/**
+ * Get Clinical Staff (for messaging/appointments)
+ * GET /api/portal/chart/staff
+ */
+router.get('/staff', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT id, first_name, last_name, role
+            FROM users
+            WHERE active = true AND role IN ('clinician', 'nurse')
+            ORDER BY last_name ASC
+        `);
+
+        res.json(result.rows);
+    } catch (error) {
+        console.error('[Portal Chart] Error fetching staff:', error);
+        res.status(500).json({ error: 'Failed to fetch staff list' });
+    }
+});
+
 module.exports = router;

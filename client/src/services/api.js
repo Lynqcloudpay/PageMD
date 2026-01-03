@@ -166,7 +166,7 @@ export const inboxAPI = {
   getDetails: (id) => api.get(`/inbox/${id}`),
   create: (data) => api.post('/inbox', data),
   update: (id, data) => api.put(`/inbox/${id}`, data),
-  addNote: (id, note) => api.post(`/inbox/${id}/notes`, { note }),
+  addNote: (id, note, isExternal = false) => api.post(`/inbox/${id}/notes`, { note, isExternal }),
 
   // Legacy aliases (mapped to new endpoints)
   markReviewed: (type, id, data) => api.put(`/inbox/${id}`, { status: 'completed', ...data }), // Note: backend handles status update
