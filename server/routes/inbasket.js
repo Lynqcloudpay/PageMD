@@ -228,7 +228,15 @@ async function syncInboxItems(tenantId, schema) {
     )
   `, [tenantId]);
 
-    // 7. Sync Portal Messages (Unread messages from patients)
+    // 7. Sync Portal Message Threads (Unread threads)
+    // CLEANUP: Remove old individual portal message items (migration to threads)
+    await client.query(`
+        DELETE FROM inbox_items 
+        WHERE reference_table = 'portal_messages' 
+          AND status != 'completed'
+    `);
+
+    // Insert new items for threads that don't have an active item
     await client.query(`
     INSERT INTO inbox_items(
       id, tenant_id, patient_id, type, priority, status,
@@ -238,19 +246,44 @@ async function syncInboxItems(tenantId, schema) {
     SELECT
       gen_random_uuid(), $1, t.patient_id, 'portal_message', 'normal', 'new',
       'Portal: ' || t.subject,
-      m.body,
-      m.id, 'portal_messages',
-      COALESCE(t.assigned_user_id, p.primary_care_provider), m.created_at, m.created_at
-    FROM portal_messages m
-    JOIN portal_message_threads t ON m.thread_id = t.id
-    LEFT JOIN patients p ON t.patient_id = p.id
-    WHERE m.sender_portal_account_id IS NOT NULL
-      AND m.read_at IS NULL
-      AND NOT EXISTS(
+      (SELECT body FROM portal_messages WHERE thread_id = t.id AND sender_portal_account_id IS NOT NULL ORDER BY created_at DESC LIMIT 1),
+      t.id, 'portal_message_threads',
+      COALESCE(t.assigned_user_id, p.primary_care_provider), t.updated_at, t.updated_at
+    FROM portal_message_threads t
+    JOIN patients p ON t.patient_id = p.id
+    WHERE EXISTS (
+        SELECT 1 FROM portal_messages m 
+        WHERE m.thread_id = t.id 
+          AND m.sender_portal_account_id IS NOT NULL 
+          AND m.read_at IS NULL
+    )
+    AND NOT EXISTS(
         SELECT 1 FROM inbox_items 
-        WHERE reference_id = m.id AND reference_table = 'portal_messages'
-      )
+        WHERE reference_id = t.id AND reference_table = 'portal_message_threads' AND status != 'completed'
+    )
     `, [tenantId]);
+
+    // Update existing active items if thread updated
+    await client.query(`
+    UPDATE inbox_items i
+    SET 
+        body = sub.latest_body,
+        updated_at = sub.thread_updated_at,
+        status = 'new'
+    FROM (
+        SELECT t.id as thread_id, t.updated_at as thread_updated_at,
+        (SELECT body FROM portal_messages WHERE thread_id = t.id AND sender_portal_account_id IS NOT NULL ORDER BY created_at DESC LIMIT 1) as latest_body
+        FROM portal_message_threads t
+        WHERE EXISTS (
+             SELECT 1 FROM portal_messages m 
+             WHERE m.thread_id = t.id AND m.sender_portal_account_id IS NOT NULL AND m.read_at IS NULL
+        )
+    ) sub
+    WHERE i.reference_id = sub.thread_id 
+      AND i.reference_table = 'portal_message_threads'
+      AND i.status != 'completed'
+      AND i.updated_at < sub.thread_updated_at
+    `);
 
     // 8. Sync Portal Appointment Requests
     await client.query(`
@@ -392,7 +425,41 @@ router.get('/:id', async (req, res) => {
       ORDER BY n.created_at ASC
     `, [id]);
 
-    res.json({ ...item, notes: notesRes.rows });
+    let notes = notesRes.rows;
+
+    // If it's a thread, fetch thread history and merge (excluding duplicates from internal notes if any)
+    // We prioritize portal_messages for the conversation history
+    if (item.type === 'portal_message' && item.reference_table === 'portal_message_threads') {
+      const threadMsgs = await pool.query(`
+            SELECT 
+                m.id, 
+                m.body as note, 
+                m.created_at,
+                CASE 
+                    WHEN m.sender_type = 'staff' THEN u.first_name 
+                    ELSE $2 
+                END as first_name,
+                CASE 
+                    WHEN m.sender_type = 'staff' THEN u.last_name 
+                    ELSE $3 
+                END as last_name,
+                m.sender_type
+            FROM portal_messages m
+            LEFT JOIN users u ON m.sender_user_id = u.id
+            WHERE m.thread_id = $1
+            ORDER BY m.created_at ASC
+        `, [item.reference_id, item.patient_first_name, item.patient_last_name]);
+
+      // Filter out inbox_notes that are just copies of portal messages to avoid duplication if we were listing them?
+      // Actually inbox_notes are internal usually. 
+      // If we want to show strict history, we use threadMsgs + internal only notes.
+      const internalNotes = notes.filter(n => n.is_internal);
+
+      // Combine and sort
+      notes = [...threadMsgs.rows, ...internalNotes].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    }
+
+    res.json({ ...item, notes });
   } catch (error) {
     console.error('Error fetching details:', error);
     res.status(500).json({ error: 'Failed' });
@@ -497,11 +564,19 @@ router.post('/:id/notes', async (req, res) => {
     const itemRes = await client.query('SELECT * FROM inbox_items WHERE id = $1', [id]);
     const item = itemRes.rows[0];
 
-    if (item && isExternal && item.type === 'portal_message' && item.reference_table === 'portal_messages') {
-      const msgRes = await client.query('SELECT thread_id FROM portal_messages WHERE id = $1', [item.reference_id]);
-      if (msgRes.rows.length > 0) {
-        const threadId = msgRes.rows[0].thread_id;
+    if (item && isExternal && item.type === 'portal_message') {
+      let threadId = null;
 
+      if (item.reference_table === 'portal_messages') {
+        // Legacy support
+        const msgRes = await client.query('SELECT thread_id FROM portal_messages WHERE id = $1', [item.reference_id]);
+        if (msgRes.rows.length > 0) threadId = msgRes.rows[0].thread_id;
+      } else if (item.reference_table === 'portal_message_threads') {
+        // New support
+        threadId = item.reference_id;
+      }
+
+      if (threadId) {
         await client.query(`
           INSERT INTO portal_messages (thread_id, sender_user_id, sender_id, sender_type, body)
           VALUES ($1, $2, $2, 'staff', $3)
@@ -513,8 +588,12 @@ router.post('/:id/notes', async (req, res) => {
           WHERE id = $1
         `, [threadId]);
 
-        // Also mark the original patient message as read since we replied
-        await client.query("UPDATE portal_messages SET read_at = CURRENT_TIMESTAMP WHERE id = $1", [item.reference_id]);
+        // Mark messages as read
+        await client.query("UPDATE portal_messages SET read_at = CURRENT_TIMESTAMP WHERE thread_id = $1 AND sender_portal_account_id IS NOT NULL", [threadId]);
+
+        // Mark inbox item as read/handled? 
+        // Actually, if we reply, we usually keep it open until we click "Done".
+        // But we should mark it as "read" so it doesn't look like "new" (bold).
         await client.query("UPDATE inbox_items SET status = 'read', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [id]);
       }
     }
