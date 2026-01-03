@@ -924,7 +924,7 @@ const Inbasket = () => {
 
                     <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-between gap-3 shrink-0">
                         <button
-                            onClick={() => {
+                            onClick={async () => {
                                 setShowApproveModal(false);
                                 let msg = `Hi, unfortunately ${approvalData.appointmentDate || 'the requested date'} is unavailable.`;
 
@@ -944,11 +944,21 @@ const Inbasket = () => {
                                     msg += ` Are you available on ...?`;
                                 }
 
-                                setReplyText(msg);
+                                // If it's a portal appointment, we can send this reply directly to make sure they get it
+                                if (selectedItem.type === 'portal_appointment' || selectedItem.type === 'portal_message') {
+                                    try {
+                                        await handleAction('replyExternal', msg);
+                                    } catch (e) {
+                                        console.error('Failed to auto-send reschedule message:', e);
+                                        setReplyText(msg);
+                                    }
+                                } else {
+                                    setReplyText(msg);
+                                }
                             }}
                             className="px-4 py-2 bg-amber-100 text-amber-700 rounded-lg text-sm font-bold hover:bg-amber-200 border border-amber-200 flex flex-col items-start"
                         >
-                            <span>Modify / Reschedule</span>
+                            <span>Send Modify / Reschedule</span>
                             {suggestedSlots.length > 0 && <span className="text-[10px] font-normal text-amber-800">{suggestedSlots.length} times selected</span>}
                         </button>
                         <div className="flex gap-3">

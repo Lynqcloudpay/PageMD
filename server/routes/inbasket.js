@@ -580,16 +580,35 @@ router.post('/:id/notes', async (req, res) => {
     const itemRes = await client.query('SELECT * FROM inbox_items WHERE id = $1', [id]);
     const item = itemRes.rows[0];
 
-    if (item && isExternal && item.type === 'portal_message') {
+    if (item && isExternal && (item.type === 'portal_message' || item.type === 'portal_appointment')) {
       let threadId = null;
 
-      if (item.reference_table === 'portal_messages') {
-        // Legacy support
-        const msgRes = await client.query('SELECT thread_id FROM portal_messages WHERE id = $1', [item.reference_id]);
-        if (msgRes.rows.length > 0) threadId = msgRes.rows[0].thread_id;
-      } else if (item.reference_table === 'portal_message_threads') {
-        // New support
-        threadId = item.reference_id;
+      if (item.type === 'portal_message') {
+        if (item.reference_table === 'portal_messages') {
+          // Legacy support
+          const msgRes = await client.query('SELECT thread_id FROM portal_messages WHERE id = $1', [item.reference_id]);
+          if (msgRes.rows.length > 0) threadId = msgRes.rows[0].thread_id;
+        } else if (item.reference_table === 'portal_message_threads') {
+          // New support
+          threadId = item.reference_id;
+        }
+      } else if (item.type === 'portal_appointment') {
+        // Find or create an appointment thread for this patient
+        const existingThread = await client.query(
+          "SELECT id FROM portal_message_threads WHERE patient_id = $1 AND subject ILIKE 'Appointment Support%' ORDER BY created_at DESC LIMIT 1",
+          [item.patient_id]
+        );
+
+        if (existingThread.rows.length > 0) {
+          threadId = existingThread.rows[0].id;
+        } else {
+          const newThread = await client.query(`
+            INSERT INTO portal_message_threads (patient_id, subject, last_message_at, updated_at)
+            VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            RETURNING id
+          `, [item.patient_id, 'Appointment Support: ' + (item.subject || 'Visit Request')]);
+          threadId = newThread.rows[0].id;
+        }
       }
 
       if (threadId) {
