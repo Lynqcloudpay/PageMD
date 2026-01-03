@@ -549,47 +549,34 @@ const Inbasket = () => {
                                         <div className="flex items-center gap-3 mb-3">
                                             <Calendar className="w-8 h-8 text-amber-500" />
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-bold text-amber-900">
-                                                    {details.subject?.includes('Support') ? 'Appointment Support Thread' : 'Appointment Request'}
-                                                </p>
-                                                <p className="text-xs text-amber-600">
-                                                    {details.body?.match(/\[ACCEPTED_SLOT:([^\]]+)\]/) ? 'Appointment Confirmed & Scheduled' :
-                                                        details.body?.split('\n')[0] || 'Appointment request details'}
-                                                </p>
+                                                <p className="text-sm font-medium text-amber-900">Appointment Request</p>
+                                                <p className="text-xs text-amber-600">Patient prefers {details.body?.split('\n')[0] || 'date/time in notes'}</p>
                                             </div>
-                                            {details.body?.match(/\[ACCEPTED_SLOT:([^\]]+)\]/) && (
-                                                <div className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-black uppercase flex items-center gap-1 animate-pulse">
-                                                    <CheckCircle className="w-3 h-3" /> Scheduled
-                                                </div>
-                                            )}
                                         </div>
-
-                                        {!details.body?.match(/\[ACCEPTED_SLOT:([^\]]+)\]/) && (
-                                            <div className="flex gap-2 mt-3">
-                                                <button
-                                                    onClick={() => setShowApproveModal(true)}
-                                                    className="flex-1 px-3 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 flex items-center justify-center gap-1 shadow-sm"
-                                                >
-                                                    <CheckCircle className="w-4 h-4" /> Approve & Schedule
-                                                </button>
-                                                <button
-                                                    onClick={async () => {
-                                                        try {
-                                                            await api.post(`/inbasket/${selectedItem.id}/deny-appointment`);
-                                                            toast.success('Appointment request denied');
-                                                            fetchItems();
-                                                            setSelectedItem(null);
-                                                        } catch (e) {
-                                                            console.error('Failed to deny:', e);
-                                                            toast.error('Failed to deny request');
-                                                        }
-                                                    }}
-                                                    className="px-3 py-2 bg-white border border-red-200 text-red-600 text-xs font-bold rounded-lg hover:bg-red-50"
-                                                >
-                                                    Deny
-                                                </button>
-                                            </div>
-                                        )}
+                                        <div className="flex gap-2 mt-3">
+                                            <button
+                                                onClick={() => setShowApproveModal(true)}
+                                                className="flex-1 px-3 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 flex items-center justify-center gap-1"
+                                            >
+                                                <CheckCircle className="w-4 h-4" /> Approve & Schedule
+                                            </button>
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        await inboxAPI.denyAppointment(selectedItem.id);
+                                                        showSuccess('Appointment request denied');
+                                                        fetchItems();
+                                                        setSelectedItem(null);
+                                                    } catch (e) {
+                                                        console.error('Failed to deny:', e);
+                                                        showError('Failed to deny request');
+                                                    }
+                                                }}
+                                                className="px-3 py-2 bg-red-100 text-red-600 text-xs font-bold rounded-lg hover:bg-red-200"
+                                            >
+                                                Deny
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
 
@@ -950,15 +937,16 @@ const Inbasket = () => {
                             <button
                                 onClick={async () => {
                                     try {
-                                        await api.post(`/inbasket/${selectedItem.id}/suggest-slots`, {
+                                        await inboxAPI.suggestSlots(selectedItem.id, {
                                             slots: suggestedSlots.map(s => ({ date: s.date, time: s.time }))
                                         });
                                         setShowApproveModal(false);
-                                        toast.success('Alternative times sent to patient');
+                                        setSuggestedSlots([]);
+                                        showSuccess('Alternative times sent to patient');
                                         fetchItems();
                                     } catch (e) {
                                         console.error('Failed to suggest slots:', e);
-                                        toast.error('Failed to send suggestions');
+                                        showError('Failed to send suggestions');
                                     }
                                 }}
                                 className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg text-sm font-bold hover:from-amber-600 hover:to-orange-600 shadow-sm flex items-center gap-2"
