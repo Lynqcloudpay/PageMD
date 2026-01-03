@@ -74,10 +74,13 @@ const Inbasket = () => {
         appointmentTime: '',
         duration: 30
     });
+    const [suggestedSlots, setSuggestedSlots] = useState([]); // Array of {date, time}
 
     // Autofill approval data when modal opens
     useEffect(() => {
         if (showApproveModal && selectedItem) {
+            setSuggestedSlots([]); // Clear suggestions
+
             // Default provider to assigned user or first available
             let providerId = selectedItem.assigned_user_id || '';
 
@@ -884,63 +887,91 @@ const Inbasket = () => {
                                 )}
                             </div>
 
-                            {/* Right Column: Schedule Browser */}
-                            <div className="w-full md:w-[450px] bg-slate-50 border-t md:border-t-0 md:border-l border-slate-200 p-4 flex flex-col h-full overflow-hidden">
-                                {approvalData.providerId ? (
-                                    <DaySchedulePreview
-                                        date={approvalData.appointmentDate}
-                                        providerId={approvalData.providerId}
-                                        selectedTime={approvalData.appointmentTime}
-                                        duration={approvalData.duration}
-                                        onDateChange={(newDate) => setApprovalData(prev => ({ ...prev, appointmentDate: newDate }))}
-                                    />
-                                ) : (
-                                    <div className="flex items-center justify-center h-full text-slate-400 text-sm">
-                                        Select a provider to view schedule
-                                    </div>
-                                )}
-                            </div>
                         </div>
 
-                        <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-between gap-3 shrink-0">
+                        {/* Right Column: Schedule Browser */}
+                        <div className="w-full md:w-[450px] bg-slate-50 border-t md:border-t-0 md:border-l border-slate-200 p-4 flex flex-col h-full overflow-hidden">
+                            {approvalData.providerId ? (
+                                <DaySchedulePreview
+                                    date={approvalData.appointmentDate}
+                                    providerId={approvalData.providerId}
+                                    selectedTime={approvalData.appointmentTime}
+                                    duration={approvalData.duration}
+                                    onDateChange={(newDate) => setApprovalData(prev => ({ ...prev, appointmentDate: newDate }))}
+                                    suggestedSlots={suggestedSlots}
+                                    onSlotClick={(slot) => {
+                                        // Toggle slot selection
+                                        setSuggestedSlots(prev => {
+                                            const exists = prev.find(s => s.date === slot.date && s.time === slot.time);
+                                            if (exists) return prev.filter(s => s !== exists);
+                                            return [...prev, slot];
+                                        });
+                                    }}
+                                />
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-slate-400 text-sm">
+                                    Select a provider to view schedule
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-between gap-3 shrink-0">
+                        <button
+                            onClick={() => {
+                                setShowApproveModal(false);
+                                let msg = `Hi, unfortunately ${approvalData.appointmentDate || 'the requested date'} is unavailable.`;
+
+                                if (suggestedSlots.length > 0) {
+                                    // Sort slots by date/time
+                                    const sortedSlots = [...suggestedSlots].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+
+                                    msg += `\n\nWe have the following openings available:\n`;
+                                    sortedSlots.forEach(slot => {
+                                        // Format: "Monday, Jan 3 at 9:00 AM"
+                                        const d = new Date(slot.date + 'T' + slot.time);
+                                        msg += `- ${format(d, 'EEEE, MMM d')} at ${format(d, 'h:mm a')}\n`;
+                                    });
+                                    msg += `\nPlease let us know which one works best for you.`;
+                                } else {
+                                    msg += ` Are you available on ...?`;
+                                }
+
+                                setReplyText(msg);
+                            }}
+                            className="px-4 py-2 bg-amber-100 text-amber-700 rounded-lg text-sm font-bold hover:bg-amber-200 border border-amber-200 flex flex-col items-start"
+                        >
+                            <span>Modify / Reschedule</span>
+                            {suggestedSlots.length > 0 && <span className="text-[10px] font-normal text-amber-800">{suggestedSlots.length} times selected</span>}
+                        </button>
+                        <div className="flex gap-3">
                             <button
-                                onClick={() => {
-                                    setShowApproveModal(false);
-                                    setReplyText(`Hi, I'd like to schedule you, but ${approvalData.appointmentDate || 'the requested date'} is unavailable. Are you available on ...?`);
-                                    // ideally focus the reply box
-                                }}
-                                className="px-4 py-2 bg-amber-100 text-amber-700 rounded-lg text-sm font-bold hover:bg-amber-200 border border-amber-200"
+                                onClick={() => setShowApproveModal(false)}
+                                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-100"
                             >
-                                Modify / Reschedule
+                                Cancel
                             </button>
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setShowApproveModal(false)}
-                                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-100"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleApproveAppointment}
-                                    className="px-6 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-emerald-700 flex items-center gap-1"
-                                >
-                                    <CheckCircle className="w-4 h-4" /> Schedule
-                                </button>
-                            </div>
+                            <button
+                                onClick={handleApproveAppointment}
+                                className="px-6 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-emerald-700 flex items-center gap-1"
+                            >
+                                <CheckCircle className="w-4 h-4" /> Schedule
+                            </button>
                         </div>
                     </div>
                 </div>
-            )}
-        </div>
+                </div>
+        </div >
     );
 };
 
 // Helper component for schedule preview
-const DaySchedulePreview = ({ date, providerId, selectedTime, duration, onDateChange }) => {
+const DaySchedulePreview = ({ date, providerId, selectedTime, duration, onDateChange, suggestedSlots = [], onSlotClick }) => {
     const [schedule, setSchedule] = React.useState([]);
     const [loading, setLoading] = React.useState(true);
 
     const currentDate = date ? new Date(date) : new Date();
+    const currentDateStr = date || format(new Date(), 'yyyy-MM-dd');
 
     const changeDay = (days) => {
         const newDate = new Date(currentDate);
@@ -1004,19 +1035,36 @@ const DaySchedulePreview = ({ date, providerId, selectedTime, duration, onDateCh
                             // robust check for appointment_time
                             const appt = sorted.find(a => (a.appointment_time || a.time || '').startsWith(slot));
                             const isSelected = selectedTime && selectedTime.startsWith(slot);
+                            const isSuggested = suggestedSlots.some(s => s.date === currentDateStr && s.time === slot);
+
+                            // Determine row style
+                            let rowClass = "hover:bg-slate-50";
+                            if (isSelected) rowClass = "bg-emerald-50";
+                            else if (isSuggested) rowClass = "bg-amber-50 ring-1 ring-inset ring-amber-200";
 
                             return (
-                                <div key={slot} className={`flex items-start text-xs p-2 min-h-[40px] ${isSelected ? 'bg-emerald-50' : 'hover:bg-slate-50'}`}>
-                                    <span className="font-medium text-slate-400 w-14 shrink-0">{slot}</span>
+                                <div
+                                    key={slot}
+                                    className={`flex items-start text-xs p-2 min-h-[40px] cursor-pointer ${rowClass}`}
+                                    onClick={() => {
+                                        if (!appt && onSlotClick) {
+                                            onSlotClick({ date: currentDateStr, time: slot });
+                                        }
+                                    }}
+                                >
+                                    <span className={`font-medium w-14 shrink-0 ${isSuggested ? 'text-amber-700 font-bold' : 'text-slate-400'}`}>{slot}</span>
                                     <div className="flex-1">
                                         {appt ? (
-                                            <div className="bg-blue-100 text-blue-700 px-2 py-1 rounded w-full truncate border border-blue-200">
+                                            <div className="bg-blue-100 text-blue-700 px-2 py-1 rounded w-full truncate border border-blue-200 cursor-default">
                                                 {appt.patient_name || 'Booked'} ({appt.duration}m)
                                             </div>
                                         ) : (
-                                            <span className="text-slate-300 italic">Available</span>
+                                            <span className={`${isSuggested ? 'text-amber-600 font-bold' : 'text-slate-300 italic'}`}>
+                                                {isSuggested ? 'Suggested' : 'Available'}
+                                            </span>
                                         )}
                                     </div>
+                                    {isSuggested && <Check className="w-4 h-4 text-amber-600" />}
                                 </div>
                             );
                         })}
@@ -1024,7 +1072,7 @@ const DaySchedulePreview = ({ date, providerId, selectedTime, duration, onDateCh
                 )}
             </div>
             <div className="mt-2 text-xs text-slate-400 text-center">
-                Reviewing provider availability
+                Click available slots to suggest them
             </div>
         </div>
     );
