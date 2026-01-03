@@ -10,11 +10,11 @@ router.use(authenticate);
 // Syncs external items (orders, documents) into the inbox_items table
 // This ensures we have a unified, real-table representation for everything
 // Schema self-healing state
-async function ensureSchema() {
+async function ensureSchema(client) {
   // 1. Try to create extensions (separately, ignored if fails due to permissions)
   try {
-    await pool.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
-    await pool.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
+    await client.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
+    await client.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
   } catch (e) {
     // Ignore extension creation errors (likely permission issues or already exists)
     // Postgres 13+ has gen_random_uuid() built-in anyway
@@ -23,9 +23,8 @@ async function ensureSchema() {
 
   // 2. Create Tables
   try {
-    await pool.query('BEGIN');
-
-    await pool.query(`
+    // Note: We don't start a transaction here because the caller (syncInboxItems) handles it or connection state
+    await client.query(`
             CREATE TABLE IF NOT EXISTS inbox_items (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 tenant_id UUID,
@@ -47,7 +46,7 @@ async function ensureSchema() {
             )
         `);
 
-    await pool.query(`
+    await client.query(`
             CREATE TABLE IF NOT EXISTS inbox_notes (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 item_id UUID REFERENCES inbox_items(id) ON DELETE CASCADE,
@@ -60,24 +59,30 @@ async function ensureSchema() {
         `);
 
     // Indexes
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_inbox_assigned_user ON inbox_items(assigned_user_id) WHERE status != 'completed'`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_inbox_patient ON inbox_items(patient_id)`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_inbox_status ON inbox_items(status)`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_inbox_reference ON inbox_items(reference_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_inbox_assigned_user ON inbox_items(assigned_user_id) WHERE status != 'completed'`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_inbox_patient ON inbox_items(patient_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_inbox_status ON inbox_items(status)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_inbox_reference ON inbox_items(reference_id)`);
 
-    await pool.query('COMMIT');
   } catch (error) {
-    await pool.query('ROLLBACK');
     console.error('Error ensuring inbasket schema:', error);
     // Don't throw, let the query fail naturally if table doesn't exist, 
     // but at least we tried our best.
   }
 }
 
-async function syncInboxItems(tenantId) {
-  await ensureSchema();
-  // 1. Sync Lab Orders
-  await pool.query(`
+async function syncInboxItems(tenantId, schema) {
+  const client = await pool.connect();
+  try {
+    if (schema) {
+      // Set the search path strictly to the tenant schema first, then public
+      await client.query(`SET search_path TO ${schema}, public`);
+    }
+
+    await ensureSchema(client);
+
+    // 1. Sync Lab Orders
+    await client.query(`
     INSERT INTO inbox_items (
       id, tenant_id, patient_id, type, priority, status, 
       subject, body, reference_id, reference_table, 
@@ -101,8 +106,8 @@ async function syncInboxItems(tenantId) {
       )
   `, [tenantId]);
 
-  // 2. Sync Imaging Orders
-  await pool.query(`
+    // 2. Sync Imaging Orders
+    await client.query(`
     INSERT INTO inbox_items (
       id, tenant_id, patient_id, type, priority, status, 
       subject, body, reference_id, reference_table, 
@@ -125,8 +130,8 @@ async function syncInboxItems(tenantId) {
       )
   `, [tenantId]);
 
-  // 3. Sync Documents
-  await pool.query(`
+    // 3. Sync Documents
+    await client.query(`
     INSERT INTO inbox_items (
       id, tenant_id, patient_id, type, priority, status, 
       subject, body, reference_id, reference_table, 
@@ -148,8 +153,8 @@ async function syncInboxItems(tenantId) {
       )
   `, [tenantId]);
 
-  // 4. Sync Referrals
-  await pool.query(`
+    // 4. Sync Referrals
+    await client.query(`
     INSERT INTO inbox_items (
       id, tenant_id, patient_id, type, priority, status, 
       subject, body, reference_id, reference_table, 
@@ -170,8 +175,8 @@ async function syncInboxItems(tenantId) {
       )
   `, [tenantId]);
 
-  // 5. Sync Unsigned Notes (Co-signing)
-  await pool.query(`
+    // 5. Sync Unsigned Notes (Co-signing)
+    await client.query(`
     INSERT INTO inbox_items (
       id, tenant_id, patient_id, type, priority, status, 
       subject, body, reference_id, reference_table, 
@@ -192,8 +197,8 @@ async function syncInboxItems(tenantId) {
       )
   `, [tenantId]);
 
-  // 6. Sync Old Messages/Tasks
-  await pool.query(`
+    // 6. Sync Old Messages/Tasks
+    await client.query(`
     INSERT INTO inbox_items (
       id, tenant_id, patient_id, type, priority, status, 
       subject, body, reference_id, reference_table, 
@@ -223,8 +228,8 @@ async function syncInboxItems(tenantId) {
     )
   `, [tenantId]);
 
-  // 7. Sync Portal Messages (Unread messages from patients)
-  await pool.query(`
+    // 7. Sync Portal Messages (Unread messages from patients)
+    await client.query(`
     INSERT INTO inbox_items(
       id, tenant_id, patient_id, type, priority, status,
       subject, body, reference_id, reference_table,
@@ -247,8 +252,8 @@ async function syncInboxItems(tenantId) {
       )
     `, [tenantId]);
 
-  // 8. Sync Portal Appointment Requests
-  await pool.query(`
+    // 8. Sync Portal Appointment Requests
+    await client.query(`
     INSERT INTO inbox_items(
       id, tenant_id, patient_id, type, priority, status,
       subject, body, reference_id, reference_table,
@@ -268,6 +273,10 @@ async function syncInboxItems(tenantId) {
         WHERE reference_id = ar.id AND reference_table = 'portal_appointment_requests'
       )
     `, [tenantId]);
+
+  } finally {
+    client.release();
+  }
 }
 
 // --- ROUTES ---
@@ -277,9 +286,10 @@ router.get('/', async (req, res) => {
   try {
     const { status = 'new', type, assignedTo } = req.query;
     const tenantId = req.user.tenantId || req.user.tenant_id || null;
+    const schema = req.user.schema || req.user.schema_name || 'tenant_sandbox'; // Fallback for safety
 
     // Trigger sync first - always run since we use schema-based multi-tenancy
-    await syncInboxItems(tenantId);
+    await syncInboxItems(tenantId, schema);
 
     let query = `
       SELECT i.*,
