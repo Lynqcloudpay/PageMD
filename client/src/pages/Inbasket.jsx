@@ -973,7 +973,11 @@ const DaySchedulePreview = ({ date, providerId, selectedTime, duration, onDateCh
 
     // Simple visualization
     // Sort appointments by time
-    const sorted = [...schedule].sort((a, b) => a.appointment_time.localeCompare(b.appointment_time));
+    const sorted = [...schedule].sort((a, b) => {
+        const timeA = a.appointment_time || a.time || '';
+        const timeB = b.appointment_time || b.time || '';
+        return timeA.localeCompare(timeB);
+    });
 
     // Generate timeslots from 8am to 6pm
     const slots = [];
@@ -997,7 +1001,8 @@ const DaySchedulePreview = ({ date, providerId, selectedTime, duration, onDateCh
                     <div className="divide-y divide-slate-100">
                         {slots.map(slot => {
                             // Find appointment in this slot
-                            const appt = sorted.find(a => a.appointment_time.startsWith(slot));
+                            // robust check for appointment_time
+                            const appt = sorted.find(a => (a.appointment_time || a.time || '').startsWith(slot));
                             const isSelected = selectedTime && selectedTime.startsWith(slot);
 
                             return (
