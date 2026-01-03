@@ -960,8 +960,8 @@ const Inbasket = () => {
                         </div>
                     </div>
                 </div>
-                </div>
-        </div >
+            )}
+        </div>
     );
 };
 
