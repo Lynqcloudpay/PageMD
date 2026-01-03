@@ -11,10 +11,11 @@ router.use(authenticate);
 // This ensures we have a unified, real-table representation for everything
 // Schema self-healing state
 async function ensureSchema(client) {
+  const db = client || pool;
   // 1. Try to create extensions (separately, ignored if fails due to permissions)
   try {
-    await client.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
-    await client.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
+    await db.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
+    await db.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
   } catch (e) {
     // Ignore extension creation errors (likely permission issues or already exists)
     // Postgres 13+ has gen_random_uuid() built-in anyway
@@ -24,7 +25,7 @@ async function ensureSchema(client) {
   // 2. Create Tables
   try {
     // Note: We don't start a transaction here because the caller (syncInboxItems) handles it or connection state
-    await client.query(`
+    await db.query(`
             CREATE TABLE IF NOT EXISTS inbox_items (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 tenant_id UUID,
@@ -46,7 +47,7 @@ async function ensureSchema(client) {
             )
         `);
 
-    await client.query(`
+    await db.query(`
             CREATE TABLE IF NOT EXISTS inbox_notes (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 item_id UUID REFERENCES inbox_items(id) ON DELETE CASCADE,
@@ -59,10 +60,25 @@ async function ensureSchema(client) {
         `);
 
     // Indexes
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_inbox_assigned_user ON inbox_items(assigned_user_id) WHERE status != 'completed'`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_inbox_patient ON inbox_items(patient_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_inbox_status ON inbox_items(status)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_inbox_reference ON inbox_items(reference_id)`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_inbox_assigned_user ON inbox_items(assigned_user_id) WHERE status != 'completed'`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_inbox_patient ON inbox_items(patient_id)`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_inbox_status ON inbox_items(status)`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_inbox_reference ON inbox_items(reference_id)`);
+
+    // 3. Self-healing migration for portal_appointment_requests
+    // This ensures that existing schemas get the provider_id column we recently added.
+    try {
+      await db.query(`
+            DO $$ 
+            BEGIN 
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'portal_appointment_requests') THEN
+                    ALTER TABLE portal_appointment_requests ADD COLUMN IF NOT EXISTS provider_id UUID REFERENCES users(id);
+                END IF;
+            END $$;
+        `);
+    } catch (e) {
+      console.warn('Self-healing migration failed (provider_id):', e.message);
+    }
 
   } catch (error) {
     console.error('Error ensuring inbasket schema:', error);

@@ -86,6 +86,7 @@ BEGIN
             reason TEXT,
             status TEXT DEFAULT ''pending'' CHECK (status IN (''pending'', ''approved'', ''denied'', ''cancelled'')),
             staff_notes TEXT,
+            provider_id UUID REFERENCES %I.users(id),
             processed_by UUID REFERENCES %I.users(id),
             processed_at TIMESTAMP,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
