@@ -7,6 +7,9 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
 import PatientHeaderPhoto from './PatientHeaderPhoto';
+import PortalInviteModal from './PortalInviteModal';
+
+// Robust date formatter that ignores timezones completely
 
 // Robust date formatter that ignores timezones completely
 const formatDate = (dateString) => {
@@ -46,6 +49,8 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
     const [isEditing, setIsEditing] = useState(false);
     const [editForm, setEditForm] = useState({});
     const [loading, setLoading] = useState(false);
+    const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    const [inviteData, setInviteData] = useState(null);
 
     // Use passed patient or fetched patient
     const patient = propPatient || fetchedPatient;
@@ -388,14 +393,14 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                 alert('An email address is required to invite a patient to the portal.');
                                 return;
                             }
-                            if (!window.confirm(`Invite ${patient.first_name} to the Patient Portal?`)) return;
 
                             try {
                                 const response = await api.post(`/patients/${patient.id}/portal-invite`, {
                                     email: patient.email
                                 });
                                 if (response.data.success) {
-                                    alert(`Invitation generated!\n\nInvite Link: ${response.data.inviteLink}\n\n(In a production system, this would be emailed to ${patient.email})`);
+                                    setInviteData(response.data);
+                                    setIsInviteModalOpen(true);
                                 }
                             } catch (err) {
                                 alert(err.response?.data?.error || 'Failed to send invitation');
@@ -407,6 +412,13 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                         <Users size={16} />
                         Portal Invite
                     </button>
+
+                    <PortalInviteModal
+                        isOpen={isInviteModalOpen}
+                        onClose={() => setIsInviteModalOpen(false)}
+                        patient={patient}
+                        inviteData={inviteData}
+                    />
                     <button
                         onClick={() => navigate(`/patient/${patient?.id || id}/snapshot?tab=billing`)}
                         className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 shadow-sm transition-all flex items-center gap-2"
