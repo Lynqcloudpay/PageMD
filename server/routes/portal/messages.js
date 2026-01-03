@@ -149,8 +149,8 @@ router.post('/threads/:id', [
         await pool.query('BEGIN');
 
         // 1. Insert message
-        await pool.query(
-            'INSERT INTO portal_messages (thread_id, sender_portal_account_id, sender_id, sender_type, body) VALUES ($1, $2, $3, $4, $5)',
+        const msgResult = await pool.query(
+            'INSERT INTO portal_messages (thread_id, sender_portal_account_id, sender_id, sender_type, body) VALUES ($1, $2, $3, $4, $5) RETURNING *',
             [id, portalAccountId, portalAccountId, 'patient', body]
         );
 
@@ -159,6 +159,50 @@ router.post('/threads/:id', [
             'UPDATE portal_message_threads SET last_message_at = CURRENT_TIMESTAMP, status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
             ['open', id]
         );
+
+        // 3. AUTO-SCHEDULING LOGIC: If body contains [ACCEPTED_SLOT:YYYY-MM-DDTHH:mm]
+        const acceptMatch = body.match(/\[ACCEPTED_SLOT:(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})\]/);
+        if (acceptMatch) {
+            const [_, date, time] = acceptMatch;
+
+            // Find the most recent pending appointment request for this patient
+            const pendingReq = await pool.query(
+                'SELECT * FROM portal_appointment_requests WHERE patient_id = $1 AND status = $2 ORDER BY created_at DESC LIMIT 1',
+                [patientId, 'pending']
+            );
+
+            if (pendingReq.rows.length > 0) {
+                const request = pendingReq.rows[0];
+                const providerId = request.provider_id || (await pool.query('SELECT primary_care_provider FROM patients WHERE id = $1', [patientId])).rows[0]?.primary_care_provider;
+
+                if (providerId) {
+                    // Create the appointment
+                    const apptResult = await pool.query(`
+                        INSERT INTO appointments (patient_id, provider_id, appointment_date, appointment_time, duration, appointment_type, status, notes)
+                        VALUES ($1, $2, $3, $4, $5, $6, 'scheduled', $7)
+                        RETURNING id
+                    `, [patientId, providerId, date, time, 30, request.appointment_type || 'Follow-up', 'Auto-scheduled via portal message acceptance']);
+
+                    // Update the request status
+                    await pool.query(
+                        'UPDATE portal_appointment_requests SET status = $1, processed_at = CURRENT_TIMESTAMP WHERE id = $2',
+                        ['approved', request.id]
+                    );
+
+                    // Mark related In-Basket items as completed
+                    await pool.query(
+                        "UPDATE inbox_items SET status = 'completed', completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE reference_id = $1 AND reference_table = $2",
+                        [request.id, 'portal_appointment_requests']
+                    );
+
+                    // Also mark the portal message thread inbasket item as completed if it exists
+                    await pool.query(
+                        "UPDATE inbox_items SET status = 'completed', completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE reference_id = $1 AND reference_table = $2",
+                        [id, 'portal_message_threads']
+                    );
+                }
+            }
+        }
 
         await pool.query('COMMIT');
 

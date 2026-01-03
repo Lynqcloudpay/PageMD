@@ -253,6 +253,7 @@ async function syncInboxItems(tenantId, schema) {
     `);
 
     // Insert new items for threads that don't have an active item
+    // If it's an Appointment Support thread, mark as portal_appointment to group in sidebar
     await client.query(`
     INSERT INTO inbox_items(
       id, tenant_id, patient_id, type, priority, status,
@@ -260,7 +261,9 @@ async function syncInboxItems(tenantId, schema) {
       assigned_user_id, created_at, updated_at
     )
     SELECT
-      gen_random_uuid(), $1, t.patient_id, 'portal_message', 'normal', 'new',
+      gen_random_uuid(), $1, t.patient_id, 
+      CASE WHEN t.subject ILIKE 'Appointment Support%' THEN 'portal_appointment' ELSE 'portal_message' END,
+      'normal', 'new',
       'Portal: ' || t.subject,
       (SELECT body FROM portal_messages WHERE thread_id = t.id AND sender_portal_account_id IS NOT NULL ORDER BY created_at DESC LIMIT 1),
       t.id, 'portal_message_threads',
