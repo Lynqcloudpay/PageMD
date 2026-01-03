@@ -15,7 +15,8 @@ import { getPatientDisplayName } from '../utils/patientNameUtils';
 const TASK_CATEGORIES = [
     { id: 'results', label: 'Results', icon: FlaskConical, color: 'blue', types: ['lab', 'imaging'] },
     { id: 'messages', label: 'Messages', icon: MessageSquare, color: 'purple', types: ['message'] },
-    { id: 'portal', label: 'Patient Portal', icon: User, color: 'blue', types: ['portal_message', 'portal_appointment'] },
+    { id: 'portal_messages', label: 'Portal Messages', icon: User, color: 'blue', types: ['portal_message'] },
+    { id: 'appointment_requests', label: 'Appt Requests', icon: Calendar, color: 'emerald', types: ['portal_appointment'] },
     { id: 'notes', label: 'Clinical Notes', icon: FileText, color: 'emerald', types: ['note'] },
     { id: 'documents', label: 'Documents', icon: FileText, color: 'orange', types: ['document'] },
     { id: 'referrals', label: 'Referrals', icon: Send, color: 'indigo', types: ['referral'] },
@@ -63,6 +64,15 @@ const Inbasket = () => {
 
     // Assignment Modal
     const [showAssignModal, setShowAssignModal] = useState(false);
+
+    // Appointment Approval Modal
+    const [showApproveModal, setShowApproveModal] = useState(false);
+    const [approvalData, setApprovalData] = useState({
+        providerId: '',
+        appointmentDate: '',
+        appointmentTime: '',
+        duration: 30
+    });
 
     // --- Data Fetching ---
 
@@ -256,6 +266,23 @@ const Inbasket = () => {
             fetchData(true);
         } catch (e) {
             showError('Failed to create item');
+        }
+    };
+
+    const handleApproveAppointment = async () => {
+        if (!approvalData.providerId || !approvalData.appointmentDate || !approvalData.appointmentTime) {
+            showError('Provider, date, and time are required');
+            return;
+        }
+        try {
+            await inboxAPI.approveAppointment(selectedItem.id, approvalData);
+            showSuccess('Appointment scheduled successfully!');
+            setShowApproveModal(false);
+            setApprovalData({ providerId: '', appointmentDate: '', appointmentTime: '', duration: 30 });
+            setSelectedItem(null);
+            fetchData(true);
+        } catch (e) {
+            showError('Failed to approve appointment');
         }
     };
 
@@ -479,13 +506,28 @@ const Inbasket = () => {
                                     </div>
                                 )}
                                 {details?.type === 'portal_appointment' && (
-                                    <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 flex items-center gap-3">
-                                        <Calendar className="w-8 h-8 text-amber-500" />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-amber-900">Appointment Request</p>
-                                            <p className="text-xs text-amber-600">Review preferred dates and schedule</p>
+                                    <div className="bg-amber-50 border border-amber-100 rounded-lg p-4">
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <Calendar className="w-8 h-8 text-amber-500" />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-amber-900">Appointment Request</p>
+                                                <p className="text-xs text-amber-600">Patient prefers {details.body?.split('\n')[0] || 'date/time in notes'}</p>
+                                            </div>
                                         </div>
-                                        <button onClick={() => navigate('/schedule')} className="text-amber-600 text-xs font-bold whitespace-nowrap">Go to Schedule</button>
+                                        <div className="flex gap-2 mt-3">
+                                            <button
+                                                onClick={() => setShowApproveModal(true)}
+                                                className="flex-1 px-3 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 flex items-center justify-center gap-1"
+                                            >
+                                                <CheckCircle className="w-4 h-4" /> Approve & Schedule
+                                            </button>
+                                            <button
+                                                onClick={() => handleAction('complete')}
+                                                className="px-3 py-2 bg-red-100 text-red-600 text-xs font-bold rounded-lg hover:bg-red-200"
+                                            >
+                                                Deny
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
 
@@ -710,6 +752,92 @@ const Inbasket = () => {
                                 className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700"
                             >
                                 Send / Create
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Appointment Approval Modal */}
+            {showApproveModal && selectedItem && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+                        <div className="p-4 border-b border-gray-200 bg-emerald-50">
+                            <h3 className="text-lg font-bold text-emerald-900 flex items-center gap-2">
+                                <Calendar className="w-5 h-5" /> Approve & Schedule Appointment
+                            </h3>
+                            <p className="text-sm text-emerald-600 mt-1">Schedule this patient's appointment request</p>
+                        </div>
+                        <div className="p-4 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Provider</label>
+                                <select
+                                    value={approvalData.providerId}
+                                    onChange={e => setApprovalData({ ...approvalData, providerId: e.target.value })}
+                                    className="w-full border border-gray-300 rounded-lg p-2 text-sm"
+                                >
+                                    <option value="">Select provider...</option>
+                                    {users.filter(u => u.role === 'clinician' || u.role === 'physician').map(u => (
+                                        <option key={u.id} value={u.id}>Dr. {u.last_name}, {u.first_name}</option>
+                                    ))}
+                                    {users.filter(u => u.role !== 'clinician' && u.role !== 'physician').map(u => (
+                                        <option key={u.id} value={u.id}>{u.last_name}, {u.first_name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                                    <input
+                                        type="date"
+                                        value={approvalData.appointmentDate}
+                                        onChange={e => setApprovalData({ ...approvalData, appointmentDate: e.target.value })}
+                                        min={new Date().toISOString().split('T')[0]}
+                                        className="w-full border border-gray-300 rounded-lg p-2 text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                                    <input
+                                        type="time"
+                                        value={approvalData.appointmentTime}
+                                        onChange={e => setApprovalData({ ...approvalData, appointmentTime: e.target.value })}
+                                        className="w-full border border-gray-300 rounded-lg p-2 text-sm"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
+                                <select
+                                    value={approvalData.duration}
+                                    onChange={e => setApprovalData({ ...approvalData, duration: parseInt(e.target.value) })}
+                                    className="w-full border border-gray-300 rounded-lg p-2 text-sm"
+                                >
+                                    <option value={15}>15 minutes</option>
+                                    <option value={30}>30 minutes</option>
+                                    <option value={45}>45 minutes</option>
+                                    <option value={60}>60 minutes</option>
+                                </select>
+                            </div>
+                            {details?.body && (
+                                <div className="bg-amber-50 p-3 rounded-lg border border-amber-100">
+                                    <p className="text-xs font-bold text-amber-600 uppercase mb-1">Patient's Request</p>
+                                    <p className="text-sm text-amber-900 whitespace-pre-wrap">{details.body}</p>
+                                </div>
+                            )}
+                        </div>
+                        <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowApproveModal(false)}
+                                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-100"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleApproveAppointment}
+                                className="px-6 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-emerald-700 flex items-center gap-1"
+                            >
+                                <CheckCircle className="w-4 h-4" /> Schedule Appointment
                             </button>
                         </div>
                     </div>

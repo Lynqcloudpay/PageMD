@@ -520,4 +520,69 @@ router.post('/:id/notes', async (req, res) => {
   }
 });
 
+// POST /:id/approve-appointment - Approve portal appointment request and auto-schedule
+router.post('/:id/approve-appointment', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+    const { providerId, appointmentDate, appointmentTime, duration = 30 } = req.body;
+
+    if (!providerId || !appointmentDate || !appointmentTime) {
+      return res.status(400).json({ error: 'Provider, date, and time are required' });
+    }
+
+    await client.query('BEGIN');
+
+    // 1. Get the inbox item and verify it's a portal_appointment
+    const itemRes = await client.query('SELECT * FROM inbox_items WHERE id = $1', [id]);
+    if (itemRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    const item = itemRes.rows[0];
+    if (item.type !== 'portal_appointment' || item.reference_table !== 'portal_appointment_requests') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Item is not an appointment request' });
+    }
+
+    // 2. Get the portal_appointment_request for patient_id and appointment_type
+    const requestRes = await client.query('SELECT * FROM portal_appointment_requests WHERE id = $1', [item.reference_id]);
+    if (requestRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Appointment request not found' });
+    }
+    const request = requestRes.rows[0];
+
+    // 3. Create the actual appointment
+    await client.query(`
+      INSERT INTO appointments (patient_id, provider_id, appointment_date, appointment_time, duration, appointment_type, status, created_by, notes)
+      VALUES ($1, $2, $3, $4, $5, $6, 'scheduled', $7, $8)
+    `, [request.patient_id, providerId, appointmentDate, appointmentTime, duration, request.appointment_type || 'Follow-up', req.user.id, 'Scheduled from portal request: ' + (request.reason || '')]);
+
+    // 4. Update the portal_appointment_request as approved
+    await client.query(`
+      UPDATE portal_appointment_requests 
+      SET status = 'approved', processed_by = $1, processed_at = CURRENT_TIMESTAMP 
+      WHERE id = $2
+    `, [req.user.id, item.reference_id]);
+
+    // 5. Mark the inbox item as completed
+    await client.query(`
+      UPDATE inbox_items 
+      SET status = 'completed', completed_at = CURRENT_TIMESTAMP, completed_by = $1, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $2
+    `, [req.user.id, id]);
+
+    await client.query('COMMIT');
+    res.json({ success: true, message: 'Appointment scheduled successfully' });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error approving appointment:', error);
+    res.status(500).json({ error: 'Failed to approve appointment' });
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = router;
