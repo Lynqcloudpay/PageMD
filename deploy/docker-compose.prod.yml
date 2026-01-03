@@ -109,6 +109,8 @@ services:
     restart: unless-stopped
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
+    networks:
+      - emr-network
 
   caddy:
     image: caddy:2-alpine

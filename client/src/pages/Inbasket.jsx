@@ -573,7 +573,17 @@ const Inbasket = () => {
                                                     <CheckCircle className="w-4 h-4" /> Approve & Schedule
                                                 </button>
                                                 <button
-                                                    onClick={() => handleAction('complete')}
+                                                    onClick={async () => {
+                                                        try {
+                                                            await api.post(`/inbasket/${selectedItem.id}/deny-appointment`);
+                                                            toast.success('Appointment request denied');
+                                                            fetchItems();
+                                                            setSelectedItem(null);
+                                                        } catch (e) {
+                                                            console.error('Failed to deny:', e);
+                                                            toast.error('Failed to deny request');
+                                                        }
+                                                    }}
                                                     className="px-3 py-2 bg-white border border-red-200 text-red-600 text-xs font-bold rounded-lg hover:bg-red-50"
                                                 >
                                                     Deny
@@ -936,44 +946,31 @@ const Inbasket = () => {
                     </div>
 
                     <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-between gap-3 shrink-0">
-                        <button
-                            onClick={async () => {
-                                setShowApproveModal(false);
-                                let msg = `Hi, unfortunately ${approvalData.appointmentDate || 'the requested date'} is unavailable.`;
-
-                                if (suggestedSlots.length > 0) {
-                                    // Sort slots by date/time
-                                    const sortedSlots = [...suggestedSlots].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-
-                                    msg += `\n\nWe have the following openings available:\n`;
-                                    sortedSlots.forEach(slot => {
-                                        // Format: "Monday, Jan 3 at 9:00 AM"
-                                        const d = new Date(slot.date + 'T' + slot.time);
-                                        // Use machine-readable tag that is hidden-ish but detectable
-                                        msg += `- ${format(d, 'EEEE, MMM d')} at ${format(d, 'h:mm a')} [SUGGEST_SLOT:${slot.date}T${slot.time}]\n`;
-                                    });
-                                    msg += `\nPlease let us know which one works best for you.`;
-                                } else {
-                                    msg += ` Are you available on ...?`;
-                                }
-
-                                // If it's a portal appointment, we can send this reply directly to make sure they get it
-                                if (selectedItem.type === 'portal_appointment' || selectedItem.type === 'portal_message') {
+                        {suggestedSlots.length > 0 ? (
+                            <button
+                                onClick={async () => {
                                     try {
-                                        await handleAction('replyExternal', msg);
+                                        await api.post(`/inbasket/${selectedItem.id}/suggest-slots`, {
+                                            slots: suggestedSlots.map(s => ({ date: s.date, time: s.time }))
+                                        });
+                                        setShowApproveModal(false);
+                                        toast.success('Alternative times sent to patient');
+                                        fetchItems();
                                     } catch (e) {
-                                        console.error('Failed to auto-send reschedule message:', e);
-                                        setReplyText(msg);
+                                        console.error('Failed to suggest slots:', e);
+                                        toast.error('Failed to send suggestions');
                                     }
-                                } else {
-                                    setReplyText(msg);
-                                }
-                            }}
-                            className="px-4 py-2 bg-amber-100 text-amber-700 rounded-lg text-sm font-bold hover:bg-amber-200 border border-amber-200 flex flex-col items-start"
-                        >
-                            <span>Send Modify / Reschedule</span>
-                            {suggestedSlots.length > 0 && <span className="text-[10px] font-normal text-amber-800">{suggestedSlots.length} times selected</span>}
-                        </button>
+                                }}
+                                className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg text-sm font-bold hover:from-amber-600 hover:to-orange-600 shadow-sm flex items-center gap-2"
+                            >
+                                <Clock className="w-4 h-4" />
+                                Send {suggestedSlots.length} Alternative{suggestedSlots.length > 1 ? 's' : ''}
+                            </button>
+                        ) : (
+                            <div className="text-xs text-gray-400 flex items-center">
+                                Click available slots to suggest alternatives
+                            </div>
+                        )}
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setShowApproveModal(false)}

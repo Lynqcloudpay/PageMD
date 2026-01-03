@@ -712,4 +712,97 @@ router.post('/:id/approve-appointment', async (req, res) => {
   }
 });
 
+// POST /:id/deny-appointment - Deny portal appointment request
+router.post('/:id/deny-appointment', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+
+    await client.query('BEGIN');
+
+    // Get the inbox item
+    const itemRes = await client.query('SELECT * FROM inbox_items WHERE id = $1', [id]);
+    if (itemRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    const item = itemRes.rows[0];
+
+    // Update the portal_appointment_request as denied
+    if (item.reference_table === 'portal_appointment_requests') {
+      await client.query(`
+        UPDATE portal_appointment_requests 
+        SET status = 'denied', processed_by = $1, processed_at = CURRENT_TIMESTAMP 
+        WHERE id = $2
+      `, [req.user.id, item.reference_id]);
+    }
+
+    // Mark the inbox item as completed
+    await client.query(`
+      UPDATE inbox_items 
+      SET status = 'completed', completed_at = CURRENT_TIMESTAMP, completed_by = $1, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $2
+    `, [req.user.id, id]);
+
+    await client.query('COMMIT');
+    res.json({ success: true, message: 'Appointment request denied' });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error denying appointment:', error);
+    res.status(500).json({ error: 'Failed to deny appointment' });
+  } finally {
+    client.release();
+  }
+});
+
+// POST /:id/suggest-slots - Send alternative time slots to patient (stored on request, not via messages)
+router.post('/:id/suggest-slots', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+    const { slots } = req.body; // Array of {date, time}
+
+    if (!slots || slots.length === 0) {
+      return res.status(400).json({ error: 'At least one slot is required' });
+    }
+
+    await client.query('BEGIN');
+
+    // Get the inbox item
+    const itemRes = await client.query('SELECT * FROM inbox_items WHERE id = $1', [id]);
+    if (itemRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    const item = itemRes.rows[0];
+
+    // Store suggested slots on the portal_appointment_request
+    if (item.reference_table === 'portal_appointment_requests') {
+      await client.query(`
+        UPDATE portal_appointment_requests 
+        SET suggested_slots = $1, status = 'pending_patient', updated_at = CURRENT_TIMESTAMP 
+        WHERE id = $2
+      `, [JSON.stringify(slots), item.reference_id]);
+    }
+
+    // Mark inbox as read (not completed - waiting for patient response)
+    await client.query(`
+      UPDATE inbox_items 
+      SET status = 'read', updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $1
+    `, [id]);
+
+    await client.query('COMMIT');
+    res.json({ success: true, message: 'Slots sent to patient' });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error suggesting slots:', error);
+    res.status(500).json({ error: 'Failed to suggest slots' });
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = router;

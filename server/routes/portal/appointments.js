@@ -159,4 +159,78 @@ router.get('/availability', async (req, res) => {
     }
 });
 
+/**
+ * Accept a suggested slot and auto-schedule
+ * POST /api/portal/appointments/requests/:id/accept-slot
+ */
+router.post('/requests/:id/accept-slot', requirePortalPermission('can_request_appointments'), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { id } = req.params;
+        const { date, time } = req.body;
+        const portalAccountId = req.portalAccount.id;
+        const patientId = req.portalAccount.patient_id;
+
+        if (!date || !time) {
+            return res.status(400).json({ error: 'Date and time are required' });
+        }
+
+        await client.query('BEGIN');
+
+        // Get the request and verify ownership
+        const requestRes = await client.query(
+            'SELECT * FROM portal_appointment_requests WHERE id = $1 AND portal_account_id = $2',
+            [id, portalAccountId]
+        );
+
+        if (requestRes.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'Request not found' });
+        }
+
+        const request = requestRes.rows[0];
+
+        // Get provider (from request or patient's PCP)
+        let providerId = request.provider_id;
+        if (!providerId) {
+            const patientRes = await client.query('SELECT primary_care_provider FROM patients WHERE id = $1', [patientId]);
+            providerId = patientRes.rows[0]?.primary_care_provider;
+        }
+
+        if (!providerId) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: 'No provider assigned' });
+        }
+
+        // Create the appointment
+        await client.query(`
+            INSERT INTO appointments (patient_id, provider_id, appointment_date, appointment_time, duration, appointment_type, status, notes)
+            VALUES ($1, $2, $3, $4, $5, $6, 'scheduled', $7)
+        `, [patientId, providerId, date, time, 30, request.appointment_type || 'Follow-up', 'Accepted from portal suggestions']);
+
+        // Update request status
+        await client.query(`
+            UPDATE portal_appointment_requests 
+            SET status = 'approved', processed_at = CURRENT_TIMESTAMP, suggested_slots = NULL 
+            WHERE id = $1
+        `, [id]);
+
+        // Mark related inbox items as completed
+        await client.query(`
+            UPDATE inbox_items 
+            SET status = 'completed', completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP 
+            WHERE reference_id = $1 AND reference_table = 'portal_appointment_requests'
+        `, [id]);
+
+        await client.query('COMMIT');
+        res.json({ success: true, message: 'Appointment scheduled!' });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('[Portal Appointments] Error accepting slot:', error);
+        res.status(500).json({ error: 'Failed to accept slot' });
+    } finally {
+        client.release();
+    }
+});
+
 module.exports = router;

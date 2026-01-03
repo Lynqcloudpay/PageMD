@@ -132,7 +132,8 @@ const PortalAppointments = ({ onMessageShortcut }) => {
 
     const scheduled = appointments.filter(a => new Date(`${a.appointment_date} ${a.appointment_time}`) > new Date()).sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date));
     const pending = requests.filter(r => r.status === 'pending');
-    const cancelled = requests.filter(r => r.status === 'cancelled');
+    const withSuggestions = requests.filter(r => r.status === 'pending_patient' && r.suggested_slots);
+    const cancelled = requests.filter(r => r.status === 'cancelled' || r.status === 'denied');
     const past = appointments.filter(a => new Date(`${a.appointment_date} ${a.appointment_time}`) <= new Date());
 
     const nextAppt = scheduled[0];
@@ -190,21 +191,62 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                 </div>
             )}
 
-            {/* ACTION REQUIRED: Suggestions pulsing banner */}
-            {hasSuggestions && (
-                <div className="bg-emerald-600 rounded-2xl p-4 text-white shadow-xl shadow-emerald-100 flex items-center justify-between gap-4 animate-pulse-subtle">
-                    <div className="flex items-center gap-3">
-                        <MessageCircle className="w-4 h-4" />
-                        <div>
-                            <h4 className="font-bold text-xs">New Appointment Suggestions</h4>
-                        </div>
+            {/* ACTION REQUIRED: Suggested Slots from Clinic */}
+            {withSuggestions.length > 0 && (
+                <div className="space-y-3">
+                    <div className="flex items-center gap-2 ml-1">
+                        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-700">Action Required</h3>
                     </div>
-                    <button
-                        onClick={() => onMessageShortcut?.('messages')}
-                        className="px-4 py-1.5 bg-white text-emerald-600 rounded-lg font-black text-[8px] uppercase tracking-widest"
-                    >
-                        Review Options
-                    </button>
+                    {withSuggestions.map(req => {
+                        let slots = [];
+                        try { slots = typeof req.suggested_slots === 'string' ? JSON.parse(req.suggested_slots) : req.suggested_slots; } catch (e) { }
+                        return (
+                            <div key={req.id} className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 rounded-2xl p-5 shadow-sm">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div>
+                                        <h4 className="font-bold text-emerald-900 text-sm">Choose Your Appointment Time</h4>
+                                        <p className="text-[10px] text-emerald-600 font-medium mt-0.5">
+                                            Your requested date wasn't available. Please select one of these options:
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {slots.map((slot, idx) => {
+                                        const d = new Date(`${slot.date}T${slot.time}`);
+                                        return (
+                                            <button
+                                                key={idx}
+                                                onClick={async () => {
+                                                    try {
+                                                        await axios.post(`${apiBase}/portal/appointments/requests/${req.id}/accept-slot`, {
+                                                            date: slot.date,
+                                                            time: slot.time
+                                                        }, { headers });
+                                                        fetchData();
+                                                    } catch (err) {
+                                                        console.error('Failed to accept slot:', err);
+                                                        setError('Failed to accept slot. Please try again.');
+                                                    }
+                                                }}
+                                                className="flex items-center gap-3 p-3 bg-white hover:bg-emerald-600 hover:text-white rounded-xl border border-emerald-100 hover:border-emerald-600 transition-all group"
+                                            >
+                                                <div className="w-10 h-10 bg-emerald-100 group-hover:bg-white/20 rounded-lg flex flex-col items-center justify-center shrink-0">
+                                                    <span className="text-sm font-black text-emerald-700 group-hover:text-white leading-none">{format(d, 'd')}</span>
+                                                    <span className="text-[7px] font-bold text-emerald-500 group-hover:text-white/80 uppercase">{format(d, 'MMM')}</span>
+                                                </div>
+                                                <div className="text-left flex-1">
+                                                    <div className="font-bold text-sm text-emerald-900 group-hover:text-white">{format(d, 'EEEE')}</div>
+                                                    <div className="text-[10px] font-medium text-emerald-600 group-hover:text-white/80">{format(d, 'h:mm a')}</div>
+                                                </div>
+                                                <CheckCircle2 className="w-5 h-5 text-emerald-400 group-hover:text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             )}
 
