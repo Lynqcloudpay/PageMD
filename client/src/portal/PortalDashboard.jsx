@@ -17,7 +17,8 @@ import {
     ClipboardList,
     FlaskConical,
     Menu,
-    X
+    X,
+    Bell
 } from 'lucide-react';
 import PortalMessages from './PortalMessages';
 import PortalAppointments from './PortalAppointments';
@@ -27,6 +28,7 @@ const PortalDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('overview'); // overview, messages, appointments, record
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [activeNotifications, setActiveNotifications] = useState([]);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -56,6 +58,54 @@ const PortalDashboard = () => {
 
         fetchDashboard();
     }, [navigate]);
+
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            try {
+                const token = localStorage.getItem('portalToken');
+                if (!token) return;
+
+                const apiBase = import.meta.env.VITE_API_URL || '/api';
+                const headers = { Authorization: `Bearer ${token}` };
+
+                // Fetch data
+                const [msgsRes, reqsRes] = await Promise.all([
+                    axios.get(`${apiBase}/portal/messages/threads`, { headers }).catch(() => ({ data: [] })),
+                    axios.get(`${apiBase}/portal/appointments/requests`, { headers }).catch(() => ({ data: [] }))
+                ]);
+
+                const newNotifs = [];
+
+                // Check messages
+                const unreadCount = msgsRes.data.reduce((acc, t) => acc + (parseInt(t.unread_count) || 0), 0);
+                if (unreadCount > 0) {
+                    newNotifs.push(`You have ${unreadCount} new message${unreadCount > 1 ? 's' : ''}`);
+                }
+
+                // Check appointment updates (recent updates in last 72h)
+                const threeDaysAgo = new Date();
+                threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
+                const recentUpdates = reqsRes.data.filter(r =>
+                    (r.status === 'confirmed' || r.status === 'denied') &&
+                    new Date(r.updated_at || r.created_at) > threeDaysAgo
+                );
+
+                if (recentUpdates.length > 0) {
+                    newNotifs.push(`${recentUpdates.length} appointment request${recentUpdates.length > 1 ? 's were' : ' was'} updated recently`);
+                }
+
+                setActiveNotifications(newNotifs);
+
+            } catch (err) {
+                console.error('Notification check failed', err);
+            }
+        };
+
+        fetchNotifications();
+        const interval = setInterval(fetchNotifications, 60000); // Poll every minute
+        return () => clearInterval(interval);
+    }, []);
 
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -92,6 +142,9 @@ const PortalDashboard = () => {
             default:
                 return (
                     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                        {/* Notifications */}
+                        <Notifications notifications={activeNotifications} onClick={() => setActiveTab('messages')} />
+
                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                             {/* Patient Info Card */}
                             <div className="xl:col-span-2 bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/60 p-10 border border-slate-50 relative overflow-hidden group">
@@ -346,5 +399,32 @@ const QuickCard = ({ title, icon, status, count, onClick }) => (
         </div>
     </div>
 );
+
+const Notifications = ({ notifications, onClick }) => {
+    if (notifications.length === 0) return null;
+    return (
+        <div
+            onClick={onClick}
+            className="bg-blue-600 text-white p-6 rounded-[2rem] flex items-start sm:items-center gap-5 shadow-xl shadow-blue-200/50 cursor-pointer hover:bg-blue-700 transition-all group"
+        >
+            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center shrink-0 backdrop-blur-sm group-hover:scale-110 transition-transform">
+                <Bell className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1">
+                <h4 className="font-bold text-lg mb-1 tracking-tight">New Activity</h4>
+                <div className="space-y-1">
+                    {notifications.map((n, i) => (
+                        <p key={i} className="text-sm font-medium text-blue-100 leading-snug flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 bg-blue-300 rounded-full" /> {n}
+                        </p>
+                    ))}
+                </div>
+            </div>
+            <div className="hidden sm:block">
+                <ChevronRight className="w-6 h-6 text-white/50 group-hover:text-white transition-colors" />
+            </div>
+        </div>
+    );
+};
 
 export default PortalDashboard;

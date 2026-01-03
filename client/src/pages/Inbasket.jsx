@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
-import { inboxAPI, usersAPI, patientsAPI } from '../services/api';
+import { inboxAPI, usersAPI, patientsAPI, appointmentsAPI } from '../services/api';
 import { showError, showSuccess } from '../utils/toast';
 import { getPatientDisplayName } from '../utils/patientNameUtils';
 
@@ -806,6 +806,22 @@ const Inbasket = () => {
                                     />
                                 </div>
                             </div>
+
+                            {/* Provider Schedule Visualization */}
+                            {approvalData.providerId && approvalData.appointmentDate && (
+                                <div className="mt-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                        <Calendar className="w-3 h-3" /> Schedule for {new Date(approvalData.appointmentDate).toLocaleDateString()}
+                                    </h4>
+                                    <DaySchedulePreview
+                                        date={approvalData.appointmentDate}
+                                        providerId={approvalData.providerId}
+                                        selectedTime={approvalData.appointmentTime}
+                                        duration={approvalData.duration}
+                                    />
+                                </div>
+                            )}
+
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
                                 <select
@@ -840,6 +856,66 @@ const Inbasket = () => {
                                 <CheckCircle className="w-4 h-4" /> Schedule Appointment
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// Helper component for schedule preview
+const DaySchedulePreview = ({ date, providerId, selectedTime, duration }) => {
+    const [schedule, setSchedule] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        const fetchSchedule = async () => {
+            try {
+                setLoading(true);
+                // Fetch appointments for the day
+                const res = await appointmentsAPI.get({
+                    view: 'day',
+                    date: date,
+                    providerId: providerId
+                });
+                setSchedule(res.data || []);
+            } catch (err) {
+                console.error('Failed to fetch schedule', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (date && providerId) {
+            fetchSchedule();
+        }
+    }, [date, providerId]);
+
+    if (loading) return <div className="text-xs text-slate-400 p-2 text-center">Loading schedule...</div>;
+
+    // Simple visualization
+    // Sort appointments by time
+    const sorted = [...schedule].sort((a, b) => a.appointment_time.localeCompare(b.appointment_time));
+
+    return (
+        <div className="space-y-1 max-h-32 overflow-y-auto custom-scrollbar">
+            {sorted.length === 0 ? (
+                <div className="text-xs text-slate-400 italic text-center py-2">No appointments scheduled yet</div>
+            ) : (
+                sorted.map(appt => (
+                    <div key={appt.id} className="flex items-center gap-2 text-xs p-1.5 bg-white border border-slate-100 rounded shadow-sm">
+                        <span className="font-bold text-slate-700 w-16">{appt.appointment_time.slice(0, 5)}</span>
+                        <span className="text-slate-500 truncate flex-1">{appt.patient_name || 'Patient'}</span>
+                        <span className="text-[10px] uppercase tracking-wider text-slate-400 bg-slate-50 px-1 rounded">{appt.appointment_type}</span>
+                    </div>
+                ))
+            )}
+            {/* Show where the new appointment would fit if time selected */}
+            {selectedTime && (
+                <div className="mt-2 pt-2 border-t border-slate-100">
+                    <div className="flex items-center gap-2 text-xs p-1.5 bg-emerald-50 border border-emerald-100 rounded ring-1 ring-emerald-200">
+                        <span className="font-bold text-emerald-700 w-16">{selectedTime}</span>
+                        <span className="text-emerald-600 font-bold italic">New Appointment ({duration}m)</span>
                     </div>
                 </div>
             )}

@@ -19,6 +19,13 @@ const PortalAppointments = () => {
     const [availability, setAvailability] = useState([]);
     const [loadingAvailability, setLoadingAvailability] = useState(false);
 
+    // Missing state variables
+    const [appointments, setAppointments] = useState([]);
+    const [requests, setRequests] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [showRequestForm, setShowRequestForm] = useState(false);
+
     const [formData, setFormData] = useState({
         preferredDate: '',
         preferredTimeRange: 'morning',
@@ -218,8 +225,8 @@ const PortalAppointments = () => {
                                                     disabled={!slot.available}
                                                     onClick={() => setFormData(prev => ({ ...prev, exactTime: prev.exactTime === slot.time ? '' : slot.time }))}
                                                     className={`py-2 px-1 rounded-lg text-[10px] font-bold transition-all border ${!slot.available ? 'bg-slate-50 text-slate-300 border-slate-50 cursor-not-allowed' :
-                                                            formData.exactTime === slot.time ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-200' :
-                                                                'bg-white text-slate-600 border-slate-100 hover:border-blue-300 hover:text-blue-600'
+                                                        formData.exactTime === slot.time ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-200' :
+                                                            'bg-white text-slate-600 border-slate-100 hover:border-blue-300 hover:text-blue-600'
                                                         }`}
                                                 >
                                                     {slot.time}
