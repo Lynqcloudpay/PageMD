@@ -76,6 +76,14 @@ services:
       PORTAL_URL: ${PORTAL_URL:-}
       # Platform Admin
       SUPER_ADMIN_SECRET: ${SUPER_ADMIN_SECRET}
+      # Email System
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@pagemdemr.com}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
     depends_on:
       db:
         condition: service_healthy

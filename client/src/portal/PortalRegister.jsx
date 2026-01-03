@@ -6,6 +6,7 @@ import { showSuccess } from '../utils/toast';
 const PortalRegister = () => {
     const [searchParams] = useSearchParams();
     const token = searchParams.get('token');
+    const clinic = searchParams.get('clinic');
     const [inviteData, setInviteData] = useState(null);
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -24,7 +25,9 @@ const PortalRegister = () => {
 
             try {
                 const apiBase = import.meta.env.VITE_API_URL || '/api';
-                const response = await axios.get(`${apiBase}/portal/auth/invite/${token}`);
+                const response = await axios.get(`${apiBase}/portal/auth/invite/${token}`, {
+                    headers: { 'x-clinic-slug': clinic }
+                });
                 setInviteData(response.data);
             } catch (err) {
                 setError(err.response?.data?.error || 'Invalid or expired invitation.');
@@ -57,6 +60,8 @@ const PortalRegister = () => {
             await axios.post(`${apiBase}/portal/auth/register`, {
                 token,
                 password
+            }, {
+                headers: { 'x-clinic-slug': clinic }
             });
 
             showSuccess('Account created successfully! You can now log in.');

@@ -533,7 +533,7 @@ router.post('/:id/portal-invite', requirePermission('patients:edit_demographics'
 
     // 6. Send invitation email and return link
     const portalUrl = process.env.PORTAL_URL || 'https://pagemdemr.com/portal';
-    const inviteLink = `${portalUrl}/register?token=${token}`;
+    const inviteLink = `${portalUrl}/register?token=${token}&clinic=${req.clinic.slug}`;
 
     try {
       const patientResult = await pool.query('SELECT first_name, last_name FROM patients WHERE id = $1', [id]);

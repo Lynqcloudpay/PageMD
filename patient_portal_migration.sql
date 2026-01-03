@@ -59,6 +59,47 @@ BEGIN
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
+        CREATE TABLE IF NOT EXISTS %I.portal_message_threads (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            patient_id UUID NOT NULL REFERENCES %I.patients(id),
+            subject TEXT NOT NULL,
+            status TEXT DEFAULT ''open'' CHECK (status IN (''open'', ''closed'')),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS %I.portal_messages (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            thread_id UUID NOT NULL REFERENCES %I.portal_message_threads(id),
+            sender_type TEXT NOT NULL CHECK (sender_type IN (''patient'', ''staff'')),
+            sender_id UUID NOT NULL,
+            content TEXT NOT NULL,
+            read_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS %I.portal_appointment_requests (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            patient_id UUID NOT NULL REFERENCES %I.patients(id),
+            preferred_date DATE,
+            preferred_time TEXT,
+            reason TEXT,
+            status TEXT DEFAULT ''pending'' CHECK (status IN (''pending'', ''approved'', ''denied'', ''cancelled'')),
+            staff_notes TEXT,
+            processed_by UUID REFERENCES %I.users(id),
+            processed_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS %I.patient_portal_password_resets (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            email TEXT NOT NULL,
+            token_hash TEXT NOT NULL,
+            expires_at TIMESTAMP NOT NULL,
+            used_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
         CREATE INDEX IF NOT EXISTS idx_portal_accounts_patient_%s ON %I.patient_portal_accounts(patient_id);
         CREATE INDEX IF NOT EXISTS idx_portal_accounts_email_%s ON %I.patient_portal_accounts(email);
         CREATE INDEX IF NOT EXISTS idx_portal_invites_patient_%s ON %I.patient_portal_invites(patient_id);
@@ -68,6 +109,12 @@ BEGIN
     target_schema, target_schema, target_schema, 
     target_schema, target_schema, 
     target_schema, target_schema, target_schema,
+    target_schema, target_schema,
+    target_schema, target_schema,
+    target_schema, target_schema,
+    target_schema, target_schema,
+    target_schema, target_schema,
+    target_schema, target_schema,
     target_schema, target_schema,
     target_schema, target_schema,
     target_schema, target_schema,

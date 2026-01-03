@@ -63,6 +63,41 @@ const resolveTenant = async (req, res, next) => {
         }
     }
 
+    // D. Recognition by Portal Token (for Invitations/Registration)
+    const isPortalInviteVerify = req.path.includes('/portal/auth/invite/');
+    const isPortalRegister = req.path === '/portal/auth/register' || req.path === '/api/portal/auth/register';
+
+    if (!slug && !lookupSchema && (isPortalInviteVerify || isPortalRegister)) {
+        try {
+            const crypto = require('crypto');
+            const token = isPortalInviteVerify
+                ? req.path.split('/').pop()
+                : (req.body ? req.body.token : null);
+
+            if (token) {
+                const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+                // Search across all safe tenant schemas
+                const schemas = await pool.controlPool.query('SELECT schema_name FROM clinics WHERE status = \'active\'');
+                for (const row of schemas.rows) {
+                    const schema = row.schema_name;
+                    // Note: We use pool.query here which usually respects search_path, 
+                    // but here we are OUTSIDE a tenant context, so we MUST use qualified names.
+                    const check = await pool.controlPool.query(
+                        `SELECT 1 FROM ${schema}.patient_portal_invites WHERE token_hash = $1 AND used_at IS NULL AND expires_at > CURRENT_TIMESTAMP`,
+                        [tokenHash]
+                    );
+                    if (check.rows.length > 0) {
+                        lookupSchema = schema;
+                        console.log(`[Tenant] Found portal token in schema: ${schema}`);
+                        break;
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('[Tenant] Portal Token lookup failed:', e);
+        }
+    }
+
     // C. Subdomain / Host Resolution
     if (!slug && !lookupSchema && req.headers.host) {
         const host = req.headers.host;
