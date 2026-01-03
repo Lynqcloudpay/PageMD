@@ -184,14 +184,37 @@ router.get('/staff', async (req, res) => {
         const result = await pool.query(`
             SELECT id, first_name, last_name, role
             FROM users
-            WHERE active = true AND role IN ('clinician', 'nurse')
-            ORDER BY last_name ASC
+            WHERE active = true
+            ORDER BY last_name ASC, first_name ASC
         `);
 
         res.json(result.rows);
     } catch (error) {
         console.error('[Portal Chart] Error fetching staff:', error);
         res.status(500).json({ error: 'Failed to fetch staff list' });
+    }
+});
+
+/**
+ * Get Patient Profile
+ * GET /api/portal/chart/patient-profile
+ */
+router.get('/patient-profile', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT id, first_name, last_name, mrn, dob, sex, primary_care_provider
+            FROM patients
+            WHERE id = $1
+        `, [req.portalAccount.patient_id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Patient not found' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('[Portal Chart] Error fetching patient profile:', error);
+        res.status(500).json({ error: 'Failed to fetch patient profile' });
     }
 });
 

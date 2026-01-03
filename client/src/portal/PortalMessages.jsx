@@ -31,6 +31,7 @@ const PortalMessages = () => {
     useEffect(() => {
         fetchThreads();
         fetchStaff();
+        fetchPatientProfile();
     }, []);
 
     const fetchThreads = async () => {
@@ -52,6 +53,17 @@ const PortalMessages = () => {
             setStaff(response.data);
         } catch (err) {
             console.error('Failed to fetch staff list:', err);
+        }
+    };
+
+    const fetchPatientProfile = async () => {
+        try {
+            const response = await axios.get(`${apiBase}/portal/chart/patient-profile`, { headers });
+            if (response.data.primary_care_provider) {
+                setAssignedUserId(response.data.primary_care_provider);
+            }
+        } catch (err) {
+            console.error('Failed to fetch patient profile:', err);
         }
     };
 

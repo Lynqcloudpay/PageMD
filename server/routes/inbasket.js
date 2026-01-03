@@ -235,9 +235,10 @@ async function syncInboxItems(tenantId) {
       'Portal: ' || t.subject,
       m.body,
       m.id, 'portal_messages',
-      t.assigned_user_id, m.created_at, m.created_at
+      COALESCE(t.assigned_user_id, p.primary_care_provider), m.created_at, m.created_at
     FROM portal_messages m
     JOIN portal_message_threads t ON m.thread_id = t.id
+    LEFT JOIN patients p ON t.patient_id = p.id
     WHERE m.sender_portal_account_id IS NOT NULL
       AND m.read_at IS NULL
       AND NOT EXISTS(
@@ -254,16 +255,17 @@ async function syncInboxItems(tenantId) {
       assigned_user_id, created_at, updated_at
     )
     SELECT
-      gen_random_uuid(), $1, patient_id, 'portal_appointment', 'normal', 'new',
+      gen_random_uuid(), $1, p.id, 'portal_appointment', 'normal', 'new',
       'Portal Appt Req: ' || appointment_type,
       'Preferred Date: ' || preferred_date || ' (' || preferred_time_range || ')\nReason: ' || COALESCE(reason, 'N/A'),
-      id, 'portal_appointment_requests',
-      NULL, created_at, created_at
-    FROM portal_appointment_requests
-    WHERE status = 'pending'
+      ar.id, 'portal_appointment_requests',
+      p.primary_care_provider, ar.created_at, ar.created_at
+    FROM portal_appointment_requests ar
+    JOIN patients p ON ar.patient_id = p.id
+    WHERE ar.status = 'pending'
       AND NOT EXISTS(
         SELECT 1 FROM inbox_items 
-        WHERE reference_id = portal_appointment_requests.id AND reference_table = 'portal_appointment_requests'
+        WHERE reference_id = ar.id AND reference_table = 'portal_appointment_requests'
       )
     `, [tenantId]);
 }
