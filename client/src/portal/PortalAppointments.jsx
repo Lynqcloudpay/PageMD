@@ -132,9 +132,11 @@ const PortalAppointments = ({ onMessageShortcut }) => {
 
     const todayStr = format(new Date(), 'yyyy-MM-dd');
 
-    const scheduled = appointments.filter(a => a.appointment_date >= todayStr && a.status !== 'cancelled').sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date));
-    const past = appointments.filter(a => a.appointment_date < todayStr && a.status !== 'cancelled').sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date));
-    const cancelledAppts = appointments.filter(a => a.status === 'cancelled');
+    const isCancelled = (a) => a.status === 'cancelled' || a.patient_status === 'cancelled' || a.patient_status === 'no_show';
+
+    const scheduled = appointments.filter(a => a.appointment_date >= todayStr && !isCancelled(a)).sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date));
+    const past = appointments.filter(a => a.appointment_date < todayStr && !isCancelled(a)).sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date));
+    const cancelledAppts = appointments.filter(a => isCancelled(a));
 
     const pending = requests.filter(r => r.status === 'pending');
     const withSuggestions = requests.filter(r => r.status === 'pending_patient' && r.suggested_slots);
@@ -286,13 +288,18 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                             <div className="font-bold text-slate-800 text-sm">{format(new Date(appt.appointment_date), 'MMM d, yyyy')}</div>
                                             <div className="text-[10px] font-bold text-slate-400">{appt.appointment_time.slice(0, 5)}</div>
                                         </td>
-                                        <td className="px-5 py-4 font-bold text-slate-600 text-sm">Dr. {appt.provider_last_name}</td>
                                         <td className="px-5 py-4">
-                                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter ${appt.status === 'confirmed' || appt.status === 'scheduled' ? 'bg-emerald-50 text-emerald-600' :
-                                                    appt.status === 'arrived' ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-500'
-                                                }`}>
-                                                {appt.status === 'scheduled' ? 'Confirmed' : appt.status}
-                                            </span>
+                                            {(() => {
+                                                const effectiveStatus = (appt.patient_status === 'cancelled' || appt.patient_status === 'no_show') ? appt.patient_status : appt.status;
+                                                return (
+                                                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter ${effectiveStatus === 'confirmed' || effectiveStatus === 'scheduled' ? 'bg-emerald-50 text-emerald-600' :
+                                                            effectiveStatus === 'arrived' ? 'bg-blue-50 text-blue-600' :
+                                                                (effectiveStatus === 'cancelled' || effectiveStatus === 'no_show') ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-500'
+                                                        }`}>
+                                                        {effectiveStatus === 'scheduled' ? 'Confirmed' : effectiveStatus}
+                                                    </span>
+                                                );
+                                            })()}
                                         </td>
                                         <td className="px-5 py-4 text-right">
                                             <button onClick={() => onMessageShortcut?.('messages')} className="p-2 text-slate-300 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-all">
@@ -399,21 +406,24 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                         </div>
                         <div className="space-y-2">
                             {/* Cancelled Appointments */}
-                            {cancelledAppts.map(appt => (
-                                <div key={appt.id} className="p-4 rounded-2xl border border-transparent bg-slate-50 opacity-60 flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-slate-200 text-slate-400 flex flex-col items-center justify-center shrink-0">
-                                            <span className="text-sm font-black leading-none">{format(new Date(appt.appointment_date), 'dd')}</span>
-                                            <span className="text-[8px] font-bold uppercase">{format(new Date(appt.appointment_date), 'MMM')}</span>
+                            {cancelledAppts.map(appt => {
+                                const isNoShow = appt.patient_status === 'no_show';
+                                return (
+                                    <div key={appt.id} className="p-4 rounded-2xl border border-transparent bg-slate-50 opacity-60 flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-slate-200 text-slate-400 flex flex-col items-center justify-center shrink-0">
+                                                <span className="text-sm font-black leading-none">{format(new Date(appt.appointment_date), 'dd')}</span>
+                                                <span className="text-[8px] font-bold uppercase">{format(new Date(appt.appointment_date), 'MMM')}</span>
+                                            </div>
+                                            <div>
+                                                <h4 className="text-xs font-bold text-slate-800">{format(new Date(appt.appointment_date), 'MMM do')}</h4>
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Visit {isNoShow ? 'No Show' : 'Cancelled'}</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h4 className="text-xs font-bold text-slate-800">{format(new Date(appt.appointment_date), 'MMM do')}</h4>
-                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Visit Cancelled</p>
-                                        </div>
+                                        <span className="text-[8px] font-black uppercase text-slate-400">{isNoShow ? 'No Show' : 'Cancelled'}</span>
                                     </div>
-                                    <span className="text-[8px] font-black uppercase text-slate-400">Cancelled</span>
-                                </div>
-                            ))}
+                                );
+                            })}
 
                             {/* Cancelled Requests */}
                             {cancelledRequests.map(req => (
