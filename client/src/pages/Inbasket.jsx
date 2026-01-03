@@ -903,75 +903,74 @@ const Inbasket = () => {
                                 )}
                             </div>
 
+                            {/* Right Column: Schedule Browser */}
+                            <div className="w-full md:w-[380px] bg-slate-50 border-t md:border-t-0 md:border-l border-slate-200 p-4 flex flex-col overflow-y-auto">
+                                {approvalData.providerId ? (
+                                    <DaySchedulePreview
+                                        date={approvalData.appointmentDate}
+                                        providerId={approvalData.providerId}
+                                        selectedTime={approvalData.appointmentTime}
+                                        duration={approvalData.duration}
+                                        onDateChange={(newDate) => setApprovalData(prev => ({ ...prev, appointmentDate: newDate }))}
+                                        suggestedSlots={suggestedSlots}
+                                        onSlotClick={(slot) => {
+                                            // Toggle slot selection
+                                            setSuggestedSlots(prev => {
+                                                const exists = prev.find(s => s.date === slot.date && s.time === slot.time);
+                                                if (exists) return prev.filter(s => s !== exists);
+                                                return [...prev, slot];
+                                            });
+                                        }}
+                                    />
+                                ) : (
+                                    <div className="flex items-center justify-center h-full text-slate-400 text-sm">
+                                        Select a provider to view schedule
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
-                        {/* Right Column: Schedule Browser */}
-                        <div className="w-full md:w-[450px] bg-slate-50 border-t md:border-t-0 md:border-l border-slate-200 p-4 flex flex-col h-full overflow-hidden">
-                            {approvalData.providerId ? (
-                                <DaySchedulePreview
-                                    date={approvalData.appointmentDate}
-                                    providerId={approvalData.providerId}
-                                    selectedTime={approvalData.appointmentTime}
-                                    duration={approvalData.duration}
-                                    onDateChange={(newDate) => setApprovalData(prev => ({ ...prev, appointmentDate: newDate }))}
-                                    suggestedSlots={suggestedSlots}
-                                    onSlotClick={(slot) => {
-                                        // Toggle slot selection
-                                        setSuggestedSlots(prev => {
-                                            const exists = prev.find(s => s.date === slot.date && s.time === slot.time);
-                                            if (exists) return prev.filter(s => s !== exists);
-                                            return [...prev, slot];
-                                        });
+                        <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-between gap-3 shrink-0">
+                            {suggestedSlots.length > 0 ? (
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            await inboxAPI.suggestSlots(selectedItem.id, {
+                                                slots: suggestedSlots.map(s => ({ date: s.date, time: s.time }))
+                                            });
+                                            setShowApproveModal(false);
+                                            setSuggestedSlots([]);
+                                            showSuccess('Alternative times sent to patient');
+                                            fetchItems();
+                                        } catch (e) {
+                                            console.error('Failed to suggest slots:', e);
+                                            showError('Failed to send suggestions');
+                                        }
                                     }}
-                                />
+                                    className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg text-sm font-bold hover:from-amber-600 hover:to-orange-600 shadow-sm flex items-center gap-2"
+                                >
+                                    <Clock className="w-4 h-4" />
+                                    Send {suggestedSlots.length} Alternative{suggestedSlots.length > 1 ? 's' : ''}
+                                </button>
                             ) : (
-                                <div className="flex items-center justify-center h-full text-slate-400 text-sm">
-                                    Select a provider to view schedule
+                                <div className="text-xs text-gray-400 flex items-center">
+                                    Click available slots to suggest alternatives
                                 </div>
                             )}
-                        </div>
-                    </div>
-
-                    <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-between gap-3 shrink-0">
-                        {suggestedSlots.length > 0 ? (
-                            <button
-                                onClick={async () => {
-                                    try {
-                                        await inboxAPI.suggestSlots(selectedItem.id, {
-                                            slots: suggestedSlots.map(s => ({ date: s.date, time: s.time }))
-                                        });
-                                        setShowApproveModal(false);
-                                        setSuggestedSlots([]);
-                                        showSuccess('Alternative times sent to patient');
-                                        fetchItems();
-                                    } catch (e) {
-                                        console.error('Failed to suggest slots:', e);
-                                        showError('Failed to send suggestions');
-                                    }
-                                }}
-                                className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg text-sm font-bold hover:from-amber-600 hover:to-orange-600 shadow-sm flex items-center gap-2"
-                            >
-                                <Clock className="w-4 h-4" />
-                                Send {suggestedSlots.length} Alternative{suggestedSlots.length > 1 ? 's' : ''}
-                            </button>
-                        ) : (
-                            <div className="text-xs text-gray-400 flex items-center">
-                                Click available slots to suggest alternatives
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowApproveModal(false)}
+                                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-100"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleApproveAppointment}
+                                    className="px-6 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-emerald-700 flex items-center gap-1"
+                                >
+                                    <CheckCircle className="w-4 h-4" /> Schedule
+                                </button>
                             </div>
-                        )}
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setShowApproveModal(false)}
-                                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-100"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleApproveAppointment}
-                                className="px-6 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-emerald-700 flex items-center gap-1"
-                            >
-                                <CheckCircle className="w-4 h-4" /> Schedule
-                            </button>
                         </div>
                     </div>
                 </div>

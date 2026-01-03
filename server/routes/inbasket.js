@@ -782,7 +782,7 @@ router.post('/:id/suggest-slots', async (req, res) => {
     if (item.reference_table === 'portal_appointment_requests') {
       await client.query(`
         UPDATE portal_appointment_requests 
-        SET suggested_slots = $1, status = 'pending_patient', updated_at = CURRENT_TIMESTAMP 
+        SET suggested_slots = $1, status = 'pending_patient'
         WHERE id = $2
       `, [JSON.stringify(slots), item.reference_id]);
     }
