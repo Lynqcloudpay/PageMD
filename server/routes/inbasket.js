@@ -276,12 +276,10 @@ async function syncInboxItems(tenantId) {
 router.get('/', async (req, res) => {
   try {
     const { status = 'new', type, assignedTo } = req.query;
-    const tenantId = req.user.tenantId || req.user.tenant_id; // Handle both cases if needed, assuming tenant is on user
+    const tenantId = req.user.tenantId || req.user.tenant_id || null;
 
-    // Trigger sync first (fire and forget usually, but manageable here)
-    if (tenantId) {
-      await syncInboxItems(tenantId);
-    }
+    // Trigger sync first - always run since we use schema-based multi-tenancy
+    await syncInboxItems(tenantId);
 
     let query = `
       SELECT i.*,
