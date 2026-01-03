@@ -15,17 +15,17 @@ import {
 } from 'lucide-react';
 
 const PortalAppointments = () => {
-    const [appointments, setAppointments] = useState([]);
-    const [requests, setRequests] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [showRequestForm, setShowRequestForm] = useState(false);
+    const [staff, setStaff] = useState([]);
+    const [availability, setAvailability] = useState([]);
+    const [loadingAvailability, setLoadingAvailability] = useState(false);
 
     const [formData, setFormData] = useState({
         preferredDate: '',
         preferredTimeRange: 'morning',
         appointmentType: 'Follow-up',
-        reason: ''
+        reason: '',
+        providerId: '',
+        exactTime: ''
     });
 
     const apiBase = import.meta.env.VITE_API_URL || '/api';
@@ -39,12 +39,14 @@ const PortalAppointments = () => {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [apptsRes, reqsRes] = await Promise.all([
+            const [apptsRes, reqsRes, staffRes] = await Promise.all([
                 axios.get(`${apiBase}/portal/appointments`, { headers }),
-                axios.get(`${apiBase}/portal/appointments/requests`, { headers })
+                axios.get(`${apiBase}/portal/appointments/requests`, { headers }),
+                axios.get(`${apiBase}/portal/chart/staff`, { headers })
             ]);
             setAppointments(apptsRes.data);
             setRequests(reqsRes.data);
+            setStaff(staffRes.data);
             setError(null);
         } catch (err) {
             setError('Failed to load appointment information.');
@@ -53,12 +55,37 @@ const PortalAppointments = () => {
         }
     };
 
+    const fetchAvailability = async () => {
+        if (!formData.preferredDate || !formData.providerId) return;
+        try {
+            setLoadingAvailability(true);
+            const res = await axios.get(`${apiBase}/portal/appointments/availability`, {
+                params: { date: formData.preferredDate, providerId: formData.providerId },
+                headers
+            });
+            setAvailability(res.data);
+        } catch (err) {
+            console.error('Failed to fetch availability');
+        } finally {
+            setLoadingAvailability(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchAvailability();
+    }, [formData.preferredDate, formData.providerId]);
+
     const handleRequestSubmit = async (e) => {
         e.preventDefault();
         try {
-            await axios.post(`${apiBase}/portal/appointments/requests`, formData, { headers });
+            // Include exactTime in preferredTimeRange if selected
+            const submissionData = {
+                ...formData,
+                preferredTimeRange: formData.exactTime ? `At ${formData.exactTime}` : formData.preferredTimeRange
+            };
+            await axios.post(`${apiBase}/portal/appointments/requests`, submissionData, { headers });
             setShowRequestForm(false);
-            setFormData({ preferredDate: '', preferredTimeRange: 'morning', appointmentType: 'Follow-up', reason: '' });
+            setFormData({ preferredDate: '', preferredTimeRange: 'morning', appointmentType: 'Follow-up', reason: '', providerId: '', exactTime: '' });
             fetchData();
         } catch (err) {
             setError('Failed to submit appointment request.');
@@ -129,6 +156,23 @@ const PortalAppointments = () => {
                         </div>
 
                         <form onSubmit={handleRequestSubmit} className="space-y-5">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Preferred Provider</label>
+                                <select
+                                    required
+                                    value={formData.providerId}
+                                    onChange={(e) => setFormData({ ...formData, providerId: e.target.value })}
+                                    className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 outline-none transition-all font-bold text-sm text-slate-800 appearance-none"
+                                >
+                                    <option value="">Choose a clinician...</option>
+                                    {staff.map(s => (
+                                        <option key={s.id} value={s.id}>
+                                            {s.role === 'clinician' ? 'Dr.' : ''} {s.last_name}, {s.first_name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Preferred Date</label>
@@ -142,11 +186,12 @@ const PortalAppointments = () => {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Time Window</label>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Window/Slot</label>
                                     <select
                                         value={formData.preferredTimeRange}
+                                        disabled={!!formData.exactTime}
                                         onChange={(e) => setFormData({ ...formData, preferredTimeRange: e.target.value })}
-                                        className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 outline-none transition-all font-bold text-sm text-slate-800 appearance-none"
+                                        className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 outline-none transition-all font-bold text-sm text-slate-800 appearance-none disabled:opacity-50"
                                     >
                                         <option value="morning">Morning (8am - 12pm)</option>
                                         <option value="afternoon">Afternoon (1pm - 5pm)</option>
@@ -154,6 +199,41 @@ const PortalAppointments = () => {
                                     </select>
                                 </div>
                             </div>
+
+                            {/* Availability Calendar (Slots) */}
+                            {formData.providerId && formData.preferredDate && (
+                                <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Available Slots</label>
+                                        {loadingAvailability && <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />}
+                                    </div>
+                                    <div className="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1 custom-scrollbar">
+                                        {availability.length === 0 && !loadingAvailability ? (
+                                            <p className="col-span-4 text-center py-4 text-slate-400 text-[10px] font-bold uppercase tracking-widest bg-slate-50 rounded-xl border border-dashed border-slate-200">No slots available</p>
+                                        ) : (
+                                            availability.map(slot => (
+                                                <button
+                                                    key={slot.time}
+                                                    type="button"
+                                                    disabled={!slot.available}
+                                                    onClick={() => setFormData(prev => ({ ...prev, exactTime: prev.exactTime === slot.time ? '' : slot.time }))}
+                                                    className={`py-2 px-1 rounded-lg text-[10px] font-bold transition-all border ${!slot.available ? 'bg-slate-50 text-slate-300 border-slate-50 cursor-not-allowed' :
+                                                            formData.exactTime === slot.time ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-200' :
+                                                                'bg-white text-slate-600 border-slate-100 hover:border-blue-300 hover:text-blue-600'
+                                                        }`}
+                                                >
+                                                    {slot.time}
+                                                </button>
+                                            ))
+                                        )}
+                                    </div>
+                                    {formData.exactTime && (
+                                        <p className="text-[10px] font-bold text-blue-600 flex items-center gap-1 bg-blue-50/50 p-2 rounded-lg border border-blue-100/50">
+                                            <CheckCircle2 size={12} /> Specific slot selected: {formData.exactTime}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
 
                             <div className="space-y-2">
                                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Visit Type</label>

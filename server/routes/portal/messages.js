@@ -107,8 +107,8 @@ router.post('/threads', [
 
         // 2. Create message
         await client.query(
-            'INSERT INTO portal_messages (thread_id, sender_portal_account_id, body) VALUES ($1, $2, $3)',
-            [threadId, portalAccountId, body]
+            'INSERT INTO portal_messages (thread_id, sender_portal_account_id, sender_id, sender_type, body) VALUES ($1, $2, $3, $4, $5)',
+            [threadId, portalAccountId, portalAccountId, 'patient', body]
         );
 
         await client.query('COMMIT');
@@ -150,8 +150,8 @@ router.post('/threads/:id', [
 
         // 1. Insert message
         await pool.query(
-            'INSERT INTO portal_messages (thread_id, sender_portal_account_id, body) VALUES ($1, $2, $3)',
-            [id, portalAccountId, body]
+            'INSERT INTO portal_messages (thread_id, sender_portal_account_id, sender_id, sender_type, body) VALUES ($1, $2, $3, $4, $5)',
+            [id, portalAccountId, portalAccountId, 'patient', body]
         );
 
         // 2. Update thread last_message_at and status if needed (e.g. reopen)

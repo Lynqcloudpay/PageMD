@@ -494,8 +494,8 @@ router.post('/:id/notes', async (req, res) => {
         const threadId = msgRes.rows[0].thread_id;
 
         await client.query(`
-          INSERT INTO portal_messages (thread_id, sender_user_id, sender_type, body)
-          VALUES ($1, $2, 'staff', $3)
+          INSERT INTO portal_messages (thread_id, sender_user_id, sender_id, sender_type, body)
+          VALUES ($1, $2, $2, 'staff', $3)
         `, [threadId, req.user.id, note]);
 
         await client.query(`
