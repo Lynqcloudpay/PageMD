@@ -301,6 +301,41 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                     </div>
                 </div>
 
+                {/* PAST VISITS - TABLE VIEW */}
+                <div className="space-y-3 pt-4">
+                    <SectionLabel icon={<History size={14} className="text-slate-400" />} title="Past Visits" count={past.length} />
+                    <div className="bg-slate-50/50 rounded-2xl border border-slate-100 overflow-hidden shadow-sm opacity-80 hover:opacity-100 transition-opacity">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-slate-50">
+                                    <th className="px-5 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Date & Time</th>
+                                    <th className="px-5 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Clinician</th>
+                                    <th className="px-5 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Status</th>
+                                    <th className="px-5 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100"></th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {past.map(appt => (
+                                    <tr key={appt.id} className="hover:bg-slate-100/50 transition-colors">
+                                        <td className="px-5 py-4">
+                                            <div className="font-bold text-slate-500 text-sm">{format(new Date(appt.appointment_date), 'MMM d, yyyy')}</div>
+                                            <div className="text-[10px] font-bold text-slate-300">{appt.appointment_time.slice(0, 5)}</div>
+                                        </td>
+                                        <td className="px-5 py-4 font-bold text-slate-500 text-sm">Dr. {appt.provider_last_name}</td>
+                                        <td className="px-5 py-4">
+                                            <span className="px-2 py-0.5 bg-slate-200 text-slate-500 rounded text-[8px] font-black uppercase tracking-tighter">Completed</span>
+                                        </td>
+                                        <td className="px-5 py-4 text-right"></td>
+                                    </tr>
+                                ))}
+                                {past.length === 0 && (
+                                    <tr><td colSpan="4" className="px-5 py-8 text-center text-xs text-slate-400 font-bold uppercase tracking-widest">No past visits</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 {/* PENDING / CANCELLED GRID */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-3">
