@@ -145,8 +145,8 @@ const PortalAppointments = () => {
 
             {/* Request Form Modal */}
             {showRequestForm && (
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[70] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-lg w-full p-8 animate-in zoom-in duration-300 relative">
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[70] flex items-center justify-center p-4" onClick={() => setShowRequestForm(false)}>
+                    <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-lg w-full p-8 animate-in zoom-in duration-300 relative max-h-[90vh] overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}>
                         <button
                             onClick={() => setShowRequestForm(false)}
                             className="absolute top-6 right-6 w-9 h-9 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-800 transition-colors"
