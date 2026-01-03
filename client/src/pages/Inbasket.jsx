@@ -97,6 +97,13 @@ const Inbasket = () => {
             const timeMatch = body.match(/\(At (\d{2}:\d{2})\)/);
             if (timeMatch) time = timeMatch[1];
 
+            // NEW: Detect [ACCEPTED_SLOT:YYYY-MM-DDTHH:mm]
+            const acceptedMatch = body.match(/\[ACCEPTED_SLOT:(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})\]/);
+            if (acceptedMatch) {
+                date = acceptedMatch[1];
+                time = acceptedMatch[2];
+            }
+
             setApprovalData(prev => ({
                 ...prev,
                 providerId: providerId || prev.providerId,

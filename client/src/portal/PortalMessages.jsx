@@ -280,7 +280,35 @@ const PortalMessages = () => {
                                         <div className={`max-w-[85%] lg:max-w-[75%] p-4 px-5 rounded-[1.8rem] shadow-sm text-sm ${msg.sender_portal_account_id
                                             ? 'bg-blue-600 text-white rounded-tr-none'
                                             : 'bg-white border border-slate-100 text-slate-800 rounded-tl-none shadow-slate-200/50'}`}>
-                                            <p className="font-medium leading-relaxed">{msg.body}</p>
+                                            <div className="font-medium leading-relaxed">
+                                                {msg.body.split('\n').map((line, i) => {
+                                                    const suggestMatch = line.match(/\[SUGGEST_SLOT:(.+?)T(.+?)\]/);
+                                                    if (suggestMatch) {
+                                                        const [_, date, time] = suggestMatch;
+                                                        const cleanLine = line.replace(/\[SUGGEST_SLOT:.+?\]/, '').trim();
+                                                        return (
+                                                            <div key={i} className="my-2 p-3 bg-blue-50/50 border border-blue-100 rounded-xl flex items-center justify-between gap-4">
+                                                                <span className="text-blue-800 font-bold">{cleanLine}</span>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        const confirmText = `I accept the appointment on ${date} at ${time}. [ACCEPTED_SLOT:${date}T${time}]`;
+                                                                        axios.post(`${apiBase}/portal/messages/threads/${selectedThread.id}`,
+                                                                            { body: confirmText },
+                                                                            { headers }
+                                                                        ).then(() => {
+                                                                            fetchThreadMessages(selectedThread.id);
+                                                                        });
+                                                                    }}
+                                                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center gap-1 shrink-0"
+                                                                >
+                                                                    Select This Slot
+                                                                </button>
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return <p key={i}>{line}</p>;
+                                                })}
+                                            </div>
                                         </div>
                                         {msg.read_at && msg.sender_portal_account_id && (
                                             <div className="flex items-center gap-1 mt-1 px-2 text-[8px] font-bold text-blue-400 uppercase tracking-widest">

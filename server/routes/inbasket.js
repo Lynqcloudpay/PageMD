@@ -297,7 +297,7 @@ async function syncInboxItems(tenantId, schema) {
       'Portal Appt Req: ' || appointment_type,
       'Preferred Date: ' || preferred_date || ' (' || preferred_time_range || ')\nReason: ' || COALESCE(reason, 'N/A'),
       ar.id, 'portal_appointment_requests',
-      p.primary_care_provider, ar.created_at, ar.created_at
+      COALESCE(ar.provider_id, p.primary_care_provider), ar.created_at, ar.created_at
     FROM portal_appointment_requests ar
     JOIN patients p ON ar.patient_id = p.id
     WHERE ar.status = 'pending'
