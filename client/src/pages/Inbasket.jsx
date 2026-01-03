@@ -3,7 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Inbox, CheckCircle, Clock, AlertTriangle, MessageSquare, FileText,
     Pill, FlaskConical, Image, Send, RefreshCw, Filter, Search,
-    ChevronRight, X, Plus as PlusIcon, Bell, User, Calendar, Phone, Paperclip
+    ChevronRight, X, Plus, Bell, User, Calendar, Phone, Paperclip,
+    ArrowRight, Check, ArrowLeft, ChevronLeft
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
@@ -73,6 +74,35 @@ const Inbasket = () => {
         appointmentTime: '',
         duration: 30
     });
+
+    // Autofill approval data when modal opens
+    useEffect(() => {
+        if (showApproveModal && selectedItem) {
+            // Default provider to assigned user or first available
+            let providerId = selectedItem.assigned_user_id || '';
+
+            // Attempt to parse Date and Time from body
+            // Format: "Preferred Date: 2026-01-03 (At 10:00)"
+            let date = '';
+            let time = '';
+
+            // Try explicit parsing if body matches expected format
+            const body = selectedItem.body || '';
+            const dateMatch = body.match(/Preferred Date: (\d{4}-\d{2}-\d{2})/);
+            if (dateMatch) date = dateMatch[1];
+
+            const timeMatch = body.match(/\(At (\d{2}:\d{2})\)/);
+            if (timeMatch) time = timeMatch[1];
+
+            setApprovalData(prev => ({
+                ...prev,
+                providerId: providerId || prev.providerId,
+                appointmentDate: date || prev.appointmentDate,
+                appointmentTime: time || prev.appointmentTime,
+                duration: 30
+            }));
+        }
+    }, [showApproveModal, selectedItem]);
 
     // --- Data Fetching ---
 
@@ -312,7 +342,7 @@ const Inbasket = () => {
                         onClick={() => setShowCompose(true)}
                         className="w-full mb-4 py-2 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg flex items-center justify-center gap-2 font-bold shadow-sm hover:shadow-md transition-all active:scale-95"
                     >
-                        <PlusIcon className="w-5 h-5" /> Compose New
+                        <Plus className="w-5 h-5" /> Compose New
                     </button>
 
                     <div className="flex gap-2 text-xs">
@@ -549,8 +579,8 @@ const Inbasket = () => {
                                                                 <span className="text-xs text-gray-400">{format(new Date(note.created_at), 'MMM d, h:mm a')}</span>
                                                             </div>
                                                             <div className={`px-4 py-2 rounded-2xl text-sm whitespace-pre-wrap ${isPatient
-                                                                    ? 'bg-emerald-600 text-white rounded-tr-none'
-                                                                    : 'bg-white border border-gray-200 text-gray-700 rounded-tl-none shadow-sm'
+                                                                ? 'bg-emerald-600 text-white rounded-tr-none'
+                                                                : 'bg-white border border-gray-200 text-gray-700 rounded-tl-none shadow-sm'
                                                                 }`}>
                                                                 {note.note}
                                                             </div>
@@ -781,100 +811,122 @@ const Inbasket = () => {
             {/* Appointment Approval Modal */}
             {showApproveModal && selectedItem && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
-                        <div className="p-4 border-b border-gray-200 bg-emerald-50">
-                            <h3 className="text-lg font-bold text-emerald-900 flex items-center gap-2">
-                                <Calendar className="w-5 h-5" /> Approve & Schedule Appointment
-                            </h3>
-                            <p className="text-sm text-emerald-600 mt-1">Schedule this patient's appointment request</p>
-                        </div>
-                        <div className="p-4 space-y-4">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="p-4 border-b border-gray-200 bg-emerald-50 flex justify-between items-center shrink-0">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Provider</label>
-                                <select
-                                    value={approvalData.providerId}
-                                    onChange={e => setApprovalData({ ...approvalData, providerId: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg p-2 text-sm"
-                                >
-                                    <option value="">Select provider...</option>
-                                    {users.filter(u => u.role === 'clinician' || u.role === 'physician').map(u => (
-                                        <option key={u.id} value={u.id}>Dr. {u.last_name}, {u.first_name}</option>
-                                    ))}
-                                    {users.filter(u => u.role !== 'clinician' && u.role !== 'physician').map(u => (
-                                        <option key={u.id} value={u.id}>{u.last_name}, {u.first_name}</option>
-                                    ))}
-                                </select>
+                                <h3 className="text-lg font-bold text-emerald-900 flex items-center gap-2">
+                                    <Calendar className="w-5 h-5" /> Approve & Schedule Appointment
+                                </h3>
+                                <p className="text-sm text-emerald-600 mt-1">Schedule this patient's appointment request</p>
                             </div>
-                            <div className="grid grid-cols-2 gap-3">
+                            <button onClick={() => setShowApproveModal(false)} className="text-emerald-800 hover:bg-emerald-100 p-1 rounded-full"><X className="w-5 h-5" /></button>
+                        </div>
+
+                        <div className="flex flex-col md:flex-row h-full overflow-hidden">
+                            {/* Left Column: Form */}
+                            <div className="p-6 space-y-5 flex-1 overflow-y-auto">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                                    <input
-                                        type="date"
-                                        value={approvalData.appointmentDate}
-                                        onChange={e => setApprovalData({ ...approvalData, appointmentDate: e.target.value })}
-                                        min={new Date().toISOString().split('T')[0]}
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Provider</label>
+                                    <select
+                                        value={approvalData.providerId}
+                                        onChange={e => setApprovalData({ ...approvalData, providerId: e.target.value })}
                                         className="w-full border border-gray-300 rounded-lg p-2 text-sm"
-                                    />
+                                    >
+                                        <option value="">Select provider...</option>
+                                        {users.filter(u => u.role === 'clinician' || u.role === 'physician').map(u => (
+                                            <option key={u.id} value={u.id}>Dr. {u.last_name}, {u.first_name}</option>
+                                        ))}
+                                        {users.filter(u => u.role !== 'clinician' && u.role !== 'physician').map(u => (
+                                            <option key={u.id} value={u.id}>{u.last_name}, {u.first_name}</option>
+                                        ))}
+                                    </select>
                                 </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                                        <input
+                                            type="date"
+                                            value={approvalData.appointmentDate}
+                                            onChange={e => setApprovalData({ ...approvalData, appointmentDate: e.target.value })}
+                                            min={new Date().toISOString().split('T')[0]}
+                                            className="w-full border border-gray-300 rounded-lg p-2 text-sm"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                                        <input
+                                            type="time"
+                                            value={approvalData.appointmentTime}
+                                            onChange={e => setApprovalData({ ...approvalData, appointmentTime: e.target.value })}
+                                            className="w-full border border-gray-300 rounded-lg p-2 text-sm"
+                                        />
+                                    </div>
+                                </div>
+
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
-                                    <input
-                                        type="time"
-                                        value={approvalData.appointmentTime}
-                                        onChange={e => setApprovalData({ ...approvalData, appointmentTime: e.target.value })}
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
+                                    <select
+                                        value={approvalData.duration}
+                                        onChange={e => setApprovalData({ ...approvalData, duration: parseInt(e.target.value) })}
                                         className="w-full border border-gray-300 rounded-lg p-2 text-sm"
-                                    />
+                                    >
+                                        <option value={15}>15 minutes</option>
+                                        <option value={30}>30 minutes</option>
+                                        <option value={45}>45 minutes</option>
+                                        <option value={60}>60 minutes</option>
+                                    </select>
                                 </div>
+                                {details?.body && (
+                                    <div className="bg-amber-50 p-3 rounded-lg border border-amber-100">
+                                        <p className="text-xs font-bold text-amber-600 uppercase mb-1">Patient's Request</p>
+                                        <p className="text-sm text-amber-900 whitespace-pre-wrap">{details.body}</p>
+                                    </div>
+                                )}
                             </div>
 
-                            {/* Provider Schedule Visualization */}
-                            {approvalData.providerId && approvalData.appointmentDate && (
-                                <div className="mt-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
-                                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
-                                        <Calendar className="w-3 h-3" /> Schedule for {new Date(approvalData.appointmentDate).toLocaleDateString()}
-                                    </h4>
+                            {/* Right Column: Schedule Browser */}
+                            <div className="w-full md:w-[450px] bg-slate-50 border-t md:border-t-0 md:border-l border-slate-200 p-4 flex flex-col h-full overflow-hidden">
+                                {approvalData.providerId ? (
                                     <DaySchedulePreview
                                         date={approvalData.appointmentDate}
                                         providerId={approvalData.providerId}
                                         selectedTime={approvalData.appointmentTime}
                                         duration={approvalData.duration}
+                                        onDateChange={(newDate) => setApprovalData(prev => ({ ...prev, appointmentDate: newDate }))}
                                     />
-                                </div>
-                            )}
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
-                                <select
-                                    value={approvalData.duration}
-                                    onChange={e => setApprovalData({ ...approvalData, duration: parseInt(e.target.value) })}
-                                    className="w-full border border-gray-300 rounded-lg p-2 text-sm"
-                                >
-                                    <option value={15}>15 minutes</option>
-                                    <option value={30}>30 minutes</option>
-                                    <option value={45}>45 minutes</option>
-                                    <option value={60}>60 minutes</option>
-                                </select>
+                                ) : (
+                                    <div className="flex items-center justify-center h-full text-slate-400 text-sm">
+                                        Select a provider to view schedule
+                                    </div>
+                                )}
                             </div>
-                            {details?.body && (
-                                <div className="bg-amber-50 p-3 rounded-lg border border-amber-100">
-                                    <p className="text-xs font-bold text-amber-600 uppercase mb-1">Patient's Request</p>
-                                    <p className="text-sm text-amber-900 whitespace-pre-wrap">{details.body}</p>
-                                </div>
-                            )}
                         </div>
-                        <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+
+                        <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-between gap-3 shrink-0">
                             <button
-                                onClick={() => setShowApproveModal(false)}
-                                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-100"
+                                onClick={() => {
+                                    setShowApproveModal(false);
+                                    setReplyText(`Hi, I'd like to schedule you, but ${approvalData.appointmentDate || 'the requested date'} is unavailable. Are you available on ...?`);
+                                    // ideally focus the reply box
+                                }}
+                                className="px-4 py-2 bg-amber-100 text-amber-700 rounded-lg text-sm font-bold hover:bg-amber-200 border border-amber-200"
                             >
-                                Cancel
+                                Modify / Reschedule
                             </button>
-                            <button
-                                onClick={handleApproveAppointment}
-                                className="px-6 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-emerald-700 flex items-center gap-1"
-                            >
-                                <CheckCircle className="w-4 h-4" /> Schedule Appointment
-                            </button>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowApproveModal(false)}
+                                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-100"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleApproveAppointment}
+                                    className="px-6 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-emerald-700 flex items-center gap-1"
+                                >
+                                    <CheckCircle className="w-4 h-4" /> Schedule
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -884,12 +936,22 @@ const Inbasket = () => {
 };
 
 // Helper component for schedule preview
-const DaySchedulePreview = ({ date, providerId, selectedTime, duration }) => {
+const DaySchedulePreview = ({ date, providerId, selectedTime, duration, onDateChange }) => {
     const [schedule, setSchedule] = React.useState([]);
     const [loading, setLoading] = React.useState(true);
 
+    const currentDate = date ? new Date(date) : new Date();
+
+    const changeDay = (days) => {
+        const newDate = new Date(currentDate);
+        newDate.setDate(newDate.getDate() + days);
+        const dateStr = newDate.toISOString().split('T')[0];
+        if (onDateChange) onDateChange(dateStr);
+    };
+
     React.useEffect(() => {
         const fetchSchedule = async () => {
+            if (!date || !providerId) return;
             try {
                 setLoading(true);
                 // Fetch appointments for the day
@@ -906,39 +968,59 @@ const DaySchedulePreview = ({ date, providerId, selectedTime, duration }) => {
             }
         };
 
-        if (date && providerId) {
-            fetchSchedule();
-        }
+        fetchSchedule();
     }, [date, providerId]);
-
-    if (loading) return <div className="text-xs text-slate-400 p-2 text-center">Loading schedule...</div>;
 
     // Simple visualization
     // Sort appointments by time
     const sorted = [...schedule].sort((a, b) => a.appointment_time.localeCompare(b.appointment_time));
 
+    // Generate timeslots from 8am to 6pm
+    const slots = [];
+    for (let i = 8; i <= 17; i++) {
+        slots.push(`${i.toString().padStart(2, '0')}:00`);
+        slots.push(`${i.toString().padStart(2, '0')}:30`);
+    }
+
     return (
-        <div className="space-y-1 max-h-32 overflow-y-auto custom-scrollbar">
-            {sorted.length === 0 ? (
-                <div className="text-xs text-slate-400 italic text-center py-2">No appointments scheduled yet</div>
-            ) : (
-                sorted.map(appt => (
-                    <div key={appt.id} className="flex items-center gap-2 text-xs p-1.5 bg-white border border-slate-100 rounded shadow-sm">
-                        <span className="font-bold text-slate-700 w-16">{appt.appointment_time.slice(0, 5)}</span>
-                        <span className="text-slate-500 truncate flex-1">{appt.patient_name || 'Patient'}</span>
-                        <span className="text-[10px] uppercase tracking-wider text-slate-400 bg-slate-50 px-1 rounded">{appt.appointment_type}</span>
+        <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between mb-3 bg-white p-2 rounded border border-slate-200 shadow-sm">
+                <button onClick={() => changeDay(-1)} className="p-1 hover:bg-slate-100 rounded"><ChevronLeft className="w-4 h-4" /></button>
+                <span className="font-bold text-sm">{format(currentDate, 'EEEE, MMM d, yyyy')}</span>
+                <button onClick={() => changeDay(1)} className="p-1 hover:bg-slate-100 rounded"><ChevronRight className="w-4 h-4" /></button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto custom-scrollbar bg-white rounded-lg border border-slate-200">
+                {loading ? (
+                    <div className="text-xs text-slate-400 p-8 text-center flex items-center justify-center h-full">Loading schedule...</div>
+                ) : (
+                    <div className="divide-y divide-slate-100">
+                        {slots.map(slot => {
+                            // Find appointment in this slot
+                            const appt = sorted.find(a => a.appointment_time.startsWith(slot));
+                            const isSelected = selectedTime && selectedTime.startsWith(slot);
+
+                            return (
+                                <div key={slot} className={`flex items-start text-xs p-2 min-h-[40px] ${isSelected ? 'bg-emerald-50' : 'hover:bg-slate-50'}`}>
+                                    <span className="font-medium text-slate-400 w-14 shrink-0">{slot}</span>
+                                    <div className="flex-1">
+                                        {appt ? (
+                                            <div className="bg-blue-100 text-blue-700 px-2 py-1 rounded w-full truncate border border-blue-200">
+                                                {appt.patient_name || 'Booked'} ({appt.duration}m)
+                                            </div>
+                                        ) : (
+                                            <span className="text-slate-300 italic">Available</span>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
-                ))
-            )}
-            {/* Show where the new appointment would fit if time selected */}
-            {selectedTime && (
-                <div className="mt-2 pt-2 border-t border-slate-100">
-                    <div className="flex items-center gap-2 text-xs p-1.5 bg-emerald-50 border border-emerald-100 rounded ring-1 ring-emerald-200">
-                        <span className="font-bold text-emerald-700 w-16">{selectedTime}</span>
-                        <span className="text-emerald-600 font-bold italic">New Appointment ({duration}m)</span>
-                    </div>
-                </div>
-            )}
+                )}
+            </div>
+            <div className="mt-2 text-xs text-slate-400 text-center">
+                Reviewing provider availability
+            </div>
         </div>
     );
 };
