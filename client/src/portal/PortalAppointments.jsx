@@ -130,11 +130,15 @@ const PortalAppointments = ({ onMessageShortcut }) => {
         </div>
     );
 
-    const scheduled = appointments.filter(a => new Date(`${a.appointment_date} ${a.appointment_time}`) > new Date()).sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date));
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+
+    const scheduled = appointments.filter(a => a.appointment_date >= todayStr && a.status !== 'cancelled').sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date));
+    const past = appointments.filter(a => a.appointment_date < todayStr && a.status !== 'cancelled').sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date));
+    const cancelledAppts = appointments.filter(a => a.status === 'cancelled');
+
     const pending = requests.filter(r => r.status === 'pending');
     const withSuggestions = requests.filter(r => r.status === 'pending_patient' && r.suggested_slots);
-    const cancelled = requests.filter(r => r.status === 'cancelled' || r.status === 'denied');
-    const past = appointments.filter(a => new Date(`${a.appointment_date} ${a.appointment_time}`) <= new Date());
+    const cancelledRequests = requests.filter(r => r.status === 'cancelled' || r.status === 'denied');
 
     const nextAppt = scheduled[0];
 
@@ -284,7 +288,11 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                         </td>
                                         <td className="px-5 py-4 font-bold text-slate-600 text-sm">Dr. {appt.provider_last_name}</td>
                                         <td className="px-5 py-4">
-                                            <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[8px] font-black uppercase tracking-tighter">Confirmed</span>
+                                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter ${appt.status === 'confirmed' || appt.status === 'scheduled' ? 'bg-emerald-50 text-emerald-600' :
+                                                    appt.status === 'arrived' ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-500'
+                                                }`}>
+                                                {appt.status === 'scheduled' ? 'Confirmed' : appt.status}
+                                            </span>
                                         </td>
                                         <td className="px-5 py-4 text-right">
                                             <button onClick={() => onMessageShortcut?.('messages')} className="p-2 text-slate-300 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-all">
@@ -323,7 +331,9 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                         </td>
                                         <td className="px-5 py-4 font-bold text-slate-500 text-sm">Dr. {appt.provider_last_name}</td>
                                         <td className="px-5 py-4">
-                                            <span className="px-2 py-0.5 bg-slate-200 text-slate-500 rounded text-[8px] font-black uppercase tracking-tighter">Completed</span>
+                                            <span className="px-2 py-0.5 bg-slate-200 text-slate-500 rounded text-[8px] font-black uppercase tracking-tighter">
+                                                {appt.status}
+                                            </span>
                                         </td>
                                         <td className="px-5 py-4 text-right"></td>
                                     </tr>
@@ -367,13 +377,13 @@ const PortalAppointments = ({ onMessageShortcut }) => {
 
                     <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                            <SectionLabel icon={<XCircle size={14} className="text-red-400" />} title="Cancelled" count={cancelled.length} />
-                            {cancelled.length > 0 && (
+                            <SectionLabel icon={<XCircle size={14} className="text-red-400" />} title="Cancelled" count={cancelledRequests.length + cancelledAppts.length} />
+                            {cancelledRequests.length > 0 && (
                                 <button
                                     onClick={async () => {
                                         if (!window.confirm('Clear all cancelled/denied records?')) return;
                                         try {
-                                            await Promise.all(cancelled.map(req =>
+                                            await Promise.all(cancelledRequests.map(req =>
                                                 axios.delete(`${apiBase}/portal/appointments/requests/${req.id}/clear`, { headers })
                                             ));
                                             fetchData();
@@ -383,15 +393,34 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                     }}
                                     className="text-[9px] font-bold text-red-400 hover:text-red-600 uppercase tracking-widest"
                                 >
-                                    Clear All
+                                    Clear Requests
                                 </button>
                             )}
                         </div>
                         <div className="space-y-2">
-                            {cancelled.map(req => (
+                            {/* Cancelled Appointments */}
+                            {cancelledAppts.map(appt => (
+                                <div key={appt.id} className="p-4 rounded-2xl border border-transparent bg-slate-50 opacity-60 flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-slate-200 text-slate-400 flex flex-col items-center justify-center shrink-0">
+                                            <span className="text-sm font-black leading-none">{format(new Date(appt.appointment_date), 'dd')}</span>
+                                            <span className="text-[8px] font-bold uppercase">{format(new Date(appt.appointment_date), 'MMM')}</span>
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xs font-bold text-slate-800">{format(new Date(appt.appointment_date), 'MMM do')}</h4>
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Visit Cancelled</p>
+                                        </div>
+                                    </div>
+                                    <span className="text-[8px] font-black uppercase text-slate-400">Cancelled</span>
+                                </div>
+                            ))}
+
+                            {/* Cancelled Requests */}
+                            {cancelledRequests.map(req => (
                                 <CompactCard key={req.id} req={req} type="cancelled" />
                             ))}
-                            {cancelled.length === 0 && <div className="p-6 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-[10px] font-bold text-slate-300 uppercase tracking-widest">No cancelled records</div>}
+
+                            {cancelledRequests.length === 0 && cancelledAppts.length === 0 && <div className="p-6 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-[10px] font-bold text-slate-300 uppercase tracking-widest">No cancelled records</div>}
                         </div>
                     </div>
                 </div>
