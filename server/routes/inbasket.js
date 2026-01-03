@@ -215,7 +215,7 @@ async function syncInboxItems(tenantId) {
       END,
       subject, body, id, 'messages',
       to_user_id, from_user_id, created_at, created_at,
-      CASE WHEN task_status = 'completed' THEN updated_at ELSE NULL END
+      CASE WHEN task_status = 'completed' THEN created_at ELSE NULL END
     FROM messages
     WHERE NOT EXISTS (
         SELECT 1 FROM inbox_items 
