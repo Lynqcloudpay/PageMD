@@ -38,7 +38,6 @@ async function logIntakeAudit(client, tenantId, actorType, actorId, action, obje
  * Create a new intake invitation
  */
 router.post('/invite', authenticate, async (req, res) => {
-    const client = await pool.connect();
     try {
         const { channel, toPhone, toEmail, prefill } = req.body;
         const tenantId = req.clinic.id;
@@ -48,9 +47,7 @@ router.post('/invite', authenticate, async (req, res) => {
         const expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + 72); // 72 hour expiration
 
-        await client.query('BEGIN');
-
-        const result = await client.query(`
+        const result = await pool.query(`
             INSERT INTO intake_invites (
                 tenant_id, created_by_user_id, channel, to_phone, to_email,
                 prefill_first_name, prefill_last_name, prefill_dob, prefill_phone,
@@ -70,12 +67,10 @@ router.post('/invite', authenticate, async (req, res) => {
         const inviteLink = `${FRONTEND_URL}/r/${token}`;
 
         // Log Audit
-        await logIntakeAudit(client, tenantId, 'staff', req.user.id, 'invite_create', 'intake_invites', inviteId, req);
+        await logIntakeAudit(pool, tenantId, 'staff', req.user.id, 'invite_create', 'intake_invites', inviteId, req);
 
         // Send Email/SMS
         if (channel === 'email' && toEmail) {
-            // Reusing sendPortalInvite logic but customized for intake if we had it
-            // For now, let's just log or send a generic invite via emailService
             await emailService._send(toEmail, 'Patient Registration', `
                 <h2>Complete Your Registration</h2>
                 <p>Hello ${prefill?.firstName || 'Patient'},</p>
@@ -89,20 +84,15 @@ router.post('/invite', authenticate, async (req, res) => {
             console.log(`[SMS MOCK] To ${toPhone}: Complete your registration at ${inviteLink}`);
         }
 
-        await client.query('COMMIT');
-
         res.json({
             id: inviteId,
-            token: token, // Return raw token ONLY ONCE during creation
+            token: token,
             inviteLink: inviteLink,
             expiresAt
         });
     } catch (error) {
-        await client.query('ROLLBACK');
         console.error('[Intake] Invite failed:', error);
         res.status(500).json({ error: 'Failed to create invite' });
-    } finally {
-        client.release();
     }
 });
 
@@ -191,16 +181,13 @@ router.get('/submission/:id/duplicates', authenticate, async (req, res) => {
  * Approve intake and create patient record
  */
 router.post('/submission/:id/approve', authenticate, async (req, res) => {
-    const client = await pool.connect();
     const patientEncryptionService = require('../services/patientEncryptionService');
     try {
         const { id } = req.params;
         const { linkToPatientId } = req.body; // If staff wants to merge into existing patient
 
-        await client.query('BEGIN');
-
         // 1. Get submission
-        const subRes = await client.query(`
+        const subRes = await pool.query(`
             SELECT s.*, i.id as invite_id
             FROM intake_submissions s
             JOIN intake_invites i ON s.invite_id = i.id
@@ -208,7 +195,6 @@ router.post('/submission/:id/approve', authenticate, async (req, res) => {
         `, [id, req.clinic.id]);
 
         if (subRes.rows.length === 0) {
-            await client.query('ROLLBACK');
             return res.status(404).json({ error: 'Submission not found' });
         }
         const submission = subRes.rows[0];
@@ -251,7 +237,7 @@ router.post('/submission/:id/approve', authenticate, async (req, res) => {
             values.push(JSON.stringify(encrypted.encryption_metadata));
 
             const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
-            const patientRes = await client.query(
+            const patientRes = await pool.query(
                 `INSERT INTO patients (${fields.join(', ')}) VALUES (${placeholders}) RETURNING id`,
                 values
             );
@@ -259,11 +245,11 @@ router.post('/submission/:id/approve', authenticate, async (req, res) => {
         }
 
         // 3. Update submission and invite
-        await client.query(`UPDATE intake_submissions SET patient_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [targetPatientId, id]);
-        await client.query(`UPDATE intake_invites SET status = 'Approved', updated_at = CURRENT_TIMESTAMP WHERE id = $1`, [submission.invite_id]);
+        await pool.query(`UPDATE intake_submissions SET patient_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [targetPatientId, id]);
+        await pool.query(`UPDATE intake_invites SET status = 'Approved', updated_at = CURRENT_TIMESTAMP WHERE id = $1`, [submission.invite_id]);
 
         // 4. Mark Inbox Item as completed
-        await client.query(`
+        await pool.query(`
             UPDATE inbox_items SET 
                 status = 'completed', 
                 completed_at = CURRENT_TIMESTAMP, 
@@ -272,16 +258,12 @@ router.post('/submission/:id/approve', authenticate, async (req, res) => {
             WHERE reference_id = $3 AND reference_table = 'intake_submissions'
         `, [req.user.id, targetPatientId, id]);
 
-        await logIntakeAudit(client, req.clinic.id, 'staff', req.user.id, 'approve', 'intake_submissions', id, req);
+        await logIntakeAudit(pool, req.clinic.id, 'staff', req.user.id, 'approve', 'intake_submissions', id, req);
 
-        await client.query('COMMIT');
         res.json({ success: true, patientId: targetPatientId });
     } catch (error) {
-        await client.query('ROLLBACK');
         console.error('[Intake] Approval failed:', error);
         res.status(500).json({ error: error.message || 'Approval failed' });
-    } finally {
-        client.release();
     }
 });
 
@@ -290,24 +272,20 @@ router.post('/submission/:id/approve', authenticate, async (req, res) => {
  * Request corrections from patient
  */
 router.post('/submission/:id/send-back', authenticate, async (req, res) => {
-    const client = await pool.connect();
     try {
         const { id } = req.params;
         const { note } = req.body;
 
         if (!note) return res.status(400).json({ error: 'Correction note is required' });
 
-        await client.query('BEGIN');
-
-        const subRes = await client.query('SELECT invite_id, tenant_id FROM intake_submissions WHERE id = $1', [id]);
+        const subRes = await pool.query('SELECT invite_id, tenant_id FROM intake_submissions WHERE id = $1', [id]);
         if (subRes.rows.length === 0) {
-            await client.query('ROLLBACK');
             return res.status(404).json({ error: 'Not found' });
         }
         const { invite_id, tenant_id } = subRes.rows[0];
 
         // Update submission review notes
-        await client.query(`
+        await pool.query(`
             UPDATE intake_submissions 
             SET review_notes = review_notes || $1::jsonb,
                 updated_at = CURRENT_TIMESTAMP
@@ -315,24 +293,20 @@ router.post('/submission/:id/send-back', authenticate, async (req, res) => {
         `, [JSON.stringify([{ note, author: `${req.user.first_name} ${req.user.last_name}`, created_at: new Date() }]), id]);
 
         // Update invite status
-        await client.query(`UPDATE intake_invites SET status = 'NeedsEdits', updated_at = CURRENT_TIMESTAMP WHERE id = $1`, [invite_id]);
+        await pool.query(`UPDATE intake_invites SET status = 'NeedsEdits', updated_at = CURRENT_TIMESTAMP WHERE id = $1`, [invite_id]);
 
         // Update Inbox Item
-        await client.query(`
+        await pool.query(`
             UPDATE inbox_items SET status = 'NeedsEdits', updated_at = CURRENT_TIMESTAMP
             WHERE reference_id = $1 AND reference_table = 'intake_submissions'
         `, [id]);
 
-        await logIntakeAudit(client, tenant_id, 'staff', req.user.id, 'send_back', 'intake_submissions', id, req);
+        await logIntakeAudit(pool, tenant_id, 'staff', req.user.id, 'send_back', 'intake_submissions', id, req);
 
-        await client.query('COMMIT');
         res.json({ success: true });
     } catch (error) {
-        await client.query('ROLLBACK');
         console.error('[Intake] Send back failed:', error);
         res.status(500).json({ error: 'Failed' });
-    } finally {
-        client.release();
     }
 });
 
@@ -387,22 +361,18 @@ router.get('/public/details/:token', async (req, res) => {
  * Autosave progress
  */
 router.post('/public/save/:token', async (req, res) => {
-    const client = await pool.connect();
     try {
         const token = req.params.token;
         const tokenHash = hashToken(token);
         const { data } = req.body;
 
-        await client.query('BEGIN');
-
-        const inviteRes = await client.query('SELECT id, tenant_id FROM intake_invites WHERE token_hash = $1', [tokenHash]);
+        const inviteRes = await pool.query('SELECT id, tenant_id FROM intake_invites WHERE token_hash = $1', [tokenHash]);
         if (inviteRes.rows.length === 0) {
-            await client.query('ROLLBACK');
             return res.status(404).json({ error: 'Link invalid' });
         }
         const invite = inviteRes.rows[0];
 
-        await client.query(`
+        await pool.query(`
             INSERT INTO intake_submissions (tenant_id, invite_id, data_json, updated_at)
             VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
             ON CONFLICT (invite_id) DO UPDATE SET 
@@ -410,19 +380,15 @@ router.post('/public/save/:token', async (req, res) => {
                 updated_at = CURRENT_TIMESTAMP
         `, [invite.tenant_id, invite.id, data]);
 
-        await client.query(`
+        await pool.query(`
             UPDATE intake_invites SET status = 'InProgress', updated_at = CURRENT_TIMESTAMP
             WHERE id = $1 AND status = 'Sent'
         `, [invite.id]);
 
-        await client.query('COMMIT');
         res.json({ success: true });
     } catch (error) {
-        await client.query('ROLLBACK');
         console.error('[Intake] Save failed:', error);
         res.status(500).json({ error: 'Save failed' });
-    } finally {
-        client.release();
     }
 });
 
@@ -431,22 +397,18 @@ router.post('/public/save/:token', async (req, res) => {
  * Final submission
  */
 router.post('/public/submit/:token', async (req, res) => {
-    const client = await pool.connect();
     try {
         const token = req.params.token;
         const tokenHash = hashToken(token);
         const { data, signatures } = req.body;
 
-        await client.query('BEGIN');
-
-        const inviteRes = await client.query('SELECT id, tenant_id, prefill_first_name, prefill_last_name FROM intake_invites WHERE token_hash = $1', [tokenHash]);
+        const inviteRes = await pool.query('SELECT id, tenant_id, prefill_first_name, prefill_last_name FROM intake_invites WHERE token_hash = $1', [tokenHash]);
         if (inviteRes.rows.length === 0) {
-            await client.query('ROLLBACK');
             return res.status(404).json({ error: 'Link invalid' });
         }
         const invite = inviteRes.rows[0];
 
-        const subRes = await client.query(`
+        const subRes = await pool.query(`
             INSERT INTO intake_submissions (tenant_id, invite_id, data_json, signature_json, submitted_at)
             VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
             ON CONFLICT (invite_id) DO UPDATE SET 
@@ -458,10 +420,10 @@ router.post('/public/submit/:token', async (req, res) => {
 
         const submissionId = subRes.rows[0].id;
 
-        await client.query(`UPDATE intake_invites SET status = 'Submitted', updated_at = CURRENT_TIMESTAMP WHERE id = $1`, [invite.id]);
+        await pool.query(`UPDATE intake_invites SET status = 'Submitted', updated_at = CURRENT_TIMESTAMP WHERE id = $1`, [invite.id]);
 
         const patientName = `${data.firstName || invite.prefill_first_name || ''} ${data.lastName || invite.prefill_last_name || ''}`.trim() || 'New Patient';
-        await client.query(`
+        await pool.query(`
             INSERT INTO inbox_items (
                 tenant_id, type, subject, body, reference_id, reference_table, status, priority
             ) VALUES ($1, $2, $3, $4, $5, $6, 'new', 'normal')
@@ -474,16 +436,12 @@ router.post('/public/submit/:token', async (req, res) => {
             'intake_submissions'
         ]);
 
-        await logIntakeAudit(client, invite.tenant_id, 'patient', invite.id, 'submit', 'intake_submissions', submissionId, req);
+        await logIntakeAudit(pool, invite.tenant_id, 'patient', invite.id, 'submit', 'intake_submissions', submissionId, req);
 
-        await client.query('COMMIT');
         res.json({ success: true });
     } catch (error) {
-        await client.query('ROLLBACK');
         console.error('[Intake] Submit failed:', error);
         res.status(500).json({ error: 'Submission failed' });
-    } finally {
-        client.release();
     }
 });
 
