@@ -66,13 +66,20 @@ const resolveTenant = async (req, res, next) => {
     // D. Recognition by Portal Token (for Invitations/Registration)
     const isPortalInviteVerify = req.path.includes('/portal/auth/invite/');
     const isPortalRegister = req.path === '/portal/auth/register' || req.path === '/api/portal/auth/register';
+    const isIntakePublic = req.path.includes('/intake/public/');
 
-    if (!slug && !lookupSchema && (isPortalInviteVerify || isPortalRegister)) {
+    if (!slug && !lookupSchema && (isPortalInviteVerify || isPortalRegister || isIntakePublic)) {
         try {
             const crypto = require('crypto');
-            const token = isPortalInviteVerify
-                ? req.path.split('/').pop()
-                : (req.body ? req.body.token : null);
+            let token = null;
+
+            if (isPortalInviteVerify) {
+                token = req.path.split('/').pop();
+            } else if (isIntakePublic) {
+                token = req.params.token || req.path.split('/').pop();
+            } else {
+                token = req.body ? req.body.token : null;
+            }
 
             if (token) {
                 const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
@@ -80,21 +87,23 @@ const resolveTenant = async (req, res, next) => {
                 const schemas = await pool.controlPool.query('SELECT schema_name FROM clinics WHERE status = \'active\'');
                 for (const row of schemas.rows) {
                     const schema = row.schema_name;
-                    // Note: We use pool.query here which usually respects search_path, 
-                    // but here we are OUTSIDE a tenant context, so we MUST use qualified names.
+
+                    // Search in patient_portal_invites OR intake_invites
+                    const tableToCheck = isIntakePublic ? 'intake_invites' : 'patient_portal_invites';
                     const check = await pool.controlPool.query(
-                        `SELECT 1 FROM ${schema}.patient_portal_invites WHERE token_hash = $1 AND used_at IS NULL AND expires_at > CURRENT_TIMESTAMP`,
+                        `SELECT 1 FROM ${schema}.${tableToCheck} WHERE token_hash = $1 AND expires_at > CURRENT_TIMESTAMP`,
                         [tokenHash]
                     );
+
                     if (check.rows.length > 0) {
                         lookupSchema = schema;
-                        console.log(`[Tenant] Found portal token in schema: ${schema}`);
+                        console.log(`[Tenant] Found intake/portal token in schema: ${schema}`);
                         break;
                     }
                 }
             }
         } catch (e) {
-            console.error('[Tenant] Portal Token lookup failed:', e);
+            console.error('[Tenant] Public Token lookup failed:', e);
         }
     }
 

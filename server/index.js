@@ -255,6 +255,10 @@ app.use('/api/followups', followupsRoutes);
 const portalRoutes = require('./routes/portal');
 app.use('/api/portal', portalRoutes);
 
+// Digital Intake
+const intakeRoutes = require('./routes/intake');
+app.use('/api/intake', intakeRoutes);
+
 // Support
 app.use('/api/support', require('./routes/support'));
 
