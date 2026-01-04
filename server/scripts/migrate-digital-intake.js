@@ -71,6 +71,16 @@ async function migrate() {
         )
       `);
 
+            // Add unique constraint separately to ensure it exists
+            await client.query(`
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'intake_submissions_invite_id_key') THEN
+            ALTER TABLE intake_submissions ADD CONSTRAINT intake_submissions_invite_id_key UNIQUE (invite_id);
+          END IF;
+        END $$;
+      `);
+
             // 3. audit_events (Specifically for Intake as requested)
             await client.query(`
         CREATE TABLE IF NOT EXISTS audit_events (
