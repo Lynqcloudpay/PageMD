@@ -7,7 +7,7 @@ import {
 import { format } from 'date-fns';
 import { intakeAPI } from '../services/api';
 import { showSuccess, showError } from '../utils/toast';
-import Modal from '../components/Modal';
+import Modal from '../components/ui/Modal';
 
 const DigitalIntake = () => {
     const [invites, setInvites] = useState([]);
