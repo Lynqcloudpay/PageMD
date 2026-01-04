@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     UserPlus, Search, Filter, QrCode, Send, Mail, Phone, Clock,
     CheckCircle, AlertCircle, Eye, MoreVertical, Copy, RefreshCw,
-    Check, X, ChevronRight, User, ExternalLink, Smartphone, Shield
+    Check, X, ChevronRight, User, ExternalLink, Smartphone, Shield, Key
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { format } from 'date-fns';
@@ -21,6 +21,7 @@ const DigitalIntake = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [selectedSessionId, setSelectedSessionId] = useState(null);
     const [menuSessionId, setMenuSessionId] = useState(null);
+    const [newCodeModal, setNewCodeModal] = useState({ open: false, code: '', patientName: '' });
 
     useEffect(() => {
         fetchSessions();
@@ -52,6 +53,17 @@ const DigitalIntake = () => {
         }
     };
 
+    const handleRegenerateCode = async (id, patientName) => {
+        try {
+            const res = await intakeAPI.regenerateCode(id);
+            setNewCodeModal({ open: true, code: res.data.resumeCode, patientName });
+            setMenuSessionId(null);
+            showSuccess('New code generated');
+        } catch (e) {
+            showError('Failed to generate new code');
+        }
+    };
+
     const getStatusColor = (status) => {
         switch (status) {
             case 'SUBMITTED': return 'bg-blue-100 text-blue-700 font-bold';
@@ -80,13 +92,23 @@ const DigitalIntake = () => {
                     <h1 className="text-3xl font-black text-blue-600 tracking-tight">Digital Intake</h1>
                     <p className="text-gray-500 mt-1 font-medium italic">Universal QR Workflow • Azure Blue Engine</p>
                 </div>
-                <button
-                    onClick={() => setShowQRModal(true)}
-                    className="flex items-center justify-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-xl shadow-blue-100 hover:bg-blue-700 hover:-translate-y-0.5 transition-all active:scale-95"
-                >
-                    <QrCode className="w-5 h-5" />
-                    Display Universal QR
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => fetchSessions(true)}
+                        disabled={refreshing}
+                        className="flex items-center justify-center gap-2 px-6 py-4 bg-white border-2 border-blue-100 text-blue-600 rounded-2xl font-bold hover:bg-blue-50 transition-all active:scale-95 disabled:opacity-50"
+                    >
+                        <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </button>
+                    <button
+                        onClick={() => setShowQRModal(true)}
+                        className="flex items-center justify-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-xl shadow-blue-100 hover:bg-blue-700 hover:-translate-y-0.5 transition-all active:scale-95"
+                    >
+                        <QrCode className="w-5 h-5" />
+                        Display Universal QR
+                    </button>
+                </div>
             </div>
 
             {/* Stats Overview */}
@@ -196,28 +218,36 @@ const DigitalIntake = () => {
                                                 <div className="relative">
                                                     <button
                                                         onClick={() => setMenuSessionId(menuSessionId === session.id ? null : session.id)}
-                                                        className="p-2 text-gray-300 hover:text-blue-600 rounded-lg transition-colors"
+                                                        className="p-2 text-gray-400 hover:text-blue-600 rounded-lg transition-colors"
                                                     >
                                                         <MoreVertical className="w-5 h-5" />
                                                     </button>
                                                     {menuSessionId === session.id && (
                                                         <>
                                                             <div className="fixed inset-0 z-30" onClick={() => setMenuSessionId(null)} />
-                                                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-40 animate-fadeInShort">
+                                                            <div className="absolute right-0 bottom-full mb-2 w-52 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 z-40 animate-fadeInShort">
                                                                 {session.patient_id && (
                                                                     <button
                                                                         onClick={() => {
                                                                             window.open(`/patient/${session.patient_id}`, '_blank');
                                                                             setMenuSessionId(null);
                                                                         }}
-                                                                        className="w-full text-left px-4 py-2 text-sm font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2"
+                                                                        className="w-full text-left px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2"
                                                                     >
                                                                         <User className="w-4 h-4" /> Open Chart
                                                                     </button>
                                                                 )}
+                                                                {(session.status === 'IN_PROGRESS' || session.status === 'NEEDS_EDITS') && (
+                                                                    <button
+                                                                        onClick={() => handleRegenerateCode(session.id, `${session.prefill_json?.firstName} ${session.prefill_json?.lastName}`)}
+                                                                        className="w-full text-left px-4 py-2.5 text-sm font-bold text-blue-600 hover:bg-blue-50 flex items-center gap-2"
+                                                                    >
+                                                                        <Key className="w-4 h-4" /> New Resume Code
+                                                                    </button>
+                                                                )}
                                                                 <button
                                                                     onClick={() => handleDeleteSession(session.id)}
-                                                                    className="w-full text-left px-4 py-2 text-sm font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2"
+                                                                    className="w-full text-left px-4 py-2.5 text-sm font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2"
                                                                 >
                                                                     <X className="w-4 h-4" /> Delete Session
                                                                 </button>
@@ -304,6 +334,38 @@ const DigitalIntake = () => {
                     sessionId={selectedSessionId}
                 />
             )}
+
+            {/* New Code Modal */}
+            <Modal
+                isOpen={newCodeModal.open}
+                onClose={() => setNewCodeModal({ open: false, code: '', patientName: '' })}
+                title="New Resume Code Generated"
+                size="sm"
+            >
+                <div className="p-6 text-center space-y-6">
+                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
+                        <Key className="w-8 h-8 text-blue-600" />
+                    </div>
+                    <div>
+                        <p className="text-gray-500 text-sm mb-2">New code for <span className="font-bold text-gray-700">{newCodeModal.patientName}</span></p>
+                        <div className="bg-blue-50 p-4 rounded-2xl border-2 border-blue-200">
+                            <div className="font-mono text-3xl font-black text-blue-700 tracking-widest">
+                                {newCodeModal.code}
+                            </div>
+                        </div>
+                    </div>
+                    <p className="text-xs text-gray-400">Give this code to the patient. It expires in 7 days.</p>
+                    <button
+                        onClick={() => {
+                            navigator.clipboard.writeText(newCodeModal.code);
+                            showSuccess('Code copied to clipboard');
+                        }}
+                        className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
+                    >
+                        <Copy className="w-4 h-4" /> Copy Code
+                    </button>
+                </div>
+            </Modal>
         </div>
     );
 };

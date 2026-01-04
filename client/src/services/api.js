@@ -442,6 +442,7 @@ export const intakeAPI = {
   getSessions: () => api.get('/intake/sessions'),
   getSession: (id) => api.get(`/intake/session/${id}`),
   deleteSession: (id) => api.delete(`/intake/session/${id}`),
+  regenerateCode: (id) => api.post(`/intake/session/${id}/regenerate-code`),
   approve: (id, linkToPatientId) => api.post(`/intake/session/${id}/approve`, { linkToPatientId }),
   needsEdits: (id, note) => api.post(`/intake/session/${id}/needs-edits`, { note }),
   getDuplicates: (id) => api.get(`/intake/session/${id}/duplicates`),

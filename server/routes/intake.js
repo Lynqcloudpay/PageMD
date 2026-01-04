@@ -97,6 +97,51 @@ router.delete('/session/:id', authenticate, async (req, res) => {
 });
 
 /**
+ * POST /session/:id/regenerate-code - Generate a new resume code for a patient
+ */
+router.post('/session/:id/regenerate-code', authenticate, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const checkRes = await pool.query(`
+            SELECT id, status FROM intake_sessions
+            WHERE id = $1 AND tenant_id = $2
+        `, [id, req.clinic.id]);
+
+        if (checkRes.rows.length === 0) {
+            return res.status(404).json({ error: 'Session not found' });
+        }
+
+        const session = checkRes.rows[0];
+        if (session.status === 'APPROVED' || session.status === 'SUBMITTED') {
+            return res.status(400).json({ error: 'Cannot regenerate code for completed sessions' });
+        }
+
+        const newResumeCode = generateResumeCode();
+        const newHash = hashToken(newResumeCode);
+        const newExpiry = new Date();
+        newExpiry.setDate(newExpiry.getDate() + 7);
+
+        await pool.query(`
+            UPDATE intake_sessions
+            SET resume_code_hash = $1, expires_at = $2, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $3
+        `, [newHash, newExpiry, id]);
+
+        await logIntakeAudit(pool, req.clinic.id, 'staff', req.user.id, 'regenerate_code', 'intake_sessions', id, req);
+
+        res.json({
+            success: true,
+            resumeCode: newResumeCode,
+            expiresAt: newExpiry
+        });
+    } catch (error) {
+        console.error('[Intake] Regenerate code failed:', error);
+        res.status(500).json({ error: 'Failed to regenerate code' });
+    }
+});
+
+/**
  * GET /public/clinic-info - Get clinic info for public intake form
  */
 router.get('/public/clinic-info', async (req, res) => {
