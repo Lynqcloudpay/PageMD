@@ -460,15 +460,36 @@ const PatientListItem = ({ patient, index, onClick, highlight }) => (
 const HighlightText = ({ text, highlight }) => {
     if (!highlight || !text) return <span>{text}</span>;
 
-    // Convert text and highlight to string
     const textStr = String(text);
     const highlightStr = String(highlight).trim();
 
     if (!highlightStr) return <span>{textStr}</span>;
 
-    // Split text by highlight terms
+    // Special handling for Phone Search: If highlight is digits, match any digit sequence in text
+    // E.g. highlight "305123" matches "(305) 123-4567"
+    const isPhoneQuery = /^\d+$/.test(highlightStr) && highlightStr.length >= 3;
+
     try {
-        const parts = textStr.split(new RegExp(`(${highlightStr})`, 'gi'));
+        if (isPhoneQuery) {
+            // Complex case: highlight digits across symbols
+            // We'll use a regex that allows any non-digit character between the digits of the highlight
+            const regexStr = highlightStr.split('').join('[^\\d]*');
+            const regex = new RegExp(`(${regexStr})`, 'gi');
+            const parts = textStr.split(regex);
+
+            return (
+                <span>
+                    {parts.map((part, i) =>
+                        regex.test(part)
+                            ? <mark key={i} className="bg-yellow-200 text-yellow-900 rounded-sm px-0.5">{part}</mark>
+                            : part
+                    )}
+                </span>
+            );
+        }
+
+        // Default case: simple string match
+        const parts = textStr.split(new RegExp(`(${highlightStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
         return (
             <span>
                 {parts.map((part, i) =>
