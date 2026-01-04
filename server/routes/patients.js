@@ -132,7 +132,12 @@ router.get('/', async (req, res) => {
         filtered = filtered.filter(p => {
           const p1 = (p.phone || '').replace(/\D/g, '');
           const p2 = (p.phone_cell || '').replace(/\D/g, '');
-          return p1.includes(phoneDigits) || p2.includes(phoneDigits);
+          const p3 = (p.phone_secondary || '').replace(/\D/g, '');
+          const p4 = (p.phone_work || '').replace(/\D/g, '');
+          const pn = (p.phone_normalized || '');
+          return p1.includes(phoneDigits) || p2.includes(phoneDigits) ||
+            p3.includes(phoneDigits) || p4.includes(phoneDigits) ||
+            pn.includes(phoneDigits);
         });
       }
 
@@ -156,10 +161,10 @@ router.get('/', async (req, res) => {
 
         // 2. Exact Phone match
         if (phoneDigits) {
-          const aPhone = (a.phone || '').replace(/\D/g, '');
-          const bPhone = (b.phone || '').replace(/\D/g, '');
-          if (aPhone === phoneDigits && bPhone !== phoneDigits) return -1;
-          if (bPhone === phoneDigits && aPhone !== phoneDigits) return 1;
+          const aMatch = (a.phone_normalized || '').includes(phoneDigits);
+          const bMatch = (b.phone_normalized || '').includes(phoneDigits);
+          if (aMatch && !bMatch) return -1;
+          if (bMatch && !aMatch) return 1;
         }
 
         // 3. Name match score (starts-with > contains)
@@ -896,10 +901,11 @@ router.put('/:id', requirePermission('patients:edit_demographics'), async (req, 
     }
 
     if (phoneChanged) {
-      const p = updates.phone || updates.phoneCell || updates.phone_cell || existingPatient.phone || existingPatient.phone_cell || '';
+      const p = updates.phone || existingPatient.phone || '';
+      const c = updates.phoneCell || updates.phone_cell || existingPatient.phone_cell || '';
       const s = updates.phoneSecondary || updates.phone_secondary || existingPatient.phone_secondary || '';
       const w = updates.phoneWork || updates.phone_work || existingPatient.phone_work || '';
-      const combined = (p + s + w).replace(/\D/g, '');
+      const combined = (p + c + s + w).replace(/\D/g, '');
       updates.phone_normalized = combined;
     }
 
