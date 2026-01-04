@@ -59,7 +59,7 @@ const PortalDashboard = React.lazy(() => import('./portal/PortalDashboard'));
 const PortalRegister = React.lazy(() => import('./portal/PortalRegister'));
 const PortalForgotPassword = React.lazy(() => import('./portal/PortalForgotPassword'));
 const PortalResetPassword = React.lazy(() => import('./portal/PortalResetPassword'));
-const PatientIntakeForm = React.lazy(() => import('./pages/PatientIntakeForm'));
+const PublicIntake = React.lazy(() => import('./pages/PublicIntake'));
 const DigitalIntake = React.lazy(() => import('./pages/DigitalIntake'));
 
 // Patient Redirect Component - redirects /patient/:id to /patient/:id/snapshot
@@ -156,9 +156,9 @@ function App() {
                                                         </ErrorBoundary>
                                                     </ProtectedRoute>
                                                 } />
-                                                <Route path="/r/:token" element={
+                                                <Route path="/intake" element={
                                                     <React.Suspense fallback={<div>Loading Registration...</div>}>
-                                                        <PatientIntakeForm />
+                                                        <PublicIntake />
                                                     </React.Suspense>
                                                 } />
                                                 <Route path="/sales-admin" element={<SalesAdmin />} />

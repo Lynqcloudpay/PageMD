@@ -2,133 +2,111 @@ import React, { useState, useEffect } from 'react';
 import {
     UserPlus, Search, Filter, QrCode, Send, Mail, Phone, Clock,
     CheckCircle, AlertCircle, Eye, MoreVertical, Copy, RefreshCw,
-    Check, X, ChevronRight, User
+    Check, X, ChevronRight, User, ExternalLink, Smartphone, Shield
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { intakeAPI } from '../services/api';
 import { showSuccess, showError } from '../utils/toast';
 import Modal from '../components/ui/Modal';
+import IntakeReviewModal from '../components/IntakeReviewModal';
 
 const DigitalIntake = () => {
-    const [invites, setInvites] = useState([]);
+    const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [showInviteModal, setShowInviteModal] = useState(false);
+    const [showQRModal, setShowQRModal] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
-
-    // Invite Form State
-    const [inviteData, setInviteData] = useState({
-        channel: 'qr',
-        toEmail: '',
-        toPhone: '',
-        prefill: {
-            firstName: '',
-            lastName: '',
-            dob: '',
-            phone: ''
-        }
-    });
-    const [generatedLink, setGeneratedLink] = useState(null);
+    const [selectedSessionId, setSelectedSessionId] = useState(null);
 
     useEffect(() => {
-        fetchInvites();
+        fetchSessions();
     }, []);
 
-    const fetchInvites = async (isRefresh = false) => {
+    const fetchSessions = async (isRefresh = false) => {
         if (isRefresh) setRefreshing(true);
         else setLoading(true);
         try {
-            const res = await intakeAPI.getInvites();
-            setInvites(res.data || []);
+            const res = await intakeAPI.getSessions();
+            setSessions(res.data || []);
         } catch (e) {
-            showError('Failed to load invitations');
+            showError('Failed to load registrations');
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
     };
 
-    const handleCreateInvite = async () => {
-        try {
-            const res = await intakeAPI.createInvite(inviteData);
-            setGeneratedLink(res.data.inviteLink);
-            showSuccess('Invitation created successfully');
-            fetchInvites(true);
-        } catch (e) {
-            showError('Failed to create invitation');
-        }
-    };
-
     const getStatusColor = (status) => {
         switch (status) {
-            case 'Sent': return 'bg-blue-100 text-blue-700';
-            case 'InProgress': return 'bg-amber-100 text-amber-700';
-            case 'Submitted': return 'bg-purple-100 text-purple-700 font-bold';
-            case 'Approved': return 'bg-emerald-100 text-emerald-700';
-            case 'NeedsEdits': return 'bg-red-100 text-red-700';
+            case 'SUBMITTED': return 'bg-purple-100 text-purple-700 font-bold';
+            case 'IN_PROGRESS': return 'bg-amber-100 text-amber-700';
+            case 'APPROVED': return 'bg-emerald-100 text-emerald-700';
+            case 'NEEDS_EDITS': return 'bg-red-100 text-red-700';
+            case 'EXPIRED': return 'bg-gray-200 text-gray-500';
             default: return 'bg-gray-100 text-gray-700';
         }
     };
 
-    const filteredInvites = invites.filter(i => {
-        const name = `${i.prefill_first_name || ''} ${i.prefill_last_name || ''}`.toLowerCase();
-        const contact = (i.to_email || i.to_phone || '').toLowerCase();
-        return name.includes(searchQuery.toLowerCase()) || contact.includes(searchQuery.toLowerCase());
+    const filteredSessions = sessions.filter(s => {
+        const name = `${s.prefill_json?.firstName || ''} ${s.prefill_json?.lastName || ''}`.toLowerCase();
+        return name.includes(searchQuery.toLowerCase());
     });
 
+    // The Universal QR URL
+    const universalURL = `${window.location.origin}/intake`;
+
     return (
-        <div className="p-6 max-w-7xl mx-auto">
+        <div className="p-6 max-w-7xl mx-auto animate-fadeIn">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
-                    <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Digital Intake</h1>
-                    <p className="text-gray-500 mt-1">Manage and monitor new patient registrations.</p>
+                    <h1 className="text-3xl font-black text-gray-900 tracking-tight">Free Digital Intake</h1>
+                    <p className="text-gray-500 mt-1 font-medium italic">Universal QR Workflow (No SMS/Email fees)</p>
                 </div>
                 <button
-                    onClick={() => {
-                        setGeneratedLink(null);
-                        setShowInviteModal(true);
-                    }}
-                    className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 hover:-translate-y-0.5 transition-all active:scale-95"
+                    onClick={() => setShowQRModal(true)}
+                    className="flex items-center justify-center gap-2 px-6 py-4 bg-gray-900 text-white rounded-2xl font-bold shadow-xl shadow-gray-200 hover:bg-black hover:-translate-y-0.5 transition-all active:scale-95"
                 >
-                    <UserPlus className="w-5 h-5" />
-                    New Registration
+                    <QrCode className="w-5 h-5" />
+                    Show Universal QR
                 </button>
             </div>
 
             {/* Stats Overview */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                 {[
-                    { label: 'Total Invites', value: invites.length, icon: Send, color: 'blue' },
-                    { label: 'Pending Review', value: invites.filter(i => i.status === 'Submitted').length, icon: Clock, color: 'purple' },
-                    { label: 'In Progress', value: invites.filter(i => i.status === 'InProgress').length, icon: RefreshCw, color: 'amber' },
-                    { label: 'Completed', value: invites.filter(i => i.status === 'Approved').length, icon: CheckCircle, color: 'emerald' },
+                    { label: 'Total Submissions', value: sessions.length, icon: Smartphone, color: 'blue' },
+                    { label: 'Pending Review', value: sessions.filter(s => s.status === 'SUBMITTED').length, icon: Clock, color: 'purple' },
+                    { label: 'In Progress', value: sessions.filter(s => s.status === 'IN_PROGRESS' || s.status === 'NEEDS_EDITS').length, icon: RefreshCw, color: 'amber' },
+                    { label: 'Created Patients', value: sessions.filter(s => s.status === 'APPROVED').length, icon: CheckCircle, color: 'emerald' },
                 ].map((stat, i) => (
-                    <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <div key={i} className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium text-gray-500">{stat.label}</span>
-                            <stat.icon className={`w-5 h-5 text-${stat.color}-500`} />
+                            <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">{stat.label}</span>
+                            <div className={`w-10 h-10 rounded-xl bg-${stat.color}-50 flex items-center justify-center`}>
+                                <stat.icon className={`w-5 h-5 text-${stat.color}-600`} />
+                            </div>
                         </div>
-                        <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
+                        <div className="text-3xl font-black text-gray-900">{stat.value}</div>
                     </div>
                 ))}
             </div>
 
             {/* Filters and List */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="relative flex-1 max-w-md">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Search by name, email, or phone..."
+                            placeholder="Search registrations..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                            className="w-full pl-12 pr-4 py-3 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
                         />
                     </div>
                     <div className="flex items-center gap-2">
-                        <button onClick={() => fetchInvites(true)} className="p-2 text-gray-500 hover:bg-gray-50 rounded-lg transition-colors">
+                        <button onClick={() => fetchSessions(true)} className="p-3 text-gray-500 hover:bg-gray-50 rounded-xl transition-colors">
                             <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
                         </button>
                     </div>
@@ -137,68 +115,67 @@ const DigitalIntake = () => {
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead>
-                            <tr className="bg-gray-50 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                <th className="px-6 py-4">Patient Name</th>
-                                <th className="px-6 py-4">Contact / Channel</th>
-                                <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4">Sent On</th>
-                                <th className="px-6 py-4">Expires</th>
-                                <th className="px-6 py-4 text-right">Actions</th>
+                            <tr className="bg-gray-50 text-left text-xs font-black text-gray-400 uppercase tracking-widest">
+                                <th className="px-8 py-5">Patient Details</th>
+                                <th className="px-8 py-5 text-center">Status</th>
+                                <th className="px-8 py-5">Last Activity</th>
+                                <th className="px-8 py-5 text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody className="divide-y divide-gray-50">
                             {loading ? (
-                                <tr><td colSpan="6" className="px-6 py-12 text-center text-gray-400">Loading invitations...</td></tr>
-                            ) : filteredInvites.length === 0 ? (
-                                <tr><td colSpan="6" className="px-6 py-12 text-center text-gray-400">No invitations found.</td></tr>
+                                <tr><td colSpan="4" className="px-8 py-12 text-center text-gray-400 font-medium">Loading session data...</td></tr>
+                            ) : filteredSessions.length === 0 ? (
+                                <tr><td colSpan="4" className="px-8 py-12 text-center text-gray-400 font-medium">No registrations found.</td></tr>
                             ) : (
-                                filteredInvites.map((invite) => (
-                                    <tr key={invite.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center font-bold text-xs">
-                                                    {(invite.prefill_first_name?.[0] || '') + (invite.prefill_last_name?.[0] || '')}
+                                filteredSessions.map((session) => (
+                                    <tr key={session.id} className="hover:bg-gray-50 transition-colors group">
+                                        <td className="px-8 py-5">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 bg-white border border-gray-100 text-gray-900 rounded-2xl flex items-center justify-center font-black shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                                    {(session.prefill_json?.firstName?.[0] || '') + (session.prefill_json?.lastName?.[0] || '')}
                                                 </div>
                                                 <div>
-                                                    <div className="text-sm font-bold text-gray-900">
-                                                        {invite.prefill_first_name} {invite.prefill_last_name}
+                                                    <div className="text-base font-bold text-gray-900">
+                                                        {session.prefill_json?.firstName} {session.prefill_json?.lastName}
                                                     </div>
-                                                    <div className="text-xs text-gray-500">
-                                                        DOB: {invite.prefill_dob ? format(new Date(invite.prefill_dob), 'MM/dd/yyyy') : 'Not set'}
+                                                    <div className="text-xs font-bold text-gray-400 uppercase tracking-tighter">
+                                                        DOB: {session.prefill_json?.dob} • Phone: {session.prefill_json?.phone}
                                                     </div>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                                                {invite.channel === 'sms' && <Phone className="w-4 h-4 text-gray-400" />}
-                                                {invite.channel === 'email' && <Mail className="w-4 h-4 text-gray-400" />}
-                                                {invite.channel === 'qr' && <QrCode className="w-4 h-4 text-gray-400" />}
-                                                <span className="truncate max-w-[150px]">{invite.to_email || invite.to_phone || 'QR Generation'}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${getStatusColor(invite.status)}`}>
-                                                {invite.status}
+                                        <td className="px-8 py-5 text-center">
+                                            <span className={`px-4 py-1.5 rounded-full text-xs font-black tracking-widest ${getStatusColor(session.status)}`}>
+                                                {session.status}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-500">
-                                            {format(new Date(invite.created_at), 'MM/dd/yy h:mm a')}
+                                        <td className="px-8 py-5">
+                                            <div className="text-sm font-bold text-gray-900">
+                                                {format(new Date(session.updated_at), 'MMM d, h:mm a')}
+                                            </div>
+                                            <div className="text-xs text-gray-400 font-medium">
+                                                Started {format(new Date(session.created_at), 'MM/dd/yy')}
+                                            </div>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-500">
-                                            {format(new Date(invite.expires_at), 'MM/dd/yy')}
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
+                                        <td className="px-8 py-5 text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                {invite.status === 'Submitted' && (
+                                                {session.status === 'SUBMITTED' || session.status === 'NEEDS_EDITS' ? (
                                                     <button
-                                                        title="Review Submission"
-                                                        className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                                                        onClick={() => setSelectedSessionId(session.id)}
+                                                        className="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all flex items-center gap-1"
                                                     >
-                                                        <Eye className="w-5 h-5" />
+                                                        <Eye className="w-4 h-4" /> Review
                                                     </button>
-                                                )}
-                                                <button className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors">
+                                                ) : session.status === 'APPROVED' ? (
+                                                    <button
+                                                        onClick={() => window.open(`/patient/${session.patient_id}`, '_blank')}
+                                                        className="px-4 py-2 border border-gray-100 text-gray-500 rounded-xl font-bold text-xs hover:bg-gray-50 transition-all flex items-center gap-1"
+                                                    >
+                                                        View Chart <ExternalLink className="w-4 h-4" />
+                                                    </button>
+                                                ) : null}
+                                                <button className="p-2 text-gray-300 hover:text-gray-900 rounded-lg transition-colors">
                                                     <MoreVertical className="w-5 h-5" />
                                                 </button>
                                             </div>
@@ -211,147 +188,66 @@ const DigitalIntake = () => {
                 </div>
             </div>
 
-            {/* Invite Modal */}
+            {/* Universal QR Modal */}
             <Modal
-                isOpen={showInviteModal}
-                onClose={() => setShowInviteModal(false)}
-                title="New Patient Registration"
+                isOpen={showQRModal}
+                onClose={() => setShowQRModal(false)}
+                title="Universal Intake QR"
                 size="md"
             >
-                {!generatedLink ? (
-                    <div className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">First Name</label>
-                                <input
-                                    type="text"
-                                    value={inviteData.prefill.firstName}
-                                    onChange={(e) => setInviteData({ ...inviteData, prefill: { ...inviteData.prefill, firstName: e.target.value } })}
-                                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Last Name</label>
-                                <input
-                                    type="text"
-                                    value={inviteData.prefill.lastName}
-                                    onChange={(e) => setInviteData({ ...inviteData, prefill: { ...inviteData.prefill, lastName: e.target.value } })}
-                                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                                />
-                            </div>
+                <div className="p-4 text-center space-y-8 animate-fadeIn">
+                    <div className="space-y-2">
+                        <div className="inline-flex p-4 bg-emerald-50 text-emerald-600 rounded-2xl mb-2 items-center gap-2">
+                            <Shield className="w-5 h-5" />
+                            <span className="text-sm font-bold uppercase tracking-widest">Universal QR workflow enabled</span>
                         </div>
+                        <p className="text-gray-500 text-sm max-w-xs mx-auto">Point patients to this QR code to start or resume their registration on their own device.</p>
+                    </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Date of Birth</label>
-                                <input
-                                    type="date"
-                                    value={inviteData.prefill.dob}
-                                    onChange={(e) => setInviteData({ ...inviteData, prefill: { ...inviteData.prefill, dob: e.target.value } })}
-                                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Phone Number</label>
-                                <input
-                                    type="tel"
-                                    value={inviteData.prefill.phone}
-                                    onChange={(e) => setInviteData({ ...inviteData, prefill: { ...inviteData.prefill, phone: e.target.value } })}
-                                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                                />
-                            </div>
+                    <div className="bg-white p-10 rounded-[3rem] inline-block border-8 border-gray-50 shadow-2xl">
+                        <QrCode className="w-64 h-64 text-gray-900" />
+                        <div className="mt-6 text-2xl font-black text-gray-900 tracking-tight">Scan to Register</div>
+                        <div className="text-gray-400 font-bold text-sm">Powered by PageMD</div>
+                    </div>
+
+                    <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 text-left space-y-4">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Access URL</span>
+                            <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText(universalURL);
+                                    showSuccess('Link copied to clipboard');
+                                }}
+                                className="flex items-center gap-1 text-blue-600 font-bold text-xs"
+                            >
+                                <Copy className="w-4 h-4" /> Copy
+                            </button>
                         </div>
-
-                        <div className="space-y-3">
-                            <label className="block text-sm font-bold text-gray-700">Delivery Method</label>
-                            <div className="grid grid-cols-3 gap-3">
-                                {[
-                                    { id: 'qr', label: 'QR Code', icon: QrCode },
-                                    { id: 'sms', label: 'SMS Link', icon: Phone },
-                                    { id: 'email', label: 'Email Link', icon: Mail },
-                                ].map((channel) => (
-                                    <button
-                                        key={channel.id}
-                                        onClick={() => setInviteData({ ...inviteData, channel: channel.id })}
-                                        className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all ${inviteData.channel === channel.id ? 'border-blue-600 bg-blue-50 text-blue-600' : 'border-gray-100 text-gray-500 hover:border-gray-200'}`}
-                                    >
-                                        <channel.icon className="w-6 h-6 mb-2" />
-                                        <span className="text-xs font-bold">{channel.label}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {inviteData.channel === 'email' && (
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Email Address</label>
-                                <input
-                                    type="email"
-                                    placeholder="patient@example.com"
-                                    value={inviteData.toEmail}
-                                    onChange={(e) => setInviteData({ ...inviteData, toEmail: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                                />
-                            </div>
-                        )}
-
-                        {inviteData.channel === 'sms' && (
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Mobile Number</label>
-                                <input
-                                    type="tel"
-                                    placeholder="(555) 000-0000"
-                                    value={inviteData.toPhone}
-                                    onChange={(e) => setInviteData({ ...inviteData, toPhone: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                                />
-                            </div>
-                        )}
-
-                        <div className="flex gap-3 pt-4">
-                            <button onClick={() => setShowInviteModal(false)} className="flex-1 py-3 text-gray-600 font-bold hover:bg-gray-100 rounded-xl transition-colors">Cancel</button>
-                            <button onClick={handleCreateInvite} className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">Generate Invite</button>
+                        <div className="text-blue-600 font-mono text-sm break-all font-bold">
+                            {universalURL}
                         </div>
                     </div>
-                ) : (
-                    <div className="p-4 text-center space-y-6">
-                        {inviteData.channel === 'qr' && (
-                            <div className="bg-white p-8 rounded-2xl inline-block border-4 border-blue-50 shadow-xl mb-4">
-                                <QrCode className="w-48 h-48 text-gray-900" />
-                                <div className="mt-4 text-sm font-bold text-gray-500">Scan to Start Registration</div>
-                            </div>
-                        )}
 
-                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 text-left">
-                            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Secure Link</label>
-                            <div className="flex items-center gap-2">
-                                <code className="flex-1 text-xs truncate text-blue-600 bg-white p-2 rounded border border-blue-100">{generatedLink}</code>
-                                <button
-                                    onClick={() => {
-                                        navigator.clipboard.writeText(generatedLink);
-                                        showSuccess('Link copied to clipboard');
-                                    }}
-                                    className="p-2 bg-blue-600 text-white rounded-lg"
-                                >
-                                    <Copy className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="text-sm text-gray-500">
-                            {inviteData.channel === 'sms' && `The link has been sent to ${inviteData.toPhone}`}
-                            {inviteData.channel === 'email' && `The link has been sent to ${inviteData.toEmail}`}
-                        </div>
-
-                        <button
-                            onClick={() => setShowInviteModal(false)}
-                            className="w-full py-3 bg-gray-900 text-white font-bold rounded-xl hover:bg-black transition-all"
-                        >
-                            Done
-                        </button>
-                    </div>
-                )}
+                    <button
+                        onClick={() => window.print()}
+                        className="w-full py-5 bg-gray-900 text-white rounded-[2rem] font-bold text-lg shadow-2xl shadow-gray-200 active:scale-95 transition-all"
+                    >
+                        Print Display Sign
+                    </button>
+                </div>
             </Modal>
+
+            {/* Review Modal */}
+            {selectedSessionId && (
+                <IntakeReviewModal
+                    isOpen={!!selectedSessionId}
+                    onClose={() => {
+                        setSelectedSessionId(null);
+                        fetchSessions(true);
+                    }}
+                    sessionId={selectedSessionId}
+                />
+            )}
         </div>
     );
 };

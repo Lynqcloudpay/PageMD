@@ -430,22 +430,20 @@ export const portalAPI = {
   verifyInvite: (token) => api.get(`/portal/auth/invite/${token}`),
 };
 
-// Digital Intake
+// Universal Digital Intake (QR Code)
 export const intakeAPI = {
-  // Staff methods
-  createInvite: (data) => api.post('/intake/invite', data),
-  getInvites: () => api.get('/intake/invites'),
-  getSubmission: (id) => api.get(`/intake/submission/${id}`),
-  getDuplicates: (id) => api.get(`/intake/submission/${id}/duplicates`),
-  approve: (id, data) => api.post(`/intake/submission/${id}/approve`, data),
-  sendBack: (id, data) => api.post(`/intake/submission/${id}/send-back`, data),
+  // Public (No Auth)
+  start: (data) => api.post('/intake/public/start', data, { skipAuth: true }),
+  resume: (resumeCode, dob) => api.post('/intake/public/resume', { resumeCode, dob }, { skipAuth: true }),
+  save: (id, data) => api.post(`/intake/public/save/${id}`, { data }, { skipAuth: true }),
+  submit: (id, data, signature) => api.post(`/intake/public/submit/${id}`, { data, signature }, { skipAuth: true }),
 
-  // Public methods (No auth header added by interceptor if route matches public pattern)
-  // Actually our axios interceptor adds it if it exists. 
-  // For public routes, the token won't be in localStorage so it's fine.
-  getPublicDetails: (token) => api.get(`/intake/public/details/${token}`),
-  savePublicData: (token, data) => api.post(`/intake/public/save/${token}`, { data }),
-  submitPublicData: (token, data, signatures) => api.post(`/intake/public/submit/${token}`, { data, signatures }),
+  // Staff (Auth required)
+  getSessions: () => api.get('/intake/sessions'),
+  getSession: (id) => api.get(`/intake/session/${id}`),
+  approve: (id, linkToPatientId) => api.post(`/intake/session/${id}/approve`, { linkToPatientId }),
+  needsEdits: (id, note) => api.post(`/intake/session/${id}/needs-edits`, { note }),
+  getDuplicates: (id) => api.get(`/intake/session/${id}/duplicates`)
 };
 
 // Auth

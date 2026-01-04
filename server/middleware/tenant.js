@@ -107,14 +107,20 @@ const resolveTenant = async (req, res, next) => {
         }
     }
 
-    // C. Subdomain / Host Resolution
-    if (!slug && !lookupSchema && req.headers.host) {
-        const host = req.headers.host;
-        // logic for subdomains: clinic.pagemdemr.com
-        if (host.includes('pagemdemr.com') || host.includes('localhost')) {
-            const parts = host.split('.');
-            if (parts.length > 2) {
-                slug = parts[0];
+    // C. Subdomain / Host / Query Resolution
+    if (!slug && !lookupSchema) {
+        // 1. Check Query Params (for public links like Universal QR)
+        if (req.query.clinic) {
+            slug = req.query.clinic;
+        }
+        // 2. Check Hostname / Subdomain
+        else if (req.headers.host) {
+            const host = req.headers.host;
+            if (host.includes('pagemdemr.com') || host.includes('localhost')) {
+                const parts = host.split('.');
+                if (parts.length > 2) {
+                    slug = parts[0];
+                }
             }
         }
     }

@@ -9,9 +9,9 @@ import { intakeAPI } from '../services/api';
 import { showError, showSuccess } from '../utils/toast';
 import { format } from 'date-fns';
 
-const IntakeReviewModal = ({ show, onClose, submissionId, onApproved }) => {
+const IntakeReviewModal = ({ isOpen, onClose, sessionId, onApproved }) => {
     const [loading, setLoading] = useState(true);
-    const [submission, setSubmission] = useState(null);
+    const [session, setSession] = useState(null);
     const [duplicates, setDuplicates] = useState([]);
     const [checkingDuplicates, setCheckingDuplicates] = useState(false);
     const [sendBackNote, setSendBackNote] = useState('');
@@ -20,23 +20,23 @@ const IntakeReviewModal = ({ show, onClose, submissionId, onApproved }) => {
     const [selectedDuplicateId, setSelectedDuplicateId] = useState(null);
 
     useEffect(() => {
-        if (show && submissionId) {
-            loadSubmission();
+        if (isOpen && sessionId) {
+            loadSession();
         }
-    }, [show, submissionId]);
+    }, [isOpen, sessionId]);
 
-    const loadSubmission = async () => {
+    const loadSession = async () => {
         setLoading(true);
         try {
-            const res = await intakeAPI.getSubmission(submissionId);
-            setSubmission(res.data);
+            const res = await intakeAPI.getSession(sessionId);
+            setSession(res.data);
 
             // Check for duplicates automatically
             setCheckingDuplicates(true);
-            const dupRes = await intakeAPI.getDuplicates(submissionId);
+            const dupRes = await intakeAPI.getDuplicates(sessionId);
             setDuplicates(dupRes.data || []);
         } catch (e) {
-            showError('Failed to load submission');
+            showError('Failed to load session');
             onClose();
         } finally {
             setLoading(false);
@@ -47,11 +47,9 @@ const IntakeReviewModal = ({ show, onClose, submissionId, onApproved }) => {
     const handleApprove = async () => {
         setApproving(true);
         try {
-            const res = await intakeAPI.approve(submissionId, {
-                linkToPatientId: selectedDuplicateId
-            });
+            const res = await intakeAPI.approve(sessionId, selectedDuplicateId);
             showSuccess(selectedDuplicateId ? 'Data linked to existing patient' : 'New patient record created');
-            onApproved(res.data.patientId);
+            if (onApproved) onApproved(res.data.patientId);
             onClose();
         } catch (e) {
             showError(e.response?.data?.error || 'Approval failed');
@@ -63,7 +61,7 @@ const IntakeReviewModal = ({ show, onClose, submissionId, onApproved }) => {
     const handleSendBack = async () => {
         if (!sendBackNote.trim()) return;
         try {
-            await intakeAPI.sendBack(submissionId, { note: sendBackNote });
+            await intakeAPI.needsEdits(sessionId, sendBackNote);
             showSuccess('Sent back to patient for edits');
             onClose();
         } catch (e) {
@@ -71,27 +69,28 @@ const IntakeReviewModal = ({ show, onClose, submissionId, onApproved }) => {
         }
     };
 
-    if (!submission && !loading) return null;
+    if (!session && !loading) return null;
 
-    const data = submission?.data_json || {};
+    const data = session?.data_json || {};
+    const prefill = session?.prefill_json || {};
 
     return (
         <Modal
-            isOpen={show}
+            isOpen={isOpen}
             onClose={onClose}
             title="Review Patient Registration"
             size="xl"
         >
             {loading ? (
-                <div className="p-12 text-center text-gray-400">Loading submission...</div>
+                <div className="p-12 text-center text-gray-400">Loading session data...</div>
             ) : (
                 <div className="flex flex-col h-[70vh]">
                     <div className="flex-1 overflow-y-auto p-6 space-y-8">
                         {/* Status Alert */}
-                        {submission.invite_status === 'NeedsEdits' && (
+                        {session.status === 'NEEDS_EDITS' && (
                             <div className="bg-red-50 border border-red-100 p-4 rounded-xl flex gap-3 text-red-800 italic">
                                 <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                                <span>This submission was previously sent back for edits. Review the latest changes.</span>
+                                <span>This session was previously sent back for edits. Review the latest changes.</span>
                             </div>
                         )}
 
@@ -147,23 +146,19 @@ const IntakeReviewModal = ({ show, onClose, submissionId, onApproved }) => {
                                     <div className="bg-gray-50 p-4 rounded-xl space-y-3">
                                         <div className="flex justify-between">
                                             <span className="text-xs text-gray-500">Name</span>
-                                            <span className="text-sm font-bold text-gray-900">{data.firstName} {data.lastName}</span>
+                                            <span className="text-sm font-bold text-gray-900">{prefill.firstName} {prefill.lastName}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-xs text-gray-500">DOB</span>
-                                            <span className="text-sm font-bold text-gray-900">{data.dob}</span>
+                                            <span className="text-sm font-bold text-gray-900">{prefill.dob}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-xs text-gray-500">Sex</span>
-                                            <span className="text-sm font-bold text-gray-900 capitalize">{data.sex}</span>
+                                            <span className="text-sm font-bold text-gray-900 capitalize">{data.sex || 'Not Specified'}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-xs text-gray-500">Phone</span>
-                                            <span className="text-sm font-bold text-gray-900">{data.phone}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-xs text-gray-500">Email</span>
-                                            <span className="text-sm font-bold text-gray-900 truncate ml-4">{data.email}</span>
+                                            <span className="text-sm font-bold text-gray-900">{prefill.phone}</span>
                                         </div>
                                     </div>
                                 </section>
@@ -193,15 +188,11 @@ const IntakeReviewModal = ({ show, onClose, submissionId, onApproved }) => {
                                     </h4>
                                     <div className="bg-gray-50 p-4 rounded-xl space-y-4">
                                         <div>
-                                            <span className="text-[10px] font-bold text-gray-400 uppercase">Conditions</span>
-                                            <p className="text-sm text-gray-700 mt-1">{data.medicalHistory || 'None reported'}</p>
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase">Primary Reason</span>
+                                            <p className="text-sm text-gray-700 mt-1">{data.reason || 'Not Specified'}</p>
                                         </div>
                                         <div>
-                                            <span className="text-[10px] font-bold text-gray-400 uppercase">Allergies</span>
-                                            <p className="text-sm text-gray-700 mt-1">{data.allergies || 'NKDA'}</p>
-                                        </div>
-                                        <div>
-                                            <span className="text-[10px] font-bold text-gray-400 uppercase">Medications</span>
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase">Medications & Allergies</span>
                                             <p className="text-sm text-gray-700 mt-1">{data.medications || 'None reported'}</p>
                                         </div>
                                     </div>
@@ -213,11 +204,10 @@ const IntakeReviewModal = ({ show, onClose, submissionId, onApproved }) => {
                                     </h4>
                                     <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl">
                                         <div className="flex items-center gap-2 text-emerald-800 font-bold text-sm">
-                                            <CheckCircle className="w-4 h-4" /> Forms Signed
+                                            <CheckCircle className="w-4 h-4" /> HIPPA Agreement Signed
                                         </div>
-                                        <p className="text-[10px] text-emerald-600 mt-1">
-                                            Patient signed General Consent and HIPAA documents
-                                            on {submission.submitted_at ? format(new Date(submission.submitted_at), 'MM/dd/yyyy') : 'submission'}.
+                                        <p className="text-[10px] text-emerald-600 mt-1 uppercase font-bold tracking-tighter">
+                                            Submission Timestamp: {session.submitted_at ? format(new Date(session.submitted_at), 'MM/dd/yyyy HH:mm') : 'N/A'}
                                         </p>
                                     </div>
                                 </section>
@@ -225,11 +215,11 @@ const IntakeReviewModal = ({ show, onClose, submissionId, onApproved }) => {
                         </div>
 
                         {/* Audit Trail */}
-                        {submission.review_notes && submission.review_notes.length > 0 && (
+                        {session.review_notes && session.review_notes.length > 0 && (
                             <section>
                                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Previous Notes</h4>
                                 <div className="space-y-3">
-                                    {submission.review_notes.map((n, i) => (
+                                    {session.review_notes.map((n, i) => (
                                         <div key={i} className="text-sm bg-gray-50 p-3 rounded-lg border border-gray-100">
                                             <div className="flex justify-between mb-1">
                                                 <span className="font-bold text-gray-700">{n.author}</span>
@@ -251,7 +241,7 @@ const IntakeReviewModal = ({ show, onClose, submissionId, onApproved }) => {
                                 <textarea
                                     value={sendBackNote}
                                     onChange={e => setSendBackNote(e.target.value)}
-                                    placeholder="e.g. Please upload a clearer photo of your insurance card."
+                                    placeholder="e.g. Please clarify your insurance policy ID."
                                     className="w-full border border-gray-300 rounded-xl p-3 text-sm min-h-[80px]"
                                 />
                                 <div className="flex gap-3">
@@ -271,17 +261,17 @@ const IntakeReviewModal = ({ show, onClose, submissionId, onApproved }) => {
                                     onClick={() => setShowSendBack(true)}
                                     className="flex-1 py-4 bg-white border border-gray-200 text-red-600 rounded-2xl font-bold hover:bg-red-50 transition-all flex items-center justify-center gap-2"
                                 >
-                                    <XCircle className="w-5 h-5" /> Need Edits
+                                    <XCircle className="w-5 h-5" /> Need Correction
                                 </button>
                                 <button
                                     onClick={handleApprove}
-                                    disabled={approving}
+                                    disabled={approving || session.status === 'APPROVED'}
                                     className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                                 >
                                     {approving ? (
                                         <Clock className="w-5 h-5 animate-spin" />
                                     ) : selectedDuplicateId ? (
-                                        <><LinkIcon className="w-5 h-5" /> Link to Existing Patient</>
+                                        <><LinkIcon className="w-5 h-5" /> Link to Selected Patient</>
                                     ) : (
                                         <><UserPlus className="w-5 h-5" /> Approve & Create Patient</>
                                     )}
