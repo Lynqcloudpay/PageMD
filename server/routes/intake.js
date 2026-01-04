@@ -74,6 +74,62 @@ router.get('/session/:id', authenticate, async (req, res) => {
 });
 
 /**
+ * DELETE /session/:id - Delete an intake session
+ */
+router.delete('/session/:id', authenticate, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            DELETE FROM intake_sessions
+            WHERE id = $1 AND tenant_id = $2
+            RETURNING id
+        `, [req.params.id, req.clinic.id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Session not found' });
+        }
+
+        await logIntakeAudit(pool, req.clinic.id, 'staff', req.user.id, 'delete_session', 'intake_sessions', req.params.id, req);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('[Intake] Delete failed:', error);
+        res.status(500).json({ error: 'Failed to delete session' });
+    }
+});
+
+/**
+ * GET /public/clinic-info - Get clinic info for public intake form
+ */
+router.get('/public/clinic-info', async (req, res) => {
+    try {
+        if (!req.clinic?.id) {
+            return res.status(400).json({ error: 'Clinic not specified' });
+        }
+
+        const result = await pool.query(`
+            SELECT name, slug, logo_url, address, phone
+            FROM tenants
+            WHERE id = $1 AND is_active = true
+        `, [req.clinic.id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Clinic not found' });
+        }
+
+        const clinic = result.rows[0];
+        res.json({
+            name: clinic.name,
+            slug: clinic.slug,
+            logoUrl: clinic.logo_url,
+            address: clinic.address,
+            phone: clinic.phone
+        });
+    } catch (error) {
+        console.error('[Intake] Clinic info failed:', error);
+        res.status(500).json({ error: 'Failed to get clinic info' });
+    }
+});
+
+/**
  * POST /session/:id/approve
  */
 router.post('/session/:id/approve', authenticate, async (req, res) => {

@@ -17,6 +17,7 @@ const DigitalIntake = () => {
     const [showQRModal, setShowQRModal] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [selectedSessionId, setSelectedSessionId] = useState(null);
+    const [menuSessionId, setMenuSessionId] = useState(null);
 
     useEffect(() => {
         fetchSessions();
@@ -36,12 +37,24 @@ const DigitalIntake = () => {
         }
     };
 
+    const handleDeleteSession = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this intake session? This cannot be undone.')) return;
+        try {
+            // We need a delete endpoint in the backend
+            await intakeAPI.deleteSession(id);
+            showSuccess('Session deleted');
+            fetchSessions(true);
+        } catch (e) {
+            showError('Failed to delete session');
+        }
+    };
+
     const getStatusColor = (status) => {
         switch (status) {
-            case 'SUBMITTED': return 'bg-purple-100 text-purple-700 font-bold';
+            case 'SUBMITTED': return 'bg-blue-100 text-blue-700 font-bold';
             case 'IN_PROGRESS': return 'bg-amber-100 text-amber-700';
             case 'APPROVED': return 'bg-emerald-100 text-emerald-700';
-            case 'NEEDS_EDITS': return 'bg-red-100 text-red-700';
+            case 'NEEDS_EDITS': return 'bg-rose-100 text-rose-700';
             case 'EXPIRED': return 'bg-gray-200 text-gray-500';
             default: return 'bg-gray-100 text-gray-700';
         }
@@ -52,23 +65,22 @@ const DigitalIntake = () => {
         return name.includes(searchQuery.toLowerCase());
     });
 
-    // The Universal QR URL
-    const universalURL = `${window.location.origin}/intake`;
+    const universalURL = `${window.location.origin}/intake?clinic=${window.location.host.split('.')[0]}`;
 
     return (
         <div className="p-6 max-w-7xl mx-auto animate-fadeIn">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
-                    <h1 className="text-3xl font-black text-gray-900 tracking-tight">Free Digital Intake</h1>
-                    <p className="text-gray-500 mt-1 font-medium italic">Universal QR Workflow (No SMS/Email fees)</p>
+                    <h1 className="text-3xl font-black text-blue-600 tracking-tight">Digital Intake</h1>
+                    <p className="text-gray-500 mt-1 font-medium italic">Universal QR Workflow • Azure Blue Engine</p>
                 </div>
                 <button
                     onClick={() => setShowQRModal(true)}
-                    className="flex items-center justify-center gap-2 px-6 py-4 bg-gray-900 text-white rounded-2xl font-bold shadow-xl shadow-gray-200 hover:bg-black hover:-translate-y-0.5 transition-all active:scale-95"
+                    className="flex items-center justify-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-xl shadow-blue-100 hover:bg-blue-700 hover:-translate-y-0.5 transition-all active:scale-95"
                 >
                     <QrCode className="w-5 h-5" />
-                    Show Universal QR
+                    Display Universal QR
                 </button>
             </div>
 
@@ -76,7 +88,7 @@ const DigitalIntake = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                 {[
                     { label: 'Total Submissions', value: sessions.length, icon: Smartphone, color: 'blue' },
-                    { label: 'Pending Review', value: sessions.filter(s => s.status === 'SUBMITTED').length, icon: Clock, color: 'purple' },
+                    { label: 'Pending Review', value: sessions.filter(s => s.status === 'SUBMITTED').length, icon: Clock, color: 'indigo' },
                     { label: 'In Progress', value: sessions.filter(s => s.status === 'IN_PROGRESS' || s.status === 'NEEDS_EDITS').length, icon: RefreshCw, color: 'amber' },
                     { label: 'Created Patients', value: sessions.filter(s => s.status === 'APPROVED').length, icon: CheckCircle, color: 'emerald' },
                 ].map((stat, i) => (
@@ -129,10 +141,10 @@ const DigitalIntake = () => {
                                 <tr><td colSpan="4" className="px-8 py-12 text-center text-gray-400 font-medium">No registrations found.</td></tr>
                             ) : (
                                 filteredSessions.map((session) => (
-                                    <tr key={session.id} className="hover:bg-gray-50 transition-colors group">
+                                    <tr key={session.id} className="hover:bg-blue-50/30 transition-colors group">
                                         <td className="px-8 py-5">
                                             <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 bg-white border border-gray-100 text-gray-900 rounded-2xl flex items-center justify-center font-black shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                                <div className="w-12 h-12 bg-white border border-gray-100 text-blue-600 rounded-2xl flex items-center justify-center font-black shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-all">
                                                     {(session.prefill_json?.firstName?.[0] || '') + (session.prefill_json?.lastName?.[0] || '')}
                                                 </div>
                                                 <div>
@@ -158,7 +170,7 @@ const DigitalIntake = () => {
                                                 Started {format(new Date(session.created_at), 'MM/dd/yy')}
                                             </div>
                                         </td>
-                                        <td className="px-8 py-5 text-right">
+                                        <td className="px-8 py-5 text-right relative">
                                             <div className="flex items-center justify-end gap-2">
                                                 {session.status === 'SUBMITTED' || session.status === 'NEEDS_EDITS' ? (
                                                     <button
@@ -170,14 +182,44 @@ const DigitalIntake = () => {
                                                 ) : session.status === 'APPROVED' ? (
                                                     <button
                                                         onClick={() => window.open(`/patient/${session.patient_id}`, '_blank')}
-                                                        className="px-4 py-2 border border-gray-100 text-gray-500 rounded-xl font-bold text-xs hover:bg-gray-50 transition-all flex items-center gap-1"
+                                                        className="px-4 py-2 border border-blue-100 text-blue-600 rounded-xl font-bold text-xs hover:bg-blue-50 transition-all flex items-center gap-1"
                                                     >
                                                         View Chart <ExternalLink className="w-4 h-4" />
                                                     </button>
                                                 ) : null}
-                                                <button className="p-2 text-gray-300 hover:text-gray-900 rounded-lg transition-colors">
-                                                    <MoreVertical className="w-5 h-5" />
-                                                </button>
+
+                                                <div className="relative">
+                                                    <button
+                                                        onClick={() => setMenuSessionId(menuSessionId === session.id ? null : session.id)}
+                                                        className="p-2 text-gray-300 hover:text-blue-600 rounded-lg transition-colors"
+                                                    >
+                                                        <MoreVertical className="w-5 h-5" />
+                                                    </button>
+                                                    {menuSessionId === session.id && (
+                                                        <>
+                                                            <div className="fixed inset-0 z-30" onClick={() => setMenuSessionId(null)} />
+                                                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-40 animate-fadeInShort">
+                                                                {session.patient_id && (
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            window.open(`/patient/${session.patient_id}`, '_blank');
+                                                                            setMenuSessionId(null);
+                                                                        }}
+                                                                        className="w-full text-left px-4 py-2 text-sm font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2"
+                                                                    >
+                                                                        <User className="w-4 h-4" /> Open Chart
+                                                                    </button>
+                                                                )}
+                                                                <button
+                                                                    onClick={() => handleDeleteSession(session.id)}
+                                                                    className="w-full text-left px-4 py-2 text-sm font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2"
+                                                                >
+                                                                    <X className="w-4 h-4" /> Delete Session
+                                                                </button>
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>
@@ -199,20 +241,20 @@ const DigitalIntake = () => {
                     <div className="space-y-2">
                         <div className="inline-flex p-4 bg-emerald-50 text-emerald-600 rounded-2xl mb-2 items-center gap-2">
                             <Shield className="w-5 h-5" />
-                            <span className="text-sm font-bold uppercase tracking-widest">Universal QR workflow enabled</span>
+                            <span className="text-sm font-bold uppercase tracking-widest">Azure Secure workflow active</span>
                         </div>
-                        <p className="text-gray-500 text-sm max-w-xs mx-auto">Point patients to this QR code to start or resume their registration on their own device.</p>
+                        <p className="text-gray-500 text-sm max-w-xs mx-auto">Patients can scan this to start their registration on their own mobile device.</p>
                     </div>
 
-                    <div className="bg-white p-10 rounded-[3rem] inline-block border-8 border-gray-50 shadow-2xl">
-                        <QrCode className="w-64 h-64 text-gray-900" />
+                    <div className="bg-white p-10 rounded-[3rem] inline-block border-8 border-blue-50 shadow-2xl shadow-blue-100">
+                        <QrCode className="w-64 h-64 text-blue-600" />
                         <div className="mt-6 text-2xl font-black text-gray-900 tracking-tight">Scan to Register</div>
-                        <div className="text-gray-400 font-bold text-sm">Powered by PageMD</div>
+                        <div className="text-blue-400 font-bold text-sm tracking-widest uppercase">Azure Blue Engine</div>
                     </div>
 
-                    <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 text-left space-y-4">
+                    <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100 text-left space-y-4">
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Access URL</span>
+                            <span className="text-xs font-black text-blue-400 uppercase tracking-widest">Clinic Link</span>
                             <button
                                 onClick={() => {
                                     navigator.clipboard.writeText(universalURL);
@@ -223,16 +265,16 @@ const DigitalIntake = () => {
                                 <Copy className="w-4 h-4" /> Copy
                             </button>
                         </div>
-                        <div className="text-blue-600 font-mono text-sm break-all font-bold">
+                        <div className="text-blue-700 font-mono text-sm break-all font-bold">
                             {universalURL}
                         </div>
                     </div>
 
                     <button
                         onClick={() => window.print()}
-                        className="w-full py-5 bg-gray-900 text-white rounded-[2rem] font-bold text-lg shadow-2xl shadow-gray-200 active:scale-95 transition-all"
+                        className="w-full py-5 bg-blue-600 text-white rounded-[2rem] font-bold text-lg shadow-2xl shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all"
                     >
-                        Print Display Sign
+                        Print Signage
                     </button>
                 </div>
             </Modal>
