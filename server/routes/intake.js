@@ -105,23 +105,13 @@ router.get('/public/clinic-info', async (req, res) => {
             return res.status(400).json({ error: 'Clinic not specified' });
         }
 
-        const result = await pool.query(`
-            SELECT name, slug, logo_url, address, phone
-            FROM tenants
-            WHERE id = $1 AND is_active = true
-        `, [req.clinic.id]);
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Clinic not found' });
-        }
-
-        const clinic = result.rows[0];
+        // Use the clinic object already populated by tenant middleware
         res.json({
-            name: clinic.name,
-            slug: clinic.slug,
-            logoUrl: clinic.logo_url,
-            address: clinic.address,
-            phone: clinic.phone
+            name: req.clinic.name || 'Medical Practice',
+            slug: req.clinic.slug,
+            logoUrl: req.clinic.logo_url || null,
+            address: req.clinic.address || null,
+            phone: req.clinic.phone || null
         });
     } catch (error) {
         console.error('[Intake] Clinic info failed:', error);

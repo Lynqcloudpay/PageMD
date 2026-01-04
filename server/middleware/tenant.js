@@ -88,10 +88,10 @@ const resolveTenant = async (req, res, next) => {
                 for (const row of schemas.rows) {
                     const schema = row.schema_name;
 
-                    // Search in patient_portal_invites OR intake_invites
-                    const tableToCheck = isIntakePublic ? 'intake_invites' : 'patient_portal_invites';
+                    // Search in patient_portal_invites OR intake_sessions (new universal intake)
+                    const tableToCheck = isIntakePublic ? 'intake_sessions' : 'patient_portal_invites';
                     const check = await pool.controlPool.query(
-                        `SELECT 1 FROM ${schema}.${tableToCheck} WHERE token_hash = $1 AND expires_at > CURRENT_TIMESTAMP`,
+                        `SELECT 1 FROM ${schema}.${tableToCheck} WHERE ${isIntakePublic ? 'resume_code_hash' : 'token_hash'} = $1 AND expires_at > CURRENT_TIMESTAMP`,
                         [tokenHash]
                     );
 
