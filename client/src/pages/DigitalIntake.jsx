@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-    UserPlus, Search, Filter, Send, Mail, Phone, Clock,
+    UserPlus, Search, Filter, QrCode, Send, Mail, Phone, Clock,
     CheckCircle, AlertCircle, Eye, MoreVertical, Copy, RefreshCw,
     Check, X, ChevronRight, User, ExternalLink, Smartphone, Shield
 } from 'lucide-react';
