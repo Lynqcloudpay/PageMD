@@ -20,38 +20,52 @@ const pool = new Pool(poolConfig);
 
 async function repairPhoneNormalized() {
     const client = await pool.connect();
-    console.log('--- Repairing phone_normalized via Decryption ---');
+    console.log('--- Repairing phone_normalized via Decryption (Multi-Tenant Aware) ---');
 
     try {
-        const res = await client.query('SELECT * FROM patients');
-        console.log(`Found ${res.rows.length} patients to process.`);
+        // 1. Get all clinis and their schemas
+        const clinicsRes = await client.query('SELECT id, display_name, schema_name FROM public.clinics WHERE schema_name IS NOT NULL');
+        console.log(`Found ${clinicsRes.rows.length} clinics/schemas to process.`);
 
-        for (const row of res.rows) {
-            try {
-                const decrypted = await patientEncryptionService.decryptPatientPHI(row);
-                const p = decrypted.phone || '';
-                const c = decrypted.phone_cell || '';
-                const s = decrypted.phone_secondary || '';
-                const w = decrypted.phone_work || '';
+        for (const clinic of clinicsRes.rows) {
+            console.log(`\nProcessing clinic: ${clinic.display_name} (${clinic.schema_name})`);
 
-                const normalized = (p + c + s + w).replace(/\D/g, '');
+            // Set search path to this tenant
+            await client.query(`SET search_path TO ${clinic.schema_name}, public`);
 
-                if (normalized) {
-                    await client.query(
-                        'UPDATE patients SET phone_normalized = $1 WHERE id = $2',
-                        [normalized, row.id]
-                    );
-                    process.stdout.write('.');
+            const res = await client.query('SELECT * FROM patients');
+            console.log(`Found ${res.rows.length} patients in ${clinic.schema_name}.`);
+
+            for (const row of res.rows) {
+                try {
+                    const decrypted = await patientEncryptionService.decryptPatientPHI(row);
+                    const p = decrypted.phone || '';
+                    const c = decrypted.phone_cell || '';
+                    const s = decrypted.phone_secondary || '';
+                    const w = decrypted.phone_work || '';
+
+                    const normalized = (p + c + s + w).replace(/\D/g, '');
+
+                    if (normalized) {
+                        await client.query(
+                            'UPDATE patients SET phone_normalized = $1 WHERE id = $2',
+                            [normalized, row.id]
+                        );
+                        process.stdout.write('.');
+                    }
+                } catch (err) {
+                    console.error(`\nFailed to process patient ${row.id}:`, err.message);
                 }
-            } catch (err) {
-                console.error(`\nFailed to process patient ${row.id}:`, err.message);
             }
+            console.log(`\nDone with ${clinic.display_name}`);
         }
 
-        console.log('\n✅ Phone normalization repair complete.');
+        console.log('\n✅ All tenants processed.');
     } catch (error) {
         console.error('❌ Repair failed:', error);
     } finally {
+        // Reset search path
+        try { await client.query('SET search_path TO public'); } catch (e) { }
         client.release();
         await pool.end();
     }
