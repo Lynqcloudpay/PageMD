@@ -134,8 +134,22 @@ const PortalAppointments = ({ onMessageShortcut }) => {
 
     const isCancelled = (a) => a.status === 'cancelled' || a.patient_status === 'cancelled' || a.patient_status === 'no_show';
 
-    const scheduled = appointments.filter(a => a.appointment_date >= todayStr && !isCancelled(a)).sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date));
-    const past = appointments.filter(a => a.appointment_date < todayStr && !isCancelled(a)).sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date));
+    const getDateStr = (dateVal) => {
+        if (!dateVal) return '';
+        if (typeof dateVal === 'string') return dateVal.substring(0, 10);
+        return format(new Date(dateVal), 'yyyy-MM-dd');
+    };
+
+    const scheduled = appointments.filter(a => {
+        const apptDate = getDateStr(a.appointment_date);
+        return apptDate >= todayStr && !isCancelled(a);
+    }).sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date));
+
+    const past = appointments.filter(a => {
+        const apptDate = getDateStr(a.appointment_date);
+        return apptDate < todayStr && !isCancelled(a);
+    }).sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date));
+
     const cancelledAppts = appointments.filter(a => isCancelled(a));
 
     const pending = requests.filter(r => r.status === 'pending');
@@ -148,7 +162,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
         <div className="space-y-6 pb-10 animate-in fade-in duration-700">
             {/* TOP ACTION BAR */}
             <div className="flex justify-between items-center">
-                <h1 className="text-xl font-bold text-slate-800">Appointments</h1>
+                <h1 className="text-xl font-bold text-slate-800">My Appointments</h1>
                 <button
                     onClick={() => setShowRequestForm(true)}
                     className="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-blue-100 hover:bg-blue-700 transition-colors flex items-center gap-2"
@@ -293,8 +307,8 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                                 const effectiveStatus = (appt.patient_status === 'cancelled' || appt.patient_status === 'no_show') ? appt.patient_status : appt.status;
                                                 return (
                                                     <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter ${effectiveStatus === 'confirmed' || effectiveStatus === 'scheduled' ? 'bg-emerald-50 text-emerald-600' :
-                                                            effectiveStatus === 'arrived' ? 'bg-blue-50 text-blue-600' :
-                                                                (effectiveStatus === 'cancelled' || effectiveStatus === 'no_show') ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-500'
+                                                        effectiveStatus === 'arrived' ? 'bg-blue-50 text-blue-600' :
+                                                            (effectiveStatus === 'cancelled' || effectiveStatus === 'no_show') ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-500'
                                                         }`}>
                                                         {effectiveStatus === 'scheduled' ? 'Confirmed' : effectiveStatus}
                                                     </span>
