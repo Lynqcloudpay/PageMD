@@ -44,8 +44,10 @@ api.interceptors.response.use(
   (error) => {
     // Handle 401 Unauthorized - token invalid or missing
     if (error.response?.status === 401) {
-      // Don't clear token on login endpoint (that's expected)
-      if (!error.config?.url?.includes('/auth/login')) {
+      // Don't clear token on login endpoint or public routes (that's expected)
+      const url = error.config?.url || '';
+      const isPublicRoute = url.includes('/intake/public/') || url.includes('/portal/auth/');
+      if (!url.includes('/auth/login') && !isPublicRoute) {
         console.warn('401 Unauthorized - clearing token and dispatching event');
         tokenManager.clearToken();
         // Dispatch event for AuthContext to handle
