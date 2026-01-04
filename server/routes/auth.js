@@ -264,7 +264,10 @@ router.get('/me', authenticate, async (req, res) => {
       permissions: req.user.permissions || [],
       scope: req.user.scope || { scheduleScope: 'CLINIC', patientScope: 'CLINIC' },
       isAdmin: user.is_admin || req.user.isAdmin || req.user.is_admin || false,
-      is_admin: user.is_admin || req.user.is_admin || false // Include both formats
+      is_admin: user.is_admin || req.user.is_admin || false, // Include both formats
+      // Clinic info for tenant-specific features
+      clinicSlug: req.clinic?.slug || null,
+      clinicName: req.clinic?.name || null
     });
   } catch (error) {
     console.error('Error fetching current user:', error);

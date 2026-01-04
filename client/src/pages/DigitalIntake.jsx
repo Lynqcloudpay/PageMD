@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import {
-    UserPlus, Search, Filter, QrCode, Send, Mail, Phone, Clock,
+    UserPlus, Search, Filter, Send, Mail, Phone, Clock,
     CheckCircle, AlertCircle, Eye, MoreVertical, Copy, RefreshCw,
     Check, X, ChevronRight, User, ExternalLink, Smartphone, Shield
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { format } from 'date-fns';
 import { intakeAPI } from '../services/api';
 import { showSuccess, showError } from '../utils/toast';
 import Modal from '../components/ui/Modal';
 import IntakeReviewModal from '../components/IntakeReviewModal';
+import { useAuth } from '../context/AuthContext';
 
 const DigitalIntake = () => {
+    const { user } = useAuth();
     const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -65,7 +68,9 @@ const DigitalIntake = () => {
         return name.includes(searchQuery.toLowerCase());
     });
 
-    const universalURL = `${window.location.origin}/intake?clinic=${window.location.host.split('.')[0]}`;
+    // Use clinic slug from authenticated user context for tenant-specific URL
+    const clinicSlug = user?.clinicSlug || 'sandbox';
+    const universalURL = `${window.location.origin}/intake?clinic=${clinicSlug}`;
 
     return (
         <div className="p-6 max-w-7xl mx-auto animate-fadeIn">
@@ -246,10 +251,19 @@ const DigitalIntake = () => {
                         <p className="text-gray-500 text-sm max-w-xs mx-auto">Patients can scan this to start their registration on their own mobile device.</p>
                     </div>
 
-                    <div className="bg-white p-10 rounded-[3rem] inline-block border-8 border-blue-50 shadow-2xl shadow-blue-100">
-                        <QrCode className="w-64 h-64 text-blue-600" />
+                    <div className="bg-white p-8 rounded-[2rem] inline-block border-4 border-blue-100 shadow-2xl shadow-blue-100">
+                        <div className="bg-white p-4 rounded-2xl">
+                            <QRCodeSVG
+                                value={universalURL}
+                                size={240}
+                                level="H"
+                                includeMargin={false}
+                                bgColor="#ffffff"
+                                fgColor="#2563eb"
+                            />
+                        </div>
                         <div className="mt-6 text-2xl font-black text-gray-900 tracking-tight">Scan to Register</div>
-                        <div className="text-blue-400 font-bold text-sm tracking-widest uppercase">Azure Blue Engine</div>
+                        <div className="text-blue-500 font-bold text-xs tracking-widest uppercase mt-1">{user?.clinicName || 'Your Clinic'}</div>
                     </div>
 
                     <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100 text-left space-y-4">
