@@ -77,10 +77,10 @@ const IntakeReviewModal = ({ show, onClose, submissionId, onApproved }) => {
 
     return (
         <Modal
-            show={show}
+            isOpen={show}
             onClose={onClose}
             title="Review Patient Registration"
-            maxWidth="3xl"
+            size="xl"
         >
             {loading ? (
                 <div className="p-12 text-center text-gray-400">Loading submission...</div>

@@ -213,10 +213,10 @@ const DigitalIntake = () => {
 
             {/* Invite Modal */}
             <Modal
-                show={showInviteModal}
+                isOpen={showInviteModal}
                 onClose={() => setShowInviteModal(false)}
                 title="New Patient Registration"
-                maxWidth="md"
+                size="md"
             >
                 {!generatedLink ? (
                     <div className="space-y-6">
