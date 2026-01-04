@@ -51,228 +51,205 @@ const upload = multer({
 // All routes require authentication
 router.use(authenticate);
 
-// Get all patients (with search) - temporarily public for debugging
+// Get all patients (with smart search)
 router.get('/', async (req, res) => {
-  console.log('[PATIENTS-GET] Request received');
+  console.log('[PATIENTS-GET] Smart search request received');
   try {
-    const { search, limit = 100, offset = 0 } = req.query;
-    console.log(`[PATIENTS-GET] Query params: search="${search}", limit=${limit}, offset=${offset}`);
+    const { name, dob, phone, mrn, limit = 25, offset = 0 } = req.query;
+    // Legacy support
+    const search = req.query.search;
+    const firstName = req.query.firstName;
+    const lastName = req.query.lastName;
 
-    let query = 'SELECT * FROM patients';
-    const params = [];
-    let paramCount = 0;
+    const clinicId = req.user?.clinic_id;
+    const encryptionEnabled = process.env.ENABLE_PHI_ENCRYPTION === 'true';
 
-    // All users can see all patients (CLINIC scope is now default for all roles)
-    // Only filter by clinic_id if it exists in the user context
-    query += ' WHERE 1=1';
+    // 1. Name Parsing Logic
+    let firstNameQuery = firstName || '';
+    let lastNameQuery = lastName || '';
+    let isSingleNameToken = false;
 
-    // Filter by clinic_id if user has one (multi-tenant support)
-    if (req.user && req.user.clinic_id) {
-      console.log(`[PATIENTS-GET] Filtering by clinic_id: ${req.user.clinic_id}`);
-      paramCount++;
-      query += ` AND clinic_id = $${paramCount}`;
-      params.push(req.user.clinic_id);
-    } else {
-      console.log('[PATIENTS-GET] No clinic_id filtering');
+    if (name && name.trim()) {
+      const trimmedName = name.trim();
+      if (trimmedName.includes(',')) {
+        const parts = trimmedName.split(',').map(p => p.trim());
+        lastNameQuery = parts[0];
+        firstNameQuery = parts[1] || '';
+      } else if (trimmedName.includes(' ')) {
+        const parts = trimmedName.split(/\s+/).map(p => p.trim());
+        firstNameQuery = parts[0];
+        lastNameQuery = parts.slice(1).join(' ');
+      } else {
+        firstNameQuery = trimmedName;
+        lastNameQuery = trimmedName;
+        isSingleNameToken = true;
+      }
     }
 
-    // Handle structured search parameters
-    const { firstName, lastName, dob, phone, email, mrn } = req.query;
+    // 2. Phone Normalization (search digits only)
+    const phoneDigits = phone ? phone.replace(/\D/g, '') : '';
 
-    // Check if encryption is enabled (string 'true')
-    const encryptionEnabled = process.env.ENABLE_PHI_ENCRYPTION === 'true';
-    const hasSearchTerms = search || firstName || lastName || phone || email;
+    // If encryption is enabled, we must filter in memory for name/phone
+    if (encryptionEnabled && (firstNameQuery || lastNameQuery || phoneDigits || search)) {
+      console.log('[PATIENTS-GET] Encryption enabled -> In-Memory Search');
 
-    // STRATEGY:
-    // If PHI encryption is enabled and we are searching by encrypted fields (name, email, phone),
-    // we CANNOT use SQL ILIKE. We must fetch all patients for the clinic, decrypt them, 
-    // and filter in memory. (Feasible for < 5000 patients).
-    // MRN and DOB are plaintext, so they can be searched efficiently in SQL if they are the ONLY search terms.
+      let query = 'SELECT * FROM patients WHERE clinic_id = $1';
+      const params = [clinicId];
 
-    if (encryptionEnabled && hasSearchTerms) {
-      console.log('[PATIENTS-GET] Encryption enabled + Search terms present -> Performing In-Memory Search');
-
-      // 1. Fetch ALL patients for this clinic (without offset/limit yet)
-      // We still respect MRN search in SQL since it's plaintext and effectively filters down to 1 row
-      if (mrn) {
-        paramCount++;
-        query += ` AND mrn ILIKE $${paramCount}`;
-        params.push(`%${mrn}%`);
-      }
-
-      // Optimize: If ONLY searching by DOB, we can do that in SQL too
-      if (dob && !search && !firstName && !lastName && !phone && !email) {
-        paramCount++;
-        query += ` AND (to_char(dob, 'MM/DD/YYYY') = $${paramCount} OR to_char(dob, 'YYYY-MM-DD') = $${paramCount})`;
+      // We can still pre-filter by dob and mrn in SQL since they are plaintext
+      if (dob) {
+        query += ` AND (to_char(dob, 'MM/DD/YYYY') = $2 OR to_char(dob, 'YYYY-MM-DD') = $2 OR to_char(dob, 'YYYY') = $2)`;
         params.push(dob);
       }
-
-      query += ` ORDER BY last_name, first_name`; // Sort full result
+      if (mrn) {
+        const mrnIdx = params.length + 1;
+        query += ` AND mrn ILIKE $${mrnIdx}`;
+        params.push(`${mrn}%`);
+      }
 
       const result = await pool.query(query, params);
-
-      // 2. Decrypt ALL fetched rows
       const decryptedAll = await patientEncryptionService.decryptPatientsPHI(result.rows);
 
-      // 3. Filter in Memory
       let filtered = decryptedAll;
 
-      if (search && search.trim()) {
-        const term = search.trim().toLowerCase();
+      // Apply Name filter (AND logic)
+      if (firstNameQuery || lastNameQuery) {
         filtered = filtered.filter(p => {
-          const fullName = `${p.first_name || ''} ${p.last_name || ''}`.toLowerCase();
-          const dobStr = p.dob ? new Date(p.dob).toLocaleDateString() : ''; // Basic format check
-          // Check all searchable fields
-          return (
-            (p.first_name && p.first_name.toLowerCase().includes(term)) ||
-            (p.last_name && p.last_name.toLowerCase().includes(term)) ||
-            fullName.includes(term) ||
-            (p.mrn && p.mrn.toLowerCase().includes(term)) ||
-            (p.phone && p.phone.includes(term)) ||
-            (p.email && p.email.toLowerCase().includes(term)) ||
-            dobStr.includes(term)
-          );
+          const fn = (p.first_name || '').toLowerCase();
+          const ln = (p.last_name || '').toLowerCase();
+          const fq = firstNameQuery.toLowerCase();
+          const lq = lastNameQuery.toLowerCase();
+
+          if (isSingleNameToken) {
+            return fn.includes(fq) || ln.includes(lq);
+          }
+          return fn.includes(fq) && ln.includes(lq);
         });
       }
 
-      if (firstName) {
-        const term = firstName.toLowerCase();
-        filtered = filtered.filter(p => p.first_name && p.first_name.toLowerCase().includes(term));
+      // Apply Phone filter
+      if (phoneDigits) {
+        filtered = filtered.filter(p => {
+          const p1 = (p.phone || '').replace(/\D/g, '');
+          const p2 = (p.phone_cell || '').replace(/\D/g, '');
+          return p1.includes(phoneDigits) || p2.includes(phoneDigits);
+        });
       }
-      if (lastName) {
-        const term = lastName.toLowerCase();
-        filtered = filtered.filter(p => p.last_name && p.last_name.toLowerCase().includes(term));
-      }
-      if (phone) {
+
+      // Apply Legacy Search if present
+      if (search && search.trim()) {
+        const term = search.trim().toLowerCase();
         filtered = filtered.filter(p =>
-          (p.phone && p.phone.includes(phone)) ||
-          (p.phone_cell && p.phone_cell.includes(phone))
+          (p.first_name && p.first_name.toLowerCase().includes(term)) ||
+          (p.last_name && p.last_name.toLowerCase().includes(term)) ||
+          (p.mrn && p.mrn.toLowerCase().includes(term))
         );
       }
-      if (email) {
-        const term = email.toLowerCase();
-        filtered = filtered.filter(p => p.email && p.email.toLowerCase().includes(term));
+
+      // Sorting Logic
+      filtered.sort((a, b) => {
+        // 1. Exact MRN match priority
+        if (mrn) {
+          if (a.mrn === mrn && b.mrn !== mrn) return -1;
+          if (b.mrn === mrn && a.mrn !== mrn) return 1;
+        }
+
+        // 2. Exact Phone match
+        if (phoneDigits) {
+          const aPhone = (a.phone || '').replace(/\D/g, '');
+          const bPhone = (b.phone || '').replace(/\D/g, '');
+          if (aPhone === phoneDigits && bPhone !== phoneDigits) return -1;
+          if (bPhone === phoneDigits && aPhone !== phoneDigits) return 1;
+        }
+
+        // 3. Name match score (starts-with > contains)
+        if (firstNameQuery) {
+          const aStarts = (a.first_name || '').toLowerCase().startsWith(firstNameQuery.toLowerCase());
+          const bStarts = (b.first_name || '').toLowerCase().startsWith(firstNameQuery.toLowerCase());
+          if (aStarts && !bStarts) return -1;
+          if (bStarts && !aStarts) return 1;
+        }
+
+        // 4. Recently updated
+        return new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at);
+      });
+
+      return res.json(filtered.slice(offset, offset + limit));
+    }
+
+    // --- SQL SEARCH (Encryption Disabled) ---
+    let query = 'SELECT * FROM patients WHERE clinic_id = $1';
+    const params = [clinicId];
+    let paramCount = 1;
+
+    if (firstNameQuery || lastNameQuery) {
+      if (isSingleNameToken) {
+        paramCount++;
+        query += ` AND (first_name ILIKE $${paramCount} OR last_name ILIKE $${paramCount})`;
+        params.push(`%${firstNameQuery}%`);
+      } else {
+        if (firstNameQuery) {
+          paramCount++;
+          query += ` AND first_name ILIKE $${paramCount}`;
+          params.push(`%${firstNameQuery}%`);
+        }
+        if (lastNameQuery) {
+          paramCount++;
+          query += ` AND last_name ILIKE $${paramCount}`;
+          params.push(`%${lastNameQuery}%`);
+        }
       }
-      // DOB check if generic search didn't cover it (and it wasn't SQL filtered)
-      if (dob && (search || firstName || lastName || phone || email)) {
-        // Basic date string match for simplicity in legacy support
-        filtered = filtered.filter(p => p.dob && (p.dob === dob || new Date(p.dob).toISOString().startsWith(dob)));
-      }
-
-      console.log(`[PATIENTS-GET] In-Memory Filter Result: ${filtered.length} matches`);
-
-      // 4. Manual Pagination
-      const limitNum = parseInt(limit);
-      const offsetNum = parseInt(offset);
-      const paginated = filtered.slice(offsetNum, offsetNum + limitNum);
-
-      // Log Audit
-      try {
-        const requestId = req.headers['x-request-id'] || crypto.randomUUID();
-        await logAudit(
-          req.user.id, 'patient.list', 'patient', null,
-          { search: search ? '[REDACTED]' : null, count: paginated.length, mode: 'in-memory' },
-          req.ip, req.get('user-agent'), 'success', requestId, req.sessionId
-        );
-      } catch (e) { }
-
-      return res.json(paginated);
-
     }
 
-    // --- SQL SEARCH (Encryption Disabled or No Search Terms) ---
-
-    if (firstName) {
-      paramCount++;
-      query += ` AND first_name ILIKE $${paramCount}`;
-      params.push(`%${firstName}%`);
-    }
-    if (lastName) {
-      paramCount++;
-      query += ` AND last_name ILIKE $${paramCount}`;
-      params.push(`%${lastName}%`);
-    }
     if (dob) {
       paramCount++;
-      // Handle both MM/DD/YYYY and YYYY-MM-DD
-      query += ` AND (to_char(dob, 'MM/DD/YYYY') = $${paramCount} OR to_char(dob, 'YYYY-MM-DD') = $${paramCount})`;
+      // Exact match or year-only
+      query += ` AND (to_char(dob, 'YYYY-MM-DD') = $${paramCount} OR to_char(dob, 'MM/DD/YYYY') = $${paramCount} OR to_char(dob, 'YYYY') = $${paramCount})`;
       params.push(dob);
     }
-    if (phone) {
+
+    if (phoneDigits) {
       paramCount++;
-      query += ` AND (phone ILIKE $${paramCount} OR phone_cell ILIKE $${paramCount} OR phone_secondary ILIKE $${paramCount})`;
-      params.push(`%${phone}%`);
+      query += ` AND phone_normalized ILIKE $${paramCount}`;
+      params.push(`%${phoneDigits}%`);
     }
-    if (email) {
-      paramCount++;
-      query += ` AND email ILIKE $${paramCount}`;
-      params.push(`%${email}%`);
-    }
+
     if (mrn) {
       paramCount++;
       query += ` AND mrn ILIKE $${paramCount}`;
-      params.push(`%${mrn}%`);
+      params.push(`${mrn}%`);
     }
 
-    // Handle generic search parameter - check if search is provided and not empty
     if (search && search.trim()) {
-      const searchTerm = search.trim();
-      console.log(`[PATIENTS-GET] Adding generic search filter: ${searchTerm}`);
       paramCount++;
-      // Search by name (including full name), MRN, Phone, DOB, and Email
-      query += ` AND (
-        concat_ws(' ', first_name, last_name) ILIKE $${paramCount} OR 
-        first_name ILIKE $${paramCount} OR 
-        last_name ILIKE $${paramCount} OR 
-        mrn ILIKE $${paramCount} OR 
-        phone ILIKE $${paramCount} OR
-        phone_cell ILIKE $${paramCount} OR
-        email ILIKE $${paramCount} OR
-        to_char(dob, 'MM/DD/YYYY') ILIKE $${paramCount} OR
-        to_char(dob, 'YYYY-MM-DD') ILIKE $${paramCount}
-      )`;
-      params.push(`%${searchTerm}%`);
+      query += ` AND (first_name ILIKE $${paramCount} OR last_name ILIKE $${paramCount} OR mrn ILIKE $${paramCount})`;
+      params.push(`%${search.trim()}%`);
     }
 
-    query += ` ORDER BY last_name, first_name LIMIT $${++paramCount} OFFSET $${++paramCount}`;
+    // Advanced Sorting in SQL
+    const sortConditions = [];
+    if (mrn) sortConditions.push(`CASE WHEN mrn = '${mrn.replace(/'/g, "''")}' THEN 0 ELSE 1 END`);
+    if (phoneDigits) sortConditions.push(`CASE WHEN phone_normalized = '${phoneDigits}' THEN 0 ELSE 1 END`);
+    sortConditions.push(`updated_at DESC`);
+    sortConditions.push(`last_name, first_name`);
+
+    query += ` ORDER BY ${sortConditions.join(', ')}`;
+
+    query += ` LIMIT $${++paramCount} OFFSET $${++paramCount}`;
     params.push(parseInt(limit), parseInt(offset));
 
-    console.log(`[PATIENTS-GET] Executing query: ${query}`);
-    console.log(`[PATIENTS-GET] Params: ${JSON.stringify(params)}`);
-
     const result = await pool.query(query, params);
-
-    console.log(`[PATIENTS-GET] Query result rows: ${result.rows.length}`);
-
-    // Decrypt PHI fields before sending response
     const decryptedPatients = await patientEncryptionService.decryptPatientsPHI(result.rows);
-    console.log(`[PATIENTS-GET] Decrypted rows: ${decryptedPatients.length}`);
 
-    // Log audit
-    const requestId = req.headers['x-request-id'] || crypto.randomUUID();
-    // Use try-catch for audit to prevent blocking main response
+    // Audit log
     try {
-      await logAudit(
-        req.user.id,
-        'patient.list',
-        'patient',
-        null,
-        { search: search ? '[REDACTED]' : null, count: decryptedPatients.length },
-        req.ip,
-        req.get('user-agent'),
-        'success',
-        requestId,
-        req.sessionId
-      );
-    } catch (auditErr) {
-      console.warn('Audit log failed', auditErr.message);
-    }
+      await logAudit(req.user.id, 'patient.search', 'patient', null, { filters: req.query }, req.ip);
+    } catch (e) { }
 
     res.json(decryptedPatients);
   } catch (error) {
-    console.error('[PATIENTS-GET] Error fetching patients:', error);
-    console.error(error.stack);
-    res.status(500).json({ error: 'Failed to fetch patients' });
+    console.error('[PATIENTS-GET] Smart search error:', error);
+    res.status(500).json({ error: 'Failed to search patients' });
   }
 });
 
@@ -771,6 +748,10 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
       clinic_id: userClinicId,
     };
 
+    // Extract digits for phone_normalized
+    const allPhones = [phone, phone_cell, phoneCell, phone_secondary, phoneSecondary, phone_work, phoneWork].filter(Boolean).join('');
+    const phone_normalized = allPhones.replace(/\D/g, '');
+
     // Build patient object for encryption
     const patientData = {
       mrn: finalMRN,
@@ -778,6 +759,7 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
       last_name: final_last_name,
       dob: dob,
       clinic_id: userClinicId,
+      phone_normalized: phone_normalized,
       ...optionalFields
     };
 
@@ -789,6 +771,7 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
       'id', 'mrn', 'first_name', 'last_name', 'dob', 'sex', 'gender',
       'middle_name', 'name_suffix', 'preferred_name', 'race', 'ethnicity', 'marital_status',
       'phone', 'phone_secondary', 'phone_cell', 'phone_work', 'phone_preferred',
+      'phone_normalized',
       'email', 'email_secondary',
       'address_line1', 'address_line2', 'city', 'state', 'zip', 'country', 'address_type',
       'preferred_language', 'interpreter_needed', 'communication_preference', 'consent_to_text', 'consent_to_email',
@@ -902,6 +885,24 @@ router.put('/:id', requirePermission('patients:edit_demographics'), async (req, 
     // Decrypt existing patient data
     const existingPatient = await patientEncryptionService.decryptPatientPHI(existingResult.rows[0]);
 
+    // Handle phone_normalized update if any phone field changes
+    const phoneFields = ['phone', 'phone_cell', 'phone_secondary', 'phone_work'];
+    let phoneChanged = false;
+    for (const f of phoneFields) {
+      if (updates[f] !== undefined || updates[f.replace(/_([a-z])/g, (g) => g[1].toUpperCase())] !== undefined) {
+        phoneChanged = true;
+        break;
+      }
+    }
+
+    if (phoneChanged) {
+      const p = updates.phone || updates.phoneCell || updates.phone_cell || existingPatient.phone || existingPatient.phone_cell || '';
+      const s = updates.phoneSecondary || updates.phone_secondary || existingPatient.phone_secondary || '';
+      const w = updates.phoneWork || updates.phone_work || existingPatient.phone_work || '';
+      const combined = (p + s + w).replace(/\D/g, '');
+      updates.phone_normalized = combined;
+    }
+
     // Track which fields are being updated
     const changedFields = {};
     const allowedFields = [
@@ -910,6 +911,7 @@ router.put('/:id', requirePermission('patients:edit_demographics'), async (req, 
       'dob', 'sex', 'gender', 'race', 'ethnicity', 'marital_status',
       // Contact
       'phone', 'phone_secondary', 'phone_cell', 'phone_work', 'phone_preferred',
+      'phone_normalized',
       'email', 'email_secondary', 'preferred_language', 'interpreter_needed',
       'communication_preference', 'consent_to_text', 'consent_to_email',
       // Address

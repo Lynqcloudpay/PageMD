@@ -37,6 +37,7 @@ const PHI_FIELDS = [
 // These are less sensitive or needed for queries
 const PLAINTEXT_FIELDS = [
   'mrn', // Medical Record Number - needed for lookup
+  'phone_normalized', // For search indexing
   'id', 'created_at', 'updated_at', 'primary_care_provider',
   'insurance_provider', 'pharmacy_name', 'pharmacy_npi'
 ];

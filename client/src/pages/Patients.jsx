@@ -10,7 +10,12 @@ import { format, parseISO } from 'date-fns';
 const Patients = () => {
     const navigate = useNavigate();
     const { patients, appointments, addPatient } = usePatient();
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchFields, setSearchFields] = useState({
+        name: '',
+        dob: '',
+        phone: '',
+        mrn: ''
+    });
     const [filteredPatients, setFilteredPatients] = useState([]);
     const [pendingPatients, setPendingPatients] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -51,37 +56,55 @@ const Patients = () => {
         setPendingPatients(pending);
     }, [appointments, patients, currentProvider]);
 
+    const hasFilters = Object.values(searchFields).some(v => v.trim() !== '');
+
+    const triggerSearch = async () => {
+        if (!hasFilters) {
+            setFilteredPatients([]);
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const response = await patientsAPI.search(searchFields);
+            setFilteredPatients(response.data);
+        } catch (error) {
+            console.error('Search failed', error);
+            // Fallback local search
+            const results = patients.filter(p => {
+                const pName = (p.name || `${p.first_name || ''} ${p.last_name || ''}`).toLowerCase();
+                const pMrn = (p.mrn || '').toLowerCase();
+
+                const nameMatch = !searchFields.name || pName.includes(searchFields.name.toLowerCase());
+                const mrnMatch = !searchFields.mrn || pMrn.includes(searchFields.mrn.toLowerCase());
+
+                return nameMatch && mrnMatch;
+            });
+            setFilteredPatients(results);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        // Debounce search to reduce API calls
         const timeoutId = setTimeout(() => {
-            if (searchQuery.trim()) {
-                setLoading(true);
-                // Try API first, fallback to local search
-                patientsAPI.search(searchQuery)
-                    .then(response => {
-                        setFilteredPatients(response.data);
-                        setLoading(false);
-                    })
-                    .catch(() => {
-                        // Fallback to local search
-                        const results = patients.filter(p =>
-                            (p.name && p.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                            (p.mrn && p.mrn.toLowerCase().includes(searchQuery.toLowerCase()))
-                        );
-                        setFilteredPatients(results);
-                        setLoading(false);
-                    });
+            if (hasFilters) {
+                triggerSearch();
             } else {
                 setFilteredPatients([]);
             }
-        }, 300); // 300ms debounce delay
+        }, 400);
 
         return () => clearTimeout(timeoutId);
-    }, [searchQuery, patients]);
+    }, [searchFields]);
+
+    const clearFilters = () => {
+        setSearchFields({ name: '', dob: '', phone: '', mrn: '' });
+        setFilteredPatients([]);
+    };
 
     const handlePatientClick = (patientId) => {
         // Find patient details from search results or all patients
-        // Only if we have full patient details do we add to recent
         const patient = filteredPatients.find(p => p.id === patientId) ||
             patients.find(p => p.id === patientId) ||
             recentlyViewed.find(p => p.id === patientId);
@@ -104,6 +127,14 @@ const Patients = () => {
         setShowAddModal(false);
     };
 
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            triggerSearch();
+        } else if (e.key === 'Escape') {
+            clearFilters();
+        }
+    };
+
     return (
         <div className="h-full bg-white w-full">
             <div className="p-4 w-full">
@@ -122,17 +153,68 @@ const Patients = () => {
                     </button>
                 </div>
 
-                {/* Search Bar - Compact Design */}
-                <div className="mb-4">
-                    <div className="relative">
-                        <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10" />
-                        <input
-                            type="text"
-                            placeholder="Search patients by name, MRN, phone, email, or DOB (MM/DD/YYYY)..."
-                            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm text-gray-700 placeholder:text-gray-400"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
+                {/* 4-Field Smart Search Row */}
+                <div className="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm" onKeyDown={handleKeyDown}>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        {/* Name Search */}
+                        <div className="relative">
+                            <User className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10" />
+                            <input
+                                type="text"
+                                placeholder="Name (First Last or Last, First)"
+                                className="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm text-gray-700 placeholder:text-gray-400"
+                                value={searchFields.name}
+                                onChange={(e) => setSearchFields({ ...searchFields, name: e.target.value })}
+                            />
+                        </div>
+                        {/* DOB Search */}
+                        <div className="relative">
+                            <Calendar className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10" />
+                            <input
+                                type="text"
+                                placeholder="DOB (MM/DD/YYYY or YYYY)"
+                                className="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm text-gray-700 placeholder:text-gray-400"
+                                value={searchFields.dob}
+                                onChange={(e) => setSearchFields({ ...searchFields, dob: e.target.value })}
+                            />
+                        </div>
+                        {/* Phone Search */}
+                        <div className="relative">
+                            <Clock className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10" />
+                            <input
+                                type="tel"
+                                placeholder="Phone (e.g. 3055551212)"
+                                className="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm text-gray-700 placeholder:text-gray-400"
+                                value={searchFields.phone}
+                                onChange={(e) => setSearchFields({ ...searchFields, phone: e.target.value })}
+                            />
+                        </div>
+                        {/* MRN Search */}
+                        <div className="relative">
+                            <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10" />
+                            <input
+                                type="text"
+                                placeholder="MRN (Partial or Exact)"
+                                className="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm text-gray-700 placeholder:text-gray-400"
+                                value={searchFields.mrn}
+                                onChange={(e) => setSearchFields({ ...searchFields, mrn: e.target.value })}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 mt-3">
+                        <button
+                            onClick={clearFilters}
+                            className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-all"
+                        >
+                            Clear All (Esc)
+                        </button>
+                        <button
+                            onClick={triggerSearch}
+                            className="px-4 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-bold rounded-lg transition-all border border-blue-200"
+                        >
+                            Search (Enter)
+                        </button>
                     </div>
                 </div>
 
@@ -179,7 +261,7 @@ const Patients = () => {
                 )}
 
                 {/* Search Results or Recently Viewed / All Patients */}
-                {searchQuery.trim() ? (
+                {hasFilters ? (
                     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                         <div className="px-4 py-2.5 bg-blue-50 border-b border-gray-200">
                             <div className="flex items-center gap-2">
@@ -204,13 +286,30 @@ const Patients = () => {
                                         patient={patient}
                                         index={index}
                                         onClick={() => handlePatientClick(patient.id)}
+                                        highlight={searchFields}
                                     />
                                 ))}
                             </div>
                         ) : (
-                            <div className="p-8 text-center text-gray-500">
-                                <User className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                                <p className="text-sm">No patients found matching "{searchQuery}"</p>
+                            <div className="p-12 text-center text-gray-500">
+                                <Search className="w-12 h-12 mx-auto mb-4 text-gray-200" />
+                                <h3 className="text-lg font-medium text-gray-900 mb-1">No patients found</h3>
+                                <p className="text-sm text-gray-500 mb-6">We couldn't find any patients matching those criteria.</p>
+                                <div className="space-y-4 max-w-xs mx-auto text-left bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Suggestions:</p>
+                                    <ul className="text-xs text-gray-600 space-y-2 list-disc pl-4">
+                                        <li>Try searching for part of the name (e.g. "chr" for "Christopher")</li>
+                                        <li>Verify the MRN is correct</li>
+                                        <li>Try searching by year of birth only (e.g. "1990")</li>
+                                        <li>Remove some filters to broaden your search</li>
+                                    </ul>
+                                </div>
+                                <button
+                                    onClick={clearFilters}
+                                    className="mt-6 text-blue-600 hover:text-blue-800 text-sm font-semibold"
+                                >
+                                    Reset all filters
+                                </button>
                             </div>
                         )}
                     </div>
@@ -300,7 +399,7 @@ const formatDate = (dateString) => {
     }
 };
 
-const PatientListItem = ({ patient, index, onClick }) => (
+const PatientListItem = ({ patient, index, onClick, highlight }) => (
     <div
         onClick={onClick}
         className="p-3 hover:bg-blue-50 cursor-pointer transition-all flex items-center justify-between group border-l-4 border-transparent hover:border-blue-500"
@@ -310,18 +409,33 @@ const PatientListItem = ({ patient, index, onClick }) => (
                 {index + 1}
             </div>
             <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-gray-800 text-sm group-hover:text-blue-600 transition-colors mb-1.5">
-                    {patient.name || `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || 'Unknown Patient'}
+                <h3 className="font-semibold text-gray-800 text-sm group-hover:text-blue-600 transition-colors mb-1.5 flex items-center gap-2">
+                    <HighlightText
+                        text={patient.name || `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || 'Unknown Patient'}
+                        highlight={highlight?.name}
+                    />
                 </h3>
                 <div className="flex items-center gap-2 text-xs text-gray-600 flex-wrap">
                     <span className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded">
                         <span className="text-gray-500 text-xs">MRN:</span>
-                        <span className="font-mono font-semibold text-gray-700">{patient.mrn}</span>
+                        <span className="font-mono font-semibold text-gray-700">
+                            <HighlightText text={patient.mrn} highlight={highlight?.mrn} />
+                        </span>
                     </span>
                     {(patient.dob || patient.date_of_birth) && (
                         <span className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded">
                             <Calendar className="w-3 h-3 text-blue-600" />
-                            <span className="font-medium">{formatDate(patient.dob || patient.date_of_birth)}</span>
+                            <span className="font-medium">
+                                <HighlightText text={formatDate(patient.dob || patient.date_of_birth)} highlight={highlight?.dob} />
+                            </span>
+                        </span>
+                    )}
+                    {(patient.phone || patient.phone_cell) && (
+                        <span className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded">
+                            <Clock className="w-3 h-3 text-blue-600" />
+                            <span className="font-medium">
+                                <HighlightText text={patient.phone || patient.phone_cell} highlight={highlight?.phone} />
+                            </span>
                         </span>
                     )}
                     {patient.sex && (
@@ -342,4 +456,30 @@ const PatientListItem = ({ patient, index, onClick }) => (
         </div>
     </div>
 );
+
+const HighlightText = ({ text, highlight }) => {
+    if (!highlight || !text) return <span>{text}</span>;
+
+    // Convert text and highlight to string
+    const textStr = String(text);
+    const highlightStr = String(highlight).trim();
+
+    if (!highlightStr) return <span>{textStr}</span>;
+
+    // Split text by highlight terms
+    try {
+        const parts = textStr.split(new RegExp(`(${highlightStr})`, 'gi'));
+        return (
+            <span>
+                {parts.map((part, i) =>
+                    part.toLowerCase() === highlightStr.toLowerCase()
+                        ? <mark key={i} className="bg-yellow-200 text-yellow-900 rounded-sm px-0.5">{part}</mark>
+                        : part
+                )}
+            </span>
+        );
+    } catch (e) {
+        return <span>{textStr}</span>;
+    }
+};
 
