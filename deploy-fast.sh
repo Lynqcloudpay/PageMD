@@ -110,6 +110,9 @@ ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST << EOF
   echo "💊 Running Orders Catalog Migration..."
   docker compose -f docker-compose.prod.yml exec -T api node scripts/create_orders_catalog.js || echo "⚠️ Warning: Orders Catalog migration failed."
 
+  echo "⚙️  Running Patient Search Smart Filter Migration..."
+  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-patient-search-smart.js || echo "⚠️ Warning: Patient search migration failed."
+
   echo "🏥 Running Clinic ID User Migration..."
   docker compose -f docker-compose.prod.yml exec -T api node scripts/add_clinic_id_to_users.js || echo "⚠️ Warning: Clinic ID migration failed."
 
