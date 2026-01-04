@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Heart, Shield, ChevronRight, CheckCircle,
     ClipboardList, AlertCircle, Phone, Calendar,
-    User, ArrowRight, Lock, Key, Smartphone
+    User, ArrowRight, Lock, Key, Smartphone, Building
 } from 'lucide-react';
 import { intakeAPI } from '../services/api';
 import { showError, showSuccess } from '../utils/toast';
