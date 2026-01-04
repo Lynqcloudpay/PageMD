@@ -19,7 +19,18 @@ api.interceptors.request.use((config) => {
   }
 
   // HIPAA: Clinic slug is used for multi-tenant routing
-  const clinicSlug = localStorage.getItem('clinic_slug');
+  // Priority: 1. URL query param (for public intake links), 2. localStorage (for staff)
+  let clinicSlug = localStorage.getItem('clinic_slug');
+
+  // For public pages, check URL for clinic param
+  if (typeof window !== 'undefined') {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlClinic = urlParams.get('clinic');
+    if (urlClinic) {
+      clinicSlug = urlClinic;
+    }
+  }
+
   if (clinicSlug) {
     config.headers['x-clinic-slug'] = clinicSlug;
   }
