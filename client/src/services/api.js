@@ -416,6 +416,38 @@ export const eprescribeAPI = {
   }),
 };
 
+// Portal
+export const portalAPI = {
+  login: (credentials) => api.post('/portal/auth/login', credentials),
+  register: (data) => api.post('/portal/auth/register', data),
+  getProfile: () => api.get('/portal/profile'),
+  getMedications: () => api.get('/portal/medications'),
+  getResults: () => api.get('/portal/labs'),
+  getAppointments: () => api.get('/portal/appointments'),
+  requestAppointment: (data) => api.post('/portal/appointments', data),
+  getMessages: () => api.get('/portal/messages'),
+  sendMessage: (data) => api.post('/portal/messages', data),
+  verifyInvite: (token) => api.get(`/portal/auth/invite/${token}`),
+};
+
+// Digital Intake
+export const intakeAPI = {
+  // Staff methods
+  createInvite: (data) => api.post('/intake/invite', data),
+  getInvites: () => api.get('/intake/invites'),
+  getSubmission: (id) => api.get(`/intake/submission/${id}`),
+  getDuplicates: (id) => api.get(`/intake/submission/${id}/duplicates`),
+  approve: (id, data) => api.post(`/intake/submission/${id}/approve`, data),
+  sendBack: (id, data) => api.post(`/intake/submission/${id}/send-back`, data),
+
+  // Public methods (No auth header added by interceptor if route matches public pattern)
+  // Actually our axios interceptor adds it if it exists. 
+  // For public routes, the token won't be in localStorage so it's fine.
+  getPublicDetails: (token) => api.get(`/intake/public/details/${token}`),
+  savePublicData: (token, data) => api.post(`/intake/public/save/${token}`, { data }),
+  submitPublicData: (token, data, signatures) => api.post(`/intake/public/submit/${token}`, { data, signatures }),
+};
+
 // Auth
 export const authAPI = {
   login: (email, password) => api.post('/auth/login', { email, password }),

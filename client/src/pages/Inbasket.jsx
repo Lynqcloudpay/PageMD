@@ -4,7 +4,7 @@ import {
     Inbox, CheckCircle, Clock, AlertTriangle, MessageSquare, FileText,
     Pill, FlaskConical, Image, Send, RefreshCw, Filter, Search,
     ChevronRight, X, Plus, Bell, User, Calendar, Phone, Paperclip,
-    ArrowRight, Check, ArrowLeft, ChevronLeft
+    ArrowRight, Check, ArrowLeft, ChevronLeft, Eye, UserPlus
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
@@ -21,9 +21,12 @@ const TASK_CATEGORIES = [
     { id: 'notes', label: 'Clinical Notes', icon: FileText, color: 'emerald', types: ['note'] },
     { id: 'documents', label: 'Documents', icon: FileText, color: 'orange', types: ['document'] },
     { id: 'referrals', label: 'Referrals', icon: Send, color: 'indigo', types: ['referral'] },
+    { id: 'registrations', label: 'Registrations', icon: User, color: 'emerald', types: ['new_patient_registration'] },
     { id: 'tasks', label: 'Tasks', icon: CheckCircle, color: 'green', types: ['task'] },
     { id: 'refills', label: 'Rx Requests', icon: Pill, color: 'red', types: ['refill'] },
 ];
+
+import IntakeReviewModal from '../components/IntakeReviewModal';
 
 const Inbasket = () => {
     const { user } = useAuth();
@@ -51,6 +54,7 @@ const Inbasket = () => {
 
     // Compose State
     const [showCompose, setShowCompose] = useState(false);
+    const [showIntakeReview, setShowIntakeReview] = useState(false);
     const [composeData, setComposeData] = useState({
         type: 'task',
         subject: '',
@@ -544,6 +548,23 @@ const Inbasket = () => {
                                         <button onClick={() => openPatientChart(selectedItem)} className="text-blue-600 text-xs font-bold whitespace-nowrap">Open Thread</button>
                                     </div>
                                 )}
+                                {details?.type === 'new_patient_registration' && (
+                                    <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-4">
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <UserPlus className="w-8 h-8 text-emerald-500" />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-emerald-900 font-bold">New Registration</p>
+                                                <p className="text-xs text-emerald-600">Patient intake form submitted.</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => setShowIntakeReview(true)}
+                                            className="w-full px-3 py-2.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 flex items-center justify-center gap-1 shadow-sm"
+                                        >
+                                            <Eye className="w-4 h-4" /> Review Submission
+                                        </button>
+                                    </div>
+                                )}
                                 {details?.type === 'portal_appointment' && (
                                     <div className="bg-amber-50 border border-amber-100 rounded-lg p-4">
                                         <div className="flex items-center gap-3 mb-3">
@@ -975,6 +996,21 @@ const Inbasket = () => {
                     </div>
                 </div>
             )}
+
+            {/* Intake Review Modal */}
+            <IntakeReviewModal
+                show={showIntakeReview}
+                onClose={() => setShowIntakeReview(false)}
+                submissionId={selectedItem?.reference_id}
+                onApproved={(patientId) => {
+                    setShowIntakeReview(false);
+                    setSelectedItem(null);
+                    fetchData(true);
+                    if (patientId) {
+                        navigate(`/patient/${patientId}/snapshot`);
+                    }
+                }}
+            />
         </div>
     );
 };

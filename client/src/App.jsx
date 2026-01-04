@@ -59,6 +59,8 @@ const PortalDashboard = React.lazy(() => import('./portal/PortalDashboard'));
 const PortalRegister = React.lazy(() => import('./portal/PortalRegister'));
 const PortalForgotPassword = React.lazy(() => import('./portal/PortalForgotPassword'));
 const PortalResetPassword = React.lazy(() => import('./portal/PortalResetPassword'));
+const PatientIntakeForm = React.lazy(() => import('./pages/PatientIntakeForm'));
+const DigitalIntake = React.lazy(() => import('./pages/DigitalIntake'));
 
 // Patient Redirect Component - redirects /patient/:id to /patient/:id/snapshot
 const PatientRedirect = () => {
@@ -147,6 +149,18 @@ function App() {
                                                 <Route path="/pricing" element={<PricingPage />} />
                                                 <Route path="/contact" element={<ContactPage />} />
                                                 <Route path="/about" element={<AboutPage />} />
+                                                <Route path="/digital-intake" element={
+                                                    <ProtectedRoute>
+                                                        <ErrorBoundary>
+                                                            <Layout><DigitalIntake /></Layout>
+                                                        </ErrorBoundary>
+                                                    </ProtectedRoute>
+                                                } />
+                                                <Route path="/r/:token" element={
+                                                    <React.Suspense fallback={<div>Loading Registration...</div>}>
+                                                        <PatientIntakeForm />
+                                                    </React.Suspense>
+                                                } />
                                                 <Route path="/sales-admin" element={<SalesAdmin />} />
 
                                                 {/* Patient Portal Routes */}

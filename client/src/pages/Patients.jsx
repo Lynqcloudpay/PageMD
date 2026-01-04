@@ -144,13 +144,22 @@ const Patients = () => {
                         <h1 className="text-2xl font-bold text-gray-800 mb-0.5">Patients</h1>
                         <p className="text-gray-500 text-xs">Manage your patient list</p>
                     </div>
-                    <button
-                        onClick={() => setShowAddModal(true)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow-sm flex items-center gap-2 transition-all hover:bg-blue-700 hover:shadow-md text-sm font-medium"
-                    >
-                        <Plus className="w-4 h-4" />
-                        <span>Enroll New Patient</span>
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => navigate('/digital-intake')}
+                            className="px-4 py-2 bg-emerald-600 text-white rounded-lg shadow-sm flex items-center gap-2 transition-all hover:bg-emerald-700 hover:shadow-md text-sm font-medium"
+                        >
+                            <Calendar className="w-4 h-4" />
+                            <span>Digital Intake</span>
+                        </button>
+                        <button
+                            onClick={() => setShowAddModal(true)}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow-sm flex items-center gap-2 transition-all hover:bg-blue-700 hover:shadow-md text-sm font-medium"
+                        >
+                            <Plus className="w-4 h-4" />
+                            <span>Enroll New Patient</span>
+                        </button>
+                    </div>
                 </div>
 
                 {/* 4-Field Smart Search Row */}
