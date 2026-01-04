@@ -421,10 +421,15 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                     </div>
                 )}
 
-                <h2 className="text-3xl font-black text-gray-900 flex items-center gap-3">
-                    <STEPS[step].icon className="w-8 h-8 text-blue-600" />
-                    {STEPS[step].title}
-                </h2>
+                {(() => {
+                    const StepIcon = STEPS[step].icon;
+                    return (
+                        <h2 className="text-3xl font-black text-gray-900 flex items-center gap-3">
+                            <StepIcon className="w-8 h-8 text-blue-600" />
+                            {STEPS[step].title}
+                        </h2>
+                    );
+                })()}
 
                 {renderStep()}
             </div>
