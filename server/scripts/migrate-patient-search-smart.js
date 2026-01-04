@@ -2,14 +2,22 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 // PostgreSQL configuration using production environment variables
-const pool = new Pool({
-  host: process.env.DB_HOST || (process.env.NODE_ENV === 'production' ? 'db' : 'localhost'),
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || (process.env.NODE_ENV === 'production' ? 'emr_db' : 'paper_emr'),
-  user: process.env.DB_USER || (process.env.NODE_ENV === 'production' ? 'emr_user' : 'postgres'),
-  password: process.env.DB_PASSWORD || 'postgres',
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
-});
+const poolConfig = process.env.DATABASE_URL
+  ? { connectionString: process.env.DATABASE_URL }
+  : {
+    host: process.env.DB_HOST || (process.env.NODE_ENV === 'production' ? 'db' : 'localhost'),
+    port: process.env.DB_PORT || 5432,
+    database: process.env.DB_NAME || (process.env.NODE_ENV === 'production' ? 'emr_db' : 'paper_emr'),
+    user: process.env.DB_USER || (process.env.NODE_ENV === 'production' ? 'emr_user' : 'postgres'),
+    password: process.env.DB_PASSWORD || 'postgres',
+  };
+
+// Add SSL for production if not local
+if (process.env.NODE_ENV === 'production' || process.env.DATABASE_URL) {
+  poolConfig.ssl = { rejectUnauthorized: false };
+}
+
+const pool = new Pool(poolConfig);
 
 async function migrate() {
   const client = await pool.connect();
