@@ -65,10 +65,7 @@ I authorize the release of necessary medical information to insurance carriers f
 
 I authorize {CLINIC_NAME} to disclose my Protected Health Information for the purpose of treatment, payment, and healthcare operations.
 
-I authorize communication regarding my care via:
-- Phone / Voicemail
-- Email (Note: Email may not be secure)
-- Postal Mail
+I authorize communication regarding my care via all reasonable methods including phone, voicemail, email, text, and postal mail.
 
 Individuals authorized to receive my health information:
 {ROI_LIST}

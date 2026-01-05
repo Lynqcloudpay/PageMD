@@ -404,7 +404,7 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
             .replace(/{CLINIC_PHONE}/g, clinicInfo?.phone || '')
             .replace(/{PRIVACY_EMAIL}/g, clinicInfo?.email || 'privacy@pagemd.com')
             .replace(/{EFFECTIVE_DATE}/g, new Date().toLocaleDateString())
-            .replace(/{ROI_LIST}/g, (formData.roiPeople || []).map(p => `${p.name} (${p.relationship})`).join(', ') || 'NONE LISTED');
+            .replace(/{ROI_LIST}/g, (formData.roiPeople || []).map(p => `${p.name} (${p.relationship})`).join(', ') || '___________________________');
         return processed;
     };
 
@@ -808,26 +808,6 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                                                             }
                                                         }} className="px-3 bg-blue-600 text-white rounded-lg text-xs font-bold">+</button>
                                                     </div>
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] font-bold text-blue-400 uppercase block tracking-widest">Communication Permissions</label>
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    {['Phone', 'Voicemail', 'Email', 'Text', 'Postal Mail'].map(pref => (
-                                                        <label key={pref} className="flex items-center gap-2 cursor-pointer">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={formData.commPrefs?.includes(pref)}
-                                                                onChange={e => {
-                                                                    const prefs = formData.commPrefs || [];
-                                                                    if (e.target.checked) setFormData({ ...formData, commPrefs: [...prefs, pref] });
-                                                                    else setFormData({ ...formData, commPrefs: prefs.filter(p => p !== pref) });
-                                                                }}
-                                                                className="w-4 h-4 rounded text-blue-600"
-                                                            />
-                                                            <span className="text-xs font-bold text-blue-900">{pref}</span>
-                                                        </label>
-                                                    ))}
                                                 </div>
                                             </div>
                                         </div>

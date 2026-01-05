@@ -309,17 +309,6 @@ const IntakeReviewModal = ({ isOpen, onClose, sessionId, onApproved }) => {
                                             </div>
                                         )}
 
-                                        {data.commPrefs && data.commPrefs.length > 0 && (
-                                            <div className="pt-3 border-t border-emerald-100">
-                                                <div className="text-[10px] text-emerald-600 font-bold uppercase mb-1 tracking-widest">Communication Preferences</div>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {data.commPrefs.map(pref => (
-                                                        <span key={pref} className="px-2 py-0.5 bg-white border border-emerald-100 rounded text-[10px] font-bold text-emerald-700">{pref}</span>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
                                         <div className="pt-3 border-t border-emerald-100">
                                             <div className="text-[10px] text-emerald-600 font-bold uppercase mb-1">E-Signature Name</div>
                                             <div className="text-xl font-script text-emerald-900 leading-none">{data.signature || 'No Signature'}</div>
