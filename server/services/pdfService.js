@@ -132,69 +132,145 @@ async function generateSuperbillPDF(data) {
 async function generateIntakeLegalPDF(data) {
     return new Promise((resolve, reject) => {
         try {
-            const doc = new PDFDocument({ margin: 50, size: 'LETTER', bufferPages: true });
+            const doc = new PDFDocument({ margin: 60, size: 'LETTER', bufferPages: true });
             const buffers = [];
             doc.on('data', buffers.push.bind(buffers));
             doc.on('end', () => resolve(Buffer.concat(buffers)));
 
             const { clinic, session, forms, signerName, ip, userAgent, patientId } = data;
+            const pageWidth = 612;
+            const contentWidth = pageWidth - 120; // 60px margins on each side
+            const timestamp = new Date();
 
             // Header for every page
-            const addHeader = () => {
-                doc.fontSize(18).font('Helvetica-Bold').text(clinic.name || 'Medical Clinic', { align: 'center' });
-                doc.fontSize(8).font('Helvetica').text(clinic.address || '', { align: 'center' });
-                doc.text(`Phone: ${clinic.phone || ''} | Email: ${clinic.email || ''}`, { align: 'center' });
-                doc.moveDown();
-                doc.fontSize(12).font('Helvetica-Bold').text('PATIENT REGISTRATION & LEGAL ACKNOWLEDGMENTS', { align: 'center' });
-                doc.moveTo(50, doc.y).lineTo(560, doc.y).stroke('#e5e7eb');
-                doc.moveDown();
+            const addHeader = (isFirstPage = false) => {
+                const startY = 50;
+
+                // Clinic Name (centered, bold)
+                doc.fontSize(20).font('Helvetica-Bold').fillColor('#1f2937')
+                    .text(clinic.name || 'Medical Clinic', 60, startY, { width: contentWidth, align: 'center' });
+
+                // Clinic Address
+                doc.fontSize(9).font('Helvetica').fillColor('#6b7280')
+                    .text(clinic.address || '', 60, doc.y + 2, { width: contentWidth, align: 'center' });
+
+                // Phone & Email
+                doc.text(`Phone: ${clinic.phone || 'N/A'} | Email: ${clinic.email || 'N/A'}`, 60, doc.y + 2, { width: contentWidth, align: 'center' });
+
+                doc.moveDown(0.8);
+
+                // Divider line
+                doc.moveTo(60, doc.y).lineTo(pageWidth - 60, doc.y).strokeColor('#d1d5db').stroke();
+                doc.moveDown(0.5);
+
+                // Document title
+                doc.fontSize(11).font('Helvetica-Bold').fillColor('#374151')
+                    .text('PATIENT REGISTRATION & LEGAL ACKNOWLEDGMENTS', 60, doc.y, { width: contentWidth, align: 'center' });
+
+                doc.moveDown(1);
+
+                return doc.y;
             };
 
-            addHeader();
+            // Add audit metadata block (first page only)
+            const addAuditBlock = () => {
+                const blockStartY = doc.y;
+                const blockHeight = 70;
 
-            // Audit Info Block
-            doc.rect(50, doc.y, 510, 80).fill('#f9fafb');
-            doc.fillColor('#111827').fontSize(10).font('Helvetica-Bold').text('AUDIT & COMPLIANCE METADATA', 60, doc.y - 75);
-            doc.font('Helvetica').fontSize(9).fillColor('#374151');
-            doc.text(`Patient ID: ${patientId || 'NEW_REGISTRATION'}`, 60, doc.y + 5);
-            doc.text(`Signer Name: ${signerName}`, 60, doc.y + 5);
-            doc.text(`Timestamp: ${new Date().toLocaleString()}`, 60, doc.y + 5);
-            doc.text(`IP Address: ${ip}`, 300, doc.y - 45);
-            doc.text(`User Agent: ${userAgent.substring(0, 50)}...`, 300, doc.y + 5);
-            doc.moveDown(4);
+                // Background box
+                doc.rect(60, blockStartY, contentWidth, blockHeight).fill('#f8fafc');
 
-            // Forms
+                // Title
+                doc.fontSize(9).font('Helvetica-Bold').fillColor('#64748b')
+                    .text('AUDIT & COMPLIANCE METADATA', 70, blockStartY + 10);
+
+                // Draw a line under the title
+                doc.moveTo(70, blockStartY + 22).lineTo(200, blockStartY + 22).strokeColor('#cbd5e1').stroke();
+
+                // Left column
+                doc.fontSize(8).font('Helvetica').fillColor('#475569');
+                doc.text(`Patient ID: ${patientId || 'NEW_REGISTRATION'}`, 70, blockStartY + 30);
+                doc.text(`Signer Name: ${signerName}`, 70, blockStartY + 42);
+                doc.text(`Timestamp: ${timestamp.toLocaleString()}`, 70, blockStartY + 54);
+
+                // Right column
+                doc.text(`IP Address: ${ip || 'N/A'}`, 320, blockStartY + 30);
+                const uaDisplay = (userAgent || 'Unknown').substring(0, 45);
+                doc.text(`User Agent: ${uaDisplay}...`, 320, blockStartY + 42);
+
+                // Reset position after block
+                doc.y = blockStartY + blockHeight + 20;
+            };
+
+            // Add a form section
+            const addFormSection = (form, isFirstForm) => {
+                // Form title with blue accent
+                doc.fontSize(13).font('Helvetica-Bold').fillColor('#1d4ed8')
+                    .text(form.label.toUpperCase(), 60, doc.y, { width: contentWidth });
+
+                doc.moveDown(0.3);
+
+                // Subtitle (form type)
+                doc.fontSize(9).font('Helvetica').fillColor('#6b7280')
+                    .text(form.processedPolicy.split('\n')[0] || '', 60, doc.y, { width: contentWidth });
+
+                doc.moveDown(0.8);
+
+                // Form content - skip the first line as it's already the subtitle
+                const policyLines = form.processedPolicy.split('\n').slice(1).join('\n').trim();
+
+                doc.fontSize(10).font('Helvetica').fillColor('#374151')
+                    .text(policyLines, 60, doc.y, {
+                        width: contentWidth,
+                        lineGap: 3,
+                        align: 'left'
+                    });
+
+                doc.moveDown(1.5);
+
+                // Signature block
+                const sigBlockY = doc.y;
+                const sigBlockHeight = 50;
+
+                // Green signature box
+                doc.rect(60, sigBlockY, contentWidth, sigBlockHeight).fill('#dcfce7');
+
+                // Checkmark and text
+                doc.fontSize(10).font('Helvetica-Bold').fillColor('#166534')
+                    .text('✓ ELECTRONICALLY SIGNED & ACKNOWLEDGED', 75, sigBlockY + 12);
+
+                doc.fontSize(9).font('Helvetica').fillColor('#166534')
+                    .text(`Signed by ${signerName} on ${timestamp.toLocaleDateString()} at ${timestamp.toLocaleTimeString()}`, 75, sigBlockY + 28);
+
+                doc.y = sigBlockY + sigBlockHeight + 15;
+            };
+
+            // === Build the PDF ===
+
+            // First page with header and audit block
+            addHeader(true);
+            addAuditBlock();
+
+            // Add each form
             forms.forEach((form, idx) => {
                 if (idx > 0) {
                     doc.addPage();
-                    addHeader();
+                    addHeader(false);
                 }
-
-                doc.fontSize(14).font('Helvetica-Bold').fillColor('#1e40af').text(form.label.toUpperCase());
-                doc.moveDown(0.5);
-
-                doc.fontSize(10).font('Helvetica').fillColor('#374151').text(form.processedPolicy, {
-                    lineGap: 2,
-                    align: 'justify'
-                });
-
-                doc.moveDown(2);
-                doc.rect(50, doc.y, 510, 40).fill('#ecfdf5');
-                doc.fillColor('#065f46').font('Helvetica-Bold').text('✓ ELECTRONICALLY SIGNED & ACKNOWLEDGED', 60, doc.y - 30);
-                doc.font('Helvetica').text(`Signed by ${signerName} on ${new Date().toLocaleDateString()}`, 60, doc.y + 5);
-                doc.moveDown();
+                addFormSection(form, idx === 0);
             });
 
-            // Footer (Page Numbers)
+            // Add page numbers to all pages
             const range = doc.bufferedPageRange();
             for (let i = range.start; i < range.start + range.count; i++) {
                 doc.switchToPage(i);
-                doc.fontSize(8).fillColor('grey').text(
-                    `Page ${i + 1} of ${range.count} | ${clinic.name} | Confidential Legal Record`,
-                    50,
-                    750,
-                    { align: 'center' }
-                );
+                doc.fontSize(8).font('Helvetica').fillColor('#9ca3af')
+                    .text(
+                        `Page ${i + 1} of ${range.count} | ${clinic.name} | Confidential Legal Document`,
+                        60,
+                        745,
+                        { width: contentWidth, align: 'center' }
+                    );
             }
 
             doc.end();
