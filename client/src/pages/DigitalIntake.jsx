@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     UserPlus, Search, Filter, QrCode, Send, Mail, Phone, Clock,
     CheckCircle, AlertCircle, Eye, MoreVertical, Copy, RefreshCw,
-    Check, X, ChevronRight, User, ExternalLink, Smartphone, Shield, Key
+    Check, X, ChevronRight, User, ExternalLink, Smartphone, Shield, Key, ShieldOff
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { format } from 'date-fns';
@@ -21,7 +21,15 @@ const DigitalIntake = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [selectedSessionId, setSelectedSessionId] = useState(null);
     const [menuSessionId, setMenuSessionId] = useState(null);
-    const [newCodeModal, setNewCodeModal] = useState({ open: false, code: '', patientName: '' });
+
+    const handleClearLimits = async () => {
+        try {
+            await intakeAPI.clearRateLimits();
+            showSuccess('Lookup rate limits reset for all patients');
+        } catch (e) {
+            showError('Failed to reset rate limits');
+        }
+    };
 
     useEffect(() => {
         fetchSessions();
@@ -93,6 +101,14 @@ const DigitalIntake = () => {
                     <p className="text-gray-500 mt-1 font-medium italic">Universal QR Workflow • Azure Blue Engine</p>
                 </div>
                 <div className="flex items-center gap-3">
+                    <button
+                        onClick={handleClearLimits}
+                        title="Reset lockout timing for patients who failed lookup too many times"
+                        className="p-4 bg-white border-2 border-rose-50 text-rose-400 rounded-2xl hover:bg-rose-50 transition-all active:scale-95 flex items-center gap-2"
+                    >
+                        <ShieldOff className="w-5 h-5" />
+                        <span className="hidden lg:inline text-xs font-bold uppercase tracking-widest">Reset Wait Timing</span>
+                    </button>
                     <button
                         onClick={() => fetchSessions(true)}
                         disabled={refreshing}

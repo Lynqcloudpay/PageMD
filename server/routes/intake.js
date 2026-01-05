@@ -169,6 +169,19 @@ router.post('/session/:id/regenerate-code', authenticate, async (req, res) => {
 });
 
 /**
+ * POST /clear-rate-limits - Clear all lookup rate limits (Staff only)
+ */
+router.post('/clear-rate-limits', authenticate, async (req, res) => {
+    try {
+        lookupRateLimit.clear();
+        await logIntakeAudit(pool, req.clinic.id, 'staff', req.user.id, 'clear_rate_limits', 'system', null, req);
+        res.json({ success: true, message: 'Intake lookup rate limits cleared' });
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to clear rate limits' });
+    }
+});
+
+/**
  * GET /public/clinic-info - Get clinic info for public intake form
  */
 router.get('/public/clinic-info', async (req, res) => {

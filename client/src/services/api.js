@@ -462,6 +462,7 @@ export const intakeAPI = {
   approve: (id, linkToPatientId) => api.post(`/intake/session/${id}/approve`, { linkToPatientId }),
   needsEdits: (id, note) => api.post(`/intake/session/${id}/needs-edits`, { note }),
   getDuplicates: (id) => api.get(`/intake/session/${id}/duplicates`),
+  clearRateLimits: () => api.post('/intake/clear-rate-limits'),
   getClinicInfo: () => api.get('/intake/public/clinic-info', { skipAuth: true })
 };
 
