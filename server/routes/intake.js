@@ -635,7 +635,7 @@ router.post('/public/submit/:id', async (req, res) => {
             WHERE id = $3 AND tenant_id = $4 AND status IN ('IN_PROGRESS', 'NEEDS_EDITS', 'SUBMITTED')
         `, [data, signature, req.params.id, req.clinic.id]);
 
-        if (result.rows.length === 0) return res.status(400).json({ error: 'Session locked or not found' });
+        if (result.rowCount === 0) return res.status(400).json({ error: 'Session locked or not found' });
 
         // Create Inbox Item
         const patientName = `${prefill.firstName} ${prefill.lastName}`;
