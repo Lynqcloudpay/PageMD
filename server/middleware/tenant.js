@@ -172,14 +172,13 @@ const resolveTenant = async (req, res, next) => {
         }
 
         const { id, schema_name, slug: resolvedSlug, is_read_only, billing_locked, prescribing_locked } = tenantInfo;
+        const displaySlug = resolvedSlug || slug;
 
-        // 4. Start Transaction Wrapper
+        // 4. Start Transaction Wrapper (Actually just a connection now)
         client = await pool.controlPool.connect();
 
-        await client.query('BEGIN');
-
         // Critical Security Step: Set Search Path
-        await client.query(`SET LOCAL search_path TO ${schema_name}, public`);
+        await client.query(`SET search_path TO ${schema_name}, public`);
 
         // Attach clinic info
         req.clinic = {
@@ -199,15 +198,9 @@ const resolveTenant = async (req, res, next) => {
 
         const cleanup = async () => {
             try {
-                if (res.statusCode >= 400) {
-                    await client.query('ROLLBACK');
-                } else {
-                    await client.query('COMMIT');
-                }
+                client.release();
             } catch (e) {
                 console.error('[Tenant] Cleanup error:', e);
-            } finally {
-                client.release();
             }
         };
 
@@ -217,14 +210,13 @@ const resolveTenant = async (req, res, next) => {
         });
 
         return pool.dbStorage.run(client, async () => {
-            const status = await client.query('SELECT current_schema() as sch, current_setting(\'search_path\') as path');
-            console.log(`[Tenant] Context active for ${schema_name} (slug: ${slug}). Schema: ${status.rows[0].sch}`);
+            console.log(`[Tenant] Context active for ${schema_name} (slug: ${displaySlug})`);
             return next();
         });
     } catch (error) {
         console.error('[Tenant] Resolution failed:', error);
         if (client) {
-            try { await client.query('ROLLBACK'); client.release(); } catch (e) { }
+            try { client.release(); } catch (e) { }
         }
         res.status(500).json({ error: 'System error resolving tenant.' });
     }
