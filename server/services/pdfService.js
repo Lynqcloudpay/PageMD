@@ -260,17 +260,13 @@ async function generateIntakeLegalPDF(data) {
                 addFormSection(form, idx === 0);
             });
 
-            // Add page numbers to all pages
+            // Add page numbers to all pages (IMPORTANT: lineBreak: false prevents new pages)
             const range = doc.bufferedPageRange();
             for (let i = range.start; i < range.start + range.count; i++) {
                 doc.switchToPage(i);
+                const footerText = `Page ${i + 1} of ${range.count} | ${clinic.name} | Confidential Legal Document`;
                 doc.fontSize(8).font('Helvetica').fillColor('#9ca3af')
-                    .text(
-                        `Page ${i + 1} of ${range.count} | ${clinic.name} | Confidential Legal Document`,
-                        60,
-                        745,
-                        { width: contentWidth, align: 'center' }
-                    );
+                    .text(footerText, 60, 745, { width: contentWidth, align: 'center', lineBreak: false });
             }
 
             doc.end();
