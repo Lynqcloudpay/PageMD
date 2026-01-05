@@ -13,7 +13,7 @@ const PublicIntake = () => {
     const [searchParams] = useSearchParams();
     const clinicSlug = searchParams.get('clinic');
 
-    const [view, setView] = useState('landing'); // landing, start, resume, session
+    const [view, setView] = useState('landing'); // landing, start, resume, session, candidates
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
@@ -22,7 +22,7 @@ const PublicIntake = () => {
 
     // Session State
     const [session, setSession] = useState(null);
-    const [resumeCode, setResumeCode] = useState(''); // Only shown once at start
+    const [candidates, setCandidates] = useState([]); // For multiple matches
 
     // Start Form State
     const [startForm, setStartForm] = useState({
@@ -32,10 +32,11 @@ const PublicIntake = () => {
         phone: ''
     });
 
-    // Resume Form State
-    const [resumeForm, setResumeForm] = useState({
-        code: '',
-        dob: ''
+    // Continue Form State (Replacement for Resume)
+    const [continueForm, setContinueForm] = useState({
+        lastName: '',
+        dob: '',
+        phone: ''
     });
 
     // Main Intake Data
@@ -68,14 +69,14 @@ const PublicIntake = () => {
                 data: {},
                 status: 'IN_PROGRESS'
             });
-            setResumeCode(res.data.resumeCode);
             setFormData({
                 firstName: startForm.firstName,
                 lastName: startForm.lastName,
                 dob: startForm.dob,
                 phone: startForm.phone
             });
-            setView('code_reveal');
+            setView('session'); // Immediately proceed
+            showSuccess('Registration started!');
         } catch (error) {
             showError('Failed to start registration. Please try again.');
         } finally {
@@ -83,24 +84,43 @@ const PublicIntake = () => {
         }
     };
 
-    const handleResume = async (e) => {
+    const handleContinueLookup = async (e) => {
         e.preventDefault();
         setSubmitting(true);
         try {
-            const res = await intakeAPI.resume(resumeForm.code, resumeForm.dob);
-            setSession({
-                id: res.data.sessionId,
-                prefill: res.data.prefill,
-                data: res.data.data || {},
-                status: res.data.status,
-                reviewNotes: res.data.reviewNotes || []
-            });
-            setFormData(res.data.data || {});
-            setView('session');
+            const res = await intakeAPI.continue(continueForm);
+            if (res.data.sessionId) {
+                // One match found
+                fetchAndOpenSession(res.data.sessionId);
+            } else if (res.data.candidates) {
+                // Multiple matches
+                setCandidates(res.data.candidates);
+                setView('candidates');
+            }
         } catch (error) {
-            showError(error.response?.data?.error || 'Resume failed');
+            showError(error.response?.data?.error || 'Lookup failed');
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const fetchAndOpenSession = async (id) => {
+        setLoading(true);
+        try {
+            const res = await intakeAPI.getSessionPublic(id, continueForm);
+            setSession({
+                id: res.data.id,
+                prefill: res.data.prefill_json,
+                data: res.data.data_json || {},
+                status: res.data.status,
+                reviewNotes: res.data.review_notes || []
+            });
+            setFormData(res.data.data_json || {});
+            setView('session');
+        } catch (error) {
+            showError(error.response?.data?.error || 'Failed to load your registration session.');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -168,7 +188,7 @@ const PublicIntake = () => {
                         onClick={() => setView('resume')}
                         className="w-full py-5 bg-white border-2 border-blue-50 text-blue-600 rounded-2xl font-bold flex items-center justify-center gap-3 transition-transform active:scale-95 hover:bg-blue-50"
                     >
-                        <Key className="w-5 h-5" /> Resume Registration
+                        <ArrowRight className="w-5 h-5" /> Continue Registration
                     </button>
                 </div>
 
@@ -230,26 +250,38 @@ const PublicIntake = () => {
                 <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-blue-50 p-8 space-y-8 mt-12 border border-blue-50">
                     <div className="flex justify-between items-center">
                         <button onClick={() => setView('landing')} className="p-2 hover:bg-blue-50 rounded-xl text-blue-400 transition-all"><ChevronLeft className="w-6 h-6" /></button>
-                        <h2 className="text-xl font-bold text-gray-900">Resume</h2>
+                        <h2 className="text-xl font-bold text-gray-900">Find Registration</h2>
                         <div className="w-10"></div>
                     </div>
 
-                    <form onSubmit={handleResume} className="space-y-6">
+                    <form onSubmit={handleContinueLookup} className="space-y-6">
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-xs font-bold text-blue-400 uppercase mb-2">Resume Code</label>
+                                <label className="block text-xs font-bold text-blue-400 uppercase mb-2">Last Name</label>
                                 <input
                                     required
                                     type="text"
-                                    placeholder="8-character code"
-                                    value={resumeForm.code}
-                                    onChange={e => setResumeForm({ ...resumeForm, code: e.target.value.toUpperCase() })}
-                                    className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 text-center font-mono text-xl tracking-widest text-blue-600 font-black"
+                                    placeholder="Doe"
+                                    value={continueForm.lastName}
+                                    onChange={e => setContinueForm({ ...continueForm, lastName: e.target.value })}
+                                    className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 font-bold"
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-blue-400 uppercase mb-2">Verify Date of Birth</label>
-                                <input required type="date" value={resumeForm.dob} onChange={e => setResumeForm({ ...resumeForm, dob: e.target.value })} className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500" />
+                                <label className="block text-xs font-bold text-blue-400 uppercase mb-2">Date of Birth</label>
+                                <input required type="date" value={continueForm.dob} onChange={e => setContinueForm({ ...continueForm, dob: e.target.value })} className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-blue-400 uppercase mb-2">Phone Number</label>
+                                <input
+                                    required
+                                    type="tel"
+                                    placeholder="(555) 000-0000"
+                                    value={continueForm.phone}
+                                    onChange={e => setContinueForm({ ...continueForm, phone: e.target.value })}
+                                    className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500"
+                                />
+                                <p className="text-[10px] text-blue-400 mt-2 ml-1">Must match the number used to start registration.</p>
                             </div>
                         </div>
                         <button
@@ -257,7 +289,7 @@ const PublicIntake = () => {
                             disabled={submitting}
                             className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-100 disabled:opacity-50"
                         >
-                            {submitting ? 'Verifying...' : 'Unlock Forms'} <Lock className="w-5 h-5" />
+                            {submitting ? 'Searching...' : 'Continue Registration'} <ChevronRight className="w-5 h-5" />
                         </button>
                     </form>
                 </div>
@@ -265,29 +297,47 @@ const PublicIntake = () => {
         );
     }
 
-    if (view === 'code_reveal') {
+    if (view === 'candidates') {
         return (
-            <div className="min-h-screen bg-blue-600 flex flex-col items-center justify-center p-6 text-center animate-fadeIn">
-                <div className="w-full max-w-sm bg-white rounded-[40px] shadow-2xl p-10 space-y-8">
-                    <div className="space-y-2">
-                        <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Smartphone className="w-8 h-8" />
-                        </div>
-                        <h2 className="text-2xl font-black text-gray-900">Save Your Code</h2>
-                        <p className="text-gray-500">Take a photo of this code. You will need it to resume if you are interrupted.</p>
+            <div className="min-h-screen bg-blue-50/30 flex flex-col items-center p-6 animate-fadeIn">
+                <div className="w-full max-w-md bg-white rounded-3xl shadow-xl p-8 space-y-6 mt-12 border border-blue-50">
+                    <div className="text-center space-y-2">
+                        <h2 className="text-2xl font-black text-blue-900 leading-tight">Multiple Matches</h2>
+                        <p className="text-blue-600/70 font-medium">We found more than one session. Please select yours:</p>
                     </div>
 
-                    <div className="bg-blue-50 border-2 border-dashed border-blue-100 rounded-3xl p-6 py-8">
-                        <p className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-2">Resume Code</p>
-                        <div className="text-4xl font-mono font-black text-blue-600 tracking-[0.2em]">{resumeCode}</div>
+                    <div className="space-y-3">
+                        {candidates.map(candidate => (
+                            <button
+                                key={candidate.id}
+                                onClick={() => fetchAndOpenSession(candidate.id)}
+                                className="w-full p-5 bg-blue-50/50 hover:bg-blue-600 hover:text-white border border-blue-100 rounded-2xl text-left transition-all active:scale-95 group"
+                            >
+                                <div className="flex justify-between items-center">
+                                    <div className="space-y-1">
+                                        <div className="font-extrabold text-lg flex items-center gap-2">
+                                            {candidate.firstNameInitial}. {candidate.lastName}
+                                            <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full uppercase tracking-widest group-hover:bg-blue-500 group-hover:text-white">
+                                                Active
+                                            </span>
+                                        </div>
+                                        <div className="text-sm opacity-70 flex items-center gap-2">
+                                            <Calendar className="w-3 h-3" /> {new Date(candidate.dob).toLocaleDateString()}
+                                            <span>•</span>
+                                            <Smartphone className="w-3 h-3" /> {candidate.maskedPhone}
+                                        </div>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 opacity-30 group-hover:opacity-100" />
+                                </div>
+                            </button>
+                        ))}
                     </div>
 
-                    <button
-                        onClick={() => setView('session')}
-                        className="w-full py-5 bg-blue-600 text-white rounded-2xl font-bold text-lg shadow-xl shadow-blue-100 active:scale-95 transition-all"
-                    >
-                        I've Saved It, Let's Continue
-                    </button>
+                    <div className="pt-4 border-t border-blue-50 text-center">
+                        <button onClick={() => setView('resume')} className="text-blue-600 font-bold hover:underline">
+                            Search Again
+                        </button>
+                    </div>
                 </div>
             </div>
         );

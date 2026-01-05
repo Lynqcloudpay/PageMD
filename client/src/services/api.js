@@ -447,7 +447,9 @@ export const portalAPI = {
 export const intakeAPI = {
   // Public (No Auth)
   start: (data) => api.post('/intake/public/start', data, { skipAuth: true }),
-  resume: (resumeCode, dob) => api.post('/intake/public/resume', { resumeCode, dob }, { skipAuth: true }),
+  continue: (data) => api.post('/intake/public/continue', data, { skipAuth: true }),
+  getSessionPublic: (id, credentials) => api.post(`/intake/public/session/${id}`, credentials, { skipAuth: true }),
+  resume: (resumeCode, dob) => api.post('/intake/public/resume', { resumeCode, dob }, { skipAuth: true }), // Deprecated but kept for safety
   save: (id, data) => api.post(`/intake/public/save/${id}`, { data }, { skipAuth: true }),
   submit: (id, data, signature) => api.post(`/intake/public/submit/${id}`, { data, signature }, { skipAuth: true }),
 

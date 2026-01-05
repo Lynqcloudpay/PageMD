@@ -237,14 +237,6 @@ const DigitalIntake = () => {
                                                                         <User className="w-4 h-4" /> Open Chart
                                                                     </button>
                                                                 )}
-                                                                {(session.status === 'IN_PROGRESS' || session.status === 'NEEDS_EDITS') && (
-                                                                    <button
-                                                                        onClick={() => handleRegenerateCode(session.id, `${session.prefill_json?.firstName} ${session.prefill_json?.lastName}`)}
-                                                                        className="w-full text-left px-4 py-2.5 text-sm font-bold text-blue-600 hover:bg-blue-50 flex items-center gap-2"
-                                                                    >
-                                                                        <Key className="w-4 h-4" /> New Resume Code
-                                                                    </button>
-                                                                )}
                                                                 <button
                                                                     onClick={() => handleDeleteSession(session.id)}
                                                                     className="w-full text-left px-4 py-2.5 text-sm font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2"
@@ -335,37 +327,6 @@ const DigitalIntake = () => {
                 />
             )}
 
-            {/* New Code Modal */}
-            <Modal
-                isOpen={newCodeModal.open}
-                onClose={() => setNewCodeModal({ open: false, code: '', patientName: '' })}
-                title="New Resume Code Generated"
-                size="sm"
-            >
-                <div className="p-6 text-center space-y-6">
-                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
-                        <Key className="w-8 h-8 text-blue-600" />
-                    </div>
-                    <div>
-                        <p className="text-gray-500 text-sm mb-2">New code for <span className="font-bold text-gray-700">{newCodeModal.patientName}</span></p>
-                        <div className="bg-blue-50 p-4 rounded-2xl border-2 border-blue-200">
-                            <div className="font-mono text-3xl font-black text-blue-700 tracking-widest">
-                                {newCodeModal.code}
-                            </div>
-                        </div>
-                    </div>
-                    <p className="text-xs text-gray-400">Give this code to the patient. It expires in 7 days.</p>
-                    <button
-                        onClick={() => {
-                            navigator.clipboard.writeText(newCodeModal.code);
-                            showSuccess('Code copied to clipboard');
-                        }}
-                        className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
-                    >
-                        <Copy className="w-4 h-4" /> Copy Code
-                    </button>
-                </div>
-            </Modal>
         </div>
     );
 };
