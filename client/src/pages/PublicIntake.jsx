@@ -62,7 +62,7 @@ const PublicIntake = () => {
         e.preventDefault();
         setSubmitting(true);
         try {
-            const res = await intakeAPI.start(startForm);
+            const res = await intakeAPI.start(startForm, clinicSlug);
             setSession({
                 id: res.data.sessionId,
                 prefill: startForm,
@@ -88,7 +88,7 @@ const PublicIntake = () => {
         e.preventDefault();
         setSubmitting(true);
         try {
-            const res = await intakeAPI.continue(continueForm);
+            const res = await intakeAPI.continue(continueForm, clinicSlug);
             if (res.data.sessionId) {
                 // One match found
                 fetchAndOpenSession(res.data.sessionId);
@@ -107,7 +107,7 @@ const PublicIntake = () => {
     const fetchAndOpenSession = async (id) => {
         setLoading(true);
         try {
-            const res = await intakeAPI.getSessionPublic(id, continueForm);
+            const res = await intakeAPI.getSessionPublic(id, continueForm, clinicSlug);
             setSession({
                 id: res.data.id,
                 prefill: res.data.prefill_json,

@@ -126,7 +126,12 @@ const resolveTenant = async (req, res, next) => {
     }
 
     // Default Fallback (Legacy Support)
-    if (!slug && !lookupSchema) slug = 'test';
+    if (!slug && !lookupSchema) {
+        slug = 'test';
+        console.log(`[Tenant] No slug or schema found, falling back to 'test' for path: ${req.path}`);
+    } else {
+        console.log(`[Tenant] Resolving for slug: ${slug}, schema: ${lookupSchema}, path: ${req.path}`);
+    }
 
     // 3. Lookup Tenant Schema
     let client = null;

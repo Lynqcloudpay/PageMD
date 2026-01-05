@@ -446,9 +446,9 @@ export const portalAPI = {
 // Universal Digital Intake (QR Code)
 export const intakeAPI = {
   // Public (No Auth)
-  start: (data) => api.post('/intake/public/start', data, { skipAuth: true }),
-  continue: (data) => api.post('/intake/public/continue', data, { skipAuth: true }),
-  getSessionPublic: (id, credentials) => api.post(`/intake/public/session/${id}`, credentials, { skipAuth: true }),
+  start: (data, clinic) => api.post(`/intake/public/start${clinic ? `?clinic=${clinic}` : ''}`, data, { skipAuth: true }),
+  continue: (data, clinic) => api.post(`/intake/public/continue${clinic ? `?clinic=${clinic}` : ''}`, data, { skipAuth: true }),
+  getSessionPublic: (id, credentials, clinic) => api.post(`/intake/public/session/${id}${clinic ? `?clinic=${clinic}` : ''}`, credentials, { skipAuth: true }),
   resume: (resumeCode, dob) => api.post('/intake/public/resume', { resumeCode, dob }, { skipAuth: true }), // Deprecated but kept for safety
   save: (id, data) => api.post(`/intake/public/save/${id}`, { data }, { skipAuth: true }),
   submit: (id, data, signature) => api.post(`/intake/public/submit/${id}`, { data, signature }, { skipAuth: true }),
