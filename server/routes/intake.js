@@ -397,7 +397,7 @@ router.post('/session/:id/approve', authenticate, async (req, res) => {
             await pool.query(`
                 INSERT INTO documents (patient_id, uploader_id, doc_type, filename, file_path, mime_type, file_size, tags)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            `, [targetPatientId, req.user.id, 'consult', 'Intake Legal Packet.pdf', urlPath, 'application/pdf', pdfBuffer.length, ['legal', 'consent', 'intake', 'hipaa']]);
+            `, [targetPatientId, req.user.id, 'other', 'Intake Legal Packet.pdf', urlPath, 'application/pdf', pdfBuffer.length, ['legal', 'consent', 'intake', 'hipaa']]);
 
         } catch (pdfErr) {
             console.error('[Intake] PDF Packet generation failed:', pdfErr);

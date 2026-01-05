@@ -92,8 +92,8 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
         { id: 'imaging', label: 'Imaging & Studies', icon: Image, types: ['imaging', 'ekg', 'echo', 'stress_test', 'cardiac_cath'] },
         { id: 'referrals', label: 'Referrals', icon: ExternalLink, types: ['referral'] },
         { id: 'payments', label: 'Payments', icon: CreditCard, types: ['superbill', 'payment'] },
-        { id: 'legal', label: 'Legal & Consent', icon: CheckCircle2, types: ['consent'] },
-        { id: 'other', label: 'Other', icon: Database, types: ['other'] },
+        { id: 'legal', label: 'Legal & Consent', icon: CheckCircle2, types: ['consent'], tags: ['legal', 'consent', 'hipaa', 'intake'] },
+        { id: 'other', label: 'Other', icon: Database, types: ['other'], excludeTags: ['legal', 'consent', 'hipaa', 'intake'] },
     ];
 
     // Helper to decode HTML entities like &#x2F; and &amp;#x2F;
@@ -309,7 +309,6 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
         { id: 'social', label: 'Social History', icon: UserCircle },
         { id: 'labs', label: 'Labs / Studies', icon: FlaskConical },
         { id: 'documents', label: 'Documents', icon: FileImage },
-        { id: 'legal', label: 'Legal & Consent', icon: CheckCircle2 },
         { id: 'images', label: 'Imaging', icon: Image },
         { id: 'ekg', label: 'EKG', icon: ActivitySquare },
         { id: 'echo', label: 'ECHO', icon: HeartPulse },
@@ -1487,7 +1486,15 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                         const filteredDocs = hubDocuments.filter(doc => {
                                                             // Folder filter
                                                             if (selectedDocFolder !== 'all') {
-                                                                if (!category?.types.includes(doc.doc_type)) return false;
+                                                                // Check if doc matches category by type OR by tags
+                                                                const matchesType = category?.types?.includes(doc.doc_type);
+                                                                const matchesTags = category?.tags?.some(tag => doc.tags?.includes(tag));
+
+                                                                // Check if doc should be excluded (e.g. legal docs from 'Other')
+                                                                const isExcluded = category?.excludeTags?.some(tag => doc.tags?.includes(tag));
+                                                                if (isExcluded) return false;
+
+                                                                if (!matchesType && !matchesTags) return false;
                                                             } else if (activeTab === 'images') {
                                                                 // If in images tab but "all" folder, still filter for images
                                                                 if (!['imaging', 'ekg', 'echo', 'stress_test', 'cardiac_cath'].includes(doc.doc_type)) return false;
@@ -1579,75 +1586,6 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                     })()}
                                                 </div>
                                             </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* LEGAL & CONSENT TAB */}
-                                {activeTab === 'legal' && (
-                                    <div className="space-y-4">
-                                        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-emerald-100 shadow-sm">
-                                            <div className="flex items-center gap-3">
-                                                <div className="bg-emerald-100 p-2 rounded-lg"><CheckCircle2 className="w-5 h-5 text-emerald-600" /></div>
-                                                <div>
-                                                    <span className="text-sm font-bold text-gray-900">Legal & Consent Documents</span>
-                                                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Signed intake forms, HIPAA acknowledgments, consent documents</p>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {hubDocuments.filter(d =>
-                                                d.tags?.includes('legal') ||
-                                                d.tags?.includes('consent') ||
-                                                d.tags?.includes('hipaa') ||
-                                                d.tags?.includes('intake') ||
-                                                d.filename?.toLowerCase().includes('legal') ||
-                                                d.filename?.toLowerCase().includes('consent')
-                                            ).length === 0 ? (
-                                                <div className="col-span-2 text-center py-12 bg-gray-50/50 rounded-xl border-2 border-dashed border-gray-200 text-gray-400">
-                                                    <CheckCircle2 className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                                                    <p className="text-sm font-medium">No legal or consent documents on file</p>
-                                                    <p className="text-xs text-gray-400 mt-1">Documents will appear here after intake approval</p>
-                                                </div>
-                                            ) : (
-                                                hubDocuments.filter(d =>
-                                                    d.tags?.includes('legal') ||
-                                                    d.tags?.includes('consent') ||
-                                                    d.tags?.includes('hipaa') ||
-                                                    d.tags?.includes('intake') ||
-                                                    d.filename?.toLowerCase().includes('legal') ||
-                                                    d.filename?.toLowerCase().includes('consent')
-                                                ).map(doc => (
-                                                    <div
-                                                        key={doc.id}
-                                                        className="bg-white border border-emerald-100 rounded-xl p-4 hover:shadow-lg hover:border-emerald-200 transition-all cursor-pointer group"
-                                                        onClick={() => window.open(`/api/documents/${doc.id}/file`, '_blank')}
-                                                    >
-                                                        <div className="flex items-start gap-3">
-                                                            <div className="bg-emerald-50 p-2.5 rounded-lg group-hover:bg-emerald-100 transition-colors">
-                                                                <FileText className="w-5 h-5 text-emerald-600" />
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <h4 className="font-bold text-gray-900 text-sm truncate group-hover:text-emerald-700 transition-colors">
-                                                                    {doc.filename || 'Legal Document'}
-                                                                </h4>
-                                                                <p className="text-xs text-gray-500 mt-0.5">
-                                                                    {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : 'Unknown date'}
-                                                                </p>
-                                                                <div className="flex flex-wrap gap-1 mt-2">
-                                                                    {doc.tags?.filter(t => ['legal', 'consent', 'hipaa', 'intake'].includes(t)).map(tag => (
-                                                                        <span key={tag} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase rounded-full border border-emerald-100">
-                                                                            {tag}
-                                                                        </span>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                            <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-emerald-500 transition-colors flex-shrink-0" />
-                                                        </div>
-                                                    </div>
-                                                ))
-                                            )}
                                         </div>
                                     </div>
                                 )}
