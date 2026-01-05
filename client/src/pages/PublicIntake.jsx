@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Heart, Shield, ChevronRight, CheckCircle,
     ClipboardList, AlertCircle, Phone, Calendar,
-    User, ArrowRight, Lock, Key, Smartphone, Building
+    User, ArrowRight, Lock, Key, Smartphone, Building, Pill, X
 } from 'lucide-react';
 import { intakeAPI } from '../services/api';
 import { showError, showSuccess } from '../utils/toast';
@@ -357,7 +357,7 @@ const PublicIntake = () => {
             );
         }
 
-        return <IntakeEditor session={session} formData={formData} setFormData={setFormData} onSave={handleSave} onSubmit={handleSubmit} submitting={submitting} />;
+        return <IntakeEditor session={session} formData={formData} setFormData={setFormData} onSave={handleSave} onSubmit={handleSubmit} submitting={submitting} templates={clinicInfo?.templates || {}} />;
     }
 
     return null;
@@ -366,22 +366,82 @@ const PublicIntake = () => {
 /**
  * Reusable multi-step editor component
  */
-const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submitting }) => {
+const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submitting, templates }) => {
     const [step, setStep] = useState(0);
+    const [errors, setErrors] = useState({});
+
     const STEPS = [
-        { id: 'demographics', title: 'Demographics', icon: User },
+        { id: 'demographics', title: 'Personal Info', icon: User },
+        { id: 'guarantor', title: 'Billing Info', icon: Smartphone },
         { id: 'insurance', title: 'Insurance', icon: Building },
-        { id: 'medical', title: 'Medical History', icon: ClipboardList },
-        { id: 'consent', title: 'Consents', icon: Shield },
+        { id: 'allergies', title: 'Allergies', icon: AlertCircle },
+        { id: 'medications', title: 'Medications', icon: Pill },
+        { id: 'clinical', title: 'Clinical History', icon: ClipboardList },
+        { id: 'consent', title: 'Legal & Consent', icon: Shield },
         { id: 'review', title: 'Review', icon: CheckCircle }
     ];
 
+    const validateStep = () => {
+        const newErrors = {};
+        const currentStepId = STEPS[step].id;
+
+        if (currentStepId === 'demographics') {
+            if (!formData.sex) newErrors.sex = 'Legal sex is required';
+            if (!formData.addressLine1) newErrors.addressLine1 = 'Address is required';
+            if (!formData.city) newErrors.city = 'City is required';
+            if (!formData.state) newErrors.state = 'State is required';
+            if (!formData.zip) newErrors.zip = 'Zip code is required';
+            if (!formData.ecName) newErrors.ecName = 'Emergency contact name is required';
+            if (!formData.ecRelationship) newErrors.ecRelationship = 'Relationship is required';
+            if (!formData.ecPhone) newErrors.ecPhone = 'Emergency phone is required';
+        }
+
+        if (currentStepId === 'guarantor') {
+            if (formData.isGuarantor === 'no') {
+                if (!formData.guarantorName) newErrors.guarantorName = 'Guarantor name is required';
+                if (!formData.guarantorDob) newErrors.guarantorDob = 'Guarantor DOB is required';
+            }
+        }
+
+        if (currentStepId === 'insurance') {
+            if (!formData.primaryInsuranceCarrier) newErrors.primaryInsuranceCarrier = 'Carrier is required';
+            if (!formData.primaryMemberId) newErrors.primaryMemberId = 'Member ID is required';
+        }
+
+        if (currentStepId === 'consent') {
+            if (!formData.consentHIPAA) newErrors.consentHIPAA = 'HIPAA acknowledgment required';
+            if (!formData.consentTreat) newErrors.consentTreat = 'Treatment consent required';
+            if (!formData.consentAOB) newErrors.consentAOB = 'Assignment of benefits required';
+            if (!formData.signature) newErrors.signature = 'Signature is required';
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
     const next = () => {
+        if (!validateStep()) {
+            showError('Please fill in all required fields');
+            return;
+        }
         setStep(prev => prev + 1);
         window.scrollTo(0, 0);
         onSave();
     };
+
     const back = () => { setStep(prev => prev - 1); window.scrollTo(0, 0); };
+
+    // Clinical List Helpers
+    const addItem = (listName, item) => {
+        const list = formData[listName] || [];
+        setFormData({ ...formData, [listName]: [...list, item] });
+    };
+
+    const removeItem = (listName, index) => {
+        const list = [...(formData[listName] || [])];
+        list.splice(index, 1);
+        setFormData({ ...formData, [listName]: list });
+    };
 
     const renderStep = () => {
         switch (STEPS[step].id) {
@@ -390,8 +450,8 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                     <div className="space-y-6">
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-xs font-bold text-blue-400 uppercase mb-2">Legal Sex</label>
-                                <select value={formData.sex || ''} onChange={e => setFormData({ ...formData, sex: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl shadow-sm focus:ring-2 focus:ring-blue-500 font-bold text-blue-600">
+                                <label className="block text-xs font-bold text-blue-400 uppercase mb-2">Legal Sex *</label>
+                                <select value={formData.sex || ''} onChange={e => setFormData({ ...formData, sex: e.target.value })} className={`w-full p-4 bg-white border ${errors.sex ? 'border-rose-300' : 'border-blue-50'} rounded-2xl shadow-sm font-bold text-blue-600`}>
                                     <option value="">Select...</option>
                                     <option value="male">Male</option>
                                     <option value="female">Female</option>
@@ -399,79 +459,278 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-blue-400 uppercase mb-2">SSN (Optional)</label>
-                                <input type="password" value={formData.ssn || ''} onChange={e => setFormData({ ...formData, ssn: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl shadow-sm focus:ring-2 focus:ring-blue-500 font-bold" />
+                                <label className="block text-xs font-bold text-blue-400 uppercase mb-2">Language</label>
+                                <input type="text" placeholder="English" value={formData.preferredLanguage || ''} onChange={e => setFormData({ ...formData, preferredLanguage: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl font-bold" />
                             </div>
                         </div>
-                        <div>
-                            <label className="block text-xs font-bold text-blue-400 uppercase mb-2">Home Address</label>
-                            <input type="text" placeholder="Street Address" value={formData.addressLine1 || ''} onChange={e => setFormData({ ...formData, addressLine1: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl shadow-sm focus:ring-2 focus:ring-blue-500 font-bold" />
+
+                        <div className="space-y-4 pt-4 border-t border-blue-50">
+                            <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest">Home Address *</h3>
+                            <input type="text" placeholder="Street Address" value={formData.addressLine1 || ''} onChange={e => setFormData({ ...formData, addressLine1: e.target.value })} className={`w-full p-4 bg-white border ${errors.addressLine1 ? 'border-rose-300' : 'border-blue-50'} rounded-2xl font-bold`} />
+                            <input type="text" placeholder="Apt / Suite (Optional)" value={formData.addressLine2 || ''} onChange={e => setFormData({ ...formData, addressLine2: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl font-bold" />
+                            <div className="grid grid-cols-2 gap-4">
+                                <input type="text" placeholder="City" value={formData.city || ''} onChange={e => setFormData({ ...formData, city: e.target.value })} className={`w-full p-4 bg-white border ${errors.city ? 'border-rose-300' : 'border-blue-50'} rounded-2xl font-bold`} />
+                                <div className="grid grid-cols-2 gap-2">
+                                    <input type="text" placeholder="ST" value={formData.state || ''} onChange={e => setFormData({ ...formData, state: e.target.value.toUpperCase() })} maxLength={2} className={`w-full p-4 bg-white border ${errors.state ? 'border-rose-300' : 'border-blue-50'} rounded-2xl font-bold`} />
+                                    <input type="text" placeholder="Zip" value={formData.zip || ''} onChange={e => setFormData({ ...formData, zip: e.target.value })} className={`w-full p-4 bg-white border ${errors.zip ? 'border-rose-300' : 'border-blue-50'} rounded-2xl font-bold`} />
+                                </div>
+                            </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <input type="text" placeholder="City" value={formData.city || ''} onChange={e => setFormData({ ...formData, city: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl shadow-sm focus:ring-2 focus:ring-blue-500 font-bold" />
-                            <input type="text" placeholder="Zip" value={formData.zip || ''} onChange={e => setFormData({ ...formData, zip: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl shadow-sm focus:ring-2 focus:ring-blue-500 font-bold" />
+
+                        <div className="space-y-4 pt-4 border-t border-blue-50">
+                            <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest">Emergency Contact *</h3>
+                            <input type="text" placeholder="Full Name" value={formData.ecName || ''} onChange={e => setFormData({ ...formData, ecName: e.target.value })} className={`w-full p-4 bg-white border ${errors.ecName ? 'border-rose-300' : 'border-blue-50'} rounded-2xl font-bold`} />
+                            <div className="grid grid-cols-2 gap-4">
+                                <input type="text" placeholder="Relationship" value={formData.ecRelationship || ''} onChange={e => setFormData({ ...formData, ecRelationship: e.target.value })} className={`w-full p-4 bg-white border ${errors.ecRelationship ? 'border-rose-300' : 'border-blue-50'} rounded-2xl font-bold`} />
+                                <input type="tel" placeholder="Phone Number" value={formData.ecPhone || ''} onChange={e => setFormData({ ...formData, ecPhone: e.target.value })} className={`w-full p-4 bg-white border ${errors.ecPhone ? 'border-rose-300' : 'border-blue-50'} rounded-2xl font-bold`} />
+                            </div>
                         </div>
+                    </div>
+                );
+            case 'guarantor':
+                return (
+                    <div className="space-y-6">
+                        <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100">
+                            <label className="block text-sm font-bold text-blue-900 mb-4">Is the patient the financial guarantor? *</label>
+                            <div className="grid grid-cols-2 gap-4">
+                                <button type="button" onClick={() => setFormData({ ...formData, isGuarantor: 'yes' })} className={`py-4 rounded-2xl font-bold transition-all ${formData.isGuarantor === 'yes' ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-blue-600 border border-blue-100'}`}>Yes</button>
+                                <button type="button" onClick={() => setFormData({ ...formData, isGuarantor: 'no' })} className={`py-4 rounded-2xl font-bold transition-all ${formData.isGuarantor === 'no' ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-blue-600 border border-blue-100'}`}>No</button>
+                            </div>
+                        </div>
+
+                        {formData.isGuarantor === 'no' && (
+                            <div className="space-y-4 animate-fadeIn">
+                                <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest">Guarantor Details</h3>
+                                <input type="text" placeholder="Guarantor Full Name" value={formData.guarantorName || ''} onChange={e => setFormData({ ...formData, guarantorName: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl font-bold" />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[10px] font-bold text-blue-400 uppercase mb-1 block ml-2">DOB</label>
+                                        <input type="date" value={formData.guarantorDob || ''} onChange={e => setFormData({ ...formData, guarantorDob: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl font-bold" />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold text-blue-400 uppercase mb-1 block ml-2">Relationship</label>
+                                        <input type="text" placeholder="e.g. Parent" value={formData.guarantorRelationship || ''} onChange={e => setFormData({ ...formData, guarantorRelationship: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl font-bold" />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 );
             case 'insurance':
                 return (
                     <div className="space-y-6">
-                        <div>
-                            <label className="block text-xs font-bold text-blue-400 uppercase mb-2">Insurance Carrier</label>
-                            <input type="text" placeholder="e.g. BCBS" value={formData.insuranceProvider || ''} onChange={e => setFormData({ ...formData, insuranceProvider: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl shadow-sm focus:ring-2 focus:ring-blue-500 font-bold" />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-blue-400 uppercase mb-2">Member ID / Policy Number</label>
-                            <input type="text" value={formData.insuranceId || ''} onChange={e => setFormData({ ...formData, insuranceId: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl shadow-sm focus:ring-2 focus:ring-blue-500 font-bold" />
+                        <div className="space-y-4">
+                            <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest">Primary Insurance *</h3>
+                            <input type="text" placeholder="Insurance Carrier (e.g. Aetna)" value={formData.primaryInsuranceCarrier || ''} onChange={e => setFormData({ ...formData, primaryInsuranceCarrier: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl font-bold shadow-sm" />
+                            <div className="grid grid-cols-2 gap-4">
+                                <input type="text" placeholder="Member ID" value={formData.primaryMemberId || ''} onChange={e => setFormData({ ...formData, primaryMemberId: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl font-bold shadow-sm" />
+                                <input type="text" placeholder="Group # (Opt)" value={formData.primaryGroupNumber || ''} onChange={e => setFormData({ ...formData, primaryGroupNumber: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl font-bold shadow-sm" />
+                            </div>
+                            <div className="bg-blue-50/50 p-4 rounded-2xl flex items-center gap-3">
+                                <Smartphone className="w-5 h-5 text-blue-400" />
+                                <span className="text-xs font-bold text-blue-600">Please bring your physical insurance card to your appointment.</span>
+                            </div>
                         </div>
                     </div>
                 );
-            case 'medical':
+            case 'allergies':
                 return (
                     <div className="space-y-6">
-                        <div>
-                            <label className="block text-xs font-bold text-blue-400 uppercase mb-2">Primary Concern / Reason for Visit</label>
-                            <textarea value={formData.reason || ''} onChange={e => setFormData({ ...formData, reason: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl shadow-sm focus:ring-2 focus:ring-blue-500 min-h-[100px] font-bold" />
+                        <label className="flex items-center gap-3 p-6 bg-white border border-blue-50 rounded-3xl shadow-sm cursor-pointer transition-all active:scale-95">
+                            <input type="checkbox" checked={formData.allergiesNone || false} onChange={e => setFormData({ ...formData, allergiesNone: e.target.checked, allergyList: e.target.checked ? [] : formData.allergyList })} className="w-6 h-6 rounded-lg text-blue-600 focus:ring-blue-500" />
+                            <span className="font-black text-blue-900">No Known Allergies</span>
+                        </label>
+
+                        {!formData.allergiesNone && (
+                            <div className="space-y-4">
+                                {(formData.allergyList || []).map((a, i) => (
+                                    <div key={i} className="p-4 bg-white border border-blue-50 rounded-2xl shadow-sm flex justify-between items-center group">
+                                        <div>
+                                            <div className="font-black text-blue-900">{a.allergen}</div>
+                                            <div className="text-xs text-blue-400 font-bold uppercase">{a.reaction} • {a.severity}</div>
+                                        </div>
+                                        <button onClick={() => removeItem('allergyList', i)} className="p-2 text-rose-400 hover:bg-rose-50 rounded-xl transition-all"><X className="w-5 h-5" /></button>
+                                    </div>
+                                ))}
+                                <div className="bg-blue-50 p-4 rounded-3xl space-y-3">
+                                    <input id="new-allergen" type="text" placeholder="Allergen Name" className="w-full p-4 rounded-2xl border-none font-bold" />
+                                    <input id="new-reaction" type="text" placeholder="Reaction (e.g. Hives)" className="w-full p-4 rounded-2xl border-none font-bold" />
+                                    <button onClick={() => {
+                                        const name = document.getElementById('new-allergen').value;
+                                        const react = document.getElementById('new-reaction').value;
+                                        if (name) {
+                                            addItem('allergyList', { allergen: name, reaction: react, severity: 'Moderate' });
+                                            document.getElementById('new-allergen').value = '';
+                                            document.getElementById('new-reaction').value = '';
+                                        }
+                                    }} className="w-full py-3 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-100">+ Add Allergy</button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            case 'medications':
+                return (
+                    <div className="space-y-6">
+                        <label className="flex items-center gap-3 p-6 bg-white border border-blue-50 rounded-3xl shadow-sm cursor-pointer transition-all active:scale-95">
+                            <input type="checkbox" checked={formData.medsNone || false} onChange={e => setFormData({ ...formData, medsNone: e.target.checked, medsList: e.target.checked ? [] : formData.medsList })} className="w-6 h-6 rounded-lg text-blue-600 focus:ring-blue-500" />
+                            <span className="font-black text-blue-900">No Current Medications</span>
+                        </label>
+
+                        {!formData.medsNone && (
+                            <div className="space-y-4">
+                                {(formData.medsList || []).map((m, i) => (
+                                    <div key={i} className="p-4 bg-white border border-blue-50 rounded-2xl shadow-sm flex justify-between items-center">
+                                        <div>
+                                            <div className="font-black text-blue-900">{m.name}</div>
+                                            <div className="text-xs text-blue-400 font-bold uppercase">{m.dose} • {m.frequency}</div>
+                                        </div>
+                                        <button onClick={() => removeItem('medsList', i)} className="p-2 text-rose-400 hover:bg-rose-50 rounded-xl transition-all"><X className="w-5 h-5" /></button>
+                                    </div>
+                                ))}
+                                <div className="bg-blue-50 p-4 rounded-3xl space-y-3">
+                                    <input id="med-name" type="text" placeholder="Medication Name" className="w-full p-4 rounded-2xl border-none font-bold" />
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <input id="med-dose" type="text" placeholder="Dose (e.g. 10mg)" className="w-full p-4 rounded-2xl border-none font-bold" />
+                                        <input id="med-freq" type="text" placeholder="Freq (e.g. Daily)" className="w-full p-4 rounded-2xl border-none font-bold" />
+                                    </div>
+                                    <button onClick={() => {
+                                        const name = document.getElementById('med-name').value;
+                                        const dose = document.getElementById('med-dose').value;
+                                        const freq = document.getElementById('med-freq').value;
+                                        if (name) {
+                                            addItem('medsList', { name, dose, frequency: freq });
+                                            document.getElementById('med-name').value = '';
+                                            document.getElementById('med-dose').value = '';
+                                            document.getElementById('med-freq').value = '';
+                                        }
+                                    }} className="w-full py-3 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-100">+ Add Medication</button>
+                                </div>
+                            </div>
+                        )}
+                        <div className="pt-4 border-t border-blue-50">
+                            <label className="block text-xs font-bold text-blue-400 uppercase mb-2">Preferred Pharmacy</label>
+                            <input type="text" placeholder="Pharmacy Name & City" value={formData.preferredPharmacy || ''} onChange={e => setFormData({ ...formData, preferredPharmacy: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl font-bold" />
                         </div>
-                        <div>
-                            <label className="block text-xs font-bold text-blue-400 uppercase mb-2">Medications & Allergies</label>
-                            <textarea placeholder="List any medications or allergies..." value={formData.medications || ''} onChange={e => setFormData({ ...formData, medications: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl shadow-sm focus:ring-2 focus:ring-blue-500 min-h-[100px] font-bold" />
+                    </div>
+                );
+            case 'clinical':
+                return (
+                    <div className="space-y-8 pb-12">
+                        <div className="space-y-4">
+                            <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest">Ongoing Medical Conditions</h3>
+                            <div className="grid grid-cols-2 gap-3">
+                                {['Diabetes', 'Hypertension', 'Asthma', 'Heart Disease', 'Thyroid', 'Anxiety'].map(c => (
+                                    <button key={c} type="button" onClick={() => {
+                                        const conditions = formData.pmhConditions || [];
+                                        if (conditions.includes(c)) removeItem('pmhConditions', conditions.indexOf(c));
+                                        else addItem('pmhConditions', c);
+                                    }} className={`p-4 rounded-2xl font-bold text-sm transition-all text-left ${formData.pmhConditions?.includes(c) ? 'bg-blue-600 text-white shadow-lg' : 'bg-white border border-blue-50 text-blue-900 shadow-sm'}`}>
+                                        {c}
+                                    </button>
+                                ))}
+                            </div>
+                            <textarea placeholder="Other conditions (one per line)..." value={formData.pmhOtherText || ''} onChange={e => setFormData({ ...formData, pmhOtherText: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl min-h-[100px] font-bold" />
+                        </div>
+
+                        <div className="space-y-4">
+                            <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest">Surgical History</h3>
+                            <textarea placeholder="List major surgeries and estimated years..." value={formData.surgeriesList || ''} onChange={e => setFormData({ ...formData, surgeriesList: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl min-h-[100px] font-bold" />
+                        </div>
+
+                        <div className="space-y-4">
+                            <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest">Family History</h3>
+                            <div className="space-y-2">
+                                {[['fhxHeartDisease', 'Heart Disease'], ['fhxDiabetes', 'Diabetes'], ['fhxCancer', 'Cancer'], ['fhxStroke', 'Stroke']].map(([key, label]) => (
+                                    <label key={key} className="flex items-center gap-3 p-4 bg-white border border-blue-50 rounded-2xl cursor-pointer">
+                                        <input type="checkbox" checked={formData[key] || false} onChange={e => setFormData({ ...formData, [key]: e.target.checked })} className="w-5 h-5 rounded text-blue-600" />
+                                        <span className="font-bold text-blue-900">{label}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest">Social History</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-bold text-blue-400 uppercase mb-2 block">Tobacco Use</label>
+                                    <select value={formData.tobaccoUse || ''} onChange={e => setFormData({ ...formData, tobaccoUse: e.target.value })} className="w-full p-3 bg-white border border-blue-50 rounded-xl font-bold text-xs uppercase">
+                                        <option value="">Select...</option>
+                                        <option value="never">Never</option>
+                                        <option value="former">Former</option>
+                                        <option value="current">Current</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-blue-400 uppercase mb-2 block">Alcohol Use</label>
+                                    <select value={formData.alcoholUse || ''} onChange={e => setFormData({ ...formData, alcoholUse: e.target.value })} className="w-full p-3 bg-white border border-blue-50 rounded-xl font-bold text-xs uppercase">
+                                        <option value="">Select...</option>
+                                        <option value="none">None</option>
+                                        <option value="social">Social</option>
+                                        <option value="daily">Daily</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 );
             case 'consent':
                 return (
-                    <div className="space-y-6">
-                        <div className="bg-white border border-blue-50 rounded-3xl p-6 shadow-sm">
-                            <h3 className="font-bold text-blue-900 mb-2">HIPAA & Privacy Notice</h3>
-                            <p className="text-sm text-blue-700 leading-relaxed h-32 overflow-y-auto mb-4 bg-blue-50/50 p-4 rounded-xl border border-blue-50">
-                                We are committed to protecting your health information. By signing below, you acknowledge that you have received a copy of our Notice of Privacy Practices...
-                            </p>
-                            <div className="pt-4 border-t border-blue-50">
-                                <label className="flex items-center gap-3 cursor-pointer group">
-                                    <input type="checkbox" checked={formData.consentHIPAA || false} onChange={e => setFormData({ ...formData, consentHIPAA: e.target.checked })} className="w-6 h-6 rounded-lg border-blue-100 text-blue-600 focus:ring-blue-500" />
-                                    <span className="text-sm font-bold text-blue-700 group-hover:text-blue-900 transition-colors">I Agree to the Privacy Terms</span>
-                                </label>
-                            </div>
+                    <div className="space-y-8">
+                        <div className="space-y-6">
+                            {[
+                                { key: 'consentHIPAA', label: 'HIPAA Privacy Notice Acknowledgement', policy: templates.hipaa_notice },
+                                { key: 'consentTreat', label: 'Consent to Medical Treatment', policy: templates.consent_to_treat },
+                                { key: 'consentAOB', label: 'Assignment of Insurance Benefits', policy: templates.assignment_of_benefits },
+                                { key: 'consentROI', label: 'Authorization to Release Information', policy: templates.release_of_information }
+                            ].map(c => (
+                                <div key={c.key} className="bg-white border border-blue-50 rounded-3xl p-6 shadow-sm">
+                                    <h3 className="font-extrabold text-blue-900 mb-2">{c.label}</h3>
+                                    <div className="text-xs text-blue-700 leading-relaxed max-h-32 overflow-y-auto mb-4 bg-blue-50/50 p-4 rounded-xl border border-blue-100 font-medium">
+                                        {c.policy}
+                                    </div>
+                                    <label className="flex items-center gap-3 cursor-pointer group">
+                                        <input type="checkbox" checked={formData[c.key] || false} onChange={e => setFormData({ ...formData, [c.key]: e.target.checked })} className="w-6 h-6 rounded-lg text-emerald-600 focus:ring-emerald-500 shadow-sm" />
+                                        <span className="text-sm font-black text-blue-900">I acknowledge and agree</span>
+                                    </label>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="bg-white border-2 border-dashed border-blue-100 rounded-3xl p-8 space-y-4">
+                            <h3 className="text-center font-black text-blue-900 uppercase tracking-widest text-xs">E-Signature *</h3>
+                            <input
+                                type="text"
+                                placeholder="Type Full Legal Name to Sign"
+                                value={formData.signature || ''}
+                                onChange={e => setFormData({ ...formData, signature: e.target.value })}
+                                className="w-full p-6 text-center text-2xl font-script bg-amber-50/30 border-none rounded-2xl focus:ring-0 placeholder:text-blue-200"
+                            />
+                            <p className="text-[10px] text-center font-bold text-blue-400 uppercase tracking-tighter">I understand that typing my name above constitutes a legal electronic signature.</p>
                         </div>
                     </div>
                 );
             case 'review':
                 return (
                     <div className="space-y-6">
-                        <div className="bg-blue-600 text-white rounded-3xl p-8 shadow-xl shadow-blue-100">
+                        <div className="bg-emerald-600 text-white rounded-3xl p-8 shadow-xl shadow-emerald-100">
                             <CheckCircle className="w-12 h-12 mb-4 opacity-50" />
-                            <h2 className="text-2xl font-bold mb-2">Ready to Submit?</h2>
-                            <p className="text-blue-50 opacity-90">Please review your entries. Once submitted, you cannot make changes without staff assistance.</p>
+                            <h2 className="text-2xl font-bold mb-2">Final Review</h2>
+                            <p className="text-emerald-50 opacity-90">Please confirm all information is accurate. This will be automatically attached to your clinical chart.</p>
                         </div>
-                        <div className="bg-white border border-blue-50 rounded-3xl p-6 space-y-4">
+                        <div className="bg-white border border-blue-50 rounded-3xl p-6 space-y-3">
                             <div className="flex justify-between border-b border-blue-50 pb-3">
-                                <span className="text-blue-400 font-bold text-xs uppercase tracking-widest">Patient</span>
-                                <span className="font-black text-gray-900">{formData.firstName} {formData.lastName}</span>
+                                <span className="text-blue-400 font-bold text-[10px] uppercase">Patient</span>
+                                <span className="font-extrabold text-gray-900">{formData.firstName} {formData.lastName}</span>
+                            </div>
+                            <div className="flex justify-between border-b border-blue-50 pb-3">
+                                <span className="text-blue-400 font-bold text-[10px] uppercase">Insurance</span>
+                                <span className="font-extrabold text-gray-900 truncate max-w-[150px] text-right">{formData.primaryInsuranceCarrier}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-blue-400 font-bold text-xs uppercase tracking-widest">Insurance</span>
-                                <span className="font-black text-gray-900">{formData.insuranceProvider || 'Not Provided'}</span>
+                                <span className="text-blue-400 font-bold text-[10px] uppercase">Allergies</span>
+                                <span className="font-extrabold text-rose-600">{formData.allergiesNone ? 'NONE' : `${formData.allergyList?.length || 0} Listed`}</span>
                             </div>
                         </div>
                     </div>

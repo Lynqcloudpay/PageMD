@@ -141,40 +141,60 @@ const IntakeReviewModal = ({ isOpen, onClose, sessionId, onApproved }) => {
                             <div className="space-y-6">
                                 <section>
                                     <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                        <User className="w-3 h-3" /> Demographics
+                                        <User className="w-3 h-3" /> Demographics & Contact
                                     </h4>
                                     <div className="bg-gray-50 p-4 rounded-xl space-y-3">
                                         <div className="flex justify-between">
-                                            <span className="text-xs text-gray-500">Name</span>
+                                            <span className="text-xs text-gray-500">Legal Name</span>
                                             <span className="text-sm font-bold text-gray-900">{prefill.firstName} {prefill.lastName}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-xs text-gray-500">DOB</span>
-                                            <span className="text-sm font-bold text-gray-900">{prefill.dob}</span>
+                                            <span className="text-xs text-gray-500">DOB / Sex</span>
+                                            <span className="text-sm font-bold text-gray-900">{prefill.dob} / {data.sex}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-xs text-gray-500">Sex</span>
-                                            <span className="text-sm font-bold text-gray-900 capitalize">{data.sex || 'Not Specified'}</span>
+                                            <span className="text-xs text-gray-500">Language</span>
+                                            <span className="text-sm font-bold text-gray-900">{data.preferredLanguage || 'English'}</span>
                                         </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-xs text-gray-500">Phone</span>
-                                            <span className="text-sm font-bold text-gray-900">{prefill.phone}</span>
+                                        <div className="pt-2 border-t border-gray-200">
+                                            <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Address</div>
+                                            <div className="text-xs font-bold text-gray-800">
+                                                {data.addressLine1} {data.addressLine2 ? `, ${data.addressLine2}` : ''}<br />
+                                                {data.city}, {data.state} {data.zip}
+                                            </div>
+                                        </div>
+                                        <div className="pt-2 border-t border-gray-200">
+                                            <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Emergency Contact</div>
+                                            <div className="text-xs font-bold text-gray-800">
+                                                {data.ecName} ({data.ecRelationship})<br />
+                                                {data.ecPhone}
+                                            </div>
                                         </div>
                                     </div>
                                 </section>
 
                                 <section>
                                     <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                        <Building className="w-3 h-3" /> Insurance
+                                        <Building className="w-3 h-3" /> Insurance & Billing
                                     </h4>
                                     <div className="bg-gray-50 p-4 rounded-xl space-y-3">
                                         <div className="flex justify-between">
                                             <span className="text-xs text-gray-500">Carrier</span>
-                                            <span className="text-sm font-bold text-gray-900">{data.insuranceProvider || 'None'}</span>
+                                            <span className="text-sm font-bold text-gray-900">{data.primaryInsuranceCarrier || 'Not Specified'}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-xs text-gray-500">Policy ID</span>
-                                            <span className="text-sm font-bold text-gray-900">{data.insuranceId || 'N/A'}</span>
+                                            <span className="text-sm font-bold text-gray-900">{data.primaryMemberId || 'N/A'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-xs text-gray-500">Group #</span>
+                                            <span className="text-sm font-bold text-gray-900">{data.primaryGroupNumber || 'N/A'}</span>
+                                        </div>
+                                        <div className="pt-2 border-t border-gray-200">
+                                            <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Guarantor</div>
+                                            <div className="text-xs font-bold text-gray-800">
+                                                {data.isGuarantor === 'yes' ? 'PATIENT' : `${data.guarantorName} (${data.guarantorRelationship})`}
+                                            </div>
                                         </div>
                                     </div>
                                 </section>
@@ -184,31 +204,119 @@ const IntakeReviewModal = ({ isOpen, onClose, sessionId, onApproved }) => {
                             <div className="space-y-6">
                                 <section>
                                     <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                        <ClipboardList className="w-3 h-3" /> Medical History
+                                        <ClipboardList className="w-3 h-3" /> Clinical Intake
                                     </h4>
-                                    <div className="bg-gray-50 p-4 rounded-xl space-y-4">
+                                    <div className="bg-gray-50 p-6 rounded-2xl space-y-6">
+                                        {/* Allergies */}
                                         <div>
-                                            <span className="text-[10px] font-bold text-gray-400 uppercase">Primary Reason</span>
-                                            <p className="text-sm text-gray-700 mt-1">{data.reason || 'Not Specified'}</p>
+                                            <h5 className="text-[10px] font-black text-blue-400 uppercase mb-2">Allergies</h5>
+                                            {data.allergiesNone ? (
+                                                <div className="text-sm font-bold text-gray-400 italic">None Reported</div>
+                                            ) : (data.allergyList || []).length > 0 ? (
+                                                <div className="space-y-1">
+                                                    {(data.allergyList || []).map((a, i) => (
+                                                        <div key={i} className="text-sm font-bold text-gray-900">• {a.allergen} ({a.reaction})</div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="text-sm font-bold text-rose-600">No selection (please clarify)</div>
+                                            )}
                                         </div>
+
+                                        {/* Medications */}
                                         <div>
-                                            <span className="text-[10px] font-bold text-gray-400 uppercase">Medications & Allergies</span>
-                                            <p className="text-sm text-gray-700 mt-1">{data.medications || 'None reported'}</p>
+                                            <h5 className="text-[10px] font-black text-blue-400 uppercase mb-2">Current Medications</h5>
+                                            {data.medsNone ? (
+                                                <div className="text-sm font-bold text-gray-400 italic">None Reported</div>
+                                            ) : (data.medsList || []).length > 0 ? (
+                                                <div className="space-y-1">
+                                                    {(data.medsList || []).map((m, i) => (
+                                                        <div key={i} className="text-sm font-bold text-gray-900">• {m.name} {m.dose} {m.frequency}</div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="text-sm font-bold text-rose-600">No selection (please clarify)</div>
+                                            )}
+                                            {data.preferredPharmacy && (
+                                                <div className="mt-2 p-2 bg-blue-50 rounded-lg text-xs font-bold text-blue-600">
+                                                    Pharmacy: {data.preferredPharmacy}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* PMH */}
+                                        <div>
+                                            <h5 className="text-[10px] font-black text-blue-400 uppercase mb-2">Past Medical History</h5>
+                                            <div className="flex flex-wrap gap-2 mb-2">
+                                                {(data.pmhConditions || []).map(c => (
+                                                    <span key={c} className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-900 shadow-sm">{c}</span>
+                                                ))}
+                                            </div>
+                                            {data.pmhOtherText && (
+                                                <p className="text-xs text-gray-600 italic">Other: {data.pmhOtherText}</p>
+                                            )}
+                                        </div>
+
+                                        {/* FHx / SHx */}
+                                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+                                            <div>
+                                                <h5 className="text-[10px] font-black text-blue-400 uppercase mb-1">Social History</h5>
+                                                <div className="text-xs font-bold text-gray-800">Tobacco: {data.tobaccoUse || 'N/A'}</div>
+                                                <div className="text-xs font-bold text-gray-800">Alcohol: {data.alcoholUse || 'N/A'}</div>
+                                            </div>
+                                            <div>
+                                                <h5 className="text-[10px] font-black text-blue-400 uppercase mb-1">Family History</h5>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {data.fhxHeartDisease && <span className="text-[10px] font-bold text-emerald-600">Heart</span>}
+                                                    {data.fhxDiabetes && <span className="text-[10px] font-bold text-emerald-600">Diabetes</span>}
+                                                    {data.fhxCancer && <span className="text-[10px] font-bold text-emerald-600">Cancer</span>}
+                                                    {data.fhxStroke && <span className="text-[10px] font-bold text-emerald-600">Stroke</span>}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </section>
 
                                 <section>
                                     <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                        <FileCheck className="w-3 h-3" /> Consents
+                                        <FileCheck className="w-3 h-3" /> Consents & Signatures
                                     </h4>
-                                    <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl">
-                                        <div className="flex items-center gap-2 text-emerald-800 font-bold text-sm">
-                                            <CheckCircle className="w-4 h-4" /> HIPPA Agreement Signed
+                                    <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl space-y-3">
+                                        {[
+                                            { label: 'HIPAA Agreement', signed: data.consentHIPAA },
+                                            { label: 'Consent to Treat', signed: data.consentTreat },
+                                            { label: 'Assignment of Benefits', signed: data.consentAOB },
+                                            { label: 'Release of Information', signed: data.consentROI }
+                                        ].map(c => (
+                                            <div key={c.label} className="flex items-center gap-2 text-emerald-800 font-bold text-xs uppercase tracking-tighter">
+                                                {c.signed ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <AlertCircle className="w-4 h-4 text-rose-400" />}
+                                                {c.label} {c.signed ? 'SIGNED' : 'MISSING'}
+                                            </div>
+                                        ))}
+
+                                        <div className="pt-3 border-t border-emerald-100">
+                                            <div className="text-[10px] text-emerald-600 font-bold uppercase mb-1">E-Signature Name</div>
+                                            <div className="text-xl font-script text-emerald-900 leading-none">{data.signature || 'No Signature'}</div>
                                         </div>
-                                        <p className="text-[10px] text-emerald-600 mt-1 uppercase font-bold tracking-tighter">
-                                            Submission Timestamp: {session.submitted_at ? format(new Date(session.submitted_at), 'MM/dd/yyyy HH:mm') : 'N/A'}
+
+                                        <p className="text-[10px] text-emerald-600 mt-2 uppercase font-bold tracking-tighter border-t border-emerald-100 pt-2">
+                                            Final Submission: {session.submitted_at ? format(new Date(session.submitted_at), 'MM/dd/yyyy HH:mm') : 'N/A'}
                                         </p>
+                                    </div>
+                                </section>
+
+                                {/* Audit Information */}
+                                <section>
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Audit & Compliance</h4>
+                                    <div className="bg-gray-100 p-4 rounded-xl space-y-2">
+                                        <div className="flex justify-between">
+                                            <span className="text-[10px] text-gray-500 uppercase font-black">IP Address</span>
+                                            <span className="text-[10px] font-mono font-bold text-gray-700">{session.ip_address || 'N/A'}</span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] text-gray-500 uppercase font-black mb-1">User Agent</span>
+                                            <span className="text-[8px] font-mono text-gray-400 leading-tight truncate">{session.user_agent || 'N/A'}</span>
+                                        </div>
                                     </div>
                                 </section>
                             </div>

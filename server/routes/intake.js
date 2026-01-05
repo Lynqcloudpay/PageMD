@@ -193,7 +193,7 @@ router.post('/clear-rate-limits', authenticate, async (req, res) => {
 });
 
 /**
- * GET /public/clinic-info - Get clinic info for public intake form
+ * GET /public/clinic-info - Get clinic info and intake templates
  */
 router.get('/public/clinic-info', async (req, res) => {
     try {
@@ -201,13 +201,18 @@ router.get('/public/clinic-info', async (req, res) => {
             return res.status(400).json({ error: 'Clinic not specified' });
         }
 
-        // Use the clinic object already populated by tenant middleware
+        // Fetch clinic settings/templates for the public intake form
+        const settingsRes = await pool.query('SELECT key, value FROM intake_settings');
+        const templates = {};
+        settingsRes.rows.forEach(r => { templates[r.key] = r.value; });
+
         res.json({
             name: req.clinic.name || 'Medical Practice',
             slug: req.clinic.slug,
             logoUrl: req.clinic.logo_url || null,
             address: req.clinic.address || null,
-            phone: req.clinic.phone || null
+            phone: req.clinic.phone || null,
+            templates
         });
     } catch (error) {
         console.error('[Intake] Clinic info failed:', error);
@@ -246,12 +251,26 @@ router.post('/session/:id/approve', authenticate, async (req, res) => {
                 first_name: data.firstName || session.prefill_json.firstName,
                 last_name: data.lastName || session.prefill_json.lastName,
                 dob: data.dob || session.prefill_json.dob,
+                sex: data.sex,
+                preferred_language: data.preferredLanguage,
                 phone: data.phone || session.prefill_json.phone,
+                phone_secondary: data.phoneSecondary,
                 email: data.email,
                 address_line1: data.addressLine1,
+                address_line2: data.addressLine2,
                 city: data.city,
                 state: data.state,
                 zip: data.zip,
+                communication_preference: data.preferredContactMethod,
+                emergency_contact_name: data.ecName,
+                emergency_contact_phone: data.ecPhone,
+                emergency_contact_relationship: data.ecRelationship,
+                insurance_provider: data.primaryInsuranceCarrier || data.primary_insurance_carrier,
+                insurance_id: data.primaryMemberId || data.primary_member_id,
+                insurance_group_number: data.primaryGroupNumber || data.primary_group_number,
+                insurance_subscriber_name: data.primaryPolicyholderName || data.primary_policyholder_name,
+                insurance_subscriber_dob: data.primaryPolicyholderDob || data.primary_policyholder_dob,
+                occupation: data.occupation,
                 clinic_id: req.clinic.id,
                 phone_normalized: (data.phone || session.prefill_json.phone || '').replace(/\D/g, '')
             };
@@ -268,6 +287,51 @@ router.post('/session/:id/approve', authenticate, async (req, res) => {
                 values
             );
             targetPatientId = patientRes.rows[0].id;
+
+            // Handle Clinical History Mapping
+            // 1. Allergies
+            if (data.allergyList && data.allergyList.length > 0) {
+                for (const a of data.allergyList) {
+                    await pool.query('INSERT INTO allergies (patient_id, allergen, reaction, severity) VALUES ($1, $2, $3, $4)', [targetPatientId, a.allergen || a.name, a.reaction, a.severity]);
+                }
+            }
+
+            // 2. Medications
+            if (data.medsList && data.medsList.length > 0) {
+                for (const m of data.medsList) {
+                    await pool.query('INSERT INTO medications (patient_id, name, dosage, frequency) VALUES ($1, $2, $3, $4)', [targetPatientId, m.name, m.dose, m.frequency]);
+                }
+            }
+
+            // 3. Past Medical History (populate problems)
+            if (data.pmhConditions && data.pmhConditions.length > 0) {
+                for (const condition of data.pmhConditions) {
+                    await pool.query('INSERT INTO problems (patient_id, diagnosis, status) VALUES ($1, $2, $3)', [targetPatientId, condition, 'active']);
+                }
+            }
+            if (data.pmhOtherText) {
+                await pool.query('INSERT INTO problems (patient_id, diagnosis, status, notes) VALUES ($1, $2, $3, $4)', [targetPatientId, 'Other Medical History', 'active', data.pmhOtherText]);
+            }
+
+            // 4. Family History
+            const fhx = [];
+            if (data.fhxHeartDisease) fhx.push('Heart Disease');
+            if (data.fhxDiabetes) fhx.push('Diabetes');
+            if (data.fhxCancer) fhx.push('Cancer');
+            if (data.fhxStroke) fhx.push('Stroke');
+            if (data.fhxOtherText) fhx.push(`Other: ${data.fhxOtherText}`);
+
+            for (const f of fhx) {
+                await pool.query('INSERT INTO family_history (patient_id, condition, relationship) VALUES ($1, $2, $3)', [targetPatientId, f, 'Family']);
+            }
+
+            // 5. Social History
+            if (data.tobaccoUse || data.alcoholUse) {
+                await pool.query(`
+                    INSERT INTO social_history (patient_id, tobacco_use, alcohol_use, occupation, notes)
+                    VALUES ($1, $2, $3, $4, $5)
+                `, [targetPatientId, data.tobaccoUse, data.alcoholUse, data.occupation, data.recreationalDrugUse]);
+            }
         }
 
         await pool.query(`UPDATE intake_sessions SET status = 'APPROVED', patient_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [targetPatientId, id]);
@@ -636,15 +700,20 @@ router.post('/public/submit/:id', async (req, res) => {
         if (sessionRes.rows.length === 0) return res.status(404).json({ error: 'Not found' });
         const prefill = sessionRes.rows[0].prefill_json;
 
+        const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+        const userAgent = req.headers['user-agent'];
+
         const result = await pool.query(`
             UPDATE intake_sessions
             SET data_json = $1, 
                 signature_json = $2, 
                 status = 'SUBMITTED',
                 submitted_at = CURRENT_TIMESTAMP,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = $3 AND tenant_id = $4 AND status IN ('IN_PROGRESS', 'NEEDS_EDITS', 'SUBMITTED')
-        `, [data, signature, req.params.id, req.clinic.id]);
+                updated_at = CURRENT_TIMESTAMP,
+                ip_address = $3,
+                user_agent = $4
+            WHERE id = $5 AND tenant_id = $6 AND status IN ('IN_PROGRESS', 'NEEDS_EDITS', 'SUBMITTED')
+        `, [data, signature, ipAddress, userAgent, req.params.id, req.clinic.id]);
 
         if (result.rowCount === 0) return res.status(400).json({ error: 'Session locked or not found' });
 
