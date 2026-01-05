@@ -17,11 +17,8 @@ const TASK_CATEGORIES = [
     { id: 'results', label: 'Results', icon: FlaskConical, color: 'blue', types: ['lab', 'imaging'] },
     { id: 'messages', label: 'Messages', icon: MessageSquare, color: 'purple', types: ['message'] },
     { id: 'portal_messages', label: 'Portal Messages', icon: User, color: 'blue', types: ['portal_message'] },
-    { id: 'appointment_requests', label: 'Appt Requests', icon: Calendar, color: 'emerald', types: ['portal_appointment'] },
-    { id: 'notes', label: 'Clinical Notes', icon: FileText, color: 'emerald', types: ['note'] },
     { id: 'documents', label: 'Documents', icon: FileText, color: 'orange', types: ['document'] },
     { id: 'referrals', label: 'Referrals', icon: Send, color: 'indigo', types: ['referral'] },
-    { id: 'registrations', label: 'Registrations', icon: User, color: 'emerald', types: ['new_patient_registration'] },
     { id: 'tasks', label: 'Tasks', icon: CheckCircle, color: 'green', types: ['task'] },
     { id: 'refills', label: 'Rx Requests', icon: Pill, color: 'red', types: ['refill'] },
 ];
@@ -131,7 +128,9 @@ const Inbasket = () => {
             };
 
             const response = await inboxAPI.getAll(params);
-            setItems(response.data || []);
+            const validTypes = TASK_CATEGORIES.flatMap(c => c.types);
+            const filteredData = (response.data || []).filter(item => validTypes.includes(item.type));
+            setItems(filteredData);
 
             // 2. Fetch Stats
             const statsRes = await inboxAPI.getStats();
