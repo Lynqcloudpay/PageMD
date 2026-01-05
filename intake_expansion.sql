@@ -22,12 +22,22 @@ BEGIN
         -- Seed default values if empty
         INSERT INTO %I.intake_settings (key, value, category, description)
         VALUES 
-        (''financial_policy'', ''Standard Financial Policy text...'', ''legal'', ''Financial Policy template''),
-        (''hipaa_notice'', ''HIPAA Notice of Privacy Practices...'', ''legal'', ''HIPAA Notice template''),
-        (''consent_to_treat'', ''Consent to Treat text...'', ''legal'', ''Consent to Treat template''),
-        (''assignment_of_benefits'', ''Assignment of Benefits text...'', ''legal'', ''Assignment of Benefits template''),
-        (''release_of_information'', ''Authorization to Release Information text...'', ''legal'', ''Release of Info template''),
-        (''telehealth_consent'', ''Telehealth Consent text...'', ''legal'', ''Telehealth Consent template''),
+        (''financial_policy'', ''Welcome to our practice. We are committed to providing you with the best possible medical care.
+1. Financial Responsibility: You are responsible for the timely payment of all charges for services provided. 
+2. Insurance: We will bill your insurance as a courtesy. However, you must provide accurate insurance information. 
+3. Co-payments: All co-payments and deductibles are due at the time of service.
+4. No-Show Fees: We require 24-hour notice for cancellations. Failure to do so may result in a cancellation fee.'', ''legal'', ''Financial Policy template''),
+        (''hipaa_notice'', ''THIS NOTICE DESCRIBES HOW MEDICAL INFORMATION ABOUT YOU MAY BE USED AND DISCLOSED AND HOW YOU CAN GET ACCESS TO THIS INFORMATION. PLEASE REVIEW IT CAREFULLY.
+We are required by law to maintain the privacy of your Protected Health Information (PHI). We use your PHI for:
+- Treatment: Sharing info with specialists or hospitals.
+- Payment: Billing your insurance carrier.
+- Healthcare Operations: Quality improvement and clinical audits.
+You have the right to access, amend, and request restrictions on your PHI at any time.'', ''legal'', ''HIPAA Notice template''),
+        (''consent_to_treat'', ''I hereby authorize and request medical treatment and procedures as may be deemed necessary by the healthcare providers and clinical staff. I understand that medical practice is not an exact science and that no specific guarantees have been made to me regarding the results of any examination or treatment. I acknowledge that I have the right to discuss my care plan and ask questions about risks, benefits, and alternatives prior to any procedure.'', ''legal'', ''Consent to Treat template''),
+        (''assignment_of_benefits'', ''I hereby assign and authorize direct payment to the provider for all medical benefits otherwise payable to me for services rendered. 
+I understand that I am financially responsible for all charges not covered by my insurance carrier, including co-insurance, deductibles, and non-covered services. This assignment will remain in effect until revoked by me in writing.'', ''legal'', ''Assignment of Benefits template''),
+        (''release_of_information'', ''I authorize the release of any medical or other information necessary to process my insurance claims. This includes the release of medical records to other healthcare providers involved in my care coordination and treatment. I understand that I may revoke this authorization in writing at any time, except to the extent that action has already been taken in reliance on it.'', ''legal'', ''Release of Info template''),
+        (''telehealth_consent'', ''I consent to receive healthcare services via telehealth (video/audio) technology. I understand that telehealth involves the use of electronic communications to enable healthcare providers at different locations to share individual patient medical information for the purpose of improving patient care. I understand the potential risks and limitations of telehealth and that I may refuse or withdraw my consent at any time.'', ''legal'', ''Telehealth Consent template''),
         (''telehealth_enabled'', ''false'', ''config'', ''Whether telehealth consent is required'')
         ON CONFLICT (key) DO NOTHING;
     ', target_schema, target_schema, target_schema, target_schema);
