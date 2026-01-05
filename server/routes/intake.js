@@ -318,18 +318,18 @@ router.post('/session/:id/approve', authenticate, async (req, res) => {
             // 2. Medications
             if (data.medsList && data.medsList.length > 0) {
                 for (const m of data.medsList) {
-                    await pool.query('INSERT INTO medications (patient_id, name, dosage, frequency) VALUES ($1, $2, $3, $4)', [targetPatientId, m.name, m.dose, m.frequency]);
+                    await pool.query('INSERT INTO medications (patient_id, medication_name, dosage, frequency) VALUES ($1, $2, $3, $4)', [targetPatientId, m.name, m.dose, m.frequency]);
                 }
             }
 
             // 3. Past Medical History (populate problems)
             if (data.pmhConditions && data.pmhConditions.length > 0) {
                 for (const condition of data.pmhConditions) {
-                    await pool.query('INSERT INTO problems (patient_id, diagnosis, status) VALUES ($1, $2, $3)', [targetPatientId, condition, 'active']);
+                    await pool.query('INSERT INTO problems (patient_id, problem_name, status) VALUES ($1, $2, $3)', [targetPatientId, condition, 'active']);
                 }
             }
             if (data.pmhOtherText) {
-                await pool.query('INSERT INTO problems (patient_id, diagnosis, status, notes) VALUES ($1, $2, $3, $4)', [targetPatientId, 'Other Medical History', 'active', data.pmhOtherText]);
+                await pool.query('INSERT INTO problems (patient_id, problem_name, status) VALUES ($1, $2, $3)', [targetPatientId, data.pmhOtherText, 'active']);
             }
 
             // 4. Family History
@@ -345,11 +345,11 @@ router.post('/session/:id/approve', authenticate, async (req, res) => {
             }
 
             // 5. Social History
-            if (data.tobaccoUse || data.alcoholUse) {
+            if (data.tobaccoUse || data.alcoholUse || data.recreationalDrugUse || data.occupation) {
                 await pool.query(`
-                    INSERT INTO social_history (patient_id, tobacco_use, alcohol_use, occupation, notes)
+                    INSERT INTO social_history (patient_id, smoking_status, alcohol_use, occupation, drug_use)
                     VALUES ($1, $2, $3, $4, $5)
-                `, [targetPatientId, data.tobaccoUse, data.alcoholUse, data.occupation, data.recreationalDrugUse]);
+                `, [targetPatientId, data.tobaccoUse || null, data.alcoholUse || null, data.occupation || null, data.recreationalDrugUse || null]);
             }
         }
 
