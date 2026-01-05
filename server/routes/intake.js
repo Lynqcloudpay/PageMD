@@ -169,14 +169,25 @@ router.post('/session/:id/regenerate-code', authenticate, async (req, res) => {
 });
 
 /**
- * POST /clear-rate-limits - Clear all lookup rate limits (Staff only)
+ * POST /clear-rate-limits - Clear lookup rate limits (Staff only)
  */
 router.post('/clear-rate-limits', authenticate, async (req, res) => {
     try {
+        const { lastName, dob } = req.body;
+        if (lastName && dob) {
+            const lastNameNorm = normalizeName(lastName);
+            const key = `${lastNameNorm}:${dob}`;
+            lookupRateLimit.delete(key);
+            console.log(`[Intake] Rate limit cleared for specific patient: ${key}`);
+            await logIntakeAudit(pool, req.clinic.id, 'staff', req.user.id, 'clear_rate_limit_individual', 'system', key, req);
+            return res.json({ success: true, message: `Rate limit cleared for patient ${lastName}` });
+        }
+
         lookupRateLimit.clear();
-        await logIntakeAudit(pool, req.clinic.id, 'staff', req.user.id, 'clear_rate_limits', 'system', null, req);
-        res.json({ success: true, message: 'Intake lookup rate limits cleared' });
+        await logIntakeAudit(pool, req.clinic.id, 'staff', req.user.id, 'clear_rate_limits_all', 'system', null, req);
+        res.json({ success: true, message: 'All intake lookup rate limits cleared' });
     } catch (e) {
+        console.error('[Intake] Clear rate limits failed:', e);
         res.status(500).json({ error: 'Failed to clear rate limits' });
     }
 });

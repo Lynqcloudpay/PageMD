@@ -22,12 +22,12 @@ const DigitalIntake = () => {
     const [selectedSessionId, setSelectedSessionId] = useState(null);
     const [menuSessionId, setMenuSessionId] = useState(null);
 
-    const handleClearLimits = async () => {
+    const handleClearLimits = async (lastName, dob) => {
         try {
-            await intakeAPI.clearRateLimits();
-            showSuccess('Lookup rate limits reset for all patients');
+            await intakeAPI.clearRateLimits({ lastName, dob });
+            showSuccess(`Lookup lockout reset for ${lastName}`);
         } catch (e) {
-            showError('Failed to reset rate limits');
+            showError('Failed to reset rate limit');
         }
     };
 
@@ -101,14 +101,6 @@ const DigitalIntake = () => {
                     <p className="text-gray-500 mt-1 font-medium italic">Universal QR Workflow • Azure Blue Engine</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button
-                        onClick={handleClearLimits}
-                        title="Reset lockout timing for patients who failed lookup too many times"
-                        className="p-4 bg-white border-2 border-rose-50 text-rose-400 rounded-2xl hover:bg-rose-50 transition-all active:scale-95 flex items-center gap-2"
-                    >
-                        <ShieldOff className="w-5 h-5" />
-                        <span className="hidden lg:inline text-xs font-bold uppercase tracking-widest">Reset Wait Timing</span>
-                    </button>
                     <button
                         onClick={() => fetchSessions(true)}
                         disabled={refreshing}
@@ -253,6 +245,15 @@ const DigitalIntake = () => {
                                                                         <User className="w-4 h-4" /> Open Chart
                                                                     </button>
                                                                 )}
+                                                                <button
+                                                                    onClick={() => {
+                                                                        handleClearLimits(session.patient_last_name || session.prefill_json?.lastName, session.patient_dob || session.prefill_json?.dob);
+                                                                        setMenuSessionId(null);
+                                                                    }}
+                                                                    className="w-full text-left px-4 py-2.5 text-sm font-bold text-blue-600 hover:bg-blue-50 flex items-center gap-2"
+                                                                >
+                                                                    <ShieldOff className="w-4 h-4" /> Reset Wait Timing
+                                                                </button>
                                                                 <button
                                                                     onClick={() => handleDeleteSession(session.id)}
                                                                     className="w-full text-left px-4 py-2.5 text-sm font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2"
