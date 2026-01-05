@@ -56,6 +56,23 @@ router.get('/sessions', authenticate, async (req, res) => {
 });
 
 /**
+ * GET /stats
+ */
+router.get('/stats', authenticate, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT COUNT(*) as count
+            FROM intake_sessions
+            WHERE tenant_id = $1 AND status = 'SUBMITTED'
+        `, [req.clinic.id]);
+        res.json({ pendingCount: parseInt(result.rows[0].count) });
+    } catch (error) {
+        console.error('[Intake] Stats failed:', error);
+        res.status(500).json({ error: 'Failed' });
+    }
+});
+
+/**
  * GET /session/:id
  */
 router.get('/session/:id', authenticate, async (req, res) => {

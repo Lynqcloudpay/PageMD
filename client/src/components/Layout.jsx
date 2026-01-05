@@ -11,7 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { usePatientTabs } from '../context/PatientTabsContext';
 import { useTasks } from '../context/TaskContext';
 import { usePermissions } from '../hooks/usePermissions';
-import { patientsAPI, messagesAPI, visitsAPI, followupsAPI, inboxAPI } from '../services/api';
+import { patientsAPI, messagesAPI, visitsAPI, followupsAPI, inboxAPI, intakeAPI } from '../services/api';
 import PatientTabs from './PatientTabs';
 import MobileMenu from './MobileMenu';
 import SupportModal from './SupportModal';
@@ -32,6 +32,7 @@ const Layout = ({ children }) => {
 
     const [pendingNotesCount, setPendingNotesCount] = useState(0);
     const [pendingCancellationsCount, setPendingCancellationsCount] = useState(0);
+    const [pendingIntakeCount, setPendingIntakeCount] = useState(0);
     const [inboxCount, setInboxCount] = useState(0);
 
     const isActive = (path) => {
@@ -82,11 +83,23 @@ const Layout = ({ children }) => {
             }
         };
 
+        // Fetch pending intake count
+        const fetchPendingIntakeCount = async () => {
+            try {
+                const response = await intakeAPI.getStats();
+                setPendingIntakeCount(response.data?.pendingCount || 0);
+            } catch (error) {
+                console.error('Error fetching pending intake count:', error);
+                setPendingIntakeCount(0);
+            }
+        };
+
         // Initial fetch
 
         fetchPendingNotesCount();
         fetchPendingCancellationsCount();
         fetchInboxCount();
+        fetchPendingIntakeCount();
 
         // Refresh counts periodically (every 30 seconds)
         const interval = setInterval(() => {
@@ -94,6 +107,7 @@ const Layout = ({ children }) => {
             fetchPendingNotesCount();
             fetchPendingCancellationsCount();
             fetchInboxCount();
+            fetchPendingIntakeCount();
         }, 30000);
 
         return () => clearInterval(interval);
@@ -127,7 +141,8 @@ const Layout = ({ children }) => {
         { path: '/cancellations', icon: AlertCircle, label: 'Cancellations', badge: pendingCancellationsCount > 0 ? pendingCancellationsCount : null },
         // Patients - requires patients:view_list permission
         ...(canViewPatients ? [
-            { path: '/patients', icon: Users, label: 'Patients', badge: null }
+            { path: '/patients', icon: Users, label: 'Patients', badge: null },
+            { path: '/digital-intake', icon: FileText, label: 'Digital Intake', badge: pendingIntakeCount > 0 ? pendingIntakeCount : null }
         ] : []),
     ].filter(Boolean);
 

@@ -452,6 +452,7 @@ export const intakeAPI = {
   submit: (id, data, signature) => api.post(`/intake/public/submit/${id}`, { data, signature }, { skipAuth: true }),
 
   // Staff (Auth required)
+  getStats: () => api.get('/intake/stats'),
   getSessions: () => api.get('/intake/sessions'),
   getSession: (id) => api.get(`/intake/session/${id}`),
   deleteSession: (id) => api.delete(`/intake/session/${id}`),
