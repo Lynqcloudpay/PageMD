@@ -438,7 +438,7 @@ router.post('/public/continue', async (req, res) => {
               AND patient_last_name_normalized = $2
               AND patient_dob = $3
               AND (patient_phone_normalized = $4 OR patient_phone_last4 = $5)
-              AND status IN ('IN_PROGRESS', 'NEEDS_EDITS')
+              AND status IN ('IN_PROGRESS', 'NEEDS_EDITS', 'SUBMITTED')
               AND expires_at > CURRENT_TIMESTAMP
             ORDER BY created_at DESC
         `, [req.clinic.id, lastNameNorm, dob, phoneNorm, phoneNorm.slice(-4)]);
@@ -447,7 +447,7 @@ router.post('/public/continue', async (req, res) => {
         await logIntakeAudit(pool, req.clinic.id, 'patient', null, 'continue_lookup', 'intake_sessions', null, req);
 
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'No active registration found matching these details.' });
+            return res.status(404).json({ error: 'No active or submitted registration found matching these details.' });
         }
 
         if (result.rows.length === 1) {
@@ -509,8 +509,10 @@ router.post('/public/session/:id', async (req, res) => {
         const s = result.rows[0];
 
         // Verify details match
+        const dbDob = s.patient_dob instanceof Date ? s.patient_dob.toISOString().split('T')[0] : String(s.patient_dob).split('T')[0];
+
         if (s.patient_last_name_normalized !== lastNameNorm ||
-            s.patient_dob.toISOString().split('T')[0] !== dob ||
+            dbDob !== dob ||
             (s.patient_phone_normalized !== phoneNorm && s.patient_phone_last4 !== phoneNorm)) {
             return res.status(401).json({ error: 'Verification failed' });
         }
