@@ -255,12 +255,22 @@ router.post('/session/:id/approve', authenticate, async (req, res) => {
 
         if (!targetPatientId) {
             const finalMRN = data.mrn || String(Math.floor(100000 + Math.random() * 900000));
+
+            // Map sex value from intake form to database constraint format
+            const mapSex = (val) => {
+                if (!val) return null;
+                const lower = val.toLowerCase();
+                if (lower === 'male' || lower === 'm') return 'M';
+                if (lower === 'female' || lower === 'f') return 'F';
+                return 'Other';
+            };
+
             const patientData = {
                 mrn: finalMRN,
                 first_name: data.firstName || session.prefill_json.firstName,
                 last_name: data.lastName || session.prefill_json.lastName,
                 dob: data.dob || session.prefill_json.dob,
-                sex: data.sex,
+                sex: mapSex(data.sex),
                 preferred_language: data.preferredLanguage,
                 phone: data.phone || session.prefill_json.phone,
                 phone_secondary: data.phoneSecondary,
