@@ -125,6 +125,86 @@ async function generateSuperbillPDF(data) {
     });
 }
 
+/**
+ * Generate a consolidated Intake Legal Packet PDF
+ * @param {Object} data { clinic, session, patientId, signerName, ip, userAgent, forms: [{label, policy, signed}] }
+ */
+async function generateIntakeLegalPDF(data) {
+    return new Promise((resolve, reject) => {
+        try {
+            const doc = new PDFDocument({ margin: 50, size: 'LETTER', bufferPages: true });
+            const buffers = [];
+            doc.on('data', buffers.push.bind(buffers));
+            doc.on('end', () => resolve(Buffer.concat(buffers)));
+
+            const { clinic, session, forms, signerName, ip, userAgent, patientId } = data;
+
+            // Header for every page
+            const addHeader = () => {
+                doc.fontSize(18).font('Helvetica-Bold').text(clinic.name || 'Medical Clinic', { align: 'center' });
+                doc.fontSize(8).font('Helvetica').text(clinic.address || '', { align: 'center' });
+                doc.text(`Phone: ${clinic.phone || ''} | Email: ${clinic.email || ''}`, { align: 'center' });
+                doc.moveDown();
+                doc.fontSize(12).font('Helvetica-Bold').text('PATIENT REGISTRATION & LEGAL ACKNOWLEDGMENTS', { align: 'center' });
+                doc.moveTo(50, doc.y).lineTo(560, doc.y).stroke('#e5e7eb');
+                doc.moveDown();
+            };
+
+            addHeader();
+
+            // Audit Info Block
+            doc.rect(50, doc.y, 510, 80).fill('#f9fafb');
+            doc.fillColor('#111827').fontSize(10).font('Helvetica-Bold').text('AUDIT & COMPLIANCE METADATA', 60, doc.y - 75);
+            doc.font('Helvetica').fontSize(9).fillColor('#374151');
+            doc.text(`Patient ID: ${patientId || 'NEW_REGISTRATION'}`, 60, doc.y + 5);
+            doc.text(`Signer Name: ${signerName}`, 60, doc.y + 5);
+            doc.text(`Timestamp: ${new Date().toLocaleString()}`, 60, doc.y + 5);
+            doc.text(`IP Address: ${ip}`, 300, doc.y - 45);
+            doc.text(`User Agent: ${userAgent.substring(0, 50)}...`, 300, doc.y + 5);
+            doc.moveDown(4);
+
+            // Forms
+            forms.forEach((form, idx) => {
+                if (idx > 0) {
+                    doc.addPage();
+                    addHeader();
+                }
+
+                doc.fontSize(14).font('Helvetica-Bold').fillColor('#1e40af').text(form.label.toUpperCase());
+                doc.moveDown(0.5);
+
+                doc.fontSize(10).font('Helvetica').fillColor('#374151').text(form.processedPolicy, {
+                    lineGap: 2,
+                    align: 'justify'
+                });
+
+                doc.moveDown(2);
+                doc.rect(50, doc.y, 510, 40).fill('#ecfdf5');
+                doc.fillColor('#065f46').font('Helvetica-Bold').text('✓ ELECTRONICALLY SIGNED & ACKNOWLEDGED', 60, doc.y - 30);
+                doc.font('Helvetica').text(`Signed by ${signerName} on ${new Date().toLocaleDateString()}`, 60, doc.y + 5);
+                doc.moveDown();
+            });
+
+            // Footer (Page Numbers)
+            const range = doc.bufferedPageRange();
+            for (let i = range.start; i < range.start + range.count; i++) {
+                doc.switchToPage(i);
+                doc.fontSize(8).fillColor('grey').text(
+                    `Page ${i + 1} of ${range.count} | ${clinic.name} | Confidential Legal Record`,
+                    50,
+                    750,
+                    { align: 'center' }
+                );
+            }
+
+            doc.end();
+        } catch (err) {
+            reject(err);
+        }
+    });
+}
+
 module.exports = {
-    generateSuperbillPDF
+    generateSuperbillPDF,
+    generateIntakeLegalPDF
 };

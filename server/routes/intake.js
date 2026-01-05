@@ -3,6 +3,9 @@ const crypto = require('crypto');
 const pool = require('../db');
 const { authenticate, logAudit } = require('../middleware/auth');
 const emailService = require('../services/emailService');
+const path = require('path');
+const fs = require('fs');
+const pdfService = require('../services/pdfService');
 
 const router = express.Router();
 
@@ -342,13 +345,71 @@ router.post('/session/:id/approve', authenticate, async (req, res) => {
 
         await pool.query(`UPDATE intake_sessions SET status = 'APPROVED', patient_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [targetPatientId, id]);
 
+        // --- PDF Legal Packet Generation ---
+        try {
+            const settingsRes = await pool.query('SELECT key, value FROM intake_settings WHERE category = $1', ['legal']);
+            const templates = {};
+            settingsRes.rows.forEach(r => templates[r.key] = r.value);
+
+            const practiceRes = await pool.query('SELECT practice_name, logo_url, address_line1, address_line2, city, state, zip, phone, email FROM practice_settings LIMIT 1');
+            const p = practiceRes.rows[0] || {};
+            const clinicData = {
+                name: p.practice_name || req.clinic.name,
+                address: [p.address_line1, p.address_line2, `${p.city || ''} ${p.state || ''} ${p.zip || ''}`.trim()].filter(Boolean).join('\n'),
+                phone: p.phone || req.clinic.phone,
+                email: p.email || req.clinic.email
+            };
+
+            const forms = [
+                { key: 'consentHIPAA', label: 'HIPAA Notice Acknowledgement', policy: templates.hipaa_notice },
+                { key: 'consentTreat', label: 'Consent to Medical Treatment', policy: templates.consent_to_treat },
+                { key: 'consentAOB', label: 'Assignment of Benefits', policy: templates.assignment_of_benefits },
+                { key: 'consentROI', label: 'Authorization to Release Information', policy: templates.release_of_information }
+            ].map(f => {
+                let processed = f.policy || '';
+                processed = processed
+                    .replace(/{CLINIC_NAME}/g, clinicData.name)
+                    .replace(/{CLINIC_ADDRESS}/g, clinicData.address)
+                    .replace(/{CLINIC_PHONE}/g, clinicData.phone)
+                    .replace(/{PRIVACY_EMAIL}/g, clinicData.email || 'privacy@pagemd.com')
+                    .replace(/{EFFECTIVE_DATE}/g, new Date(session.submitted_at || Date.now()).toLocaleDateString())
+                    .replace(/{ROI_LIST}/g, (data.roiPeople || []).map(p => `${p.name} (${p.relationship})`).join(', ') || 'NONE LISTED');
+                return { ...f, processedPolicy: processed };
+            });
+
+            const pdfBuffer = await pdfService.generateIntakeLegalPDF({
+                clinic: clinicData,
+                session,
+                patientId: targetPatientId,
+                signerName: data.signature,
+                ip: session.ip_address || 'N/A',
+                userAgent: session.user_agent || 'N/A',
+                forms
+            });
+
+            const filename = `intake_legal_${id}_${Date.now()}.pdf`;
+            const uploadDir = process.env.UPLOAD_DIR || './uploads';
+            if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+            const filePath = path.join(uploadDir, filename);
+            fs.writeFileSync(filePath, pdfBuffer);
+
+            const urlPath = `/uploads/${filename}`;
+            await pool.query(`
+                INSERT INTO documents (patient_id, uploader_id, doc_type, filename, file_path, mime_type, file_size, tags)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            `, [targetPatientId, req.user.id, 'consult', 'Intake Legal Packet.pdf', urlPath, 'application/pdf', pdfBuffer.length, ['legal', 'consent', 'intake', 'hipaa']]);
+
+        } catch (pdfErr) {
+            console.error('[Intake] PDF Packet generation failed:', pdfErr);
+        }
+
         await pool.query(`
             UPDATE inbox_items SET 
                 status = 'completed', 
                 completed_at = CURRENT_TIMESTAMP, 
                 completed_by = $1,
                 patient_id = $2
-            WHERE reference_id = $3 AND reference_table = 'intake_sessions'
+            WHERE reference_id = $3 AND type = 'intake_registration'
         `, [req.user.id, targetPatientId, id]);
 
         await logIntakeAudit(pool, req.clinic.id, 'staff', req.user.id, 'approve', 'intake_sessions', id, req);

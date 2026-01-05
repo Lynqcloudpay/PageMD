@@ -279,20 +279,46 @@ const IntakeReviewModal = ({ isOpen, onClose, sessionId, onApproved }) => {
 
                                 <section>
                                     <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                        <FileCheck className="w-3 h-3" /> Consents & Signatures
+                                        <FileCheck className="w-3 h-3" /> Consents & Permissions
                                     </h4>
-                                    <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl space-y-3">
-                                        {[
-                                            { label: 'HIPAA Agreement', signed: data.consentHIPAA },
-                                            { label: 'Consent to Treat', signed: data.consentTreat },
-                                            { label: 'Assignment of Benefits', signed: data.consentAOB },
-                                            { label: 'Release of Information', signed: data.consentROI }
-                                        ].map(c => (
-                                            <div key={c.label} className="flex items-center gap-2 text-emerald-800 font-bold text-xs uppercase tracking-tighter">
-                                                {c.signed ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <AlertCircle className="w-4 h-4 text-rose-400" />}
-                                                {c.label} {c.signed ? 'SIGNED' : 'MISSING'}
+                                    <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl space-y-4">
+                                        <div className="space-y-2">
+                                            {[
+                                                { label: 'HIPAA Agreement', signed: data.consentHIPAA },
+                                                { label: 'Consent to Treat', signed: data.consentTreat },
+                                                { label: 'Assignment of Benefits', signed: data.consentAOB },
+                                                { label: 'Release of Info', signed: data.consentROI }
+                                            ].map(c => (
+                                                <div key={c.label} className="flex items-center gap-2 text-emerald-800 font-bold text-xs uppercase tracking-tighter">
+                                                    {c.signed ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <AlertCircle className="w-4 h-4 text-rose-400" />}
+                                                    {c.label} {c.signed ? 'SIGNED' : 'MISSING'}
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {data.roiPeople && data.roiPeople.length > 0 && (
+                                            <div className="pt-3 border-t border-emerald-100">
+                                                <div className="text-[10px] text-emerald-600 font-bold uppercase mb-1 tracking-widest">Authorized Individuals (ROI)</div>
+                                                <div className="space-y-1">
+                                                    {data.roiPeople.map((p, i) => (
+                                                        <div key={i} className="text-xs font-bold text-emerald-900 bg-white/50 p-2 rounded-lg border border-emerald-100">
+                                                            {p.name} · {p.relationship}
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        ))}
+                                        )}
+
+                                        {data.commPrefs && data.commPrefs.length > 0 && (
+                                            <div className="pt-3 border-t border-emerald-100">
+                                                <div className="text-[10px] text-emerald-600 font-bold uppercase mb-1 tracking-widest">Communication Preferences</div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {data.commPrefs.map(pref => (
+                                                        <span key={pref} className="px-2 py-0.5 bg-white border border-emerald-100 rounded text-[10px] font-bold text-emerald-700">{pref}</span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
 
                                         <div className="pt-3 border-t border-emerald-100">
                                             <div className="text-[10px] text-emerald-600 font-bold uppercase mb-1">E-Signature Name</div>

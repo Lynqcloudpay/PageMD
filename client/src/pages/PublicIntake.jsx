@@ -382,7 +382,7 @@ const PublicIntake = () => {
             );
         }
 
-        return <IntakeEditor session={session} formData={formData} setFormData={setFormData} onSave={handleSave} onSubmit={handleSubmit} submitting={submitting} templates={clinicInfo?.templates || {}} />;
+        return <IntakeEditor session={session} formData={formData} setFormData={setFormData} onSave={handleSave} onSubmit={handleSubmit} submitting={submitting} templates={clinicInfo?.templates || {}} clinicInfo={clinicInfo} />;
     }
 
     return null;
@@ -391,10 +391,22 @@ const PublicIntake = () => {
 /**
  * Reusable multi-step editor component
  */
-const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submitting, templates }) => {
+const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submitting, templates, clinicInfo }) => {
     const [step, setStep] = useState(0);
     const [errors, setErrors] = useState({});
     const [viewingPolicy, setViewingPolicy] = useState(null);
+
+    const processTemplate = (text) => {
+        if (!text) return '';
+        let processed = text
+            .replace(/{CLINIC_NAME}/g, clinicInfo?.name || '')
+            .replace(/{CLINIC_ADDRESS}/g, clinicInfo?.address || '')
+            .replace(/{CLINIC_PHONE}/g, clinicInfo?.phone || '')
+            .replace(/{PRIVACY_EMAIL}/g, clinicInfo?.email || 'privacy@pagemd.com')
+            .replace(/{EFFECTIVE_DATE}/g, new Date().toLocaleDateString())
+            .replace(/{ROI_LIST}/g, (formData.roiPeople || []).map(p => `${p.name} (${p.relationship})`).join(', ') || 'NONE LISTED');
+        return processed;
+    };
 
     const STEPS = [
         { id: 'demographics', title: 'Personal Info', icon: User },
@@ -748,10 +760,10 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                     <div className="space-y-8">
                         <div className="space-y-6">
                             {[
-                                { key: 'consentHIPAA', label: 'HIPAA Privacy Notice Acknowledgement', policy: templates.hipaa_notice },
+                                { key: 'consentHIPAA', label: 'HIPAA Notice Acknowledgement', policy: templates.hipaa_notice },
                                 { key: 'consentTreat', label: 'Consent to Medical Treatment', policy: templates.consent_to_treat },
-                                { key: 'consentAOB', label: 'Assignment of Insurance Benefits', policy: templates.assignment_of_benefits },
-                                { key: 'consentROI', label: 'Authorization to Release Information', policy: templates.release_of_information }
+                                { key: 'consentAOB', label: 'Assignment of Benefits & Financial Policy', policy: templates.assignment_of_benefits },
+                                { key: 'consentROI', label: 'Authorized Release & Communications', policy: templates.release_of_information }
                             ].map(c => (
                                 <div key={c.key} className="bg-white border border-blue-50 rounded-3xl p-6 shadow-sm group">
                                     <div className="flex justify-between items-start mb-2">
@@ -768,9 +780,58 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                                         onClick={() => setViewingPolicy(c)}
                                         className="text-xs text-blue-700 leading-relaxed max-h-24 overflow-hidden mb-4 bg-blue-50/30 p-4 rounded-xl border border-blue-50 font-medium cursor-pointer hover:bg-blue-50 transition-colors relative"
                                     >
-                                        <div className="line-clamp-4">{c.policy || `Standard ${c.label} text...`}</div>
+                                        <div className="line-clamp-4 whitespace-pre-wrap">{processTemplate(c.policy) || `Standard ${c.label} text...`}</div>
                                         <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-blue-50/50 to-transparent"></div>
                                     </div>
+
+                                    {c.key === 'consentROI' && (
+                                        <div className="mb-6 space-y-4 border-t border-blue-50 pt-4">
+                                            <div>
+                                                <label className="text-[10px] font-bold text-blue-400 uppercase mb-2 block tracking-widest">Authorized Individuals (Name, Relation, Phone)</label>
+                                                <div className="space-y-2">
+                                                    {(formData.roiPeople || []).map((p, i) => (
+                                                        <div key={i} className="flex gap-2 items-center">
+                                                            <div className="flex-1 text-xs font-bold text-blue-900 bg-blue-50/50 p-2 rounded-lg">{p.name} · {p.relationship}</div>
+                                                            <button onClick={() => removeItem('roiPeople', i)} className="p-1 text-rose-400"><X className="w-4 h-4" /></button>
+                                                        </div>
+                                                    ))}
+                                                    <div className="flex gap-2">
+                                                        <input id="roi-name" type="text" placeholder="Name" className="flex-1 p-2 text-xs border border-blue-50 rounded-lg" />
+                                                        <input id="roi-rel" type="text" placeholder="Rel" className="w-20 p-2 text-xs border border-blue-50 rounded-lg" />
+                                                        <button onClick={() => {
+                                                            const name = document.getElementById('roi-name').value;
+                                                            const rel = document.getElementById('roi-rel').value;
+                                                            if (name) {
+                                                                addItem('roiPeople', { name, relationship: rel });
+                                                                document.getElementById('roi-name').value = '';
+                                                                document.getElementById('roi-rel').value = '';
+                                                            }
+                                                        }} className="px-3 bg-blue-600 text-white rounded-lg text-xs font-bold">+</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-bold text-blue-400 uppercase block tracking-widest">Communication Permissions</label>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {['Phone', 'Voicemail', 'Email', 'Text', 'Postal Mail'].map(pref => (
+                                                        <label key={pref} className="flex items-center gap-2 cursor-pointer">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={formData.commPrefs?.includes(pref)}
+                                                                onChange={e => {
+                                                                    const prefs = formData.commPrefs || [];
+                                                                    if (e.target.checked) setFormData({ ...formData, commPrefs: [...prefs, pref] });
+                                                                    else setFormData({ ...formData, commPrefs: prefs.filter(p => p !== pref) });
+                                                                }}
+                                                                className="w-4 h-4 rounded text-blue-600"
+                                                            />
+                                                            <span className="text-xs font-bold text-blue-900">{pref}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                     <label className="flex items-center gap-3 cursor-pointer group">
                                         <input type="checkbox" checked={formData[c.key] || false} onChange={e => setFormData({ ...formData, [c.key]: e.target.checked })} className="w-6 h-6 rounded-lg text-emerald-600 focus:ring-emerald-500 shadow-sm" />
                                         <span className="text-sm font-black text-blue-900">I acknowledge and agree</span>
@@ -878,7 +939,7 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                             </div>
                             <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
                                 <div className="text-slate-700 leading-relaxed text-[15px] whitespace-pre-wrap font-medium">
-                                    {viewingPolicy.policy || `This is the placeholder text for ${viewingPolicy.label}. Your practice has not yet uploaded a custom template for this document.`}
+                                    {processTemplate(viewingPolicy.policy) || `This is the placeholder text for ${viewingPolicy.label}. Your practice has not yet uploaded a custom template for this document.`}
                                 </div>
                             </div>
                             <div className="p-8 border-t border-blue-50 bg-slate-50/50">
