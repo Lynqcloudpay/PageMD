@@ -394,6 +394,7 @@ const PublicIntake = () => {
 const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submitting, templates }) => {
     const [step, setStep] = useState(0);
     const [errors, setErrors] = useState({});
+    const [viewingPolicy, setViewingPolicy] = useState(null);
 
     const STEPS = [
         { id: 'demographics', title: 'Personal Info', icon: User },
@@ -429,8 +430,10 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
         }
 
         if (currentStepId === 'insurance') {
-            if (!formData.primaryInsuranceCarrier) newErrors.primaryInsuranceCarrier = 'Carrier is required';
-            if (!formData.primaryMemberId) newErrors.primaryMemberId = 'Member ID is required';
+            if (!formData.isSelfPay) {
+                if (!formData.primaryInsuranceCarrier) newErrors.primaryInsuranceCarrier = 'Carrier is required';
+                if (!formData.primaryMemberId) newErrors.primaryMemberId = 'Member ID is required';
+            }
         }
 
         if (currentStepId === 'consent') {
@@ -544,18 +547,58 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
             case 'insurance':
                 return (
                     <div className="space-y-6">
-                        <div className="space-y-4">
-                            <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest">Primary Insurance *</h3>
-                            <input type="text" placeholder="Insurance Carrier (e.g. Aetna)" value={formData.primaryInsuranceCarrier || ''} onChange={e => setFormData({ ...formData, primaryInsuranceCarrier: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl font-bold shadow-sm" />
-                            <div className="grid grid-cols-2 gap-4">
-                                <input type="text" placeholder="Member ID" value={formData.primaryMemberId || ''} onChange={e => setFormData({ ...formData, primaryMemberId: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl font-bold shadow-sm" />
-                                <input type="text" placeholder="Group # (Opt)" value={formData.primaryGroupNumber || ''} onChange={e => setFormData({ ...formData, primaryGroupNumber: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl font-bold shadow-sm" />
-                            </div>
-                            <div className="bg-blue-50/50 p-4 rounded-2xl flex items-center gap-3">
-                                <Smartphone className="w-5 h-5 text-blue-400" />
-                                <span className="text-xs font-bold text-blue-600">Please bring your physical insurance card to your appointment.</span>
-                            </div>
+                        <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100 mb-6">
+                            <label className="flex items-center gap-3 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={formData.isSelfPay || false}
+                                    onChange={e => setFormData({
+                                        ...formData,
+                                        isSelfPay: e.target.checked,
+                                        primaryInsuranceCarrier: e.target.checked ? 'Self-Pay' : '',
+                                        primaryMemberId: e.target.checked ? 'NONE' : ''
+                                    })}
+                                    className="w-6 h-6 rounded-lg text-blue-600 focus:ring-blue-500"
+                                />
+                                <div>
+                                    <div className="font-black text-blue-900">Patient is Self-Pay</div>
+                                    <div className="text-xs text-blue-500 font-bold uppercase">No insurance will be billed for this visit</div>
+                                </div>
+                            </label>
                         </div>
+
+                        {!formData.isSelfPay && (
+                            <div className="space-y-4 animate-fadeIn">
+                                <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest">Primary Insurance *</h3>
+                                <input
+                                    type="text"
+                                    placeholder="Insurance Carrier (e.g. Aetna)"
+                                    value={formData.primaryInsuranceCarrier || ''}
+                                    onChange={e => setFormData({ ...formData, primaryInsuranceCarrier: e.target.value })}
+                                    className={`w-full p-4 bg-white border ${errors.primaryInsuranceCarrier ? 'border-rose-300' : 'border-blue-50'} rounded-2xl font-bold shadow-sm`}
+                                />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <input
+                                        type="text"
+                                        placeholder="Member ID"
+                                        value={formData.primaryMemberId || ''}
+                                        onChange={e => setFormData({ ...formData, primaryMemberId: e.target.value })}
+                                        className={`w-full p-4 bg-white border ${errors.primaryMemberId ? 'border-rose-300' : 'border-blue-50'} rounded-2xl font-bold shadow-sm`}
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="Group # (Opt)"
+                                        value={formData.primaryGroupNumber || ''}
+                                        onChange={e => setFormData({ ...formData, primaryGroupNumber: e.target.value })}
+                                        className="w-full p-4 bg-white border border-blue-50 rounded-2xl font-bold shadow-sm"
+                                    />
+                                </div>
+                                <div className="bg-blue-50/50 p-4 rounded-2xl flex items-center gap-3">
+                                    <Smartphone className="w-5 h-5 text-blue-400" />
+                                    <span className="text-xs font-bold text-blue-600">Please bring your physical insurance card to your appointment.</span>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 );
             case 'allergies':
@@ -710,10 +753,23 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                                 { key: 'consentAOB', label: 'Assignment of Insurance Benefits', policy: templates.assignment_of_benefits },
                                 { key: 'consentROI', label: 'Authorization to Release Information', policy: templates.release_of_information }
                             ].map(c => (
-                                <div key={c.key} className="bg-white border border-blue-50 rounded-3xl p-6 shadow-sm">
-                                    <h3 className="font-extrabold text-blue-900 mb-2">{c.label}</h3>
-                                    <div className="text-xs text-blue-700 leading-relaxed max-h-32 overflow-y-auto mb-4 bg-blue-50/50 p-4 rounded-xl border border-blue-100 font-medium">
-                                        {c.policy}
+                                <div key={c.key} className="bg-white border border-blue-50 rounded-3xl p-6 shadow-sm group">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <h3 className="font-extrabold text-blue-900">{c.label}</h3>
+                                        <button
+                                            type="button"
+                                            onClick={() => setViewingPolicy(c)}
+                                            className="text-[10px] font-black text-blue-500 uppercase tracking-widest hover:text-blue-700 transition-colors bg-blue-50 px-3 py-1 rounded-full"
+                                        >
+                                            Click to Read Full
+                                        </button>
+                                    </div>
+                                    <div
+                                        onClick={() => setViewingPolicy(c)}
+                                        className="text-xs text-blue-700 leading-relaxed max-h-24 overflow-hidden mb-4 bg-blue-50/30 p-4 rounded-xl border border-blue-50 font-medium cursor-pointer hover:bg-blue-50 transition-colors relative"
+                                    >
+                                        <div className="line-clamp-4">{c.policy || `Standard ${c.label} text...`}</div>
+                                        <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-blue-50/50 to-transparent"></div>
                                     </div>
                                     <label className="flex items-center gap-3 cursor-pointer group">
                                         <input type="checkbox" checked={formData[c.key] || false} onChange={e => setFormData({ ...formData, [c.key]: e.target.checked })} className="w-6 h-6 rounded-lg text-emerald-600 focus:ring-emerald-500 shadow-sm" />
@@ -806,30 +862,65 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                 })()}
 
                 {renderStep()}
-            </div>
-
-            <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-blue-50 via-blue-50/95 to-transparent flex gap-4 max-w-md mx-auto pointer-events-none">
-                {step > 0 ? (
-                    <button onClick={back} className="flex-1 py-5 bg-white border-2 border-blue-100 text-blue-600 rounded-3xl font-black active:scale-95 transition-all shadow-lg pointer-events-auto">
-                        Back
-                    </button>
-                ) : (
-                    <div className="flex-1"></div>
+                {/* Navigation & Progress */}
+                {/* Policy Viewing Modal */}
+                {viewingPolicy && (
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6 animate-fadeIn">
+                        <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-slideUp">
+                            <div className="p-8 border-b border-blue-50 flex justify-between items-center shrink-0 bg-blue-50/30">
+                                <div>
+                                    <h2 className="text-xl font-black text-blue-900 leading-tight">{viewingPolicy.label}</h2>
+                                    <p className="text-xs font-bold text-blue-400 uppercase tracking-widest mt-1">Legal Document</p>
+                                </div>
+                                <button onClick={() => setViewingPolicy(null)} className="p-3 bg-white text-blue-900 rounded-2xl shadow-sm hover:bg-blue-50 transition-colors">
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                                <div className="text-slate-700 leading-relaxed text-[15px] whitespace-pre-wrap font-medium">
+                                    {viewingPolicy.policy || `This is the placeholder text for ${viewingPolicy.label}. Your practice has not yet uploaded a custom template for this document.`}
+                                </div>
+                            </div>
+                            <div className="p-8 border-t border-blue-50 bg-slate-50/50">
+                                <button
+                                    onClick={() => {
+                                        setFormData({ ...formData, [viewingPolicy.key]: true });
+                                        setViewingPolicy(null);
+                                    }}
+                                    className="w-full py-5 bg-blue-600 text-white rounded-[2rem] font-bold shadow-xl shadow-blue-100 active:scale-95 transition-all"
+                                >
+                                    I Agree & Accept
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 )}
 
-                {step < STEPS.length - 1 ? (
-                    <button onClick={next} className="flex-1 py-5 bg-blue-600 text-white rounded-3xl font-black active:scale-95 transition-all shadow-xl shadow-blue-100 pointer-events-auto">
-                        Next Step
-                    </button>
-                ) : (
-                    <button
-                        onClick={() => onSubmit({ signed: true, timestamp: new Date() })}
-                        disabled={submitting}
-                        className="flex-1 py-5 bg-emerald-600 text-white rounded-3xl font-black active:scale-95 transition-all shadow-xl shadow-emerald-100 disabled:opacity-50 pointer-events-auto"
-                    >
-                        {submitting ? 'Submitting...' : 'Confirm & Submit'}
-                    </button>
-                )}
+                <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-blue-50 to-transparent pointer-events-none">
+                    <div className="max-w-xl mx-auto flex gap-4 pointer-events-auto">
+                        {step > 0 ? (
+                            <button onClick={back} className="flex-1 py-5 bg-white border-2 border-blue-100 text-blue-600 rounded-3xl font-black active:scale-95 transition-all shadow-lg pointer-events-auto">
+                                Back
+                            </button>
+                        ) : (
+                            <div className="flex-1"></div>
+                        )}
+
+                        {step < STEPS.length - 1 ? (
+                            <button onClick={next} className="flex-1 py-5 bg-blue-600 text-white rounded-3xl font-black active:scale-95 transition-all shadow-xl shadow-blue-100 pointer-events-auto">
+                                Next Step
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => onSubmit({ signed: true, timestamp: new Date() })}
+                                disabled={submitting}
+                                className="flex-1 py-5 bg-emerald-600 text-white rounded-3xl font-black active:scale-95 transition-all shadow-xl shadow-emerald-100 disabled:opacity-50 pointer-events-auto"
+                            >
+                                {submitting ? 'Submitting...' : 'Confirm & Submit'}
+                            </button>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );

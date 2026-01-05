@@ -206,12 +206,18 @@ router.get('/public/clinic-info', async (req, res) => {
         const templates = {};
         settingsRes.rows.forEach(r => { templates[r.key] = r.value; });
 
+        // Fetch branding from tenant-specific practice_settings for most up-to-date info
+        const practiceRes = await pool.query('SELECT practice_name, logo_url, address_line1, address_line2, city, state, zip, phone FROM practice_settings LIMIT 1');
+        const p = practiceRes.rows[0] || {};
+
         res.json({
-            name: req.clinic.name || 'Medical Practice',
+            name: p.practice_name || req.clinic.name || 'Medical Practice',
             slug: req.clinic.slug,
-            logoUrl: req.clinic.logo_url || null,
-            address: req.clinic.address || null,
-            phone: req.clinic.phone || null,
+            logoUrl: p.logo_url || req.clinic.logo_url || null,
+            address: p.address_line1
+                ? [p.address_line1, p.address_line2, `${p.city || ''} ${p.state || ''} ${p.zip || ''}`.trim()].filter(Boolean).join('\n')
+                : req.clinic.address,
+            phone: p.phone || req.clinic.phone || null,
             templates
         });
     } catch (error) {
