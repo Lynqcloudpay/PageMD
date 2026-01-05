@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     UserPlus, Search, Filter, QrCode, Send, Mail, Phone, Clock,
     CheckCircle, AlertCircle, Eye, MoreVertical, Copy, RefreshCw,
@@ -14,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 
 const DigitalIntake = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -216,7 +218,7 @@ const DigitalIntake = () => {
                                                     </button>
                                                 ) : session.status === 'APPROVED' ? (
                                                     <button
-                                                        onClick={() => window.open(`/patient/${session.patient_id}`, '_blank')}
+                                                        onClick={() => navigate(`/patient/${session.patient_id}/snapshot`)}
                                                         className="px-4 py-2 border border-blue-100 text-blue-600 rounded-xl font-bold text-xs hover:bg-blue-50 transition-all flex items-center gap-1"
                                                     >
                                                         View Chart <ExternalLink className="w-4 h-4" />
@@ -237,7 +239,7 @@ const DigitalIntake = () => {
                                                                 {session.patient_id && (
                                                                     <button
                                                                         onClick={() => {
-                                                                            window.open(`/patient/${session.patient_id}`, '_blank');
+                                                                            navigate(`/patient/${session.patient_id}/snapshot`);
                                                                             setMenuSessionId(null);
                                                                         }}
                                                                         className="w-full text-left px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2"
