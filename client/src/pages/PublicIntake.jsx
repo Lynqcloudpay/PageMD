@@ -157,44 +157,69 @@ const PublicIntake = () => {
     if (view === 'landing') {
         return (
             <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center animate-fadeIn">
-                {/* Clinic Logo or Default Icon */}
-                {clinicInfo?.logoUrl ? (
-                    <img
-                        src={clinicInfo.logoUrl}
-                        alt={clinicInfo.name || 'Clinic'}
-                        className="h-24 w-auto object-contain mb-6 drop-shadow-lg"
-                    />
-                ) : (
-                    <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-200 mb-8">
-                        <Heart className="w-10 h-10 text-white fill-current" />
+                {/* Branded Clinic Header (Azure Theme) */}
+                <div className="w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl shadow-blue-100/50 p-10 border border-blue-50 flex flex-col items-center mb-10 animate-slideUp">
+                    <div className="w-48 h-32 flex items-center justify-center mb-8 p-4 bg-white rounded-3xl border border-blue-50/50 shadow-sm relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/20 to-transparent"></div>
+                        {clinicInfo?.logoUrl ? (
+                            <img
+                                src={clinicInfo.logoUrl}
+                                alt={clinicInfo.name}
+                                className="max-w-full max-h-full object-contain relative z-10"
+                            />
+                        ) : (
+                            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center relative z-10 shadow-lg shadow-blue-200">
+                                <Building className="w-8 h-8 text-white" />
+                            </div>
+                        )}
                     </div>
-                )}
 
-                <h1 className="text-4xl font-black text-blue-900 mb-2 tracking-tight">
-                    {clinicInfo?.name || 'Patient Registration'}
-                </h1>
-                <p className="text-blue-600 text-lg mb-12 max-w-sm font-medium">
+                    <h1 className="text-3xl font-black text-blue-900 tracking-tight text-center leading-tight mb-4">
+                        {clinicInfo?.name || 'Patient Registration'}
+                    </h1>
+
+                    <div className="flex flex-col items-center gap-2 text-center">
+                        {clinicInfo?.address && (
+                            <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
+                                <span className="max-w-[250px] whitespace-pre-wrap">{clinicInfo.address}</span>
+                            </div>
+                        )}
+                        {clinicInfo?.phone && (
+                            <div className="flex items-center gap-2 px-4 py-1.5 bg-blue-50 text-blue-600 rounded-full text-xs font-bold ring-1 ring-blue-100">
+                                <Phone className="w-3 h-3" /> {clinicInfo.phone}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="text-blue-500 font-bold text-sm mb-12 max-w-sm tracking-tight">
                     Complete your registration securely on your own device.
-                </p>
+                </div>
 
                 <div className="w-full max-w-sm space-y-4">
                     <button
                         onClick={() => setView('start')}
-                        className="w-full py-5 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-3 transition-transform active:scale-95 shadow-lg shadow-blue-100"
+                        className="w-full py-5 bg-blue-600 text-white rounded-[2rem] font-bold flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-blue-200 hover:bg-blue-700 hover:-translate-y-0.5"
                     >
                         <User className="w-5 h-5" /> Start New Registration
                     </button>
                     <button
                         onClick={() => setView('resume')}
-                        className="w-full py-5 bg-white border-2 border-blue-50 text-blue-600 rounded-2xl font-bold flex items-center justify-center gap-3 transition-transform active:scale-95 hover:bg-blue-50"
+                        className="w-full py-5 bg-white border-2 border-blue-100 text-blue-600 rounded-[2rem] font-bold flex items-center justify-center gap-3 transition-all active:scale-95 hover:bg-blue-50"
                     >
                         <ArrowRight className="w-5 h-5" /> Continue Registration
                     </button>
                 </div>
 
-                <div className="mt-16 flex items-center gap-2 text-blue-300">
-                    <Shield className="w-4 h-4" />
-                    <span className="text-xs font-bold uppercase tracking-widest">Azure Secure • HIPAA Compliant</span>
+                <div className="mt-16 flex items-center gap-3 text-blue-400">
+                    <div className="flex items-center gap-1.5 bg-blue-50/50 px-4 py-2 rounded-full border border-blue-100">
+                        <Shield className="w-4 h-4" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Azure Secure Encryption</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 bg-blue-50/50 px-4 py-2 rounded-full border border-blue-100">
+                        <Lock className="w-4 h-4 text-emerald-500" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">HIPAA Compliant</span>
+                    </div>
                 </div>
             </div>
         );

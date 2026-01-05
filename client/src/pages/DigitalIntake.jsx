@@ -320,9 +320,14 @@ const DigitalIntake = () => {
                                 <Copy className="w-4 h-4" /> Copy
                             </button>
                         </div>
-                        <div className="text-blue-700 font-mono text-sm break-all font-bold">
+                        <a
+                            href={universalURL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-700 font-mono text-sm break-all font-bold hover:underline block"
+                        >
                             {universalURL}
-                        </div>
+                        </a>
                     </div>
 
                     <button

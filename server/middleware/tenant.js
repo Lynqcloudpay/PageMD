@@ -142,14 +142,14 @@ const resolveTenant = async (req, res, next) => {
         if (lookupSchema) {
             // We already found the schema by email
             const result = await pool.controlPool.query(
-                'SELECT id, slug, schema_name, status, is_read_only, billing_locked, prescribing_locked FROM clinics WHERE schema_name = $1 AND status = \'active\'',
+                'SELECT id, slug, schema_name, display_name, logo_url, address_line1, address_line2, city, state, zip, phone, status, is_read_only, billing_locked, prescribing_locked FROM clinics WHERE schema_name = $1 AND status = \'active\'',
                 [lookupSchema]
             );
             tenantInfo = result.rows[0];
         } else {
             // Find by slug
             const result = await pool.controlPool.query(
-                'SELECT id, slug, schema_name, status, is_read_only, billing_locked, prescribing_locked FROM clinics WHERE slug = $1',
+                'SELECT id, slug, schema_name, display_name, logo_url, address_line1, address_line2, city, state, zip, phone, status, is_read_only, billing_locked, prescribing_locked FROM clinics WHERE slug = $1',
                 [slug]
             );
             tenantInfo = result.rows[0];
@@ -187,12 +187,16 @@ const resolveTenant = async (req, res, next) => {
 
         // Attach clinic info
         req.clinic = {
-            id,
-            slug: resolvedSlug,
-            schema_name,
-            is_read_only,
-            billing_locked,
-            prescribing_locked
+            id: tenantInfo.id,
+            slug: tenantInfo.slug,
+            schema_name: tenantInfo.schema_name,
+            name: tenantInfo.display_name,
+            logo_url: tenantInfo.logo_url,
+            address: [tenantInfo.address_line1, tenantInfo.address_line2, `${tenantInfo.city || ''} ${tenantInfo.state || ''} ${tenantInfo.zip || ''}`.trim()].filter(Boolean).join('\n'),
+            phone: tenantInfo.phone,
+            is_read_only: tenantInfo.is_read_only,
+            billing_locked: tenantInfo.billing_locked,
+            prescribing_locked: tenantInfo.prescribing_locked
         };
 
         // 5. Run Request within Context using the safer .run() method
