@@ -203,25 +203,25 @@ const PublicIntake = () => {
 
     if (view === 'landing') {
         return (
-            <div className="min-h-screen bg-slate-50/50 flex flex-col items-center justify-center p-6 text-center animate-fadeIn relative">
-                {/* Fixed Top-Right Language Toggle */}
-                <div className="fixed top-8 right-8 z-50 flex items-center gap-2 bg-white/90 backdrop-blur-md p-1.5 rounded-2xl border border-blue-100 shadow-xl shadow-blue-900/5 transition-all hover:shadow-2xl hover:border-blue-200">
-                    <div className="flex items-center gap-1.5 px-3 text-blue-500">
-                        <Globe className="w-4 h-4 animate-pulse-slow" />
-                        <span className="text-[10px] font-black uppercase tracking-widest hidden lg:block">Select Language</span>
+            <div className="min-h-screen bg-slate-50/50 flex flex-col items-center justify-center p-4 sm:p-6 text-center animate-fadeIn relative">
+                {/* Responsive Fixed Language Toggle */}
+                <div className="fixed top-4 right-4 sm:top-8 sm:right-8 z-50 flex items-center gap-1.5 sm:gap-2 bg-white/95 backdrop-blur-md p-1 sm:p-1.5 rounded-2xl border border-blue-100 shadow-xl shadow-blue-900/5 transition-all hover:shadow-2xl">
+                    <div className="flex items-center gap-1.5 px-2 sm:px-3 text-blue-500">
+                        <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-pulse-slow" />
+                        <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest hidden md:block">Language</span>
                     </div>
-                    <div className="flex gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100">
+                    <div className="flex gap-0.5 sm:gap-1 bg-slate-50 p-0.5 sm:p-1 rounded-xl border border-slate-100">
                         <button
                             onClick={() => setLanguage('en')}
-                            className={`px-4 py-1.5 text-xs font-black rounded-lg transition-all ${language === 'en' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-400 hover:text-blue-600 hover:bg-white'}`}
+                            className={`px-3 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-black rounded-lg transition-all ${language === 'en' ? 'bg-blue-600 text-white shadow-md sm:shadow-lg shadow-blue-200' : 'text-slate-400 hover:text-blue-600 hover:bg-white'}`}
                         >
-                            English
+                            {language === 'es' ? 'EN' : 'English'}
                         </button>
                         <button
                             onClick={() => setLanguage('es')}
-                            className={`px-4 py-1.5 text-xs font-black rounded-lg transition-all ${language === 'es' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-400 hover:text-blue-600 hover:bg-white'}`}
+                            className={`px-3 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-black rounded-lg transition-all ${language === 'es' ? 'bg-blue-600 text-white shadow-md sm:shadow-lg shadow-blue-200' : 'text-slate-400 hover:text-blue-600 hover:bg-white'}`}
                         >
-                            Español
+                            {language === 'es' ? 'Español' : 'ES'}
                         </button>
                     </div>
                 </div>
