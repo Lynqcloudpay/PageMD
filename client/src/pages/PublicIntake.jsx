@@ -203,30 +203,31 @@ const PublicIntake = () => {
 
     if (view === 'landing') {
         return (
-            <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center animate-fadeIn">
-                {/* Branded Clinic Header (Azure Theme) */}
-                <div className="w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl shadow-blue-100/50 p-10 border border-blue-50 flex flex-col items-center mb-10 animate-slideUp relative overflow-hidden">
-                    <div className="absolute top-6 right-6 flex items-center gap-3 bg-white/80 backdrop-blur-sm p-1.5 rounded-2xl border border-blue-100 shadow-sm transition-all hover:shadow-md hover:border-blue-200 group/lang">
-                        <div className="flex items-center gap-1.5 px-2 text-blue-400">
-                            <Globe className="w-4 h-4" />
-                            <span className="text-[10px] font-bold uppercase tracking-wider hidden sm:block">Language</span>
-                        </div>
-                        <div className="flex gap-1 bg-gray-50/50 p-1 rounded-xl">
-                            <button
-                                onClick={() => setLanguage('en')}
-                                className={`px-4 py-1.5 text-xs font-black rounded-lg transition-all ${language === 'en' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-400 hover:text-blue-600 hover:bg-white'}`}
-                            >
-                                English
-                            </button>
-                            <button
-                                onClick={() => setLanguage('es')}
-                                className={`px-4 py-1.5 text-xs font-black rounded-lg transition-all ${language === 'es' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-400 hover:text-blue-600 hover:bg-white'}`}
-                            >
-                                Español
-                            </button>
-                        </div>
+            <div className="min-h-screen bg-slate-50/50 flex flex-col items-center justify-center p-6 text-center animate-fadeIn relative">
+                {/* Fixed Top-Right Language Toggle */}
+                <div className="fixed top-8 right-8 z-50 flex items-center gap-2 bg-white/90 backdrop-blur-md p-1.5 rounded-2xl border border-blue-100 shadow-xl shadow-blue-900/5 transition-all hover:shadow-2xl hover:border-blue-200">
+                    <div className="flex items-center gap-1.5 px-3 text-blue-500">
+                        <Globe className="w-4 h-4 animate-pulse-slow" />
+                        <span className="text-[10px] font-black uppercase tracking-widest hidden lg:block">Select Language</span>
                     </div>
+                    <div className="flex gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100">
+                        <button
+                            onClick={() => setLanguage('en')}
+                            className={`px-4 py-1.5 text-xs font-black rounded-lg transition-all ${language === 'en' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-400 hover:text-blue-600 hover:bg-white'}`}
+                        >
+                            English
+                        </button>
+                        <button
+                            onClick={() => setLanguage('es')}
+                            className={`px-4 py-1.5 text-xs font-black rounded-lg transition-all ${language === 'es' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-400 hover:text-blue-600 hover:bg-white'}`}
+                        >
+                            Español
+                        </button>
+                    </div>
+                </div>
 
+                {/* Branded Clinic Header (Azure Theme) */}
+                <div className="w-full max-w-lg bg-white rounded-[3rem] shadow-2xl shadow-blue-900/10 p-10 border border-blue-50 flex flex-col items-center mb-10 animate-slideUp relative overflow-hidden">
                     <div className="w-48 h-32 flex items-center justify-center mb-8 p-4 bg-white rounded-3xl border border-blue-50/50 shadow-sm relative overflow-hidden group">
                         <div className="absolute inset-0 bg-gradient-to-br from-blue-50/20 to-transparent"></div>
                         {clinicInfo?.logoUrl ? (
