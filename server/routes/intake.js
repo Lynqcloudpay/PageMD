@@ -370,11 +370,12 @@ router.post('/session/:id/approve', authenticate, async (req, res) => {
                 email: p.email || req.clinic.email
             };
 
+            const isSpanish = data.language === 'es';
             const forms = [
-                { key: 'consentHIPAA', label: 'HIPAA Notice Acknowledgement', policy: templates.hipaa_notice },
-                { key: 'consentTreat', label: 'Consent to Medical Treatment', policy: templates.consent_to_treat },
-                { key: 'consentAOB', label: 'Assignment of Benefits', policy: templates.assignment_of_benefits },
-                { key: 'consentROI', label: 'Authorization to Release Information', policy: templates.release_of_information }
+                { key: 'consentHIPAA', label: isSpanish ? 'Aviso de Privacidad (HIPAA)' : 'HIPAA Notice Acknowledgement', policy: isSpanish ? templates.hipaa_notice_es : templates.hipaa_notice },
+                { key: 'consentTreat', label: isSpanish ? 'Consentimiento para Tratamiento' : 'Consent to Medical Treatment', policy: isSpanish ? templates.consent_to_treat_es : templates.consent_to_treat },
+                { key: 'consentAOB', label: isSpanish ? 'Asignación de Beneficios' : 'Assignment of Benefits', policy: isSpanish ? templates.assignment_of_benefits_es : templates.assignment_of_benefits },
+                { key: 'consentROI', label: isSpanish ? 'Autorización para Divulgar Información' : 'Authorization to Release Information', policy: isSpanish ? templates.release_of_information_es : templates.release_of_information }
             ].map(f => {
                 let processed = f.policy || '';
                 processed = processed
@@ -382,8 +383,8 @@ router.post('/session/:id/approve', authenticate, async (req, res) => {
                     .replace(/{CLINIC_ADDRESS}/g, clinicData.address)
                     .replace(/{CLINIC_PHONE}/g, clinicData.phone)
                     .replace(/{PRIVACY_EMAIL}/g, clinicData.email || 'privacy@pagemd.com')
-                    .replace(/{EFFECTIVE_DATE}/g, new Date(session.submitted_at || Date.now()).toLocaleDateString())
-                    .replace(/{ROI_LIST}/g, (data.roiPeople || []).map(p => `${p.name} (${p.relationship})`).join(', ') || 'NONE LISTED');
+                    .replace(/{EFFECTIVE_DATE}/g, new Date(session.submitted_at || Date.now()).toLocaleDateString(isSpanish ? 'es-US' : 'en-US'))
+                    .replace(/{ROI_LIST}/g, (data.roiPeople || []).map(p => `${p.name} (${p.relationship})`).join(', ') || (isSpanish ? 'NINGUNO LISTADO' : 'NONE LISTED'));
                 return { ...f, processedPolicy: processed };
             });
 
@@ -394,7 +395,8 @@ router.post('/session/:id/approve', authenticate, async (req, res) => {
                 signerName: data.signature,
                 ip: session.ip_address || 'N/A',
                 userAgent: session.user_agent || 'N/A',
-                forms
+                forms,
+                language: data.language
             });
 
             const filename = `intake_legal_${id}_${Date.now()}.pdf`;

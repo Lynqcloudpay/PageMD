@@ -129,7 +129,8 @@ async function generateSuperbillPDF(data) {
  * Generate a consolidated Intake Legal Packet PDF
  * @param {Object} data { clinic, session, patientId, signerName, ip, userAgent, forms: [{label, policy, signed}] }
  */
-async function generateIntakeLegalPDF(data) {
+async function generateIntakeLegalPDF({ clinic, session, patientId, signerName, ip, userAgent, forms, language = 'en' }) {
+    const isSpanish = language === 'es';
     return new Promise((resolve, reject) => {
         try {
             const doc = new PDFDocument({ margin: 60, size: 'LETTER', bufferPages: true });
@@ -137,10 +138,9 @@ async function generateIntakeLegalPDF(data) {
             doc.on('data', buffers.push.bind(buffers));
             doc.on('end', () => resolve(Buffer.concat(buffers)));
 
-            const { clinic, session, forms, signerName, ip, userAgent, patientId } = data;
             const pageWidth = 612;
             const contentWidth = pageWidth - 120; // 60px margins on each side
-            const timestamp = new Date();
+            const timestamp = new Date(session.submitted_at || Date.now());
 
             // Header for every page
             const addHeader = (isFirstPage = false) => {
@@ -155,7 +155,7 @@ async function generateIntakeLegalPDF(data) {
                     .text(clinic.address || '', 60, doc.y + 2, { width: contentWidth, align: 'center' });
 
                 // Phone & Email
-                doc.text(`Phone: ${clinic.phone || 'N/A'} | Email: ${clinic.email || 'N/A'}`, 60, doc.y + 2, { width: contentWidth, align: 'center' });
+                doc.text(`${isSpanish ? 'Tel' : 'Phone'}: ${clinic.phone || 'N/A'} | Email: ${clinic.email || 'N/A'}`, 60, doc.y + 2, { width: contentWidth, align: 'center' });
 
                 doc.moveDown(0.8);
 
@@ -165,7 +165,7 @@ async function generateIntakeLegalPDF(data) {
 
                 // Document title
                 doc.fontSize(11).font('Helvetica-Bold').fillColor('#374151')
-                    .text('PATIENT REGISTRATION & LEGAL ACKNOWLEDGMENTS', 60, doc.y, { width: contentWidth, align: 'center' });
+                    .text(isSpanish ? 'REGISTRO DE PACIENTE Y RECONOCIMIENTOS LEGALES' : 'PATIENT REGISTRATION & LEGAL ACKNOWLEDGMENTS', 60, doc.y, { width: contentWidth, align: 'center' });
 
                 doc.moveDown(1);
 
@@ -182,21 +182,21 @@ async function generateIntakeLegalPDF(data) {
 
                 // Title
                 doc.fontSize(9).font('Helvetica-Bold').fillColor('#64748b')
-                    .text('AUDIT & COMPLIANCE METADATA', 70, blockStartY + 10);
+                    .text(isSpanish ? 'METADATOS DE AUDITORÍA Y CUMPLIMIENTO' : 'AUDIT & COMPLIANCE METADATA', 70, blockStartY + 10);
 
                 // Draw a line under the title
-                doc.moveTo(70, blockStartY + 22).lineTo(200, blockStartY + 22).strokeColor('#cbd5e1').stroke();
+                doc.moveTo(70, blockStartY + 22).lineTo(250, blockStartY + 22).strokeColor('#cbd5e1').stroke();
 
                 // Left column
                 doc.fontSize(8).font('Helvetica').fillColor('#475569');
-                doc.text(`Patient ID: ${patientId || 'NEW_REGISTRATION'}`, 70, blockStartY + 30);
-                doc.text(`Signer Name: ${signerName}`, 70, blockStartY + 42);
-                doc.text(`Timestamp: ${timestamp.toLocaleString()}`, 70, blockStartY + 54);
+                doc.text(`${isSpanish ? 'ID Paciente' : 'Patient ID'}: ${patientId || 'NEW_REGISTRATION'}`, 70, blockStartY + 30);
+                doc.text(`${isSpanish ? 'Nombre Firma' : 'Signer Name'}: ${signerName}`, 70, blockStartY + 42);
+                doc.text(`${isSpanish ? 'Fecha/Hora' : 'Timestamp'}: ${timestamp.toLocaleString(isSpanish ? 'es-US' : 'en-US')}`, 70, blockStartY + 54);
 
                 // Right column
-                doc.text(`IP Address: ${ip || 'N/A'}`, 320, blockStartY + 30);
+                doc.text(`${isSpanish ? 'Dirección IP' : 'IP Address'}: ${ip || 'N/A'}`, 320, blockStartY + 30);
                 const uaDisplay = (userAgent || 'Unknown').substring(0, 45);
-                doc.text(`User Agent: ${uaDisplay}...`, 320, blockStartY + 42);
+                doc.text(`${isSpanish ? 'Navegador' : 'User Agent'}: ${uaDisplay}...`, 320, blockStartY + 42);
 
                 // Reset position after block
                 doc.y = blockStartY + blockHeight + 20;
@@ -237,10 +237,13 @@ async function generateIntakeLegalPDF(data) {
 
                 // Checkmark and text
                 doc.fontSize(10).font('Helvetica-Bold').fillColor('#166534')
-                    .text('✓ ELECTRONICALLY SIGNED & ACKNOWLEDGED', 75, sigBlockY + 12);
+                    .text(isSpanish ? '✓ FIRMADO ELECTRÓNICAMENTE Y ACEPTADO' : '✓ ELECTRONICALLY SIGNED & ACKNOWLEDGED', 75, sigBlockY + 12);
 
                 doc.fontSize(9).font('Helvetica').fillColor('#166534')
-                    .text(`Signed by ${signerName} on ${timestamp.toLocaleDateString()} at ${timestamp.toLocaleTimeString()}`, 75, sigBlockY + 28);
+                    .text(isSpanish
+                        ? `Firmado por ${signerName} el ${timestamp.toLocaleDateString('es-US')} a las ${timestamp.toLocaleTimeString('es-US')}`
+                        : `Signed by ${signerName} on ${timestamp.toLocaleDateString()} at ${timestamp.toLocaleTimeString()}`,
+                        75, sigBlockY + 28);
 
                 doc.y = sigBlockY + sigBlockHeight + 15;
             };
@@ -260,13 +263,23 @@ async function generateIntakeLegalPDF(data) {
                 addFormSection(form, idx === 0);
             });
 
-            // Add page numbers to all pages (IMPORTANT: lineBreak: false prevents new pages)
+            // Add page numbers to all pages (lineBreak: false and avoiding bottom edge prevents new pages)
             const range = doc.bufferedPageRange();
-            for (let i = range.start; i < range.start + range.count; i++) {
+            for (let i = 0; i < range.count; i++) {
                 doc.switchToPage(i);
-                const footerText = `Page ${i + 1} of ${range.count} | ${clinic.name} | Confidential Legal Document`;
+                const footerText = isSpanish
+                    ? `Página ${i + 1} de ${range.count} | ${clinic.name} | Documento Legal Confidencial`
+                    : `Page ${i + 1} of ${range.count} | ${clinic.name} | Confidential Legal Document`;
+
+                // Draw a thin line above the footer
+                doc.moveTo(60, 740).lineTo(pageWidth - 60, 740).strokeColor('#f3f4f6').stroke();
+
                 doc.fontSize(8).font('Helvetica').fillColor('#9ca3af')
-                    .text(footerText, 60, 745, { width: contentWidth, align: 'center', lineBreak: false });
+                    .text(footerText, 60, 750, {
+                        width: contentWidth,
+                        align: 'center',
+                        lineBreak: false
+                    });
             }
 
             doc.end();
