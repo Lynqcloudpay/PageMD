@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Heart, Shield, ChevronRight, CheckCircle,
     ClipboardList, AlertCircle, Phone, Calendar,
-    User, ArrowRight, Lock, Key, Smartphone, Building, Pill, X
+    User, ArrowRight, Lock, Key, Smartphone, Building, Pill, X, Globe
 } from 'lucide-react';
 import { intakeAPI } from '../services/api';
 import { showError, showSuccess } from '../utils/toast';
@@ -206,19 +206,25 @@ const PublicIntake = () => {
             <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center animate-fadeIn">
                 {/* Branded Clinic Header (Azure Theme) */}
                 <div className="w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl shadow-blue-100/50 p-10 border border-blue-50 flex flex-col items-center mb-10 animate-slideUp relative overflow-hidden">
-                    <div className="absolute top-6 right-6 flex gap-1 bg-gray-50 p-1 rounded-xl border border-gray-100">
-                        <button
-                            onClick={() => setLanguage('en')}
-                            className={`px-3 py-1 text-[10px] font-black rounded-lg transition-all ${language === 'en' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-600'}`}
-                        >
-                            EN
-                        </button>
-                        <button
-                            onClick={() => setLanguage('es')}
-                            className={`px-3 py-1 text-[10px] font-black rounded-lg transition-all ${language === 'es' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-600'}`}
-                        >
-                            ES
-                        </button>
+                    <div className="absolute top-6 right-6 flex items-center gap-3 bg-white/80 backdrop-blur-sm p-1.5 rounded-2xl border border-blue-100 shadow-sm transition-all hover:shadow-md hover:border-blue-200 group/lang">
+                        <div className="flex items-center gap-1.5 px-2 text-blue-400">
+                            <Globe className="w-4 h-4" />
+                            <span className="text-[10px] font-bold uppercase tracking-wider hidden sm:block">Language</span>
+                        </div>
+                        <div className="flex gap-1 bg-gray-50/50 p-1 rounded-xl">
+                            <button
+                                onClick={() => setLanguage('en')}
+                                className={`px-4 py-1.5 text-xs font-black rounded-lg transition-all ${language === 'en' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-400 hover:text-blue-600 hover:bg-white'}`}
+                            >
+                                English
+                            </button>
+                            <button
+                                onClick={() => setLanguage('es')}
+                                className={`px-4 py-1.5 text-xs font-black rounded-lg transition-all ${language === 'es' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-400 hover:text-blue-600 hover:bg-white'}`}
+                            >
+                                Español
+                            </button>
+                        </div>
                     </div>
 
                     <div className="w-48 h-32 flex items-center justify-center mb-8 p-4 bg-white rounded-3xl border border-blue-50/50 shadow-sm relative overflow-hidden group">
