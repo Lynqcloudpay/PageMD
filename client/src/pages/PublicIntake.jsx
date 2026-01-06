@@ -47,24 +47,16 @@ const PublicIntake = () => {
     const t = (key) => {
         const translations = {
             en: {
-                welcome: "Welcome to",
-                registration: "Patient Registration",
-                secure_msg: "Complete your registration securely on your own device.",
-                start_new: "Start New Registration",
-                continue: "Continue Registration",
-                find_reg: "Find Registration",
-                first_name: "First Name",
-                last_name: "Last Name",
-                dob: "Date of Birth",
-                phone: "Phone Number",
-                get_started: "Get Started",
-                creating_session: "Creating Session...",
-                continue_btn: "Continue",
-                submit: "Submit Intake",
-                review: "Review Submission",
-                signing_as: "Signing as",
-                electronically_signed: "Electronically Signed",
                 finish: "Finish",
+                searching: "Searching...",
+                multiple_matches: "Multiple Matches",
+                multiple_matches_msg: "We found more than one session. Please select yours:",
+                active: "Active",
+                search_again: "Search Again",
+                reg_submitted: "Registration Submitted",
+                reg_received_msg: "Your registration has been received. Please return this device or alert the front desk.",
+                phone_match_msg: "Must match the number used to start registration.",
+                select_lang_title: "Select Language"
             },
             es: {
                 welcome: "Bienvenido a",
@@ -85,6 +77,15 @@ const PublicIntake = () => {
                 signing_as: "Firmando como",
                 electronically_signed: "Firmado Electrónicamente",
                 finish: "Finalizar",
+                searching: "Buscando...",
+                multiple_matches: "Múltiples Coincidencias",
+                multiple_matches_msg: "Encontramos más de una sesión. Por favor seleccione la suya:",
+                active: "Activo",
+                search_again: "Buscar de Nuevo",
+                reg_submitted: "Registro Enviado",
+                reg_received_msg: "Su registro ha sido recibido. Por favor devuelva este dispositivo o avise a la recepción.",
+                phone_match_msg: "Debe coincidir con el número utilizado para iniciar el registro.",
+                select_lang_title: "Seleccionar Idioma"
             }
         };
         return translations[language][key] || key;
@@ -208,7 +209,7 @@ const PublicIntake = () => {
                 <div className="fixed top-4 right-4 sm:top-8 sm:right-8 z-50 flex items-center gap-1.5 sm:gap-2 bg-white/95 backdrop-blur-md p-1 sm:p-1.5 rounded-2xl border border-blue-100 shadow-xl shadow-blue-900/5 transition-all hover:shadow-2xl">
                     <div className="flex items-center gap-1.5 px-2 sm:px-3 text-blue-500">
                         <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-pulse-slow" />
-                        <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest hidden md:block">Language</span>
+                        <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest hidden md:block">{t('select_lang_title')}</span>
                     </div>
                     <div className="flex gap-0.5 sm:gap-1 bg-slate-50 p-0.5 sm:p-1 rounded-xl border border-slate-100">
                         <button
@@ -344,14 +345,14 @@ const PublicIntake = () => {
                 <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-blue-50 p-8 space-y-8 mt-12 border border-blue-50">
                     <div className="flex justify-between items-center">
                         <button onClick={() => setView('landing')} className="p-2 hover:bg-blue-50 rounded-xl text-blue-400 transition-all"><ChevronLeft className="w-6 h-6" /></button>
-                        <h2 className="text-xl font-bold text-gray-900">Find Registration</h2>
+                        <h2 className="text-xl font-bold text-gray-900">{t('find_reg')}</h2>
                         <div className="w-10"></div>
                     </div>
 
                     <form onSubmit={handleContinueLookup} className="space-y-6">
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-xs font-bold text-blue-400 uppercase mb-2">Last Name</label>
+                                <label className="block text-xs font-bold text-blue-400 uppercase mb-2">{t('last_name')}</label>
                                 <input
                                     required
                                     type="text"
@@ -362,11 +363,11 @@ const PublicIntake = () => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-blue-400 uppercase mb-2">Date of Birth</label>
+                                <label className="block text-xs font-bold text-blue-400 uppercase mb-2">{t('dob')}</label>
                                 <input required type="date" value={continueForm.dob} onChange={e => setContinueForm({ ...continueForm, dob: e.target.value })} className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500" />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-blue-400 uppercase mb-2">Phone Number</label>
+                                <label className="block text-xs font-bold text-blue-400 uppercase mb-2">{t('phone')}</label>
                                 <input
                                     required
                                     type="tel"
@@ -375,7 +376,7 @@ const PublicIntake = () => {
                                     onChange={e => setContinueForm({ ...continueForm, phone: e.target.value })}
                                     className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500"
                                 />
-                                <p className="text-[10px] text-blue-400 mt-2 ml-1">Must match the number used to start registration.</p>
+                                <p className="text-[10px] text-blue-400 mt-2 ml-1">{t('phone_match_msg')}</p>
                             </div>
                         </div>
                         <button
@@ -383,7 +384,7 @@ const PublicIntake = () => {
                             disabled={submitting}
                             className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-100 disabled:opacity-50"
                         >
-                            {submitting ? 'Searching...' : 'Continue Registration'} <ChevronRight className="w-5 h-5" />
+                            {submitting ? t('searching') : t('continue')} <ChevronRight className="w-5 h-5" />
                         </button>
                     </form>
                 </div>
@@ -396,8 +397,8 @@ const PublicIntake = () => {
             <div className="min-h-screen bg-blue-50/30 flex flex-col items-center p-6 animate-fadeIn">
                 <div className="w-full max-w-md bg-white rounded-3xl shadow-xl p-8 space-y-6 mt-12 border border-blue-50">
                     <div className="text-center space-y-2">
-                        <h2 className="text-2xl font-black text-blue-900 leading-tight">Multiple Matches</h2>
-                        <p className="text-blue-600/70 font-medium">We found more than one session. Please select yours:</p>
+                        <h2 className="text-2xl font-black text-blue-900 leading-tight">{t('multiple_matches')}</h2>
+                        <p className="text-blue-600/70 font-medium">{t('multiple_matches_msg')}</p>
                     </div>
 
                     <div className="space-y-3">
@@ -412,7 +413,7 @@ const PublicIntake = () => {
                                         <div className="font-extrabold text-lg flex items-center gap-2">
                                             {candidate.firstNameInitial}. {candidate.lastName}
                                             <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full uppercase tracking-widest group-hover:bg-blue-500 group-hover:text-white">
-                                                Active
+                                                {t('active')}
                                             </span>
                                         </div>
                                         <div className="text-sm opacity-70 flex items-center gap-2">
@@ -429,7 +430,7 @@ const PublicIntake = () => {
 
                     <div className="pt-4 border-t border-blue-50 text-center">
                         <button onClick={() => setView('resume')} className="text-blue-600 font-bold hover:underline">
-                            Search Again
+                            {t('search_again')}
                         </button>
                     </div>
                 </div>
@@ -444,9 +445,9 @@ const PublicIntake = () => {
                     <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-xl mb-8 animate-bounce">
                         <CheckCircle className="w-16 h-16 text-blue-500" />
                     </div>
-                    <h1 className="text-3xl font-extrabold text-blue-900 mb-4 tracking-tighter">Registration Submitted</h1>
-                    <p className="text-blue-700 text-lg mb-8 max-w-md">Your registration has been received. Please return this device or alert the front desk.</p>
-                    <button onClick={() => window.location.reload()} className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg shadow-blue-100">Finish</button>
+                    <h1 className="text-3xl font-extrabold text-blue-900 mb-4 tracking-tighter">{t('reg_submitted')}</h1>
+                    <p className="text-blue-700 text-lg mb-8 max-w-md">{t('reg_received_msg')}</p>
+                    <button onClick={() => window.location.reload()} className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg shadow-blue-100">{t('finish')}</button>
                 </div>
             );
         }
