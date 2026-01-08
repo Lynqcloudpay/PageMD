@@ -238,6 +238,10 @@ app.use('/api/eligibility', require('./routes/eligibility'));
 const alertsRoutes = require('./routes/alerts');
 app.use('/api/alerts', alertsRoutes);
 
+// Privacy & Compliance
+app.use('/api/privacy', require('./routes/privacy'));
+app.use('/api/compliance', require('./routes/compliance'));
+
 // Inbox
 // Uses commercial-grade inbasket implementation (server/routes/inbasket.js)
 const inboxRoutes = require('./routes/inbasket');

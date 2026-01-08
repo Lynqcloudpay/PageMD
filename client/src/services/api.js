@@ -69,6 +69,17 @@ api.interceptors.response.use(
 
       showError(toastMessage, 5000);
       console.warn('403 Forbidden:', errorMessage, missingPermission ? `Missing: ${missingPermission}` : '');
+
+      // HIPAA: Handle Restricted Chart access (requires Break-the-Glass)
+      if (error.response?.data?.error === 'RESTRICTED_CHART') {
+        window.dispatchEvent(new CustomEvent('privacy:restricted', {
+          detail: {
+            patientId: error.response.data.patientId || error.config?.url?.split('/patients/')[1]?.split('/')[0],
+            reason: error.response.data.restrictionReason,
+            config: error.config
+          }
+        }));
+      }
     }
 
     return Promise.reject(error);
@@ -545,6 +556,21 @@ export const ordersetsAPI = {
   update: (id, data) => api.put(`/ordersets/${id}`, data),
   delete: (id) => api.delete(`/ordersets/${id}`),
   getByDiagnosis: (diagnosis) => api.get(`/ordersets/diagnosis/${encodeURIComponent(diagnosis)}`),
+};
+
+// Privacy & Audit
+export const privacyAPI = {
+  breakGlass: (patientId, data) => api.post(`/privacy/patients/${patientId}/break-glass`, data),
+  updateRestriction: (patientId, data) => api.patch(`/privacy/patients/${patientId}/restriction`, data),
+  getSettings: () => api.get('/privacy/settings'),
+};
+
+// Compliance & Analytics
+export const complianceAPI = {
+  getLogs: (params) => api.get('/compliance/logs', { params }),
+  getAlerts: (params) => api.get('/compliance/alerts', { params }),
+  resolveAlert: (id, resolutionNote) => api.patch(`/compliance/alerts/${id}/resolve`, { resolutionNote }),
+  getStats: () => api.get('/compliance/stats'),
 };
 
 export default api;

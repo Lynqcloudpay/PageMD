@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Phone, Mail, MapPin, Shield, Activity,
-    AlertCircle, Edit2, Camera, X, Check,
-    ExternalLink, Calendar, FileText, Upload, Pill, Receipt, Users
+    ExternalLink, Calendar, FileText, Upload, Pill, Receipt, Users,
+    Lock, ShieldCheck
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
+import { usePermissions } from '../hooks/usePermissions';
 import PatientHeaderPhoto from './PatientHeaderPhoto';
 import PortalInviteModal from './PortalInviteModal';
 
@@ -45,6 +45,8 @@ const calculateAge = (dob) => {
 const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToday, onAction }) => {
     const navigate = useNavigate();
     const { id } = useParams();
+    const { can } = usePermissions();
+    const canEditSettings = can('settings:edit');
     const [fetchedPatient, setFetchedPatient] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
     const [editForm, setEditForm] = useState({});
@@ -124,7 +126,11 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
             // Emergency
             emergency_contact_name: patient.emergency_contact_name || '',
             emergency_contact_phone: patient.emergency_contact_phone || '',
-            emergency_contact_relationship: patient.emergency_contact_relationship || ''
+            emergency_contact_relationship: patient.emergency_contact_relationship || '',
+
+            // Privacy
+            is_restricted: patient.is_restricted || false,
+            restriction_reason: patient.restriction_reason || ''
         });
         setIsEditing(true);
     };
@@ -330,6 +336,29 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                         <div className="pt-2 border-t border-dashed mt-2">
                             {renderField("MRN (Internal)", "mrn")}
                         </div>
+
+                        {canEditSettings && (
+                            <div className="pt-4 border-t-2 border-red-100 mt-4 space-y-3">
+                                <h4 className="font-black text-red-600 uppercase tracking-widest text-[10px]">Privacy & Security</h4>
+                                <div className="flex items-center gap-2 p-2 bg-red-50 rounded-lg border border-red-100">
+                                    <input
+                                        type="checkbox"
+                                        id="is_restricted"
+                                        checked={editForm.is_restricted}
+                                        onChange={e => setEditForm({ ...editForm, is_restricted: e.target.checked })}
+                                        className="w-4 h-4 text-red-600 rounded border-red-300 focus:ring-red-500"
+                                    />
+                                    <label htmlFor="is_restricted" className="text-xs font-black text-red-700 uppercase tracking-tighter">
+                                        Restrict Chart (Break-the-Glass)
+                                    </label>
+                                </div>
+                                {editForm.is_restricted && (
+                                    <div className="animate-in slide-in-from-top-2 duration-200">
+                                        {renderField("Restriction Reason", "restriction_reason", "text", ["VIP / Famous Patient", "Employee Record", "Family Record", "Sensitive Condition", "Security Concern"])}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -361,6 +390,14 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                             >
                                 {patient.first_name || ''} {patient.last_name || ''}
                             </span>
+
+                            {patient.is_restricted && (
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-600 text-white rounded-lg text-[10px] font-black uppercase tracking-tighter shadow-sm animate-pulse-slow">
+                                    <Lock size={12} fill="currentColor" />
+                                    CONFIDENTIAL
+                                </div>
+                            )}
+
                             <button
                                 onClick={handleEditClick}
                                 className="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded-full hover:bg-blue-50"

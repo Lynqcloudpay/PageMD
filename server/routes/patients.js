@@ -9,6 +9,8 @@ const fs = require('fs');
 const crypto = require('crypto');
 const patientEncryptionService = require('../services/patientEncryptionService');
 const emailService = require('../services/emailService');
+const { enforcePrivacy, auditAccess } = require('../middleware/privacy');
+const privacyService = require('../services/privacyService');
 
 const router = express.Router();
 
@@ -260,7 +262,7 @@ router.get('/', async (req, res) => {
 
 // Get patient snapshot (front page data) - MUST come before /:id route
 // Requires patient:view permission
-router.get('/:id/snapshot', requirePermission('patients:view_chart'), async (req, res) => {
+router.get('/:id/snapshot', requirePermission('patients:view_chart'), enforcePrivacy, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -361,26 +363,7 @@ router.get('/:id/snapshot', requirePermission('patients:view_chart'), async (req
       console.warn('Error fetching last vitals (continuing):', error.message);
     }
 
-    // Log audit (non-blocking, don't fail if it errors)
-    if (req.user && req.user.id) {
-      try {
-        const requestId = req.headers['x-request-id'] || crypto.randomUUID();
-        await logAudit(
-          req.user.id,
-          'patient.snapshot.viewed',
-          'patient',
-          id,
-          {},
-          req.ip,
-          req.get('user-agent'),
-          'success',
-          requestId,
-          req.sessionId
-        );
-      } catch (auditError) {
-        console.warn('Failed to log audit for snapshot view:', auditError);
-      }
-    }
+    // Log audit (non-blocking, handled by enforcePrivacy middleware)
 
     res.json({
       patient: patient.rows[0],
@@ -410,7 +393,7 @@ router.get('/:id/snapshot', requirePermission('patients:view_chart'), async (req
 });
 
 // Get patient by ID - MUST come after /:id/snapshot route
-router.get('/:id', requirePermission('patients:view_chart'), async (req, res) => {
+router.get('/:id', requirePermission('patients:view_chart'), enforcePrivacy, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query('SELECT * FROM patients WHERE id = $1', [id]);
@@ -422,39 +405,11 @@ router.get('/:id', requirePermission('patients:view_chart'), async (req, res) =>
     // Decrypt PHI fields before sending response
     const decryptedPatient = await patientEncryptionService.decryptPatientPHI(result.rows[0]);
 
-    // Log audit
-    const requestId = req.headers['x-request-id'] || crypto.randomUUID();
-    await logAudit(
-      req.user.id,
-      'patient.viewed',
-      'patient',
-      id,
-      {},
-      req.ip,
-      req.get('user-agent'),
-      'success',
-      requestId,
-      req.sessionId
-    );
+    // Log audit (handled by enforcePrivacy)
 
     res.json(decryptedPatient);
   } catch (error) {
     console.error('Error fetching patient:', error);
-
-    // Log failed audit
-    await logAudit(
-      req.user?.id,
-      'patient.viewed',
-      'patient',
-      req.params.id,
-      { error: error.message },
-      req.ip,
-      req.get('user-agent'),
-      'failure',
-      req.requestId,
-      req.sessionId
-    );
-
     res.status(500).json({
       error: 'Failed to fetch patient',
       details: process.env.NODE_ENV === 'development' ? {
@@ -540,7 +495,7 @@ router.post('/:id/portal-invite', requirePermission('patients:edit_demographics'
 });
 
 // Get patient photo securely - Standard EMR pattern
-router.get('/:id/photo', requirePermission('patients:view_chart'), async (req, res) => {
+router.get('/:id/photo', requirePermission('patients:view_chart'), enforcePrivacy, async (req, res) => {
   try {
     const { id } = req.params;
 

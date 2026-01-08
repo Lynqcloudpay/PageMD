@@ -41,6 +41,7 @@ const UserManagement = React.lazy(() => import('./pages/UserManagement'));
 const Cancellations = React.lazy(() => import('./pages/Cancellations'));
 const Profile = React.lazy(() => import('./pages/Profile'));
 const FeeSheet = React.lazy(() => import('./pages/FeeSheet'));
+const Compliance = React.lazy(() => import('./pages/Compliance'));
 
 const PlatformAdminLogin = React.lazy(() => import('./pages/PlatformAdminLogin'));
 const PlatformAdminDashboard = React.lazy(() => import('./pages/PlatformAdminDashboard'));
@@ -218,6 +219,13 @@ function App() {
                                                     <ProtectedRoute>
                                                         <ErrorBoundary>
                                                             <Layout><Analytics /></Layout>
+                                                        </ErrorBoundary>
+                                                    </ProtectedRoute>
+                                                } />
+                                                <Route path="/compliance" element={
+                                                    <ProtectedRoute>
+                                                        <ErrorBoundary>
+                                                            <Layout><Compliance /></Layout>
                                                         </ErrorBoundary>
                                                     </ProtectedRoute>
                                                 } />

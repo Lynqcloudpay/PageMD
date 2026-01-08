@@ -11,10 +11,11 @@ import { useAuth } from '../context/AuthContext';
 import { usePatientTabs } from '../context/PatientTabsContext';
 import { useTasks } from '../context/TaskContext';
 import { usePermissions } from '../hooks/usePermissions';
-import { patientsAPI, messagesAPI, visitsAPI, followupsAPI, inboxAPI, intakeAPI } from '../services/api';
+import { patientsAPI, messagesAPI, visitsAPI, followupsAPI, inboxAPI, intakeAPI, complianceAPI } from '../services/api';
 import PatientTabs from './PatientTabs';
 import MobileMenu from './MobileMenu';
 import SupportModal from './SupportModal';
+import BreakTheGlassModal from './BreakTheGlassModal';
 
 const Layout = ({ children }) => {
     const location = useLocation();
@@ -34,6 +35,7 @@ const Layout = ({ children }) => {
     const [pendingCancellationsCount, setPendingCancellationsCount] = useState(0);
     const [pendingIntakeCount, setPendingIntakeCount] = useState(0);
     const [inboxCount, setInboxCount] = useState(0);
+    const [privacyAlertsCount, setPrivacyAlertsCount] = useState(0);
 
     const isActive = (path) => {
         return location.pathname.startsWith(path);
@@ -94,12 +96,23 @@ const Layout = ({ children }) => {
             }
         };
 
+        // Fetch privacy alerts count
+        const fetchPrivacyAlertsCount = async () => {
+            try {
+                const response = await complianceAPI.getAlerts({ unresolvedOnly: true });
+                setPrivacyAlertsCount(response.data?.length || 0);
+            } catch (error) {
+                console.error('Error fetching privacy alerts:', error);
+            }
+        };
+
         // Initial fetch
 
         fetchPendingNotesCount();
         fetchPendingCancellationsCount();
         fetchInboxCount();
         fetchPendingIntakeCount();
+        fetchPrivacyAlertsCount();
 
         // Refresh counts periodically (every 30 seconds)
         const interval = setInterval(() => {
@@ -108,6 +121,7 @@ const Layout = ({ children }) => {
             fetchPendingCancellationsCount();
             fetchInboxCount();
             fetchPendingIntakeCount();
+            fetchPrivacyAlertsCount();
         }, 30000);
 
         return () => clearInterval(interval);
@@ -157,6 +171,7 @@ const Layout = ({ children }) => {
         // Admin items - requires users:manage or reports:view
         ...(canManageUsers ? [
             { path: '/users', icon: Shield, label: 'User Management', badge: null },
+            { path: '/compliance', icon: ShieldCheck, label: 'Compliance', badge: privacyAlertsCount > 0 ? privacyAlertsCount : null },
             { path: '/admin-settings', icon: Settings, label: 'Settings', badge: null }
         ] : []),
     ].filter(Boolean);
@@ -570,6 +585,9 @@ const Layout = ({ children }) => {
 
             {/* Support Modal */}
             <SupportModal isOpen={showSupportModal} onClose={() => setShowSupportModal(false)} />
+
+            {/* Privacy Enforcement Modal */}
+            <BreakTheGlassModal />
 
             {/* Mobile Menu */}
             <MobileMenu />
