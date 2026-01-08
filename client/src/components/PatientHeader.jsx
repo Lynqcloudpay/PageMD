@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
+    Phone, Mail, MapPin, Shield, Activity,
+    AlertCircle, Edit2, Camera, X, Check,
     ExternalLink, Calendar, FileText, Upload, Pill, Receipt, Users,
     Lock, ShieldCheck
 } from 'lucide-react';
