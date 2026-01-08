@@ -4,7 +4,7 @@ import {
     Calendar, Users, FileText, Settings, LogOut, Search, X, Activity,
     Clock, History, User, ClipboardList, BarChart3,
     MessageSquare, Video, Moon, Sun, Menu, ChevronRight, Bell,
-    Zap, Command, DollarSign, Shield, AlertCircle, HelpCircle, Inbox
+    Zap, Command, DollarSign, Shield, AlertCircle, HelpCircle, Inbox, ShieldCheck
 } from 'lucide-react';
 import { usePatient } from '../context/PatientContext';
 import { useAuth } from '../context/AuthContext';
