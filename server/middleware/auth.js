@@ -37,6 +37,7 @@ const authenticate = async (req, res, next) => {
     console.log('[AUTH] User query result:', result.rows.length > 0 ? `Found user ${result.rows[0].email}` : 'No user found');
 
     if (result.rows.length === 0) {
+      console.warn('[AUTH] 401: User from token not found in DB:', decoded.userId);
       return res.status(401).json({ error: 'Invalid token' });
     }
 
@@ -106,8 +107,10 @@ const authenticate = async (req, res, next) => {
     console.error('[AUTH] Error stack:', error.stack);
     // If it's a JWT error, provide more specific message
     if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      console.warn('[AUTH] 401: JWT invalid or expired:', error.message);
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
+    console.warn('[AUTH] 401: Generic auth error:', error.message);
     return res.status(401).json({ error: 'Invalid token' });
   }
 };

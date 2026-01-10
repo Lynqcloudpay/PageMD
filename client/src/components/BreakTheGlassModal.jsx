@@ -31,7 +31,11 @@ const BreakTheGlassModal = () => {
     }, []);
 
     const handleBreakGlass = async (e) => {
-        e.preventDefault();
+        if (e && typeof e.preventDefault === 'function') {
+            e.preventDefault();
+        }
+        console.log('[BreakTheGlass] Attempting break-glass for patient:', restrictedData?.patientId);
+
         if (!reasonCode) {
             setError('Please select a reason for access.');
             return;
@@ -45,18 +49,22 @@ const BreakTheGlassModal = () => {
         setError('');
 
         try {
-            await privacyAPI.breakGlass(restrictedData.patientId, {
+            console.log('[BreakTheGlass] Calling API...');
+            const response = await privacyAPI.breakGlass(restrictedData.patientId, {
                 reasonCode,
                 reasonComment
             });
+            console.log('[BreakTheGlass] API Success:', response.data);
 
             setIsOpen(false);
-            // Refresh the page or retry the failed request
-            // Retrofitting: Refresh is safest but we can also broadcast a 'privacy:cleared' event
-            window.location.reload();
+            // Broadcast 'privacy:authorized' so listening components can refresh
+            console.log('[BreakTheGlass] Dispatching privacy:authorized event');
+            window.dispatchEvent(new CustomEvent('privacy:authorized', {
+                detail: { patientId: restrictedData.patientId }
+            }));
         } catch (err) {
-            console.error('Break-glass failed:', err);
-            setError(err.response?.data?.message || 'Failed to authorize access. Please contact an administrator.');
+            console.error('[BreakTheGlass] API Failed:', err);
+            setError(err.response?.data?.message || err.response?.data?.error || 'Failed to authorize access. Please contact an administrator.');
         } finally {
             setIsSubmitting(false);
         }
@@ -95,7 +103,7 @@ const BreakTheGlassModal = () => {
                         </div>
                     </div>
 
-                    <form onSubmit={handleBreakGlass} className="space-y-5">
+                    <div className="space-y-5">
                         <div>
                             <label className="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2 ml-1">
                                 Reason for Access (Required)
@@ -156,7 +164,8 @@ const BreakTheGlassModal = () => {
                                 Cancel
                             </button>
                             <button
-                                type="submit"
+                                type="button"
+                                onClick={handleBreakGlass}
                                 disabled={isSubmitting}
                                 className="flex-[2] h-14 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black shadow-lg shadow-red-200 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
                             >
@@ -170,7 +179,7 @@ const BreakTheGlassModal = () => {
                                 )}
                             </button>
                         </div>
-                    </form>
+                    </div>
                 </div>
 
                 {/* Footer info */}

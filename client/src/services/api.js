@@ -44,11 +44,12 @@ api.interceptors.response.use(
   (error) => {
     // Handle 401 Unauthorized - token invalid or missing
     if (error.response?.status === 401) {
-      // Don't clear token on login endpoint or public routes (that's expected)
       const url = error.config?.url || '';
+      console.warn(`API: 401 Unauthorized from URL: ${url}`);
+      // Don't clear token on login endpoint or public routes (that's expected)
       const isPublicRoute = url.includes('/intake/public/') || url.includes('/portal/auth/');
       if (!url.includes('/auth/login') && !isPublicRoute) {
-        console.warn('401 Unauthorized - clearing token and dispatching event');
+        console.warn('API: Triggering global logout due to 401');
         tokenManager.clearToken();
         // Dispatch event for AuthContext to handle
         window.dispatchEvent(new CustomEvent('auth:unauthorized'));
@@ -57,28 +58,29 @@ api.interceptors.response.use(
 
     // Handle 403 Forbidden - insufficient permissions
     if (error.response?.status === 403) {
-      const errorMessage = error.response?.data?.message ||
-        error.response?.data?.error ||
-        'You do not have permission to perform this action';
-      const missingPermission = error.response?.data?.missing || error.response?.data?.required;
-
-      let toastMessage = errorMessage;
-      if (missingPermission) {
-        toastMessage = `Permission denied: ${missingPermission}`;
-      }
-
-      showError(toastMessage, 5000);
-      console.warn('403 Forbidden:', errorMessage, missingPermission ? `Missing: ${missingPermission}` : '');
+      const errorData = error.response?.data || {};
+      const errorMessage = errorData.message || errorData.error || 'Permission denied';
 
       // HIPAA: Handle Restricted Chart access (requires Break-the-Glass)
-      if (error.response?.data?.error === 'RESTRICTED_CHART') {
+      if (errorData.error === 'RESTRICTED_CHART' || errorData.code === 'RESTRICTED_CHART') {
+        console.log('Detected RESTRICTED_CHART error, dispatching privacy:restricted event');
+
+        // Extract patientId robustly from response data or URL
+        const patientIdFromUrl = error.config?.url?.match(/\/patients\/([^/?#]+)/)?.[1];
+        const patientId = errorData.patientId || patientIdFromUrl;
+
         window.dispatchEvent(new CustomEvent('privacy:restricted', {
           detail: {
-            patientId: error.response.data.patientId || error.config?.url?.split('/patients/')[1]?.split('/')[0],
-            reason: error.response.data.restrictionReason,
+            patientId: patientId,
+            reason: errorData.restrictionReason || errorData.reason,
             config: error.config
           }
         }));
+      } else {
+        const missingPermission = errorData.missing || errorData.required;
+        const toastMessage = missingPermission ? `Permission denied: ${missingPermission}` : errorMessage;
+        showError(toastMessage, 5000);
+        console.warn('403 Forbidden:', errorMessage, missingPermission ? `Missing: ${missingPermission}` : '');
       }
     }
 

@@ -228,6 +228,7 @@ const VisitNote = () => {
     const urlVisitId = params.visitId || (location.pathname.endsWith('/visit/new') ? 'new' : undefined);
     const [currentVisitId, setCurrentVisitId] = useState(urlVisitId);
     const [isSigned, setIsSigned] = useState(false);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [visitData, setVisitData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -776,7 +777,20 @@ const VisitNote = () => {
 
         // Return cleanup function if it was set
         return cleanup || (() => { });
-    }, [urlVisitId, id, navigate]);
+    }, [urlVisitId, id, navigate, refreshTrigger]);
+
+    // Handle Break-the-Glass authorization
+    useEffect(() => {
+        const handlePrivacyAuthorized = (event) => {
+            if (event.detail?.patientId === id) {
+                console.log('Privacy authorized for patient, refreshing visit...', id);
+                setRefreshTrigger(prev => prev + 1);
+            }
+        };
+
+        window.addEventListener('privacy:authorized', handlePrivacyAuthorized);
+        return () => window.removeEventListener('privacy:authorized', handlePrivacyAuthorized);
+    }, [id]);
 
     // Local Storage Backup Logic
     useEffect(() => {

@@ -167,12 +167,15 @@ export const AuthProvider = ({ children }) => {
 
         // Handle unauthorized events from API interceptor
         const handleUnauthorized = () => {
+            console.warn(`[AuthContext] Received auth:unauthorized event from ${window.location.pathname}`);
             if (mounted && !cancelled) {
+                console.warn('[AuthContext] Clearing token and setting user to null');
                 tokenManager.clearToken();
                 setUser(null);
                 setLoading(false);
                 // Redirect to login if not already there
                 if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+                    console.warn(`[AuthContext] Redirecting to /login due to unauthorized event`);
                     window.location.href = '/login';
                 }
             }

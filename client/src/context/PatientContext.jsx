@@ -7,7 +7,8 @@ const PatientContext = createContext();
 export const usePatient = () => useContext(PatientContext);
 
 export const PatientProvider = ({ children }) => {
-    const { isAuthenticated } = useAuth(); // Get auth state
+    const { user } = useAuth(); // Get user from auth context
+    const isAuthenticated = !!user;
     const [patients, setPatients] = useState([]);
     const [appointments, setAppointments] = useState([]);
     const [loading, setLoading] = useState(true);

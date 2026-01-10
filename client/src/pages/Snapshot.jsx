@@ -264,32 +264,34 @@ const Snapshot = ({ showNotesOnly = false }) => {
     };
 
     // Function to refresh all patient data
+    // Unified function to refresh all patient data
     const refreshPatientData = useCallback(async () => {
         if (!id) return;
 
-        setLoading(true);
+        // Only show full loading screen if we don't have patient data yet
+        if (!patient) {
+            setLoading(true);
+        }
         try {
-            // Refresh today's draft visit
-            try {
-                console.log('Fetching today\'s draft for patient:', id);
-                const response = await visitsAPI.getTodayDraft(id);
-                const note = response.data?.note || null;
-                setTodayDraftVisit(note);
-            } catch (error) {
-                console.error('Error fetching today\'s draft visit:', error);
-                setTodayDraftVisit(null);
-            }
-
-            // Fetch patient snapshot (includes basic info)
+            // Fetch patient snapshot (includes basic info, problems, meds, allergies, and recent visits)
             const snapshotResponse = await patientsAPI.getSnapshot(id);
             const snapshot = snapshotResponse.data;
             setPatient(snapshot.patient);
 
-            // Also fetch full patient data to ensure we have photo_url
+            // Also fetch full patient data to ensure we have photo_url and other details
             try {
                 const fullPatientResponse = await patientsAPI.get(id);
                 if (fullPatientResponse.data) {
-                    setPatient(prev => ({ ...prev, ...fullPatientResponse.data }));
+                    const patientData = { ...snapshot.patient, ...fullPatientResponse.data };
+                    setPatient(prev => ({ ...prev, ...patientData }));
+
+                    // Add to patient tabs for session-based switching
+                    addTab({
+                        id: patientData.id,
+                        first_name: patientData.first_name,
+                        last_name: patientData.last_name,
+                        mrn: patientData.mrn
+                    });
                 }
             } catch (error) {
                 console.warn('Could not fetch full patient data:', error);
@@ -308,241 +310,115 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 setProblems([]);
             }
 
-            // Always fetch fresh medications directly from API to ensure latest data
-            try {
-                const medsResponse = await patientsAPI.getMedications(id);
-                setMedications(medsResponse?.data || []);
-            } catch (e) {
-                console.warn('Error fetching medications:', e);
-                setMedications([]);
-            }
+            // Set medications
+            setMedications(snapshot.medications || []);
 
             // Set allergies
-            if (snapshot.allergies && snapshot.allergies.length > 0) {
-                setAllergies(snapshot.allergies);
+            setAllergies(snapshot.allergies || []);
+
+            // Set vitals from recent visits
+            if (snapshot.recentVisits && snapshot.recentVisits.length > 0) {
+                const vitalsList = snapshot.recentVisits
+                    .filter(v => v.vitals)
+                    .map(v => {
+                        const vData = typeof v.vitals === 'string' ? JSON.parse(v.vitals) : v.vitals;
+                        let bpValue = vData.bp || vData.blood_pressure || 'N/A';
+
+                        // Helper to clean potentially double-encoded values
+                        const cleanValue = (val) => {
+                            if (!val || val === 'N/A') return 'N/A';
+                            if (typeof val !== 'string') return val;
+                            let str = val;
+                            let prev = '';
+                            let i = 0;
+                            while (str !== prev && i < 5) {
+                                prev = str;
+                                str = str.replace(/&amp;/g, '&')
+                                    .replace(/&#x2F;/g, '/')
+                                    .replace(/&#47;/g, '/');
+                                i++;
+                            }
+                            return str;
+                        };
+
+                        return {
+                            id: v.id,
+                            date: new Date(v.visit_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }),
+                            bp: cleanValue(bpValue),
+                            hr: cleanValue(vData.hr || vData.heart_rate || vData.pulse || 'N/A'),
+                            temp: cleanValue(vData.temp || vData.temperature || 'N/A'),
+                            rr: cleanValue(vData.rr || vData.respiratory_rate || vData.resp || 'N/A'),
+                            spo2: vData.spo2 || vData.oxygen_saturation || vData.o2sat || 'N/A',
+                            weight: vData.weight || 'N/A'
+                        };
+                    });
+                setVitals(vitalsList);
             } else {
-                try {
-                    const allergiesResponse = await patientsAPI.getAllergies(id);
-                    setAllergies(allergiesResponse?.data || []);
-                } catch (e) {
-                    console.warn('Error fetching allergies:', e);
-                    setAllergies([]);
-                }
+                setVitals([]);
             }
 
-            // Fetch additional data
+            // Fetch additional data in parallel
             try {
-                const [familyHistResponse, socialHistResponse, ordersResponse, referralsResponse, docsResponse] = await Promise.all([
+                const [familyHistResponse, socialHistResponse, ordersResponse, referralsResponse, documentsResponse, todayDraftResponse] = await Promise.all([
                     patientsAPI.getFamilyHistory(id).catch(() => ({ data: [] })),
                     patientsAPI.getSocialHistory(id).catch(() => ({ data: null })),
                     ordersAPI.getByPatient(id).catch(() => ({ data: [] })),
                     referralsAPI.getByPatient(id).catch(() => ({ data: [] })),
-                    documentsAPI.getByPatient(id).catch(() => ({ data: [] }))
+                    documentsAPI.getByPatient(id).catch(() => ({ data: [] })),
+                    visitsAPI.getTodayDraft(id).catch(() => ({ data: { note: null } }))
                 ]);
 
                 setFamilyHistory(familyHistResponse?.data || []);
                 setSocialHistory(socialHistResponse?.data || null);
                 setOrders(ordersResponse?.data || []);
                 setReferrals(referralsResponse?.data || []);
-                setDocuments(docsResponse?.data || []);
+                setDocuments(documentsResponse?.data || []);
+                setTodayDraftVisit(todayDraftResponse.data?.note || null);
             } catch (error) {
-                console.error('Error fetching additional data:', error);
-                setFamilyHistory([]);
-                setSocialHistory(null);
-                setOrders([]);
-                setReferrals([]);
+                console.error('Error fetching supplementary data:', error);
             }
         } catch (error) {
-            console.error('Could not refresh patient data:', error);
+            console.error('Core data refresh failed:', error);
+            setProblems([]);
+            setMedications([]);
+            setAllergies([]);
+            setVitals([]);
         } finally {
             setLoading(false);
         }
-    }, [id]);
+    }, [id, addTab]);
 
-    // Fetch all patient data
+    // Handle Break-the-Glass authorization
     useEffect(() => {
-        const fetchAllData = async () => {
-            if (!id) return;
+        const handlePrivacyAuthorized = (event) => {
+            // Robust ID comparison - convert both to strings to avoid type mismatch (string vs number)
+            const authorizedId = String(event.detail?.patientId || '');
+            const currentId = String(id || '');
 
-            setLoading(true);
-            try {
-                // Fetch patient snapshot (includes basic info)
-                const snapshotResponse = await patientsAPI.getSnapshot(id);
-                const snapshot = snapshotResponse.data;
-                setPatient(snapshot.patient);
-
-                // Also fetch full patient data to ensure we have photo_url
-                try {
-                    const fullPatientResponse = await patientsAPI.get(id);
-                    if (fullPatientResponse.data) {
-                        const patientData = { ...snapshot.patient, ...fullPatientResponse.data };
-                        setPatient(prev => ({ ...prev, ...patientData }));
-
-                        // Add to patient tabs for session-based switching
-                        addTab({
-                            id: patientData.id,
-                            first_name: patientData.first_name,
-                            last_name: patientData.last_name,
-                            mrn: patientData.mrn
-                        });
-                    }
-                } catch (error) {
-                    console.warn('Could not fetch full patient data:', error);
-                }
-
-                // Set problems
-                if (snapshot.problems && snapshot.problems.length > 0) {
-                    setProblems(snapshot.problems.map(p => ({
-                        id: p.id,
-                        name: p.problem_name,
-                        icd: p.icd10_code,
-                        status: p.status,
-                        onset: p.onset_date
-                    })));
-                } else {
-                    setProblems([]);
-                }
-
-                // Always fetch fresh medications directly from API to ensure latest data
-                try {
-                    const medsResponse = await patientsAPI.getMedications(id);
-                    setMedications(medsResponse?.data || []);
-                } catch (e) {
-                    console.warn('Error fetching medications:', e);
-                    setMedications([]);
-                }
-
-                // Set allergies
-                if (snapshot.allergies && snapshot.allergies.length > 0) {
-                    setAllergies(snapshot.allergies);
-                } else {
-                    try {
-                        const allergiesResponse = await patientsAPI.getAllergies(id);
-                        setAllergies(allergiesResponse?.data || []);
-                    } catch (e) {
-                        console.warn('Error fetching allergies:', e);
-                        setAllergies([]);
-                    }
-                }
-
-                // Set vitals from recent visits
-                if (snapshot.recentVisits && snapshot.recentVisits.length > 0) {
-                    const vitalsList = snapshot.recentVisits
-                        .filter(v => v.vitals)
-                        .map(v => {
-                            const vData = typeof v.vitals === 'string' ? JSON.parse(v.vitals) : v.vitals;
-                            let bpValue = vData.bp || vData.blood_pressure || 'N/A';
-                            // Helper to clean potentially double-encoded values
-                            const cleanValue = (val) => {
-                                if (!val || val === 'N/A') return 'N/A';
-                                if (typeof val !== 'string') return val;
-                                let str = val;
-                                let prev = '';
-                                let i = 0;
-                                while (str !== prev && i < 5) {
-                                    prev = str;
-                                    str = str.replace(/&amp;/g, '&')
-                                        .replace(/&#x2F;/g, '/')
-                                        .replace(/&#47;/g, '/');
-                                    i++;
-                                }
-                                return str;
-                            };
-
-                            return {
-                                date: new Date(v.visit_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }),
-                                bp: cleanValue(bpValue),
-                                hr: cleanValue(vData.hr || vData.heart_rate || vData.pulse || 'N/A'),
-                                temp: cleanValue(vData.temp || vData.temperature || 'N/A'),
-                                rr: cleanValue(vData.rr || vData.respiratory_rate || vData.resp || 'N/A'),
-                                spo2: vData.spo2 || vData.oxygen_saturation || vData.o2sat || 'N/A',
-                                weight: vData.weight || 'N/A'
-                            };
-                        });
-                    setVitals(vitalsList);
-                } else {
-                    setVitals([]);
-                }
-
-                // Fetch additional data
-                try {
-                    const [familyHistResponse, socialHistResponse, ordersResponse, referralsResponse, documentsResponse] = await Promise.all([
-                        patientsAPI.getFamilyHistory(id).catch(() => ({ data: [] })),
-                        patientsAPI.getSocialHistory(id).catch(() => ({ data: null })),
-                        ordersAPI.getByPatient(id).catch(() => ({ data: [] })),
-                        referralsAPI.getByPatient(id).catch(() => ({ data: [] })),
-                        documentsAPI.getByPatient(id).catch(() => ({ data: [] }))
-                    ]);
-
-                    setFamilyHistory(familyHistResponse?.data || []);
-                    setSocialHistory(socialHistResponse?.data || null);
-                    setOrders(ordersResponse?.data || []);
-                    setReferrals(referralsResponse?.data || []);
-                    setDocuments(documentsResponse?.data || []);
-                } catch (error) {
-                    console.error('Error fetching additional data:', error);
-                    // Set defaults on error
-                    setFamilyHistory([]);
-                    setSocialHistory(null);
-                    setOrders([]);
-                    setReferrals([]);
-                    setDocuments([]);
-                }
-            } catch (error) {
-                console.error('Could not fetch snapshot from API:', error);
-                // Set defaults on error
-                setProblems([]);
-                setMedications([]);
-                setAllergies([]);
-                setVitals([]);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchAllData();
-    }, [id]);
-
-    // Listen for data updates from other components (e.g. ActionModals)
-    useEffect(() => {
-        const handleDataUpdate = () => {
-            if (id) {
+            if (authorizedId === currentId && currentId !== '') {
+                console.log('Privacy authorized for patient, refreshing data...', id);
                 refreshPatientData();
             }
         };
 
-        window.addEventListener('patient-data-updated', handleDataUpdate);
-        return () => window.removeEventListener('patient-data-updated', handleDataUpdate);
-    }, [id, refreshPatientData]); // refreshPatientData is stable via useCallback if it was one, but it's not. I'll make it stable or just depend on id.
+        window.addEventListener('privacy:authorized', handlePrivacyAuthorized);
+        return () => window.removeEventListener('privacy:authorized', handlePrivacyAuthorized);
+    }, [id, refreshPatientData]);
 
-    // Check for today's draft visit
-    const fetchTodayDraft = useCallback(async () => {
-        if (!id) return;
-        try {
-            console.log('Fetching today\'s draft for patient:', id);
-            const response = await visitsAPI.getTodayDraft(id);
-            console.log('Today draft response:', response.data);
-            // New API returns { note: ... } or { note: null }
-            const note = response.data?.note || null;
-            console.log('Setting todayDraftVisit to:', note?.id || 'null', note);
-            setTodayDraftVisit(note);
-            // Force re-render check
-            if (note && note.id) {
-                console.log('✅ Draft found, should show "Open Today\'s Note" button');
-            } else {
-                console.log('❌ No draft found, should show "New Visit" button');
-            }
-        } catch (error) {
-            console.error('Error fetching today\'s draft visit:', error);
-            console.error('Error details:', error.response?.data || error.message);
-            setTodayDraftVisit(null);
-        }
-    }, [id]);
-
+    // Initial load and data update listeners
     useEffect(() => {
-        fetchTodayDraft();
-    }, [fetchTodayDraft]);
+        refreshPatientData();
 
+        const handlePatientDataUpdate = () => {
+            console.log('Patient data update detected, refreshing...');
+            refreshPatientData();
+        };
+
+        window.addEventListener('patient-data-updated', handlePatientDataUpdate);
+        return () => window.removeEventListener('patient-data-updated', handlePatientDataUpdate);
+    }, [refreshPatientData]);
+
+    // Separate effect for fetching visit notes (history)
     useEffect(() => {
         const fetchNotes = async () => {
             if (!id) return;

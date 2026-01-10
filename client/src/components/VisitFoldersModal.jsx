@@ -68,8 +68,8 @@ const VisitFoldersModal = ({ isOpen, onClose, visits, onViewVisit, onDeleteVisit
                         <button
                             onClick={() => setFilter('all')}
                             className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${filter === 'all'
-                                    ? 'bg-primary-100 text-primary-700 border-b-2 border-primary-600'
-                                    : 'text-neutral-600 hover:text-neutral-900'
+                                ? 'bg-primary-100 text-primary-700 border-b-2 border-primary-600'
+                                : 'text-neutral-600 hover:text-neutral-900'
                                 }`}
                         >
                             All ({visits.length})
@@ -77,8 +77,8 @@ const VisitFoldersModal = ({ isOpen, onClose, visits, onViewVisit, onDeleteVisit
                         <button
                             onClick={() => setFilter('draft')}
                             className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${filter === 'draft'
-                                    ? 'bg-orange-100 text-orange-700 border-b-2 border-orange-600'
-                                    : 'text-neutral-600 hover:text-neutral-900'
+                                ? 'bg-orange-100 text-orange-700 border-b-2 border-orange-600'
+                                : 'text-neutral-600 hover:text-neutral-900'
                                 }`}
                         >
                             Draft ({visits.filter(v => !v.signed).length})
@@ -86,8 +86,8 @@ const VisitFoldersModal = ({ isOpen, onClose, visits, onViewVisit, onDeleteVisit
                         <button
                             onClick={() => setFilter('signed')}
                             className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${filter === 'signed'
-                                    ? 'bg-green-100 text-green-700 border-b-2 border-green-600'
-                                    : 'text-neutral-600 hover:text-neutral-900'
+                                ? 'bg-green-100 text-green-700 border-b-2 border-green-600'
+                                : 'text-neutral-600 hover:text-neutral-900'
                                 }`}
                         >
                             Signed ({visits.filter(v => v.signed).length})
@@ -144,8 +144,9 @@ const VisitFoldersModal = ({ isOpen, onClose, visits, onViewVisit, onDeleteVisit
                                         if (onDeleteVisit) {
                                             onDeleteVisit(visit.id);
                                         } else {
-                                            // Refresh by calling onClose and reopening - parent should handle refresh
-                                            window.location.reload();
+                                            // Broadcast that patient data has changed so listeners can refresh
+                                            window.dispatchEvent(new CustomEvent('patient-data-updated'));
+                                            if (onClose) onClose();
                                         }
                                     } catch (error) {
                                         console.error('Error deleting visit:', error);

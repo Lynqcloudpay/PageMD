@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const PatientTabsContext = createContext({
@@ -42,7 +42,7 @@ export const PatientTabsProvider = ({ children }) => {
         }
     }, [location.pathname]);
 
-    const addTab = (patient, shouldNavigate = false) => {
+    const addTab = useCallback((patient, shouldNavigate = false) => {
         const currentPath = location.pathname;
         const isOnPatientRoute = currentPath.includes(`/patient/${patient.id}`);
         const tabPath = isOnPatientRoute ? currentPath : `/patient/${patient.id}/snapshot`;
@@ -68,11 +68,11 @@ export const PatientTabsProvider = ({ children }) => {
 
         setActiveTab(patient.id);
         if (shouldNavigate) {
-            navigate(newTab.path);
+            navigate(tabPath);
         }
-    };
+    }, [location.pathname, navigate]);
 
-    const removeTab = (patientId) => {
+    const removeTab = useCallback((patientId) => {
         setTabs(prev => {
             const newTabs = prev.filter(t => t.patientId !== patientId);
             if (newTabs.length === 0) {
@@ -85,15 +85,15 @@ export const PatientTabsProvider = ({ children }) => {
             }
             return newTabs;
         });
-    };
+    }, [activeTab, navigate]);
 
-    const switchTab = (patientId) => {
+    const switchTab = useCallback((patientId) => {
         const tab = tabs.find(t => t.patientId === patientId);
         if (tab) {
             setActiveTab(patientId);
             navigate(tab.path);
         }
-    };
+    }, [tabs, navigate]);
 
     return (
         <PatientTabsContext.Provider value={{
