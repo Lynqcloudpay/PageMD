@@ -18,7 +18,8 @@ const Compliance = () => {
         userId: '',
         patientId: '',
         accessType: '',
-        unresolvedOnly: true
+        unresolvedOnly: true,
+        patientSearch: ''
     });
     const [users, setUsers] = useState([]);
     const [stats, setStats] = useState({
@@ -39,14 +40,23 @@ const Compliance = () => {
 
     const fetchInitialData = async () => {
         try {
-            const uRes = await usersAPI.getAll();
-            setUsers(uRes.data || []);
+            // Get all users for filters - request a larger limit for admin reference
+            const uRes = await usersAPI.getAll({ limit: 1000 });
+            const usersList = uRes.data?.users || uRes.data || [];
+
+            // Ensure usersList is indeed an array
+            const validatedUsers = Array.isArray(usersList) ? usersList : [];
+            setUsers(validatedUsers);
+
             // Pre-fetch alerts count for badge
             const aRes = await complianceAPI.getAlerts({ unresolvedOnly: true });
-            setAlerts(aRes.data || []);
-            setStats(prev => ({ ...prev, activeAlerts: aRes.data?.length || 0 }));
+            const alertsList = aRes.data || [];
+            setAlerts(alertsList);
+            setStats(prev => ({ ...prev, activeAlerts: alertsList.length || 0 }));
         } catch (err) {
             console.error('Failed to fetch reference data:', err);
+            setUsers([]);
+            setAlerts([]);
         }
     };
 
@@ -154,13 +164,13 @@ const Compliance = () => {
                     { label: 'Break Glass Events', value: data.filter(l => l.break_glass_used).length, icon: ShieldAlert, color: 'red' },
                     { label: 'Pending Alerts', value: stats.activeAlerts, icon: AlertTriangle, color: 'amber' }
                 ].map((stat, i) => (
-                    <div key={i} className="bg-white p-6 rounded-[1.5rem] shadow-sm border border-slate-100 flex items-center gap-5">
-                        <div className={`w-14 h-14 bg-${stat.color}-500/10 rounded-2xl flex items-center justify-center`}>
-                            <stat.icon className={`text-${stat.color}-600 w-7 h-7`} />
+                    <div key={i} className="bg-white p-4 rounded-[1.25rem] shadow-sm border border-slate-100 flex items-center gap-4">
+                        <div className={`w-10 h-10 bg-${stat.color}-500/10 rounded-xl flex items-center justify-center`}>
+                            <stat.icon className={`text-${stat.color}-600 w-5 h-5`} />
                         </div>
                         <div>
-                            <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">{stat.label}</div>
-                            <div className="text-2xl font-black text-slate-900">{stat.value}</div>
+                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{stat.label}</div>
+                            <div className="text-xl font-black text-slate-900">{stat.value}</div>
                         </div>
                     </div>
                 ))}
@@ -175,8 +185,8 @@ const Compliance = () => {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`flex items-center gap-3 px-8 py-6 text-sm font-black transition-all border-b-4 relative ${activeTab === tab.id
-                                    ? 'border-blue-600 text-blue-600'
-                                    : 'border-transparent text-slate-400 hover:text-slate-600'
+                                ? 'border-blue-600 text-blue-600'
+                                : 'border-transparent text-slate-400 hover:text-slate-600'
                                 }`}
                         >
                             <tab.icon className="w-5 h-5" />
@@ -236,6 +246,17 @@ const Compliance = () => {
                         </select>
                     </div>
 
+                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-xl border border-slate-200 flex-1 max-w-sm">
+                        <Search size={14} className="text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Search patient name or MRN..."
+                            className="bg-transparent border-none text-xs font-bold text-slate-700 outline-none w-full"
+                            value={filters.patientSearch}
+                            onChange={(e) => setFilters({ ...filters, patientSearch: e.target.value })}
+                        />
+                    </div>
+
                     {activeTab === 'alerts' && (
                         <label className="flex items-center gap-2 cursor-pointer ml-auto">
                             <input
@@ -259,41 +280,41 @@ const Compliance = () => {
                     ) : activeTab === 'logs' ? (
                         <div className="space-y-3">
                             {data.map((log) => (
-                                <div key={log.id} className="group hover:bg-slate-50 border border-slate-100 rounded-xl p-4 transition-all flex items-center gap-6">
-                                    <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0 group-hover:bg-white transition-colors">
-                                        {log.is_restricted ? <Lock className="w-5 h-5 text-red-500" /> : <Eye className="w-5 h-5 text-slate-400" />}
+                                <div key={log.id} className="group hover:bg-slate-50 border border-slate-100 rounded-xl p-3 transition-all flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0 group-hover:bg-white transition-colors">
+                                        {log.is_restricted ? <Lock className="w-4 h-4 text-red-500" /> : <Eye className="w-4 h-4 text-slate-400" />}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="font-black text-slate-900 truncate">
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                            <span className="font-black text-slate-900 truncate text-sm">
                                                 {log.user_first_name} {log.user_last_name}
                                             </span>
-                                            <span className="px-2 py-0.5 bg-slate-100 text-[9px] font-black text-slate-400 uppercase rounded tracking-wider">
+                                            <span className="px-2 py-0.5 bg-slate-100 text-[8px] font-black text-slate-400 uppercase rounded tracking-wider">
                                                 {log.user_role}
                                             </span>
                                             <span className="text-slate-300 font-light mx-1">•</span>
-                                            <span className="text-xs font-bold text-blue-600/80">
+                                            <span className="text-[11px] font-bold text-blue-600/80">
                                                 {log.access_type.replace('_', ' ')}
                                             </span>
                                         </div>
-                                        <div className="flex items-center gap-4 text-xs text-slate-500 font-medium">
-                                            <span className="flex items-center gap-1.5 min-w-[200px]">
-                                                <User size={12} className="text-slate-300" />
+                                        <div className="flex items-center gap-4 text-[11px] text-slate-500 font-medium">
+                                            <span className="flex items-center gap-1.5 min-w-[180px]">
+                                                <User size={10} className="text-slate-300" />
                                                 Patient: <span className="text-slate-700 font-bold">{log.patient_first_name} {log.patient_last_name}</span>
                                             </span>
                                             <span className="flex items-center gap-1.5">
-                                                <Clock size={12} className="text-slate-300" />
+                                                <Clock size={10} className="text-slate-300" />
                                                 {format(new Date(log.created_at), 'MMM d, h:mm a')}
                                             </span>
                                             <span className="flex items-center gap-1.5 ml-auto">
-                                                <Activity size={12} className="text-slate-300" />
+                                                <Activity size={10} className="text-slate-300" />
                                                 {log.ip_address}
                                             </span>
                                         </div>
                                     </div>
                                     {log.break_glass_used && (
-                                        <div className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-[10px] font-black flex items-center gap-1.5 border border-red-100">
-                                            <ShieldAlert size={12} />
+                                        <div className="px-2 py-1 bg-red-50 text-red-600 rounded-lg text-[9px] font-black flex items-center gap-1 border border-red-100">
+                                            <ShieldAlert size={10} />
                                             BREAK GLASS
                                         </div>
                                     )}
@@ -306,38 +327,38 @@ const Compliance = () => {
                     ) : activeTab === 'alerts' ? (
                         <div className="space-y-4">
                             {alerts.map((alert) => (
-                                <div key={alert.id} className={`bg-white border-2 rounded-2xl p-6 transition-all shadow-sm ${alert.severity === 'high' ? 'border-red-100 bg-red-50/10' : 'border-slate-100'
+                                <div key={alert.id} className={`bg-white border-2 rounded-2xl p-4 transition-all shadow-sm ${alert.severity === 'high' ? 'border-red-100 bg-red-50/10' : 'border-slate-100'
                                     }`}>
-                                    <div className="flex gap-5">
-                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 ${alert.severity === 'high' ? 'bg-red-600 shadow-lg shadow-red-200' : 'bg-amber-500 shadow-lg shadow-amber-100'
+                                    <div className="flex gap-4">
+                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${alert.severity === 'high' ? 'bg-red-600 shadow-lg shadow-red-200' : 'bg-amber-500 shadow-lg shadow-amber-100'
                                             }`}>
-                                            <AlertTriangle className="text-white w-7 h-7" />
+                                            <AlertTriangle className="text-white w-6 h-6" />
                                         </div>
                                         <div className="flex-1">
                                             <div className="flex justify-between items-start mb-2">
                                                 <div>
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${alert.severity === 'high' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+                                                    <div className="flex items-center gap-2 mb-0.5">
+                                                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${alert.severity === 'high' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
                                                             }`}>
                                                             {alert.severity} Priority
                                                         </span>
                                                         <span className="text-xs font-black text-slate-400">•</span>
-                                                        <span className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                                             {alert.alert_type.replace(/_/g, ' ')}
                                                         </span>
                                                     </div>
-                                                    <h3 className="text-lg font-black text-slate-900 leading-tight">
+                                                    <h3 className="text-md font-black text-slate-900 leading-tight">
                                                         {alert.user_first_name} {alert.user_last_name} triggered a security alert
                                                     </h3>
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className="text-xs font-bold text-slate-400 mb-1">{format(new Date(alert.created_at), 'MMMM do, yyyy')}</div>
-                                                    <div className="text-sm font-black text-slate-900">{format(new Date(alert.created_at), 'h:mm a')}</div>
+                                                    <div className="text-[10px] font-bold text-slate-400 mb-0.5">{format(new Date(alert.created_at), 'MMMM do, yyyy')}</div>
+                                                    <div className="text-xs font-black text-slate-900">{format(new Date(alert.created_at), 'h:mm a')}</div>
                                                 </div>
                                             </div>
 
-                                            <div className="bg-white/60 p-4 rounded-xl border border-slate-100/50 mb-5">
-                                                <pre className="text-xs font-medium text-slate-700 whitespace-pre-wrap font-mono">
+                                            <div className="bg-white/60 p-3 rounded-xl border border-slate-100/50 mb-3">
+                                                <pre className="text-[11px] font-medium text-slate-700 whitespace-pre-wrap font-mono">
                                                     {JSON.stringify(alert.details_json, null, 2)}
                                                 </pre>
                                             </div>

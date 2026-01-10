@@ -13,8 +13,8 @@ router.use(authenticate, requirePermission('audit:view'));
  */
 router.get('/logs', async (req, res) => {
     try {
-        const { patientId, userId, accessType, isRestricted, breakGlass, startDate, endDate, limit = 50, offset = 0 } = req.query;
-        const clinicId = req.user.clinic_id;
+        const { patientId, patientSearch, userId, accessType, isRestricted, breakGlass, startDate, endDate, limit = 50, offset = 0 } = req.query;
+        const clinicId = req.user.clinic_id || req.user.clinicId;
 
         let query = `
       SELECT l.*, 
@@ -32,6 +32,11 @@ router.get('/logs', async (req, res) => {
             pCount++;
             query += ` AND l.patient_id = $${pCount}`;
             params.push(patientId);
+        }
+        if (patientSearch) {
+            pCount++;
+            query += ` AND (p.first_name ILIKE $${pCount} OR p.last_name ILIKE $${pCount} OR CONCAT(p.first_name, ' ', p.last_name) ILIKE $${pCount} OR p.mrn ILIKE $${pCount})`;
+            params.push(`%${patientSearch}%`);
         }
         if (userId) {
             pCount++;
@@ -118,20 +123,30 @@ router.patch('/alerts/:id/resolve', async (req, res) => {
         const { id } = req.params;
         const { resolutionNote } = req.body;
         const userId = req.user.id;
+        const clinicId = req.user.clinic_id || req.user.clinicId;
 
-        await pool.query(
+        if (!clinicId) {
+            return res.status(400).json({ error: 'Clinic context missing' });
+        }
+
+        const result = await pool.query(
             `UPDATE privacy_alerts SET 
-        resolved_at = CURRENT_TIMESTAMP, 
-        resolved_by_user_id = $1,
-        details_json = details_json || jsonb_build_object('resolution_note', $2)
-       WHERE id = $3 AND clinic_id = $4`,
-            [userId, resolutionNote || '', id, req.user.clinic_id]
+                resolved_at = CURRENT_TIMESTAMP, 
+                resolved_by_user_id = $1,
+                details_json = COALESCE(details_json, '{}'::jsonb) || jsonb_build_object('resolution_note', $2)
+            WHERE id = $3 AND clinic_id = $4
+            RETURNING id`,
+            [userId, resolutionNote || '', id, clinicId]
         );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Alert not found or already resolved' });
+        }
 
         res.json({ success: true });
     } catch (error) {
         console.error('[Compliance-Route] Error resolving alert:', error);
-        res.status(500).json({ error: 'Failed to resolve alert' });
+        res.status(500).json({ error: 'Failed to resolve alert: ' + error.message });
     }
 });
 
