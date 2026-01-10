@@ -132,14 +132,17 @@ const Compliance = () => {
         }
     };
 
-    const exportCSV = () => {
-        if (!data.length) return;
+    const downloadCSV = (logs, filename) => {
+        if (!logs.length) {
+            alert('No data available to export.');
+            return;
+        }
 
         const headers = ['Date', 'User', 'Role', 'Patient', 'Action', 'Restricted', 'Break Glass', 'IP'];
-        const rows = data.map(l => [
+        const rows = logs.map(l => [
             format(new Date(l.created_at), 'yyyy-MM-dd HH:mm:ss'),
             `${l.user_first_name} ${l.user_last_name}`,
-            l.user_role,
+            l.user_role || 'N/A',
             `${l.patient_first_name} ${l.patient_last_name}`,
             l.access_type,
             l.is_restricted ? 'YES' : 'NO',
@@ -153,10 +156,44 @@ const Compliance = () => {
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `audit_log_${format(new Date(), 'yyyyMMdd')}.csv`);
+        link.setAttribute("download", `${filename}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    };
+
+    const handleGenerateReport = async (type) => {
+        setLoading(true);
+        try {
+            if (type === 'patient') {
+                const query = window.prompt('Enter Patient Name or MRN to generate full access history:');
+                if (!query) return;
+                const res = await complianceAPI.getLogs({ patientSearch: query, limit: 1000 });
+                downloadCSV(res.data || [], `patient_access_${query.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}`);
+            } else if (type === 'user') {
+                if (!filters.userId) {
+                    alert('Please select a user from the dropdown first to generate their access history.');
+                    return;
+                }
+                const selectedUser = users.find(u => u.id === filters.userId);
+                const res = await complianceAPI.getLogs({ userId: filters.userId, limit: 1000 });
+                downloadCSV(res.data || [], `user_access_${selectedUser?.last_name || 'audit'}_${format(new Date(), 'yyyyMMdd')}`);
+            } else if (type === 'break-glass') {
+                const res = await complianceAPI.getLogs({ breakGlass: 'true', limit: 1000 });
+                downloadCSV(res.data || [], `break_glass_summary_${format(new Date(), 'yyyyMMdd')}`);
+            } else if (type === 'restricted') {
+                setReportView('restricted');
+            }
+        } catch (err) {
+            console.error('Report generation failed:', err);
+            alert('Failed to generate report.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const exportCSV = () => {
+        downloadCSV(data, `audit_log_${format(new Date(), 'yyyyMMdd')}`);
     };
 
     const tabs = [
@@ -445,12 +482,28 @@ const Compliance = () => {
                                     <ShieldAlert className="text-orange-500 w-5 h-5" />
                                     <h3 className="text-lg font-black text-slate-900">Restricted Patient Inventory</h3>
                                 </div>
-                                <button
-                                    onClick={() => setReportView(null)}
-                                    className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-200 transition-all flex items-center gap-2"
-                                >
-                                    <ChevronRight className="rotate-180 w-4 h-4" /> Back to Dashboard
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => {
+                                            const headers = ['First Name', 'Last Name', 'MRN', 'DOB', 'Restricted Since'];
+                                            const rows = restrictedPatients.map(p => [p.first_name, p.last_name, p.mrn, p.dob, p.created_at]);
+                                            const csv = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(r => r.join(','))].join("\n");
+                                            const link = document.createElement("a");
+                                            link.setAttribute("href", encodeURI(csv));
+                                            link.setAttribute("download", `restricted_patients_${format(new Date(), 'yyyyMMdd')}.csv`);
+                                            link.click();
+                                        }}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-200"
+                                    >
+                                        <Download size={14} /> Export List
+                                    </button>
+                                    <button
+                                        onClick={() => setReportView(null)}
+                                        className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-200 transition-all flex items-center gap-2"
+                                    >
+                                        <ChevronRight className="rotate-180 w-4 h-4" /> Back to Dashboard
+                                    </button>
+                                </div>
                             </div>
 
                             {loadingReport ? (
@@ -515,37 +568,25 @@ const Compliance = () => {
                                         title: 'Patient Access History',
                                         desc: 'Full audit of every user who viewed or edited a specific patient record.',
                                         icon: User,
-                                        action: () => {
-                                            setActiveTab('logs');
-                                            setFilters({ ...filters, patientSearch: '', userId: '', accessType: '', breakGlass: '' });
-                                            setTimeout(() => document.querySelector('input[placeholder*="Search"]')?.focus(), 100);
-                                        }
+                                        action: () => handleGenerateReport('patient')
                                     },
                                     {
                                         title: 'User Access History',
                                         desc: 'Full audit of every record accessed by a specific user or role.',
                                         icon: Activity,
-                                        action: () => {
-                                            setActiveTab('logs');
-                                            setFilters({ ...filters, patientSearch: '', userId: '', accessType: '', breakGlass: '' });
-                                        }
+                                        action: () => handleGenerateReport('user')
                                     },
                                     {
                                         title: 'Break-Glass Summary',
                                         desc: 'Detailed report of all emergency unauthorized access events.',
                                         icon: Lock,
-                                        action: () => {
-                                            setActiveTab('logs');
-                                            setFilters({ ...filters, patientSearch: '', userId: '', accessType: '', breakGlass: 'true' });
-                                        }
+                                        action: () => handleGenerateReport('break-glass')
                                     },
                                     {
                                         title: 'Restricted Patient List',
                                         desc: 'Inventory of all patients with high-privacy flags active.',
                                         icon: ShieldAlert,
-                                        action: () => {
-                                            setReportView('restricted');
-                                        }
+                                        action: () => handleGenerateReport('restricted')
                                     }
                                 ].map((rpt, i) => (
                                     <div
