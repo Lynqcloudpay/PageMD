@@ -1126,22 +1126,6 @@ const Schedule = () => {
                                                         </span>
                                                     </div>
 
-                                                    {/* Flag Badges */}
-                                                    {appt.active_flags_count > 0 && (
-                                                        <div className="flex-shrink-0 flex items-center gap-0.5">
-                                                            {appt.top_severity === 'critical' ? (
-                                                                <ShieldAlert className="text-red-500" size={12} />
-                                                            ) : appt.top_severity === 'warn' ? (
-                                                                <AlertTriangle className="text-orange-500" size={12} />
-                                                            ) : (
-                                                                <Shield className="text-blue-500" size={12} />
-                                                            )}
-                                                            <span className={`text-[10px] font-black ${appt.top_severity === 'critical' ? 'text-red-600' :
-                                                                    appt.top_severity === 'warn' ? 'text-orange-600' : 'text-blue-600'
-                                                                }`}>{appt.active_flags_count}</span>
-                                                        </div>
-                                                    )}
-
                                                     {/* Column 2: Appointment Type + Duration - Fixed width */}
                                                     <div className="flex-shrink-0 w-[85px] min-w-[85px] max-w-[85px]">
                                                         <div className="flex items-center gap-0.5">
@@ -1253,20 +1237,8 @@ const Schedule = () => {
                                                             setShowPatientDropdown(false);
                                                         }}
                                                     >
-                                                        <div className="flex items-center justify-between">
-                                                            <div>
-                                                                <div className="font-medium text-slate-900">{patient.first_name} {patient.last_name}</div>
-                                                                {patient.mrn && <div className="text-xs text-slate-500">MRN: {patient.mrn}</div>}
-                                                            </div>
-                                                            {patient.active_flags_count > 0 && (
-                                                                <div className="flex items-center gap-1">
-                                                                    {patient.top_severity === 'critical' ? <ShieldAlert className="text-red-500" size={12} /> :
-                                                                        patient.top_severity === 'warn' ? <AlertTriangle className="text-orange-500" size={12} /> :
-                                                                            <Shield className="text-blue-500" size={12} />}
-                                                                    <span className="text-[10px] font-black text-slate-600">{patient.active_flags_count}</span>
-                                                                </div>
-                                                            )}
-                                                        </div>
+                                                        <div className="font-medium text-slate-900">{patient.first_name} {patient.last_name}</div>
+                                                        {patient.mrn && <div className="text-xs text-slate-500">MRN: {patient.mrn}</div>}
                                                     </button>
                                                 ))}
                                             </div>

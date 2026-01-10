@@ -416,17 +416,6 @@ const PatientListItem = ({ patient, index, onClick, highlight }) => (
                         text={patient.name || `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || 'Unknown Patient'}
                         highlight={highlight?.name}
                     />
-                    {patient.active_flags_count > 0 && (
-                        <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter shadow-sm animate-pulse-slow ${patient.top_severity === 'critical' ? 'bg-red-600 text-white' :
-                                patient.top_severity === 'warn' ? 'bg-orange-500 text-white' :
-                                    'bg-blue-600 text-white'
-                            }`}>
-                            {patient.top_severity === 'critical' ? <ShieldAlert size={10} /> :
-                                patient.top_severity === 'warn' ? <AlertTriangle size={10} /> :
-                                    <Shield size={10} />}
-                            {patient.active_flags_count} Flag{patient.active_flags_count > 1 ? 's' : ''}
-                        </div>
-                    )}
                 </h3>
                 <div className="flex items-center gap-2 text-xs text-gray-600 flex-wrap">
                     <span className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded">

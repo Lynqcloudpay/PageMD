@@ -542,15 +542,6 @@ const Layout = ({ children }) => {
                                         >
                                             <div className="font-semibold text-deep-gray group-hover:text-strong-azure flex items-center justify-between">
                                                 <span>{patient.name || 'Unknown'}</span>
-                                                {patient.active_flags_count > 0 && (
-                                                    <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter ${patient.top_severity === 'critical' ? 'bg-red-600 text-white animate-pulse' :
-                                                            patient.top_severity === 'warn' ? 'bg-orange-500 text-white' :
-                                                                'bg-blue-600 text-white'
-                                                        }`}>
-                                                        {patient.top_severity === 'critical' ? <ShieldAlert size={10} /> : <AlertTriangle size={10} />}
-                                                        Alert
-                                                    </div>
-                                                )}
                                             </div>
                                             <div className="text-sm text-deep-gray/70 mt-1 flex items-center space-x-2">
                                                 <span className="px-2 py-0.5 bg-soft-gray rounded text-xs font-medium text-deep-gray">{patient.mrn || 'N/A'}</span>
