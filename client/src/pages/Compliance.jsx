@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 
 const Compliance = () => {
     const [activeTab, setActiveTab] = useState('logs');
+    console.log('[Compliance] Rendered version: 1.0.2 (Ultra-Compact)');
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState([]);
     const [alerts, setAlerts] = useState([]);
@@ -139,12 +140,12 @@ const Compliance = () => {
                 <div className="flex justify-between items-end">
                     <div className="space-y-2">
                         <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
-                                <Shield className="text-white w-6 h-6" />
+                            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
+                                <Shield className="text-white w-5 h-5" />
                             </div>
-                            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Compliance & Audit</h1>
+                            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Compliance & Audit</h1>
                         </div>
-                        <p className="text-slate-500 font-medium ml-1">Monitor chart access and manage privacy alerts for HIPAA compliance.</p>
+                        <p className="text-slate-400 text-xs font-medium ml-1">Monitor chart access and privacy alerts.</p>
                     </div>
                     <button
                         onClick={exportCSV}
@@ -164,13 +165,13 @@ const Compliance = () => {
                     { label: 'Break Glass Events', value: data.filter(l => l.break_glass_used).length, icon: ShieldAlert, color: 'red' },
                     { label: 'Pending Alerts', value: stats.activeAlerts, icon: AlertTriangle, color: 'amber' }
                 ].map((stat, i) => (
-                    <div key={i} className="bg-white p-4 rounded-[1.25rem] shadow-sm border border-slate-100 flex items-center gap-4">
-                        <div className={`w-10 h-10 bg-${stat.color}-500/10 rounded-xl flex items-center justify-center`}>
-                            <stat.icon className={`text-${stat.color}-600 w-5 h-5`} />
+                    <div key={i} className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex items-center gap-3">
+                        <div className={`w-9 h-9 bg-${stat.color}-500/10 rounded-lg flex items-center justify-center`}>
+                            <stat.icon className={`text-${stat.color}-600 w-4 h-4`} />
                         </div>
                         <div>
-                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{stat.label}</div>
-                            <div className="text-xl font-black text-slate-900">{stat.value}</div>
+                            <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-0.5">{stat.label}</div>
+                            <div className="text-lg font-black text-slate-900 leading-none">{stat.value}</div>
                         </div>
                     </div>
                 ))}
@@ -184,15 +185,15 @@ const Compliance = () => {
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-3 px-8 py-6 text-sm font-black transition-all border-b-4 relative ${activeTab === tab.id
+                            className={`flex items-center gap-2 px-6 py-4 text-xs font-black transition-all border-b-2 relative ${activeTab === tab.id
                                 ? 'border-blue-600 text-blue-600'
                                 : 'border-transparent text-slate-400 hover:text-slate-600'
                                 }`}
                         >
-                            <tab.icon className="w-5 h-5" />
+                            <tab.icon className="w-4 h-4" />
                             {tab.label}
                             {tab.badge && (
-                                <span className="ml-2 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center shadow-lg shadow-red-200">
+                                <span className="ml-1.5 w-4 h-4 bg-red-500 text-white text-[9px] rounded-full flex items-center justify-center shadow-lg shadow-red-200">
                                     {tab.badge}
                                 </span>
                             )}

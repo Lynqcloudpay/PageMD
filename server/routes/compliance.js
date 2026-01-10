@@ -133,7 +133,7 @@ router.patch('/alerts/:id/resolve', async (req, res) => {
             `UPDATE privacy_alerts SET 
                 resolved_at = CURRENT_TIMESTAMP, 
                 resolved_by_user_id = $1,
-                details_json = COALESCE(details_json, '{}'::jsonb) || jsonb_build_object('resolution_note', $2)
+                details_json = COALESCE(details_json, '{}'::jsonb) || jsonb_build_object('resolution_note', $2::text)
             WHERE id = $3 AND clinic_id = $4
             RETURNING id`,
             [userId, resolutionNote || '', id, clinicId]
