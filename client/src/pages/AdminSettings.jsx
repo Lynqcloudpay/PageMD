@@ -24,6 +24,7 @@ import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { useNavigate } from 'react-router-dom';
 import ImageCropper from '../components/ImageCropper';
+import FlagTypesSettings from '../components/FlagTypesSettings';
 
 const AdminSettings = () => {
   const { user } = useAuth();
@@ -155,6 +156,7 @@ const AdminSettings = () => {
     { id: 'users', label: 'Users', icon: Users },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'clinical', label: 'Clinical', icon: Stethoscope },
+    { id: 'flags', label: 'Patient Flags', icon: Shield },
     { id: 'email', label: 'Email', icon: Mail },
     { id: 'features', label: 'Features', icon: Zap },
     { id: 'billing', label: 'Billing', icon: DollarSign },
@@ -251,6 +253,10 @@ const AdminSettings = () => {
               onSave={handleSaveClinical}
               saving={saving}
             />
+          )}
+
+          {activeTab === 'flags' && (
+            <FlagTypesSettings />
           )}
 
           {activeTab === 'email' && (

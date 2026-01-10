@@ -4,7 +4,8 @@ import {
     Calendar, Users, FileText, Settings, LogOut, Search, X, Activity,
     Clock, History, User, ClipboardList, BarChart3,
     MessageSquare, Video, Moon, Sun, Menu, ChevronRight, Bell,
-    Zap, Command, DollarSign, Shield, AlertCircle, HelpCircle, Inbox, ShieldCheck
+    Zap, Command, DollarSign, Shield, AlertCircle, HelpCircle, Inbox, ShieldCheck,
+    ShieldAlert, AlertTriangle
 } from 'lucide-react';
 import { usePatient } from '../context/PatientContext';
 import { useAuth } from '../context/AuthContext';
@@ -189,7 +190,9 @@ const Layout = ({ children }) => {
                                 name: p.first_name && p.last_name ? `${p.first_name} ${p.last_name}` : (p.name || `${p.first_name || ''} ${p.last_name || ''}`.trim()),
                                 mrn: p.mrn,
                                 dob: p.dob || p.date_of_birth,
-                                sex: p.sex
+                                sex: p.sex,
+                                active_flags_count: p.active_flags_count,
+                                top_severity: p.top_severity
                             }));
                             setSearchResults(apiResults.slice(0, 10));
                         } else {
@@ -537,8 +540,17 @@ const Layout = ({ children }) => {
                                             onClick={() => handleSearchSelect(patient)}
                                             className="w-full p-4 text-left hover:bg-soft-gray transition-all focus:outline-none group"
                                         >
-                                            <div className="font-semibold text-deep-gray group-hover:text-strong-azure">
-                                                {patient.name || 'Unknown'}
+                                            <div className="font-semibold text-deep-gray group-hover:text-strong-azure flex items-center justify-between">
+                                                <span>{patient.name || 'Unknown'}</span>
+                                                {patient.active_flags_count > 0 && (
+                                                    <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter ${patient.top_severity === 'critical' ? 'bg-red-600 text-white animate-pulse' :
+                                                            patient.top_severity === 'warn' ? 'bg-orange-500 text-white' :
+                                                                'bg-blue-600 text-white'
+                                                        }`}>
+                                                        {patient.top_severity === 'critical' ? <ShieldAlert size={10} /> : <AlertTriangle size={10} />}
+                                                        Alert
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="text-sm text-deep-gray/70 mt-1 flex items-center space-x-2">
                                                 <span className="px-2 py-0.5 bg-soft-gray rounded text-xs font-medium text-deep-gray">{patient.mrn || 'N/A'}</span>

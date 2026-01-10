@@ -95,7 +95,14 @@ router.get('/', async (req, res) => {
     if (encryptionEnabled && (firstNameQuery || lastNameQuery || phoneDigits || search)) {
       console.log('[PATIENTS-GET] Encryption enabled -> In-Memory Search');
 
-      let query = 'SELECT * FROM patients WHERE clinic_id = $1';
+      let query = `
+        SELECT p.*, 
+          (SELECT COUNT(*) FROM patient_flags pf WHERE pf.patient_id = p.id AND pf.status = 'active' AND pf.clinic_id = p.clinic_id) as active_flags_count,
+          (SELECT severity FROM patient_flags pf JOIN flag_types ft ON pf.flag_type_id = ft.id 
+           WHERE pf.patient_id = p.id AND pf.status = 'active' AND pf.clinic_id = p.clinic_id
+           ORDER BY CASE severity WHEN 'critical' THEN 1 WHEN 'warn' THEN 2 ELSE 3 END LIMIT 1) as top_severity
+        FROM patients p 
+        WHERE p.clinic_id = $1`;
       const params = [clinicId];
 
       // We can still pre-filter by dob and mrn in SQL since they are plaintext
@@ -185,7 +192,14 @@ router.get('/', async (req, res) => {
     }
 
     // --- SQL SEARCH (Encryption Disabled) ---
-    let query = 'SELECT * FROM patients WHERE clinic_id = $1';
+    let query = `
+      SELECT p.*, 
+        (SELECT COUNT(*) FROM patient_flags pf WHERE pf.patient_id = p.id AND pf.status = 'active' AND pf.clinic_id = p.clinic_id) as active_flags_count,
+        (SELECT severity FROM patient_flags pf JOIN flag_types ft ON pf.flag_type_id = ft.id 
+         WHERE pf.patient_id = p.id AND pf.status = 'active' AND pf.clinic_id = p.clinic_id
+         ORDER BY CASE severity WHEN 'critical' THEN 1 WHEN 'warn' THEN 2 ELSE 3 END LIMIT 1) as top_severity
+      FROM patients p 
+      WHERE p.clinic_id = $1`;
     const params = [clinicId];
     let paramCount = 1;
 

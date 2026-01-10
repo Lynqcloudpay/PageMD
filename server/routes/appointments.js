@@ -22,7 +22,24 @@ router.get('/', requirePermission('schedule:view'), async (req, res) => {
              p.dob as patient_dob,
              u.first_name as provider_first_name,
              u.last_name as provider_last_name,
-             u.id as provider_id
+             u.id as provider_id,
+             (SELECT COUNT(*) FROM patient_flags pf WHERE pf.patient_id = p.id AND pf.status = 'active') as active_flags_count,
+             (SELECT MAX(CASE 
+                WHEN ft.severity = 'critical' THEN 3 
+                WHEN ft.severity = 'warn' THEN 2 
+                ELSE 1 END) 
+              FROM patient_flags pf 
+              JOIN flag_types ft ON pf.flag_type_id = ft.id 
+              WHERE pf.patient_id = p.id AND pf.status = 'active') as top_severity_level,
+             (SELECT ft.severity 
+              FROM patient_flags pf 
+              JOIN flag_types ft ON pf.flag_type_id = ft.id 
+              WHERE pf.patient_id = p.id AND pf.status = 'active'
+              ORDER BY CASE 
+                WHEN ft.severity = 'critical' THEN 3 
+                WHEN ft.severity = 'warn' THEN 2 
+                ELSE 1 END DESC 
+              LIMIT 1) as top_severity
       FROM appointments a
       JOIN patients p ON a.patient_id = p.id
       JOIN users u ON a.provider_id = u.id
@@ -114,7 +131,9 @@ router.get('/', requirePermission('schedule:view'), async (req, res) => {
         current_room: row.current_room ?? null,
         checkout_time: row.checkout_time ?? null,
         cancellation_reason: row.cancellation_reason ?? null,
-        patient_dob: row.patient_dob
+        patient_dob: row.patient_dob,
+        active_flags_count: parseInt(row.active_flags_count) || 0,
+        top_severity: row.top_severity
       };
     }));
 
@@ -204,7 +223,9 @@ router.get('/:id', requirePermission('schedule:view'), async (req, res) => {
       arrival_time: row.arrival_time ?? null,
       current_room: row.current_room ?? null,
       checkout_time: row.checkout_time ?? null,
-      cancellation_reason: row.cancellation_reason ?? null
+      cancellation_reason: row.cancellation_reason ?? null,
+      active_flags_count: parseInt(row.active_flags_count) || 0,
+      top_severity: row.top_severity
     };
 
     res.json(appointment);

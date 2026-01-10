@@ -135,7 +135,9 @@ function getDefaultPermissionsForRole(role) {
     'schedule:status_update',
     'billing:view',
     'billing:create',
-    'billing:edit'
+    'billing:edit',
+    'patient_flags:create',
+    'patient_flags:resolve'
   ];
 
   const nursePerms = [
@@ -177,7 +179,8 @@ function getAllAdminPermissions() {
     'schedule:view', 'schedule:edit', 'schedule:status_update', 'schedule:assign_provider', 'schedule:delete',
     'users:manage', 'roles:manage', 'permissions:manage',
     'billing:view', 'billing:create', 'billing:edit', 'claims:submit',
-    'reports:view', 'settings:edit', 'admin:access', 'audit:view'
+    'reports:view', 'settings:edit', 'admin:access', 'audit:view',
+    'patient_flags:create', 'patient_flags:resolve', 'patient_flags:manage_types'
   ];
 }
 

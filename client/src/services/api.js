@@ -576,5 +576,17 @@ export const complianceAPI = {
   getReports: (type, params) => api.get(`/compliance/reports/${type}`, { params }),
 };
 
+// Patient Flags
+export const patientFlagsAPI = {
+  getTypes: () => api.get('/patient-flags/types'),
+  createType: (data) => api.post('/patient-flags/types', data),
+  updateType: (id, data) => api.put(`/patient-flags/types/${id}`, data),
+  deleteType: (id) => api.delete(`/patient-flags/types/${id}`),
+  getByPatient: (patientId) => api.get(`/patient-flags/patient/${patientId}`),
+  create: (patientId, data) => api.post(`/patient-flags/patient/${patientId}`, data),
+  resolve: (id) => api.patch(`/patient-flags/${id}/resolve`),
+  acknowledge: (id) => api.post(`/patient-flags/${id}/acknowledge`),
+};
+
 export default api;
 

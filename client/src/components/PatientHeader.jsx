@@ -10,6 +10,10 @@ import api from '../services/api';
 import { usePermissions } from '../hooks/usePermissions';
 import PatientHeaderPhoto from './PatientHeaderPhoto';
 import PortalInviteModal from './PortalInviteModal';
+import PatientFlagsManager from './PatientFlagsManager';
+import FlagAcknowledgmentModal from './FlagAcknowledgmentModal';
+import { patientFlagsAPI } from '../services/api';
+import { format } from 'date-fns';
 
 // Robust date formatter that ignores timezones completely
 
@@ -56,12 +60,18 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     const [inviteData, setInviteData] = useState(null);
 
+    // Flags State
+    const [flags, setFlags] = useState([]);
+    const [isFlagsPanelOpen, setIsFlagsPanelOpen] = useState(false);
+    const [unacknowledgedCriticalFlags, setUnacknowledgedCriticalFlags] = useState([]);
+    const [showAckModal, setShowAckModal] = useState(false);
+
     // Use passed patient or fetched patient
     const patient = propPatient || fetchedPatient;
 
-    // Fetch patient if not provided and we have an ID
+    // Fetch patient & flags
     useEffect(() => {
-        const fetchPatient = async () => {
+        const fetchData = async () => {
             if (!propPatient && id && !fetchedPatient) {
                 try {
                     const response = await api.get(`/patients/${id}`);
@@ -70,9 +80,38 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                     console.error("Failed to fetch patient for header:", error);
                 }
             }
+
+            if (id) {
+                try {
+                    const flagsRes = await patientFlagsAPI.getByPatient(id);
+                    const allFlags = flagsRes.data || [];
+                    setFlags(allFlags);
+
+                    // Check for critical flags requiring acknowledgment
+                    const criticalReqAck = allFlags.filter(f =>
+                        f.status === 'active' &&
+                        f.requires_acknowledgment &&
+                        !f.current_user_acknowledged
+                    );
+
+                    if (criticalReqAck.length > 0) {
+                        setUnacknowledgedCriticalFlags(criticalReqAck);
+                        setShowAckModal(true);
+                    }
+                } catch (err) {
+                    console.error("Failed to fetch flags:", err);
+                }
+            }
         };
-        fetchPatient();
+        fetchData();
     }, [propPatient, id, fetchedPatient]);
+
+    const refreshFlags = async () => {
+        if (id) {
+            const flagsRes = await patientFlagsAPI.getByPatient(id);
+            setFlags(flagsRes.data || []);
+        }
+    };
 
     // Safety check
     if (!patient) return null;
@@ -368,200 +407,277 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
     }
 
     // View Mode
+    const activeFlags = flags.filter(f => f.status === 'active');
+    const bannerFlags = activeFlags
+        .sort((a, b) => (b.severity === 'critical' ? 1 : -1))
+        .slice(0, 2);
+
     return (
-        <div className="bg-white border border-gray-200 shadow-sm rounded-lg mb-6 overflow-hidden">
-            {/* Top Bar: Identity & Actions */}
-            <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between bg-gradient-to-r from-blue-50/30 to-transparent">
-                <div className="flex items-center gap-5">
-                    {/* Photo */}
-                    <div className="relative group">
-                        <PatientHeaderPhoto
-                            firstName={patient.first_name}
-                            lastName={patient.last_name}
-                            className="w-16 h-16 text-xl shadow-sm ring-2 ring-white"
-                        />
-                    </div>
+        <div className="flex flex-col gap-0 mb-6 relative">
+            {/* Acknowledgment Modal */}
+            {showAckModal && (
+                <FlagAcknowledgmentModal
+                    flags={unacknowledgedCriticalFlags}
+                    onAcknowledged={() => setShowAckModal(false)}
+                />
+            )}
 
-                    {/* Name & Key Stats */}
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                            {/* Clicking name also goes to chart as a shortcut */}
-                            <span
-                                className="cursor-pointer hover:text-blue-800 transition-colors"
-                                onClick={() => navigate(`/patient/${patient?.id || id}/snapshot`)}
-                            >
-                                {patient.first_name || ''} {patient.last_name || ''}
-                            </span>
-
-                            {patient.is_restricted && (
-                                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-600 text-white rounded-lg text-[10px] font-black uppercase tracking-tighter shadow-sm animate-pulse-slow">
-                                    <Lock size={12} fill="currentColor" />
-                                    CONFIDENTIAL
+            {/* Banner Area */}
+            {activeFlags.length > 0 && (
+                <div className="mb-2 flex flex-col gap-1.5 animate-in slide-in-from-top duration-300">
+                    {bannerFlags.map(flag => (
+                        <div
+                            key={flag.id}
+                            className={`px-6 py-2 border-l-4 shadow-sm flex items-center justify-between group cursor-pointer transition-all hover:brightness-95 ${flag.severity === 'critical' ? 'bg-red-600 border-red-800 text-white' :
+                                flag.severity === 'warn' ? 'bg-orange-500 border-orange-700 text-white' :
+                                    'bg-blue-600 border-blue-800 text-white'
+                                }`}
+                            onClick={() => setIsFlagsPanelOpen(true)}
+                        >
+                            <div className="flex items-center gap-3">
+                                {flag.severity === 'critical' ? <ShieldAlert size={18} className="animate-pulse" /> : <AlertCircle size={18} />}
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-80 leading-none mb-0.5">
+                                        Patient Alert ({flag.category})
+                                    </span>
+                                    <span className="text-sm font-black tracking-tight leading-none uppercase">
+                                        {flag.label} {flag.note ? `— ${flag.note}` : ''}
+                                    </span>
                                 </div>
-                            )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black uppercase opacity-60 group-hover:opacity-100 transition-opacity">View All Flags</span>
+                                <ExternalLink size={12} />
+                            </div>
+                        </div>
+                    ))}
+                    {activeFlags.length > 2 && (
+                        <button
+                            onClick={() => setIsFlagsPanelOpen(true)}
+                            className="text-center py-1 bg-slate-100 hover:bg-slate-200 text-slate-500 text-[10px] font-black uppercase tracking-widest transition-all rounded-b-lg border-x border-b border-slate-200"
+                        >
+                            + {activeFlags.length - 2} more active flags
+                        </button>
+                    )}
+                </div>
+            )}
 
-                            <button
-                                onClick={handleEditClick}
-                                className="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded-full hover:bg-blue-50"
-                                title="Edit Patient"
-                            >
-                                <Edit2 size={14} />
-                            </button>
-                        </h1>
-
-                        <div className="flex items-center gap-3 text-sm text-gray-600 mt-1">
-                            <span className="font-medium text-gray-900">{calculateAge(patient.dob)} years old</span>
-                            <span className="text-gray-300">|</span>
-                            <span className="flex items-center gap-1">
-                                <span className="text-xs uppercase tracking-wide text-gray-500">DOB</span>
-                                {formatDate(patient.dob)}
-                            </span>
-                            <span className="text-gray-300">|</span>
-                            <span className="font-mono text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded text-xs">
-                                {patient.mrn}
-                            </span>
+            <div className="bg-white border border-gray-200 shadow-sm rounded-lg overflow-hidden">
+                {/* Flags Manager Panel */}
+                {isFlagsPanelOpen && (
+                    <div className="fixed inset-0 z-[100] flex justify-end bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-200">
+                        <div className="w-full max-w-md h-full shadow-2xl animate-in slide-in-from-right duration-300">
+                            <PatientFlagsManager
+                                patientId={patient.id}
+                                onClose={() => setIsFlagsPanelOpen(false)}
+                                onUpdate={refreshFlags}
+                            />
                         </div>
                     </div>
-                </div>
+                )}
+                {/* Top Bar: Identity & Actions */}
+                <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between bg-gradient-to-r from-blue-50/30 to-transparent">
+                    <div className="flex items-center gap-5">
+                        {/* Photo */}
+                        <div className="relative group">
+                            <PatientHeaderPhoto
+                                firstName={patient.first_name}
+                                lastName={patient.last_name}
+                                className="w-16 h-16 text-xl shadow-sm ring-2 ring-white"
+                            />
+                        </div>
 
-                {/* Primary Actions */}
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={async () => {
-                            if (!patient.email) {
-                                alert('An email address is required to invite a patient to the portal.');
-                                return;
-                            }
+                        {/* Name & Key Stats */}
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                                {/* Clicking name also goes to chart as a shortcut */}
+                                <span
+                                    className="cursor-pointer hover:text-blue-800 transition-colors"
+                                    onClick={() => navigate(`/patient/${patient?.id || id}/snapshot`)}
+                                >
+                                    {patient.first_name || ''} {patient.last_name || ''}
+                                </span>
 
-                            try {
-                                const response = await api.post(`/patients/${patient.id}/portal-invite`, {
-                                    email: patient.email
-                                });
-                                if (response.data.success) {
-                                    setInviteData(response.data);
-                                    setIsInviteModalOpen(true);
-                                }
-                            } catch (err) {
-                                alert(err.response?.data?.error || 'Failed to send invitation');
-                            }
-                        }}
-                        className="px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 shadow-sm transition-all flex items-center gap-2"
-                        title="Invite to Patient Portal"
-                    >
-                        <Users size={16} />
-                        Portal Invite
-                    </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setIsFlagsPanelOpen(true)}
+                                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter shadow-sm transition-all hover:scale-105 active:scale-95 ${activeFlags.length > 0 ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-400 opacity-60 hover:opacity-100'
+                                            }`}
+                                    >
+                                        <Shield size={12} />
+                                        {activeFlags.length} Flags
+                                    </button>
+                                    {patient.is_restricted && (
+                                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-600 text-white rounded-lg text-[10px] font-black uppercase tracking-tighter shadow-sm animate-pulse-slow">
+                                            <Lock size={12} fill="currentColor" />
+                                            CONFIDENTIAL
+                                        </div>
+                                    )}
+                                </div>
 
-                    <PortalInviteModal
-                        isOpen={isInviteModalOpen}
-                        onClose={() => setIsInviteModalOpen(false)}
-                        patient={patient}
-                        inviteData={inviteData}
-                    />
-                    <button
-                        onClick={() => navigate(`/patient/${patient?.id || id}/snapshot?tab=billing`)}
-                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 shadow-sm transition-all flex items-center gap-2"
-                        title="Billing & Superbills"
-                    >
-                        <Receipt size={16} />
-                        Superbill
-                    </button>
-                    <button
-                        onClick={handleOpenChart}
-                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm transition-all hover:shadow flex items-center gap-2"
-                    >
-                        <ExternalLink size={16} />
-                        Open Chart
-                    </button>
-                </div>
-            </div>
+                                <button
+                                    onClick={handleEditClick}
+                                    className="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded-full hover:bg-blue-50"
+                                    title="Edit Patient"
+                                >
+                                    <Edit2 size={14} />
+                                </button>
+                            </h1>
 
-            {/* Detail Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-px bg-gray-200">
-                {/* Contact */}
-                <div className="bg-white p-2">
-                    <InfoItem icon={Phone} label="Contact">
-                        <div className="font-medium">{patient.phone || <span className="text-gray-400 italic">No phone</span>}</div>
-                        {patient.email && <div className="text-gray-600 truncate">{patient.email}</div>}
-                        {patient.phone_cell && <div className="text-gray-500 text-[10px]">Cell: {patient.phone_cell}</div>}
-                    </InfoItem>
-                </div>
-                {/* Address */}
-                <div className="bg-white p-2">
-                    <InfoItem icon={MapPin} label="Address">
-                        <div className="font-medium">{patient.address_line1 || <span className="text-gray-400 italic">Not set</span>}</div>
-                        {patient.city && <div>{patient.city}, {patient.state} {patient.zip}</div>}
-                    </InfoItem>
-                </div>
-                {/* Insurance */}
-                <div className="bg-white p-2">
-                    <InfoItem icon={Shield} label="Insurance">
-                        <div className="font-medium">{patient.insurance_provider || <span className="text-gray-400 italic">Self Pay</span>}</div>
-                        {patient.insurance_provider && (
-                            <div className="space-y-0.5 mt-0.5 text-[11px] text-gray-600">
-                                {patient.insurance_id && <div>ID: <span className="font-mono text-gray-800">{patient.insurance_id}</span></div>}
-                                {patient.insurance_group_number && <div>Grp: {patient.insurance_group_number}</div>}
-                                {patient.insurance_plan_name && <div>Plan: {patient.insurance_plan_name}</div>}
-                                {patient.insurance_subscriber_name && <div>Sub: {patient.insurance_subscriber_name}</div>}
+                            <div className="flex items-center gap-3 text-sm text-gray-600 mt-1">
+                                <span className="font-medium text-gray-900">{calculateAge(patient.dob)} years old</span>
+                                <span className="text-gray-300">|</span>
+                                <span className="flex items-center gap-1">
+                                    <span className="text-xs uppercase tracking-wide text-gray-500">DOB</span>
+                                    {formatDate(patient.dob)}
+                                </span>
+                                <span className="text-gray-300">|</span>
+                                <span className="font-mono text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded text-xs">
+                                    {patient.mrn}
+                                </span>
                             </div>
-                        )}
-                        <button
-                            onClick={async (e) => {
-                                e.stopPropagation();
-                                try {
-                                    // Use new eligibility endpoint with required fields
-                                    const { data } = await api.post('/eligibility/verify', {
-                                        patientId: patient.id,
-                                        payerId: patient.insurance_payer_id || 'UNKNOWN',
-                                        memberId: patient.insurance_id || '',
-                                        groupNumber: patient.insurance_group_number || '',
-                                        // DOB and name will be fetched from patient on backend
-                                    });
+                        </div>
+                    </div>
 
-                                    if (data.isDemo) {
-                                        alert(`⚠️ Demo Mode\n\nStatus: ${data.status}\nPlan: ${data.planName}\nCopay: $${data.coverage?.copay}\nDeductible: $${data.coverage?.deductible}\n\n${data.warning || ''}`);
-                                    } else {
-                                        alert(`✅ Eligibility Verified\n\nStatus: ${data.status}\nPayer: ${data.payer}\nPlan: ${data.planName}\nCopay: $${data.coverage?.copay}\nDeductible Remaining: $${data.coverage?.deductibleRemaining}`);
+                    {/* Primary Actions */}
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={async () => {
+                                if (!patient.email) {
+                                    alert('An email address is required to invite a patient to the portal.');
+                                    return;
+                                }
+
+                                try {
+                                    const response = await api.post(`/patients/${patient.id}/portal-invite`, {
+                                        email: patient.email
+                                    });
+                                    if (response.data.success) {
+                                        setInviteData(response.data);
+                                        setIsInviteModalOpen(true);
                                     }
                                 } catch (err) {
-                                    const errMsg = err.response?.data?.error || err.response?.data?.missing?.join(', ') || 'Verification Failed';
-                                    alert(`❌ Eligibility Check Failed\n\n${errMsg}`);
+                                    alert(err.response?.data?.error || 'Failed to send invitation');
                                 }
                             }}
-                            className="mt-2 text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-200 hover:bg-blue-100 block w-full text-center"
+                            className="px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 shadow-sm transition-all flex items-center gap-2"
+                            title="Invite to Patient Portal"
                         >
-                            Verify Eligibility
+                            <Users size={16} />
+                            Portal Invite
                         </button>
-                    </InfoItem>
+
+                        <PortalInviteModal
+                            isOpen={isInviteModalOpen}
+                            onClose={() => setIsInviteModalOpen(false)}
+                            patient={patient}
+                            inviteData={inviteData}
+                        />
+                        <button
+                            onClick={() => navigate(`/patient/${patient?.id || id}/snapshot?tab=billing`)}
+                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 shadow-sm transition-all flex items-center gap-2"
+                            title="Billing & Superbills"
+                        >
+                            <Receipt size={16} />
+                            Superbill
+                        </button>
+                        <button
+                            onClick={handleOpenChart}
+                            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm transition-all hover:shadow flex items-center gap-2"
+                        >
+                            <ExternalLink size={16} />
+                            Open Chart
+                        </button>
+                    </div>
                 </div>
-                {/* Pharmacy */}
-                <div className="bg-white p-2">
-                    <InfoItem icon={Activity} label="Pharmacy">
-                        <div className="font-medium">{patient.pharmacy_name || <span className="text-gray-400 italic">Not set</span>}</div>
-                        {patient.pharmacy_name && (
-                            <div className="space-y-0.5 mt-0.5 text-[11px] text-gray-600">
-                                {patient.pharmacy_phone && <div>Ph: {patient.pharmacy_phone}</div>}
-                                {patient.pharmacy_address && <div className="leading-tight">{patient.pharmacy_address}</div>}
-                            </div>
-                        )}
-                    </InfoItem>
+
+                {/* Detail Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-px bg-gray-200">
+                    {/* Contact */}
+                    <div className="bg-white p-2">
+                        <InfoItem icon={Phone} label="Contact">
+                            <div className="font-medium">{patient.phone || <span className="text-gray-400 italic">No phone</span>}</div>
+                            {patient.email && <div className="text-gray-600 truncate">{patient.email}</div>}
+                            {patient.phone_cell && <div className="text-gray-500 text-[10px]">Cell: {patient.phone_cell}</div>}
+                        </InfoItem>
+                    </div>
+                    {/* Address */}
+                    <div className="bg-white p-2">
+                        <InfoItem icon={MapPin} label="Address">
+                            <div className="font-medium">{patient.address_line1 || <span className="text-gray-400 italic">Not set</span>}</div>
+                            {patient.city && <div>{patient.city}, {patient.state} {patient.zip}</div>}
+                        </InfoItem>
+                    </div>
+                    {/* Insurance */}
+                    <div className="bg-white p-2">
+                        <InfoItem icon={Shield} label="Insurance">
+                            <div className="font-medium">{patient.insurance_provider || <span className="text-gray-400 italic">Self Pay</span>}</div>
+                            {patient.insurance_provider && (
+                                <div className="space-y-0.5 mt-0.5 text-[11px] text-gray-600">
+                                    {patient.insurance_id && <div>ID: <span className="font-mono text-gray-800">{patient.insurance_id}</span></div>}
+                                    {patient.insurance_group_number && <div>Grp: {patient.insurance_group_number}</div>}
+                                    {patient.insurance_plan_name && <div>Plan: {patient.insurance_plan_name}</div>}
+                                    {patient.insurance_subscriber_name && <div>Sub: {patient.insurance_subscriber_name}</div>}
+                                </div>
+                            )}
+                            <button
+                                onClick={async (e) => {
+                                    e.stopPropagation();
+                                    try {
+                                        // Use new eligibility endpoint with required fields
+                                        const { data } = await api.post('/eligibility/verify', {
+                                            patientId: patient.id,
+                                            payerId: patient.insurance_payer_id || 'UNKNOWN',
+                                            memberId: patient.insurance_id || '',
+                                            groupNumber: patient.insurance_group_number || '',
+                                            // DOB and name will be fetched from patient on backend
+                                        });
+
+                                        if (data.isDemo) {
+                                            alert(`⚠️ Demo Mode\n\nStatus: ${data.status}\nPlan: ${data.planName}\nCopay: $${data.coverage?.copay}\nDeductible: $${data.coverage?.deductible}\n\n${data.warning || ''}`);
+                                        } else {
+                                            alert(`✅ Eligibility Verified\n\nStatus: ${data.status}\nPayer: ${data.payer}\nPlan: ${data.planName}\nCopay: $${data.coverage?.copay}\nDeductible Remaining: $${data.coverage?.deductibleRemaining}`);
+                                        }
+                                    } catch (err) {
+                                        const errMsg = err.response?.data?.error || err.response?.data?.missing?.join(', ') || 'Verification Failed';
+                                        alert(`❌ Eligibility Check Failed\n\n${errMsg}`);
+                                    }
+                                }}
+                                className="mt-2 text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-200 hover:bg-blue-100 block w-full text-center"
+                            >
+                                Verify Eligibility
+                            </button>
+                        </InfoItem>
+                    </div>
+                    {/* Pharmacy */}
+                    <div className="bg-white p-2">
+                        <InfoItem icon={Activity} label="Pharmacy">
+                            <div className="font-medium">{patient.pharmacy_name || <span className="text-gray-400 italic">Not set</span>}</div>
+                            {patient.pharmacy_name && (
+                                <div className="space-y-0.5 mt-0.5 text-[11px] text-gray-600">
+                                    {patient.pharmacy_phone && <div>Ph: {patient.pharmacy_phone}</div>}
+                                    {patient.pharmacy_address && <div className="leading-tight">{patient.pharmacy_address}</div>}
+                                </div>
+                            )}
+                        </InfoItem>
+                    </div>
+                    {/* Emergency */}
+                    <div className="bg-white p-2">
+                        <InfoItem icon={AlertCircle} label="Emergency">
+                            <div className="font-medium">{patient.emergency_contact_name || <span className="text-gray-400 italic">Not set</span>}</div>
+                            {patient.emergency_contact_name && (
+                                <div className="space-y-0.5 mt-0.5 text-[11px] text-gray-600">
+                                    {patient.emergency_contact_relationship && <div>Rel: {patient.emergency_contact_relationship}</div>}
+                                    {patient.emergency_contact_phone && <div>Ph: {patient.emergency_contact_phone}</div>}
+                                </div>
+                            )}
+                        </InfoItem>
+                    </div>
                 </div>
-                {/* Emergency */}
-                <div className="bg-white p-2">
-                    <InfoItem icon={AlertCircle} label="Emergency">
-                        <div className="font-medium">{patient.emergency_contact_name || <span className="text-gray-400 italic">Not set</span>}</div>
-                        {patient.emergency_contact_name && (
-                            <div className="space-y-0.5 mt-0.5 text-[11px] text-gray-600">
-                                {patient.emergency_contact_relationship && <div>Rel: {patient.emergency_contact_relationship}</div>}
-                                {patient.emergency_contact_phone && <div>Ph: {patient.emergency_contact_phone}</div>}
-                            </div>
-                        )}
-                    </InfoItem>
-                </div>
+
+                {/* Quick Actions Bar - Visible Everywhere */}
+
             </div>
-
-            {/* Quick Actions Bar - Visible Everywhere */}
-
         </div>
     );
 };

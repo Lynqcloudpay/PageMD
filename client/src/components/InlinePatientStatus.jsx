@@ -6,13 +6,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { Clock } from 'lucide-react';
-import { appointmentsAPI } from '../services/api';
+import { appointmentsAPI, patientFlagsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
+import { useNotification } from './NotificationProvider';
 
 const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled = true, showCancelledBadge = false }) => {
     const { user } = useAuth();
     const { can } = usePermissions();
+    const { showNotification } = useNotification();
     const canUpdateStatus = can('schedule:status_update');
     const [status, setStatus] = useState(appointment?.patient_status || 'scheduled');
     const [roomSubStatus, setRoomSubStatus] = useState(appointment?.room_sub_status || null);
@@ -185,6 +187,25 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                 updateData.checkout_time = null; // Clear any previous checkout_time when starting a new visit
                 setArrivalTime(now);
                 setCheckoutTime(null);
+
+                // Nursing Notification for Patient Flags
+                if (appointment.active_flags_count > 0) {
+                    try {
+                        const flagsRes = await patientFlagsAPI.getByPatient(appointment.patientId);
+                        const activeFlags = (flagsRes.data || []).filter(f => f.status === 'active');
+
+                        activeFlags.forEach(flag => {
+                            showNotification({
+                                title: `Patient Alert: ${flag.label}`,
+                                message: flag.note || `This patient has a ${flag.severity} ${flag.category} flag.`,
+                                severity: flag.severity,
+                                duration: flag.severity === 'critical' ? 10000 : 6000
+                            });
+                        });
+                    } catch (err) {
+                        console.error('Failed to fetch flags for check-in notification:', err);
+                    }
+                }
             }
 
             if (newStatus === 'checked_out') {

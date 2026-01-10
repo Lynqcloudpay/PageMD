@@ -35,6 +35,13 @@ const Compliance = () => {
 
     const [restrictedPatients, setRestrictedPatients] = useState([]);
     const [loadingReport, setLoadingReport] = useState(false);
+    const [reportParams, setReportParams] = useState({
+        showPicker: false,
+        type: null,
+        query: '',
+        results: [],
+        searching: false
+    });
 
     useEffect(() => {
         fetchInitialData();
@@ -163,30 +170,72 @@ const Compliance = () => {
     };
 
     const handleGenerateReport = async (type) => {
-        setLoading(true);
-        try {
-            if (type === 'patient') {
-                const query = window.prompt('Enter Patient Name or MRN to generate full access history:');
-                if (!query) return;
-                const res = await complianceAPI.getLogs({ patientSearch: query, limit: 1000 });
-                downloadCSV(res.data || [], `patient_access_${query.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}`);
-            } else if (type === 'user') {
-                if (!filters.userId) {
-                    alert('Please select a user from the dropdown first to generate their access history.');
-                    return;
-                }
-                const selectedUser = users.find(u => u.id === filters.userId);
-                const res = await complianceAPI.getLogs({ userId: filters.userId, limit: 1000 });
-                downloadCSV(res.data || [], `user_access_${selectedUser?.last_name || 'audit'}_${format(new Date(), 'yyyyMMdd')}`);
-            } else if (type === 'break-glass') {
-                const res = await complianceAPI.getLogs({ breakGlass: 'true', limit: 1000 });
+        if (type === 'restricted') {
+            setReportView('restricted');
+            return;
+        }
+
+        if (type === 'break-glass') {
+            setLoading(true);
+            try {
+                const res = await complianceAPI.getLogs({ breakGlass: 'true', limit: 3000 });
                 downloadCSV(res.data || [], `break_glass_summary_${format(new Date(), 'yyyyMMdd')}`);
-            } else if (type === 'restricted') {
-                setReportView('restricted');
+            } catch (err) {
+                alert('Failed to generate break-glass report');
+            } finally {
+                setLoading(false);
+            }
+            return;
+        }
+
+        // For Patient or User, open the picker
+        setReportParams({
+            showPicker: true,
+            type: type,
+            query: '',
+            results: [],
+            searching: false
+        });
+    };
+
+    const handlePickerSearch = async (val) => {
+        setReportParams(prev => ({ ...prev, query: val, searching: true }));
+        try {
+            if (reportParams.type === 'patient') {
+                const res = await patientsAPI.search(val);
+                setReportParams(prev => ({ ...prev, results: res.data || [], searching: false }));
+            } else {
+                // Search users
+                const u = users.filter(u =>
+                    `${u.first_name} ${u.last_name}`.toLowerCase().includes(val.toLowerCase()) ||
+                    u.email?.toLowerCase().includes(val.toLowerCase())
+                );
+                setReportParams(prev => ({ ...prev, results: u, searching: false }));
             }
         } catch (err) {
-            console.error('Report generation failed:', err);
-            alert('Failed to generate report.');
+            console.error('Picker search failed:', err);
+            setReportParams(prev => ({ ...prev, searching: false }));
+        }
+    };
+
+    const handlePickerSelect = async (item) => {
+        setLoading(true);
+        setReportParams(prev => ({ ...prev, showPicker: false }));
+        try {
+            let res;
+            let filename = '';
+
+            if (reportParams.type === 'patient') {
+                res = await complianceAPI.getLogs({ patientId: item.id, limit: 5000 });
+                filename = `patient_access_${item.last_name || 'audit'}_${format(new Date(), 'yyyyMMdd')}`;
+            } else {
+                res = await complianceAPI.getLogs({ userId: item.id, limit: 5000 });
+                filename = `user_access_${item.last_name || 'audit'}_${format(new Date(), 'yyyyMMdd')}`;
+            }
+
+            downloadCSV(res.data || [], filename);
+        } catch (err) {
+            alert('Failed to generate report');
         } finally {
             setLoading(false);
         }
@@ -609,6 +658,78 @@ const Compliance = () => {
                     )}
                 </div>
             </div>
+
+            {/* Picker Modal for Reports */}
+            {reportParams.showPicker && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200">
+                        <div className="p-8 border-b border-slate-50 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                                    <Search className="text-blue-600" />
+                                    Select {reportParams.type === 'patient' ? 'Patient' : 'Staff Member'}
+                                </h3>
+                                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Generate full access audit history</p>
+                            </div>
+                            <button
+                                onClick={() => setReportParams({ ...reportParams, showPicker: false })}
+                                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                            >
+                                <X size={24} className="text-slate-400" />
+                            </button>
+                        </div>
+
+                        <div className="p-8 space-y-6">
+                            <div className="relative">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:ring-0 text-slate-900 font-bold transition-all"
+                                    placeholder={reportParams.type === 'patient' ? "Search name or MRN..." : "Search staff name..."}
+                                    value={reportParams.query}
+                                    onChange={(e) => handlePickerSearch(e.target.value)}
+                                />
+                                {reportParams.searching && (
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                                        <div className="w-4 h-4 border-2 border-slate-200 border-t-blue-600 rounded-full animate-spin"></div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                                {reportParams.results.map(item => (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => handlePickerSelect(item)}
+                                        className="w-full flex items-center justify-between p-4 rounded-2xl border border-slate-50 hover:bg-blue-50 hover:border-blue-100 transition-all group"
+                                    >
+                                        <div className="text-left">
+                                            <div className="font-black text-slate-900 group-hover:text-blue-700">
+                                                {item.first_name} {item.last_name}
+                                            </div>
+                                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                {reportParams.type === 'patient' ? `MRN: ${item.mrn}` : (item.role_name || item.role)}
+                                            </div>
+                                        </div>
+                                        <ChevronRight size={16} className="text-slate-200 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
+                                    </button>
+                                ))}
+                                {reportParams.query && !reportParams.results.length && !reportParams.searching && (
+                                    <div className="p-8 text-center text-slate-400 font-bold italic">
+                                        No matches found.
+                                    </div>
+                                )}
+                                {!reportParams.query && (
+                                    <div className="p-12 text-center text-slate-300 font-black uppercase tracking-widest text-[10px]">
+                                        Start typing to search...
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

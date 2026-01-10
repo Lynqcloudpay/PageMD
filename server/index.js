@@ -18,6 +18,7 @@ const fhirRoutes = require('./routes/fhir');
 const ordersetRoutes = require('./routes/ordersets');
 const icd10HierarchyRoutes = require('./routes/icd10-hierarchy');
 const { resolveTenant } = require('./middleware/tenant');
+const flagService = require('./services/flagService');
 
 const app = express();
 // Enable trust proxy for Caddy (reverse proxy) to pass correct IP steps
@@ -261,7 +262,9 @@ app.use('/api/portal', portalRoutes);
 
 // Digital Intake
 const intakeRoutes = require('./routes/intake');
+const patientFlagsRoutes = require('./routes/patientFlags');
 app.use('/api/intake', intakeRoutes);
+app.use('/api/patient-flags', patientFlagsRoutes);
 
 // Support
 app.use('/api/support', require('./routes/support'));
@@ -305,6 +308,9 @@ if (require.main === module) {
   server = app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📡 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+
+    // Start background services
+    flagService.startMaintenance(3600000); // 1 hour
   });
 }
 
