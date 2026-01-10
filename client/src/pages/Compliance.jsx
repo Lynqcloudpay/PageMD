@@ -20,8 +20,10 @@ const Compliance = () => {
         patientId: '',
         accessType: '',
         unresolvedOnly: true,
-        patientSearch: ''
+        patientSearch: '',
+        breakGlass: ''
     });
+    const [reportView, setReportView] = useState(null);
     const [users, setUsers] = useState([]);
     const [stats, setStats] = useState({
         totalOpens: 0,
@@ -76,9 +78,12 @@ const Compliance = () => {
     const fetchAlerts = async () => {
         setLoading(true);
         try {
-            const res = await complianceAPI.getAlerts({ unresolvedOnly: filters.unresolvedOnly });
+            const res = await complianceAPI.getAlerts({
+                unresolvedOnly: filters.unresolvedOnly,
+                patientSearch: filters.patientSearch
+            });
             setAlerts(res.data || []);
-            if (filters.unresolvedOnly) {
+            if (filters.unresolvedOnly && !filters.patientSearch) {
                 setStats(prev => ({ ...prev, activeAlerts: res.data?.length || 0 }));
             }
         } catch (err) {
@@ -328,70 +333,98 @@ const Compliance = () => {
                     ) : activeTab === 'alerts' ? (
                         <div className="space-y-4">
                             {alerts.map((alert) => (
-                                <div key={alert.id} className={`bg-white border-2 rounded-2xl p-4 transition-all shadow-sm ${alert.severity === 'high' ? 'border-red-100 bg-red-50/10' : 'border-slate-100'
+                                <div key={alert.id} className={`bg-white border rounded-xl p-3 transition-all shadow-sm ${alert.severity === 'high' ? 'border-red-100 bg-red-50/10' : 'border-slate-100'
                                     }`}>
-                                    <div className="flex gap-4">
-                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${alert.severity === 'high' ? 'bg-red-600 shadow-lg shadow-red-200' : 'bg-amber-500 shadow-lg shadow-amber-100'
+                                    <div className="flex gap-3">
+                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${alert.severity === 'high' ? 'bg-red-600 shadow-lg shadow-red-200' : 'bg-amber-500 shadow-lg shadow-amber-100'
                                             }`}>
-                                            <AlertTriangle className="text-white w-6 h-6" />
+                                            <AlertTriangle className="text-white w-5 h-5" />
                                         </div>
-                                        <div className="flex-1">
-                                            <div className="flex justify-between items-start mb-2">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between items-start mb-1">
                                                 <div>
-                                                    <div className="flex items-center gap-2 mb-0.5">
-                                                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${alert.severity === 'high' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+                                                    <div className="flex items-center gap-1.5 mb-0.5">
+                                                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${alert.severity === 'high' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
                                                             }`}>
-                                                            {alert.severity} Priority
+                                                            {alert.severity}
                                                         </span>
-                                                        <span className="text-xs font-black text-slate-400">•</span>
-                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                        <span className="text-[10px] font-black text-slate-400 capitalize">
                                                             {alert.alert_type.replace(/_/g, ' ')}
                                                         </span>
                                                     </div>
-                                                    <h3 className="text-md font-black text-slate-900 leading-tight">
-                                                        {alert.user_first_name} {alert.user_last_name} triggered a security alert
+                                                    <h3 className="text-sm font-black text-slate-900 leading-tight truncate">
+                                                        {alert.user_first_name} {alert.user_last_name}
                                                     </h3>
                                                 </div>
-                                                <div className="text-right">
-                                                    <div className="text-[10px] font-bold text-slate-400 mb-0.5">{format(new Date(alert.created_at), 'MMMM do, yyyy')}</div>
-                                                    <div className="text-xs font-black text-slate-900">{format(new Date(alert.created_at), 'h:mm a')}</div>
-                                                </div>
-                                            </div>
-
-                                            <div className="bg-white/60 p-3 rounded-xl border border-slate-100/50 mb-3">
-                                                <pre className="text-[11px] font-medium text-slate-700 whitespace-pre-wrap font-mono">
-                                                    {JSON.stringify(alert.details_json, null, 2)}
-                                                </pre>
-                                            </div>
-
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    {alert.patient_id && (
-                                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
-                                                            <User size={14} />
-                                                            Patient: {alert.patient_first_name} {alert.patient_last_name}
-                                                        </div>
+                                                <div className="text-right flex flex-col items-end">
+                                                    <div className="text-[9px] font-bold text-slate-400">{format(new Date(alert.created_at), 'MMM d, h:mm a')}</div>
+                                                    {alert.break_glass_used && (
+                                                        <span className="mt-0.5 px-1 py-0.5 bg-red-600 text-white text-[7px] font-black rounded uppercase">Break Glass</span>
                                                     )}
                                                 </div>
+                                            </div>
 
-                                                {alert.resolved_at ? (
-                                                    <div className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-600 border border-green-100 rounded-xl">
-                                                        <CheckCircle size={16} />
-                                                        <span className="text-xs font-black">RESOLVED BY {alert.resolver_first_name}</span>
+                                            <div className="flex items-center justify-between gap-4">
+                                                <div className="flex-1 bg-slate-50/80 px-2 py-1.5 rounded-lg border border-slate-100">
+                                                    <div className="text-[10px] font-mono text-slate-600 truncate">
+                                                        {JSON.stringify(alert.details_json).substring(0, 100)}...
                                                     </div>
-                                                ) : (
-                                                    <button
-                                                        onClick={() => handleResolveAlert(alert.id)}
-                                                        className="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black hover:bg-slate-800 transition-all shadow-lg active:scale-95"
-                                                    >
-                                                        Resolve Alert
-                                                    </button>
-                                                )}
+                                                </div>
+
+                                                <div className="flex items-center gap-4 flex-shrink-0">
+                                                    {alert.patient_id && (
+                                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
+                                                            <User size={12} className="text-slate-300" />
+                                                            {alert.patient_first_name} {alert.patient_last_name}
+                                                        </div>
+                                                    )}
+
+                                                    {alert.resolved_at ? (
+                                                        <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-600 border border-green-100 rounded-lg">
+                                                            <CheckCircle size={12} />
+                                                            <span className="text-[9px] font-black uppercase">RESOLVED</span>
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handleResolveAlert(alert.id)}
+                                                            className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-black hover:bg-slate-800 transition-all active:scale-95"
+                                                        >
+                                                            Resolve
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    ) : reportView === 'restricted' ? (
+                        <div className="p-6">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-lg font-black text-slate-900">Restricted Patient Inventory</h3>
+                                <button onClick={() => setReportView(null)} className="text-xs font-bold text-blue-600 hover:underline">Back to Reports</button>
+                            </div>
+                            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-slate-50 border-b border-slate-200">
+                                        <tr>
+                                            <th className="px-4 py-3 font-black text-slate-600">Patient Name</th>
+                                            <th className="px-4 py-3 font-black text-slate-600">MRN</th>
+                                            <th className="px-4 py-3 font-black text-slate-600">DOB</th>
+                                            <th className="px-4 py-3 font-black text-slate-600">Access Level</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {/* This is a placeholder for the actual view logic which should be driven by an API call */}
+                                        <tr className="hover:bg-slate-50">
+                                            <td className="px-4 py-3 text-center text-slate-400 italic" colSpan="4">
+                                                Filtering logs by 'Restricted Only' filter is recommended.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     ) : (
                         <div className="p-12 text-center">
@@ -399,12 +432,48 @@ const Compliance = () => {
                             <h2 className="text-2xl font-black text-slate-900 mb-4">HIPAA Compliance Reports</h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
                                 {[
-                                    { title: 'Patient Access History', desc: 'Full audit of every user who viewed or edited a specific patient record.', icon: User },
-                                    { title: 'User Access History', desc: 'Full audit of every record accessed by a specific user or role.', icon: Activity },
-                                    { title: 'Break-Glass Summary', desc: 'Detailed report of all emergency unauthorized access events.', icon: Lock },
-                                    { title: 'Restricted Patient List', desc: 'Inventory of all patients with high-privacy flags active.', icon: ShieldAlert }
+                                    {
+                                        title: 'Patient Access History',
+                                        desc: 'Full audit of every user who viewed or edited a specific patient record.',
+                                        icon: User,
+                                        action: () => {
+                                            setActiveTab('logs');
+                                            document.querySelector('input[placeholder*="Search"]')?.focus();
+                                        }
+                                    },
+                                    {
+                                        title: 'User Access History',
+                                        desc: 'Full audit of every record accessed by a specific user or role.',
+                                        icon: Activity,
+                                        action: () => {
+                                            setActiveTab('logs');
+                                            // Trigger user dropdown focus if possible
+                                        }
+                                    },
+                                    {
+                                        title: 'Break-Glass Summary',
+                                        desc: 'Detailed report of all emergency unauthorized access events.',
+                                        icon: Lock,
+                                        action: () => {
+                                            setActiveTab('logs');
+                                            setFilters(f => ({ ...f, breakGlass: 'true' }));
+                                        }
+                                    },
+                                    {
+                                        title: 'Restricted Patient List',
+                                        desc: 'Inventory of all patients with high-privacy flags active.',
+                                        icon: ShieldAlert,
+                                        action: () => {
+                                            setActiveTab('logs');
+                                            setFilters(f => ({ ...f, accessType: 'RESTRICTED_ACCESS' })); // Just a filter trigger
+                                        }
+                                    }
                                 ].map((rpt, i) => (
-                                    <div key={i} className="p-6 bg-slate-50 border border-slate-200 rounded-[1.5rem] hover:bg-white hover:border-blue-200 transition-all text-left cursor-pointer group">
+                                    <div
+                                        key={i}
+                                        onClick={rpt.action}
+                                        className="p-6 bg-slate-50 border border-slate-200 rounded-[1.5rem] hover:bg-white hover:border-blue-200 transition-all text-left cursor-pointer group"
+                                    >
                                         <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center mb-4 border border-slate-100 group-hover:bg-blue-600 group-hover:border-blue-600 transition-all">
                                             <rpt.icon className="text-slate-400 group-hover:text-white" />
                                         </div>

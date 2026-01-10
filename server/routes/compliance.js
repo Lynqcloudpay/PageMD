@@ -86,8 +86,8 @@ router.get('/logs', async (req, res) => {
  */
 router.get('/alerts', async (req, res) => {
     try {
-        const { unresolvedOnly = 'true' } = req.query;
-        const clinicId = req.user.clinic_id;
+        const { unresolvedOnly = 'true', patientSearch } = req.query;
+        const clinicId = req.user.clinic_id || req.user.clinicId;
 
         let query = `
       SELECT a.*, 
@@ -100,14 +100,22 @@ router.get('/alerts', async (req, res) => {
       LEFT JOIN users ru ON a.resolved_by_user_id = ru.id
       WHERE a.clinic_id = $1
     `;
+        const params = [clinicId];
+        let pCount = 1;
 
         if (unresolvedOnly === 'true') {
             query += ` AND a.resolved_at IS NULL`;
         }
 
+        if (patientSearch) {
+            pCount++;
+            query += ` AND (p.first_name ILIKE $${pCount} OR p.last_name ILIKE $${pCount} OR CONCAT(p.first_name, ' ', p.last_name) ILIKE $${pCount} OR p.mrn ILIKE $${pCount})`;
+            params.push(`%${patientSearch}%`);
+        }
+
         query += ` ORDER BY a.created_at DESC`;
 
-        const result = await pool.query(query, [clinicId]);
+        const result = await pool.query(query, params);
         res.json(result.rows);
     } catch (error) {
         console.error('[Compliance-Route] Error fetching alerts:', error);
@@ -147,6 +155,55 @@ router.patch('/alerts/:id/resolve', async (req, res) => {
     } catch (error) {
         console.error('[Compliance-Route] Error resolving alert:', error);
         res.status(500).json({ error: 'Failed to resolve alert: ' + error.message });
+    }
+});
+
+/**
+ * GET /api/compliance/stats
+ * Basic stats for the dashboard
+ */
+router.get('/stats', async (req, res) => {
+    try {
+        const clinicId = req.user.clinic_id || req.user.clinicId;
+
+        const statsQuery = `
+            SELECT 
+                (SELECT COUNT(*) FROM chart_access_logs WHERE clinic_id = $1) as total_access,
+                (SELECT COUNT(*) FROM chart_access_logs WHERE clinic_id = $1 AND is_restricted = true) as restricted_access,
+                (SELECT COUNT(*) FROM chart_access_logs WHERE clinic_id = $1 AND break_glass_used = true) as break_glass_count,
+                (SELECT COUNT(*) FROM privacy_alerts WHERE clinic_id = $1 AND resolved_at IS NULL) as active_alerts
+        `;
+
+        const result = await pool.query(statsQuery, [clinicId]);
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('[Compliance-Route] Error fetching stats:', error);
+        res.status(500).json({ error: 'Failed to fetch compliance stats' });
+    }
+});
+
+/**
+ * GET /api/compliance/reports/restricted-patients
+ * Inventory of all patients with high-privacy flags active.
+ */
+router.get('/reports/restricted-patients', async (req, res) => {
+    try {
+        const clinicId = req.user.clinic_id || req.user.clinicId;
+
+        const query = `
+            SELECT id, first_name, last_name, mrn, dob, sex, 
+                   COALESCE(restricted_status, 'normal') as status,
+                   created_at
+            FROM patients 
+            WHERE clinic_id = $1 AND restricted_status = 'restricted'
+            ORDER BY last_name, first_name
+        `;
+
+        const result = await pool.query(query, [clinicId]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('[Compliance-Route] Error fetching restricted patients:', error);
+        res.status(500).json({ error: 'Failed to fetch restricted patients report' });
     }
 });
 
