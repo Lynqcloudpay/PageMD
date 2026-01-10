@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     AlertTriangle, Shield, Activity, Info, X,
-    CheckCircle, Clock, Plus, Trash2, ShieldAlert
+    CheckCircle, Clock, Plus, Trash2, ShieldAlert, Shield as ShieldCheck
 } from 'lucide-react';
 import { patientFlagsAPI } from '../services/api';
 import { format } from 'date-fns';

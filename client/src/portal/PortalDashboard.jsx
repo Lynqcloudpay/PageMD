@@ -10,7 +10,7 @@ import {
     User,
     Phone,
     Activity,
-    ShieldCheck,
+    Shield as ShieldCheck,
     ChevronRight,
     Pill,
     AlertCircle,

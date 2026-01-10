@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, CheckCircle, Copy, ExternalLink, ShieldCheck, Clock, ArrowRight } from 'lucide-react';
+import { Mail, CheckCircle, Copy, ExternalLink, Shield as ShieldCheck, Clock, ArrowRight } from 'lucide-react';
 import Modal from './ui/Modal';
 import { showSuccess } from '../utils/toast';
 

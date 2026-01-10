@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, Lock, Unlock, X, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { ShieldAlert, Lock, Unlock, X, AlertTriangle, Shield as ShieldCheck } from 'lucide-react';
 import { privacyAPI } from '../services/api';
 
 const BreakTheGlassModal = () => {

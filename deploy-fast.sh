@@ -73,6 +73,9 @@ ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST << EOF
     sed -i 's/yourdomain.com/bemypcp.com/g' .env.prod
   fi
   
+  echo "🧹 Cleaning up old Docker artifacts to ensure build space..."
+  docker system prune -f || true
+  
   echo "🔄 Building API service..."
   DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build api
   

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Shield, FileText, AlertTriangle, Search, Filter, Download,
     CheckCircle, Clock, User, Link as LinkIcon, ChevronRight,
-    ShieldAlert, ShieldCheck, Calendar, Activity, Lock, Eye
+    ShieldAlert, Shield as ShieldCheck, Calendar, Activity, Lock, Eye
 } from 'lucide-react';
 import { complianceAPI, usersAPI, patientsAPI } from '../services/api';
 import { format } from 'date-fns';

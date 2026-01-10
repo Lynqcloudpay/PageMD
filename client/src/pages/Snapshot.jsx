@@ -3,9 +3,10 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
     AlertCircle, Activity, Pill, FileText, Clock, Eye, ChevronDown, ChevronUp, ChevronRight, Plus,
     Phone, Mail, MapPin, CreditCard, Building2, Users, Heart, Printer,
-    CheckCircle2, Edit, ArrowRight, ExternalLink, UserCircle, Camera, User, X, FileImage, Save, FlaskConical, Database, Trash2, Upload, Layout, RotateCcw, Waves
+    CheckCircle2, Edit, ArrowRight, ExternalLink, UserCircle, Camera, User, X, FileImage, Save, FlaskConical, Database, Trash2, Upload, Layout, RotateCcw, Waves,
+    Shield, ShieldAlert, AlertTriangle
 } from 'lucide-react';
-import { visitsAPI, patientsAPI, ordersAPI, referralsAPI, documentsAPI } from '../services/api';
+import { visitsAPI, patientsAPI, ordersAPI, referralsAPI, documentsAPI, patientFlagsAPI } from '../services/api';
 import { format } from 'date-fns';
 import { showError, showSuccess } from '../utils/toast';
 // GridLayout temporarily disabled to fix 500 error
@@ -108,6 +109,21 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const [todayDraftVisit, setTodayDraftVisit] = useState(null);
     const [showNewVisitDropdown, setShowNewVisitDropdown] = useState(false);
     const [showPrintOrdersModal, setShowPrintOrdersModal] = useState(false);
+    const [activeFlags, setActiveFlags] = useState([]);
+
+    useEffect(() => {
+        const fetchFlags = async () => {
+            if (!id) return;
+            try {
+                const response = await patientFlagsAPI.getByPatient(id);
+                const active = (response.data || []).filter(f => f.status === 'active');
+                setActiveFlags(active);
+            } catch (err) {
+                console.error('Error fetching sticky notes (flags):', err);
+            }
+        };
+        fetchFlags();
+    }, [id]);
 
     // EKG States
     const [showEKGModal, setShowEKGModal] = useState(false);
@@ -1383,6 +1399,56 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 </div>
 
                 <div className="px-6">
+                    {/* Sticky Note / Patient Alerts Section */}
+                    {activeFlags.length > 0 && (
+                        <div className="mb-6 flex flex-wrap gap-4">
+                            {activeFlags.map(flag => (
+                                <div
+                                    key={flag.id}
+                                    className={`flex-1 min-w-[300px] p-4 rounded-xl border-l-8 shadow-sm relative group animate-in slide-in-from-top duration-300 ${flag.severity === 'critical' ? 'bg-red-50 border-red-500' :
+                                        flag.severity === 'warn' ? 'bg-orange-50 border-orange-500' :
+                                            'bg-blue-50 border-blue-500'
+                                        }`}
+                                >
+                                    <div className="flex items-start gap-4">
+                                        <div className={`p-2 rounded-lg ${flag.severity === 'critical' ? 'bg-red-100 text-red-600' :
+                                            flag.severity === 'warn' ? 'bg-orange-100 text-orange-600' :
+                                                'bg-blue-100 text-blue-600'
+                                            }`}>
+                                            {flag.severity === 'critical' ? <ShieldAlert size={20} /> :
+                                                flag.severity === 'warn' ? <AlertTriangle size={20} /> :
+                                                    <Shield size={20} />}
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <h3 className={`text-sm font-black uppercase tracking-wider ${flag.severity === 'critical' ? 'text-red-900' :
+                                                    flag.severity === 'warn' ? 'text-orange-900' :
+                                                        'text-blue-900'
+                                                    }`}>
+                                                    {flag.label}
+                                                </h3>
+                                                <span className="text-[10px] font-bold text-gray-400">
+                                                    {new Date(flag.created_at).toLocaleDateString()}
+                                                </span>
+                                            </div>
+                                            {flag.note && (
+                                                <p className={`text-sm font-medium leading-normal ${flag.severity === 'critical' ? 'text-red-800' :
+                                                    flag.severity === 'warn' ? 'text-orange-800' :
+                                                        'text-blue-800'
+                                                    }`}>
+                                                    {flag.note}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {/* Subtle background decoration to make it feel like a sticky note */}
+                                    <div className="absolute top-0 right-0 w-8 h-8 opacity-[0.03] pointer-events-none">
+                                        <Shield size={64} className="-mr-4 -mt-4" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
                     {/* Visit History Section */}
                     <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
