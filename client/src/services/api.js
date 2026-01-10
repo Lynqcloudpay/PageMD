@@ -573,6 +573,7 @@ export const complianceAPI = {
   getAlerts: (params) => api.get('/compliance/alerts', { params }),
   resolveAlert: (id, resolutionNote) => api.patch(`/compliance/alerts/${id}/resolve`, { resolutionNote }),
   getStats: () => api.get('/compliance/stats'),
+  getReports: (type, params) => api.get(`/compliance/reports/${type}`, { params }),
 };
 
 export default api;

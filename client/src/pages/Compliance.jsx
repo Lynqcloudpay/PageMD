@@ -21,7 +21,8 @@ const Compliance = () => {
         accessType: '',
         unresolvedOnly: true,
         patientSearch: '',
-        breakGlass: ''
+        breakGlass: '',
+        isRestricted: false
     });
     const [reportView, setReportView] = useState(null);
     const [users, setUsers] = useState([]);
@@ -32,6 +33,9 @@ const Compliance = () => {
         breakGlasses: 0
     });
 
+    const [restrictedPatients, setRestrictedPatients] = useState([]);
+    const [loadingReport, setLoadingReport] = useState(false);
+
     useEffect(() => {
         fetchInitialData();
     }, []);
@@ -39,7 +43,8 @@ const Compliance = () => {
     useEffect(() => {
         if (activeTab === 'logs') fetchLogs();
         if (activeTab === 'alerts') fetchAlerts();
-    }, [activeTab, filters]);
+        if (activeTab === 'reports' && reportView === 'restricted') fetchRestrictedPatients();
+    }, [activeTab, filters, reportView]);
 
     const fetchInitialData = async () => {
         try {
@@ -55,7 +60,17 @@ const Compliance = () => {
             const aRes = await complianceAPI.getAlerts({ unresolvedOnly: true });
             const alertsList = aRes.data || [];
             setAlerts(alertsList);
-            setStats(prev => ({ ...prev, activeAlerts: alertsList.length || 0 }));
+
+            // Fetch real summary stats from backend
+            const sRes = await complianceAPI.getStats();
+            if (sRes.data) {
+                setStats({
+                    totalOpens: parseInt(sRes.data.total_access) || 0,
+                    restrictedOpens: parseInt(sRes.data.restricted_access) || 0,
+                    activeAlerts: parseInt(sRes.data.active_alerts) || 0,
+                    breakGlasses: parseInt(sRes.data.break_glass_count) || 0
+                });
+            }
         } catch (err) {
             console.error('Failed to fetch reference data:', err);
             setUsers([]);
@@ -90,6 +105,18 @@ const Compliance = () => {
             console.error('Failed to fetch alerts:', err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchRestrictedPatients = async () => {
+        setLoadingReport(true);
+        try {
+            const res = await complianceAPI.getReports('restricted-patients');
+            setRestrictedPatients(res.data || []);
+        } catch (err) {
+            console.error('Failed to fetch restricted patients:', err);
+        } finally {
+            setLoadingReport(false);
         }
     };
 
@@ -165,9 +192,9 @@ const Compliance = () => {
             {/* Stats Grid */}
             <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
                 {[
-                    { label: 'Total Chart Access', value: data.length, icon: Eye, color: 'blue' },
-                    { label: 'Restricted Access', value: data.filter(l => l.is_restricted).length, icon: Lock, color: 'orange' },
-                    { label: 'Break Glass Events', value: data.filter(l => l.break_glass_used).length, icon: ShieldAlert, color: 'red' },
+                    { label: 'Total Chart Access', value: stats.totalOpens, icon: Eye, color: 'blue' },
+                    { label: 'Restricted Access', value: stats.restrictedOpens, icon: Lock, color: 'orange' },
+                    { label: 'Break Glass Events', value: stats.breakGlasses, icon: ShieldAlert, color: 'red' },
                     { label: 'Pending Alerts', value: stats.activeAlerts, icon: AlertTriangle, color: 'amber' }
                 ].map((stat, i) => (
                     <div key={i} className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex items-center gap-3">
@@ -262,6 +289,18 @@ const Compliance = () => {
                             onChange={(e) => setFilters({ ...filters, patientSearch: e.target.value })}
                         />
                     </div>
+
+                    {activeTab === 'logs' && (
+                        <label className="flex items-center gap-2 cursor-pointer ml-auto">
+                            <input
+                                type="checkbox"
+                                checked={filters.isRestricted}
+                                onChange={(e) => setFilters({ ...filters, isRestricted: e.target.checked })}
+                                className="w-4 h-4 rounded border-slate-300 text-orange-600"
+                            />
+                            <span className="text-xs font-bold text-slate-600">Restricted Only</span>
+                        </label>
+                    )}
 
                     {activeTab === 'alerts' && (
                         <label className="flex items-center gap-2 cursor-pointer ml-auto">
@@ -402,29 +441,69 @@ const Compliance = () => {
                     ) : reportView === 'restricted' ? (
                         <div className="p-6">
                             <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-lg font-black text-slate-900">Restricted Patient Inventory</h3>
-                                <button onClick={() => setReportView(null)} className="text-xs font-bold text-blue-600 hover:underline">Back to Reports</button>
+                                <div className="flex items-center gap-3">
+                                    <ShieldAlert className="text-orange-500 w-5 h-5" />
+                                    <h3 className="text-lg font-black text-slate-900">Restricted Patient Inventory</h3>
+                                </div>
+                                <button
+                                    onClick={() => setReportView(null)}
+                                    className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-200 transition-all flex items-center gap-2"
+                                >
+                                    <ChevronRight className="rotate-180 w-4 h-4" /> Back to Dashboard
+                                </button>
                             </div>
-                            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-                                <table className="w-full text-left text-sm">
-                                    <thead className="bg-slate-50 border-b border-slate-200">
-                                        <tr>
-                                            <th className="px-4 py-3 font-black text-slate-600">Patient Name</th>
-                                            <th className="px-4 py-3 font-black text-slate-600">MRN</th>
-                                            <th className="px-4 py-3 font-black text-slate-600">DOB</th>
-                                            <th className="px-4 py-3 font-black text-slate-600">Access Level</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {/* This is a placeholder for the actual view logic which should be driven by an API call */}
-                                        <tr className="hover:bg-slate-50">
-                                            <td className="px-4 py-3 text-center text-slate-400 italic" colSpan="4">
-                                                Filtering logs by 'Restricted Only' filter is recommended.
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
+
+                            {loadingReport ? (
+                                <div className="p-20 text-center">
+                                    <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+                                    <p className="text-slate-400 font-bold">Scanning for restricted charts...</p>
+                                </div>
+                            ) : (
+                                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                                    <table className="w-full text-left text-sm border-collapse">
+                                        <thead className="bg-slate-50 border-b border-slate-200">
+                                            <tr>
+                                                <th className="px-6 py-4 font-black text-slate-600 uppercase tracking-widest text-[10px]">Patient Name</th>
+                                                <th className="px-6 py-4 font-black text-slate-600 uppercase tracking-widest text-[10px]">MRN</th>
+                                                <th className="px-6 py-4 font-black text-slate-600 uppercase tracking-widest text-[10px]">DOB</th>
+                                                <th className="px-6 py-4 font-black text-slate-600 uppercase tracking-widest text-[10px]">Restricted Since</th>
+                                                <th className="px-6 py-4 font-black text-slate-600 uppercase tracking-widest text-[10px] text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {restrictedPatients.map(p => (
+                                                <tr key={p.id} className="hover:bg-slate-50/50 group transition-colors">
+                                                    <td className="px-6 py-4">
+                                                        <span className="font-black text-slate-900">{p.first_name} {p.last_name}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4 font-mono text-slate-500 text-xs">{p.mrn}</td>
+                                                    <td className="px-6 py-4 text-slate-600 font-medium">{p.dob}</td>
+                                                    <td className="px-6 py-4 text-slate-600 font-medium">{p.created_at ? format(new Date(p.created_at), 'MMM d, yyyy') : 'N/A'}</td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <button
+                                                            onClick={() => {
+                                                                setActiveTab('logs');
+                                                                setFilters({ ...filters, patientSearch: p.mrn, userId: '', accessType: '', breakGlass: '' });
+                                                                setReportView(null);
+                                                            }}
+                                                            className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg font-black text-[10px] uppercase hover:bg-blue-100 transition-all"
+                                                        >
+                                                            View Logs
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {restrictedPatients.length === 0 && (
+                                                <tr>
+                                                    <td colSpan="5" className="px-6 py-20 text-center text-slate-300 font-bold italic">
+                                                        No restricted patients found.
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="p-12 text-center">
@@ -438,7 +517,8 @@ const Compliance = () => {
                                         icon: User,
                                         action: () => {
                                             setActiveTab('logs');
-                                            document.querySelector('input[placeholder*="Search"]')?.focus();
+                                            setFilters({ ...filters, patientSearch: '', userId: '', accessType: '', breakGlass: '' });
+                                            setTimeout(() => document.querySelector('input[placeholder*="Search"]')?.focus(), 100);
                                         }
                                     },
                                     {
@@ -447,7 +527,7 @@ const Compliance = () => {
                                         icon: Activity,
                                         action: () => {
                                             setActiveTab('logs');
-                                            // Trigger user dropdown focus if possible
+                                            setFilters({ ...filters, patientSearch: '', userId: '', accessType: '', breakGlass: '' });
                                         }
                                     },
                                     {
@@ -456,7 +536,7 @@ const Compliance = () => {
                                         icon: Lock,
                                         action: () => {
                                             setActiveTab('logs');
-                                            setFilters(f => ({ ...f, breakGlass: 'true' }));
+                                            setFilters({ ...filters, patientSearch: '', userId: '', accessType: '', breakGlass: 'true' });
                                         }
                                     },
                                     {
@@ -464,8 +544,7 @@ const Compliance = () => {
                                         desc: 'Inventory of all patients with high-privacy flags active.',
                                         icon: ShieldAlert,
                                         action: () => {
-                                            setActiveTab('logs');
-                                            setFilters(f => ({ ...f, accessType: 'RESTRICTED_ACCESS' })); // Just a filter trigger
+                                            setReportView('restricted');
                                         }
                                     }
                                 ].map((rpt, i) => (
