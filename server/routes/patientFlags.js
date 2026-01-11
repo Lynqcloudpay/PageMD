@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, logAudit } = require('../middleware/auth');
 const { requirePermission } = require('../services/authorization');
 
 /**
@@ -117,8 +117,13 @@ router.get('/patient/:patientId', authenticate, async (req, res) => {
 
         res.json(result.rows);
     } catch (err) {
-        console.error('[PatientFlags] Error fetching patient flags:', err);
-        res.status(500).json({ error: 'Failed to fetch patient flags' });
+        console.error('[PatientFlags] Error fetching patient flags:', {
+            error: err.message,
+            stack: err.stack,
+            patientId: req.params.patientId,
+            userId: req.user?.id
+        });
+        res.status(500).json({ error: 'Failed to fetch patient flags', details: err.message });
     }
 });
 
@@ -135,20 +140,24 @@ router.post('/patient/:patientId', authenticate, requirePermission('patient_flag
             `INSERT INTO patient_flags (clinic_id, patient_id, flag_type_id, note, expires_at, created_by_user_id)
              VALUES ($1, $2, $3, $4, $5, $6)
              RETURNING *`,
-            [clinicId, patientId, flag_type_id, note, expires_at, req.user.id]
+            [clinicId, patientId, flag_type_id, note, expires_at || null, req.user.id]
         );
 
-        // Audit log
-        await pool.query(
-            `INSERT INTO audit_logs (user_id, action, target_type, target_id, details)
-             VALUES ($1, $2, $3, $4, $5)`,
-            [req.user.id, 'flag.created', 'patient', patientId, JSON.stringify({ flag_id: result.rows[0].id, flag_type_id })]
+        // Standardized HIPAA Audit log
+        await logAudit(
+            req.user.id,
+            'flag.created',
+            'patient',
+            patientId,
+            { flag_id: result.rows[0].id, flag_type_id },
+            req.ip,
+            req.get('user-agent')
         );
 
         res.status(201).json(result.rows[0]);
     } catch (err) {
         console.error('[PatientFlags] Error adding flag:', err);
-        res.status(500).json({ error: 'Failed to add flag' });
+        res.status(500).json({ error: 'Failed to add flag', details: err.message });
     }
 });
 
@@ -172,17 +181,21 @@ router.patch('/:id/resolve', authenticate, requirePermission('patient_flags:reso
             return res.status(404).json({ error: 'Active flag not found' });
         }
 
-        // Audit log
-        await pool.query(
-            `INSERT INTO audit_logs (user_id, action, target_type, target_id, details)
-             VALUES ($1, $2, $3, $4, $5)`,
-            [req.user.id, 'flag.resolved', 'patient', result.rows[0].patient_id, JSON.stringify({ flag_id: id })]
+        // Standardized HIPAA Audit log
+        await logAudit(
+            req.user.id,
+            'flag.resolved',
+            'patient',
+            result.rows[0].patient_id,
+            { flag_id: id },
+            req.ip,
+            req.get('user-agent')
         );
 
         res.json(result.rows[0]);
     } catch (err) {
         console.error('[PatientFlags] Error resolving flag:', err);
-        res.status(500).json({ error: 'Failed to resolve flag' });
+        res.status(500).json({ error: 'Failed to resolve flag', details: err.message });
     }
 });
 
