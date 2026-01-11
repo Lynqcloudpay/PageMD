@@ -449,7 +449,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
 
                         {/* Name & Key Stats */}
                         <div>
-                            <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                                 {/* Clicking name also goes to chart as a shortcut */}
                                 <span
                                     className="cursor-pointer hover:text-blue-800 transition-colors"
@@ -458,19 +458,19 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                     {patient.first_name || ''} {patient.last_name || ''}
                                 </span>
 
-                                <div className="flex items-center gap-1.5">
+                                <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => setIsFlagsPanelOpen(true)}
-                                        className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tighter shadow-sm transition-all hover:scale-105 active:scale-95 ${activeFlags.length > 0 ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-400 opacity-60 hover:opacity-100'
+                                        className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-black uppercase tracking-widest shadow-sm transition-all hover:scale-105 active:scale-95 ${activeFlags.length > 0 ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-400 opacity-60 hover:opacity-100'
                                             }`}
                                     >
-                                        <Shield size={10} />
-                                        {activeFlags.length}
+                                        <Shield size={12} />
+                                        {activeFlags.length} Flags
                                     </button>
                                     {patient.is_restricted && (
-                                        <div className="flex items-center gap-1 px-2 py-0.5 bg-red-600 text-white rounded-md text-[9px] font-black uppercase tracking-tighter shadow-sm">
-                                            <Lock size={10} fill="currentColor" />
-                                            CONF
+                                        <div className="flex items-center gap-1.5 px-3 py-1 bg-red-600 text-white rounded-md text-[11px] font-black uppercase tracking-widest shadow-sm">
+                                            <Lock size={12} fill="currentColor" />
+                                            CONFIDENTIAL
                                         </div>
                                     )}
                                 </div>
