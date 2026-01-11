@@ -2206,9 +2206,6 @@ ALTER TABLE ONLY visits
 ALTER TABLE ONLY visits
     ADD CONSTRAINT visits_provider_id_fkey FOREIGN KEY (provider_id) REFERENCES users(id);
 
-\unrestrict Jf7w9z0bTkp8ufc9djaZfTBH8ens1JlNgYuzRYHrVeQikA6gyzHHHmh91hhtycb
-
-
 `;
 
 module.exports = tenantSchemaSQL;
