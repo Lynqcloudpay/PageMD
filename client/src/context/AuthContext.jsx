@@ -206,6 +206,12 @@ export const AuthProvider = ({ children }) => {
                 tokenManager.setToken(response.data.token);
                 tokenManager.setRememberedUsername(email);
 
+                // Update clinic slug in localStorage immediately to prevent stale headers
+                if (response.data.user?.clinicSlug) {
+                    console.log('AuthContext: Updating clinic_slug to', response.data.user.clinicSlug);
+                    localStorage.setItem('clinic_slug', response.data.user.clinicSlug);
+                }
+
                 // Fetch full user data with permissions from /auth/me
                 try {
                     const meResponse = await authAPI.getMe();

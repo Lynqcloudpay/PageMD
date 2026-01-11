@@ -224,6 +224,7 @@ router.post('/login', [
         roleId: user.role_id,
         isAdmin: isAdmin,
         is_admin: isAdmin, // Include both formats
+        clinicSlug: req.clinic?.slug,
       },
       token,
     });
