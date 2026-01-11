@@ -35,31 +35,51 @@ router.post('/verify', requirePermission('billing:view'), async (req, res) => {
         // === STRICT VALIDATION (Required for 270) ===
         const errors = [];
 
-        if (!payerId) errors.push("Payer ID required");
-        if (!memberId) errors.push("Member ID required");
+        // Debug log
+        console.log('[Eligibility] Verify Request:', { patientId, payerId, memberId, subscriberFirstName, subscriberLastName });
 
-        // Fetch patient data if patientId provided
-        let dob = req.body.dob;
+        // Let the client know what's missing, but be helpful with defaults in non-prod
+        let actualPayerId = payerId;
+        if (!actualPayerId || actualPayerId === 'UNKNOWN') {
+            const isProd = process.env.NODE_ENV === 'production' && process.env.CLEARINGHOUSE_MODE !== 'sandbox';
+            if (!isProd) {
+                actualPayerId = '61033'; // Generic Sandbox Payer (Medicare)
+            } else {
+                errors.push("Payer ID required");
+            }
+        }
+
+        const patientEncryptionService = require('../services/patientEncryptionService');
+
+        let actualMemberId = memberId;
+        let actualDob = req.body.dob;
         let firstName = subscriberFirstName;
         let lastName = subscriberLastName;
 
         if (patientId) {
             const patRes = await pool.query(
-                'SELECT date_of_birth, first_name, last_name FROM patients WHERE id = $1',
+                'SELECT date_of_birth, dob, first_name, last_name, insurance_id, insurance_member_id, encryption_metadata FROM patients WHERE id = $1',
                 [patientId]
             );
             if (patRes.rows.length > 0) {
-                const pat = patRes.rows[0];
-                dob = dob || pat.date_of_birth;
+                // Decrypt PHI (names, IDs)
+                const pat = await patientEncryptionService.decryptPatientPHI(patRes.rows[0]);
+
+                actualDob = actualDob || pat.date_of_birth || pat.dob;
                 firstName = firstName || pat.first_name;
                 lastName = lastName || pat.last_name;
+                if (!actualMemberId) {
+                    actualMemberId = pat.insurance_id || pat.insurance_member_id;
+                }
             }
         }
 
-        if (!dob) errors.push("Date of birth required for eligibility check");
+        if (!actualMemberId) errors.push("Member ID required");
+        if (!actualDob) errors.push("Date of birth required for eligibility check");
         if (!firstName || !lastName) errors.push("Subscriber name required for eligibility check");
 
         if (errors.length > 0) {
+            console.warn('[Eligibility] Validation Failed:', errors);
             return res.status(400).json({
                 error: "Missing required fields for eligibility check",
                 missing: errors
@@ -67,14 +87,14 @@ router.post('/verify', requirePermission('billing:view'), async (req, res) => {
         }
 
         // Format DOB if needed
-        const formattedDob = typeof dob === 'string' ? dob :
-            (dob instanceof Date ? dob.toISOString().split('T')[0] : null);
+        const formattedDob = typeof actualDob === 'string' ? actualDob :
+            (actualDob instanceof Date ? actualDob.toISOString().split('T')[0] : null);
 
         // === SEND REQUEST ===
         const result = await clearinghouse.verifyEligibility({
             tenantId: req.user.tenant_id || 'default',
-            payerId,
-            memberId,
+            payerId: actualPayerId,
+            memberId: actualMemberId,
             groupNumber,
             npi: npi || process.env.CLINIC_NPI,
             dob: formattedDob,
