@@ -582,33 +582,6 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                     {patient.insurance_subscriber_name && <div>Sub: {patient.insurance_subscriber_name}</div>}
                                 </div>
                             )}
-                            <button
-                                onClick={async (e) => {
-                                    e.stopPropagation();
-                                    try {
-                                        // Use new eligibility endpoint with required fields
-                                        const { data } = await api.post('/eligibility/verify', {
-                                            patientId: patient.id,
-                                            payerId: patient.insurance_payer_id || 'UNKNOWN',
-                                            memberId: patient.insurance_id || '',
-                                            groupNumber: patient.insurance_group_number || '',
-                                            // DOB and name will be fetched from patient on backend
-                                        });
-
-                                        if (data.isDemo) {
-                                            alert(`⚠️ Demo Mode\n\nStatus: ${data.status}\nPlan: ${data.planName}\nCopay: $${data.coverage?.copay}\nDeductible: $${data.coverage?.deductible}\n\n${data.warning || ''}`);
-                                        } else {
-                                            alert(`✅ Eligibility Verified\n\nStatus: ${data.status}\nPayer: ${data.payer}\nPlan: ${data.planName}\nCopay: $${data.coverage?.copay}\nDeductible Remaining: $${data.coverage?.deductibleRemaining}`);
-                                        }
-                                    } catch (err) {
-                                        const errMsg = err.response?.data?.error || err.response?.data?.missing?.join(', ') || 'Verification Failed';
-                                        alert(`❌ Eligibility Check Failed\n\n${errMsg}`);
-                                    }
-                                }}
-                                className="mt-2 text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-200 hover:bg-blue-100 block w-full text-center"
-                            >
-                                Verify Eligibility
-                            </button>
                         </InfoItem>
                     </div>
                     {/* Pharmacy */}
