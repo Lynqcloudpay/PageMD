@@ -39,11 +39,11 @@ const resolveTenant = async (req, res, next) => {
     }
 
     // B. Recognition by Email (specifically for Login)
-    // If it's a login attempt and we don't have a slug, try to find the clinic by email
+    // CRITICAL: For login, we MUST check the email lookup even if a slug was provided in headers (which might be stale/incorrect)
     const isLogin = req.path === '/auth/login' || req.path === '/api/auth/login';
     const isPortalLogin = req.path === '/portal/auth/login' || req.path === '/api/portal/auth/login';
 
-    if (!slug && isLogin && req.body && req.body.email) {
+    if (isLogin && req.body && req.body.email) {
         try {
             const lookup = await pool.controlPool.query(
                 'SELECT schema_name FROM platform_user_lookup WHERE email = $1',
@@ -51,11 +51,14 @@ const resolveTenant = async (req, res, next) => {
             );
             if (lookup.rows.length > 0) {
                 lookupSchema = lookup.rows[0].schema_name;
+                // If we found a schema by email, it OVERRIDES any header-provided slug during login
+                slug = null;
+                console.log(`[Tenant] User ${req.body.email} mapped to schema ${lookupSchema} via login lookup`);
             }
         } catch (e) {
             console.error('[Tenant] Staff Lookup failed:', e);
         }
-    } else if (!slug && isPortalLogin && req.body && req.body.email) {
+    } else if (isPortalLogin && req.body && req.body.email) {
         try {
             const lookup = await pool.controlPool.query(
                 'SELECT schema_name FROM platform_patient_lookup WHERE email = $1',
