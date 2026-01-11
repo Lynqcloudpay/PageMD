@@ -167,7 +167,7 @@ const Layout = ({ children }) => {
             ] : [])
         ] : []),
         { path: '/cancellations', icon: AlertCircle, label: 'Cancellations', badge: pendingCancellationsCount > 0 ? pendingCancellationsCount : null },
-        { path: '/tasks?filter=portal_appointment', icon: CalendarPlus, label: 'Appt Requests', badge: appointmentRequestsCount > 0 ? appointmentRequestsCount : null, badgeColor: 'amber' },
+        { path: '/appointment-requests', icon: CalendarPlus, label: 'Appt Requests', badge: appointmentRequestsCount > 0 ? appointmentRequestsCount : null, badgeColor: 'amber' },
         // Patients - requires patients:view_list permission
         ...(canViewPatients ? [
             { path: '/patients', icon: Users, label: 'Patients', badge: null },

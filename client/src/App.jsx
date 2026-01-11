@@ -40,6 +40,7 @@ const ClaimViewer = React.lazy(() => import('./pages/ClaimViewer'));
 const AdminSettings = React.lazy(() => import('./pages/AdminSettings'));
 const UserManagement = React.lazy(() => import('./pages/UserManagement'));
 const Cancellations = React.lazy(() => import('./pages/Cancellations'));
+const AppointmentRequests = React.lazy(() => import('./pages/AppointmentRequests'));
 const Profile = React.lazy(() => import('./pages/Profile'));
 const FeeSheet = React.lazy(() => import('./pages/FeeSheet'));
 const Compliance = React.lazy(() => import('./pages/Compliance'));
@@ -298,6 +299,13 @@ function App() {
                                                         <ProtectedRoute>
                                                             <ErrorBoundary>
                                                                 <Layout><Cancellations /></Layout>
+                                                            </ErrorBoundary>
+                                                        </ProtectedRoute>
+                                                    } />
+                                                    <Route path="/appointment-requests" element={
+                                                        <ProtectedRoute>
+                                                            <ErrorBoundary>
+                                                                <Layout><AppointmentRequests /></Layout>
                                                             </ErrorBoundary>
                                                         </ProtectedRoute>
                                                     } />
