@@ -505,33 +505,36 @@ router.get('/:id/photo', requirePermission('patients:view_chart'), enforcePrivac
   try {
     const { id } = req.params;
 
-    // 1. Get photo URL from DB
-    const result = await pool.query('SELECT photo_url FROM patients WHERE id = $1', [id]);
+    // 1. Get photo info from DB
+    const result = await pool.query(
+      'SELECT photo_document_id, photo_url FROM patients WHERE id = $1',
+      [id]
+    );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Patient not found' });
     }
 
-    const photoUrl = result.rows[0].photo_url;
+    const { photo_document_id, photo_url } = result.rows[0];
 
-    if (!photoUrl) {
+    if (!photo_document_id && !photo_url) {
       return res.status(404).json({ error: 'No photo set' });
     }
 
-    // 2. Resolve file path
-    // photoUrl is like "/api/uploads/patient-photos/filename.jpg"
-    const filename = path.basename(photoUrl);
+    // If we have a photo_document_id, we should ideally redirect to the document file route
+    // to maintain consistency and single-responsibility for file serving.
+    if (photo_document_id) {
+      return res.redirect(`/api/documents/${photo_document_id}/file`);
+    }
+
+    // Fallback for legacy photo_url if photo_document_id is missing
+    const filename = path.basename(photo_url);
     const filepath = path.join(process.env.UPLOAD_DIR || './uploads', 'patient-photos', filename);
 
-    console.log(`[PHOTO-GET] Serving photo for patient ${id}: ${filepath}`);
-
-    // 3. Verify existence
     if (!fs.existsSync(filepath)) {
-      console.error(`[PHOTO-GET] File missing on disk: ${filepath}`);
       return res.status(404).json({ error: 'Photo file not found on server' });
     }
 
-    // 4. Serve file
     res.sendFile(path.resolve(filepath));
   } catch (error) {
     console.error('[PHOTO-GET] Error serving photo:', error);
@@ -749,7 +752,7 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
       'insurance_copay', 'insurance_effective_date', 'insurance_expiry_date', 'insurance_notes',
       'pharmacy_name', 'pharmacy_address', 'pharmacy_phone', 'pharmacy_npi', 'pharmacy_fax', 'pharmacy_preferred',
       'referral_source', 'smoking_status', 'alcohol_use', 'allergies_known', 'notes',
-      'primary_care_provider', 'photo_url', 'clinic_id', 'created_at', 'updated_at',
+      'primary_care_provider', 'photo_url', 'photo_document_id', 'clinic_id', 'created_at', 'updated_at',
       'deceased', 'deceased_date', 'clinic_id'
     ]);
 
@@ -898,7 +901,7 @@ router.put('/:id', requirePermission('patients:edit_demographics'), async (req, 
       'pharmacy_name', 'pharmacy_address', 'pharmacy_phone', 'pharmacy_npi', 'pharmacy_fax',
       'pharmacy_preferred',
       // Additional
-      'allergies_known', 'photo_url', 'notes', 'deceased', 'deceased_date',
+      'allergies_known', 'photo_url', 'photo_document_id', 'notes', 'deceased', 'deceased_date',
       'is_restricted', 'restriction_reason',
     ];
 
@@ -1532,22 +1535,41 @@ router.post('/:id/photo', requirePermission('patients:edit_demographics'), uploa
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // Construct photo URL (relative path that can be served statically)
-    const photoUrl = `/api/uploads/patient-photos/${req.file.filename}`;
+    // NEW LOGIC FOR OPTION A (Store as Document)
+    // 1. Insert into documents table
+    const docResult = await pool.query(
+      `INSERT INTO documents (
+        patient_id, uploader_id, doc_type, filename, file_path, mime_type, file_size
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+      [
+        id,
+        req.user.id,
+        'profile_photo',
+        req.file.originalname,
+        `/uploads/patient-photos/${req.file.filename}`,
+        req.file.mimetype,
+        req.file.size
+      ]
+    );
 
-    // Update patient record with photo URL
+    const docId = docResult.rows[0].id;
+    const photoUrl = `/api/documents/${docId}/file`;
+
+    // 2. Update patient record
     const result = await pool.query(
-      'UPDATE patients SET photo_url = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
-      [photoUrl, id]
+      'UPDATE patients SET photo_document_id = $1, photo_url = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *',
+      [docId, photoUrl, id]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Patient not found' });
     }
 
-    await logAudit(req.user.id, 'upload_patient_photo', 'patient', id, {}, req.ip);
+    await logAudit(req.user.id, 'upload_patient_photo', 'patient', id, { document_id: docId }, req.ip);
 
-    res.json({ photoUrl, patient: result.rows[0] });
+    // Decrypt for response
+    const decryptedPatient = await patientEncryptionService.decryptPatientPHI(result.rows[0]);
+    res.json({ photoUrl, patient: decryptedPatient });
   } catch (error) {
     console.error('Error uploading patient photo:', error);
     res.status(500).json({ error: 'Failed to upload patient photo' });
@@ -1567,43 +1589,93 @@ router.post('/:id/photo/base64', requirePermission('patients:edit_demographics')
     // Convert base64 to buffer
     const base64Data = photoData.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
-
-    // Determine file extension from data URL
     const match = photoData.match(/^data:image\/(\w+);base64,/);
     const extension = match ? match[1] : 'jpg';
+    const filename = `patient-${id}-${Date.now()}.${extension}`;
 
-    // Generate filename
-    const filename = `patient-${id}-${Date.now()}-${Math.round(Math.random() * 1E9)}.${extension}`;
-    // Ensure uploadDir exists and is correct
     const patientPhotosDir = path.join(process.env.UPLOAD_DIR || './uploads', 'patient-photos');
     if (!fs.existsSync(patientPhotosDir)) {
       fs.mkdirSync(patientPhotosDir, { recursive: true });
     }
     const filepath = path.join(patientPhotosDir, filename);
-
-    // Save file
     fs.writeFileSync(filepath, buffer);
-    console.log('Photo saved to:', filepath);
 
-    // Construct photo URL
-    const photoUrl = `/api/uploads/patient-photos/${filename}`;
+    // Store as Document
+    const docResult = await pool.query(
+      `INSERT INTO documents (
+        patient_id, uploader_id, doc_type, filename, file_path, mime_type, file_size
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+      [
+        id,
+        req.user.id,
+        'profile_photo',
+        `webcam_capture.${extension}`,
+        `/uploads/patient-photos/${filename}`,
+        match ? `image/${extension}` : 'image/jpeg',
+        buffer.length
+      ]
+    );
+
+    const docId = docResult.rows[0].id;
+    const photoUrl = `/api/documents/${docId}/file`;
 
     // Update patient record
     const result = await pool.query(
-      'UPDATE patients SET photo_url = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
-      [photoUrl, id]
+      'UPDATE patients SET photo_document_id = $1, photo_url = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *',
+      [docId, photoUrl, id]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Patient not found' });
     }
 
-    await logAudit(req.user.id, 'upload_patient_photo', 'patient', id, {}, req.ip);
+    await logAudit(req.user.id, 'upload_patient_photo_webcam', 'patient', id, { document_id: docId }, req.ip);
 
-    res.json({ photoUrl, patient: result.rows[0] });
+    const decryptedPatient = await patientEncryptionService.decryptPatientPHI(result.rows[0]);
+    res.json({ photoUrl, patient: decryptedPatient });
   } catch (error) {
-    console.error('Error uploading patient photo:', error);
-    res.status(500).json({ error: 'Failed to upload patient photo' });
+    console.error('Error uploading patient photo (base64):', error);
+    res.status(500).json({ error: 'Failed to save webcam photo' });
+  }
+});
+
+// Remove patient photo
+router.delete('/:id/photo', requirePermission('patients:edit_demographics'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 1. Get current photo document
+    const patientRes = await pool.query('SELECT photo_document_id FROM patients WHERE id = $1', [id]);
+    if (patientRes.rows.length === 0) return res.status(404).json({ error: 'Patient not found' });
+
+    const docId = patientRes.rows[0].photo_document_id;
+    if (docId) {
+      // Find file to delete
+      const docRes = await pool.query('SELECT file_path FROM documents WHERE id = $1', [docId]);
+      if (docRes.rows.length > 0) {
+        const filePath = docRes.rows[0].file_path;
+        const baseDir = process.env.UPLOAD_DIR || './uploads';
+        const fullPath = path.join(baseDir, 'patient-photos', path.basename(filePath));
+        if (fs.existsSync(fullPath)) {
+          fs.unlinkSync(fullPath);
+        }
+      }
+      // Delete document record
+      await pool.query('DELETE FROM documents WHERE id = $1', [docId]);
+    }
+
+    // 2. Clear patient pointers
+    await pool.query(
+      'UPDATE patients SET photo_document_id = NULL, photo_url = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+      [id]
+    );
+
+    await logAudit(req.user.id, 'remove_patient_photo', 'patient', id, {}, req.ip);
+
+    res.json({ success: true, message: 'Photo removed successfully' });
+  } catch (error) {
+    console.error('Error removing patient photo:', error);
+    res.status(500).json({ error: 'Failed to remove patient photo' });
   }
 });
 

@@ -1,8 +1,14 @@
 import React from 'react';
+import tokenManager from '../services/tokenManager';
 
 const PatientHeaderPhoto = ({ firstName, lastName, photoUrl, className = "w-16 h-16 text-xl", onClick }) => {
     // Generate initials
     const initials = `${firstName?.[0] || '?'}${lastName?.[0] || '?'}`.toUpperCase();
+
+    // Append token for authenticated image loading if it's an internal API URL
+    const authenticatedPhotoUrl = photoUrl && photoUrl.startsWith('/api/')
+        ? `${photoUrl}${photoUrl.includes('?') ? '&' : '?'}token=${tokenManager.getToken()}`
+        : photoUrl;
 
     // Choose a stable background color based on name hash (optional, using blue for now consistently)
     const bgColor = "bg-blue-100";
@@ -13,9 +19,9 @@ const PatientHeaderPhoto = ({ firstName, lastName, photoUrl, className = "w-16 h
             className={`rounded-full flex items-center justify-center font-bold overflow-hidden border-2 border-white ring-2 ring-gray-100 ${bgColor} ${textColor} ${className} ${onClick ? 'cursor-pointer hover:ring-blue-200' : ''}`}
             onClick={onClick}
         >
-            {photoUrl ? (
+            {authenticatedPhotoUrl ? (
                 <img
-                    src={photoUrl}
+                    src={authenticatedPhotoUrl}
                     alt={`${firstName} ${lastName}`}
                     className="w-full h-full object-cover"
                 />

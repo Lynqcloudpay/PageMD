@@ -12,8 +12,9 @@ import PatientHeaderPhoto from './PatientHeaderPhoto';
 import PortalInviteModal from './PortalInviteModal';
 import PatientFlagsManager from './PatientFlagsManager';
 import FlagAcknowledgmentModal from './FlagAcknowledgmentModal';
-import { patientFlagsAPI } from '../services/api';
+import { patientFlagsAPI, patientsAPI } from '../services/api';
 import { format } from 'date-fns';
+import PatientPhotoModal from './PatientPhotoModal';
 
 // Robust date formatter that ignores timezones completely
 
@@ -59,6 +60,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
     const [loading, setLoading] = useState(false);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     const [inviteData, setInviteData] = useState(null);
+    const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
 
     // Flags State
     const [flags, setFlags] = useState([]);
@@ -443,8 +445,16 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                             <PatientHeaderPhoto
                                 firstName={patient.first_name}
                                 lastName={patient.last_name}
-                                className="w-12 h-12 text-lg shadow-sm ring-2 ring-white"
+                                photoUrl={patient.photo_url}
+                                className="w-12 h-12 text-lg shadow-sm ring-2 ring-white cursor-pointer hover:ring-blue-100 transition-all"
+                                onClick={() => setIsPhotoModalOpen(true)}
                             />
+                            <button
+                                onClick={() => setIsPhotoModalOpen(true)}
+                                className="absolute -bottom-1 -right-1 p-1.5 bg-white text-slate-400 rounded-full shadow-md border border-slate-100 hover:text-blue-600 hover:border-blue-200 transition-all opacity-0 group-hover:opacity-100"
+                            >
+                                <Camera size={10} />
+                            </button>
                         </div>
 
                         {/* Name & Key Stats */}
@@ -637,6 +647,12 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
 
                 {/* Quick Actions Bar - Visible Everywhere */}
 
+                <PatientPhotoModal
+                    isOpen={isPhotoModalOpen}
+                    onClose={() => setIsPhotoModalOpen(false)}
+                    patient={patient}
+                    onUpdate={onUpdate}
+                />
             </div>
         </div>
     );

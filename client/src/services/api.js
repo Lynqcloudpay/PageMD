@@ -120,6 +120,7 @@ export const patientsAPI = {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
   uploadPhotoBase64: (patientId, photoData) => api.post(`/patients/${patientId}/photo/base64`, { photoData }),
+  removePhoto: (id) => api.delete(`/patients/${id}/photo`),
 };
 
 // Visits
