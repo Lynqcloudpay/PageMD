@@ -101,17 +101,26 @@ router.get('/patient/:patientId', authenticate, async (req, res) => {
         const { patientId } = req.params;
         const clinicId = req.user.clinic_id || req.user.clinicId;
 
+        // Use COALESCE to prioritize custom_label over flag_type label if needed,
+        // or just return both and let the frontend decide.
         const result = await pool.query(
-            `SELECT pf.*, ft.label, ft.category, ft.severity, ft.color, ft.requires_acknowledgment,
+            `SELECT pf.*, 
+                    COALESCE(ft.label, pf.custom_label) as display_label,
+                    COALESCE(ft.category, 'admin') as category, 
+                    COALESCE(ft.severity, pf.custom_severity, 'info') as display_severity, 
+                    COALESCE(ft.color, pf.custom_color) as display_color,
+                    COALESCE(ft.requires_acknowledgment, false) as requires_acknowledgment,
                     u.first_name as created_by_first, u.last_name as created_by_last,
                     ru.first_name as resolved_by_first, ru.last_name as resolved_by_last,
                     (SELECT COUNT(*) FROM patient_flag_acknowledgments pfa WHERE pfa.patient_flag_id = pf.id AND pfa.user_id = $3) > 0 as current_user_acknowledged
              FROM patient_flags pf
-             JOIN flag_types ft ON pf.flag_type_id = ft.id
+             LEFT JOIN flag_types ft ON pf.flag_type_id = ft.id
              LEFT JOIN users u ON pf.created_by_user_id = u.id
              LEFT JOIN users ru ON pf.resolved_by_user_id = ru.id
              WHERE pf.patient_id = $1 AND pf.clinic_id = $2
-             ORDER BY pf.status = 'active' DESC, ft.severity = 'critical' DESC, pf.created_at DESC`,
+             ORDER BY pf.status = 'active' DESC, 
+                      severity = 'critical' DESC, 
+                      pf.created_at DESC`,
             [patientId, clinicId, req.user.id]
         );
 
@@ -134,13 +143,21 @@ router.post('/patient/:patientId', authenticate, requirePermission('patient_flag
     try {
         const { patientId } = req.params;
         const clinicId = req.user.clinic_id || req.user.clinicId;
-        const { flag_type_id, note, expires_at } = req.body;
+        const { flag_type_id, note, expires_at, custom_label, custom_severity, custom_color } = req.body;
 
         const result = await pool.query(
-            `INSERT INTO patient_flags (clinic_id, patient_id, flag_type_id, note, expires_at, created_by_user_id)
-             VALUES ($1, $2, $3, $4, $5, $6)
+            `INSERT INTO patient_flags (
+                clinic_id, patient_id, flag_type_id, 
+                note, expires_at, created_by_user_id,
+                custom_label, custom_severity, custom_color
+            )
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
              RETURNING *`,
-            [clinicId, patientId, flag_type_id, note, expires_at || null, req.user.id]
+            [
+                clinicId, patientId, flag_type_id || null,
+                note, expires_at || null, req.user.id,
+                custom_label, custom_severity || 'info', custom_color
+            ]
         );
 
         // Standardized HIPAA Audit log
@@ -149,7 +166,11 @@ router.post('/patient/:patientId', authenticate, requirePermission('patient_flag
             'flag.created',
             'patient',
             patientId,
-            { flag_id: result.rows[0].id, flag_type_id },
+            {
+                flag_id: result.rows[0].id,
+                flag_type_id,
+                custom_label: custom_label ? true : false
+            },
             req.ip,
             req.get('user-agent')
         );

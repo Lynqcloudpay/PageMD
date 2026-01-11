@@ -13,6 +13,8 @@ const PatientFlagsManager = ({ patientId, onClose, onUpdate }) => {
     const [adding, setAdding] = useState(false);
     const [newFlag, setNewFlag] = useState({
         flag_type_id: '',
+        custom_label: '',
+        custom_severity: 'info',
         note: '',
         expires_at: ''
     });
@@ -42,7 +44,13 @@ const PatientFlagsManager = ({ patientId, onClose, onUpdate }) => {
         try {
             await patientFlagsAPI.create(patientId, newFlag);
             setAdding(false);
-            setNewFlag({ flag_type_id: '', note: '', expires_at: '' });
+            setNewFlag({
+                flag_type_id: '',
+                custom_label: '',
+                custom_severity: 'info',
+                note: '',
+                expires_at: ''
+            });
             fetchData();
             onUpdate?.();
         } catch (err) {
@@ -134,8 +142,46 @@ const PatientFlagsManager = ({ patientId, onClose, onUpdate }) => {
                                             {types.map(t => (
                                                 <option key={t.id} value={t.id}>{t.label} ({t.severity.toUpperCase()})</option>
                                             ))}
+                                            <option value="other">Other / Custom Flag...</option>
                                         </select>
                                     </div>
+
+                                    {newFlag.flag_type_id === 'other' && (
+                                        <div className="space-y-3 animate-in fade-in slide-in-from-left-2 duration-300">
+                                            <div>
+                                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Custom Label</label>
+                                                <input
+                                                    type="text"
+                                                    required
+                                                    autoFocus
+                                                    placeholder="Enter custom flag name..."
+                                                    className="w-full text-sm border-slate-200 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                                    value={newFlag.custom_label}
+                                                    onChange={(e) => setNewFlag({ ...newFlag, custom_label: e.target.value })}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Severity</label>
+                                                <div className="flex gap-2">
+                                                    {['info', 'warn', 'critical'].map(sev => (
+                                                        <button
+                                                            key={sev}
+                                                            type="button"
+                                                            onClick={() => setNewFlag({ ...newFlag, custom_severity: sev })}
+                                                            className={`flex-1 py-1.5 rounded-lg border text-[10px] font-black uppercase transition-all ${newFlag.custom_severity === sev
+                                                                ? (sev === 'critical' ? 'bg-red-600 border-red-600 text-white' :
+                                                                    sev === 'warn' ? 'bg-orange-500 border-orange-500 text-white' :
+                                                                        'bg-blue-600 border-blue-600 text-white')
+                                                                : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'}`}
+                                                        >
+                                                            {sev}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div>
                                         <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Notes (Optional)</label>
                                         <textarea
@@ -151,13 +197,13 @@ const PatientFlagsManager = ({ patientId, onClose, onUpdate }) => {
                                             <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Expires (Optional)</label>
                                             <input
                                                 type="date"
-                                                className="w-full text-sm border-slate-200 rounded-lg"
+                                                className="w-full text-sm border-slate-200 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                                                 value={newFlag.expires_at}
                                                 onChange={(e) => setNewFlag({ ...newFlag, expires_at: e.target.value })}
                                             />
                                         </div>
                                         <div className="flex items-end">
-                                            <button type="submit" className="w-full py-2 bg-blue-600 text-white rounded-lg font-black text-xs uppercase hover:bg-blue-700 transition-all">
+                                            <button type="submit" className="w-full py-2 bg-blue-600 text-white rounded-lg font-black text-xs uppercase hover:bg-blue-700 transition-all shadow-md active:scale-95">
                                                 Create Flag
                                             </button>
                                         </div>
@@ -177,12 +223,12 @@ const PatientFlagsManager = ({ patientId, onClose, onUpdate }) => {
                                 flags.map(flag => (
                                     <div
                                         key={flag.id}
-                                        className={`p-3 border rounded-xl relative transition-all ${flag.status === 'active' ? getSeverityStyles(flag.severity) : 'bg-slate-50 border-slate-200 grayscale opacity-60'}`}
+                                        className={`p-3 border rounded-xl relative transition-all ${flag.status === 'active' ? getSeverityStyles(flag.display_severity) : 'bg-slate-50 border-slate-200 grayscale opacity-60'}`}
                                     >
                                         <div className="flex justify-between items-start mb-1">
                                             <div className="flex items-center gap-1.5">
-                                                {getIcon(flag.severity)}
-                                                <span className="text-[11px] font-black uppercase tracking-tight">{flag.label}</span>
+                                                {getIcon(flag.display_severity)}
+                                                <span className="text-[11px] font-black uppercase tracking-tight">{flag.display_label}</span>
                                                 {flag.status === 'active' && (
                                                     <span className="text-[8px] px-1 py-0.5 bg-white/50 rounded font-black text-slate-600 uppercase">Active</span>
                                                 )}
@@ -211,12 +257,12 @@ const PatientFlagsManager = ({ patientId, onClose, onUpdate }) => {
                                                 {flag.created_by_first && ` by ${flag.created_by_first} ${flag.created_by_last[0]}.`}
                                             </div>
                                             {flag.status === 'resolved' && (
-                                                <div className="text-green-600">
+                                                <div className="text-green-600 font-black">
                                                     Resolved {format(new Date(flag.resolved_at), 'MMM d')}
                                                 </div>
                                             )}
                                             {flag.expires_at && flag.status === 'active' && (
-                                                <div className="text-orange-600">
+                                                <div className="text-orange-600 font-black">
                                                     Exp: {format(new Date(flag.expires_at), 'MMM d')}
                                                 </div>
                                             )}

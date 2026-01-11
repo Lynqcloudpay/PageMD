@@ -1405,35 +1405,35 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             {activeFlags.map(flag => (
                                 <div
                                     key={flag.id}
-                                    className={`flex-1 min-w-[300px] p-4 rounded-xl border-l-8 shadow-sm relative group animate-in slide-in-from-top duration-300 ${flag.severity === 'critical' ? 'bg-red-50 border-red-500' :
-                                        flag.severity === 'warn' ? 'bg-orange-50 border-orange-500' :
+                                    className={`flex-1 min-w-[300px] p-4 rounded-xl border-l-8 shadow-sm relative group animate-in slide-in-from-top duration-300 ${flag.display_severity === 'critical' ? 'bg-red-50 border-red-500' :
+                                        flag.display_severity === 'warn' ? 'bg-orange-50 border-orange-500' :
                                             'bg-blue-50 border-blue-500'
                                         }`}
                                 >
                                     <div className="flex items-start gap-4">
-                                        <div className={`p-2 rounded-lg ${flag.severity === 'critical' ? 'bg-red-100 text-red-600' :
-                                            flag.severity === 'warn' ? 'bg-orange-100 text-orange-600' :
+                                        <div className={`p-2 rounded-lg ${flag.display_severity === 'critical' ? 'bg-red-100 text-red-600' :
+                                            flag.display_severity === 'warn' ? 'bg-orange-100 text-orange-600' :
                                                 'bg-blue-100 text-blue-600'
                                             }`}>
-                                            {flag.severity === 'critical' ? <ShieldAlert size={20} /> :
-                                                flag.severity === 'warn' ? <AlertTriangle size={20} /> :
+                                            {flag.display_severity === 'critical' ? <ShieldAlert size={20} /> :
+                                                flag.display_severity === 'warn' ? <AlertTriangle size={20} /> :
                                                     <Shield size={20} />}
                                         </div>
                                         <div className="flex-1">
                                             <div className="flex items-center justify-between mb-1">
-                                                <h3 className={`text-sm font-black uppercase tracking-wider ${flag.severity === 'critical' ? 'text-red-900' :
-                                                    flag.severity === 'warn' ? 'text-orange-900' :
+                                                <h3 className={`text-sm font-black uppercase tracking-wider ${flag.display_severity === 'critical' ? 'text-red-900' :
+                                                    flag.display_severity === 'warn' ? 'text-orange-900' :
                                                         'text-blue-900'
                                                     }`}>
-                                                    {flag.label}
+                                                    {flag.display_label}
                                                 </h3>
                                                 <span className="text-[10px] font-bold text-gray-400">
                                                     {new Date(flag.created_at).toLocaleDateString()}
                                                 </span>
                                             </div>
                                             {flag.note && (
-                                                <p className={`text-sm font-medium leading-normal ${flag.severity === 'critical' ? 'text-red-800' :
-                                                    flag.severity === 'warn' ? 'text-orange-800' :
+                                                <p className={`text-sm font-medium leading-normal ${flag.display_severity === 'critical' ? 'text-red-800' :
+                                                    flag.display_severity === 'warn' ? 'text-orange-800' :
                                                         'text-blue-800'
                                                     }`}>
                                                     {flag.note}
