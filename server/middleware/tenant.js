@@ -32,12 +32,9 @@ const resolveTenant = async (req, res, next) => {
             const decoded = jwt.decode(token); // Just peek, verification happens later in auth middleware
             if (decoded && decoded.clinicSlug) {
                 slug = decoded.clinicSlug;
-                console.log(`[Tenant] Extracted slug '${slug}' from token for path: ${req.path}`);
-            } else {
-                console.log(`[Tenant] Token found but no clinicSlug in it for path: ${req.path}`);
             }
         } catch (e) {
-            console.error('[Tenant] Failed to decode token:', e.message);
+            // Ignore decoding errors here
         }
     }
 

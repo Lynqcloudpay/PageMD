@@ -67,14 +67,6 @@ app.use(cors({
 }));
 
 
-// Debug Logger
-app.use((req, res, next) => {
-  if (req.path.includes('/documents') || req.path.includes('/photo')) {
-    console.log(`[DEBUG-REQS] ${req.method} ${req.path} - Token in Query: ${!!req.query.token}, Auth Header: ${!!req.headers.authorization}`);
-  }
-  next();
-});
-
 // Health check - must be before HTTPS enforcement to allow internal health checks
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

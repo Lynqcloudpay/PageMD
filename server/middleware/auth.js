@@ -16,9 +16,6 @@ const authenticate = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (req.query.token) {
-      console.log(`[AUTH] Verified token from query string for user: ${decoded.userId}`);
-    }
 
     // Get user with role information and admin privileges
     const result = await pool.query(`
