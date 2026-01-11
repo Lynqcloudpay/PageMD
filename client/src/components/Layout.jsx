@@ -5,7 +5,7 @@ import {
     Clock, History, User, ClipboardList, BarChart3,
     MessageSquare, Video, Moon, Sun, Menu, ChevronRight, Bell,
     Zap, Command, DollarSign, Shield, Shield as ShieldCheck, AlertCircle, HelpCircle, Inbox, ShieldAlert,
-    AlertTriangle
+    AlertTriangle, CalendarPlus
 } from 'lucide-react';
 import { usePatient } from '../context/PatientContext';
 import { useAuth } from '../context/AuthContext';
@@ -37,6 +37,7 @@ const Layout = ({ children }) => {
     const [pendingIntakeCount, setPendingIntakeCount] = useState(0);
     const [inboxCount, setInboxCount] = useState(0);
     const [privacyAlertsCount, setPrivacyAlertsCount] = useState(0);
+    const [appointmentRequestsCount, setAppointmentRequestsCount] = useState(0);
 
     const isActive = (path) => {
         return location.pathname.startsWith(path);
@@ -107,6 +108,16 @@ const Layout = ({ children }) => {
             }
         };
 
+        // Fetch pending appointment requests count
+        const fetchAppointmentRequestsCount = async () => {
+            try {
+                const response = await inboxAPI.getAll({ status: 'new', type: 'portal_appointment' });
+                setAppointmentRequestsCount(response.data?.length || 0);
+            } catch (error) {
+                console.error('Error fetching appointment requests count:', error);
+            }
+        };
+
         // Initial fetch
 
         fetchPendingNotesCount();
@@ -114,6 +125,7 @@ const Layout = ({ children }) => {
         fetchInboxCount();
         fetchPendingIntakeCount();
         fetchPrivacyAlertsCount();
+        fetchAppointmentRequestsCount();
 
         // Refresh counts periodically (every 30 seconds)
         const interval = setInterval(() => {
@@ -123,6 +135,7 @@ const Layout = ({ children }) => {
             fetchInboxCount();
             fetchPendingIntakeCount();
             fetchPrivacyAlertsCount();
+            fetchAppointmentRequestsCount();
         }, 30000);
 
         return () => clearInterval(interval);
@@ -154,6 +167,7 @@ const Layout = ({ children }) => {
             ] : [])
         ] : []),
         { path: '/cancellations', icon: AlertCircle, label: 'Cancellations', badge: pendingCancellationsCount > 0 ? pendingCancellationsCount : null },
+        { path: '/tasks?filter=portal_appointment', icon: CalendarPlus, label: 'Appt Requests', badge: appointmentRequestsCount > 0 ? appointmentRequestsCount : null, badgeColor: 'amber' },
         // Patients - requires patients:view_list permission
         ...(canViewPatients ? [
             { path: '/patients', icon: Users, label: 'Patients', badge: null },

@@ -158,10 +158,20 @@ const Inbasket = () => {
         return () => clearInterval(poll);
     }, [fetchData]);
 
-    // Handle initial selection from URL query param (?id=...)
+    // Handle initial selection from URL query param (?id=... or ?filter=...)
     useEffect(() => {
         const searchParams = new URLSearchParams(location.search);
         const itemId = searchParams.get('id');
+        const filterType = searchParams.get('filter');
+
+        // Pre-select category based on filter param
+        if (filterType === 'portal_appointment') {
+            // Find the category that includes portal_appointment type
+            // Since portal_appointment isn't in the standard categories, we'll use 'all' 
+            // and add a type filter
+            setSelectedCategory('all');
+            setSearchQuery('Portal Appt'); // This will filter to appointment requests
+        }
 
         if (itemId && items.length > 0) {
             const item = items.find(i => String(i.id) === String(itemId));
