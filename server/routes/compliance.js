@@ -192,10 +192,11 @@ router.get('/reports/restricted-patients', async (req, res) => {
 
         const query = `
             SELECT id, first_name, last_name, mrn, dob, sex, 
-                   COALESCE(restricted_status, 'normal') as status,
-                   created_at
+                   is_restricted,
+                   restricted_at,
+                   restriction_reason
             FROM patients 
-            WHERE clinic_id = $1 AND restricted_status = 'restricted'
+            WHERE clinic_id = $1 AND is_restricted = true
             ORDER BY last_name, first_name
         `;
 
