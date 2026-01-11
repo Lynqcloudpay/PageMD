@@ -145,6 +145,9 @@ router.post('/patient/:patientId', authenticate, requirePermission('patient_flag
         const clinicId = req.user.clinic_id || req.user.clinicId;
         const { flag_type_id, note, expires_at, custom_label, custom_severity, custom_color } = req.body;
 
+        // Handle 'other' from dropdown which isn't a valid UUID
+        const actualFlagTypeId = (flag_type_id === 'other' || !flag_type_id) ? null : flag_type_id;
+
         const result = await pool.query(
             `INSERT INTO patient_flags (
                 clinic_id, patient_id, flag_type_id, 
@@ -154,7 +157,7 @@ router.post('/patient/:patientId', authenticate, requirePermission('patient_flag
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
              RETURNING *`,
             [
-                clinicId, patientId, flag_type_id || null,
+                clinicId, patientId, actualFlagTypeId,
                 note, expires_at || null, req.user.id,
                 custom_label, custom_severity || 'info', custom_color
             ]
