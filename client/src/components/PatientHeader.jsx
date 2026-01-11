@@ -446,14 +446,14 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                 firstName={patient.first_name}
                                 lastName={patient.last_name}
                                 photoUrl={patient.photo_url}
-                                className="w-12 h-12 text-lg shadow-sm ring-2 ring-white cursor-pointer hover:ring-blue-100 transition-all"
+                                className="w-20 h-20 text-2xl shadow-md ring-2 ring-white cursor-pointer hover:ring-blue-100 transition-all"
                                 onClick={() => setIsPhotoModalOpen(true)}
                             />
                             <button
                                 onClick={() => setIsPhotoModalOpen(true)}
-                                className="absolute -bottom-1 -right-1 p-1.5 bg-white text-slate-400 rounded-full shadow-md border border-slate-100 hover:text-blue-600 hover:border-blue-200 transition-all opacity-0 group-hover:opacity-100"
+                                className="absolute -bottom-1 -right-1 p-2 bg-white text-slate-500 rounded-full shadow-lg border border-slate-100 hover:text-blue-600 hover:border-blue-200 transition-all opacity-0 group-hover:opacity-100"
                             >
-                                <Camera size={10} />
+                                <Camera size={14} />
                             </button>
                         </div>
 

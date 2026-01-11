@@ -1,7 +1,7 @@
 import React from 'react';
 import tokenManager from '../services/tokenManager';
 
-const PatientHeaderPhoto = ({ firstName, lastName, photoUrl, className = "w-16 h-16 text-xl", onClick }) => {
+const PatientHeaderPhoto = ({ firstName, lastName, photoUrl, className = "w-20 h-20 text-2xl", onClick }) => {
     // Generate initials
     const initials = `${firstName?.[0] || '?'}${lastName?.[0] || '?'}`.toUpperCase();
 
@@ -11,12 +11,12 @@ const PatientHeaderPhoto = ({ firstName, lastName, photoUrl, className = "w-16 h
         : photoUrl;
 
     // Choose a stable background color based on name hash (optional, using blue for now consistently)
-    const bgColor = "bg-blue-100";
+    const bgColor = "bg-blue-50";
     const textColor = "text-blue-600";
 
     return (
         <div
-            className={`rounded-full flex items-center justify-center font-bold overflow-hidden border-2 border-white ring-2 ring-gray-100 ${bgColor} ${textColor} ${className} ${onClick ? 'cursor-pointer hover:ring-blue-200' : ''}`}
+            className={`rounded-xl flex items-center justify-center font-black overflow-hidden border-2 border-white shadow-sm ring-1 ring-slate-200 ${bgColor} ${textColor} ${className} ${onClick ? 'cursor-pointer hover:ring-blue-400 hover:shadow-md transition-all' : ''}`}
             onClick={onClick}
         >
             {authenticatedPhotoUrl ? (

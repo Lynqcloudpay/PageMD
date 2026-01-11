@@ -164,9 +164,9 @@ router.get('/:id/file', requirePermission('patients:view_chart'), async (req, re
     // 3. Legacy filesystem path: ./uploads/filename
     let actualPath;
     if (doc.file_path.startsWith('/uploads/') || doc.file_path.startsWith('/api/uploads/')) {
-      // URL path format - extract filename and construct filesystem path
-      const filename = path.basename(doc.file_path);
-      actualPath = path.join(uploadDir, filename);
+      // URL path format - preserve subdirectory structure relative to uploads folder
+      const relativePath = doc.file_path.replace(/^\/api/, '').replace(/^\/uploads\//, '');
+      actualPath = path.join(uploadDir, relativePath);
     } else {
       // Legacy filesystem path
       actualPath = doc.file_path;

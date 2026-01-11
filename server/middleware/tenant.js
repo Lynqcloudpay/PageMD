@@ -20,9 +20,15 @@ const resolveTenant = async (req, res, next) => {
 
     // A. Recognition by JWT Token (for already authenticated users)
     const authHeader = req.headers.authorization;
-    if (!slug && authHeader && authHeader.startsWith('Bearer ')) {
+    let token = null;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+    } else if (req.query.token) {
+        token = req.query.token;
+    }
+
+    if (!slug && token) {
         try {
-            const token = authHeader.split(' ')[1];
             const decoded = jwt.decode(token); // Just peek, verification happens later in auth middleware
             if (decoded && decoded.clinicSlug) {
                 slug = decoded.clinicSlug;
