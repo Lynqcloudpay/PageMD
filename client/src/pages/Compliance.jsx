@@ -842,7 +842,6 @@ const Compliance = () => {
                                 )}
                         </div>
                     )}
-                    )}
                 </div>
             </div >
 
