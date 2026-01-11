@@ -1,7 +1,7 @@
 import React from 'react';
 import tokenManager from '../services/tokenManager';
 
-const PatientHeaderPhoto = ({ firstName, lastName, photoUrl, className = "w-20 h-20 text-2xl", onClick }) => {
+const PatientHeaderPhoto = ({ firstName, lastName, photoUrl, className = "w-24 h-24 text-3xl", onClick }) => {
     // Generate initials
     const initials = `${firstName?.[0] || '?'}${lastName?.[0] || '?'}`.toUpperCase();
 
@@ -16,7 +16,7 @@ const PatientHeaderPhoto = ({ firstName, lastName, photoUrl, className = "w-20 h
 
     return (
         <div
-            className={`rounded-xl flex items-center justify-center font-black overflow-hidden border-2 border-white shadow-sm ring-1 ring-slate-200 ${bgColor} ${textColor} ${className} ${onClick ? 'cursor-pointer hover:ring-blue-400 hover:shadow-md transition-all' : ''}`}
+            className={`rounded-full flex items-center justify-center font-black overflow-hidden border-2 border-white shadow-sm ring-1 ring-slate-200 ${bgColor} ${textColor} ${className} ${onClick ? 'cursor-pointer hover:ring-blue-400 hover:shadow-md transition-all' : ''}`}
             onClick={onClick}
         >
             {authenticatedPhotoUrl ? (

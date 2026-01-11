@@ -446,12 +446,12 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                 firstName={patient.first_name}
                                 lastName={patient.last_name}
                                 photoUrl={patient.photo_url}
-                                className="w-20 h-20 text-2xl shadow-md ring-2 ring-white cursor-pointer hover:ring-blue-100 transition-all"
+                                className="w-24 h-24 text-3xl shadow-md ring-2 ring-white cursor-pointer hover:ring-blue-100 transition-all"
                                 onClick={() => setIsPhotoModalOpen(true)}
                             />
                             <button
                                 onClick={() => setIsPhotoModalOpen(true)}
-                                className="absolute -bottom-1 -right-1 p-2 bg-white text-slate-500 rounded-full shadow-lg border border-slate-100 hover:text-blue-600 hover:border-blue-200 transition-all opacity-0 group-hover:opacity-100"
+                                className="absolute bottom-1 right-1 p-2 bg-white text-slate-500 rounded-full shadow-lg border border-slate-100 hover:text-blue-600 hover:border-blue-200 transition-all opacity-0 group-hover:opacity-100"
                             >
                                 <Camera size={14} />
                             </button>
@@ -543,14 +543,6 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                             patient={patient}
                             inviteData={inviteData}
                         />
-                        <button
-                            onClick={() => navigate(`/patient/${patient?.id || id}/snapshot?tab=billing`)}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 shadow-sm transition-all flex items-center gap-2"
-                            title="Billing & Superbills"
-                        >
-                            <Receipt size={16} />
-                            Superbill
-                        </button>
                         <button
                             onClick={handleOpenChart}
                             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm transition-all hover:shadow flex items-center gap-2"
