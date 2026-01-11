@@ -604,7 +604,7 @@ const Compliance = () => {
                                     <button
                                         onClick={() => {
                                             const headers = ['First Name', 'Last Name', 'MRN', 'DOB', 'Restricted Since'];
-                                            const rows = restrictedPatients.map(p => [p.first_name, p.last_name, p.mrn, p.dob, p.created_at]);
+                                            const rows = restrictedPatients.map(p => [p.first_name, p.last_name, p.mrn, p.dob, p.restricted_at]);
                                             const csv = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(r => r.join(','))].join("\n");
                                             const link = document.createElement("a");
                                             link.setAttribute("href", encodeURI(csv));
@@ -677,250 +677,248 @@ const Compliance = () => {
                             )}
                         </div>
                     ) : (
-                    ): (
-                            <div className = "p-12">
+                        <div className="p-12">
                             {
-                                reportView?(
-                                <div className = "space-y-6" >
-                                    <div className="flex justify-between items-center mb-6">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center">
-                                                <FileText className="text-blue-600" />
+                                reportView ? (
+                                    <div className="space-y-6" >
+                                        <div className="flex justify-between items-center mb-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center">
+                                                    <FileText className="text-blue-600" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">
+                                                        {reportView === 'patient' ? 'Patient Access Report' :
+                                                            reportView === 'user' ? 'User Access Report' :
+                                                                reportView === 'break-glass' ? 'Break-Glass Summary' : 'Compliance Report'}
+                                                    </h3>
+                                                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Interactive Audit Visualization</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">
-                                                    {reportView === 'patient' ? 'Patient Access Report' : 
-                                                     reportView === 'user' ? 'User Access Report' : 
-                                                     reportView === 'break-glass' ? 'Break-Glass Summary' : 'Compliance Report'}
-                                                </h3>
-                                                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Interactive Audit Visualization</p>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => downloadCSV(data, `report_${reportView}_${format(new Date(), 'yyyyMMdd')}`)}
+                                                    className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-200"
+                                                >
+                                                    <Download size={14} /> Export CSV
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setReportView(null);
+                                                        setData([]);
+                                                    }}
+                                                    className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-200 transition-all"
+                                                >
+                                                    Back to Reports
+                                                </button>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={() => downloadCSV(data, `report_${reportView}_${format(new Date(), 'yyyyMMdd')}`)}
-                                                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-200"
-                                            >
-                                                <Download size={14} /> Export CSV
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setReportView(null);
-                                                    setData([]);
-                                                }}
-                                                className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-200 transition-all"
-                                            >
-                                                Back to Reports
-                                            </button>
-                                        </div>
-                                    </div>
 
-                                    <div className="bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100">
-                                        {loading ? (
-                                            <div className="p-20 text-center">
-                                                <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-                                                <p className="text-slate-400 font-bold">Generating report data...</p>
-                                            </div>
-                                        ) : data.length > 0 ? (
-                                            <div className="space-y-4">
-                                                {data.slice(0, 50).map(log => (
-                                                    <div key={log.id} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex items-center gap-6">
-                                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${
-                                                            log.break_glass_used ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'
-                                                        }`}>
-                                                            {log.break_glass_used ? <ShieldAlert size={20} /> : <Eye size={20} />}
+                                        <div className="bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100">
+                                            {loading ? (
+                                                <div className="p-20 text-center">
+                                                    <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+                                                    <p className="text-slate-400 font-bold">Generating report data...</p>
+                                                </div>
+                                            ) : data.length > 0 ? (
+                                                <div className="space-y-4">
+                                                    {data.slice(0, 50).map(log => (
+                                                        <div key={log.id} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex items-center gap-6">
+                                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${log.break_glass_used ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'
+                                                                }`}>
+                                                                {log.break_glass_used ? <ShieldAlert size={20} /> : <Eye size={20} />}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-center gap-2 mb-1">
+                                                                    <span className="font-black text-slate-900">{log.user_first_name} {log.user_last_name}</span>
+                                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 py-0.5 bg-slate-100 rounded">{log.user_role}</span>
+                                                                    <span className="text-slate-300 mx-1">•</span>
+                                                                    <span className="text-[11px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{log.access_type.replace(/_/g, ' ')}</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-6 text-[11px] text-slate-500 font-medium">
+                                                                    <span className="flex items-center gap-1.5">
+                                                                        <User size={12} className="text-slate-300" />
+                                                                        Patient: <span className="font-bold text-slate-700">{log.patient_first_name} {log.patient_last_name}</span>
+                                                                    </span>
+                                                                    <span className="flex items-center gap-1.5">
+                                                                        <Clock size={12} className="text-slate-300" />
+                                                                        {format(new Date(log.created_at), 'MMM d, yyyy h:mm a')}
+                                                                    </span>
+                                                                    <span className="flex items-center gap-1.5">
+                                                                        <Activity size={12} className="text-slate-300" />
+                                                                        IP: {log.ip_address}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            {log.break_glass_used && (
+                                                                <div className="px-3 py-1 bg-red-600 text-white rounded-lg text-[10px] font-black shadow-lg shadow-red-200 uppercase tracking-widest">
+                                                                    Break Glass
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <span className="font-black text-slate-900">{log.user_first_name} {log.user_last_name}</span>
-                                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 py-0.5 bg-slate-100 rounded">{log.user_role}</span>
-                                                                <span className="text-slate-300 mx-1">•</span>
-                                                                <span className="text-[11px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{log.access_type.replace(/_/g, ' ')}</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-6 text-[11px] text-slate-500 font-medium">
-                                                                <span className="flex items-center gap-1.5">
-                                                                    <User size={12} className="text-slate-300" />
-                                                                    Patient: <span className="font-bold text-slate-700">{log.patient_first_name} {log.patient_last_name}</span>
-                                                                </span>
-                                                                <span className="flex items-center gap-1.5">
-                                                                    <Clock size={12} className="text-slate-300" />
-                                                                    {format(new Date(log.created_at), 'MMM d, yyyy h:mm a')}
-                                                                </span>
-                                                                <span className="flex items-center gap-1.5">
-                                                                    <Activity size={12} className="text-slate-300" />
-                                                                    IP: {log.ip_address}
-                                                                </span>
-                                                            </div>
+                                                    ))}
+                                                    {data.length > 50 && (
+                                                        <div className="text-center p-4 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 text-xs font-bold">
+                                                            Showing first 50 results. Export CSV for full audit trail.
                                                         </div>
-                                                        {log.break_glass_used && (
-                                                            <div className="px-3 py-1 bg-red-600 text-white rounded-lg text-[10px] font-black shadow-lg shadow-red-200 uppercase tracking-widest">
-                                                                Break Glass
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                                {data.length > 50 && (
-                                                    <div className="text-center p-4 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 text-xs font-bold">
-                                                        Showing first 50 results. Export CSV for full audit trail.
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div className="p-20 text-center text-slate-400 font-bold italic">No data found for this report criteria.</div>
-                                        )}
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="p-20 text-center text-slate-400 font-bold italic">No data found for this report criteria.</div>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                ) : (
-                <>
-                    <div className="text-center mb-12">
-                        <div className="w-20 h-20 bg-blue-100 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-50 border-4 border-white">
-                            <ShieldCheck className="w-10 h-10 text-blue-600" />
+                                ) : (
+                                    <>
+                                        <div className="text-center mb-12">
+                                            <div className="w-20 h-20 bg-blue-100 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-50 border-4 border-white">
+                                                <ShieldCheck className="w-10 h-10 text-blue-600" />
+                                            </div>
+                                            <h2 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">HIPAA Compliance Center</h2>
+                                            <p className="text-slate-400 text-sm font-medium">Select a module to generate certified access reports.</p>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+                                            {[
+                                                {
+                                                    title: 'Patient Access',
+                                                    desc: 'Comprehensive audit of all users who accessed a specific chart.',
+                                                    icon: User,
+                                                    color: 'blue',
+                                                    action: () => handleGenerateReport('patient')
+                                                },
+                                                {
+                                                    title: 'User Activity',
+                                                    desc: 'Audit trail for a specific staff member across all patient charts.',
+                                                    icon: Activity,
+                                                    color: 'emerald',
+                                                    action: () => handleGenerateReport('user')
+                                                },
+                                                {
+                                                    title: 'Break-Glass Hits',
+                                                    desc: 'Emergency access events requiring immediate administrative review.',
+                                                    icon: ShieldAlert,
+                                                    color: 'red',
+                                                    action: () => {
+                                                        setReportView('break-glass');
+                                                        setLoading(true);
+                                                        complianceAPI.getLogs({ breakGlass: 'true', limit: 100 })
+                                                            .then(res => setData(res.data || []))
+                                                            .finally(() => setLoading(false));
+                                                    }
+                                                },
+                                                {
+                                                    title: 'Privileged List',
+                                                    desc: 'Inventory of restricted patients and high-value VIP accounts.',
+                                                    icon: Lock,
+                                                    color: 'orange',
+                                                    action: () => handleGenerateReport('restricted')
+                                                }
+                                            ].map((rpt, i) => (
+                                                <div
+                                                    key={i}
+                                                    onClick={rpt.action}
+                                                    className="group relative bg-white border border-slate-100 rounded-[2.5rem] p-8 hover:border-slate-200 hover:shadow-2xl hover:shadow-slate-200/50 transition-all cursor-pointer overflow-hidden"
+                                                >
+                                                    <div className={`w-14 h-14 rounded-2xl bg-${rpt.color}-50 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
+                                                        <rpt.icon className={`text-${rpt.color}-600`} size={28} />
+                                                    </div>
+                                                    <h4 className="text-lg font-black text-slate-900 mb-2">{rpt.title}</h4>
+                                                    <p className="text-[11px] font-bold text-slate-400 leading-relaxed uppercase tracking-widest">{rpt.desc}</p>
+
+                                                    <div className="mt-8 flex items-center justify-between">
+                                                        <span className={`text-xs font-black text-${rpt.color}-600 uppercase tracking-widest`}>Initialize</span>
+                                                        <div className={`w-8 h-8 rounded-full bg-${rpt.color}-100 flex items-center justify-center group-hover:bg-${rpt.color}-600 transition-colors`}>
+                                                            <ChevronRight size={16} className={`text-${rpt.color}-600 group-hover:text-white transition-colors`} />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Decorative background circle */}
+                                                    <div className={`absolute -bottom-12 -right-12 w-32 h-32 bg-${rpt.color}-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity blur-2xl`}></div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
                         </div>
-                        <h2 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">HIPAA Compliance Center</h2>
-                        <p className="text-slate-400 text-sm font-medium">Select a module to generate certified access reports.</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-                        {[
-                            {
-                                title: 'Patient Access',
-                                desc: 'Comprehensive audit of all users who accessed a specific chart.',
-                                icon: User,
-                                color: 'blue',
-                                action: () => handleGenerateReport('patient')
-                            },
-                            {
-                                title: 'User Activity',
-                                desc: 'Audit trail for a specific staff member across all patient charts.',
-                                icon: Activity,
-                                color: 'emerald',
-                                action: () => handleGenerateReport('user')
-                            },
-                            {
-                                title: 'Break-Glass Hits',
-                                desc: 'Emergency access events requiring immediate administrative review.',
-                                icon: ShieldAlert,
-                                color: 'red',
-                                action: () => {
-                                    setReportView('break-glass');
-                                    setLoading(true);
-                                    complianceAPI.getLogs({ breakGlass: 'true', limit: 100 })
-                                        .then(res => setData(res.data || []))
-                                        .finally(() => setLoading(false));
-                                }
-                            },
-                            {
-                                title: 'Privileged List',
-                                desc: 'Inventory of restricted patients and high-value VIP accounts.',
-                                icon: Lock,
-                                color: 'orange',
-                                action: () => handleGenerateReport('restricted')
-                            }
-                        ].map((rpt, i) => (
-                            <div
-                                key={i}
-                                onClick={rpt.action}
-                                className="group relative bg-white border border-slate-100 rounded-[2.5rem] p-8 hover:border-slate-200 hover:shadow-2xl hover:shadow-slate-200/50 transition-all cursor-pointer overflow-hidden"
-                            >
-                                <div className={`w-14 h-14 rounded-2xl bg-${rpt.color}-50 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
-                                    <rpt.icon className={`text-${rpt.color}-600`} size={28} />
-                                </div>
-                                <h4 className="text-lg font-black text-slate-900 mb-2">{rpt.title}</h4>
-                                <p className="text-[11px] font-bold text-slate-400 leading-relaxed uppercase tracking-widest">{rpt.desc}</p>
-
-                                <div className="mt-8 flex items-center justify-between">
-                                    <span className={`text-xs font-black text-${rpt.color}-600 uppercase tracking-widest`}>Initialize</span>
-                                    <div className={`w-8 h-8 rounded-full bg-${rpt.color}-100 flex items-center justify-center group-hover:bg-${rpt.color}-600 transition-colors`}>
-                                        <ChevronRight size={16} className={`text-${rpt.color}-600 group-hover:text-white transition-colors`} />
-                                    </div>
-                                </div>
-
-                                {/* Decorative background circle */}
-                                <div className={`absolute -bottom-12 -right-12 w-32 h-32 bg-${rpt.color}-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity blur-2xl`}></div>
-                            </div>
-                        ))}
-                    </div>
-                </>
-                            )}
-            </div>
                     )}
                     )}
-        </div>
+                </div>
             </div >
 
-    {/* Picker Modal for Reports */ }
-{
-    reportParams.showPicker && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-            <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200">
-                <div className="p-8 border-b border-slate-50 flex justify-between items-center">
-                    <div>
-                        <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
-                            <Search className="text-blue-600" />
-                            Select {reportParams.type === 'patient' ? 'Patient' : 'Staff Member'}
-                        </h3>
-                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Generate full access audit history</p>
-                    </div>
-                    <button
-                        onClick={() => setReportParams({ ...reportParams, showPicker: false })}
-                        className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-                    >
-                        <X size={24} className="text-slate-400" />
-                    </button>
-                </div>
-
-                <div className="p-8 space-y-6">
-                    <div className="relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-                        <input
-                            autoFocus
-                            type="text"
-                            className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:ring-0 text-slate-900 font-bold transition-all"
-                            placeholder={reportParams.type === 'patient' ? "Search name or MRN..." : "Search staff name..."}
-                            value={reportParams.query}
-                            onChange={(e) => handlePickerSearch(e.target.value)}
-                        />
-                        {reportParams.searching && (
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                                <div className="w-4 h-4 border-2 border-slate-200 border-t-blue-600 rounded-full animate-spin"></div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-                        {reportParams.results.map(item => (
-                            <button
-                                key={item.id}
-                                onClick={() => handlePickerSelect(item)}
-                                className="w-full flex items-center justify-between p-4 rounded-2xl border border-slate-50 hover:bg-blue-50 hover:border-blue-100 transition-all group"
-                            >
-                                <div className="text-left">
-                                    <div className="font-black text-slate-900 group-hover:text-blue-700">
-                                        {item.first_name} {item.last_name}
-                                    </div>
-                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                        {reportParams.type === 'patient' ? `MRN: ${item.mrn}` : (item.role_name || item.role)}
-                                    </div>
+            {/* Picker Modal for Reports */}
+            {
+                reportParams.showPicker && (
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                        <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200">
+                            <div className="p-8 border-b border-slate-50 flex justify-between items-center">
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                                        <Search className="text-blue-600" />
+                                        Select {reportParams.type === 'patient' ? 'Patient' : 'Staff Member'}
+                                    </h3>
+                                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Generate full access audit history</p>
                                 </div>
-                                <ChevronRight size={16} className="text-slate-200 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
-                            </button>
-                        ))}
-                        {reportParams.query && !reportParams.results.length && !reportParams.searching && (
-                            <div className="p-8 text-center text-slate-400 font-bold italic">
-                                No matches found.
+                                <button
+                                    onClick={() => setReportParams({ ...reportParams, showPicker: false })}
+                                    className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                                >
+                                    <X size={24} className="text-slate-400" />
+                                </button>
                             </div>
-                        )}
-                        {!reportParams.query && (
-                            <div className="p-12 text-center text-slate-300 font-black uppercase tracking-widest text-[10px]">
-                                Start typing to search...
+
+                            <div className="p-8 space-y-6">
+                                <div className="relative">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                                    <input
+                                        autoFocus
+                                        type="text"
+                                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:ring-0 text-slate-900 font-bold transition-all"
+                                        placeholder={reportParams.type === 'patient' ? "Search name or MRN..." : "Search staff name..."}
+                                        value={reportParams.query}
+                                        onChange={(e) => handlePickerSearch(e.target.value)}
+                                    />
+                                    {reportParams.searching && (
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                                            <div className="w-4 h-4 border-2 border-slate-200 border-t-blue-600 rounded-full animate-spin"></div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                                    {reportParams.results.map(item => (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => handlePickerSelect(item)}
+                                            className="w-full flex items-center justify-between p-4 rounded-2xl border border-slate-50 hover:bg-blue-50 hover:border-blue-100 transition-all group"
+                                        >
+                                            <div className="text-left">
+                                                <div className="font-black text-slate-900 group-hover:text-blue-700">
+                                                    {item.first_name} {item.last_name}
+                                                </div>
+                                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                    {reportParams.type === 'patient' ? `MRN: ${item.mrn}` : (item.role_name || item.role)}
+                                                </div>
+                                            </div>
+                                            <ChevronRight size={16} className="text-slate-200 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
+                                        </button>
+                                    ))}
+                                    {reportParams.query && !reportParams.results.length && !reportParams.searching && (
+                                        <div className="p-8 text-center text-slate-400 font-bold italic">
+                                            No matches found.
+                                        </div>
+                                    )}
+                                    {!reportParams.query && (
+                                        <div className="p-12 text-center text-slate-300 font-black uppercase tracking-widest text-[10px]">
+                                            Start typing to search...
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        )}
+                        </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    )
-}
+                )
+            }
         </div >
     );
 };
