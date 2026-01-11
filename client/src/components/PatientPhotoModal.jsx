@@ -5,11 +5,61 @@ import { patientsAPI } from '../services/api';
 const PatientPhotoModal = ({ isOpen, onClose, patient, onUpdate }) => {
     const [preview, setPreview] = useState(null);
     const [file, setFile] = useState(null);
+    const [isWebcamActive, setIsWebcamActive] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const fileInputRef = useRef(null);
+    const videoRef = useRef(null);
+    const canvasRef = useRef(null);
 
     if (!isOpen) return null;
+
+    const startWebcam = async () => {
+        try {
+            setError(null);
+            setIsWebcamActive(true);
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { width: 400, height: 400, facingMode: 'user' }
+            });
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+            }
+        } catch (err) {
+            console.error('Error starting webcam:', err);
+            setError('Could not access camera. Please ensure permissions are granted.');
+            setIsWebcamActive(false);
+        }
+    };
+
+    const stopWebcam = () => {
+        if (videoRef.current && videoRef.current.srcObject) {
+            const tracks = videoRef.current.srcObject.getTracks();
+            tracks.forEach(track => track.stop());
+            videoRef.current.srcObject = null;
+        }
+        setIsWebcamActive(false);
+    };
+
+    const takePhoto = () => {
+        if (videoRef.current && canvasRef.current) {
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            const context = canvas.getContext('2d');
+
+            // Set canvas size to match video
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            // Draw current video frame to canvas
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Convert to base64
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            setPreview(dataUrl);
+            setFile('webcam'); // Flag to identify source
+            stopWebcam();
+        }
+    };
 
     const handleFileChange = (e) => {
         const selectedFile = e.target.files[0];
@@ -42,9 +92,15 @@ const PatientPhotoModal = ({ isOpen, onClose, patient, onUpdate }) => {
         setError(null);
 
         try {
-            const formData = new FormData();
-            formData.append('photo', file);
-            await patientsAPI.uploadPhoto(patient.id, formData);
+            if (file === 'webcam') {
+                // Upload base64 data
+                await patientsAPI.uploadPhotoBase64(patient.id, preview);
+            } else {
+                // Upload multipart form data
+                const formData = new FormData();
+                formData.append('photo', file);
+                await patientsAPI.uploadPhoto(patient.id, formData);
+            }
             onUpdate?.();
             onClose();
         } catch (err) {
@@ -72,6 +128,11 @@ const PatientPhotoModal = ({ isOpen, onClose, patient, onUpdate }) => {
         }
     };
 
+    const handleClose = () => {
+        stopWebcam();
+        onClose();
+    };
+
     return (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
@@ -86,7 +147,7 @@ const PatientPhotoModal = ({ isOpen, onClose, patient, onUpdate }) => {
                             {patient.first_name} {patient.last_name}
                         </p>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+                    <button onClick={handleClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
                         <X size={20} className="text-slate-400" />
                     </button>
                 </div>
@@ -95,8 +156,15 @@ const PatientPhotoModal = ({ isOpen, onClose, patient, onUpdate }) => {
                     {/* Preview Area */}
                     <div className="flex flex-col items-center justify-center mb-8">
                         <div className="relative group">
-                            <div className="w-40 h-40 rounded-full border-4 border-slate-100 shadow-inner overflow-hidden bg-slate-50 flex items-center justify-center">
-                                {preview || patient.photo_url ? (
+                            <div className="w-48 h-48 rounded-full border-4 border-slate-100 shadow-inner overflow-hidden bg-slate-50 flex items-center justify-center">
+                                {isWebcamActive ? (
+                                    <video
+                                        ref={videoRef}
+                                        autoPlay
+                                        playsInline
+                                        className="w-full h-full object-cover mirror"
+                                    />
+                                ) : preview || patient.photo_url ? (
                                     <img
                                         src={preview || patient.photo_url}
                                         alt="Preview"
@@ -110,12 +178,45 @@ const PatientPhotoModal = ({ isOpen, onClose, patient, onUpdate }) => {
                                 )}
                             </div>
 
-                            <button
-                                onClick={() => fileInputRef.current?.click()}
-                                className="absolute bottom-1 right-1 p-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all hover:scale-110 active:scale-95"
-                            >
-                                <Upload size={18} />
-                            </button>
+                            <canvas ref={canvasRef} className="hidden" />
+
+                            {!isWebcamActive && (
+                                <div className="absolute bottom-1 right-1 flex gap-2">
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="p-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all hover:scale-110 active:scale-95"
+                                        title="Upload File"
+                                    >
+                                        <Upload size={18} />
+                                    </button>
+                                    <button
+                                        onClick={startWebcam}
+                                        className="p-3 bg-emerald-600 text-white rounded-full shadow-lg hover:bg-emerald-700 transition-all hover:scale-110 active:scale-95"
+                                        title="Take Photo"
+                                    >
+                                        <Camera size={18} />
+                                    </button>
+                                </div>
+                            )}
+
+                            {isWebcamActive && (
+                                <div className="absolute bottom-1 right-1 flex gap-2">
+                                    <button
+                                        onClick={stopWebcam}
+                                        className="p-3 bg-red-600 text-white rounded-full shadow-lg hover:bg-red-700 transition-all hover:scale-110 active:scale-95"
+                                        title="Cancel"
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                    <button
+                                        onClick={takePhoto}
+                                        className="p-3 bg-emerald-600 text-white rounded-full shadow-lg hover:bg-emerald-700 transition-all hover:scale-110 active:scale-95 animate-pulse"
+                                        title="Capture Photo"
+                                    >
+                                        <Camera size={18} />
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -134,19 +235,28 @@ const PatientPhotoModal = ({ isOpen, onClose, patient, onUpdate }) => {
                         className="hidden"
                     />
 
-                    <div className="space-y-3">
-                        {!file && (
-                            <button
-                                onClick={() => fileInputRef.current?.click()}
-                                className="w-full p-4 border-2 border-dashed border-slate-200 rounded-xl text-slate-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/30 transition-all group flex flex-col items-center justify-center gap-1"
-                            >
-                                <span className="text-sm font-black">Upload New Photo</span>
-                                <span className="text-[10px] font-bold uppercase opacity-60">JPG, PNG or WEBP (Max 5MB)</span>
-                            </button>
+                    <div className="space-y-4">
+                        {!file && !isWebcamActive && (
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="p-4 border-2 border-dashed border-slate-200 rounded-xl text-slate-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/30 transition-all group flex flex-col items-center justify-center gap-1"
+                                >
+                                    <Upload size={20} className="mb-1" />
+                                    <span className="text-xs font-black uppercase">Upload File</span>
+                                </button>
+                                <button
+                                    onClick={startWebcam}
+                                    className="p-4 border-2 border-dashed border-slate-200 rounded-xl text-slate-500 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50/30 transition-all group flex flex-col items-center justify-center gap-1"
+                                >
+                                    <Camera size={20} className="mb-1" />
+                                    <span className="text-xs font-black uppercase">Webcam</span>
+                                </button>
+                            </div>
                         )}
 
                         <div className="flex gap-3">
-                            {patient.photo_url && !file && (
+                            {patient.photo_url && !file && !isWebcamActive && (
                                 <button
                                     onClick={handleRemove}
                                     disabled={loading}
@@ -156,7 +266,7 @@ const PatientPhotoModal = ({ isOpen, onClose, patient, onUpdate }) => {
                                 </button>
                             )}
 
-                            {file && (
+                            {file && !isWebcamActive && (
                                 <>
                                     <button
                                         onClick={() => { setFile(null); setPreview(null); }}
