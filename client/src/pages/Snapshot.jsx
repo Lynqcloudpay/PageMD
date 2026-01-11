@@ -1401,38 +1401,38 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 <div className="px-6">
                     {/* Sticky Note / Patient Alerts Section */}
                     {activeFlags.length > 0 && (
-                        <div className="mb-6 flex flex-wrap gap-4">
+                        <div className="mb-4 flex flex-wrap gap-2">
                             {activeFlags.map(flag => (
                                 <div
                                     key={flag.id}
-                                    className={`flex-1 min-w-[300px] p-4 rounded-xl border-l-8 shadow-sm relative group animate-in slide-in-from-top duration-300 ${flag.display_severity === 'critical' ? 'bg-red-50 border-red-500' :
+                                    className={`flex-1 min-w-[200px] p-2.5 rounded-lg border-l-4 shadow-sm relative group animate-in slide-in-from-top duration-300 ${flag.display_severity === 'critical' ? 'bg-red-50 border-red-500' :
                                         flag.display_severity === 'warn' ? 'bg-orange-50 border-orange-500' :
                                             'bg-blue-50 border-blue-500'
                                         }`}
                                 >
-                                    <div className="flex items-start gap-4">
-                                        <div className={`p-2 rounded-lg ${flag.display_severity === 'critical' ? 'bg-red-100 text-red-600' :
+                                    <div className="flex items-center gap-2.5">
+                                        <div className={`p-1.5 rounded-md ${flag.display_severity === 'critical' ? 'bg-red-100 text-red-600' :
                                             flag.display_severity === 'warn' ? 'bg-orange-100 text-orange-600' :
                                                 'bg-blue-100 text-blue-600'
                                             }`}>
-                                            {flag.display_severity === 'critical' ? <ShieldAlert size={20} /> :
-                                                flag.display_severity === 'warn' ? <AlertTriangle size={20} /> :
-                                                    <Shield size={20} />}
+                                            {flag.display_severity === 'critical' ? <ShieldAlert size={16} /> :
+                                                flag.display_severity === 'warn' ? <AlertTriangle size={16} /> :
+                                                    <Shield size={16} />}
                                         </div>
-                                        <div className="flex-1">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <h3 className={`text-sm font-black uppercase tracking-wider ${flag.display_severity === 'critical' ? 'text-red-900' :
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between">
+                                                <h3 className={`text-[11px] font-black uppercase tracking-tight truncate ${flag.display_severity === 'critical' ? 'text-red-900' :
                                                     flag.display_severity === 'warn' ? 'text-orange-900' :
                                                         'text-blue-900'
                                                     }`}>
                                                     {flag.display_label}
                                                 </h3>
-                                                <span className="text-[10px] font-bold text-gray-400">
+                                                <span className="text-[9px] font-bold text-gray-400 ml-2 whitespace-nowrap">
                                                     {new Date(flag.created_at).toLocaleDateString()}
                                                 </span>
                                             </div>
                                             {flag.note && (
-                                                <p className={`text-sm font-medium leading-normal ${flag.display_severity === 'critical' ? 'text-red-800' :
+                                                <p className={`text-[11px] font-medium leading-tight truncate ${flag.display_severity === 'critical' ? 'text-red-800' :
                                                     flag.display_severity === 'warn' ? 'text-orange-800' :
                                                         'text-blue-800'
                                                     }`}>
@@ -1440,10 +1440,6 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 </p>
                                             )}
                                         </div>
-                                    </div>
-                                    {/* Subtle background decoration to make it feel like a sticky note */}
-                                    <div className="absolute top-0 right-0 w-8 h-8 opacity-[0.03] pointer-events-none">
-                                        <Shield size={64} className="-mr-4 -mt-4" />
                                     </div>
                                 </div>
                             ))}

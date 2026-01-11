@@ -413,53 +413,13 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
         .slice(0, 2);
 
     return (
-        <div className="flex flex-col gap-0 mb-6 relative">
+        <div className="flex flex-col gap-0 mb-4 relative">
             {/* Acknowledgment Modal */}
             {showAckModal && (
                 <FlagAcknowledgmentModal
                     flags={unacknowledgedCriticalFlags}
                     onAcknowledged={() => setShowAckModal(false)}
                 />
-            )}
-
-            {/* Banner Area */}
-            {activeFlags.length > 0 && (
-                <div className="mb-2 flex flex-col gap-1.5 animate-in slide-in-from-top duration-300">
-                    {bannerFlags.map(flag => (
-                        <div
-                            key={flag.id}
-                            className={`px-6 py-2 border-l-4 shadow-sm flex items-center justify-between group cursor-pointer transition-all hover:brightness-95 ${flag.severity === 'critical' ? 'bg-red-600 border-red-800 text-white' :
-                                flag.severity === 'warn' ? 'bg-orange-500 border-orange-700 text-white' :
-                                    'bg-blue-600 border-blue-800 text-white'
-                                }`}
-                            onClick={() => setIsFlagsPanelOpen(true)}
-                        >
-                            <div className="flex items-center gap-3">
-                                {flag.severity === 'critical' ? <ShieldAlert size={18} className="animate-pulse" /> : <AlertCircle size={18} />}
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-80 leading-none mb-0.5">
-                                        Patient Alert ({flag.category})
-                                    </span>
-                                    <span className="text-sm font-black tracking-tight leading-none uppercase">
-                                        {flag.label} {flag.note ? `— ${flag.note}` : ''}
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-black uppercase opacity-60 group-hover:opacity-100 transition-opacity">View All Flags</span>
-                                <ExternalLink size={12} />
-                            </div>
-                        </div>
-                    ))}
-                    {activeFlags.length > 2 && (
-                        <button
-                            onClick={() => setIsFlagsPanelOpen(true)}
-                            className="text-center py-1 bg-slate-100 hover:bg-slate-200 text-slate-500 text-[10px] font-black uppercase tracking-widest transition-all rounded-b-lg border-x border-b border-slate-200"
-                        >
-                            + {activeFlags.length - 2} more active flags
-                        </button>
-                    )}
-                </div>
             )}
 
             <div className="bg-white border border-gray-200 shadow-sm rounded-lg overflow-hidden">
@@ -476,20 +436,20 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                     </div>
                 )}
                 {/* Top Bar: Identity & Actions */}
-                <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between bg-gradient-to-r from-blue-50/30 to-transparent">
-                    <div className="flex items-center gap-5">
+                <div className="px-6 py-3 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-blue-50/30 to-transparent">
+                    <div className="flex items-center gap-4">
                         {/* Photo */}
                         <div className="relative group">
                             <PatientHeaderPhoto
                                 firstName={patient.first_name}
                                 lastName={patient.last_name}
-                                className="w-16 h-16 text-xl shadow-sm ring-2 ring-white"
+                                className="w-12 h-12 text-lg shadow-sm ring-2 ring-white"
                             />
                         </div>
 
                         {/* Name & Key Stats */}
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                            <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                                 {/* Clicking name also goes to chart as a shortcut */}
                                 <span
                                     className="cursor-pointer hover:text-blue-800 transition-colors"
@@ -498,19 +458,19 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                     {patient.first_name || ''} {patient.last_name || ''}
                                 </span>
 
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1.5">
                                     <button
                                         onClick={() => setIsFlagsPanelOpen(true)}
-                                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter shadow-sm transition-all hover:scale-105 active:scale-95 ${activeFlags.length > 0 ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-400 opacity-60 hover:opacity-100'
+                                        className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tighter shadow-sm transition-all hover:scale-105 active:scale-95 ${activeFlags.length > 0 ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-400 opacity-60 hover:opacity-100'
                                             }`}
                                     >
-                                        <Shield size={12} />
-                                        {activeFlags.length} Flags
+                                        <Shield size={10} />
+                                        {activeFlags.length}
                                     </button>
                                     {patient.is_restricted && (
-                                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-600 text-white rounded-lg text-[10px] font-black uppercase tracking-tighter shadow-sm animate-pulse-slow">
-                                            <Lock size={12} fill="currentColor" />
-                                            CONFIDENTIAL
+                                        <div className="flex items-center gap-1 px-2 py-0.5 bg-red-600 text-white rounded-md text-[9px] font-black uppercase tracking-tighter shadow-sm">
+                                            <Lock size={10} fill="currentColor" />
+                                            CONF
                                         </div>
                                     )}
                                 </div>
@@ -520,7 +480,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                     className="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded-full hover:bg-blue-50"
                                     title="Edit Patient"
                                 >
-                                    <Edit2 size={14} />
+                                    <Edit2 size={12} />
                                 </button>
                             </h1>
 
