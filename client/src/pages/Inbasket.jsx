@@ -17,6 +17,7 @@ const TASK_CATEGORIES = [
     { id: 'results', label: 'Results', icon: FlaskConical, color: 'blue', types: ['lab', 'imaging'] },
     { id: 'messages', label: 'Messages', icon: MessageSquare, color: 'purple', types: ['message'] },
     { id: 'portal_messages', label: 'Portal Messages', icon: User, color: 'blue', types: ['portal_message'] },
+    { id: 'portal_appointments', label: 'Appt Requests', icon: Calendar, color: 'amber', types: ['portal_appointment'] },
     { id: 'documents', label: 'Documents', icon: FileText, color: 'orange', types: ['document'] },
     { id: 'referrals', label: 'Referrals', icon: Send, color: 'indigo', types: ['referral'] },
     { id: 'tasks', label: 'Tasks', icon: CheckCircle, color: 'green', types: ['task'] },
@@ -166,11 +167,9 @@ const Inbasket = () => {
 
         // Pre-select category based on filter param
         if (filterType === 'portal_appointment') {
-            // Find the category that includes portal_appointment type
-            // Since portal_appointment isn't in the standard categories, we'll use 'all' 
-            // and add a type filter
-            setSelectedCategory('all');
-            setSearchQuery('Portal Appt'); // This will filter to appointment requests
+            // Select the portal_appointments category directly
+            setSelectedCategory('portal_appointments');
+            setSearchQuery(''); // Clear any existing search
         }
 
         if (itemId && items.length > 0) {
