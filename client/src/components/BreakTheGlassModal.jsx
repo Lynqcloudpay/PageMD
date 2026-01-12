@@ -158,7 +158,10 @@ const BreakTheGlassModal = () => {
                         <div className="flex gap-3 pt-2">
                             <button
                                 type="button"
-                                onClick={() => window.history.back()}
+                                onClick={() => {
+                                    setIsOpen(false);
+                                    window.history.back();
+                                }}
                                 className="flex-1 h-14 rounded-2xl font-bold text-slate-500 hover:bg-slate-100 transition-all"
                             >
                                 Cancel
