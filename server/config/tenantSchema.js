@@ -17,7 +17,7 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
-DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'superbill_status') THEN CREATE TYPE superbill_status AS ENUM (
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace WHERE t.typname = 'superbill_status' AND n.nspname = current_schema()) THEN CREATE TYPE superbill_status AS ENUM (
     'DRAFT',
     'READY',
     'FINALIZED',
