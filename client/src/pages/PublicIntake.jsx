@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-    Heart, Shield, ChevronRight, CheckCircle,
+    Heart, Shield, ChevronRight, ChevronLeft, CheckCircle,
     ClipboardList, AlertCircle, Phone, Calendar,
     User, ArrowRight, Lock, Key, Smartphone, Building, Pill, X, Globe
 } from 'lucide-react';
