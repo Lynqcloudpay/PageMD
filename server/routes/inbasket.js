@@ -787,10 +787,10 @@ router.post('/:id/suggest-slots', async (req, res) => {
       `, [JSON.stringify(slots), item.reference_id]);
     }
 
-    // Mark inbox as read (not completed - waiting for patient response)
+    // Mark inbox as pending patient (not completed - waiting for response)
     await client.query(`
       UPDATE inbox_items 
-      SET status = 'read', updated_at = CURRENT_TIMESTAMP 
+      SET status = 'pending_patient', updated_at = CURRENT_TIMESTAMP 
       WHERE id = $1
     `, [id]);
 

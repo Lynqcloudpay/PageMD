@@ -340,8 +340,13 @@ const AppointmentRequests = () => {
                                     className={`p-4 cursor-pointer transition-all hover:bg-amber-50/30 ${selectedRequest?.id === req.id ? 'bg-amber-50/50 border-l-4 border-amber-500 shadow-sm' : 'border-l-4 border-transparent'}`}
                                 >
                                     <div className="flex justify-between items-start mb-1">
-                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${req.status === 'new' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
-                                            {req.status === 'new' ? 'NEW' : 'COMPLETED'}
+                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${req.status === 'new' ? 'bg-amber-100 text-amber-700' :
+                                                req.status === 'pending_patient' ? 'bg-blue-100 text-blue-700' :
+                                                    'bg-gray-100 text-gray-500'
+                                            }`}>
+                                            {req.status === 'new' ? 'NEW' :
+                                                req.status === 'pending_patient' ? 'PENDING RESPONSE' :
+                                                    'COMPLETED'}
                                         </span>
                                         <span className="text-[10px] text-gray-400 font-medium">
                                             {format(new Date(req.created_at || req.createdAt), 'MMM d, h:mm a')}
@@ -421,7 +426,25 @@ const AppointmentRequests = () => {
                                         </div>
                                     </div>
 
-                                    {selectedRequest.status === 'new' && (
+                                    {selectedRequest.status === 'pending_patient' ? (
+                                        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-blue-500 rounded-lg shadow-md">
+                                                    <Clock className="w-5 h-5 text-white animate-pulse" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-bold text-blue-900">Waiting for Patient</p>
+                                                    <p className="text-xs text-blue-700 font-medium">Alternative slots have been sent. Staff action is paused.</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => setShowApproveModal(true)}
+                                                className="text-xs font-bold text-blue-600 hover:text-blue-800 underline"
+                                            >
+                                                Modify Suggestions
+                                            </button>
+                                        </div>
+                                    ) : selectedRequest.status === 'new' && (
                                         <div className="flex flex-col sm:flex-row gap-3">
                                             <button
                                                 onClick={() => setShowApproveModal(true)}
