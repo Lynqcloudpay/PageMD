@@ -33,7 +33,7 @@ if [ "$1" == "web" ]; then
     
     # Fast volume update (copy from container instead of rebuild)
     echo "📋 Updating web static volume..."
-    run_with_timeout "Volume update" "docker compose -f docker-compose.prod.yml exec -T web sh -c 'cp -r /usr/share/caddy/* /tmp/web_copy 2>/dev/null || true' && docker cp emr-web:/usr/share/caddy/. deploy_web_static:/web_static/ 2>/dev/null || echo 'Volume update skipped (will use container files)'"
+    run_with_timeout "Volume update" "docker compose -f docker-compose.prod.yml exec -T web sh -c 'cp -r /usr/share/caddy/* /tmp/web_copy 2>/dev/null || true' && docker cp emr-web:/usr/share/caddy/. ./static/ 2>/dev/null || echo 'Volume update skipped (will use container files)'"
     
 elif [ "$1" == "api" ]; then
     echo "📦 Building API only..."
