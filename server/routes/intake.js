@@ -306,46 +306,126 @@ router.post('/session/:id/approve', authenticate, async (req, res) => {
                 values
             );
             targetPatientId = patientRes.rows[0].id;
+        } else {
+            // If linking to an existing patient, update their demographic info
+            const mapSex = (val) => {
+                if (!val) return null;
+                const lower = val.toLowerCase();
+                if (lower === 'male' || lower === 'm') return 'M';
+                if (lower === 'female' || lower === 'f') return 'F';
+                return 'Other';
+            };
 
-            // Handle Clinical History Mapping
-            // 1. Allergies
-            if (data.allergyList && data.allergyList.length > 0) {
-                for (const a of data.allergyList) {
-                    await pool.query('INSERT INTO allergies (patient_id, allergen, reaction, severity) VALUES ($1, $2, $3, $4)', [targetPatientId, a.allergen || a.name, a.reaction, a.severity]);
+            const patientData = {
+                first_name: data.firstName || session.prefill_json.firstName,
+                last_name: data.lastName || session.prefill_json.lastName,
+                dob: data.dob || session.prefill_json.dob,
+                sex: mapSex(data.sex),
+                preferred_language: data.preferredLanguage,
+                phone: data.phone || session.prefill_json.phone,
+                phone_secondary: data.phoneSecondary,
+                email: data.email,
+                address_line1: data.addressLine1,
+                address_line2: data.addressLine2,
+                city: data.city,
+                state: data.state,
+                zip: data.zip,
+                communication_preference: data.preferredContactMethod,
+                emergency_contact_name: data.ecName,
+                emergency_contact_phone: data.ecPhone,
+                emergency_contact_relationship: data.ecRelationship,
+                insurance_provider: data.primaryInsuranceCarrier || data.primary_insurance_carrier,
+                insurance_id: data.primaryMemberId || data.primary_member_id,
+                insurance_group_number: data.primaryGroupNumber || data.primary_group_number,
+                insurance_subscriber_name: data.primaryPolicyholderName || data.primary_policyholder_name,
+                insurance_subscriber_dob: data.primaryPolicyholderDob || data.primary_policyholder_dob,
+                occupation: data.occupation,
+                phone_normalized: (data.phone || session.prefill_json.phone || '').replace(/\D/g, '')
+            };
+
+            const encrypted = await patientEncryptionService.preparePatientForStorage(patientData);
+            const fields = Object.keys(encrypted).filter(k => k !== 'encryption_metadata');
+            const setClause = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
+            const values = fields.map(f => encrypted[f]);
+
+            // Add metadata
+            values.push(JSON.stringify(encrypted.encryption_metadata));
+            values.push(targetPatientId);
+            values.push(req.clinic.id);
+
+            await pool.query(
+                `UPDATE patients SET ${setClause}, encryption_metadata = $${values.length - 2} WHERE id = $${values.length - 1} AND clinic_id = $${values.length}`,
+                values
+            );
+        }
+
+        // Handle Clinical History Mapping (Sync for both new and linked patients)
+        // 1. Allergies
+        if (data.allergyList && data.allergyList.length > 0) {
+            for (const a of data.allergyList) {
+                const allergenName = a.allergen || a.name;
+                const existing = await pool.query('SELECT 1 FROM allergies WHERE patient_id = $1 AND allergen = $2', [targetPatientId, allergenName]);
+                if (existing.rows.length === 0) {
+                    await pool.query('INSERT INTO allergies (patient_id, allergen, reaction, severity) VALUES ($1, $2, $3, $4)', [targetPatientId, allergenName, a.reaction, a.severity]);
                 }
             }
+        }
 
-            // 2. Medications
-            if (data.medsList && data.medsList.length > 0) {
-                for (const m of data.medsList) {
-                    await pool.query('INSERT INTO medications (patient_id, medication_name, dosage, frequency) VALUES ($1, $2, $3, $4)', [targetPatientId, m.name, m.dose, m.frequency]);
+        // 2. Medications
+        if (data.medsList && data.medsList.length > 0) {
+            for (const m of data.medsList) {
+                const medName = m.name;
+                const existing = await pool.query('SELECT 1 FROM medications WHERE patient_id = $1 AND medication_name = $2', [targetPatientId, medName]);
+                if (existing.rows.length === 0) {
+                    await pool.query('INSERT INTO medications (patient_id, medication_name, dosage, frequency) VALUES ($1, $2, $3, $4)', [targetPatientId, medName, m.dose, m.frequency]);
                 }
             }
+        }
 
-            // 3. Past Medical History (populate problems)
-            if (data.pmhConditions && data.pmhConditions.length > 0) {
-                for (const condition of data.pmhConditions) {
+        // 3. Past Medical History (populate problems)
+        if (data.pmhConditions && data.pmhConditions.length > 0) {
+            for (const condition of data.pmhConditions) {
+                const existing = await pool.query('SELECT 1 FROM problems WHERE patient_id = $1 AND problem_name = $2', [targetPatientId, condition]);
+                if (existing.rows.length === 0) {
                     await pool.query('INSERT INTO problems (patient_id, problem_name, status) VALUES ($1, $2, $3)', [targetPatientId, condition, 'active']);
                 }
             }
-            if (data.pmhOtherText) {
+        }
+        if (data.pmhOtherText) {
+            const existing = await pool.query('SELECT 1 FROM problems WHERE patient_id = $1 AND problem_name = $2', [targetPatientId, data.pmhOtherText]);
+            if (existing.rows.length === 0) {
                 await pool.query('INSERT INTO problems (patient_id, problem_name, status) VALUES ($1, $2, $3)', [targetPatientId, data.pmhOtherText, 'active']);
             }
+        }
 
-            // 4. Family History
-            const fhx = [];
-            if (data.fhxHeartDisease) fhx.push('Heart Disease');
-            if (data.fhxDiabetes) fhx.push('Diabetes');
-            if (data.fhxCancer) fhx.push('Cancer');
-            if (data.fhxStroke) fhx.push('Stroke');
-            if (data.fhxOtherText) fhx.push(`Other: ${data.fhxOtherText}`);
+        // 4. Family History
+        const fhx = [];
+        if (data.fhxHeartDisease) fhx.push('Heart Disease');
+        if (data.fhxDiabetes) fhx.push('Diabetes');
+        if (data.fhxCancer) fhx.push('Cancer');
+        if (data.fhxStroke) fhx.push('Stroke');
+        if (data.fhxOtherText) fhx.push(`Other: ${data.fhxOtherText}`);
 
-            for (const f of fhx) {
+        for (const f of fhx) {
+            const existing = await pool.query('SELECT 1 FROM family_history WHERE patient_id = $1 AND condition = $2', [targetPatientId, f]);
+            if (existing.rows.length === 0) {
                 await pool.query('INSERT INTO family_history (patient_id, condition, relationship) VALUES ($1, $2, $3)', [targetPatientId, f, 'Family']);
             }
+        }
 
-            // 5. Social History
-            if (data.tobaccoUse || data.alcoholUse || data.recreationalDrugUse || data.occupation) {
+        // 5. Social History
+        if (data.tobaccoUse || data.alcoholUse || data.recreationalDrugUse || data.occupation) {
+            const existing = await pool.query('SELECT id FROM social_history WHERE patient_id = $1', [targetPatientId]);
+            if (existing.rows.length > 0) {
+                await pool.query(`
+                    UPDATE social_history SET
+                        smoking_status = COALESCE($2, smoking_status),
+                        alcohol_use = COALESCE($3, alcohol_use),
+                        occupation = COALESCE($4, occupation),
+                        drug_use = COALESCE($5, drug_use)
+                    WHERE patient_id = $1
+                `, [targetPatientId, data.tobaccoUse || null, data.alcoholUse || null, data.occupation || null, data.recreationalDrugUse || null]);
+            } else {
                 await pool.query(`
                     INSERT INTO social_history (patient_id, smoking_status, alcohol_use, occupation, drug_use)
                     VALUES ($1, $2, $3, $4, $5)

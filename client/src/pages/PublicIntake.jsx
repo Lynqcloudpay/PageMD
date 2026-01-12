@@ -47,6 +47,23 @@ const PublicIntake = () => {
     const t = (key) => {
         const translations = {
             en: {
+                welcome: "Welcome to",
+                registration: "Patient Registration",
+                secure_msg: "Complete your registration safely on your own device.",
+                start_new: "Start New Registration",
+                continue: "Continue Registration",
+                find_reg: "Find Registration",
+                first_name: "First Name",
+                last_name: "Last Name",
+                dob: "Date of Birth",
+                phone: "Phone Number",
+                get_started: "Get Started",
+                creating_session: "Creating session...",
+                continue_btn: "Continue",
+                submit: "Submit Registration",
+                review: "Review Submission",
+                signing_as: "Signing as",
+                electronically_signed: "Electronically Signed",
                 finish: "Finish",
                 searching: "Searching...",
                 multiple_matches: "Multiple Matches",
@@ -88,7 +105,7 @@ const PublicIntake = () => {
                 select_lang_title: "Seleccionar Idioma"
             }
         };
-        return translations[language][key] || key;
+        return (translations[language] && translations[language][key]) || (translations['en'] && translations['en'][key]) || key;
     };
 
     // Fetch clinic info on mount
