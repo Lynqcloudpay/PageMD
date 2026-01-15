@@ -615,6 +615,14 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                             </div>
 
                             <div className="flex items-center gap-3">
+                                {isSigned && (
+                                    <button
+                                        onClick={() => setShowAddendumModal(true)}
+                                        className="px-4 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[12px] font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-amber-100 active:scale-95 transition-all"
+                                    >
+                                        <FilePlus className="w-4 h-4" /> Addendum
+                                    </button>
+                                )}
                                 <button onClick={handlePrint} className="px-5 py-2 bg-slate-900 text-white rounded text-[12px] font-bold uppercase tracking-wider flex items-center gap-2 shadow-sm active:scale-95 transition-all">
                                     <Printer className="w-4 h-4" /> Print (A3 Format)
                                 </button>
