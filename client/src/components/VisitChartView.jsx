@@ -566,24 +566,19 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                 <div className="relative">
                                     <button
                                         onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-                                        className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors"
+                                        className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 hover:text-slate-900 transition-colors"
                                     >
-                                        <div className="text-left">
-                                            <div className="text-[10px] text-slate-400 uppercase font-black leading-tight">Switch Note</div>
-                                            <div className="text-[12px] font-bold text-slate-800 leading-tight flex items-center gap-2">
-                                                {visitDate} <ChevronDown className={`w-3 h-3 transition-transform ${isHistoryOpen ? 'rotate-180' : ''}`} />
-                                            </div>
-                                        </div>
+                                        {visitDate} <ChevronDown className={`w-3 h-3 transition-transform ${isHistoryOpen ? 'rotate-180' : ''}`} />
                                     </button>
 
                                     {isHistoryOpen && (
                                         <>
                                             <div className="fixed inset-0 z-30" onClick={() => setIsHistoryOpen(false)} />
-                                            <div className="absolute top-full left-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-2xl z-40 overflow-hidden animate-slide-up">
-                                                <div className="p-3 bg-slate-50 border-b border-slate-200 text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                                            <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-slate-200 rounded-xl shadow-2xl z-40 overflow-hidden animate-slide-up">
+                                                <div className="p-2 bg-slate-50 border-b border-slate-200 text-[9px] font-bold uppercase text-slate-400 tracking-widest">
                                                     Visit Timeline ({allVisits.length})
                                                 </div>
-                                                <div className="max-h-[60vh] overflow-y-auto custom-scrollbar">
+                                                <div className="max-h-[50vh] overflow-y-auto custom-scrollbar">
                                                     {allVisits.map((v) => (
                                                         <button
                                                             key={v.id}
@@ -591,19 +586,16 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                                                 setActiveVisitId(v.id);
                                                                 setIsHistoryOpen(false);
                                                             }}
-                                                            className={`w-full text-left p-4 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 ${activeVisitId === v.id ? 'bg-blue-50/50' : ''}`}
+                                                            className={`w-full text-left px-3 py-2 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 ${activeVisitId === v.id ? 'bg-blue-50/50' : ''}`}
                                                         >
-                                                            <div className="flex justify-between items-start">
-                                                                <span className={`text-[12px] font-black ${activeVisitId === v.id ? 'text-blue-600' : 'text-slate-900'}`}>
+                                                            <div className="flex justify-between items-center">
+                                                                <span className={`text-[11px] font-bold ${activeVisitId === v.id ? 'text-blue-600' : 'text-slate-800'}`}>
                                                                     {format(new Date(v.visit_date), 'MMM d, yyyy')}
                                                                 </span>
                                                                 {v.locked && <Lock className="w-3 h-3 text-slate-300" />}
                                                             </div>
-                                                            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter mt-1 truncate">
+                                                            <div className="text-[10px] text-slate-500 truncate">
                                                                 {getChiefComplaint(v)}
-                                                            </div>
-                                                            <div className="text-[9px] text-slate-400 uppercase mt-0.5 font-medium">
-                                                                {v.visit_type?.replace('_', ' ') || 'Office Visit'} • {v.provider_last_name || 'MD'}
                                                             </div>
                                                         </button>
                                                     ))}
@@ -614,24 +606,24 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
                                 {isSigned && (
                                     <button
                                         onClick={() => setShowAddendumModal(true)}
-                                        className="px-4 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[12px] font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-amber-100 active:scale-95 transition-all"
+                                        className="px-3 py-1 text-[10px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-full border border-amber-200 transition-all flex items-center gap-1"
                                     >
-                                        <FilePlus className="w-4 h-4" /> Addendum
+                                        <FilePlus className="w-3 h-3" /> Addendum
                                     </button>
                                 )}
-                                <button onClick={handlePrint} className="px-5 py-2 bg-slate-900 text-white rounded text-[12px] font-bold uppercase tracking-wider flex items-center gap-2 shadow-sm active:scale-95 transition-all">
-                                    <Printer className="w-4 h-4" /> Print (A3 Format)
+                                <button onClick={handlePrint} className="px-3 py-1 text-[10px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-full border border-slate-200 transition-all flex items-center gap-1">
+                                    <Printer className="w-3 h-3" /> Print
                                 </button>
                                 <button
                                     onClick={onClose}
-                                    className="p-2.5 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-all border border-rose-100"
-                                    title="Close View"
+                                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-all"
+                                    title="Close"
                                 >
-                                    <X className="w-5 h-5" />
+                                    <X className="w-4 h-4" />
                                 </button>
                             </div>
                         </div>
@@ -848,6 +840,29 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                             <span className="text-[12px] font-bold text-slate-700 italic">{noteData.followUp || visit.follow_up_instructions || 'PRN / AS NEEDED'}</span>
                                         </div>
                                     </div>
+
+                                    {/* ADDENDUMS SECTION */}
+                                    {addendums.length > 0 && (
+                                        <div className="mt-8 pt-6 border-t-2 border-amber-200 avoid-cut space-y-4">
+                                            <span className="section-label text-amber-600">Clinical Addendums ({addendums.length})</span>
+                                            <div className="space-y-3">
+                                                {addendums.map((addendum, idx) => (
+                                                    <div key={idx} className="bg-amber-50/50 border border-amber-100 rounded-lg p-4">
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Addendum #{idx + 1}</span>
+                                                            <span className="text-[9px] text-amber-600 font-medium">
+                                                                {addendum.date ? format(new Date(addendum.date), 'MM/dd/yyyy HH:mm') : ''}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-[12px] text-slate-700 leading-relaxed whitespace-pre-wrap">{addendum.text || addendum}</div>
+                                                        {addendum.author && (
+                                                            <div className="mt-2 text-[10px] font-semibold text-amber-700 italic">/s/ {addendum.author}</div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* AUTHENTICATION FOOTER */}
                                     <div className="mt-8 pt-4 border-t border-blue-100 avoid-cut">
