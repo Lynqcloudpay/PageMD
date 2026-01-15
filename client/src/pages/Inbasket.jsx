@@ -18,9 +18,9 @@ const TASK_CATEGORIES = [
     { id: 'messages', label: 'Messages', icon: MessageSquare, color: 'purple', types: ['message'] },
     { id: 'portal_messages', label: 'Portal Messages', icon: User, color: 'blue', types: ['portal_message'] },
     { id: 'portal_appointments', label: 'Appt Requests', icon: Calendar, color: 'amber', types: ['portal_appointment'] },
-    { id: 'documents', label: 'Documents', icon: FileText, color: 'orange', types: ['document'] },
+    { id: 'documents', label: 'Documents', icon: FileText, color: 'orange', types: ['document', 'new_patient_registration'] },
     { id: 'referrals', label: 'Referrals', icon: Send, color: 'indigo', types: ['referral'] },
-    { id: 'tasks', label: 'Tasks', icon: CheckCircle, color: 'green', types: ['task'] },
+    { id: 'tasks', label: 'Tasks', icon: CheckCircle, color: 'green', types: ['task', 'note'] },
     { id: 'refills', label: 'Rx Requests', icon: Pill, color: 'red', types: ['refill'] },
 ];
 

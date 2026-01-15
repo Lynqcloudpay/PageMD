@@ -962,7 +962,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Order Entry" size="2xl">
-            <div className="flex flex-col h-[700px] overflow-hidden">
+            <div className="flex flex-col max-h-[70vh] overflow-hidden">
                 {/* Tabs */}
                 <div className="flex border-b border-gray-200 bg-gray-50">
                     <div className="flex-1 flex overflow-x-auto">
@@ -1293,8 +1293,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                                                         >
                                                             <Pill className="w-5 h-5 text-primary-400 group-hover:text-primary-600 flex-shrink-0" />
                                                             <div className="flex-1 min-w-0">
-                                                                <h2 className="text-lg font-semibold text-ink-900 tracking-tight">Order Entry (v1.2)</h2>
-                                                                <p className="text-sm font-semibold text-gray-900 leading-tight truncate">
+                                                                <p className="text-sm font-semibold text-gray-900 leading-tight">
                                                                     {decodeHtmlEntities(m.name || '')}
                                                                 </p>
                                                                 {m.strength && <p className="text-xs text-gray-500 mt-0.5">{m.strength}</p>}
