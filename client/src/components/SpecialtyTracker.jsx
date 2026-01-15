@@ -2,9 +2,10 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
     X, Activity, Heart, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronRight,
     AlertCircle, Clock, Pin, PinOff, Stethoscope, FlaskConical, Pill, Calendar,
-    Brain, Bone, Eye, FileText, Zap, Droplet, Thermometer, Wind
+    Brain, Bone, Eye, FileText, Zap, Droplet, Thermometer, Wind, RefreshCw
 } from 'lucide-react';
-import { format, differenceInDays, parseISO } from 'date-fns';
+import { format, differenceInDays, parseISO, subDays } from 'date-fns';
+import { labsAPI } from '../services/api';
 
 // ============== SPECIALTY TEMPLATES ==============
 // Each specialty defines: trends (cards), due rules (screenings), events (procedures)
@@ -16,25 +17,25 @@ const SPECIALTY_TEMPLATES = {
         icon: Heart,
         color: 'rose',
         trends: [
-            { id: 'sbp', label: 'Systolic BP', unit: 'mmHg', source: 'vitals', field: 'bp', extractor: (v) => v?.bp?.split('/')[0], thresholds: { low: 90, high: 140, critical: 180 }, goal: '<130' },
-            { id: 'dbp', label: 'Diastolic BP', unit: 'mmHg', source: 'vitals', field: 'bp', extractor: (v) => v?.bp?.split('/')[1], thresholds: { low: 60, high: 90, critical: 110 }, goal: '<80' },
-            { id: 'hr', label: 'Heart Rate', unit: 'bpm', source: 'vitals', field: 'pulse', thresholds: { low: 50, high: 100, critical: 120 } },
+            { id: 'sbp', label: 'Systolic BP', unit: 'mmHg', source: 'vitals', vitalKey: 'bp', extractor: (v) => { const bp = v?.bp; if (!bp || bp === 'N/A') return null; const parts = String(bp).split('/'); return parts[0] ? parseInt(parts[0]) : null; }, thresholds: { low: 90, high: 140, critical: 180 }, goal: '<130' },
+            { id: 'dbp', label: 'Diastolic BP', unit: 'mmHg', source: 'vitals', vitalKey: 'bp', extractor: (v) => { const bp = v?.bp; if (!bp || bp === 'N/A') return null; const parts = String(bp).split('/'); return parts[1] ? parseInt(parts[1]) : null; }, thresholds: { low: 60, high: 90, critical: 110 }, goal: '<80' },
+            { id: 'hr', label: 'Heart Rate', unit: 'bpm', source: 'vitals', vitalKey: 'hr', thresholds: { low: 50, high: 100, critical: 120 } },
             { id: 'ef', label: 'EF (Echo)', unit: '%', source: 'documents', docType: 'echo', field: 'ef', thresholds: { low: 40, critical: 30 }, goal: '>55%' },
-            { id: 'bnp', label: 'BNP', unit: 'pg/mL', source: 'labs', loincCode: '42637-9', thresholds: { high: 100, critical: 400 } },
-            { id: 'ldl', label: 'LDL', unit: 'mg/dL', source: 'labs', loincCode: '13457-7', thresholds: { high: 100, critical: 160 }, goal: '<70' },
-            { id: 'a1c', label: 'HbA1c', unit: '%', source: 'labs', loincCode: '4548-4', thresholds: { high: 6.5, critical: 9 }, goal: '<7%' },
-            { id: 'weight', label: 'Weight', unit: 'lbs', source: 'vitals', field: 'weight' },
-            { id: 'cr', label: 'Creatinine', unit: 'mg/dL', source: 'labs', loincCode: '2160-0', thresholds: { high: 1.2, critical: 2.0 } },
-            { id: 'k', label: 'Potassium', unit: 'mEq/L', source: 'labs', loincCode: '2823-3', thresholds: { low: 3.5, high: 5.0, critical: 5.5 } },
+            { id: 'bnp', label: 'BNP', unit: 'pg/mL', source: 'labs', labName: 'bnp', thresholds: { high: 100, critical: 400 } },
+            { id: 'ldl', label: 'LDL', unit: 'mg/dL', source: 'labs', labName: 'ldl', thresholds: { high: 100, critical: 160 }, goal: '<70' },
+            { id: 'a1c', label: 'HbA1c', unit: '%', source: 'labs', labName: 'a1c', thresholds: { high: 6.5, critical: 9 }, goal: '<7%' },
+            { id: 'weight', label: 'Weight', unit: 'lbs', source: 'vitals', vitalKey: 'weight' },
+            { id: 'cr', label: 'Creatinine', unit: 'mg/dL', source: 'labs', labName: 'creatinine', thresholds: { high: 1.2, critical: 2.0 } },
+            { id: 'k', label: 'Potassium', unit: 'mEq/L', source: 'labs', labName: 'potassium', thresholds: { low: 3.5, high: 5.0, critical: 5.5 } },
         ],
         status: [
-            { id: 'anticoag', label: 'Anticoagulation', checkMeds: ['warfarin', 'eliquis', 'xarelto', 'pradaxa', 'apixaban', 'rivaroxaban', 'dabigatran'] },
-            { id: 'antiplatelet', label: 'Antiplatelet', checkMeds: ['aspirin', 'plavix', 'clopidogrel', 'brilinta', 'ticagrelor'] },
+            { id: 'anticoag', label: 'Anticoagulation', checkMeds: ['warfarin', 'eliquis', 'xarelto', 'pradaxa', 'apixaban', 'rivaroxaban', 'dabigatran', 'coumadin'] },
+            { id: 'antiplatelet', label: 'Antiplatelet', checkMeds: ['aspirin', 'plavix', 'clopidogrel', 'brilinta', 'ticagrelor', 'effient', 'prasugrel'] },
         ],
-        events: ['cardiac_cath', 'pci', 'cabg', 'echo', 'stress_test', 'icd_implant', 'pacemaker'],
+        events: ['cardiac_cath', 'pci', 'cabg', 'echo', 'stress_test', 'icd_implant', 'pacemaker', 'ekg', 'echocardiogram'],
         due: [
-            { id: 'lipid_recheck', label: 'Lipid Panel', intervalDays: 90, lastLabCode: '13457-7' },
-            { id: 'echo_followup', label: 'Echo Follow-up', intervalDays: 365, lastDocType: 'echo' },
+            { id: 'lipid_recheck', label: 'Lipid Panel', intervalDays: 90, labName: 'ldl' },
+            { id: 'echo_followup', label: 'Echo Follow-up', intervalDays: 365, docType: 'echo' },
         ]
     },
     endocrinology: {
@@ -43,26 +44,25 @@ const SPECIALTY_TEMPLATES = {
         icon: Droplet,
         color: 'purple',
         trends: [
-            { id: 'a1c', label: 'HbA1c', unit: '%', source: 'labs', loincCode: '4548-4', thresholds: { high: 7, critical: 9 }, goal: '<7%' },
-            { id: 'fasting_glucose', label: 'Fasting Glucose', unit: 'mg/dL', source: 'labs', loincCode: '1558-6', thresholds: { low: 70, high: 100, critical: 200 } },
-            { id: 'tsh', label: 'TSH', unit: 'mIU/L', source: 'labs', loincCode: '3016-3', thresholds: { low: 0.4, high: 4.0 } },
-            { id: 'freet4', label: 'Free T4', unit: 'ng/dL', source: 'labs', loincCode: '3024-7', thresholds: { low: 0.8, high: 1.8 } },
-            { id: 'calcium', label: 'Calcium', unit: 'mg/dL', source: 'labs', loincCode: '17861-6', thresholds: { low: 8.5, high: 10.5 } },
-            { id: 'vitd', label: 'Vitamin D', unit: 'ng/mL', source: 'labs', loincCode: '1989-3', thresholds: { low: 30 } },
-            { id: 'ldl', label: 'LDL', unit: 'mg/dL', source: 'labs', loincCode: '13457-7', thresholds: { high: 100 }, goal: '<100' },
-            { id: 'weight', label: 'Weight', unit: 'lbs', source: 'vitals', field: 'weight' },
-            { id: 'bmi', label: 'BMI', unit: 'kg/m²', source: 'vitals', field: 'bmi', thresholds: { high: 25, critical: 30 } },
-            { id: 'uacr', label: 'UACR', unit: 'mg/g', source: 'labs', loincCode: '14959-1', thresholds: { high: 30, critical: 300 } },
+            { id: 'a1c', label: 'HbA1c', unit: '%', source: 'labs', labName: 'a1c', thresholds: { high: 7, critical: 9 }, goal: '<7%' },
+            { id: 'fasting_glucose', label: 'Fasting Glucose', unit: 'mg/dL', source: 'labs', labName: 'glucose', thresholds: { low: 70, high: 100, critical: 200 } },
+            { id: 'tsh', label: 'TSH', unit: 'mIU/L', source: 'labs', labName: 'tsh', thresholds: { low: 0.4, high: 4.0 } },
+            { id: 'freet4', label: 'Free T4', unit: 'ng/dL', source: 'labs', labName: 't4', thresholds: { low: 0.8, high: 1.8 } },
+            { id: 'calcium', label: 'Calcium', unit: 'mg/dL', source: 'labs', labName: 'calcium', thresholds: { low: 8.5, high: 10.5 } },
+            { id: 'vitd', label: 'Vitamin D', unit: 'ng/mL', source: 'labs', labName: 'vitamin d', thresholds: { low: 30 } },
+            { id: 'ldl', label: 'LDL', unit: 'mg/dL', source: 'labs', labName: 'ldl', thresholds: { high: 100 }, goal: '<100' },
+            { id: 'weight', label: 'Weight', unit: 'lbs', source: 'vitals', vitalKey: 'weight' },
+            { id: 'bmi', label: 'BMI', unit: 'kg/m²', source: 'vitals', vitalKey: 'bmi', thresholds: { high: 25, critical: 30 } },
+            { id: 'uacr', label: 'UACR', unit: 'mg/g', source: 'labs', labName: 'uacr', thresholds: { high: 30, critical: 300 } },
         ],
         status: [
-            { id: 'insulin', label: 'Insulin Regimen', checkMeds: ['insulin', 'lantus', 'humalog', 'novolog', 'levemir', 'tresiba'] },
+            { id: 'insulin', label: 'Insulin Regimen', checkMeds: ['insulin', 'lantus', 'humalog', 'novolog', 'levemir', 'tresiba', 'basaglar', 'toujeo'] },
         ],
         events: ['dexa', 'thyroid_us'],
         due: [
-            { id: 'a1c_due', label: 'HbA1c', intervalDays: 90, lastLabCode: '4548-4' },
+            { id: 'a1c_due', label: 'HbA1c', intervalDays: 90, labName: 'a1c' },
             { id: 'eye_exam', label: 'Diabetic Eye Exam', intervalDays: 365 },
             { id: 'foot_exam', label: 'Diabetic Foot Exam', intervalDays: 365 },
-            { id: 'dexa_due', label: 'DEXA Scan', intervalDays: 730, lastDocType: 'dexa' },
         ]
     },
     primary_care: {
@@ -71,23 +71,20 @@ const SPECIALTY_TEMPLATES = {
         icon: Stethoscope,
         color: 'blue',
         trends: [
-            { id: 'sbp', label: 'Systolic BP', unit: 'mmHg', source: 'vitals', field: 'bp', extractor: (v) => v?.bp?.split('/')[0], thresholds: { high: 130, critical: 180 }, goal: '<130' },
-            { id: 'bmi', label: 'BMI', unit: 'kg/m²', source: 'vitals', field: 'bmi', thresholds: { high: 25, critical: 30 } },
-            { id: 'weight', label: 'Weight', unit: 'lbs', source: 'vitals', field: 'weight' },
-            { id: 'a1c', label: 'HbA1c', unit: '%', source: 'labs', loincCode: '4548-4', thresholds: { high: 5.7, critical: 6.5 } },
-            { id: 'ldl', label: 'LDL', unit: 'mg/dL', source: 'labs', loincCode: '13457-7', thresholds: { high: 100 } },
-            { id: 'egfr', label: 'eGFR', unit: 'mL/min', source: 'labs', loincCode: '33914-3', thresholds: { low: 60, critical: 30 } },
-            { id: 'alt', label: 'ALT', unit: 'U/L', source: 'labs', loincCode: '1742-6', thresholds: { high: 40 } },
+            { id: 'sbp', label: 'Systolic BP', unit: 'mmHg', source: 'vitals', vitalKey: 'bp', extractor: (v) => { const bp = v?.bp; if (!bp || bp === 'N/A') return null; const parts = String(bp).split('/'); return parts[0] ? parseInt(parts[0]) : null; }, thresholds: { high: 130, critical: 180 }, goal: '<130' },
+            { id: 'bmi', label: 'BMI', unit: 'kg/m²', source: 'vitals', vitalKey: 'bmi', thresholds: { high: 25, critical: 30 } },
+            { id: 'weight', label: 'Weight', unit: 'lbs', source: 'vitals', vitalKey: 'weight' },
+            { id: 'a1c', label: 'HbA1c', unit: '%', source: 'labs', labName: 'a1c', thresholds: { high: 5.7, critical: 6.5 } },
+            { id: 'ldl', label: 'LDL', unit: 'mg/dL', source: 'labs', labName: 'ldl', thresholds: { high: 100 } },
+            { id: 'egfr', label: 'eGFR', unit: 'mL/min', source: 'labs', labName: 'egfr', thresholds: { low: 60, critical: 30 } },
+            { id: 'alt', label: 'ALT', unit: 'U/L', source: 'labs', labName: 'alt', thresholds: { high: 40 } },
         ],
         status: [],
         events: ['hospitalization', 'preventive_visit'],
         due: [
             { id: 'colonoscopy', label: 'Colonoscopy', intervalDays: 3650, minAge: 45 },
             { id: 'mammogram', label: 'Mammogram', intervalDays: 365, minAge: 40, sex: 'F' },
-            { id: 'pap_smear', label: 'Pap Smear', intervalDays: 1095, minAge: 21, maxAge: 65, sex: 'F' },
             { id: 'flu_vaccine', label: 'Flu Vaccine', intervalDays: 365 },
-            { id: 'tdap', label: 'Tdap Vaccine', intervalDays: 3650 },
-            { id: 'depression_screen', label: 'Depression Screening', intervalDays: 365 },
         ]
     },
     pulmonology: {
@@ -96,18 +93,17 @@ const SPECIALTY_TEMPLATES = {
         icon: Wind,
         color: 'cyan',
         trends: [
-            { id: 'spo2', label: 'SpO2', unit: '%', source: 'vitals', field: 'o2sat', thresholds: { low: 92, critical: 88 } },
-            { id: 'fev1', label: 'FEV1', unit: '%', source: 'documents', docType: 'pft', field: 'fev1' },
-            { id: 'fvc', label: 'FVC', unit: '%', source: 'documents', docType: 'pft', field: 'fvc' },
-            { id: 'pef', label: 'Peak Flow', unit: 'L/min', source: 'vitals', field: 'peak_flow' },
+            { id: 'spo2', label: 'SpO2', unit: '%', source: 'vitals', vitalKey: 'spo2', thresholds: { low: 92, critical: 88 } },
+            { id: 'hr', label: 'Heart Rate', unit: 'bpm', source: 'vitals', vitalKey: 'hr', thresholds: { high: 100 } },
+            { id: 'rr', label: 'Resp Rate', unit: '/min', source: 'vitals', vitalKey: 'rr', thresholds: { high: 20 } },
+            { id: 'weight', label: 'Weight', unit: 'lbs', source: 'vitals', vitalKey: 'weight' },
         ],
         status: [
-            { id: 'inhaler', label: 'Inhaler Regimen', checkMeds: ['albuterol', 'symbicort', 'advair', 'breo', 'spiriva', 'combivent'] },
+            { id: 'inhaler', label: 'Inhaler Regimen', checkMeds: ['albuterol', 'symbicort', 'advair', 'breo', 'spiriva', 'combivent', 'proair', 'ventolin', 'dulera'] },
         ],
-        events: ['pft', 'sleep_study', 'bronchoscopy'],
+        events: ['pft', 'sleep_study', 'bronchoscopy', 'ct chest'],
         due: [
-            { id: 'pft_repeat', label: 'PFT Repeat', intervalDays: 365, lastDocType: 'pft' },
-            { id: 'ct_lung', label: 'CT Lung Follow-up', intervalDays: 365 },
+            { id: 'pft_repeat', label: 'PFT Repeat', intervalDays: 365 },
         ]
     },
     nephrology: {
@@ -116,21 +112,21 @@ const SPECIALTY_TEMPLATES = {
         icon: Droplet,
         color: 'amber',
         trends: [
-            { id: 'egfr', label: 'eGFR', unit: 'mL/min', source: 'labs', loincCode: '33914-3', thresholds: { low: 60, critical: 15 } },
-            { id: 'cr', label: 'Creatinine', unit: 'mg/dL', source: 'labs', loincCode: '2160-0', thresholds: { high: 1.2, critical: 4 } },
-            { id: 'k', label: 'Potassium', unit: 'mEq/L', source: 'labs', loincCode: '2823-3', thresholds: { low: 3.5, high: 5.0, critical: 5.5 } },
-            { id: 'co2', label: 'CO2', unit: 'mEq/L', source: 'labs', loincCode: '2028-9', thresholds: { low: 22 } },
-            { id: 'phos', label: 'Phosphorus', unit: 'mg/dL', source: 'labs', loincCode: '2777-1', thresholds: { high: 4.5 } },
-            { id: 'calcium', label: 'Calcium', unit: 'mg/dL', source: 'labs', loincCode: '17861-6', thresholds: { low: 8.5, high: 10.5 } },
-            { id: 'hgb', label: 'Hemoglobin', unit: 'g/dL', source: 'labs', loincCode: '718-7', thresholds: { low: 10, critical: 7 } },
-            { id: 'uacr', label: 'UACR', unit: 'mg/g', source: 'labs', loincCode: '14959-1', thresholds: { high: 30, critical: 300 } },
+            { id: 'egfr', label: 'eGFR', unit: 'mL/min', source: 'labs', labName: 'egfr', thresholds: { low: 60, critical: 15 } },
+            { id: 'cr', label: 'Creatinine', unit: 'mg/dL', source: 'labs', labName: 'creatinine', thresholds: { high: 1.2, critical: 4 } },
+            { id: 'bun', label: 'BUN', unit: 'mg/dL', source: 'labs', labName: 'bun', thresholds: { high: 20 } },
+            { id: 'k', label: 'Potassium', unit: 'mEq/L', source: 'labs', labName: 'potassium', thresholds: { low: 3.5, high: 5.0, critical: 5.5 } },
+            { id: 'co2', label: 'CO2', unit: 'mEq/L', source: 'labs', labName: 'co2', thresholds: { low: 22 } },
+            { id: 'phos', label: 'Phosphorus', unit: 'mg/dL', source: 'labs', labName: 'phosphorus', thresholds: { high: 4.5 } },
+            { id: 'calcium', label: 'Calcium', unit: 'mg/dL', source: 'labs', labName: 'calcium', thresholds: { low: 8.5, high: 10.5 } },
+            { id: 'hgb', label: 'Hemoglobin', unit: 'g/dL', source: 'labs', labName: 'hemoglobin', thresholds: { low: 10, critical: 7 } },
         ],
         status: [
-            { id: 'ace_arb', label: 'ACE/ARB Use', checkMeds: ['lisinopril', 'enalapril', 'losartan', 'valsartan', 'irbesartan'] },
+            { id: 'ace_arb', label: 'ACE/ARB Use', checkMeds: ['lisinopril', 'enalapril', 'losartan', 'valsartan', 'irbesartan', 'olmesartan', 'ramipril', 'benazepril'] },
         ],
         events: ['dialysis_access', 'kidney_biopsy'],
         due: [
-            { id: 'ckd_labs', label: 'CKD Labs', intervalDays: 90 },
+            { id: 'ckd_labs', label: 'CKD Labs', intervalDays: 90, labName: 'creatinine' },
         ]
     },
     gastroenterology: {
@@ -139,12 +135,12 @@ const SPECIALTY_TEMPLATES = {
         icon: Activity,
         color: 'orange',
         trends: [
-            { id: 'ast', label: 'AST', unit: 'U/L', source: 'labs', loincCode: '1920-8', thresholds: { high: 40 } },
-            { id: 'alt', label: 'ALT', unit: 'U/L', source: 'labs', loincCode: '1742-6', thresholds: { high: 40 } },
-            { id: 'inr', label: 'INR', unit: '', source: 'labs', loincCode: '6301-6', thresholds: { high: 1.5 } },
-            { id: 'albumin', label: 'Albumin', unit: 'g/dL', source: 'labs', loincCode: '1751-7', thresholds: { low: 3.5 } },
-            { id: 'bilirubin', label: 'Bilirubin', unit: 'mg/dL', source: 'labs', loincCode: '1975-2', thresholds: { high: 1.2 } },
-            { id: 'hgb', label: 'Hemoglobin', unit: 'g/dL', source: 'labs', loincCode: '718-7', thresholds: { low: 12, critical: 8 } },
+            { id: 'ast', label: 'AST', unit: 'U/L', source: 'labs', labName: 'ast', thresholds: { high: 40 } },
+            { id: 'alt', label: 'ALT', unit: 'U/L', source: 'labs', labName: 'alt', thresholds: { high: 40 } },
+            { id: 'inr', label: 'INR', unit: '', source: 'labs', labName: 'inr', thresholds: { high: 1.5 } },
+            { id: 'albumin', label: 'Albumin', unit: 'g/dL', source: 'labs', labName: 'albumin', thresholds: { low: 3.5 } },
+            { id: 'bilirubin', label: 'Bilirubin', unit: 'mg/dL', source: 'labs', labName: 'bilirubin', thresholds: { high: 1.2 } },
+            { id: 'hgb', label: 'Hemoglobin', unit: 'g/dL', source: 'labs', labName: 'hemoglobin', thresholds: { low: 12, critical: 8 } },
         ],
         events: ['colonoscopy', 'egd', 'ercp'],
         due: [
@@ -157,20 +153,19 @@ const SPECIALTY_TEMPLATES = {
         icon: Bone,
         color: 'indigo',
         trends: [
-            { id: 'esr', label: 'ESR', unit: 'mm/hr', source: 'labs', loincCode: '4537-7', thresholds: { high: 20 } },
-            { id: 'crp', label: 'CRP', unit: 'mg/L', source: 'labs', loincCode: '1988-5', thresholds: { high: 3 } },
-            { id: 'wbc', label: 'WBC', unit: 'K/uL', source: 'labs', loincCode: '6690-2', thresholds: { low: 4, high: 11 } },
-            { id: 'hgb', label: 'Hemoglobin', unit: 'g/dL', source: 'labs', loincCode: '718-7', thresholds: { low: 12 } },
-            { id: 'plt', label: 'Platelets', unit: 'K/uL', source: 'labs', loincCode: '777-3', thresholds: { low: 150 } },
+            { id: 'esr', label: 'ESR', unit: 'mm/hr', source: 'labs', labName: 'esr', thresholds: { high: 20 } },
+            { id: 'crp', label: 'CRP', unit: 'mg/L', source: 'labs', labName: 'crp', thresholds: { high: 3 } },
+            { id: 'wbc', label: 'WBC', unit: 'K/uL', source: 'labs', labName: 'wbc', thresholds: { low: 4, high: 11 } },
+            { id: 'hgb', label: 'Hemoglobin', unit: 'g/dL', source: 'labs', labName: 'hemoglobin', thresholds: { low: 12 } },
+            { id: 'plt', label: 'Platelets', unit: 'K/uL', source: 'labs', labName: 'platelet', thresholds: { low: 150 } },
         ],
         status: [
-            { id: 'dmard', label: 'DMARD/Biologic', checkMeds: ['methotrexate', 'humira', 'enbrel', 'remicade', 'adalimumab', 'etanercept'] },
-            { id: 'steroid', label: 'Steroid Use', checkMeds: ['prednisone', 'methylprednisolone', 'dexamethasone'] },
+            { id: 'dmard', label: 'DMARD/Biologic', checkMeds: ['methotrexate', 'humira', 'enbrel', 'remicade', 'adalimumab', 'etanercept', 'infliximab', 'rituximab', 'orencia'] },
+            { id: 'steroid', label: 'Steroid Use', checkMeds: ['prednisone', 'methylprednisolone', 'dexamethasone', 'hydrocortisone'] },
         ],
         events: ['joint_injection'],
         due: [
             { id: 'tb_screen', label: 'TB Screening', intervalDays: 365 },
-            { id: 'hep_screen', label: 'Hepatitis Screening', intervalDays: 365 },
         ]
     },
     neurology: {
@@ -179,14 +174,14 @@ const SPECIALTY_TEMPLATES = {
         icon: Brain,
         color: 'violet',
         trends: [
-            { id: 'sbp', label: 'Systolic BP', unit: 'mmHg', source: 'vitals', field: 'bp', extractor: (v) => v?.bp?.split('/')[0], thresholds: { high: 140 } },
-            { id: 'ldl', label: 'LDL', unit: 'mg/dL', source: 'labs', loincCode: '13457-7', thresholds: { high: 70 } },
-            { id: 'a1c', label: 'HbA1c', unit: '%', source: 'labs', loincCode: '4548-4', thresholds: { high: 7 } },
+            { id: 'sbp', label: 'Systolic BP', unit: 'mmHg', source: 'vitals', vitalKey: 'bp', extractor: (v) => { const bp = v?.bp; if (!bp || bp === 'N/A') return null; const parts = String(bp).split('/'); return parts[0] ? parseInt(parts[0]) : null; }, thresholds: { high: 140 } },
+            { id: 'ldl', label: 'LDL', unit: 'mg/dL', source: 'labs', labName: 'ldl', thresholds: { high: 70 } },
+            { id: 'a1c', label: 'HbA1c', unit: '%', source: 'labs', labName: 'a1c', thresholds: { high: 7 } },
         ],
         status: [
-            { id: 'aed', label: 'AED Regimen', checkMeds: ['keppra', 'levetiracetam', 'lamictal', 'lamotrigine', 'depakote', 'valproic'] },
+            { id: 'aed', label: 'AED Regimen', checkMeds: ['keppra', 'levetiracetam', 'lamictal', 'lamotrigine', 'depakote', 'valproic', 'topamax', 'topiramate', 'dilantin', 'phenytoin'] },
         ],
-        events: ['eeg', 'mri_brain', 'stroke', 'tia'],
+        events: ['eeg', 'mri_brain', 'stroke', 'tia', 'ct head'],
         due: [
             { id: 'aed_labs', label: 'AED Level Check', intervalDays: 180 },
         ]
@@ -197,15 +192,15 @@ const SPECIALTY_TEMPLATES = {
         icon: FlaskConical,
         color: 'red',
         trends: [
-            { id: 'hgb', label: 'Hemoglobin', unit: 'g/dL', source: 'labs', loincCode: '718-7', thresholds: { low: 10, critical: 7 } },
-            { id: 'wbc', label: 'WBC', unit: 'K/uL', source: 'labs', loincCode: '6690-2', thresholds: { low: 4, critical: 1 } },
-            { id: 'plt', label: 'Platelets', unit: 'K/uL', source: 'labs', loincCode: '777-3', thresholds: { low: 100, critical: 20 } },
-            { id: 'anc', label: 'ANC', unit: 'K/uL', source: 'labs', loincCode: '751-8', thresholds: { low: 1.5, critical: 0.5 } },
-            { id: 'ferritin', label: 'Ferritin', unit: 'ng/mL', source: 'labs', loincCode: '2276-4', thresholds: { low: 30 } },
+            { id: 'hgb', label: 'Hemoglobin', unit: 'g/dL', source: 'labs', labName: 'hemoglobin', thresholds: { low: 10, critical: 7 } },
+            { id: 'wbc', label: 'WBC', unit: 'K/uL', source: 'labs', labName: 'wbc', thresholds: { low: 4, critical: 1 } },
+            { id: 'plt', label: 'Platelets', unit: 'K/uL', source: 'labs', labName: 'platelet', thresholds: { low: 100, critical: 20 } },
+            { id: 'anc', label: 'ANC', unit: 'K/uL', source: 'labs', labName: 'anc', thresholds: { low: 1.5, critical: 0.5 } },
+            { id: 'ferritin', label: 'Ferritin', unit: 'ng/mL', source: 'labs', labName: 'ferritin', thresholds: { low: 30 } },
         ],
-        events: ['infusion', 'transfusion', 'bone_marrow_biopsy'],
+        events: ['infusion', 'transfusion', 'bone_marrow_biopsy', 'chemo'],
         due: [
-            { id: 'cbc_monitoring', label: 'CBC Monitoring', intervalDays: 14 },
+            { id: 'cbc_monitoring', label: 'CBC Monitoring', intervalDays: 14, labName: 'cbc' },
         ]
     },
     psychiatry: {
@@ -214,10 +209,10 @@ const SPECIALTY_TEMPLATES = {
         icon: Brain,
         color: 'teal',
         trends: [
-            { id: 'phq9', label: 'PHQ-9', unit: '', source: 'assessments', assessmentType: 'phq9', thresholds: { high: 10, critical: 20 } },
-            { id: 'gad7', label: 'GAD-7', unit: '', source: 'assessments', assessmentType: 'gad7', thresholds: { high: 10, critical: 15 } },
-            { id: 'weight', label: 'Weight', unit: 'lbs', source: 'vitals', field: 'weight' },
-            { id: 'bmi', label: 'BMI', unit: 'kg/m²', source: 'vitals', field: 'bmi', thresholds: { high: 30 } },
+            { id: 'weight', label: 'Weight', unit: 'lbs', source: 'vitals', vitalKey: 'weight' },
+            { id: 'bmi', label: 'BMI', unit: 'kg/m²', source: 'vitals', vitalKey: 'bmi', thresholds: { high: 30 } },
+            { id: 'hr', label: 'Heart Rate', unit: 'bpm', source: 'vitals', vitalKey: 'hr' },
+            { id: 'sbp', label: 'Systolic BP', unit: 'mmHg', source: 'vitals', vitalKey: 'bp', extractor: (v) => { const bp = v?.bp; if (!bp || bp === 'N/A') return null; const parts = String(bp).split('/'); return parts[0] ? parseInt(parts[0]) : null; } },
         ],
         status: [],
         events: [],
@@ -227,11 +222,20 @@ const SPECIALTY_TEMPLATES = {
     }
 };
 
+// Helper to parse vital value
+const parseVitalValue = (value) => {
+    if (value === null || value === undefined || value === 'N/A' || value === '') return null;
+    const num = parseFloat(value);
+    return isNaN(num) ? null : num;
+};
+
 // ============== MINI SPARKLINE COMPONENT ==============
 const MiniSparkline = ({ data, color = 'blue', width = 60, height = 20 }) => {
     if (!data || data.length < 2) return null;
 
-    const values = data.map(d => parseFloat(d.value) || 0);
+    const values = data.map(d => parseFloat(d.value) || 0).filter(v => !isNaN(v));
+    if (values.length < 2) return null;
+
     const min = Math.min(...values);
     const max = Math.max(...values);
     const range = max - min || 1;
@@ -242,13 +246,15 @@ const MiniSparkline = ({ data, color = 'blue', width = 60, height = 20 }) => {
         return `${x},${y}`;
     }).join(' ');
 
+    const strokeColor = color === 'emerald' ? '#10b981' : color === 'rose' ? '#f43f5e' : color === 'amber' ? '#f59e0b' : '#3b82f6';
+
     return (
-        <svg width={width} height={height} className="opacity-60">
+        <svg width={width} height={height} className="opacity-70">
             <polyline
                 points={points}
                 fill="none"
-                stroke={`var(--${color}-500, #3b82f6)`}
-                strokeWidth="1.5"
+                stroke={strokeColor}
+                strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
             />
@@ -257,7 +263,7 @@ const MiniSparkline = ({ data, color = 'blue', width = 60, height = 20 }) => {
 };
 
 // ============== TREND CARD COMPONENT ==============
-const TrendCard = ({ trend, data, onClick, specialty }) => {
+const TrendCard = ({ trend, data, onClick }) => {
     const latest = data[0];
     const previous = data[1];
 
@@ -270,22 +276,26 @@ const TrendCard = ({ trend, data, onClick, specialty }) => {
     let deltaType = 'neutral';
     if (value != null && prevValue != null) {
         const diff = parseFloat(value) - parseFloat(prevValue);
-        delta = diff > 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1);
-        deltaType = diff > 0 ? 'up' : diff < 0 ? 'down' : 'neutral';
+        if (!isNaN(diff)) {
+            delta = diff > 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1);
+            deltaType = diff > 0 ? 'up' : diff < 0 ? 'down' : 'neutral';
+        }
     }
 
     // Determine status color based on thresholds
     let statusColor = 'slate';
     if (trend.thresholds && value != null) {
         const v = parseFloat(value);
-        if (trend.thresholds.critical && (v >= trend.thresholds.critical || v <= (trend.thresholds.criticalLow || -Infinity))) {
-            statusColor = 'rose';
-        } else if (trend.thresholds.high && v >= trend.thresholds.high) {
-            statusColor = 'amber';
-        } else if (trend.thresholds.low && v <= trend.thresholds.low) {
-            statusColor = 'amber';
-        } else {
-            statusColor = 'emerald';
+        if (!isNaN(v)) {
+            if (trend.thresholds.critical && v >= trend.thresholds.critical) {
+                statusColor = 'rose';
+            } else if (trend.thresholds.high && v >= trend.thresholds.high) {
+                statusColor = 'amber';
+            } else if (trend.thresholds.low && v <= trend.thresholds.low) {
+                statusColor = 'amber';
+            } else if (trend.thresholds.high || trend.thresholds.low) {
+                statusColor = 'emerald';
+            }
         }
     }
 
@@ -297,6 +307,9 @@ const TrendCard = ({ trend, data, onClick, specialty }) => {
     };
 
     const colors = colorMap[statusColor];
+
+    // Format the display value
+    const displayValue = value != null ? (typeof value === 'number' ? value.toFixed(value % 1 === 0 ? 0 : 1) : value) : '--';
 
     return (
         <button
@@ -317,7 +330,7 @@ const TrendCard = ({ trend, data, onClick, specialty }) => {
             <div className="flex items-end justify-between">
                 <div>
                     <div className={`text-xl font-bold ${colors.value} tabular-nums`}>
-                        {value != null ? value : '--'}
+                        {displayValue}
                         <span className="text-xs font-medium text-slate-400 ml-0.5">{trend.unit}</span>
                     </div>
 
@@ -333,7 +346,7 @@ const TrendCard = ({ trend, data, onClick, specialty }) => {
                 </div>
 
                 <div className="flex flex-col items-end">
-                    <MiniSparkline data={data} color={statusColor === 'emerald' ? 'emerald' : statusColor === 'rose' ? 'rose' : 'blue'} />
+                    <MiniSparkline data={data} color={statusColor} />
                     {date && (
                         <span className="text-[9px] text-slate-400 mt-1">
                             {format(new Date(date), 'M/d/yy')}
@@ -346,7 +359,7 @@ const TrendCard = ({ trend, data, onClick, specialty }) => {
 };
 
 // ============== DUE ITEM COMPONENT ==============
-const DueItem = ({ item, dueDate, overdue }) => {
+const DueItem = ({ item, lastDate, overdue }) => {
     return (
         <div className={`flex items-center justify-between px-3 py-2 rounded-lg ${overdue ? 'bg-rose-50 border border-rose-200' : 'bg-amber-50 border border-amber-200'
             }`}>
@@ -357,7 +370,7 @@ const DueItem = ({ item, dueDate, overdue }) => {
                 </span>
             </div>
             <span className={`text-[10px] font-bold ${overdue ? 'text-rose-600' : 'text-amber-600'}`}>
-                {overdue ? 'OVERDUE' : dueDate ? format(new Date(dueDate), 'M/d/yy') : 'Due Soon'}
+                {overdue ? 'OVERDUE' : lastDate ? `Last: ${format(new Date(lastDate), 'M/d/yy')}` : 'Due'}
             </span>
         </div>
     );
@@ -370,21 +383,36 @@ const EventItem = ({ type, date, summary }) => {
         pci: 'PCI/Stent',
         cabg: 'CABG',
         echo: 'Echocardiogram',
+        echocardiogram: 'Echocardiogram',
         stress_test: 'Stress Test',
+        stress: 'Stress Test',
         colonoscopy: 'Colonoscopy',
         egd: 'EGD',
         pft: 'PFT',
         dexa: 'DEXA Scan',
         mri_brain: 'MRI Brain',
+        mri: 'MRI',
         eeg: 'EEG',
+        ekg: 'EKG',
+        ct: 'CT Scan',
     };
+
+    // Find matching label
+    const lowerType = (type || '').toLowerCase();
+    let label = type;
+    for (const [key, val] of Object.entries(eventLabels)) {
+        if (lowerType.includes(key)) {
+            label = val;
+            break;
+        }
+    }
 
     return (
         <div className="flex items-center justify-between px-3 py-2 bg-white border border-slate-100 rounded-lg">
             <div className="flex items-center gap-2">
                 <FileText className="w-3.5 h-3.5 text-slate-400" />
                 <span className="text-xs font-medium text-slate-700">
-                    {eventLabels[type] || type}
+                    {label}
                 </span>
             </div>
             <span className="text-[10px] text-slate-500">
@@ -412,10 +440,27 @@ const TrendDetailView = ({ trend, data, onClose }) => {
                 </div>
 
                 <div className="p-4 max-h-[60vh] overflow-y-auto">
-                    {/* Chart placeholder - would use recharts or similar */}
-                    <div className="h-48 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-center mb-4">
-                        <span className="text-slate-400 text-sm">Trend Chart</span>
-                    </div>
+                    {/* Simple chart visualization */}
+                    {data.length > 0 && (
+                        <div className="h-32 bg-gradient-to-b from-blue-50 to-white rounded-lg border border-slate-200 flex items-end justify-around p-4 mb-4 gap-1">
+                            {data.slice(0, 10).reverse().map((d, i) => {
+                                const val = parseFloat(d.value) || 0;
+                                const max = Math.max(...data.map(x => parseFloat(x.value) || 0));
+                                const height = max > 0 ? (val / max) * 80 : 20;
+                                return (
+                                    <div key={i} className="flex flex-col items-center flex-1">
+                                        <div
+                                            className="w-full bg-blue-500 rounded-t min-h-[4px] transition-all"
+                                            style={{ height: `${height}px` }}
+                                        />
+                                        <span className="text-[8px] text-slate-400 mt-1 truncate w-full text-center">
+                                            {d.date ? format(new Date(d.date), 'M/d') : ''}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
 
                     {/* Data table */}
                     <div className="space-y-1">
@@ -424,13 +469,15 @@ const TrendDetailView = ({ trend, data, onClose }) => {
                             <span>Value</span>
                             <span>Source</span>
                         </div>
-                        {data.map((d, i) => (
+                        {data.length > 0 ? data.map((d, i) => (
                             <div key={i} className="grid grid-cols-3 gap-2 text-xs text-slate-700 px-2 py-1.5 bg-slate-50 rounded">
                                 <span>{d.date ? format(new Date(d.date), 'M/d/yyyy') : '--'}</span>
                                 <span className="font-semibold">{d.value} {trend.unit}</span>
                                 <span className="text-slate-400">{d.source || 'Chart'}</span>
                             </div>
-                        ))}
+                        )) : (
+                            <div className="text-center text-slate-400 py-4">No data available</div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -456,8 +503,28 @@ const SpecialtyTracker = ({
     const [showMore, setShowMore] = useState(false);
     const [selectedTrend, setSelectedTrend] = useState(null);
     const [selectedTrendData, setSelectedTrendData] = useState([]);
+    const [labResults, setLabResults] = useState([]);
+    const [loadingLabs, setLoadingLabs] = useState(false);
 
     const specialty = SPECIALTY_TEMPLATES[selectedSpecialty];
+
+    // Fetch lab results when patient changes
+    useEffect(() => {
+        const fetchLabs = async () => {
+            if (!patientId || !isOpen) return;
+            setLoadingLabs(true);
+            try {
+                const response = await labsAPI.getByPatient(patientId);
+                setLabResults(response.data || []);
+            } catch (err) {
+                console.error('Error fetching labs for tracker:', err);
+                setLabResults([]);
+            } finally {
+                setLoadingLabs(false);
+            }
+        };
+        fetchLabs();
+    }, [patientId, isOpen]);
 
     // Extract trend data from patient data sources
     const extractTrendData = useMemo(() => {
@@ -468,46 +535,69 @@ const SpecialtyTracker = ({
         specialty.trends.forEach(trend => {
             const data = [];
 
+            // Extract from vitals
             if (trend.source === 'vitals' && vitals.length > 0) {
-                vitals.slice(0, 10).forEach(v => {
-                    let value;
+                vitals.forEach(v => {
+                    let value = null;
+
                     if (trend.extractor) {
                         value = trend.extractor(v);
-                    } else if (trend.field && v[trend.field]) {
-                        value = v[trend.field];
+                    } else if (trend.vitalKey) {
+                        // Map vitalKey to actual field names from Snapshot vitals structure
+                        const fieldMap = {
+                            'bp': 'bp',
+                            'hr': 'hr',
+                            'temp': 'temp',
+                            'rr': 'rr',
+                            'spo2': 'spo2',
+                            'weight': 'weight',
+                            'bmi': 'bmi'
+                        };
+                        const field = fieldMap[trend.vitalKey] || trend.vitalKey;
+                        value = parseVitalValue(v[field]);
                     }
-                    if (value != null) {
+
+                    if (value !== null) {
                         data.push({
                             value: value,
-                            date: v.created_at || v.date,
+                            date: v.date || v.created_at,
                             source: 'Vitals'
                         });
                     }
                 });
             }
 
-            if (trend.source === 'labs' && labs.length > 0) {
-                // Filter labs by LOINC code if available
-                const relevantLabs = labs.filter(l =>
-                    !trend.loincCode || l.loinc_code === trend.loincCode ||
-                    l.test_name?.toLowerCase().includes(trend.label.toLowerCase())
-                );
-                relevantLabs.slice(0, 10).forEach(l => {
-                    if (l.result_value != null) {
-                        data.push({
-                            value: l.result_value,
-                            date: l.result_date || l.collected_date,
-                            source: l.test_name || 'Lab'
-                        });
+            // Extract from lab results
+            if (trend.source === 'labs' && labResults.length > 0) {
+                const searchTerm = (trend.labName || trend.label).toLowerCase();
+
+                labResults.forEach(lab => {
+                    const testName = (lab.test_name || '').toLowerCase();
+                    const component = (lab.component || '').toLowerCase();
+
+                    // Check if this lab matches the trend
+                    if (testName.includes(searchTerm) || component.includes(searchTerm) ||
+                        searchTerm.includes(testName) || searchTerm.includes(component)) {
+                        const value = parseFloat(lab.result_value);
+                        if (!isNaN(value)) {
+                            data.push({
+                                value: value,
+                                date: lab.result_date || lab.collected_date || lab.created_at,
+                                source: lab.test_name || 'Lab'
+                            });
+                        }
                     }
                 });
             }
 
-            trendData[trend.id] = data;
+            // Sort by date descending
+            data.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            trendData[trend.id] = data.slice(0, 10); // Keep last 10 values
         });
 
         return trendData;
-    }, [specialty, vitals, labs]);
+    }, [specialty, vitals, labResults]);
 
     // Check medication status
     const medicationStatus = useMemo(() => {
@@ -515,12 +605,10 @@ const SpecialtyTracker = ({
 
         const status = {};
         specialty.status.forEach(s => {
-            const activeMeds = medications.filter(m =>
-                m.active !== false &&
-                s.checkMeds.some(check =>
-                    m.medication_name?.toLowerCase().includes(check.toLowerCase())
-                )
-            );
+            const activeMeds = medications.filter(m => {
+                const medName = (m.medication_name || m.name || '').toLowerCase();
+                return m.active !== false && s.checkMeds.some(check => medName.includes(check.toLowerCase()));
+            });
             status[s.id] = {
                 active: activeMeds.length > 0,
                 meds: activeMeds
@@ -529,7 +617,7 @@ const SpecialtyTracker = ({
         return status;
     }, [specialty, medications]);
 
-    // Calculate due items
+    // Calculate due items based on actual data
     const dueItems = useMemo(() => {
         if (!specialty?.due) return [];
 
@@ -537,35 +625,72 @@ const SpecialtyTracker = ({
         const now = new Date();
 
         specialty.due.forEach(due => {
-            // Simple logic - in real app would check last date from patient data
-            const dueDate = new Date(now.getTime() + (due.intervalDays * 24 * 60 * 60 * 1000) * 0.1); // Mock: 10% of interval
-            const overdue = Math.random() > 0.7; // Mock
+            let lastDate = null;
+            let overdue = false;
+
+            // Check if we have data for this due item
+            if (due.labName && labResults.length > 0) {
+                const searchTerm = due.labName.toLowerCase();
+                const matchingLabs = labResults.filter(lab => {
+                    const testName = (lab.test_name || '').toLowerCase();
+                    return testName.includes(searchTerm);
+                });
+                if (matchingLabs.length > 0) {
+                    // Sort and get most recent
+                    matchingLabs.sort((a, b) => new Date(b.result_date || b.created_at) - new Date(a.result_date || a.created_at));
+                    lastDate = matchingLabs[0].result_date || matchingLabs[0].created_at;
+                }
+            }
+
+            if (due.docType && documents.length > 0) {
+                const matchingDocs = documents.filter(d => {
+                    const cat = (d.category || d.doc_type || '').toLowerCase();
+                    const name = (d.filename || d.name || '').toLowerCase();
+                    return cat.includes(due.docType) || name.includes(due.docType);
+                });
+                if (matchingDocs.length > 0) {
+                    matchingDocs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                    lastDate = matchingDocs[0].created_at;
+                }
+            }
+
+            // Calculate if overdue
+            if (lastDate) {
+                const daysSince = differenceInDays(now, new Date(lastDate));
+                overdue = daysSince > due.intervalDays;
+            } else {
+                // No data = consider overdue
+                overdue = true;
+            }
 
             items.push({
                 ...due,
-                dueDate,
+                lastDate,
                 overdue
             });
         });
 
         return items.slice(0, 4);
-    }, [specialty]);
+    }, [specialty, labResults, documents]);
 
     // Get key events from documents
     const keyEvents = useMemo(() => {
         if (!specialty?.events || !documents.length) return [];
 
-        return documents
-            .filter(d => specialty.events.some(e =>
-                d.category?.toLowerCase().includes(e) ||
-                d.filename?.toLowerCase().includes(e)
-            ))
+        const events = documents
+            .filter(d => {
+                const cat = (d.category || d.doc_type || '').toLowerCase();
+                const name = (d.filename || d.name || '').toLowerCase();
+                return specialty.events.some(e => cat.includes(e) || name.includes(e));
+            })
             .slice(0, 4)
             .map(d => ({
-                type: d.category || 'procedure',
+                type: d.category || d.doc_type || 'procedure',
                 date: d.created_at,
-                summary: d.filename
+                summary: d.filename || d.name
             }));
+
+        return events;
     }, [specialty, documents]);
 
     const visibleTrends = showMore ? specialty?.trends : specialty?.trends?.slice(0, 8);
@@ -593,8 +718,8 @@ const SpecialtyTracker = ({
                 <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                            <div className={`p-2 rounded-xl bg-${specialty?.color || 'blue'}-100`}>
-                                <Icon className={`w-5 h-5 text-${specialty?.color || 'blue'}-600`} />
+                            <div className={`p-2 rounded-xl bg-rose-100`}>
+                                <Icon className={`w-5 h-5 text-rose-600`} />
                             </div>
                             <div>
                                 <h2 className="text-lg font-bold text-slate-900">Specialty Tracker</h2>
@@ -602,6 +727,7 @@ const SpecialtyTracker = ({
                             </div>
                         </div>
                         <div className="flex items-center gap-1">
+                            {loadingLabs && <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />}
                             <button
                                 onClick={() => setIsPinned(!isPinned)}
                                 className={`p-2 rounded-lg transition-colors ${isPinned ? 'bg-blue-100 text-blue-600' : 'hover:bg-slate-100 text-slate-400'}`}
@@ -664,7 +790,6 @@ const SpecialtyTracker = ({
                                     key={trend.id}
                                     trend={trend}
                                     data={extractTrendData[trend.id] || []}
-                                    specialty={specialty}
                                     onClick={() => handleTrendClick(trend)}
                                 />
                             ))}
@@ -684,9 +809,16 @@ const SpecialtyTracker = ({
                                     return (
                                         <div key={s.id} className={`flex items-center justify-between px-3 py-2 rounded-lg ${status?.active ? 'bg-emerald-50 border border-emerald-200' : 'bg-slate-50 border border-slate-200'
                                             }`}>
-                                            <span className={`text-xs font-medium ${status?.active ? 'text-emerald-700' : 'text-slate-500'}`}>
-                                                {s.label}
-                                            </span>
+                                            <div>
+                                                <span className={`text-xs font-medium ${status?.active ? 'text-emerald-700' : 'text-slate-500'}`}>
+                                                    {s.label}
+                                                </span>
+                                                {status?.active && status.meds.length > 0 && (
+                                                    <p className="text-[10px] text-emerald-600 truncate max-w-[200px]">
+                                                        {status.meds.map(m => m.medication_name || m.name).join(', ')}
+                                                    </p>
+                                                )}
+                                            </div>
                                             <span className={`text-[10px] font-bold ${status?.active ? 'text-emerald-600' : 'text-slate-400'}`}>
                                                 {status?.active ? 'ACTIVE' : 'NOT ON'}
                                             </span>
@@ -706,7 +838,7 @@ const SpecialtyTracker = ({
                             </h3>
                             <div className="space-y-2">
                                 {dueItems.map(item => (
-                                    <DueItem key={item.id} item={item} dueDate={item.dueDate} overdue={item.overdue} />
+                                    <DueItem key={item.id} item={item} lastDate={item.lastDate} overdue={item.overdue} />
                                 ))}
                             </div>
                         </div>
@@ -726,12 +858,21 @@ const SpecialtyTracker = ({
                             </div>
                         </div>
                     )}
+
+                    {/* No Data Message */}
+                    {Object.values(extractTrendData).every(d => d.length === 0) && !loadingLabs && (
+                        <div className="text-center py-8">
+                            <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                            <p className="text-sm text-slate-500">No trend data available</p>
+                            <p className="text-xs text-slate-400 mt-1">Record vitals and labs to see trends</p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Footer */}
                 <div className="p-3 border-t border-slate-200 bg-slate-50/50">
                     <div className="text-[10px] text-slate-400 text-center">
-                        Data synced from patient chart • Last updated just now
+                        Data synced from patient chart • {vitals.length} vitals, {labResults.length} labs
                     </div>
                 </div>
             </div>
