@@ -314,7 +314,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
             }
 
             // Set problems
-            if (snapshot.problems && snapshot.problems.length > 0) {
+            if (snapshot.problems && snapshot.(problems || []).length > 0) {
                 setProblems(snapshot.problems.map(p => ({
                     id: p.id,
                     name: p.problem_name,
@@ -925,7 +925,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
         return expandedNotes.has(noteId);
     };
 
-    const filteredNotes = recentNotes.filter(note => {
+    const filteredNotes = (recentNotes || []).filter(note => {
         if (noteFilter === 'all') return true;
         if (noteFilter === 'draft') return !note.signed;
         if (noteFilter === 'signed') return note.signed;
@@ -1026,7 +1026,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     : 'bg-white text-deep-gray hover:bg-soft-gray border border-deep-gray/20'
                                     }`}
                             >
-                                All ({recentNotes.length})
+                                All ({(recentNotes || []).length})
                             </button>
                             <button
                                 onClick={() => setNoteFilter('draft')}
@@ -1035,7 +1035,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     : 'bg-white text-ink-700 hover:bg-paper-50 border border-paper-300'
                                     }`}
                             >
-                                Draft ({recentNotes.filter(n => !n.signed).length})
+                                Draft ({(recentNotes || []).filter(n => !n.signed).length})
                             </button>
                             <button
                                 onClick={() => setNoteFilter('signed')}
@@ -1044,7 +1044,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     : 'bg-white text-ink-700 hover:bg-paper-50 border border-paper-300'
                                     }`}
                             >
-                                Signed ({recentNotes.filter(n => n.signed).length})
+                                Signed ({(recentNotes || []).filter(n => n.signed).length})
                             </button>
                         </div>
                     </div>
@@ -1170,7 +1170,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             })
                         ) : (
                             <div className="p-8 text-center text-ink-500">
-                                {recentNotes.length === 0
+                                {(recentNotes || []).length === 0
                                     ? 'No prior notes found'
                                     : `No ${noteFilter === 'draft' ? 'draft' : noteFilter === 'signed' ? 'signed' : ''} notes found`}
                             </div>
@@ -1237,9 +1237,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             >
                                 <FileImage className="w-3.5 h-3.5 text-purple-600" />
                                 <span>Images</span>
-                                {documents.filter(d => d.doc_type === 'imaging').length > 0 && (
+                                {(documents || []).filter(d => d.doc_type === 'imaging').length > 0 && (
                                     <span className="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">
-                                        {documents.filter(d => d.doc_type === 'imaging').length}
+                                        {(documents || []).filter(d => d.doc_type === 'imaging').length}
                                     </span>
                                 )}
                             </button>
@@ -1252,9 +1252,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             >
                                 <FlaskConical className="w-3.5 h-3.5 text-blue-600" />
                                 <span>Labs</span>
-                                {orders.filter(o => o.order_type === 'lab').length > 0 && (
+                                {(orders || []).filter(o => o.order_type === 'lab').length > 0 && (
                                     <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">
-                                        {orders.filter(o => o.order_type === 'lab').length}
+                                        {(orders || []).filter(o => o.order_type === 'lab').length}
                                     </span>
                                 )}
                             </button>
@@ -1267,9 +1267,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             >
                                 <FileText className="w-3.5 h-3.5 text-gray-600" />
                                 <span>Documents</span>
-                                {documents.filter(d => d.doc_type !== 'imaging').length > 0 && (
+                                {(documents || []).filter(d => d.doc_type !== 'imaging').length > 0 && (
                                     <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">
-                                        {documents.filter(d => d.doc_type !== 'imaging').length}
+                                        {(documents || []).filter(d => d.doc_type !== 'imaging').length}
                                     </span>
                                 )}
                             </button>
@@ -1713,14 +1713,14 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             <div className="flex items-center space-x-1.5">
                                                 <Pill className="w-4 h-4 text-emerald-600" />
                                                 <h3 className="font-bold text-sm text-gray-900">Medications</h3>
-                                                {medications.filter(m => m.active !== false).length > 0 && <span className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{medications.filter(m => m.active !== false).length}</span>}
+                                                {(medications || []).filter(m => m.active !== false).length > 0 && <span className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{(medications || []).filter(m => m.active !== false).length}</span>}
                                             </div>
                                             <button onClick={() => { setPatientChartTab('medications'); setShowPatientChart(true); }} className="text-[10px] text-emerald-600 hover:text-emerald-700 font-bold uppercase tracking-wider">Manage</button>
                                         </div>
                                         <div className="p-2 max-h-[200px] overflow-y-auto">
-                                            {medications.filter(m => m.active !== false).length > 0 ? (
+                                            {(medications || []).filter(m => m.active !== false).length > 0 ? (
                                                 <div className="space-y-1.5">
-                                                    {medications.filter(m => m.active !== false).slice(0, 10).map(med => {
+                                                    {(medications || []).filter(m => m.active !== false).slice(0, 10).map(med => {
                                                         const decodedName = decodeHtmlEntities(med.medication_name);
 
                                                         return (
@@ -1743,12 +1743,12 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             <div className="flex items-center space-x-1.5">
                                                 <AlertCircle className="w-4 h-4 text-orange-600" />
                                                 <h3 className="font-bold text-sm text-gray-900">Problem List</h3>
-                                                {problems.length > 0 && <span className="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{problems.length}</span>}
+                                                {(problems || []).length > 0 && <span className="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{(problems || []).length}</span>}
                                             </div>
                                             <button onClick={() => { setPatientChartTab('problems'); setShowPatientChart(true); }} className="text-[10px] text-orange-600 hover:text-orange-700 font-bold uppercase tracking-wider">Manage</button>
                                         </div>
                                         <div className="p-2 max-h-[200px] overflow-y-auto">
-                                            {problems.length > 0 ? (
+                                            {(problems || []).length > 0 ? (
                                                 <div className="space-y-1.5">
                                                     {(() => {
                                                         const seen = new Set();
@@ -1825,8 +1825,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             <div className="flex items-center space-x-2 cursor-pointer group" onClick={() => { setCardiologyViewerType('EKG'); setShowCardiologyViewer(true); }}>
                                                 <Activity className="w-4 h-4 text-red-600 group-hover:scale-110 transition-transform" />
                                                 <h3 className="font-bold text-sm text-gray-900 group-hover:text-red-600 transition-colors">EKG</h3>
-                                                {documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('ekg') || d.file_name?.toLowerCase().includes('ekg'))).length > 0 &&
-                                                    <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('ekg') || d.file_name?.toLowerCase().includes('ekg'))).length}</span>
+                                                {(documents || []).filter(d => d.doc_type === 'imaging' && (d.tags?.includes('ekg') || d.file_name?.toLowerCase().includes('ekg'))).length > 0 &&
+                                                    <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{(documents || []).filter(d => d.doc_type === 'imaging' && (d.tags?.includes('ekg') || d.file_name?.toLowerCase().includes('ekg'))).length}</span>
                                                 }
                                             </div>
                                             <button onClick={() => setShowEKGModal(true)} className="p-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors">
@@ -1834,7 +1834,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </button>
                                         </div>
                                         <div className="p-2 space-y-1">
-                                            {documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('ekg') || d.file_name?.toLowerCase().includes('ekg'))).slice(0, 3).map(doc => {
+                                            {(documents || []).filter(d => d.doc_type === 'imaging' && (d.tags?.includes('ekg') || d.file_name?.toLowerCase().includes('ekg'))).slice(0, 3).map(doc => {
                                                 const rhythm = doc.tags?.find(t => t.startsWith('rhythm:'))?.split(':')[1] || '';
                                                 const rate = doc.tags?.find(t => t.startsWith('rate:'))?.split(':')[1] || '';
                                                 return (
@@ -1854,7 +1854,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     </div>
                                                 );
                                             })}
-                                            {documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('ekg') || d.file_name?.toLowerCase().includes('ekg'))).length === 0 && <p className="text-xs text-gray-500 text-center py-4">No EKGs recorded</p>}
+                                            {(documents || []).filter(d => d.doc_type === 'imaging' && (d.tags?.includes('ekg') || d.file_name?.toLowerCase().includes('ekg'))).length === 0 && <p className="text-xs text-gray-500 text-center py-4">No EKGs recorded</p>}
                                         </div>
                                     </div>
 
@@ -1864,8 +1864,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             <div className="flex items-center space-x-2 cursor-pointer group" onClick={() => { setCardiologyViewerType('ECHO'); setShowCardiologyViewer(true); }}>
                                                 <Heart className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform" />
                                                 <h3 className="font-bold text-sm text-gray-900 group-hover:text-indigo-600 transition-colors">ECHO</h3>
-                                                {documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('echo') || d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length > 0 &&
-                                                    <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('echo') || d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length}</span>
+                                                {(documents || []).filter(d => d.doc_type === 'imaging' && (d.tags?.includes('echo') || d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length > 0 &&
+                                                    <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{(documents || []).filter(d => d.doc_type === 'imaging' && (d.tags?.includes('echo') || d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length}</span>
                                                 }
                                             </div>
                                             <button onClick={() => setShowECHOModal(true)} className="p-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors">
@@ -1873,7 +1873,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </button>
                                         </div>
                                         <div className="p-2 space-y-1">
-                                            {documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('echo') || d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).slice(0, 3).map(doc => {
+                                            {(documents || []).filter(d => d.doc_type === 'imaging' && (d.tags?.includes('echo') || d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).slice(0, 3).map(doc => {
                                                 const ef = doc.tags?.find(t => t.startsWith('ef:'))?.split(':')[1] || '';
                                                 const la = doc.tags?.find(t => t.startsWith('la_size:'))?.split(':')[1] || '';
                                                 const lv = doc.tags?.find(t => t.startsWith('lv_size:'))?.split(':')[1] || '';
@@ -1895,7 +1895,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     </div>
                                                 );
                                             })}
-                                            {documents.filter(d => d.doc_type === 'imaging' && (d.tags?.includes('echo') || d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length === 0 && <p className="text-xs text-gray-500 text-center py-4">No ECHO studies</p>}
+                                            {(documents || []).filter(d => d.doc_type === 'imaging' && (d.tags?.includes('echo') || d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length === 0 && <p className="text-xs text-gray-500 text-center py-4">No ECHO studies</p>}
                                         </div>
                                     </div>
 
@@ -1905,8 +1905,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             <div className="flex items-center space-x-2 cursor-pointer group" onClick={() => { setCardiologyViewerType('STRESS'); setShowCardiologyViewer(true); }}>
                                                 <Activity className="w-4 h-4 text-fuchsia-600 group-hover:scale-110 transition-transform" />
                                                 <h3 className="font-bold text-sm text-gray-900 group-hover:text-fuchsia-600 transition-colors">Stress Test</h3>
-                                                {(documents.filter(d => d.tags?.includes('stress_test')).length > 0 || documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('stress')).length > 0) &&
-                                                    <span className="bg-fuchsia-100 text-fuchsia-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{documents.filter(d => d.tags?.includes('stress_test') || (d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('stress'))).length}</span>
+                                                {((documents || []).filter(d => d.tags?.includes('stress_test')).length > 0 || (documents || []).filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('stress')).length > 0) &&
+                                                    <span className="bg-fuchsia-100 text-fuchsia-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{(documents || []).filter(d => d.tags?.includes('stress_test') || (d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('stress'))).length}</span>
                                                 }
                                             </div>
                                             <button onClick={() => setShowStressTestModal(true)} className="p-1 bg-fuchsia-600 text-white rounded hover:bg-fuchsia-700 transition-colors">
@@ -1914,7 +1914,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </button>
                                         </div>
                                         <div className="p-2 space-y-1">
-                                            {documents.filter(d => d.tags?.includes('stress_test')).slice(0, 3).map(doc => {
+                                            {(documents || []).filter(d => d.tags?.includes('stress_test')).slice(0, 3).map(doc => {
                                                 const typeTag = doc.tags?.find(t => t.startsWith('type:'))?.split(':')[1] || '';
                                                 const stressorTag = doc.tags?.find(t => t.startsWith('stressor:'))?.split(':')[1] || '';
                                                 return (
@@ -1930,7 +1930,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     </div>
                                                 );
                                             })}
-                                            {documents.filter(d => d.tags?.includes('stress_test')).length === 0 && <p className="text-xs text-gray-500 text-center py-4">No Stress tests recorded</p>}
+                                            {(documents || []).filter(d => d.tags?.includes('stress_test')).length === 0 && <p className="text-xs text-gray-500 text-center py-4">No Stress tests recorded</p>}
                                         </div>
                                     </div>
 
@@ -1940,8 +1940,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             <div className="flex items-center space-x-2 cursor-pointer group" onClick={() => { setCardiologyViewerType('CATH'); setShowCardiologyViewer(true); }}>
                                                 <Waves className="w-4 h-4 text-slate-700 group-hover:scale-110 transition-transform" />
                                                 <h3 className="font-bold text-sm text-gray-900 group-hover:text-slate-700 transition-colors">Cardiac Cath</h3>
-                                                {(documents.filter(d => d.tags?.includes('cardiac_cath')).length > 0 || documents.filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('cath')).length > 0) &&
-                                                    <span className="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{documents.filter(d => d.tags?.includes('cardiac_cath') || (d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('cath'))).length}</span>
+                                                {((documents || []).filter(d => d.tags?.includes('cardiac_cath')).length > 0 || (documents || []).filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('cath')).length > 0) &&
+                                                    <span className="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{(documents || []).filter(d => d.tags?.includes('cardiac_cath') || (d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('cath'))).length}</span>
                                                 }
                                             </div>
                                             <button onClick={() => setShowCardiacCathModal(true)} className="p-1 bg-slate-700 text-white rounded hover:bg-slate-800 transition-colors">
@@ -1949,7 +1949,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </button>
                                         </div>
                                         <div className="p-2 space-y-1">
-                                            {documents.filter(d => d.tags?.includes('cardiac_cath')).slice(0, 3).map(doc => {
+                                            {(documents || []).filter(d => d.tags?.includes('cardiac_cath')).slice(0, 3).map(doc => {
                                                 const facility = doc.tags?.find(t => t.startsWith('facility:'))?.split(':')[1] || '';
                                                 return (
                                                     <div key={doc.id} className="block text-[11px] p-2 bg-slate-50/30 rounded border border-slate-200/50 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => { setPatientChartTab('images'); setShowPatientChart(true); }}>
@@ -1961,7 +1961,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     </div>
                                                 );
                                             })}
-                                            {documents.filter(d => d.tags?.includes('cardiac_cath')).length === 0 && <p className="text-xs text-gray-500 text-center py-4">No Cardiac Cath records</p>}
+                                            {(documents || []).filter(d => d.tags?.includes('cardiac_cath')).length === 0 && <p className="text-xs text-gray-500 text-center py-4">No Cardiac Cath records</p>}
                                         </div>
                                     </div>
 
