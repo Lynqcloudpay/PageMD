@@ -108,8 +108,24 @@ const DEFAULT_SPECIALTY_TEMPLATES = {
         trackerIds: ['sbp', 'hr', 'weight', 'spo2', 'a1c', 'ldl'],
         status: [],
         due: [
-            { id: 'colonoscopy', label: 'Colonoscopy', intervalDays: 3650 },
-            { id: 'flu_vaccine', label: 'Flu Vaccine', intervalDays: 365 },
+            // Cancer Screenings
+            { id: 'mammogram', label: 'Mammogram', intervalDays: 365, gender: 'female', minAge: 40, maxAge: 74, docKeywords: ['mammogram', 'breast tomosynthesis'] },
+            { id: 'colonoscopy', label: 'Colonoscopy', intervalDays: 3650, minAge: 45, maxAge: 75, docKeywords: ['colonoscopy', 'cologuard', 'fit test'] },
+            { id: 'pap_smear', label: 'Pap Smear', intervalDays: 1095, gender: 'female', minAge: 21, maxAge: 65, docKeywords: ['pap', 'cervical', 'hpv'] },
+            { id: 'lung_ca_screen', label: 'Lung CT', intervalDays: 365, minAge: 50, maxAge: 80, docKeywords: ['lung screening', 'low dose ct', 'ldct'] }, // Note: Usually requires smoking history
+            { id: 'aaa_screen', label: 'AAA Ultrasound', intervalDays: 99999, gender: 'male', minAge: 65, maxAge: 75, docKeywords: ['aaa', 'abdominal aortic aneurysm', 'aorta ultrasound'] }, // Once
+            { id: 'dexa', label: 'Bone Density', intervalDays: 730, gender: 'female', minAge: 65, docKeywords: ['dexa', 'bone density'] },
+
+            // Vaccines
+            { id: 'flu_vaccine', label: 'Flu Vaccine', intervalDays: 365, docKeywords: ['flu', 'influenza', 'fluzone'] },
+            { id: 'tdap', label: 'Tdap/Td', intervalDays: 3650, docKeywords: ['tdap', 'tetanus', 'adacel', 'boostrix'] },
+            { id: 'shingles', label: 'Shingles vax', intervalDays: 99999, minAge: 50, docKeywords: ['shingrix', 'zoster'] }, // Series, check if ever done
+            { id: 'pneumonia', label: 'Pneumonia vax', intervalDays: 99999, minAge: 65, docKeywords: ['prevnar', 'pneumovax', 'pneumococcal'] },
+            { id: 'covid', label: 'COVID-19 vax', intervalDays: 365, docKeywords: ['covid', 'sars-cov-2', 'moderna', 'pfizer'] },
+
+            // Metabolic
+            { id: 'a1c_screen', label: 'HbA1c', intervalDays: 365, minAge: 35, maxAge: 70, labName: 'a1c' },
+            { id: 'lipid_screen', label: 'Lipid Panel', intervalDays: 1825, minAge: 40, maxAge: 75, labName: 'ldl' },
         ]
     },
     nephrology: {
@@ -553,9 +569,27 @@ const SpecialtyTracker = ({ isOpen, onClose, patientId, patientData, vitals = []
         if (!specialty?.due) return [];
         const items = [];
         const now = new Date();
+
+        // Calculate patient demographics
+        const dob = parseDateSafe(patientData?.dob || patientData?.birth_date);
+        const age = dob ? differenceInDays(now, dob) / 365.25 : 0;
+        const pGender = (patientData?.sex || patientData?.gender || '').toLowerCase();
+        const isFemale = pGender === 'female' || pGender === 'f' || pGender === 'woman';
+        const isMale = pGender === 'male' || pGender === 'm' || pGender === 'man';
+
         specialty.due.forEach(due => {
+            // 1. Check Gender Constraints
+            if (due.gender === 'female' && !isFemale) return;
+            if (due.gender === 'male' && !isMale) return;
+
+            // 2. Check Age Constraints
+            if (due.minAge && age < due.minAge) return;
+            if (due.maxAge && age > due.maxAge) return;
+
             let lastDate = null;
             let overdue = false;
+
+            // 3. Check Labs
             if (due.labName && labResults.length > 0) {
                 const searchTerm = due.labName.toLowerCase();
                 const matchingLabs = labResults.filter(lab => (lab.test_name || '').toLowerCase().includes(searchTerm));
@@ -564,14 +598,36 @@ const SpecialtyTracker = ({ isOpen, onClose, patientId, patientData, vitals = []
                     lastDate = matchingLabs[0].result_date || matchingLabs[0].created_at;
                 }
             }
+
+            // 4. Check Documents (e.g. Colonoscopy reports)
+            if (due.docKeywords && documents && documents.length > 0) {
+                const keywords = due.docKeywords;
+                const matchingDocs = documents.filter(d => {
+                    const text = ((d.filename || '') + ' ' + (d.doc_type || '') + ' ' + (d.tags || '')).toLowerCase();
+                    return keywords.some(k => text.includes(k.toLowerCase()));
+                });
+
+                if (matchingDocs.length > 0) {
+                    matchingDocs.sort((a, b) => (parseDateSafe(b.created_at || b.date) || 0) - (parseDateSafe(a.created_at || a.date) || 0));
+                    const docDate = matchingDocs[0].created_at || matchingDocs[0].date;
+                    // Use the most recent date found from either labs or docs
+                    if (!lastDate || (docDate && new Date(docDate) > new Date(lastDate))) {
+                        lastDate = docDate;
+                    }
+                }
+            }
+
+            // 5. Determine Overdue Status
             if (lastDate) {
                 const parsedDate = parseDateSafe(lastDate);
                 if (parsedDate) overdue = differenceInDays(now, parsedDate) > due.intervalDays;
-            } else overdue = true;
+            } else {
+                overdue = true; // Never done
+            }
             items.push({ ...due, lastDate, overdue });
         });
-        return items.slice(0, 4);
-    }, [specialty, labResults]);
+        return items.slice(0, 10);
+    }, [specialty, labResults, documents, patientData]);
 
     const visibleTrends = showMore ? activeTrackers : activeTrackers.slice(0, 8);
 
