@@ -974,8 +974,9 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                                 route: item.route,
                                                                 startDate: new Date().toISOString()
                                                             });
-                                                            await fetchPatientData();
                                                             setShowAddMedForm(false);
+                                                            window.dispatchEvent(new CustomEvent('patient-data-updated'));
+                                                            fetchAllData();
                                                         } catch (error) {
                                                             console.error('Failed to add medication:', error);
                                                             alert('Failed to add medication.');
