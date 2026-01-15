@@ -25,6 +25,7 @@ import CardiologyViewer from '../components/CardiologyViewer';
 import PrintOrdersModal from '../components/PrintOrdersModal';
 import PatientHeader from '../components/PatientHeader';
 import { usePatientTabs } from '../context/PatientTabsContext';
+import SpecialtyTracker from '../components/SpecialtyTracker';
 
 const Snapshot = ({ showNotesOnly = false }) => {
     const { id } = useParams();
@@ -139,6 +140,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
     });
     const [ekgFile, setEKGFile] = useState(null);
     const [showChartReview, setShowChartReview] = useState(false);
+    const [showSpecialtyTracker, setShowSpecialtyTracker] = useState(false);
 
     // ECHO States
     const [showECHOModal, setShowECHOModal] = useState(false);
@@ -1309,6 +1311,14 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             >
                                 <Eye className="w-3.5 h-3.5" />
                                 <span>Review Chart</span>
+                            </button>
+                            <button
+                                onClick={() => setShowSpecialtyTracker(true)}
+                                className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-rose-500 to-pink-500 text-white hover:from-rose-600 hover:to-pink-600 text-[11px] font-bold rounded-full transition-all shadow-sm"
+                                title="Specialty Tracker - At-a-glance trends"
+                            >
+                                <Activity className="w-3.5 h-3.5" />
+                                <span>Tracker</span>
                             </button>
                         </div>
                         <div className="flex-shrink-0 ml-2 flex items-center gap-2">
@@ -2723,6 +2733,18 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     }}
                 />
             )}
+            {/* Specialty Tracker Drawer */}
+            <SpecialtyTracker
+                isOpen={showSpecialtyTracker}
+                onClose={() => setShowSpecialtyTracker(false)}
+                patientId={id}
+                patientData={patient}
+                vitals={vitals}
+                labs={orders.filter(o => o.order_type === 'lab')}
+                medications={medications}
+                documents={documents}
+                problems={problems}
+            />
         </div >
     );
 };
