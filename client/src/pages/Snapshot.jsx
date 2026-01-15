@@ -314,7 +314,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
             }
 
             // Set problems
-            if (snapshot.problems && snapshot.(problems || []).length > 0) {
+            if (snapshot.problems && snapshot.problems.length > 0) {
                 setProblems(snapshot.problems.map(p => ({
                     id: p.id,
                     name: p.problem_name,
