@@ -699,6 +699,22 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                     </div>
                                 </div>
 
+                                {/* ADDENDUM NOTICE BANNER */}
+                                {addendums.length > 0 && (
+                                    <div className="avoid-cut mb-4 py-3 px-4 bg-amber-50 rounded-xl border-2 border-amber-300 flex items-center gap-3 shadow-sm">
+                                        <div className="p-1.5 bg-amber-400 rounded-full">
+                                            <AlertCircle className="w-4 h-4 text-white" />
+                                        </div>
+                                        <div>
+                                            <div className="text-[11px] font-black text-amber-800 uppercase tracking-wider">
+                                                ⚠️ This Note Contains {addendums.length} Addendum{addendums.length > 1 ? 's' : ''}
+                                            </div>
+                                            <div className="text-[10px] text-amber-600 font-medium">
+                                                Please scroll to the end of this document to view all clinical addendums.
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                                 {/* 3. CLINICAL NARRATIVE */}
                                 <div className="space-y-12 pb-16">
                                     {/* HPI */}
