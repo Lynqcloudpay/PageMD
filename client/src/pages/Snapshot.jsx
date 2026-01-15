@@ -2744,6 +2744,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 medications={medications}
                 documents={documents}
                 problems={problems}
+                onOpenChart={(tab) => {
+                    setShowSpecialtyTracker(false);
+                    setPatientChartTab(tab || 'hub');
+                    setShowPatientChart(true);
+                }}
             />
         </div >
     );

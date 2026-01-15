@@ -2,14 +2,12 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
     X, Activity, Heart, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronRight,
     AlertCircle, Clock, Pin, PinOff, Stethoscope, FlaskConical, Pill, Calendar,
-    Brain, Bone, Eye, FileText, Zap, Droplet, Thermometer, Wind, RefreshCw
+    Brain, Bone, Eye, FileText, Zap, Droplet, Thermometer, Wind, RefreshCw, Edit3, Plus, ExternalLink
 } from 'lucide-react';
 import { format, differenceInDays, parseISO, subDays } from 'date-fns';
 import { labsAPI } from '../services/api';
 
 // ============== SPECIALTY TEMPLATES ==============
-// Each specialty defines: trends (cards), due rules (screenings), events (procedures)
-
 const SPECIALTY_TEMPLATES = {
     cardiology: {
         id: 'cardiology',
@@ -20,11 +18,9 @@ const SPECIALTY_TEMPLATES = {
             { id: 'sbp', label: 'Systolic BP', unit: 'mmHg', source: 'vitals', vitalKey: 'bp', extractor: (v) => { const bp = v?.bp; if (!bp || bp === 'N/A') return null; const parts = String(bp).split('/'); return parts[0] ? parseInt(parts[0]) : null; }, thresholds: { low: 90, high: 140, critical: 180 }, goal: '<130' },
             { id: 'dbp', label: 'Diastolic BP', unit: 'mmHg', source: 'vitals', vitalKey: 'bp', extractor: (v) => { const bp = v?.bp; if (!bp || bp === 'N/A') return null; const parts = String(bp).split('/'); return parts[1] ? parseInt(parts[1]) : null; }, thresholds: { low: 60, high: 90, critical: 110 }, goal: '<80' },
             { id: 'hr', label: 'Heart Rate', unit: 'bpm', source: 'vitals', vitalKey: 'hr', thresholds: { low: 50, high: 100, critical: 120 } },
-            { id: 'ef', label: 'EF (Echo)', unit: '%', source: 'documents', docType: 'echo', field: 'ef', thresholds: { low: 40, critical: 30 }, goal: '>55%' },
-            { id: 'bnp', label: 'BNP', unit: 'pg/mL', source: 'labs', labName: 'bnp', thresholds: { high: 100, critical: 400 } },
+            { id: 'weight', label: 'Weight', unit: 'lbs', source: 'vitals', vitalKey: 'weight' },
             { id: 'ldl', label: 'LDL', unit: 'mg/dL', source: 'labs', labName: 'ldl', thresholds: { high: 100, critical: 160 }, goal: '<70' },
             { id: 'a1c', label: 'HbA1c', unit: '%', source: 'labs', labName: 'a1c', thresholds: { high: 6.5, critical: 9 }, goal: '<7%' },
-            { id: 'weight', label: 'Weight', unit: 'lbs', source: 'vitals', vitalKey: 'weight' },
             { id: 'cr', label: 'Creatinine', unit: 'mg/dL', source: 'labs', labName: 'creatinine', thresholds: { high: 1.2, critical: 2.0 } },
             { id: 'k', label: 'Potassium', unit: 'mEq/L', source: 'labs', labName: 'potassium', thresholds: { low: 3.5, high: 5.0, critical: 5.5 } },
         ],
@@ -32,7 +28,7 @@ const SPECIALTY_TEMPLATES = {
             { id: 'anticoag', label: 'Anticoagulation', checkMeds: ['warfarin', 'eliquis', 'xarelto', 'pradaxa', 'apixaban', 'rivaroxaban', 'dabigatran', 'coumadin'] },
             { id: 'antiplatelet', label: 'Antiplatelet', checkMeds: ['aspirin', 'plavix', 'clopidogrel', 'brilinta', 'ticagrelor', 'effient', 'prasugrel'] },
         ],
-        events: ['cardiac_cath', 'pci', 'cabg', 'echo', 'stress_test', 'icd_implant', 'pacemaker', 'ekg', 'echocardiogram'],
+        events: ['cardiac_cath', 'pci', 'cabg', 'echo', 'stress', 'ekg', 'echocardiogram'],
         due: [
             { id: 'lipid_recheck', label: 'Lipid Panel', intervalDays: 90, labName: 'ldl' },
             { id: 'echo_followup', label: 'Echo Follow-up', intervalDays: 365, docType: 'echo' },
@@ -45,24 +41,17 @@ const SPECIALTY_TEMPLATES = {
         color: 'purple',
         trends: [
             { id: 'a1c', label: 'HbA1c', unit: '%', source: 'labs', labName: 'a1c', thresholds: { high: 7, critical: 9 }, goal: '<7%' },
-            { id: 'fasting_glucose', label: 'Fasting Glucose', unit: 'mg/dL', source: 'labs', labName: 'glucose', thresholds: { low: 70, high: 100, critical: 200 } },
+            { id: 'glucose', label: 'Glucose', unit: 'mg/dL', source: 'labs', labName: 'glucose', thresholds: { low: 70, high: 100, critical: 200 } },
             { id: 'tsh', label: 'TSH', unit: 'mIU/L', source: 'labs', labName: 'tsh', thresholds: { low: 0.4, high: 4.0 } },
-            { id: 'freet4', label: 'Free T4', unit: 'ng/dL', source: 'labs', labName: 't4', thresholds: { low: 0.8, high: 1.8 } },
-            { id: 'calcium', label: 'Calcium', unit: 'mg/dL', source: 'labs', labName: 'calcium', thresholds: { low: 8.5, high: 10.5 } },
-            { id: 'vitd', label: 'Vitamin D', unit: 'ng/mL', source: 'labs', labName: 'vitamin d', thresholds: { low: 30 } },
-            { id: 'ldl', label: 'LDL', unit: 'mg/dL', source: 'labs', labName: 'ldl', thresholds: { high: 100 }, goal: '<100' },
             { id: 'weight', label: 'Weight', unit: 'lbs', source: 'vitals', vitalKey: 'weight' },
-            { id: 'bmi', label: 'BMI', unit: 'kg/m²', source: 'vitals', vitalKey: 'bmi', thresholds: { high: 25, critical: 30 } },
-            { id: 'uacr', label: 'UACR', unit: 'mg/g', source: 'labs', labName: 'uacr', thresholds: { high: 30, critical: 300 } },
+            { id: 'sbp', label: 'Systolic BP', unit: 'mmHg', source: 'vitals', vitalKey: 'bp', extractor: (v) => { const bp = v?.bp; if (!bp || bp === 'N/A') return null; const parts = String(bp).split('/'); return parts[0] ? parseInt(parts[0]) : null; } },
         ],
         status: [
             { id: 'insulin', label: 'Insulin Regimen', checkMeds: ['insulin', 'lantus', 'humalog', 'novolog', 'levemir', 'tresiba', 'basaglar', 'toujeo'] },
         ],
-        events: ['dexa', 'thyroid_us'],
+        events: ['dexa', 'thyroid'],
         due: [
             { id: 'a1c_due', label: 'HbA1c', intervalDays: 90, labName: 'a1c' },
-            { id: 'eye_exam', label: 'Diabetic Eye Exam', intervalDays: 365 },
-            { id: 'foot_exam', label: 'Diabetic Foot Exam', intervalDays: 365 },
         ]
     },
     primary_care: {
@@ -72,38 +61,17 @@ const SPECIALTY_TEMPLATES = {
         color: 'blue',
         trends: [
             { id: 'sbp', label: 'Systolic BP', unit: 'mmHg', source: 'vitals', vitalKey: 'bp', extractor: (v) => { const bp = v?.bp; if (!bp || bp === 'N/A') return null; const parts = String(bp).split('/'); return parts[0] ? parseInt(parts[0]) : null; }, thresholds: { high: 130, critical: 180 }, goal: '<130' },
-            { id: 'bmi', label: 'BMI', unit: 'kg/m²', source: 'vitals', vitalKey: 'bmi', thresholds: { high: 25, critical: 30 } },
+            { id: 'hr', label: 'Heart Rate', unit: 'bpm', source: 'vitals', vitalKey: 'hr', thresholds: { high: 100 } },
             { id: 'weight', label: 'Weight', unit: 'lbs', source: 'vitals', vitalKey: 'weight' },
+            { id: 'spo2', label: 'SpO2', unit: '%', source: 'vitals', vitalKey: 'spo2', thresholds: { low: 92 } },
             { id: 'a1c', label: 'HbA1c', unit: '%', source: 'labs', labName: 'a1c', thresholds: { high: 5.7, critical: 6.5 } },
             { id: 'ldl', label: 'LDL', unit: 'mg/dL', source: 'labs', labName: 'ldl', thresholds: { high: 100 } },
-            { id: 'egfr', label: 'eGFR', unit: 'mL/min', source: 'labs', labName: 'egfr', thresholds: { low: 60, critical: 30 } },
-            { id: 'alt', label: 'ALT', unit: 'U/L', source: 'labs', labName: 'alt', thresholds: { high: 40 } },
         ],
         status: [],
-        events: ['hospitalization', 'preventive_visit'],
+        events: [],
         due: [
-            { id: 'colonoscopy', label: 'Colonoscopy', intervalDays: 3650, minAge: 45 },
-            { id: 'mammogram', label: 'Mammogram', intervalDays: 365, minAge: 40, sex: 'F' },
+            { id: 'colonoscopy', label: 'Colonoscopy', intervalDays: 3650 },
             { id: 'flu_vaccine', label: 'Flu Vaccine', intervalDays: 365 },
-        ]
-    },
-    pulmonology: {
-        id: 'pulmonology',
-        label: 'Pulmonology',
-        icon: Wind,
-        color: 'cyan',
-        trends: [
-            { id: 'spo2', label: 'SpO2', unit: '%', source: 'vitals', vitalKey: 'spo2', thresholds: { low: 92, critical: 88 } },
-            { id: 'hr', label: 'Heart Rate', unit: 'bpm', source: 'vitals', vitalKey: 'hr', thresholds: { high: 100 } },
-            { id: 'rr', label: 'Resp Rate', unit: '/min', source: 'vitals', vitalKey: 'rr', thresholds: { high: 20 } },
-            { id: 'weight', label: 'Weight', unit: 'lbs', source: 'vitals', vitalKey: 'weight' },
-        ],
-        status: [
-            { id: 'inhaler', label: 'Inhaler Regimen', checkMeds: ['albuterol', 'symbicort', 'advair', 'breo', 'spiriva', 'combivent', 'proair', 'ventolin', 'dulera'] },
-        ],
-        events: ['pft', 'sleep_study', 'bronchoscopy', 'ct chest'],
-        due: [
-            { id: 'pft_repeat', label: 'PFT Repeat', intervalDays: 365 },
         ]
     },
     nephrology: {
@@ -112,19 +80,15 @@ const SPECIALTY_TEMPLATES = {
         icon: Droplet,
         color: 'amber',
         trends: [
-            { id: 'egfr', label: 'eGFR', unit: 'mL/min', source: 'labs', labName: 'egfr', thresholds: { low: 60, critical: 15 } },
             { id: 'cr', label: 'Creatinine', unit: 'mg/dL', source: 'labs', labName: 'creatinine', thresholds: { high: 1.2, critical: 4 } },
             { id: 'bun', label: 'BUN', unit: 'mg/dL', source: 'labs', labName: 'bun', thresholds: { high: 20 } },
             { id: 'k', label: 'Potassium', unit: 'mEq/L', source: 'labs', labName: 'potassium', thresholds: { low: 3.5, high: 5.0, critical: 5.5 } },
-            { id: 'co2', label: 'CO2', unit: 'mEq/L', source: 'labs', labName: 'co2', thresholds: { low: 22 } },
-            { id: 'phos', label: 'Phosphorus', unit: 'mg/dL', source: 'labs', labName: 'phosphorus', thresholds: { high: 4.5 } },
-            { id: 'calcium', label: 'Calcium', unit: 'mg/dL', source: 'labs', labName: 'calcium', thresholds: { low: 8.5, high: 10.5 } },
-            { id: 'hgb', label: 'Hemoglobin', unit: 'g/dL', source: 'labs', labName: 'hemoglobin', thresholds: { low: 10, critical: 7 } },
+            { id: 'sbp', label: 'Systolic BP', unit: 'mmHg', source: 'vitals', vitalKey: 'bp', extractor: (v) => { const bp = v?.bp; if (!bp || bp === 'N/A') return null; const parts = String(bp).split('/'); return parts[0] ? parseInt(parts[0]) : null; } },
         ],
         status: [
             { id: 'ace_arb', label: 'ACE/ARB Use', checkMeds: ['lisinopril', 'enalapril', 'losartan', 'valsartan', 'irbesartan', 'olmesartan', 'ramipril', 'benazepril'] },
         ],
-        events: ['dialysis_access', 'kidney_biopsy'],
+        events: [],
         due: [
             { id: 'ckd_labs', label: 'CKD Labs', intervalDays: 90, labName: 'creatinine' },
         ]
@@ -137,14 +101,12 @@ const SPECIALTY_TEMPLATES = {
         trends: [
             { id: 'ast', label: 'AST', unit: 'U/L', source: 'labs', labName: 'ast', thresholds: { high: 40 } },
             { id: 'alt', label: 'ALT', unit: 'U/L', source: 'labs', labName: 'alt', thresholds: { high: 40 } },
-            { id: 'inr', label: 'INR', unit: '', source: 'labs', labName: 'inr', thresholds: { high: 1.5 } },
             { id: 'albumin', label: 'Albumin', unit: 'g/dL', source: 'labs', labName: 'albumin', thresholds: { low: 3.5 } },
-            { id: 'bilirubin', label: 'Bilirubin', unit: 'mg/dL', source: 'labs', labName: 'bilirubin', thresholds: { high: 1.2 } },
             { id: 'hgb', label: 'Hemoglobin', unit: 'g/dL', source: 'labs', labName: 'hemoglobin', thresholds: { low: 12, critical: 8 } },
         ],
         events: ['colonoscopy', 'egd', 'ercp'],
         due: [
-            { id: 'colonoscopy_surveillance', label: 'Surveillance Colonoscopy', intervalDays: 1825 },
+            { id: 'colonoscopy_surveillance', label: 'Colonoscopy', intervalDays: 1825 },
         ]
     },
     rheumatology: {
@@ -156,35 +118,13 @@ const SPECIALTY_TEMPLATES = {
             { id: 'esr', label: 'ESR', unit: 'mm/hr', source: 'labs', labName: 'esr', thresholds: { high: 20 } },
             { id: 'crp', label: 'CRP', unit: 'mg/L', source: 'labs', labName: 'crp', thresholds: { high: 3 } },
             { id: 'wbc', label: 'WBC', unit: 'K/uL', source: 'labs', labName: 'wbc', thresholds: { low: 4, high: 11 } },
-            { id: 'hgb', label: 'Hemoglobin', unit: 'g/dL', source: 'labs', labName: 'hemoglobin', thresholds: { low: 12 } },
-            { id: 'plt', label: 'Platelets', unit: 'K/uL', source: 'labs', labName: 'platelet', thresholds: { low: 150 } },
         ],
         status: [
-            { id: 'dmard', label: 'DMARD/Biologic', checkMeds: ['methotrexate', 'humira', 'enbrel', 'remicade', 'adalimumab', 'etanercept', 'infliximab', 'rituximab', 'orencia'] },
-            { id: 'steroid', label: 'Steroid Use', checkMeds: ['prednisone', 'methylprednisolone', 'dexamethasone', 'hydrocortisone'] },
+            { id: 'dmard', label: 'DMARD/Biologic', checkMeds: ['methotrexate', 'humira', 'enbrel', 'remicade', 'adalimumab', 'etanercept'] },
+            { id: 'steroid', label: 'Steroid Use', checkMeds: ['prednisone', 'methylprednisolone', 'dexamethasone'] },
         ],
-        events: ['joint_injection'],
-        due: [
-            { id: 'tb_screen', label: 'TB Screening', intervalDays: 365 },
-        ]
-    },
-    neurology: {
-        id: 'neurology',
-        label: 'Neurology',
-        icon: Brain,
-        color: 'violet',
-        trends: [
-            { id: 'sbp', label: 'Systolic BP', unit: 'mmHg', source: 'vitals', vitalKey: 'bp', extractor: (v) => { const bp = v?.bp; if (!bp || bp === 'N/A') return null; const parts = String(bp).split('/'); return parts[0] ? parseInt(parts[0]) : null; }, thresholds: { high: 140 } },
-            { id: 'ldl', label: 'LDL', unit: 'mg/dL', source: 'labs', labName: 'ldl', thresholds: { high: 70 } },
-            { id: 'a1c', label: 'HbA1c', unit: '%', source: 'labs', labName: 'a1c', thresholds: { high: 7 } },
-        ],
-        status: [
-            { id: 'aed', label: 'AED Regimen', checkMeds: ['keppra', 'levetiracetam', 'lamictal', 'lamotrigine', 'depakote', 'valproic', 'topamax', 'topiramate', 'dilantin', 'phenytoin'] },
-        ],
-        events: ['eeg', 'mri_brain', 'stroke', 'tia', 'ct head'],
-        due: [
-            { id: 'aed_labs', label: 'AED Level Check', intervalDays: 180 },
-        ]
+        events: [],
+        due: []
     },
     hematology_oncology: {
         id: 'hematology_oncology',
@@ -195,45 +135,39 @@ const SPECIALTY_TEMPLATES = {
             { id: 'hgb', label: 'Hemoglobin', unit: 'g/dL', source: 'labs', labName: 'hemoglobin', thresholds: { low: 10, critical: 7 } },
             { id: 'wbc', label: 'WBC', unit: 'K/uL', source: 'labs', labName: 'wbc', thresholds: { low: 4, critical: 1 } },
             { id: 'plt', label: 'Platelets', unit: 'K/uL', source: 'labs', labName: 'platelet', thresholds: { low: 100, critical: 20 } },
-            { id: 'anc', label: 'ANC', unit: 'K/uL', source: 'labs', labName: 'anc', thresholds: { low: 1.5, critical: 0.5 } },
-            { id: 'ferritin', label: 'Ferritin', unit: 'ng/mL', source: 'labs', labName: 'ferritin', thresholds: { low: 30 } },
         ],
-        events: ['infusion', 'transfusion', 'bone_marrow_biopsy', 'chemo'],
+        events: ['infusion', 'transfusion'],
         due: [
-            { id: 'cbc_monitoring', label: 'CBC Monitoring', intervalDays: 14, labName: 'cbc' },
+            { id: 'cbc_monitoring', label: 'CBC Monitoring', intervalDays: 14 },
         ]
     },
-    psychiatry: {
-        id: 'psychiatry',
-        label: 'Psychiatry',
-        icon: Brain,
-        color: 'teal',
-        trends: [
-            { id: 'weight', label: 'Weight', unit: 'lbs', source: 'vitals', vitalKey: 'weight' },
-            { id: 'bmi', label: 'BMI', unit: 'kg/m²', source: 'vitals', vitalKey: 'bmi', thresholds: { high: 30 } },
-            { id: 'hr', label: 'Heart Rate', unit: 'bpm', source: 'vitals', vitalKey: 'hr' },
-            { id: 'sbp', label: 'Systolic BP', unit: 'mmHg', source: 'vitals', vitalKey: 'bp', extractor: (v) => { const bp = v?.bp; if (!bp || bp === 'N/A') return null; const parts = String(bp).split('/'); return parts[0] ? parseInt(parts[0]) : null; } },
-        ],
-        status: [],
-        events: [],
-        due: [
-            { id: 'metabolic_labs', label: 'Metabolic Labs (Antipsychotics)', intervalDays: 180 },
-        ]
-    }
 };
 
-// Helper to parse vital value
+// Helper to parse vital value - handles both numbers and strings like "150 lbs"
 const parseVitalValue = (value) => {
-    if (value === null || value === undefined || value === 'N/A' || value === '') return null;
-    const num = parseFloat(value);
+    if (value === null || value === undefined || value === 'N/A' || value === '' || value === '-') return null;
+    // Extract numeric part (handles "150 lbs", "98%", etc.)
+    const numStr = String(value).replace(/[^0-9.-]/g, '');
+    const num = parseFloat(numStr);
     return isNaN(num) ? null : num;
+};
+
+// Parse date - handles formatted strings like "01/14/2026" or ISO dates
+const parseDateSafe = (dateStr) => {
+    if (!dateStr) return null;
+    try {
+        const d = new Date(dateStr);
+        return isNaN(d.getTime()) ? null : d;
+    } catch {
+        return null;
+    }
 };
 
 // ============== MINI SPARKLINE COMPONENT ==============
 const MiniSparkline = ({ data, color = 'blue', width = 60, height = 20 }) => {
     if (!data || data.length < 2) return null;
 
-    const values = data.map(d => parseFloat(d.value) || 0).filter(v => !isNaN(v));
+    const values = data.map(d => parseFloat(d.value) || 0).filter(v => !isNaN(v) && v !== 0);
     if (values.length < 2) return null;
 
     const min = Math.min(...values);
@@ -276,9 +210,9 @@ const TrendCard = ({ trend, data, onClick }) => {
     let deltaType = 'neutral';
     if (value != null && prevValue != null) {
         const diff = parseFloat(value) - parseFloat(prevValue);
-        if (!isNaN(diff)) {
+        if (!isNaN(diff) && diff !== 0) {
             delta = diff > 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1);
-            deltaType = diff > 0 ? 'up' : diff < 0 ? 'down' : 'neutral';
+            deltaType = diff > 0 ? 'up' : 'down';
         }
     }
 
@@ -309,7 +243,8 @@ const TrendCard = ({ trend, data, onClick }) => {
     const colors = colorMap[statusColor];
 
     // Format the display value
-    const displayValue = value != null ? (typeof value === 'number' ? value.toFixed(value % 1 === 0 ? 0 : 1) : value) : '--';
+    const displayValue = value != null ? (typeof value === 'number' ? (Number.isInteger(value) ? value : value.toFixed(1)) : value) : '--';
+    const parsedDate = parseDateSafe(date);
 
     return (
         <button
@@ -335,11 +270,9 @@ const TrendCard = ({ trend, data, onClick }) => {
                     </div>
 
                     {delta && (
-                        <div className={`flex items-center gap-0.5 text-[10px] font-semibold ${deltaType === 'up' ? 'text-rose-500' : deltaType === 'down' ? 'text-emerald-500' : 'text-slate-400'
+                        <div className={`flex items-center gap-0.5 text-[10px] font-semibold ${deltaType === 'up' ? 'text-rose-500' : 'text-emerald-500'
                             }`}>
-                            {deltaType === 'up' ? <TrendingUp className="w-3 h-3" /> :
-                                deltaType === 'down' ? <TrendingDown className="w-3 h-3" /> :
-                                    <Minus className="w-3 h-3" />}
+                            {deltaType === 'up' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                             {delta}
                         </div>
                     )}
@@ -347,9 +280,9 @@ const TrendCard = ({ trend, data, onClick }) => {
 
                 <div className="flex flex-col items-end">
                     <MiniSparkline data={data} color={statusColor} />
-                    {date && (
+                    {parsedDate && (
                         <span className="text-[9px] text-slate-400 mt-1">
-                            {format(new Date(date), 'M/d/yy')}
+                            {format(parsedDate, 'M/d/yy')}
                         </span>
                     )}
                 </div>
@@ -360,6 +293,7 @@ const TrendCard = ({ trend, data, onClick }) => {
 
 // ============== DUE ITEM COMPONENT ==============
 const DueItem = ({ item, lastDate, overdue }) => {
+    const parsedDate = parseDateSafe(lastDate);
     return (
         <div className={`flex items-center justify-between px-3 py-2 rounded-lg ${overdue ? 'bg-rose-50 border border-rose-200' : 'bg-amber-50 border border-amber-200'
             }`}>
@@ -370,53 +304,7 @@ const DueItem = ({ item, lastDate, overdue }) => {
                 </span>
             </div>
             <span className={`text-[10px] font-bold ${overdue ? 'text-rose-600' : 'text-amber-600'}`}>
-                {overdue ? 'OVERDUE' : lastDate ? `Last: ${format(new Date(lastDate), 'M/d/yy')}` : 'Due'}
-            </span>
-        </div>
-    );
-};
-
-// ============== EVENT ITEM COMPONENT ==============
-const EventItem = ({ type, date, summary }) => {
-    const eventLabels = {
-        cardiac_cath: 'Cardiac Cath',
-        pci: 'PCI/Stent',
-        cabg: 'CABG',
-        echo: 'Echocardiogram',
-        echocardiogram: 'Echocardiogram',
-        stress_test: 'Stress Test',
-        stress: 'Stress Test',
-        colonoscopy: 'Colonoscopy',
-        egd: 'EGD',
-        pft: 'PFT',
-        dexa: 'DEXA Scan',
-        mri_brain: 'MRI Brain',
-        mri: 'MRI',
-        eeg: 'EEG',
-        ekg: 'EKG',
-        ct: 'CT Scan',
-    };
-
-    // Find matching label
-    const lowerType = (type || '').toLowerCase();
-    let label = type;
-    for (const [key, val] of Object.entries(eventLabels)) {
-        if (lowerType.includes(key)) {
-            label = val;
-            break;
-        }
-    }
-
-    return (
-        <div className="flex items-center justify-between px-3 py-2 bg-white border border-slate-100 rounded-lg">
-            <div className="flex items-center gap-2">
-                <FileText className="w-3.5 h-3.5 text-slate-400" />
-                <span className="text-xs font-medium text-slate-700">
-                    {label}
-                </span>
-            </div>
-            <span className="text-[10px] text-slate-500">
-                {date ? format(new Date(date), 'M/d/yy') : 'N/A'}
+                {overdue ? 'OVERDUE' : parsedDate ? `Last: ${format(parsedDate, 'M/d/yy')}` : 'Due'}
             </span>
         </div>
     );
@@ -447,6 +335,7 @@ const TrendDetailView = ({ trend, data, onClose }) => {
                                 const val = parseFloat(d.value) || 0;
                                 const max = Math.max(...data.map(x => parseFloat(x.value) || 0));
                                 const height = max > 0 ? (val / max) * 80 : 20;
+                                const parsedDate = parseDateSafe(d.date);
                                 return (
                                     <div key={i} className="flex flex-col items-center flex-1">
                                         <div
@@ -454,7 +343,7 @@ const TrendDetailView = ({ trend, data, onClose }) => {
                                             style={{ height: `${height}px` }}
                                         />
                                         <span className="text-[8px] text-slate-400 mt-1 truncate w-full text-center">
-                                            {d.date ? format(new Date(d.date), 'M/d') : ''}
+                                            {parsedDate ? format(parsedDate, 'M/d') : ''}
                                         </span>
                                     </div>
                                 );
@@ -469,13 +358,16 @@ const TrendDetailView = ({ trend, data, onClose }) => {
                             <span>Value</span>
                             <span>Source</span>
                         </div>
-                        {data.length > 0 ? data.map((d, i) => (
-                            <div key={i} className="grid grid-cols-3 gap-2 text-xs text-slate-700 px-2 py-1.5 bg-slate-50 rounded">
-                                <span>{d.date ? format(new Date(d.date), 'M/d/yyyy') : '--'}</span>
-                                <span className="font-semibold">{d.value} {trend.unit}</span>
-                                <span className="text-slate-400">{d.source || 'Chart'}</span>
-                            </div>
-                        )) : (
+                        {data.length > 0 ? data.map((d, i) => {
+                            const parsedDate = parseDateSafe(d.date);
+                            return (
+                                <div key={i} className="grid grid-cols-3 gap-2 text-xs text-slate-700 px-2 py-1.5 bg-slate-50 rounded">
+                                    <span>{parsedDate ? format(parsedDate, 'M/d/yyyy') : '--'}</span>
+                                    <span className="font-semibold">{d.value} {trend.unit}</span>
+                                    <span className="text-slate-400">{d.source || 'Chart'}</span>
+                                </div>
+                            );
+                        }) : (
                             <div className="text-center text-slate-400 py-4">No data available</div>
                         )}
                     </div>
@@ -495,7 +387,8 @@ const SpecialtyTracker = ({
     labs = [],
     medications = [],
     documents = [],
-    problems = []
+    problems = [],
+    onOpenChart // Function to open the patient chart panel
 }) => {
     const [selectedSpecialty, setSelectedSpecialty] = useState('cardiology');
     const [timeRange, setTimeRange] = useState(90);
@@ -526,6 +419,13 @@ const SpecialtyTracker = ({
         fetchLabs();
     }, [patientId, isOpen]);
 
+    // Debug: Log vitals to see structure
+    useEffect(() => {
+        if (vitals.length > 0) {
+            console.log('SpecialtyTracker vitals received:', vitals.slice(0, 2));
+        }
+    }, [vitals]);
+
     // Extract trend data from patient data sources
     const extractTrendData = useMemo(() => {
         if (!specialty) return {};
@@ -543,24 +443,15 @@ const SpecialtyTracker = ({
                     if (trend.extractor) {
                         value = trend.extractor(v);
                     } else if (trend.vitalKey) {
-                        // Map vitalKey to actual field names from Snapshot vitals structure
-                        const fieldMap = {
-                            'bp': 'bp',
-                            'hr': 'hr',
-                            'temp': 'temp',
-                            'rr': 'rr',
-                            'spo2': 'spo2',
-                            'weight': 'weight',
-                            'bmi': 'bmi'
-                        };
-                        const field = fieldMap[trend.vitalKey] || trend.vitalKey;
-                        value = parseVitalValue(v[field]);
+                        // Get the raw value from vitals
+                        const rawValue = v[trend.vitalKey];
+                        value = parseVitalValue(rawValue);
                     }
 
                     if (value !== null) {
                         data.push({
                             value: value,
-                            date: v.date || v.created_at,
+                            date: v.date || v.created_at || v.visit_date,
                             source: 'Vitals'
                         });
                     }
@@ -572,18 +463,18 @@ const SpecialtyTracker = ({
                 const searchTerm = (trend.labName || trend.label).toLowerCase();
 
                 labResults.forEach(lab => {
-                    const testName = (lab.test_name || '').toLowerCase();
+                    const testName = (lab.test_name || lab.name || '').toLowerCase();
                     const component = (lab.component || '').toLowerCase();
 
                     // Check if this lab matches the trend
                     if (testName.includes(searchTerm) || component.includes(searchTerm) ||
-                        searchTerm.includes(testName) || searchTerm.includes(component)) {
-                        const value = parseFloat(lab.result_value);
+                        searchTerm.includes(testName) || (component && searchTerm.includes(component))) {
+                        const value = parseFloat(lab.result_value || lab.value);
                         if (!isNaN(value)) {
                             data.push({
                                 value: value,
                                 date: lab.result_date || lab.collected_date || lab.created_at,
-                                source: lab.test_name || 'Lab'
+                                source: lab.test_name || lab.name || 'Lab'
                             });
                         }
                     }
@@ -591,9 +482,16 @@ const SpecialtyTracker = ({
             }
 
             // Sort by date descending
-            data.sort((a, b) => new Date(b.date) - new Date(a.date));
+            data.sort((a, b) => {
+                const dateA = parseDateSafe(a.date);
+                const dateB = parseDateSafe(b.date);
+                if (!dateA && !dateB) return 0;
+                if (!dateA) return 1;
+                if (!dateB) return -1;
+                return dateB - dateA;
+            });
 
-            trendData[trend.id] = data.slice(0, 10); // Keep last 10 values
+            trendData[trend.id] = data.slice(0, 10);
         });
 
         return trendData;
@@ -628,20 +526,24 @@ const SpecialtyTracker = ({
             let lastDate = null;
             let overdue = false;
 
-            // Check if we have data for this due item
+            // Check if we have lab data for this due item
             if (due.labName && labResults.length > 0) {
                 const searchTerm = due.labName.toLowerCase();
                 const matchingLabs = labResults.filter(lab => {
-                    const testName = (lab.test_name || '').toLowerCase();
+                    const testName = (lab.test_name || lab.name || '').toLowerCase();
                     return testName.includes(searchTerm);
                 });
                 if (matchingLabs.length > 0) {
-                    // Sort and get most recent
-                    matchingLabs.sort((a, b) => new Date(b.result_date || b.created_at) - new Date(a.result_date || a.created_at));
+                    matchingLabs.sort((a, b) => {
+                        const dateA = parseDateSafe(a.result_date || a.created_at);
+                        const dateB = parseDateSafe(b.result_date || b.created_at);
+                        return (dateB || 0) - (dateA || 0);
+                    });
                     lastDate = matchingLabs[0].result_date || matchingLabs[0].created_at;
                 }
             }
 
+            // Check documents
             if (due.docType && documents.length > 0) {
                 const matchingDocs = documents.filter(d => {
                     const cat = (d.category || d.doc_type || '').toLowerCase();
@@ -656,10 +558,12 @@ const SpecialtyTracker = ({
 
             // Calculate if overdue
             if (lastDate) {
-                const daysSince = differenceInDays(now, new Date(lastDate));
-                overdue = daysSince > due.intervalDays;
+                const parsedDate = parseDateSafe(lastDate);
+                if (parsedDate) {
+                    const daysSince = differenceInDays(now, parsedDate);
+                    overdue = daysSince > due.intervalDays;
+                }
             } else {
-                // No data = consider overdue
                 overdue = true;
             }
 
@@ -677,7 +581,7 @@ const SpecialtyTracker = ({
     const keyEvents = useMemo(() => {
         if (!specialty?.events || !documents.length) return [];
 
-        const events = documents
+        return documents
             .filter(d => {
                 const cat = (d.category || d.doc_type || '').toLowerCase();
                 const name = (d.filename || d.name || '').toLowerCase();
@@ -689,8 +593,6 @@ const SpecialtyTracker = ({
                 date: d.created_at,
                 summary: d.filename || d.name
             }));
-
-        return events;
     }, [specialty, documents]);
 
     const visibleTrends = showMore ? specialty?.trends : specialty?.trends?.slice(0, 8);
@@ -700,9 +602,31 @@ const SpecialtyTracker = ({
         setSelectedTrendData(extractTrendData[trend.id] || []);
     };
 
+    const handleEditVitals = () => {
+        if (onOpenChart) {
+            onOpenChart('vitals');
+            onClose();
+        }
+    };
+
+    const handleEditMedications = () => {
+        if (onOpenChart) {
+            onOpenChart('medications');
+            onClose();
+        }
+    };
+
+    const handleEditLabs = () => {
+        if (onOpenChart) {
+            onOpenChart('labs');
+            onClose();
+        }
+    };
+
     if (!isOpen) return null;
 
     const Icon = specialty?.icon || Activity;
+    const dataCount = Object.values(extractTrendData).reduce((sum, arr) => sum + arr.length, 0);
 
     return (
         <>
@@ -718,8 +642,8 @@ const SpecialtyTracker = ({
                 <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                            <div className={`p-2 rounded-xl bg-rose-100`}>
-                                <Icon className={`w-5 h-5 text-rose-600`} />
+                            <div className="p-2 rounded-xl bg-rose-100">
+                                <Icon className="w-5 h-5 text-rose-600" />
                             </div>
                             <div>
                                 <h2 className="text-lg font-bold text-slate-900">Specialty Tracker</h2>
@@ -766,6 +690,31 @@ const SpecialtyTracker = ({
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                    {/* Quick Edit Actions */}
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handleEditVitals}
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg transition-colors"
+                        >
+                            <Plus className="w-3.5 h-3.5" />
+                            Add Vitals
+                        </button>
+                        <button
+                            onClick={handleEditLabs}
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-semibold rounded-lg transition-colors"
+                        >
+                            <FlaskConical className="w-3.5 h-3.5" />
+                            View Labs
+                        </button>
+                        <button
+                            onClick={handleEditMedications}
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg transition-colors"
+                        >
+                            <Pill className="w-3.5 h-3.5" />
+                            Medications
+                        </button>
+                    </div>
+
                     {/* Section A: Top Trends */}
                     <div>
                         <div className="flex items-center justify-between mb-3">
@@ -799,23 +748,32 @@ const SpecialtyTracker = ({
                     {/* Medication Status */}
                     {specialty?.status?.length > 0 && (
                         <div>
-                            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 mb-3">
-                                <Pill className="w-3.5 h-3.5" />
-                                Status
-                            </h3>
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                                    <Pill className="w-3.5 h-3.5" />
+                                    Status
+                                </h3>
+                                <button
+                                    onClick={handleEditMedications}
+                                    className="text-[10px] font-semibold text-blue-600 hover:underline flex items-center gap-0.5"
+                                >
+                                    <Edit3 className="w-3 h-3" />
+                                    Edit
+                                </button>
+                            </div>
                             <div className="space-y-2">
                                 {specialty.status.map(s => {
                                     const status = medicationStatus[s.id];
                                     return (
-                                        <div key={s.id} className={`flex items-center justify-between px-3 py-2 rounded-lg ${status?.active ? 'bg-emerald-50 border border-emerald-200' : 'bg-slate-50 border border-slate-200'
-                                            }`}>
+                                        <div key={s.id} className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer hover:shadow-sm transition-all ${status?.active ? 'bg-emerald-50 border border-emerald-200' : 'bg-slate-50 border border-slate-200'
+                                            }`} onClick={handleEditMedications}>
                                             <div>
                                                 <span className={`text-xs font-medium ${status?.active ? 'text-emerald-700' : 'text-slate-500'}`}>
                                                     {s.label}
                                                 </span>
                                                 {status?.active && status.meds.length > 0 && (
                                                     <p className="text-[10px] text-emerald-600 truncate max-w-[200px]">
-                                                        {status.meds.map(m => m.medication_name || m.name).join(', ')}
+                                                        {status.meds.map(m => m.medication_name || m.name).slice(0, 2).join(', ')}
                                                     </p>
                                                 )}
                                             </div>
@@ -844,27 +802,19 @@ const SpecialtyTracker = ({
                         </div>
                     )}
 
-                    {/* Section C: Key Events */}
-                    {keyEvents.length > 0 && (
-                        <div>
-                            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 mb-3">
-                                <Calendar className="w-3.5 h-3.5" />
-                                Key Events
-                            </h3>
-                            <div className="space-y-2">
-                                {keyEvents.map((event, i) => (
-                                    <EventItem key={i} {...event} />
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
                     {/* No Data Message */}
-                    {Object.values(extractTrendData).every(d => d.length === 0) && !loadingLabs && (
+                    {dataCount === 0 && !loadingLabs && (
                         <div className="text-center py-8">
                             <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                             <p className="text-sm text-slate-500">No trend data available</p>
                             <p className="text-xs text-slate-400 mt-1">Record vitals and labs to see trends</p>
+                            <button
+                                onClick={handleEditVitals}
+                                className="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold rounded-lg transition-colors"
+                            >
+                                <Plus className="w-3.5 h-3.5 inline mr-1" />
+                                Add Vitals Now
+                            </button>
                         </div>
                     )}
                 </div>
@@ -872,7 +822,7 @@ const SpecialtyTracker = ({
                 {/* Footer */}
                 <div className="p-3 border-t border-slate-200 bg-slate-50/50">
                     <div className="text-[10px] text-slate-400 text-center">
-                        Data synced from patient chart • {vitals.length} vitals, {labResults.length} labs
+                        Data synced from patient chart • {vitals.length} vitals, {labResults.length} labs, {dataCount} data points
                     </div>
                 </div>
             </div>
