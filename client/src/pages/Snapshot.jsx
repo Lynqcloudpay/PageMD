@@ -340,11 +340,19 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     .filter(v => v.vitals)
                     .map(v => {
                         const vData = typeof v.vitals === 'string' ? JSON.parse(v.vitals) : v.vitals;
-                        let bpValue = vData.bp || vData.blood_pressure || 'N/A';
+
+                        // Handle BP reconstruction from systolic/diastolic if explicit BP is missing
+                        let bpValue = vData.bp || vData.blood_pressure;
+                        if (!bpValue && vData.systolic && vData.diastolic) {
+                            bpValue = `${vData.systolic}/${vData.diastolic}`;
+                        }
+                        if (!bpValue) bpValue = 'N/A';
 
                         // Helper to clean potentially double-encoded values
                         const cleanValue = (val) => {
                             if (!val || val === 'N/A') return 'N/A';
+                            // If number, return as is
+                            if (typeof val === 'number') return val;
                             if (typeof val !== 'string') return val;
                             let str = val;
                             let prev = '';
@@ -366,8 +374,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             hr: cleanValue(vData.hr || vData.heart_rate || vData.pulse || 'N/A'),
                             temp: cleanValue(vData.temp || vData.temperature || 'N/A'),
                             rr: cleanValue(vData.rr || vData.respiratory_rate || vData.resp || 'N/A'),
-                            spo2: vData.spo2 || vData.oxygen_saturation || vData.o2sat || 'N/A',
-                            weight: vData.weight || 'N/A'
+                            spo2: cleanValue(vData.spo2 || vData.oxygen_saturation || vData.o2sat || 'N/A'),
+                            weight: cleanValue(vData.weight || 'N/A')
                         };
                     });
                 setVitals(vitalsList);
