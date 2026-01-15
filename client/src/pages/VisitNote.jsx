@@ -3340,6 +3340,7 @@ const VisitNote = () => {
                     patientId={id}
                     visitId={currentVisitId || urlVisitId}
                     initialMedications={patientData?.medications}
+                    patientProblems={patientData?.problems}
                 />
 
                 {showOrderPicker && (

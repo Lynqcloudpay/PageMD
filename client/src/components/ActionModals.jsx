@@ -227,7 +227,7 @@ export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [] }
     );
 };
 
-export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'labs', diagnoses = [], existingOrders = [], patientId = null, visitId = null, initialMedications = null }) => {
+export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'labs', diagnoses = [], existingOrders = [], patientId = null, visitId = null, initialMedications = null, patientProblems = [] }) => {
     const [activeTab, setActiveTab] = useState(initialTab);
     const [cart, setCart] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
@@ -315,6 +315,17 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
     // Aggregate all available diagnoses including existing ones, the currently selected one (if new), and any attached to cart items
     const availableDiagnoses = useMemo(() => {
         const set = new Set(diagnoses);
+        // Add patient problems as available diagnoses
+        if (patientProblems && Array.isArray(patientProblems)) {
+            patientProblems.filter(p => p.status === 'active' || !p.status).forEach(p => {
+                const problemName = p.problem_name || p.name || '';
+                const icd10 = p.icd10_code || '';
+                if (problemName) {
+                    const diagString = icd10 ? `${icd10} - ${problemName}` : problemName;
+                    set.add(diagString);
+                }
+            });
+        }
         if (selectedDiagnosis && selectedDiagnosis !== 'new' && selectedDiagnosis !== 'Unassigned') {
             set.add(selectedDiagnosis);
         }
@@ -324,7 +335,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
             }
         });
         return Array.from(set);
-    }, [diagnoses, selectedDiagnosis, cart]);
+    }, [diagnoses, patientProblems, selectedDiagnosis, cart]);
     const existingOrdersString = useMemo(() => JSON.stringify(existingOrders), [existingOrders]);
 
     // Track if modal has been initialized to prevent resets
@@ -962,7 +973,7 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Order Entry" size="2xl">
-            <div className="flex flex-col max-h-[70vh] overflow-hidden">
+            <div className="flex flex-col max-h-[80vh] overflow-hidden">
                 {/* Tabs */}
                 <div className="flex border-b border-gray-200 bg-gray-50">
                     <div className="flex-1 flex overflow-x-auto">
