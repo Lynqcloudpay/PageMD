@@ -416,22 +416,58 @@ const TrendDetailView = ({ trend, data, onClose }) => {
                     <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-400" /></button>
                 </div>
                 <div className="p-4 max-h-[60vh] overflow-y-auto">
-                    {data.length > 0 && (
-                        <div className="h-32 bg-gradient-to-b from-blue-50 to-white rounded-lg border border-slate-200 flex items-end justify-around p-4 mb-4 gap-1">
-                            {data.slice(0, 10).reverse().map((d, i) => {
-                                const val = parseFloat(d.value) || 0;
-                                const max = Math.max(...data.map(x => parseFloat(x.value) || 0));
-                                const height = max > 0 ? (val / max) * 80 : 20;
-                                const parsedDate = parseDateSafe(d.date);
-                                return (
-                                    <div key={i} className="flex flex-col items-center flex-1">
-                                        <div className="w-full bg-blue-500 rounded-t min-h-[4px] transition-all" style={{ height: `${height}px` }} />
-                                        <span className="text-[8px] text-slate-400 mt-1 truncate w-full text-center">{parsedDate ? format(parsedDate, 'M/d') : ''}</span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
+                    {data.length > 0 && (() => {
+                        const chartData = data.slice(0, 10).reverse();
+                        const values = chartData.map(d => parseFloat(d.value) || 0);
+                        const max = Math.max(...values) || 1;
+                        const min = Math.min(...values) * 0.9;
+                        const range = max - min || 1;
+                        const width = 100;
+                        const height = 80;
+                        const padding = 4;
+
+                        const points = values.map((val, i) => {
+                            const x = padding + (i / Math.max(values.length - 1, 1)) * (width - padding * 2);
+                            const y = height - padding - ((val - min) / range) * (height - padding * 2);
+                            return { x, y };
+                        });
+
+                        // Create smooth curve path
+                        const linePath = points.reduce((path, point, i) => {
+                            if (i === 0) return `M ${point.x} ${point.y}`;
+                            const prev = points[i - 1];
+                            const cpx1 = prev.x + (point.x - prev.x) / 3;
+                            const cpx2 = prev.x + 2 * (point.x - prev.x) / 3;
+                            return `${path} C ${cpx1} ${prev.y}, ${cpx2} ${point.y}, ${point.x} ${point.y}`;
+                        }, '');
+
+                        // Area path (fill under the line)
+                        const areaPath = `${linePath} L ${points[points.length - 1]?.x || padding} ${height - padding} L ${padding} ${height - padding} Z`;
+
+                        return (
+                            <div className="h-32 bg-gradient-to-b from-blue-50 to-white rounded-lg border border-slate-200 p-4 mb-4 relative overflow-hidden">
+                                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full" preserveAspectRatio="none">
+                                    <defs>
+                                        <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                            <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.4" />
+                                            <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.05" />
+                                        </linearGradient>
+                                    </defs>
+                                    <path d={areaPath} fill="url(#areaGradient)" />
+                                    <path d={linePath} fill="none" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    {points.map((point, i) => (
+                                        <circle key={i} cx={point.x} cy={point.y} r="3" fill="white" stroke="#3B82F6" strokeWidth="1.5" />
+                                    ))}
+                                </svg>
+                                <div className="absolute bottom-1 left-0 right-0 flex justify-between px-4 text-[8px] text-slate-400">
+                                    {chartData.map((d, i) => {
+                                        const parsedDate = parseDateSafe(d.date);
+                                        return <span key={i}>{parsedDate ? format(parsedDate, 'M/d') : ''}</span>;
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })()}
                     <div className="space-y-1">
                         <div className="grid grid-cols-3 gap-2 text-[10px] font-bold text-slate-400 uppercase px-2">
                             <span>Date</span><span>Value</span><span>Source</span>
