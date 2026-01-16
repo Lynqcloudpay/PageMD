@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
     AlertCircle, Activity, Pill, FileText, Clock, Eye, ChevronDown, ChevronUp, ChevronRight, Plus,
-    Phone, Mail, MapPin, CreditCard, Building2, Users, Heart, Printer,
+    Phone, Mail, MapPin, CreditCard, Building2, Users, Heart, Printer, Scissors,
     CheckCircle2, Edit, ArrowRight, ExternalLink, UserCircle, Camera, User, X, FileImage, Save, FlaskConical, Database, Trash2, Upload, Layout, RotateCcw, Waves,
     Shield, ShieldAlert, AlertTriangle
 } from 'lucide-react';
@@ -1223,32 +1223,32 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     }}
                 />
 
-                {/* Quick Navigation Bar */}
-                <div className="px-6 py-2 bg-gray-50 border-b border-gray-200 mb-4">
+                {/* Quick Navigation Bar - Neutralized */}
+                <div className="px-6 py-2 bg-white border-b border-gray-200 mb-6 shadow-sm sticky top-0 z-10">
                     <div className="flex items-center justify-between gap-1">
-                        <div className="flex items-center gap-1 overflow-x-auto flex-1">
+                        <div className="flex items-center gap-1 overflow-x-auto flex-1 scrollbar-hide">
                             <button
                                 onClick={() => {
                                     setPatientChartTab('hub');
                                     setShowPatientChart(true);
                                 }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
+                                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all whitespace-nowrap border border-transparent hover:border-slate-200"
                             >
-                                <UserCircle className="w-3.5 h-3.5 text-green-600" />
+                                <UserCircle className="w-3.5 h-3.5 text-slate-500" />
                                 <span>Patient Hub</span>
                             </button>
-                            <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                            <div className="w-px h-6 bg-slate-200 mx-1 shrink-0"></div>
                             <button
                                 onClick={() => {
                                     setPatientChartTab('images');
                                     setShowPatientChart(true);
                                 }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
+                                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all whitespace-nowrap border border-transparent hover:border-slate-200"
                             >
-                                <FileImage className="w-3.5 h-3.5 text-purple-600" />
+                                <FileImage className="w-3.5 h-3.5 text-slate-500" />
                                 <span>Images</span>
                                 {(documents || []).filter(d => d.doc_type === 'imaging').length > 0 && (
-                                    <span className="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                                    <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-bold">
                                         {(documents || []).filter(d => d.doc_type === 'imaging').length}
                                     </span>
                                 )}
@@ -1258,12 +1258,12 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     setPatientChartTab('labs');
                                     setShowPatientChart(true);
                                 }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
+                                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all whitespace-nowrap border border-transparent hover:border-slate-200"
                             >
-                                <FlaskConical className="w-3.5 h-3.5 text-blue-600" />
+                                <FlaskConical className="w-3.5 h-3.5 text-slate-500" />
                                 <span>Labs</span>
                                 {(orders || []).filter(o => o.order_type === 'lab').length > 0 && (
-                                    <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                                    <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-bold">
                                         {(orders || []).filter(o => o.order_type === 'lab').length}
                                     </span>
                                 )}
@@ -1273,30 +1273,27 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     setPatientChartTab('documents');
                                     setShowPatientChart(true);
                                 }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-primary-700 hover:bg-white rounded-md transition-colors whitespace-nowrap border border-transparent hover:border-gray-300"
+                                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all whitespace-nowrap border border-transparent hover:border-slate-200"
                             >
-                                <FileText className="w-3.5 h-3.5 text-gray-600" />
+                                <FileText className="w-3.5 h-3.5 text-slate-500" />
                                 <span>Documents</span>
                                 {(documents || []).filter(d => d.doc_type !== 'imaging').length > 0 && (
-                                    <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                                    <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-bold">
                                         {(documents || []).filter(d => d.doc_type !== 'imaging').length}
                                     </span>
                                 )}
                             </button>
                             <button
                                 onClick={() => setShowDocumentUploadModal(true)}
-                                className="flex items-center justify-center p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                                className="flex items-center justify-center p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded transition-colors"
                                 title="Upload Document"
                             >
-                                <Upload className="w-3 h-3" />
+                                <Upload className="w-4 h-4" />
                             </button>
-                            <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                            <div className="w-px h-6 bg-slate-200 mx-1 shrink-0"></div>
                             <button
                                 onClick={() => setShowPrintOrdersModal(true)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-md transition-all duration-200 hover:shadow-md whitespace-nowrap"
-                                style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
+                                className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-md transition-all hover:bg-slate-50 hover:shadow-sm whitespace-nowrap"
                                 title="Print Orders"
                             >
                                 <Printer className="w-3.5 h-3.5" />
@@ -1319,89 +1316,36 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 <span>Tracker</span>
                             </button>
                         </div>
-                        <div className="flex-shrink-0 ml-2 flex items-center gap-2">
-                            {/* Primary visit action: New Visit or Open Today's Visit (moved to right side for spacing) */}
-                            <div className="relative flex items-center shadow-md rounded-md transition-all hover:shadow-lg group" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}>
+                        <div className="flex items-center gap-2">
+                            <div className="relative group/visit">
                                 <button
-                                    type="button"
-                                    onClick={async () => {
-                                        if (!id) {
-                                            alert('Patient ID is missing. Please refresh the page.');
-                                            return;
-                                        }
-
-                                        // If we already have a draft for today, just open it
-                                        if (todayDraftVisit && todayDraftVisit.id) {
-                                            navigate(`/patient/${id}/visit/${todayDraftVisit.id}`);
-                                            return;
-                                        }
-
-                                        // Otherwise, create new
-                                        handleCreateNewVisit();
-                                    }}
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white ${todayDraftVisit && todayDraftVisit.id ? 'rounded-l-md border-r border-blue-400/30' : 'rounded-md'}`}
+                                    onClick={() => todayDraftVisit ? navigate(`/patient/${id}/visit/${todayDraftVisit.id}`) : handleCreateNewVisit()}
+                                    className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-slate-800 rounded-md transition-all hover:bg-slate-900 hover:shadow-md"
                                 >
-                                    {todayDraftVisit && todayDraftVisit.id ? (
+                                    {todayDraftVisit ? (
                                         <>
                                             <FileText className="w-3.5 h-3.5" />
-                                            <span>Open Today&apos;s Visit</span>
+                                            <span>Open Today's Note</span>
                                         </>
                                     ) : (
                                         <>
                                             <Plus className="w-3.5 h-3.5" />
-                                            <span>New Visit</span>
+                                            <span>Start New Visit</span>
                                         </>
                                     )}
                                 </button>
-
-                                {todayDraftVisit && todayDraftVisit.id && (
-                                    <>
-                                        <button
-                                            onClick={() => setShowNewVisitDropdown(!showNewVisitDropdown)}
-                                            className="px-1.5 py-1.5 rounded-r-md text-white hover:bg-white/10 h-full flex items-center justify-center transition-colors"
-                                        >
-                                            <ChevronDown className="w-3.5 h-3.5" />
-                                        </button>
-
-                                        {showNewVisitDropdown && (
-                                            <>
-                                                <div
-                                                    className="fixed inset-0 z-30"
-                                                    onClick={() => setShowNewVisitDropdown(false)}
-                                                />
-                                                <div className="absolute top-full right-0 mt-1 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-40 py-1 animate-fade-in-up">
-                                                    <div className="px-3 py-2 border-b border-gray-100 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                                                        Actions
-                                                    </div>
-                                                    <button
-                                                        onClick={() => {
-                                                            setShowNewVisitDropdown(false);
-                                                            handleCreateNewVisit();
-                                                        }}
-                                                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 flex items-center gap-2 transition-colors"
-                                                    >
-                                                        <Plus className="w-4 h-4" />
-                                                        Start New Visit
-                                                    </button>
-                                                </div>
-                                            </>
-                                        )}
-                                    </>
-                                )}
                             </div>
 
                             {layoutEditMode && (
                                 <button
                                     onClick={resetLayout}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors whitespace-nowrap"
+                                    className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors whitespace-nowrap"
                                     title="Reset to Default Layout"
                                 >
                                     <RotateCcw className="w-3.5 h-3.5" />
-                                    <span>Reset</span>
+                                    <span>Reset Layout</span>
                                 </button>
                             )}
-
-                            {/* Note actions are now in the patient header (Open Chart / New Visit / Open Today's Visit / Telephone Encounter) */}
                         </div>
                     </div>
                 </div>
@@ -1409,19 +1353,19 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 <div className="px-6">
                     {/* Sticky Note / Patient Alerts Section */}
                     {activeFlags.length > 0 && (
-                        <div className="mb-4 flex flex-wrap gap-2">
+                        <div className="mb-6 flex flex-wrap gap-3">
                             {activeFlags.map(flag => (
                                 <div
                                     key={flag.id}
-                                    className={`flex-1 min-w-[200px] p-2.5 rounded-lg border-l-4 shadow-sm relative group animate-in slide-in-from-top duration-300 ${flag.display_severity === 'critical' ? 'bg-red-50 border-red-500' :
-                                        flag.display_severity === 'warn' ? 'bg-orange-50 border-orange-500' :
-                                            'bg-blue-50 border-blue-500'
+                                    className={`flex-1 min-w-[280px] p-3 rounded-lg border-l-4 shadow-sm relative group animate-in slide-in-from-top duration-300 ${flag.display_severity === 'critical' ? 'bg-red-50 border-red-500' :
+                                        flag.display_severity === 'warn' ? 'bg-amber-50 border-amber-500' :
+                                            'bg-slate-50 border-slate-400'
                                         }`}
                                 >
                                     <div className="flex items-center gap-2.5">
                                         <div className={`p-1.5 rounded-md ${flag.display_severity === 'critical' ? 'bg-red-100 text-red-600' :
-                                            flag.display_severity === 'warn' ? 'bg-orange-100 text-orange-600' :
-                                                'bg-blue-100 text-blue-600'
+                                            flag.display_severity === 'warn' ? 'bg-amber-100 text-amber-600' :
+                                                'bg-slate-200 text-slate-600'
                                             }`}>
                                             {flag.display_severity === 'critical' ? <ShieldAlert size={16} /> :
                                                 flag.display_severity === 'warn' ? <AlertTriangle size={16} /> :
@@ -1430,19 +1374,19 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between">
                                                 <h3 className={`text-[11px] font-black uppercase tracking-tight truncate ${flag.display_severity === 'critical' ? 'text-red-900' :
-                                                    flag.display_severity === 'warn' ? 'text-orange-900' :
-                                                        'text-blue-900'
+                                                    flag.display_severity === 'warn' ? 'text-amber-900' :
+                                                        'text-slate-900'
                                                     }`}>
                                                     {flag.display_label}
                                                 </h3>
-                                                <span className="text-[9px] font-bold text-gray-400 ml-2 whitespace-nowrap">
+                                                <span className="text-[9px] font-bold text-slate-400 ml-2 whitespace-nowrap">
                                                     {new Date(flag.created_at).toLocaleDateString()}
                                                 </span>
                                             </div>
                                             {flag.note && (
                                                 <p className={`text-[11px] font-medium leading-tight truncate ${flag.display_severity === 'critical' ? 'text-red-800' :
-                                                    flag.display_severity === 'warn' ? 'text-orange-800' :
-                                                        'text-blue-800'
+                                                    flag.display_severity === 'warn' ? 'text-amber-800' :
+                                                        'text-slate-700'
                                                     }`}>
                                                     {flag.note}
                                                 </p>
@@ -1454,132 +1398,82 @@ const Snapshot = ({ showNotesOnly = false }) => {
                         </div>
                     )}
 
-                    {/* Visit History Section */}
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-                        <div className="p-3 border-b border-gray-200 flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                <button
-                                    onClick={() => setVisitHistoryExpanded(!visitHistoryExpanded)}
-                                    className="hover:bg-gray-100 rounded p-0.5 transition-colors"
-                                >
-                                    {visitHistoryExpanded ? (
-                                        <ChevronDown className="w-4 h-4 text-gray-400" />
-                                    ) : (
-                                        <ChevronRight className="w-4 h-4 text-gray-400" />
-                                    )}
-                                </button>
-                                <FileText className="w-4 h-4 text-primary-600" />
-                                <h2
-                                    className="font-semibold text-sm text-gray-900 cursor-pointer hover:text-primary-600 hover:underline transition-colors"
-                                    onClick={() => setShowVisitFoldersModal(true)}
-                                >
-                                    Visit History
-                                </h2>
-                                {filteredNotes.length > 0 && (
-                                    <span className="text-xs text-gray-500">({filteredNotes.length} visits)</span>
-                                )}
-                            </div>
-                            {visitHistoryExpanded && filteredNotes.length > 0 && (
-                                <button
-                                    onClick={() => setShowVisitFoldersModal(true)}
-                                    className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                                >
-                                    View All
-                                </button>
-                            )}
-                        </div>
-                        {visitHistoryExpanded && (
-                            <div className="p-2">
-                                {filteredNotes.length > 0 ? (
-                                    <div className="space-y-1">
-                                        {filteredNotes.slice(0, 5).map(note => (
-                                            <div
-                                                key={note.id}
-                                                className="px-2 py-1.5 border border-gray-200 rounded hover:bg-gray-50 cursor-pointer transition-colors relative group"
-                                                onClick={() => handleViewNote(note.id)}
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex-1 min-w-0 pr-6">
-                                                        <div className="flex items-center space-x-2 flex-wrap">
-                                                            <span className="text-xs font-medium text-gray-900">{note.type}</span>
-                                                            {note.signed ? (
-                                                                <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded flex-shrink-0">Signed</span>
-                                                            ) : (
-                                                                <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded flex-shrink-0">Draft</span>
-                                                            )}
-                                                            <span className="text-xs text-gray-500 flex-shrink-0">{note.dateTime || `${note.date} ${note.time || ''}` || note.date} • {note.provider}</span>
-                                                            {note.chiefComplaint && (
-                                                                <span className="text-xs text-gray-700 italic">
-                                                                    • "{note.chiefComplaint.substring(0, 60)}{note.chiefComplaint.length > 60 ? '...' : ''}"
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 absolute right-2 top-1/2 transform -translate-y-1/2">
-                                                        {!note.signed && (
-                                                            <button
-                                                                onClick={(e) => handleDeleteNote(note.id, e)}
-                                                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all"
-                                                                title="Delete draft"
-                                                            >
-                                                                <Trash2 className="w-3 h-3 text-red-600" />
-                                                            </button>
-                                                        )}
-                                                        <ArrowRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                        {filteredNotes.length > 5 && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setShowVisitFoldersModal(true);
-                                                }}
-                                                className="w-full text-center text-xs text-primary-600 hover:text-primary-700 py-1.5"
-                                            >
-                                                View {filteredNotes.length - 5} more visits
-                                            </button>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <p className="text-xs text-gray-500 text-center py-4">No visits recorded</p>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
                     {/* Modular Grid - With Layout Editor Support */}
-                    <div className="mb-6">
+                    <div className="mb-8">
                         {layoutEditMode ? (
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6">
                                 <div className="flex items-center justify-between">
-                                    <p className="text-sm text-blue-800">
-                                        <strong>Layout Editor Mode:</strong> The drag-and-drop layout editor is currently being set up.
-                                        For now, please exit edit mode to view your modules. Full functionality coming soon!
+                                    <p className="text-sm text-slate-600">
+                                        <strong>Layout Editor Mode:</strong> Use this mode to arrange your modules.
                                     </p>
                                     <button
                                         onClick={() => setLayoutEditMode(false)}
-                                        className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                                        className="px-4 py-1.5 text-xs font-bold text-white bg-slate-800 rounded hover:bg-slate-900"
                                     >
-                                        Done
+                                        Save Layout
                                     </button>
                                 </div>
                             </div>
                         ) : null}
 
                         {!layoutEditMode ? (
-                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                                {/* Left Column: Compact Reference Cards */}
+                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                                {/* Left Column: Compact Reference Cards + Visit History */}
                                 <div className="lg:col-span-1 space-y-4">
-                                    {/* Allergies Module - Smallest Card */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-red-100 hover:shadow-md transition-shadow">
-                                        <div className="p-1.5 border-b border-gray-100 flex items-center justify-between">
-                                            <div className="flex items-center space-x-1">
-                                                <AlertCircle className="w-3.5 h-3.5 text-red-600" />
-                                                <h3 className="font-semibold text-[11px] text-gray-900 uppercase tracking-wider">Allergies</h3>
+                                    {/* Visit History Section - Now in Sidebar */}
+                                    <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+                                        <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                                            <div className="flex items-center space-x-2">
+                                                <FileText className="w-3.5 h-3.5 text-slate-500" />
+                                                <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wide">Visit History</h3>
+                                                {filteredNotes.length > 0 && (
+                                                    <span className="text-[9px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-bold">{filteredNotes.length}</span>
+                                                )}
+                                            </div>
+                                            <button
+                                                onClick={() => setShowVisitFoldersModal(true)}
+                                                className="text-[9px] text-slate-500 hover:text-slate-700 font-bold uppercase tracking-wider"
+                                            >
+                                                View All
+                                            </button>
+                                        </div>
+                                        <div className="p-2">
+                                            {filteredNotes.length > 0 ? (
+                                                <div className="space-y-1.5">
+                                                    {filteredNotes.slice(0, 3).map(note => (
+                                                        <div
+                                                            key={note.id}
+                                                            className="px-2.5 py-2 bg-slate-50 border border-slate-100 rounded-md hover:bg-slate-100 cursor-pointer transition-colors group"
+                                                            onClick={() => handleViewNote(note.id)}
+                                                        >
+                                                            <div className="flex items-center justify-between mb-0.5">
+                                                                <span className="text-[11px] font-bold text-slate-900">{note.type}</span>
+                                                                {note.signed ? (
+                                                                    <span className="text-[8px] bg-slate-200 text-slate-600 px-1 rounded font-bold">Signed</span>
+                                                                ) : (
+                                                                    <span className="text-[8px] bg-amber-100 text-amber-700 px-1 rounded font-bold">Draft</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-[9px] text-slate-500 font-medium truncate">{note.dateTime || note.date} • {note.provider}</div>
+                                                            {note.chiefComplaint && (
+                                                                <p className="text-[9px] text-slate-600 mt-1 italic line-clamp-1">"{note.chiefComplaint}"</p>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-[10px] text-slate-400 text-center py-4">No visits recorded</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {/* Allergies Module */}
+                                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+                                        <div className="px-2 py-1.5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                                            <div className="flex items-center space-x-1.5">
+                                                <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
+                                                <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-wide">Allergies</h3>
                                                 {allergies.length > 0 && (
-                                                    <span className="text-[10px] text-gray-500 font-bold">({allergies.length})</span>
+                                                    <span className="text-[9px] bg-rose-100 text-rose-700 px-1 py-0.5 rounded font-bold">{allergies.length}</span>
                                                 )}
                                             </div>
                                             <button
@@ -1587,177 +1481,160 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     setPatientChartTab('allergies');
                                                     setShowPatientChart(true);
                                                 }}
-                                                className="text-[9px] text-primary-600 hover:text-primary-700 font-bold"
+                                                className="text-[9px] text-slate-500 hover:text-slate-700 font-medium"
                                             >
-                                                EDIT
+                                                Edit
                                             </button>
                                         </div>
-                                        <div className="p-1.5">
+                                        <div className="p-2">
                                             {allergies.length > 0 ? (
                                                 <div className="space-y-1">
                                                     {allergies.slice(0, 3).map(allergy => (
-                                                        <div key={allergy.id} className="pb-1 border-b border-gray-50 last:border-b-0 last:pb-0">
-                                                            <p className="font-bold text-[10px] text-red-900 leading-tight">{allergy.allergen}</p>
+                                                        <div key={allergy.id} className="pb-1 border-b border-slate-50 last:border-b-0 last:pb-0">
+                                                            <p className="font-semibold text-[10px] text-slate-900 leading-tight">{allergy.allergen}</p>
                                                             {allergy.reaction && (
-                                                                <p className="text-[9px] text-gray-600 leading-tight truncate">Rxn: {allergy.reaction}</p>
+                                                                <p className="text-[9px] text-slate-500 leading-tight truncate">{allergy.reaction}</p>
                                                             )}
                                                         </div>
                                                     ))}
                                                     {allergies.length > 3 && (
-                                                        <p className="text-[9px] text-gray-400 text-center font-medium pt-0.5">+{allergies.length - 3} more</p>
+                                                        <p className="text-[9px] text-slate-400 text-center font-medium pt-0.5">+{allergies.length - 3} more</p>
                                                     )}
                                                 </div>
                                             ) : (
-                                                <p className="text-[10px] text-gray-500 text-center py-1 font-bold">NKA</p>
+                                                <p className="text-[10px] text-slate-400 text-center py-1 font-medium">NKA</p>
                                             )}
                                         </div>
                                     </div>
 
-                                    {/* Family History Module - Compact */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                                        <div className="p-1.5 border-b border-gray-100 flex items-center justify-between">
-                                            <div className="flex items-center space-x-1">
-                                                <Heart className="w-3.5 h-3.5 text-purple-600" />
-                                                <h3 className="font-semibold text-[11px] text-gray-900 uppercase tracking-wider">Family Hx</h3>
+                                    {/* Family History Module */}
+                                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+                                        <div className="px-2 py-1.5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                                            <div className="flex items-center space-x-1.5">
+                                                <Users className="w-3.5 h-3.5 text-slate-600" />
+                                                <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-wide">Family Hx</h3>
                                             </div>
                                             <button
                                                 onClick={() => {
                                                     setPatientChartTab('family');
                                                     setShowPatientChart(true);
                                                 }}
-                                                className="text-[9px] text-primary-600 hover:text-primary-700 font-bold"
+                                                className="text-[9px] text-slate-500 hover:text-slate-700 font-medium"
                                             >
-                                                EDIT
+                                                Edit
                                             </button>
                                         </div>
-                                        <div className="p-1.5">
+                                        <div className="p-2">
                                             {familyHistory.length > 0 ? (
                                                 <div className="space-y-1">
                                                     {familyHistory.slice(0, 3).map(hist => (
-                                                        <div key={hist.id} className="pb-1 border-b border-gray-50 last:border-b-0 last:pb-0">
-                                                            <p className="font-bold text-[10px] text-purple-900 leading-tight">{hist.condition}</p>
-                                                            <p className="text-[9px] text-gray-600 leading-tight">{hist.relationship}</p>
+                                                        <div key={hist.id} className="pb-1 border-b border-slate-50 last:border-b-0 last:pb-0">
+                                                            <p className="font-semibold text-[10px] text-slate-900 leading-tight">{hist.condition}</p>
+                                                            <p className="text-[9px] text-slate-500 leading-tight">{hist.relationship}</p>
                                                         </div>
                                                     ))}
                                                     {familyHistory.length > 3 && (
-                                                        <p className="text-[9px] text-gray-400 text-center font-medium pt-0.5">+{familyHistory.length - 3} more</p>
+                                                        <p className="text-[9px] text-slate-400 text-center font-medium pt-0.5">+{familyHistory.length - 3} more</p>
                                                     )}
                                                 </div>
                                             ) : (
-                                                <p className="text-[10px] text-gray-400 text-center py-1 italic">Not recorded</p>
+                                                <p className="text-[10px] text-slate-400 text-center py-1 italic">Not recorded</p>
                                             )}
                                         </div>
                                     </div>
 
-                                    {/* Social History Module - Compact */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                                        <div className="p-1.5 border-b border-gray-100 flex items-center justify-between">
-                                            <div className="flex items-center space-x-1">
-                                                <UserCircle className="w-3.5 h-3.5 text-blue-600" />
-                                                <h3 className="font-semibold text-[11px] text-gray-900 uppercase tracking-wider">Social Hx</h3>
+                                    {/* Social History Module */}
+                                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+                                        <div className="px-2 py-1.5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                                            <div className="flex items-center space-x-1.5">
+                                                <UserCircle className="w-3.5 h-3.5 text-slate-600" />
+                                                <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-wide">Social Hx</h3>
                                             </div>
                                             <button
                                                 onClick={() => {
                                                     setPatientChartTab('social');
                                                     setShowPatientChart(true);
                                                 }}
-                                                className="text-[9px] text-primary-600 hover:text-primary-700 font-bold"
+                                                className="text-[9px] text-slate-500 hover:text-slate-700 font-medium"
                                             >
-                                                EDIT
+                                                Edit
                                             </button>
                                         </div>
-                                        <div className="p-1.5">
+                                        <div className="p-2">
                                             {socialHistory ? (
-                                                <div className="space-y-1 text-[10px]">
+                                                <div className="space-y-0.5 text-[10px]">
                                                     {socialHistory.smoking_status && (
                                                         <div className="flex justify-between">
-                                                            <span className="text-gray-500">Smoking:</span>
-                                                            <span className="font-bold text-gray-900">{socialHistory.smoking_status}</span>
+                                                            <span className="text-slate-500">Smoking:</span>
+                                                            <span className="font-medium text-slate-900">{socialHistory.smoking_status}</span>
                                                         </div>
                                                     )}
                                                     {socialHistory.alcohol_use && (
                                                         <div className="flex justify-between">
-                                                            <span className="text-gray-500">Alcohol:</span>
-                                                            <span className="font-bold text-gray-900">{socialHistory.alcohol_use}</span>
-                                                        </div>
-                                                    )}
-                                                    {socialHistory.drug_use && (
-                                                        <div className="flex justify-between">
-                                                            <span className="text-gray-500">Drugs:</span>
-                                                            <span className="font-bold text-gray-900">{socialHistory.drug_use}</span>
+                                                            <span className="text-slate-500">Alcohol:</span>
+                                                            <span className="font-medium text-slate-900">{socialHistory.alcohol_use}</span>
                                                         </div>
                                                     )}
                                                     {socialHistory.occupation && (
                                                         <div className="flex justify-between">
-                                                            <span className="text-gray-500">Occupation:</span>
-                                                            <span className="font-bold text-gray-900">{socialHistory.occupation}</span>
-                                                        </div>
-                                                    )}
-                                                    {socialHistory.exercise_frequency && (
-                                                        <div className="flex justify-between">
-                                                            <span className="text-gray-500">Exercise:</span>
-                                                            <span className="font-bold text-gray-900">{socialHistory.exercise_frequency}</span>
-                                                        </div>
-                                                    )}
-                                                    {socialHistory.marital_status && (
-                                                        <div className="flex justify-between">
-                                                            <span className="text-gray-500">Marital:</span>
-                                                            <span className="font-bold text-gray-900">{socialHistory.marital_status}</span>
+                                                            <span className="text-slate-500">Work:</span>
+                                                            <span className="font-medium text-slate-900 truncate ml-2">{socialHistory.occupation}</span>
                                                         </div>
                                                     )}
                                                 </div>
                                             ) : (
-                                                <p className="text-[10px] text-gray-400 text-center py-1 italic">Not recorded</p>
+                                                <p className="text-[10px] text-slate-400 text-center py-1 italic">Not recorded</p>
                                             )}
                                         </div>
                                     </div>
+
                                 </div>
 
                                 {/* Right Column: Main Grid */}
-                                <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                                     {/* Medications Module */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between bg-emerald-50/50">
+                                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+                                        <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50">
                                             <div className="flex items-center space-x-1.5">
-                                                <Pill className="w-4 h-4 text-emerald-600" />
-                                                <h3 className="font-bold text-sm text-gray-900">Medications</h3>
-                                                {(medications || []).filter(m => m.active !== false).length > 0 && <span className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{(medications || []).filter(m => m.active !== false).length}</span>}
+                                                <Pill className="w-4 h-4 text-slate-600" />
+                                                <h3 className="font-semibold text-sm text-slate-800">Medications</h3>
+                                                {(medications || []).filter(m => m.active !== false).length > 0 && <span className="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-medium">{(medications || []).filter(m => m.active !== false).length}</span>}
                                             </div>
-                                            <button onClick={() => { setPatientChartTab('medications'); setShowPatientChart(true); }} className="text-[10px] text-emerald-600 hover:text-emerald-700 font-bold uppercase tracking-wider">Manage</button>
+                                            <button onClick={() => { setPatientChartTab('medications'); setShowPatientChart(true); }} className="text-[10px] text-slate-500 hover:text-slate-700 font-medium">Manage</button>
                                         </div>
-                                        <div className="p-2 max-h-[200px] overflow-y-auto">
+                                        <div className="p-2 max-h-[180px] overflow-y-auto">
                                             {(medications || []).filter(m => m.active !== false).length > 0 ? (
-                                                <div className="space-y-1.5">
-                                                    {(medications || []).filter(m => m.active !== false).slice(0, 10).map(med => {
+                                                <div className="space-y-1">
+                                                    {(medications || []).filter(m => m.active !== false).slice(0, 8).map(med => {
                                                         const decodedName = decodeHtmlEntities(med.medication_name);
 
                                                         return (
-                                                            <div key={med.id} className="pb-1 border-b border-gray-50 last:border-b-0">
-                                                                <p className="font-bold text-xs text-gray-900 truncate">{decodedName}</p>
-                                                                <p className="text-[10px] text-gray-600">{med.dosage} {med.frequency}</p>
+                                                            <div key={med.id} className="pb-1 border-b border-slate-50 last:border-b-0">
+                                                                <p className="font-medium text-[11px] text-slate-900 truncate">{decodedName}</p>
+                                                                <p className="text-[10px] text-slate-500">{med.dosage} {med.frequency}</p>
                                                             </div>
                                                         );
                                                     })}
                                                 </div>
                                             ) : (
-                                                <p className="text-xs text-gray-500 text-center py-6">No active medications</p>
+                                                <p className="text-xs text-slate-400 text-center py-4">No active medications</p>
                                             )}
                                         </div>
                                     </div>
 
                                     {/* Problem List Module */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between bg-orange-50/50">
+                                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+                                        <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50">
                                             <div className="flex items-center space-x-1.5">
-                                                <AlertCircle className="w-4 h-4 text-orange-600" />
-                                                <h3 className="font-bold text-sm text-gray-900">Problem List</h3>
-                                                {(problems || []).length > 0 && <span className="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{(problems || []).length}</span>}
+                                                <AlertCircle className="w-4 h-4 text-slate-600" />
+                                                <h3 className="font-semibold text-sm text-slate-800">Problem List</h3>
+                                                {(problems || []).length > 0 && <span className="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-medium">{(problems || []).length}</span>}
                                             </div>
-                                            <button onClick={() => { setPatientChartTab('problems'); setShowPatientChart(true); }} className="text-[10px] text-orange-600 hover:text-orange-700 font-bold uppercase tracking-wider">Manage</button>
+                                            <button onClick={() => { setPatientChartTab('problems'); setShowPatientChart(true); }} className="text-[10px] text-slate-500 hover:text-slate-700 font-medium">Manage</button>
                                         </div>
-                                        <div className="p-2 max-h-[200px] overflow-y-auto">
+                                        <div className="p-2 max-h-[180px] overflow-y-auto">
                                             {(problems || []).length > 0 ? (
-                                                <div className="space-y-1.5">
+                                                <div className="space-y-1">
                                                     {(() => {
                                                         const seen = new Set();
                                                         return problems
@@ -1772,60 +1649,59 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                 seen.add(name);
                                                                 return true;
                                                             })
-                                                            .slice(0, 10)
+                                                            .slice(0, 8)
                                                             .map(prob => (
-                                                                <div key={prob.id} className="pb-1 border-b border-gray-50 last:border-b-0 flex items-center justify-between gap-2">
-                                                                    <p className="font-bold text-xs text-gray-900 truncate">
+                                                                <div key={prob.id} className="pb-1 border-b border-slate-50 last:border-b-0 flex items-center justify-between gap-2">
+                                                                    <p className="font-medium text-[11px] text-slate-900 truncate">
                                                                         {(prob.name || prob.problem_name || '').replace(/^[\d.\s]+/, '')}
                                                                     </p>
-                                                                    <span className="text-[9px] bg-green-100 text-green-700 px-1 rounded font-bold uppercase">Active</span>
+                                                                    <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1 rounded font-medium shrink-0">Active</span>
                                                                 </div>
                                                             ));
                                                     })()}
                                                 </div>
                                             ) : (
-                                                <p className="text-xs text-gray-500 text-center py-6">No active problems</p>
+                                                <p className="text-xs text-slate-400 text-center py-4">No active problems</p>
                                             )}
                                         </div>
                                     </div>
 
                                     {/* Recent Vitals Module */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between bg-blue-50/50">
-                                            <div className="flex items-center space-x-2">
-                                                <Activity className="w-4 h-4 text-blue-600" />
-                                                <h3 className="font-bold text-sm text-gray-900">Recent Vitals</h3>
+                                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+                                        <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                                            <div className="flex items-center space-x-1.5">
+                                                <Activity className="w-4 h-4 text-slate-600" />
+                                                <h3 className="font-semibold text-sm text-slate-800">Vitals</h3>
                                             </div>
-                                            <button onClick={() => { setPatientChartTab('history'); setShowPatientChart(true); }} className="text-[10px] text-blue-600 hover:text-blue-700 font-bold uppercase tracking-wider">View All</button>
+                                            <button onClick={() => { setPatientChartTab('history'); setShowPatientChart(true); }} className="text-[10px] text-slate-500 hover:text-slate-700 font-medium">View All</button>
                                         </div>
-                                        <div className="p-2 space-y-2">
+                                        <div className="p-2">
                                             {vitals.slice(0, 1).map((vital, idx) => (
-                                                <div key={idx} className="bg-blue-50/30 rounded-lg p-2 border border-blue-100/50">
-                                                    <div className="grid grid-cols-2 gap-y-2">
+                                                <div key={idx} className="bg-slate-50 rounded-lg p-2.5 border border-slate-100">
+                                                    <div className="grid grid-cols-2 gap-y-2 gap-x-4">
                                                         <div className="flex flex-col">
-                                                            <span className="text-[9px] text-gray-500 font-bold uppercase">BP</span>
-                                                            <span className="text-sm font-medium text-blue-900">{vital.bp || 'N/A'}</span>
+                                                            <span className="text-[9px] text-slate-400 font-medium uppercase">BP</span>
+                                                            <span className="text-sm font-semibold text-slate-900">{vital.bp || 'N/A'}</span>
                                                         </div>
                                                         <div className="flex flex-col">
-                                                            <span className="text-[9px] text-gray-500 font-bold uppercase">HR</span>
-                                                            <span className="text-sm font-medium text-blue-900">{vital.hr || 'N/A'} <span className="text-[10px] font-medium text-gray-400">bpm</span></span>
+                                                            <span className="text-[9px] text-slate-400 font-medium uppercase">HR</span>
+                                                            <span className="text-sm font-semibold text-slate-900">{vital.hr || 'N/A'} <span className="text-[10px] font-normal text-slate-400">bpm</span></span>
                                                         </div>
                                                         <div className="flex flex-col">
-                                                            <span className="text-[9px] text-gray-500 font-bold uppercase">SpO2</span>
-                                                            <span className="text-sm font-medium text-blue-900">{vital.spo2 || 'N/A'}%</span>
+                                                            <span className="text-[9px] text-slate-400 font-medium uppercase">SpO2</span>
+                                                            <span className="text-sm font-semibold text-slate-900">{vital.spo2 || 'N/A'}%</span>
                                                         </div>
                                                         <div className="flex flex-col">
-                                                            <span className="text-[9px] text-gray-500 font-bold uppercase">Temp</span>
-                                                            <span className="text-sm font-medium text-blue-900">{vital.temp || 'N/A'}°F</span>
+                                                            <span className="text-[9px] text-slate-400 font-medium uppercase">Temp</span>
+                                                            <span className="text-sm font-semibold text-slate-900">{vital.temp || 'N/A'}°F</span>
                                                         </div>
                                                     </div>
-                                                    <p className="text-[9px] text-gray-400 font-bold mt-2 text-right">{new Date(vital.date).toLocaleDateString()} {vital.time}</p>
+                                                    <p className="text-[9px] text-slate-400 mt-2 text-right">{new Date(vital.date).toLocaleDateString()} {vital.time}</p>
                                                 </div>
                                             ))}
-                                            {vitals.length === 0 && <p className="text-xs text-gray-500 text-center py-6">No vitals recorded</p>}
+                                            {vitals.length === 0 && <p className="text-xs text-slate-400 text-center py-4">No vitals recorded</p>}
                                         </div>
                                     </div>
-
 
                                 </div>
                             </div>
@@ -1834,724 +1710,725 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
                 </div>
 
-                {/* Demographics Modal */}
-                {showDemographicsModal && demographicsField && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" onClick={() => {
-                        setShowDemographicsModal(false);
-                        setDemographicsField(null);
-                    }}>
-                        <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-semibold text-gray-900">
-                                    {demographicsField === 'phone' && 'Edit Phone'}
-                                    {demographicsField === 'email' && 'Edit Email'}
-                                    {demographicsField === 'address' && 'Edit Address'}
-                                    {demographicsField === 'insurance' && 'Edit Insurance'}
-                                    {demographicsField === 'pharmacy' && 'Edit Pharmacy'}
-                                    {demographicsField === 'emergency' && 'Edit Emergency Contact'}
-                                </h3>
+            </div>
+
+            {/* Demographics Modal */}
+            {showDemographicsModal && demographicsField && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" onClick={() => {
+                    setShowDemographicsModal(false);
+                    setDemographicsField(null);
+                }}>
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                                {demographicsField === 'phone' && 'Edit Phone'}
+                                {demographicsField === 'email' && 'Edit Email'}
+                                {demographicsField === 'address' && 'Edit Address'}
+                                {demographicsField === 'insurance' && 'Edit Insurance'}
+                                {demographicsField === 'pharmacy' && 'Edit Pharmacy'}
+                                {demographicsField === 'emergency' && 'Edit Emergency Contact'}
+                            </h3>
+                            <button
+                                onClick={() => {
+                                    setShowDemographicsModal(false);
+                                    setDemographicsField(null);
+                                }}
+                                className="p-1 hover:bg-gray-100 rounded text-gray-500"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            {/* Phone */}
+                            {demographicsField === 'phone' && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                                    <input
+                                        type="tel"
+                                        value={demographicsForm.phone}
+                                        onChange={(e) => {
+                                            const formatted = formatPhoneInput(e.target.value);
+                                            setDemographicsForm({ ...demographicsForm, phone: formatted });
+                                        }}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                        placeholder="(555) 123-4567"
+                                        maxLength={14}
+                                        autoFocus
+                                    />
+                                </div>
+                            )}
+
+                            {/* Email */}
+                            {demographicsField === 'email' && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                                    <input
+                                        type="email"
+                                        value={demographicsForm.email}
+                                        onChange={(e) => setDemographicsForm({ ...demographicsForm, email: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                        placeholder="patient@example.com"
+                                        autoFocus
+                                    />
+                                </div>
+                            )}
+
+                            {/* Address */}
+                            {demographicsField === 'address' && (
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
+                                        <input
+                                            type="text"
+                                            value={demographicsForm.address_line1}
+                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, address_line1: e.target.value })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                            placeholder="123 Main St"
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                                            <input
+                                                type="text"
+                                                value={demographicsForm.city}
+                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, city: e.target.value })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                placeholder="City"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                                            <input
+                                                type="text"
+                                                value={demographicsForm.state}
+                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, state: e.target.value })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                placeholder="State"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
+                                        <input
+                                            type="text"
+                                            value={demographicsForm.zip}
+                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, zip: e.target.value })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                            placeholder="12345"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Insurance */}
+                            {demographicsField === 'insurance' && (
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Insurance Provider</label>
+                                        <input
+                                            type="text"
+                                            value={demographicsForm.insurance_provider}
+                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, insurance_provider: e.target.value })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                            placeholder="Insurance Company Name"
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Policy/Group Number</label>
+                                        <input
+                                            type="text"
+                                            value={demographicsForm.insurance_id}
+                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, insurance_id: e.target.value })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                            placeholder="Policy or Group Number"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Pharmacy */}
+                            {demographicsField === 'pharmacy' && (
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Pharmacy Name</label>
+                                        <input
+                                            type="text"
+                                            value={demographicsForm.pharmacy_name}
+                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, pharmacy_name: e.target.value })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                            placeholder="Pharmacy Name"
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Pharmacy Phone</label>
+                                        <input
+                                            type="tel"
+                                            value={demographicsForm.pharmacy_phone}
+                                            onChange={(e) => {
+                                                const formatted = formatPhoneInput(e.target.value);
+                                                setDemographicsForm({ ...demographicsForm, pharmacy_phone: formatted });
+                                            }}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                            placeholder="(555) 123-4567"
+                                            maxLength={14}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Emergency Contact */}
+                            {demographicsField === 'emergency' && (
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
+                                        <input
+                                            type="text"
+                                            value={demographicsForm.emergency_contact_name}
+                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, emergency_contact_name: e.target.value })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                            placeholder="Full Name"
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                                        <input
+                                            type="tel"
+                                            value={demographicsForm.emergency_contact_phone}
+                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, emergency_contact_phone: e.target.value })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                            placeholder="(555) 123-4567"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Relationship</label>
+                                        <input
+                                            type="text"
+                                            value={demographicsForm.emergency_contact_relationship}
+                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, emergency_contact_relationship: e.target.value })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                            placeholder="e.g., Spouse, Parent, Friend"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex space-x-3 pt-2">
+                                <button
+                                    onClick={handleSaveDemographics}
+                                    className="flex-1 px-4 py-2 text-white rounded-md flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
+                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
+                                >
+                                    <Save className="w-4 h-4" />
+                                    <span>Save</span>
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        // Clear the field
+                                        const clearedForm = { ...demographicsForm };
+                                        switch (demographicsField) {
+                                            case 'phone':
+                                                clearedForm.phone = '';
+                                                break;
+                                            case 'email':
+                                                clearedForm.email = '';
+                                                break;
+                                            case 'address':
+                                                clearedForm.address_line1 = '';
+                                                clearedForm.city = '';
+                                                clearedForm.state = '';
+                                                clearedForm.zip = '';
+                                                break;
+                                            case 'insurance':
+                                                clearedForm.insurance_provider = '';
+                                                clearedForm.insurance_id = '';
+                                                break;
+                                            case 'pharmacy':
+                                                clearedForm.pharmacy_name = '';
+                                                clearedForm.pharmacy_phone = '';
+                                                break;
+                                            case 'emergency':
+                                                clearedForm.emergency_contact_name = '';
+                                                clearedForm.emergency_contact_phone = '';
+                                                clearedForm.emergency_contact_relationship = '';
+                                                break;
+                                        }
+                                        setDemographicsForm(clearedForm);
+                                    }}
+                                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                                >
+                                    Clear
+                                </button>
                                 <button
                                     onClick={() => {
                                         setShowDemographicsModal(false);
                                         setDemographicsField(null);
                                     }}
-                                    className="p-1 hover:bg-gray-100 rounded text-gray-500"
+                                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
                                 >
-                                    <X className="w-5 h-5" />
+                                    Cancel
                                 </button>
-                            </div>
-
-                            <div className="space-y-4">
-                                {/* Phone */}
-                                {demographicsField === 'phone' && (
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                                        <input
-                                            type="tel"
-                                            value={demographicsForm.phone}
-                                            onChange={(e) => {
-                                                const formatted = formatPhoneInput(e.target.value);
-                                                setDemographicsForm({ ...demographicsForm, phone: formatted });
-                                            }}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                            placeholder="(555) 123-4567"
-                                            maxLength={14}
-                                            autoFocus
-                                        />
-                                    </div>
-                                )}
-
-                                {/* Email */}
-                                {demographicsField === 'email' && (
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                                        <input
-                                            type="email"
-                                            value={demographicsForm.email}
-                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, email: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                            placeholder="patient@example.com"
-                                            autoFocus
-                                        />
-                                    </div>
-                                )}
-
-                                {/* Address */}
-                                {demographicsField === 'address' && (
-                                    <div className="space-y-3">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
-                                            <input
-                                                type="text"
-                                                value={demographicsForm.address_line1}
-                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, address_line1: e.target.value })}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                                placeholder="123 Main St"
-                                                autoFocus
-                                            />
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                                                <input
-                                                    type="text"
-                                                    value={demographicsForm.city}
-                                                    onChange={(e) => setDemographicsForm({ ...demographicsForm, city: e.target.value })}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                                    placeholder="City"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                                                <input
-                                                    type="text"
-                                                    value={demographicsForm.state}
-                                                    onChange={(e) => setDemographicsForm({ ...demographicsForm, state: e.target.value })}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                                    placeholder="State"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
-                                            <input
-                                                type="text"
-                                                value={demographicsForm.zip}
-                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, zip: e.target.value })}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                                placeholder="12345"
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Insurance */}
-                                {demographicsField === 'insurance' && (
-                                    <div className="space-y-3">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Insurance Provider</label>
-                                            <input
-                                                type="text"
-                                                value={demographicsForm.insurance_provider}
-                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, insurance_provider: e.target.value })}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                                placeholder="Insurance Company Name"
-                                                autoFocus
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Policy/Group Number</label>
-                                            <input
-                                                type="text"
-                                                value={demographicsForm.insurance_id}
-                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, insurance_id: e.target.value })}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                                placeholder="Policy or Group Number"
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Pharmacy */}
-                                {demographicsField === 'pharmacy' && (
-                                    <div className="space-y-3">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Pharmacy Name</label>
-                                            <input
-                                                type="text"
-                                                value={demographicsForm.pharmacy_name}
-                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, pharmacy_name: e.target.value })}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                                placeholder="Pharmacy Name"
-                                                autoFocus
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Pharmacy Phone</label>
-                                            <input
-                                                type="tel"
-                                                value={demographicsForm.pharmacy_phone}
-                                                onChange={(e) => {
-                                                    const formatted = formatPhoneInput(e.target.value);
-                                                    setDemographicsForm({ ...demographicsForm, pharmacy_phone: formatted });
-                                                }}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                                placeholder="(555) 123-4567"
-                                                maxLength={14}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Emergency Contact */}
-                                {demographicsField === 'emergency' && (
-                                    <div className="space-y-3">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
-                                            <input
-                                                type="text"
-                                                value={demographicsForm.emergency_contact_name}
-                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, emergency_contact_name: e.target.value })}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                                placeholder="Full Name"
-                                                autoFocus
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                                            <input
-                                                type="tel"
-                                                value={demographicsForm.emergency_contact_phone}
-                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, emergency_contact_phone: e.target.value })}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                                placeholder="(555) 123-4567"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Relationship</label>
-                                            <input
-                                                type="text"
-                                                value={demographicsForm.emergency_contact_relationship}
-                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, emergency_contact_relationship: e.target.value })}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                                placeholder="e.g., Spouse, Parent, Friend"
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className="flex space-x-3 pt-2">
-                                    <button
-                                        onClick={handleSaveDemographics}
-                                        className="flex-1 px-4 py-2 text-white rounded-md flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
-                                        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                                    >
-                                        <Save className="w-4 h-4" />
-                                        <span>Save</span>
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            // Clear the field
-                                            const clearedForm = { ...demographicsForm };
-                                            switch (demographicsField) {
-                                                case 'phone':
-                                                    clearedForm.phone = '';
-                                                    break;
-                                                case 'email':
-                                                    clearedForm.email = '';
-                                                    break;
-                                                case 'address':
-                                                    clearedForm.address_line1 = '';
-                                                    clearedForm.city = '';
-                                                    clearedForm.state = '';
-                                                    clearedForm.zip = '';
-                                                    break;
-                                                case 'insurance':
-                                                    clearedForm.insurance_provider = '';
-                                                    clearedForm.insurance_id = '';
-                                                    break;
-                                                case 'pharmacy':
-                                                    clearedForm.pharmacy_name = '';
-                                                    clearedForm.pharmacy_phone = '';
-                                                    break;
-                                                case 'emergency':
-                                                    clearedForm.emergency_contact_name = '';
-                                                    clearedForm.emergency_contact_phone = '';
-                                                    clearedForm.emergency_contact_relationship = '';
-                                                    break;
-                                            }
-                                            setDemographicsForm(clearedForm);
-                                        }}
-                                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                                    >
-                                        Clear
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setShowDemographicsModal(false);
-                                            setDemographicsField(null);
-                                        }}
-                                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                                    >
-                                        Cancel
-                                    </button>
-                                </div>
                             </div>
                         </div>
                     </div>
-                )}
+                </div>
+            )}
 
-                {/* Unified Patient Chart Panel */}
-                <PatientChartPanel
-                    isOpen={showPatientChart}
-                    onClose={() => setShowPatientChart(false)}
-                    patientId={id}
-                    initialTab={patientChartTab}
+            {/* Unified Patient Chart Panel */}
+            <PatientChartPanel
+                isOpen={showPatientChart}
+                onClose={() => setShowPatientChart(false)}
+                patientId={id}
+                initialTab={patientChartTab}
+            />
+
+
+            {/* Visit Folders Modal */}
+            <VisitFoldersModal
+                isOpen={showVisitFoldersModal}
+                onClose={() => setShowVisitFoldersModal(false)}
+                visits={filteredNotes.map(note => ({
+                    id: note.id,
+                    type: note.type,
+                    date: note.date,
+                    time: note.time,
+                    dateTime: note.dateTime,
+                    visitDate: note.visitDate,
+                    createdAt: note.createdAt,
+                    provider: note.provider,
+                    summary: note.summary,
+                    assessment: note.assessment,
+                    plan: note.plan,
+                    chiefComplaint: note.chiefComplaint,
+                    fullNote: note.fullNote,
+                    signed: note.signed
+                }))}
+                onViewVisit={(visitId) => {
+                    setShowVisitFoldersModal(false);
+                    handleViewNote(visitId);
+                }}
+                onDeleteVisit={async (visitId) => {
+                    await handleDeleteNote(visitId);
+                    refreshPatientData();
+                    setShowVisitFoldersModal(false);
+                }}
+            />
+
+            {/* Visit Chart View Modal */}
+            {selectedVisitForView && (
+                <VisitChartView
+                    visitId={selectedVisitForView.visitId}
+                    patientId={selectedVisitForView.patientId}
+                    onClose={() => setSelectedVisitForView(null)}
                 />
+            )}
 
 
-                {/* Visit Folders Modal */}
-                <VisitFoldersModal
-                    isOpen={showVisitFoldersModal}
-                    onClose={() => setShowVisitFoldersModal(false)}
-                    visits={filteredNotes.map(note => ({
-                        id: note.id,
-                        type: note.type,
-                        date: note.date,
-                        time: note.time,
-                        dateTime: note.dateTime,
-                        visitDate: note.visitDate,
-                        createdAt: note.createdAt,
-                        provider: note.provider,
-                        summary: note.summary,
-                        assessment: note.assessment,
-                        plan: note.plan,
-                        chiefComplaint: note.chiefComplaint,
-                        fullNote: note.fullNote,
-                        signed: note.signed
-                    }))}
-                    onViewVisit={(visitId) => {
-                        setShowVisitFoldersModal(false);
-                        handleViewNote(visitId);
-                    }}
-                    onDeleteVisit={async (visitId) => {
-                        await handleDeleteNote(visitId);
-                        refreshPatientData();
-                        setShowVisitFoldersModal(false);
-                    }}
-                />
+            {/* Document Upload Modal */}
+            <Modal
+                isOpen={showDocumentUploadModal}
+                onClose={() => {
+                    setShowDocumentUploadModal(false);
+                    setDocumentUploadFile(null);
+                    setDocumentUploadType('other');
+                    if (documentUploadInputRef.current) {
+                        documentUploadInputRef.current.value = '';
+                    }
+                }}
+                title="Upload Document"
+            >
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Document Type</label>
+                        <select
+                            value={documentUploadType}
+                            onChange={(e) => setDocumentUploadType(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        >
+                            <option value="other">Other</option>
+                            <option value="imaging">Imaging</option>
+                            <option value="lab">Lab Result</option>
+                            <option value="consult">Consult Note</option>
+                            <option value="letter">Letter</option>
+                            <option value="form">Form</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Select File</label>
+                        <input
+                            ref={documentUploadInputRef}
+                            type="file"
+                            onChange={(e) => setDocumentUploadFile(e.target.files?.[0] || null)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">PDF, images, or documents (max 50MB)</p>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-4">
+                        <button
+                            onClick={() => {
+                                setShowDocumentUploadModal(false);
+                                setDocumentUploadFile(null);
+                                setDocumentUploadType('other');
+                                if (documentUploadInputRef.current) {
+                                    documentUploadInputRef.current.value = '';
+                                }
+                            }}
+                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleDocumentUpload}
+                            disabled={!documentUploadFile}
+                            className="px-4 py-2 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-md"
+                            style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                            onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+                            onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
+                        >
+                            Upload
+                        </button>
+                    </div>
+                </div>
+            </Modal>
 
-                {/* Visit Chart View Modal */}
-                {selectedVisitForView && (
-                    <VisitChartView
-                        visitId={selectedVisitForView.visitId}
-                        patientId={selectedVisitForView.patientId}
-                        onClose={() => setSelectedVisitForView(null)}
-                    />
-                )}
-
-
-                {/* Document Upload Modal */}
-                <Modal
-                    isOpen={showDocumentUploadModal}
-                    onClose={() => {
-                        setShowDocumentUploadModal(false);
-                        setDocumentUploadFile(null);
-                        setDocumentUploadType('other');
-                        if (documentUploadInputRef.current) {
-                            documentUploadInputRef.current.value = '';
-                        }
-                    }}
-                    title="Upload Document"
-                >
-                    <div className="space-y-4">
+            {/* Edit Patient Modal */}
+            <Modal
+                isOpen={showEditPatientModal}
+                onClose={() => setShowEditPatientModal(false)}
+                title="Edit Patient Information"
+            >
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Document Type</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                            <input
+                                type="text"
+                                value={editPatientForm.first_name}
+                                onChange={(e) => setEditPatientForm({ ...editPatientForm, first_name: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                placeholder="First Name"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                            <input
+                                type="text"
+                                value={editPatientForm.last_name}
+                                onChange={(e) => setEditPatientForm({ ...editPatientForm, last_name: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                placeholder="Last Name"
+                            />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                            <input
+                                type="date"
+                                value={editPatientForm.dob}
+                                onChange={(e) => setEditPatientForm({ ...editPatientForm, dob: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Sex</label>
                             <select
-                                value={documentUploadType}
-                                onChange={(e) => setDocumentUploadType(e.target.value)}
+                                value={editPatientForm.sex}
+                                onChange={(e) => setEditPatientForm({ ...editPatientForm, sex: e.target.value })}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                             >
-                                <option value="other">Other</option>
-                                <option value="imaging">Imaging</option>
-                                <option value="lab">Lab Result</option>
-                                <option value="consult">Consult Note</option>
-                                <option value="letter">Letter</option>
-                                <option value="form">Form</option>
+                                <option value="">Select</option>
+                                <option value="M">Male</option>
+                                <option value="F">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">MRN</label>
+                        <input
+                            type="text"
+                            value={editPatientForm.mrn}
+                            onChange={(e) => setEditPatientForm({ ...editPatientForm, mrn: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            placeholder="Medical Record Number"
+                        />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-4">
+                        <button
+                            onClick={() => setShowEditPatientModal(false)}
+                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleEditPatient}
+                            className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md"
+                            style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
+                        >
+                            Save Changes
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Enhanced E-Prescribe Modal */}
+            {hasPrivilege('e_prescribe') && (
+                <EPrescribeEnhanced
+                    isOpen={showEPrescribeEnhanced}
+                    onClose={() => setShowEPrescribeEnhanced(false)}
+                    onSuccess={() => {
+                        // Refresh patient data to show new prescription
+                        refreshPatientData();
+                        setShowEPrescribeEnhanced(false);
+                    }}
+                    patientId={id}
+                />
+            )}
+
+            {/* Stress Test Upload Modal */}
+            <Modal
+                isOpen={showStressTestModal}
+                onClose={() => setShowStressTestModal(false)}
+                title="Log Cardiac Stress Test"
+            >
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Test Type</label>
+                            <select
+                                className="w-full px-3 py-2 border rounded-md font-medium"
+                                value={stressTestData.type}
+                                onChange={(e) => setStressTestData({ ...stressTestData, type: e.target.value })}
+                            >
+                                <option value="treadmill">Treadmill (Exercise)</option>
+                                <option value="nuclear">Nuclear</option>
+                                <option value="spect">SPECT</option>
+                                <option value="pet">PET</option>
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Select File</label>
-                            <input
-                                ref={documentUploadInputRef}
-                                type="file"
-                                onChange={(e) => setDocumentUploadFile(e.target.files?.[0] || null)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                            />
-                            <p className="text-xs text-gray-500 mt-1">PDF, images, or documents (max 50MB)</p>
-                        </div>
-                        <div className="flex justify-end gap-2 pt-4">
-                            <button
-                                onClick={() => {
-                                    setShowDocumentUploadModal(false);
-                                    setDocumentUploadFile(null);
-                                    setDocumentUploadType('other');
-                                    if (documentUploadInputRef.current) {
-                                        documentUploadInputRef.current.value = '';
-                                    }
-                                }}
-                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Stressor</label>
+                            <select
+                                className="w-full px-3 py-2 border rounded-md font-medium"
+                                value={stressTestData.stressor}
+                                onChange={(e) => setStressTestData({ ...stressTestData, stressor: e.target.value })}
                             >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleDocumentUpload}
-                                disabled={!documentUploadFile}
-                                className="px-4 py-2 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-md"
-                                style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
-                                onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
-                            >
-                                Upload
-                            </button>
+                                <option value="exercise">Exercise</option>
+                                <option value="regadenoson">Regadenoson (Lexiscan)</option>
+                                <option value="adenosine">Adenosine</option>
+                                <option value="dobutamine">Dobutamine</option>
+                            </select>
                         </div>
                     </div>
-                </Modal>
-
-                {/* Edit Patient Modal */}
-                <Modal
-                    isOpen={showEditPatientModal}
-                    onClose={() => setShowEditPatientModal(false)}
-                    title="Edit Patient Information"
-                >
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                                <input
-                                    type="text"
-                                    value={editPatientForm.first_name}
-                                    onChange={(e) => setEditPatientForm({ ...editPatientForm, first_name: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    placeholder="First Name"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                                <input
-                                    type="text"
-                                    value={editPatientForm.last_name}
-                                    onChange={(e) => setEditPatientForm({ ...editPatientForm, last_name: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    placeholder="Last Name"
-                                />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
-                                <input
-                                    type="date"
-                                    value={editPatientForm.dob}
-                                    onChange={(e) => setEditPatientForm({ ...editPatientForm, dob: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Sex</label>
-                                <select
-                                    value={editPatientForm.sex}
-                                    onChange={(e) => setEditPatientForm({ ...editPatientForm, sex: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                >
-                                    <option value="">Select</option>
-                                    <option value="M">Male</option>
-                                    <option value="F">Female</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Date of Test</label>
+                        <input
+                            type="date"
+                            className="w-full px-3 py-2 border rounded-md"
+                            value={stressTestData.date}
+                            onChange={(e) => setStressTestData({ ...stressTestData, date: e.target.value })}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Attach Final Report</label>
+                        <input
+                            type="file"
+                            className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-fuchsia-50 file:text-fuchsia-700 hover:file:bg-fuchsia-100"
+                            onChange={(e) => setStressTestFile(e.target.files?.[0] || null)}
+                            accept=".pdf,.jpg,.jpeg,.png"
+                        />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">METS</label>
+                            <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={stressTestData.mets} onChange={e => setStressTestData({ ...stressTestData, mets: e.target.value })} placeholder="e.g. 10.2" />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">MRN</label>
-                            <input
-                                type="text"
-                                value={editPatientForm.mrn}
-                                onChange={(e) => setEditPatientForm({ ...editPatientForm, mrn: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                placeholder="Medical Record Number"
-                            />
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Peak HR</label>
+                            <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={stressTestData.peak_hr} onChange={e => setStressTestData({ ...stressTestData, peak_hr: e.target.value })} placeholder="e.g. 165" />
                         </div>
-                        <div className="flex justify-end gap-2 pt-4">
-                            <button
-                                onClick={() => setShowEditPatientModal(false)}
-                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleEditPatient}
-                                className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md"
-                                style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                            >
-                                Save Changes
-                            </button>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">BP Resp</label>
+                            <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={stressTestData.bp_response} onChange={e => setStressTestData({ ...stressTestData, bp_response: e.target.value })} placeholder="Normal/Hypertensive" />
                         </div>
                     </div>
-                </Modal>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Results Summary</label>
+                        <textarea
+                            className="w-full px-3 py-2 border rounded-md h-20"
+                            placeholder="e.g. Negative for ischemia, Normal EF 60%"
+                            value={stressTestData.notes}
+                            onChange={(e) => setStressTestData({ ...stressTestData, notes: e.target.value })}
+                        />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-4">
+                        <button onClick={() => setShowStressTestModal(false)} className="px-4 py-2 text-gray-600 font-bold">Cancel</button>
+                        <button
+                            onClick={handleStressTestUpload}
+                            disabled={!stressTestFile}
+                            className="px-6 py-2 bg-fuchsia-600 text-white rounded-md font-bold shadow-md hover:bg-fuchsia-700 disabled:bg-gray-300"
+                        >
+                            Save Result
+                        </button>
+                    </div>
+                </div>
+            </Modal>
 
-                {/* Enhanced E-Prescribe Modal */}
-                {hasPrivilege('e_prescribe') && (
-                    <EPrescribeEnhanced
-                        isOpen={showEPrescribeEnhanced}
-                        onClose={() => setShowEPrescribeEnhanced(false)}
-                        onSuccess={() => {
-                            // Refresh patient data to show new prescription
-                            refreshPatientData();
-                            setShowEPrescribeEnhanced(false);
-                        }}
-                        patientId={id}
-                    />
-                )}
-
-                {/* Stress Test Upload Modal */}
-                <Modal
-                    isOpen={showStressTestModal}
-                    onClose={() => setShowStressTestModal(false)}
-                    title="Log Cardiac Stress Test"
-                >
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Test Type</label>
-                                <select
-                                    className="w-full px-3 py-2 border rounded-md font-medium"
-                                    value={stressTestData.type}
-                                    onChange={(e) => setStressTestData({ ...stressTestData, type: e.target.value })}
-                                >
-                                    <option value="treadmill">Treadmill (Exercise)</option>
-                                    <option value="nuclear">Nuclear</option>
-                                    <option value="spect">SPECT</option>
-                                    <option value="pet">PET</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Stressor</label>
-                                <select
-                                    className="w-full px-3 py-2 border rounded-md font-medium"
-                                    value={stressTestData.stressor}
-                                    onChange={(e) => setStressTestData({ ...stressTestData, stressor: e.target.value })}
-                                >
-                                    <option value="exercise">Exercise</option>
-                                    <option value="regadenoson">Regadenoson (Lexiscan)</option>
-                                    <option value="adenosine">Adenosine</option>
-                                    <option value="dobutamine">Dobutamine</option>
-                                </select>
-                            </div>
+            {/* EKG Result Modal */}
+            <Modal
+                isOpen={showEKGModal}
+                onClose={() => setShowEKGModal(false)}
+                title="Log EKG Study"
+            >
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
+                            <input type="date" className="w-full px-3 py-2 border rounded-md" value={ekgData.date} onChange={e => setEKGData({ ...ekgData, date: e.target.value })} />
                         </div>
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">Date of Test</label>
-                            <input
-                                type="date"
-                                className="w-full px-3 py-2 border rounded-md"
-                                value={stressTestData.date}
-                                onChange={(e) => setStressTestData({ ...stressTestData, date: e.target.value })}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">Attach Final Report</label>
-                            <input
-                                type="file"
-                                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-fuchsia-50 file:text-fuchsia-700 hover:file:bg-fuchsia-100"
-                                onChange={(e) => setStressTestFile(e.target.files?.[0] || null)}
-                                accept=".pdf,.jpg,.jpeg,.png"
-                            />
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">METS</label>
-                                <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={stressTestData.mets} onChange={e => setStressTestData({ ...stressTestData, mets: e.target.value })} placeholder="e.g. 10.2" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Peak HR</label>
-                                <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={stressTestData.peak_hr} onChange={e => setStressTestData({ ...stressTestData, peak_hr: e.target.value })} placeholder="e.g. 165" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">BP Resp</label>
-                                <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={stressTestData.bp_response} onChange={e => setStressTestData({ ...stressTestData, bp_response: e.target.value })} placeholder="Normal/Hypertensive" />
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">Results Summary</label>
-                            <textarea
-                                className="w-full px-3 py-2 border rounded-md h-20"
-                                placeholder="e.g. Negative for ischemia, Normal EF 60%"
-                                value={stressTestData.notes}
-                                onChange={(e) => setStressTestData({ ...stressTestData, notes: e.target.value })}
-                            />
-                        </div>
-                        <div className="flex justify-end gap-2 pt-4">
-                            <button onClick={() => setShowStressTestModal(false)} className="px-4 py-2 text-gray-600 font-bold">Cancel</button>
-                            <button
-                                onClick={handleStressTestUpload}
-                                disabled={!stressTestFile}
-                                className="px-6 py-2 bg-fuchsia-600 text-white rounded-md font-bold shadow-md hover:bg-fuchsia-700 disabled:bg-gray-300"
-                            >
-                                Save Result
-                            </button>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Rhythm</label>
+                            <select className="w-full px-3 py-2 border rounded-md" value={ekgData.rhythm} onChange={e => setEKGData({ ...ekgData, rhythm: e.target.value })}>
+                                <option value="NSR">NSR</option>
+                                <option value="Sinus Brady">Sinus Brady</option>
+                                <option value="Sinus Tachy">Sinus Tachy</option>
+                                <option value="Afib">Atrial Fibrillation</option>
+                                <option value="Aflutter">Atrial Flutter</option>
+                                <option value="Other">Other</option>
+                            </select>
                         </div>
                     </div>
-                </Modal>
-
-                {/* EKG Result Modal */}
-                <Modal
-                    isOpen={showEKGModal}
-                    onClose={() => setShowEKGModal(false)}
-                    title="Log EKG Study"
-                >
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
-                                <input type="date" className="w-full px-3 py-2 border rounded-md" value={ekgData.date} onChange={e => setEKGData({ ...ekgData, date: e.target.value })} />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Rhythm</label>
-                                <select className="w-full px-3 py-2 border rounded-md" value={ekgData.rhythm} onChange={e => setEKGData({ ...ekgData, rhythm: e.target.value })}>
-                                    <option value="NSR">NSR</option>
-                                    <option value="Sinus Brady">Sinus Brady</option>
-                                    <option value="Sinus Tachy">Sinus Tachy</option>
-                                    <option value="Afib">Atrial Fibrillation</option>
-                                    <option value="Aflutter">Atrial Flutter</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-4 gap-2">
-                            <div>
-                                <label className="block text-[10px] font-bold text-gray-500 uppercase">Rate</label>
-                                <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={ekgData.rate} onChange={e => setEKGData({ ...ekgData, rate: e.target.value })} placeholder="72" />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-bold text-gray-500 uppercase">PR</label>
-                                <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={ekgData.pr} onChange={e => setEKGData({ ...ekgData, pr: e.target.value })} placeholder="160" />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-bold text-gray-500 uppercase">QRS</label>
-                                <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={ekgData.qrs} onChange={e => setEKGData({ ...ekgData, qrs: e.target.value })} placeholder="90" />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-bold text-gray-500 uppercase">QTc</label>
-                                <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={ekgData.qtc} onChange={e => setEKGData({ ...ekgData, qtc: e.target.value })} placeholder="420" />
-                            </div>
+                    <div className="grid grid-cols-4 gap-2">
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase">Rate</label>
+                            <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={ekgData.rate} onChange={e => setEKGData({ ...ekgData, rate: e.target.value })} placeholder="72" />
                         </div>
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">Attach Image/Scan</label>
-                            <input type="file" className="w-full text-sm" onChange={e => setEKGFile(e.target.files[0])} accept="image/*,.pdf" />
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase">PR</label>
+                            <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={ekgData.pr} onChange={e => setEKGData({ ...ekgData, pr: e.target.value })} placeholder="160" />
                         </div>
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">Interpretation</label>
-                            <textarea className="w-full px-3 py-2 border rounded-md h-16" value={ekgData.interpretation} onChange={e => setEKGData({ ...ekgData, interpretation: e.target.value })} placeholder="e.g. Normal EKG, no ST changes" />
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase">QRS</label>
+                            <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={ekgData.qrs} onChange={e => setEKGData({ ...ekgData, qrs: e.target.value })} placeholder="90" />
                         </div>
-                        <div className="flex justify-end gap-2">
-                            <button onClick={() => setShowEKGModal(false)} className="px-4 py-2 text-gray-600 font-bold">Cancel</button>
-                            <button onClick={handleEKGUpload} disabled={!ekgFile} className="px-6 py-2 bg-red-600 text-white rounded-md font-bold hover:bg-red-700 disabled:bg-gray-300">Save EKG</button>
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase">QTc</label>
+                            <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={ekgData.qtc} onChange={e => setEKGData({ ...ekgData, qtc: e.target.value })} placeholder="420" />
                         </div>
                     </div>
-                </Modal>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Attach Image/Scan</label>
+                        <input type="file" className="w-full text-sm" onChange={e => setEKGFile(e.target.files[0])} accept="image/*,.pdf" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Interpretation</label>
+                        <textarea className="w-full px-3 py-2 border rounded-md h-16" value={ekgData.interpretation} onChange={e => setEKGData({ ...ekgData, interpretation: e.target.value })} placeholder="e.g. Normal EKG, no ST changes" />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                        <button onClick={() => setShowEKGModal(false)} className="px-4 py-2 text-gray-600 font-bold">Cancel</button>
+                        <button onClick={handleEKGUpload} disabled={!ekgFile} className="px-6 py-2 bg-red-600 text-white rounded-md font-bold hover:bg-red-700 disabled:bg-gray-300">Save EKG</button>
+                    </div>
+                </div>
+            </Modal>
 
-                {/* ECHO Result Modal */}
-                <Modal
-                    isOpen={showECHOModal}
-                    onClose={() => setShowECHOModal(false)}
-                    title="Log Echocardiogram"
-                >
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
-                                <input type="date" className="w-full px-3 py-2 border rounded-md" value={echoData.date} onChange={e => setECHOData({ ...echoData, date: e.target.value })} />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">LVEF (%)</label>
-                                <input type="text" className="w-full px-3 py-2 border rounded-md" value={echoData.ef} onChange={e => setECHOData({ ...echoData, ef: e.target.value })} placeholder="e.g. 60-65" />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                            <div>
-                                <label className="block text-[10px] font-bold text-gray-500 uppercase">LA Size</label>
-                                <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={echoData.la_size} onChange={e => setECHOData({ ...echoData, la_size: e.target.value })} placeholder="Normal/Enlarged" />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-bold text-gray-500 uppercase">LV Size</label>
-                                <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={echoData.lv_size} onChange={e => setECHOData({ ...echoData, lv_size: e.target.value })} placeholder="Normal/Dilated" />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-bold text-gray-500 uppercase">RV Size</label>
-                                <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={echoData.rv_size} onChange={e => setECHOData({ ...echoData, rv_size: e.target.value })} placeholder="Normal" />
-                            </div>
+            {/* ECHO Result Modal */}
+            <Modal
+                isOpen={showECHOModal}
+                onClose={() => setShowECHOModal(false)}
+                title="Log Echocardiogram"
+            >
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
+                            <input type="date" className="w-full px-3 py-2 border rounded-md" value={echoData.date} onChange={e => setECHOData({ ...echoData, date: e.target.value })} />
                         </div>
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">Valve Findings</label>
-                            <textarea className="w-full px-3 py-2 border rounded-md h-16" value={echoData.valve_findings} onChange={e => setECHOData({ ...echoData, valve_findings: e.target.value })} placeholder="e.g. Trace MR, No stenosis" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">Attach Final Report</label>
-                            <input type="file" className="w-full text-sm" onChange={e => setECHOFile(e.target.files[0])} accept=".pdf,image/*" />
-                        </div>
-                        <div className="flex justify-end gap-2">
-                            <button onClick={() => setShowECHOModal(false)} className="px-4 py-2 text-gray-600 font-bold">Cancel</button>
-                            <button onClick={handleECHOUpload} disabled={!echoFile} className="px-6 py-2 bg-indigo-600 text-white rounded-md font-bold hover:bg-indigo-700 disabled:bg-gray-300">Save ECHO</button>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">LVEF (%)</label>
+                            <input type="text" className="w-full px-3 py-2 border rounded-md" value={echoData.ef} onChange={e => setECHOData({ ...echoData, ef: e.target.value })} placeholder="e.g. 60-65" />
                         </div>
                     </div>
-                </Modal>
-
-                {/* Cardiac Cath Upload Modal */}
-                <Modal
-                    isOpen={showCardiacCathModal}
-                    onClose={() => setShowCardiacCathModal(false)}
-                    title="Log Cardiac Catheterization"
-                >
-                    <div className="space-y-4">
+                    <div className="grid grid-cols-3 gap-2">
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">Facility / Performing Center</label>
-                            <input
-                                type="text"
-                                className="w-full px-3 py-2 border rounded-md"
-                                placeholder="e.g. Memorial Hospital"
-                                value={cardiacCathData.facility}
-                                onChange={(e) => setCardiacCathData({ ...cardiacCathData, facility: e.target.value })}
-                            />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
-                                <input type="date" className="w-full px-3 py-2 border rounded-md" value={cardiacCathData.date} onChange={e => setCardiacCathData({ ...cardiacCathData, date: e.target.value })} />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">LVEF (%)</label>
-                                <input type="text" className="w-full px-3 py-2 border rounded-md" value={cardiacCathData.ef} onChange={e => setCardiacCathData({ ...cardiacCathData, ef: e.target.value })} placeholder="e.g. 55" />
-                            </div>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase">LA Size</label>
+                            <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={echoData.la_size} onChange={e => setECHOData({ ...echoData, la_size: e.target.value })} placeholder="Normal/Enlarged" />
                         </div>
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">Coronary Findings</label>
-                            <textarea className="w-full px-3 py-2 border rounded-md h-20" value={cardiacCathData.findings} onChange={e => setCardiacCathData({ ...cardiacCathData, findings: e.target.value })} placeholder="e.g. LAD 80% (stented), LCx clean, RCA 40%" />
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase">LV Size</label>
+                            <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={echoData.lv_size} onChange={e => setECHOData({ ...echoData, lv_size: e.target.value })} placeholder="Normal/Dilated" />
                         </div>
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">Attach Final Report</label>
-                            <input type="file" className="w-full text-sm" onChange={e => setCardiacCathFile(e.target.files[0])} accept=".pdf,image/*" />
-                        </div>
-                        <div className="flex justify-end gap-2">
-                            <button onClick={() => setShowCardiacCathModal(false)} className="px-4 py-2 text-gray-600 font-bold">Cancel</button>
-                            <button onClick={handleCardiacCathUpload} disabled={!cardiacCathFile} className="px-6 py-2 bg-slate-700 text-white rounded-md font-bold hover:bg-slate-800 disabled:bg-gray-300">Save Result</button>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase">RV Size</label>
+                            <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={echoData.rv_size} onChange={e => setECHOData({ ...echoData, rv_size: e.target.value })} placeholder="Normal" />
                         </div>
                     </div>
-                </Modal>
-            </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Valve Findings</label>
+                        <textarea className="w-full px-3 py-2 border rounded-md h-16" value={echoData.valve_findings} onChange={e => setECHOData({ ...echoData, valve_findings: e.target.value })} placeholder="e.g. Trace MR, No stenosis" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Attach Final Report</label>
+                        <input type="file" className="w-full text-sm" onChange={e => setECHOFile(e.target.files[0])} accept=".pdf,image/*" />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                        <button onClick={() => setShowECHOModal(false)} className="px-4 py-2 text-gray-600 font-bold">Cancel</button>
+                        <button onClick={handleECHOUpload} disabled={!echoFile} className="px-6 py-2 bg-indigo-600 text-white rounded-md font-bold hover:bg-indigo-700 disabled:bg-gray-300">Save ECHO</button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Cardiac Cath Upload Modal */}
+            <Modal
+                isOpen={showCardiacCathModal}
+                onClose={() => setShowCardiacCathModal(false)}
+                title="Log Cardiac Catheterization"
+            >
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Facility / Performing Center</label>
+                        <input
+                            type="text"
+                            className="w-full px-3 py-2 border rounded-md"
+                            placeholder="e.g. Memorial Hospital"
+                            value={cardiacCathData.facility}
+                            onChange={(e) => setCardiacCathData({ ...cardiacCathData, facility: e.target.value })}
+                        />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
+                            <input type="date" className="w-full px-3 py-2 border rounded-md" value={cardiacCathData.date} onChange={e => setCardiacCathData({ ...cardiacCathData, date: e.target.value })} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">LVEF (%)</label>
+                            <input type="text" className="w-full px-3 py-2 border rounded-md" value={cardiacCathData.ef} onChange={e => setCardiacCathData({ ...cardiacCathData, ef: e.target.value })} placeholder="e.g. 55" />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Coronary Findings</label>
+                        <textarea className="w-full px-3 py-2 border rounded-md h-20" value={cardiacCathData.findings} onChange={e => setCardiacCathData({ ...cardiacCathData, findings: e.target.value })} placeholder="e.g. LAD 80% (stented), LCx clean, RCA 40%" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Attach Final Report</label>
+                        <input type="file" className="w-full text-sm" onChange={e => setCardiacCathFile(e.target.files[0])} accept=".pdf,image/*" />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                        <button onClick={() => setShowCardiacCathModal(false)} className="px-4 py-2 text-gray-600 font-bold">Cancel</button>
+                        <button onClick={handleCardiacCathUpload} disabled={!cardiacCathFile} className="px-6 py-2 bg-slate-700 text-white rounded-md font-bold hover:bg-slate-800 disabled:bg-gray-300">Save Result</button>
+                    </div>
+                </div>
+            </Modal>
             {/* Cardiology Review Center */}
             <CardiologyViewer
                 isOpen={showCardiologyViewer}
@@ -2560,31 +2437,35 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 documents={documents}
                 patientName={patient ? `${patient.first_name} ${patient.last_name}` : 'Patient'}
             />
-            {showPrintOrdersModal && (
-                <PrintOrdersModal
-                    patient={{ ...patient, id }}
-                    isOpen={showPrintOrdersModal}
-                    onClose={() => setShowPrintOrdersModal(false)}
-                />
-            )}
-            {showChartReview && (
-                <ChartReviewModal
-                    isOpen={showChartReview}
-                    onClose={() => setShowChartReview(false)}
-                    visits={recentNotes}
-                    isLoading={loadingNotes}
-                    patientData={{ ...patient, problems, medications, allergies }}
-                    onViewFullChart={() => {
-                        setShowChartReview(false);
-                        setPatientChartTab('history');
-                        setShowPatientChart(true);
-                    }}
-                    onOpenVisit={(visitId) => {
-                        navigate(`/patient/${id}/visit/${visitId}`);
-                        setShowChartReview(false);
-                    }}
-                />
-            )}
+            {
+                showPrintOrdersModal && (
+                    <PrintOrdersModal
+                        patient={{ ...patient, id }}
+                        isOpen={showPrintOrdersModal}
+                        onClose={() => setShowPrintOrdersModal(false)}
+                    />
+                )
+            }
+            {
+                showChartReview && (
+                    <ChartReviewModal
+                        isOpen={showChartReview}
+                        onClose={() => setShowChartReview(false)}
+                        visits={recentNotes}
+                        isLoading={loadingNotes}
+                        patientData={{ ...patient, problems, medications, allergies }}
+                        onViewFullChart={() => {
+                            setShowChartReview(false);
+                            setPatientChartTab('history');
+                            setShowPatientChart(true);
+                        }}
+                        onOpenVisit={(visitId) => {
+                            navigate(`/patient/${id}/visit/${visitId}`);
+                            setShowChartReview(false);
+                        }}
+                    />
+                )
+            }
             {/* Specialty Tracker Drawer */}
             <SpecialtyTracker
                 isOpen={showSpecialtyTracker}

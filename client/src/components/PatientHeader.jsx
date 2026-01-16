@@ -3,7 +3,7 @@ import {
     Phone, Mail, MapPin, Shield, Activity,
     AlertCircle, Edit2, Camera, X, Check,
     ExternalLink, Calendar, FileText, Upload, Pill, Receipt, Users,
-    Lock
+    Lock, User
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
@@ -459,52 +459,69 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
 
                         {/* Name & Key Stats */}
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                                {/* Clicking name also goes to chart as a shortcut */}
-                                <span
-                                    className="cursor-pointer hover:text-blue-800 transition-colors"
-                                    onClick={() => navigate(`/patient/${patient?.id || id}/snapshot`)}
-                                >
-                                    {patient.first_name || ''} {patient.last_name || ''}
-                                </span>
-
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => setIsFlagsPanelOpen(true)}
-                                        className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-black uppercase tracking-widest shadow-sm transition-all hover:scale-105 active:scale-95 ${activeFlags.length > 0 ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-400 opacity-60 hover:opacity-100'
-                                            }`}
+                            <div className="flex items-center gap-3 mb-1">
+                                <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                                    <span
+                                        className="cursor-pointer hover:text-slate-700 transition-colors"
+                                        onClick={() => navigate(`/patient/${patient?.id || id}/snapshot`)}
                                     >
-                                        <Shield size={12} />
-                                        {activeFlags.length} Flags
-                                    </button>
-                                    {patient.is_restricted && (
-                                        <div className="flex items-center gap-1.5 px-3 py-1 bg-red-600 text-white rounded-md text-[11px] font-black uppercase tracking-widest shadow-sm">
-                                            <Lock size={12} fill="currentColor" />
-                                            CONFIDENTIAL
-                                        </div>
+                                        {patient.first_name || ''} {patient.last_name || ''}
+                                    </span>
+                                </h1>
+                                <button
+                                    onClick={handleEditClick}
+                                    className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all"
+                                    title="Edit Patient Demographics"
+                                >
+                                    <Edit2 size={14} />
+                                </button>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-2 mt-2">
+                                {/* Age Pill */}
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-bold">
+                                    <User className="w-3 h-3 opacity-60" />
+                                    <span>{calculateAge(patient.dob)}y</span>
+                                </div>
+
+                                {/* Sex/Gender Pill */}
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-bold">
+                                    <Activity className="w-3 h-3 opacity-60" />
+                                    <span>{patient.sex === 'M' ? 'Male' : patient.sex === 'F' ? 'Female' : patient.sex || 'N/A'}</span>
+                                    {patient.gender && patient.gender !== patient.sex && (
+                                        <span className="text-slate-400 font-medium ml-1">({patient.gender})</span>
                                     )}
                                 </div>
 
-                                <button
-                                    onClick={handleEditClick}
-                                    className="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded-full hover:bg-blue-50"
-                                    title="Edit Patient"
-                                >
-                                    <Edit2 size={12} />
-                                </button>
-                            </h1>
+                                {/* DOB Pill */}
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-bold">
+                                    <Calendar className="w-3 h-3 opacity-60" />
+                                    <span>{formatDate(patient.dob)}</span>
+                                </div>
 
-                            <div className="flex items-center gap-3 text-sm text-gray-600 mt-1">
-                                <span className="font-medium text-gray-900">{calculateAge(patient.dob)} years old</span>
-                                <span className="text-gray-300">|</span>
-                                <span className="flex items-center gap-1">
-                                    <span className="text-xs uppercase tracking-wide text-gray-500">DOB</span>
-                                    {formatDate(patient.dob)}
-                                </span>
-                                <span className="text-gray-300">|</span>
-                                <span className="font-mono text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded text-xs">
-                                    {patient.mrn}
-                                </span>
+                                {/* MRN Pill */}
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 text-white rounded-full text-[10px] font-black tracking-widest uppercase">
+                                    <span className="opacity-60">MRN:</span>
+                                    <span>{patient.mrn}</span>
+                                </div>
+
+                                {/* Status Flags */}
+                                <div className="flex items-center gap-2 ml-1">
+                                    <button
+                                        onClick={() => setIsFlagsPanelOpen(true)}
+                                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all hover:shadow-md ${activeFlags.length > 0 ? 'bg-amber-500 text-white shadow-sm' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}
+                                    >
+                                        <Shield size={10} />
+                                        {activeFlags.length} {activeFlags.length === 1 ? 'Alert' : 'Alerts'}
+                                    </button>
+
+                                    {patient.is_restricted && (
+                                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-rose-600 text-white rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm animate-pulse">
+                                            <Lock size={10} fill="currentColor" />
+                                            Restricted
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
