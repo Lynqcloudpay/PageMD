@@ -1569,7 +1569,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                         ) : null}
 
                         {!layoutEditMode ? (
-                            <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
+                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                                 {/* Left Column: Compact Reference Cards */}
                                 <div className="lg:col-span-1 space-y-4">
                                     {/* Allergies Module - Smallest Card */}
@@ -1714,7 +1714,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 </div>
 
                                 {/* Right Column: Main Grid */}
-                                <div className="lg:col-span-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                     {/* Medications Module */}
                                     <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
                                         <div className="p-2 border-b border-gray-200 flex items-center justify-between bg-emerald-50/50">
@@ -1826,152 +1826,6 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         </div>
                                     </div>
 
-                                    {/* Cardiology Studies Section */}
-                                    {/* EKG Studies */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-red-200 hover:shadow-md transition-shadow">
-                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between bg-red-50/50">
-                                            <div className="flex items-center space-x-2 cursor-pointer group" onClick={() => { setCardiologyViewerType('EKG'); setShowCardiologyViewer(true); }}>
-                                                <Activity className="w-4 h-4 text-red-600 group-hover:scale-110 transition-transform" />
-                                                <h3 className="font-bold text-sm text-gray-900 group-hover:text-red-600 transition-colors">EKG</h3>
-                                                {(documents || []).filter(d => d.doc_type === 'imaging' && (d.tags?.includes('ekg') || d.file_name?.toLowerCase().includes('ekg'))).length > 0 &&
-                                                    <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{(documents || []).filter(d => d.doc_type === 'imaging' && (d.tags?.includes('ekg') || d.file_name?.toLowerCase().includes('ekg'))).length}</span>
-                                                }
-                                            </div>
-                                            <button onClick={() => setShowEKGModal(true)} className="p-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors">
-                                                <Plus className="w-3 h-3" />
-                                            </button>
-                                        </div>
-                                        <div className="p-2 space-y-1">
-                                            {(documents || []).filter(d => d.doc_type === 'imaging' && (d.tags?.includes('ekg') || d.file_name?.toLowerCase().includes('ekg'))).slice(0, 3).map(doc => {
-                                                const rhythm = doc.tags?.find(t => t.startsWith('rhythm:'))?.split(':')[1] || '';
-                                                const rate = doc.tags?.find(t => t.startsWith('rate:'))?.split(':')[1] || '';
-                                                return (
-                                                    <div key={doc.id} className="flex flex-col p-2 bg-red-50/30 rounded border border-red-100/50 hover:bg-red-50 transition-colors">
-                                                        <div className="flex items-center justify-between mb-1">
-                                                            <span className="font-bold text-red-900 text-[11px] truncate">{doc.file_name || 'EKG'}</span>
-                                                            <div className="flex items-center space-x-2">
-                                                                <span className="text-red-500 text-[10px] whitespace-nowrap">{new Date(doc.created_at).toLocaleDateString()}</span>
-                                                            </div>
-                                                        </div>
-                                                        {(rhythm || rate) && (
-                                                            <div className="flex items-center gap-2 mt-0.5">
-                                                                {rhythm && <span className="text-[9px] px-1 bg-white border border-red-100 rounded text-red-700 font-bold uppercase">{rhythm}</span>}
-                                                                {rate && <span className="text-[9px] text-gray-500 font-medium">{rate} bpm</span>}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                            {(documents || []).filter(d => d.doc_type === 'imaging' && (d.tags?.includes('ekg') || d.file_name?.toLowerCase().includes('ekg'))).length === 0 && <p className="text-xs text-gray-500 text-center py-4">No EKGs recorded</p>}
-                                        </div>
-                                    </div>
-
-                                    {/* ECHO Studies */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-indigo-200 hover:shadow-md transition-shadow">
-                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between bg-indigo-50/50">
-                                            <div className="flex items-center space-x-2 cursor-pointer group" onClick={() => { setCardiologyViewerType('ECHO'); setShowCardiologyViewer(true); }}>
-                                                <Heart className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform" />
-                                                <h3 className="font-bold text-sm text-gray-900 group-hover:text-indigo-600 transition-colors">ECHO</h3>
-                                                {(documents || []).filter(d => d.doc_type === 'imaging' && (d.tags?.includes('echo') || d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length > 0 &&
-                                                    <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{(documents || []).filter(d => d.doc_type === 'imaging' && (d.tags?.includes('echo') || d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length}</span>
-                                                }
-                                            </div>
-                                            <button onClick={() => setShowECHOModal(true)} className="p-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors">
-                                                <Plus className="w-3 h-3" />
-                                            </button>
-                                        </div>
-                                        <div className="p-2 space-y-1">
-                                            {(documents || []).filter(d => d.doc_type === 'imaging' && (d.tags?.includes('echo') || d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).slice(0, 3).map(doc => {
-                                                const ef = doc.tags?.find(t => t.startsWith('ef:'))?.split(':')[1] || '';
-                                                const la = doc.tags?.find(t => t.startsWith('la_size:'))?.split(':')[1] || '';
-                                                const lv = doc.tags?.find(t => t.startsWith('lv_size:'))?.split(':')[1] || '';
-                                                return (
-                                                    <div key={doc.id} className="flex flex-col p-2 bg-indigo-50/30 rounded border border-indigo-100/50 hover:bg-indigo-50 transition-colors">
-                                                        <div className="flex items-center justify-between mb-1">
-                                                            <span className="font-bold text-indigo-900 text-[11px] truncate">{doc.file_name || 'Echo Study'}</span>
-                                                            <div className="flex items-center space-x-2">
-                                                                <span className="text-indigo-500 text-[10px] whitespace-nowrap">{new Date(doc.created_at).toLocaleDateString()}</span>
-                                                            </div>
-                                                        </div>
-                                                        {(ef || la || lv) && (
-                                                            <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                                                                {ef && <span className="text-[9px] px-1 bg-white border border-indigo-100 rounded text-indigo-700 font-black">EF {ef}</span>}
-                                                                {la && <span className="text-[9px] text-gray-500">LA: <span className="font-bold">{la}</span></span>}
-                                                                {lv && <span className="text-[9px] text-gray-500">LV: <span className="font-bold">{lv}</span></span>}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                            {(documents || []).filter(d => d.doc_type === 'imaging' && (d.tags?.includes('echo') || d.file_name?.toLowerCase().includes('echo') || d.file_name?.toLowerCase().includes('echocardiogram'))).length === 0 && <p className="text-xs text-gray-500 text-center py-4">No ECHO studies</p>}
-                                        </div>
-                                    </div>
-
-                                    {/* Stress Tests (New) */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-fuchsia-200 hover:shadow-md transition-shadow">
-                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between bg-fuchsia-50/50">
-                                            <div className="flex items-center space-x-2 cursor-pointer group" onClick={() => { setCardiologyViewerType('STRESS'); setShowCardiologyViewer(true); }}>
-                                                <Activity className="w-4 h-4 text-fuchsia-600 group-hover:scale-110 transition-transform" />
-                                                <h3 className="font-bold text-sm text-gray-900 group-hover:text-fuchsia-600 transition-colors">Stress Test</h3>
-                                                {((documents || []).filter(d => d.tags?.includes('stress_test')).length > 0 || (documents || []).filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('stress')).length > 0) &&
-                                                    <span className="bg-fuchsia-100 text-fuchsia-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{(documents || []).filter(d => d.tags?.includes('stress_test') || (d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('stress'))).length}</span>
-                                                }
-                                            </div>
-                                            <button onClick={() => setShowStressTestModal(true)} className="p-1 bg-fuchsia-600 text-white rounded hover:bg-fuchsia-700 transition-colors">
-                                                <Plus className="w-3 h-3" />
-                                            </button>
-                                        </div>
-                                        <div className="p-2 space-y-1">
-                                            {(documents || []).filter(d => d.tags?.includes('stress_test')).slice(0, 3).map(doc => {
-                                                const typeTag = doc.tags?.find(t => t.startsWith('type:'))?.split(':')[1] || '';
-                                                const stressorTag = doc.tags?.find(t => t.startsWith('stressor:'))?.split(':')[1] || '';
-                                                return (
-                                                    <div key={doc.id} className="block text-[11px] p-2 bg-fuchsia-50/30 rounded border border-fuchsia-100/50 hover:bg-fuchsia-50 transition-colors cursor-pointer" onClick={() => { setPatientChartTab('images'); setShowPatientChart(true); }}>
-                                                        <div className="flex justify-between items-start mb-1">
-                                                            <span className="font-black text-fuchsia-900 uppercase tracking-tighter">{typeTag || 'Cardiac Stress'}</span>
-                                                            <span className="text-fuchsia-500 font-bold">{new Date(doc.created_at).toLocaleDateString()}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className="px-1.5 py-0.5 bg-white border border-fuchsia-100 rounded text-[9px] font-bold text-fuchsia-700 uppercase">{stressorTag}</span>
-                                                            <span className="truncate text-gray-500 italic">{doc.file_name}</span>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                            {(documents || []).filter(d => d.tags?.includes('stress_test')).length === 0 && <p className="text-xs text-gray-500 text-center py-4">No Stress tests recorded</p>}
-                                        </div>
-                                    </div>
-
-                                    {/* Cardiac Cath (New) */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-slate-300 hover:shadow-md transition-shadow">
-                                        <div className="p-2 border-b border-gray-200 flex items-center justify-between bg-slate-50/50">
-                                            <div className="flex items-center space-x-2 cursor-pointer group" onClick={() => { setCardiologyViewerType('CATH'); setShowCardiologyViewer(true); }}>
-                                                <Waves className="w-4 h-4 text-slate-700 group-hover:scale-110 transition-transform" />
-                                                <h3 className="font-bold text-sm text-gray-900 group-hover:text-slate-700 transition-colors">Cardiac Cath</h3>
-                                                {((documents || []).filter(d => d.tags?.includes('cardiac_cath')).length > 0 || (documents || []).filter(d => d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('cath')).length > 0) &&
-                                                    <span className="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{(documents || []).filter(d => d.tags?.includes('cardiac_cath') || (d.doc_type === 'imaging' && d.file_name?.toLowerCase().includes('cath'))).length}</span>
-                                                }
-                                            </div>
-                                            <button onClick={() => setShowCardiacCathModal(true)} className="p-1 bg-slate-700 text-white rounded hover:bg-slate-800 transition-colors">
-                                                <Plus className="w-3 h-3" />
-                                            </button>
-                                        </div>
-                                        <div className="p-2 space-y-1">
-                                            {(documents || []).filter(d => d.tags?.includes('cardiac_cath')).slice(0, 3).map(doc => {
-                                                const facility = doc.tags?.find(t => t.startsWith('facility:'))?.split(':')[1] || '';
-                                                return (
-                                                    <div key={doc.id} className="block text-[11px] p-2 bg-slate-50/30 rounded border border-slate-200/50 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => { setPatientChartTab('images'); setShowPatientChart(true); }}>
-                                                        <div className="flex justify-between items-start mb-1">
-                                                            <span className="font-black text-slate-900 uppercase tracking-tighter">{facility || 'Cardiac Cath'}</span>
-                                                            <span className="text-slate-500 font-bold">{new Date(doc.created_at).toLocaleDateString()}</span>
-                                                        </div>
-                                                        <span className="truncate text-gray-500 italic text-[10px]">{doc.file_name}</span>
-                                                    </div>
-                                                );
-                                            })}
-                                            {(documents || []).filter(d => d.tags?.includes('cardiac_cath')).length === 0 && <p className="text-xs text-gray-500 text-center py-4">No Cardiac Cath records</p>}
-                                        </div>
-                                    </div>
 
                                 </div>
                             </div>
