@@ -484,13 +484,10 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                     <span>{calculateAge(patient.dob)}y</span>
                                 </div>
 
-                                {/* Sex/Gender Pill */}
+                                {/* Sex Pill */}
                                 <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-bold">
                                     <Activity className="w-3 h-3 opacity-60" />
                                     <span>{patient.sex === 'M' ? 'Male' : patient.sex === 'F' ? 'Female' : patient.sex || 'N/A'}</span>
-                                    {patient.gender && patient.gender !== patient.sex && (
-                                        <span className="text-slate-400 font-medium ml-1">({patient.gender})</span>
-                                    )}
                                 </div>
 
                                 {/* DOB Pill */}
@@ -499,9 +496,9 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                     <span>{formatDate(patient.dob)}</span>
                                 </div>
 
-                                {/* MRN Pill */}
-                                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 text-white rounded-full text-[10px] font-black tracking-widest uppercase">
-                                    <span className="opacity-60">MRN:</span>
+                                {/* MRN Pill - Azure Blue */}
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-600 text-white rounded-full text-[10px] font-black tracking-widest uppercase shadow-sm">
+                                    <span className="opacity-70">MRN:</span>
                                     <span>{patient.mrn}</span>
                                 </div>
 

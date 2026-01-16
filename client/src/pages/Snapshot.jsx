@@ -1320,7 +1320,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             <div className="relative group/visit">
                                 <button
                                     onClick={() => todayDraftVisit ? navigate(`/patient/${id}/visit/${todayDraftVisit.id}`) : handleCreateNewVisit()}
-                                    className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-slate-800 rounded-md transition-all hover:bg-slate-900 hover:shadow-md"
+                                    className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-blue-600 rounded-md transition-all hover:bg-blue-700 hover:shadow-md"
                                 >
                                     {todayDraftVisit ? (
                                         <>
@@ -1408,7 +1408,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     </p>
                                     <button
                                         onClick={() => setLayoutEditMode(false)}
-                                        className="px-4 py-1.5 text-xs font-bold text-white bg-slate-800 rounded hover:bg-slate-900"
+                                        className="px-4 py-1.5 text-xs font-bold text-white bg-blue-600 rounded hover:bg-blue-700"
                                     >
                                         Save Layout
                                     </button>
@@ -1591,118 +1591,147 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 </div>
 
                                 {/* Right Column: Main Grid */}
-                                <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                                <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                                     {/* Medications Module */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-                                        <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow group/card">
+                                        <div
+                                            className="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 cursor-pointer hover:bg-slate-100/80 transition-colors"
+                                            onClick={() => { setPatientChartTab('medications'); setShowPatientChart(true); }}
+                                        >
                                             <div className="flex items-center space-x-1.5">
-                                                <Pill className="w-4 h-4 text-slate-600" />
-                                                <h3 className="font-semibold text-sm text-slate-800">Medications</h3>
-                                                {(medications || []).filter(m => m.active !== false).length > 0 && <span className="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-medium">{(medications || []).filter(m => m.active !== false).length}</span>}
+                                                <Pill className="w-4 h-4 text-blue-600 transition-transform group-hover/card:scale-110" />
+                                                <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wider">Medications</h3>
+                                                {(medications || []).filter(m => m.active !== false).length > 0 && <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{(medications || []).filter(m => m.active !== false).length}</span>}
                                             </div>
-                                            <button onClick={() => { setPatientChartTab('medications'); setShowPatientChart(true); }} className="text-[10px] text-slate-500 hover:text-slate-700 font-medium">Manage</button>
+                                            <ChevronRight className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover/card:opacity-100 transition-all transform group-hover/card:translate-x-0.5" />
                                         </div>
-                                        <div className="p-2 max-h-[180px] overflow-y-auto">
+                                        <div className="p-2 max-h-[160px] overflow-y-auto scrollbar-hide">
                                             {(medications || []).filter(m => m.active !== false).length > 0 ? (
                                                 <div className="space-y-1">
-                                                    {(medications || []).filter(m => m.active !== false).slice(0, 8).map(med => {
+                                                    {(medications || []).filter(m => m.active !== false).slice(0, 5).map(med => {
                                                         const decodedName = decodeHtmlEntities(med.medication_name);
-
                                                         return (
                                                             <div key={med.id} className="pb-1 border-b border-slate-50 last:border-b-0">
-                                                                <p className="font-medium text-[11px] text-slate-900 truncate">{decodedName}</p>
-                                                                <p className="text-[10px] text-slate-500">{med.dosage} {med.frequency}</p>
+                                                                <p className="font-bold text-[10px] text-slate-900 truncate">{decodedName}</p>
+                                                                <p className="text-[9px] text-slate-500">{med.dosage} {med.frequency}</p>
                                                             </div>
                                                         );
                                                     })}
                                                 </div>
                                             ) : (
-                                                <p className="text-xs text-slate-400 text-center py-4">No active medications</p>
+                                                <p className="text-[10px] text-slate-400 text-center py-4 italic">No active medications</p>
                                             )}
                                         </div>
                                     </div>
 
-                                    {/* Problem List Module */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-                                        <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                                    {/* Problems Module */}
+                                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow group/card">
+                                        <div
+                                            className="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 cursor-pointer hover:bg-slate-100/80 transition-colors"
+                                            onClick={() => { setPatientChartTab('problems'); setShowPatientChart(true); }}
+                                        >
                                             <div className="flex items-center space-x-1.5">
-                                                <AlertCircle className="w-4 h-4 text-slate-600" />
-                                                <h3 className="font-semibold text-sm text-slate-800">Problem List</h3>
-                                                {(problems || []).length > 0 && <span className="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-medium">{(problems || []).length}</span>}
+                                                <AlertCircle className="w-4 h-4 text-amber-600 transition-transform group-hover/card:scale-110" />
+                                                <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wider">Problems</h3>
+                                                {(problems || []).length > 0 && <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{(problems || []).length}</span>}
                                             </div>
-                                            <button onClick={() => { setPatientChartTab('problems'); setShowPatientChart(true); }} className="text-[10px] text-slate-500 hover:text-slate-700 font-medium">Manage</button>
+                                            <ChevronRight className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover/card:opacity-100 transition-all transform group-hover/card:translate-x-0.5" />
                                         </div>
-                                        <div className="p-2 max-h-[180px] overflow-y-auto">
+                                        <div className="p-2 max-h-[160px] overflow-y-auto scrollbar-hide">
                                             {(problems || []).length > 0 ? (
                                                 <div className="space-y-1">
-                                                    {(() => {
-                                                        const seen = new Set();
-                                                        return problems
-                                                            .filter(p => p.status === 'active')
-                                                            .filter(p => {
-                                                                const name = (p.name || p.problem_name || '')
-                                                                    .replace(/^[\d.\s]+/, '') // Strip leading numbers
-                                                                    .replace(/\s*\([A-Z][0-9.]+\)\s*$/, '') // Strip trailing (ICD-10)
-                                                                    .toLowerCase()
-                                                                    .trim();
-                                                                if (seen.has(name)) return false;
-                                                                seen.add(name);
-                                                                return true;
-                                                            })
-                                                            .slice(0, 8)
-                                                            .map(prob => (
-                                                                <div key={prob.id} className="pb-1 border-b border-slate-50 last:border-b-0 flex items-center justify-between gap-2">
-                                                                    <p className="font-medium text-[11px] text-slate-900 truncate">
-                                                                        {(prob.name || prob.problem_name || '').replace(/^[\d.\s]+/, '')}
-                                                                    </p>
-                                                                    <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1 rounded font-medium shrink-0">Active</span>
-                                                                </div>
-                                                            ));
-                                                    })()}
+                                                    {problems.filter(p => p.status === 'active').slice(0, 5).map(prob => (
+                                                        <div key={prob.id} className="pb-1 border-b border-slate-50 last:border-b-0 flex items-center justify-between gap-2">
+                                                            <p className="font-bold text-[10px] text-slate-900 truncate">
+                                                                {(prob.name || prob.problem_name || '').replace(/^[\d.\s]+/, '')}
+                                                            </p>
+                                                            <span className="text-[8px] bg-slate-100 text-slate-500 px-1 rounded font-black uppercase shrink-0">Active</span>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             ) : (
-                                                <p className="text-xs text-slate-400 text-center py-4">No active problems</p>
+                                                <p className="text-[10px] text-slate-400 text-center py-4 italic">No active problems</p>
                                             )}
                                         </div>
                                     </div>
 
-                                    {/* Recent Vitals Module */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-                                        <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                                    {/* Results & Documents Module */}
+                                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow group/card">
+                                        <div
+                                            className="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 cursor-pointer hover:bg-slate-100/80 transition-colors"
+                                            onClick={() => { setPatientChartTab('labs'); setShowPatientChart(true); }}
+                                        >
                                             <div className="flex items-center space-x-1.5">
-                                                <Activity className="w-4 h-4 text-slate-600" />
-                                                <h3 className="font-semibold text-sm text-slate-800">Vitals</h3>
+                                                <FileText className="w-4 h-4 text-blue-600 transition-transform group-hover/card:scale-110" />
+                                                <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wider">Results</h3>
                                             </div>
-                                            <button onClick={() => { setPatientChartTab('history'); setShowPatientChart(true); }} className="text-[10px] text-slate-500 hover:text-slate-700 font-medium">View All</button>
+                                            <ChevronRight className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover/card:opacity-100 transition-all transform group-hover/card:translate-x-0.5" />
                                         </div>
-                                        <div className="p-2">
-                                            {vitals.slice(0, 1).map((vital, idx) => (
-                                                <div key={idx} className="bg-slate-50 rounded-lg p-2.5 border border-slate-100">
-                                                    <div className="grid grid-cols-2 gap-y-2 gap-x-4">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[9px] text-slate-400 font-medium uppercase">BP</span>
-                                                            <span className="text-sm font-semibold text-slate-900">{vital.bp || 'N/A'}</span>
+                                        <div className="p-2 max-h-[160px] overflow-y-auto scrollbar-hide">
+                                            {orders.length > 0 || documents.length > 0 ? (
+                                                <div className="space-y-1.5">
+                                                    {[...orders.slice(0, 3), ...documents.slice(0, 3)].map((item, idx) => (
+                                                        <div key={idx} className="pb-1 border-b border-slate-50 last:border-b-0 flex items-center justify-between gap-2">
+                                                            <div className="min-w-0 flex-1">
+                                                                <p className="font-bold text-[10px] text-slate-900 truncate">{item.order_name || item.name || item.doc_type}</p>
+                                                                <p className="text-[8px] text-slate-400">{item.order_date || item.upload_date || 'Recent'}</p>
+                                                            </div>
+                                                            <span className={`text-[8px] px-1 rounded font-black uppercase shrink-0 ${item.order_type === 'lab' || item.doc_type === 'lab' ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-600'}`}>
+                                                                {item.order_type || item.doc_type || 'Result'}
+                                                            </span>
                                                         </div>
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[9px] text-slate-400 font-medium uppercase">HR</span>
-                                                            <span className="text-sm font-semibold text-slate-900">{vital.hr || 'N/A'} <span className="text-[10px] font-normal text-slate-400">bpm</span></span>
-                                                        </div>
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[9px] text-slate-400 font-medium uppercase">SpO2</span>
-                                                            <span className="text-sm font-semibold text-slate-900">{vital.spo2 || 'N/A'}%</span>
-                                                        </div>
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[9px] text-slate-400 font-medium uppercase">Temp</span>
-                                                            <span className="text-sm font-semibold text-slate-900">{vital.temp || 'N/A'}°F</span>
-                                                        </div>
-                                                    </div>
-                                                    <p className="text-[9px] text-slate-400 mt-2 text-right">{new Date(vital.date).toLocaleDateString()} {vital.time}</p>
+                                                    ))}
                                                 </div>
-                                            ))}
-                                            {vitals.length === 0 && <p className="text-xs text-slate-400 text-center py-4">No vitals recorded</p>}
+                                            ) : (
+                                                <p className="text-[10px] text-slate-400 text-center py-4 italic">No recent results</p>
+                                            )}
                                         </div>
                                     </div>
 
+                                    {/* Vitals Dashboard Module */}
+                                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow group/card">
+                                        <div
+                                            className="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 cursor-pointer hover:bg-slate-100/80 transition-colors"
+                                            onClick={() => { setPatientChartTab('history'); setShowPatientChart(true); }}
+                                        >
+                                            <div className="flex items-center space-x-1.5">
+                                                <Activity className="w-4 h-4 text-emerald-600 transition-transform group-hover/card:scale-110" />
+                                                <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wider">Vitals</h3>
+                                            </div>
+                                            <ChevronRight className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover/card:opacity-100 transition-all transform group-hover/card:translate-x-0.5" />
+                                        </div>
+                                        <div className="p-2 h-[160px] flex flex-col justify-center">
+                                            {vitals.length > 0 ? vitals.slice(0, 1).map((vital, idx) => (
+                                                <div key={idx} className="space-y-3">
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <div className="bg-slate-50/50 rounded-lg p-2 border border-slate-100 text-center">
+                                                            <span className="text-[10px] text-slate-400 font-bold uppercase block leading-none mb-1">BP</span>
+                                                            <span className="text-base font-black text-slate-900 leading-none">{vital.bp || '—'}</span>
+                                                        </div>
+                                                        <div className="bg-slate-50/50 rounded-lg p-2 border border-slate-100 text-center">
+                                                            <span className="text-[10px] text-slate-400 font-bold uppercase block leading-none mb-1">HR</span>
+                                                            <span className="text-base font-black text-slate-900 leading-none">{vital.hr || '—'}</span>
+                                                        </div>
+                                                        <div className="bg-emerald-50/30 rounded-lg p-2 border border-emerald-100/50 text-center">
+                                                            <span className="text-[10px] text-emerald-600 font-bold uppercase block leading-none mb-1">SpO2</span>
+                                                            <span className="text-base font-black text-emerald-700 leading-none">{vital.spo2 || '—'}<span className="text-[10px]">%</span></span>
+                                                        </div>
+                                                        <div className="bg-blue-50/30 rounded-lg p-2 border border-blue-100/50 text-center">
+                                                            <span className="text-[10px] text-blue-600 font-bold uppercase block leading-none mb-1">Temp</span>
+                                                            <span className="text-base font-black text-blue-700 leading-none">{vital.temp || '—'}<span className="text-[10px]">°</span></span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <div className="h-px bg-slate-100 flex-1"></div>
+                                                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">{new Date(vital.date).toLocaleDateString()}</p>
+                                                        <div className="h-px bg-slate-100 flex-1"></div>
+                                                    </div>
+                                                </div>
+                                            )) : (
+                                                <p className="text-[10px] text-slate-400 text-center py-4 italic">No vitals recorded</p>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         ) : null}
