@@ -1320,7 +1320,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             <div className="relative group/visit">
                                 <button
                                     onClick={() => todayDraftVisit ? navigate(`/patient/${id}/visit/${todayDraftVisit.id}`) : handleCreateNewVisit()}
-                                    className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-blue-600 rounded-md transition-all hover:bg-blue-700 hover:shadow-md"
+                                    className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-slate-800 rounded-md transition-all hover:bg-slate-900 hover:shadow-md"
                                 >
                                     {todayDraftVisit ? (
                                         <>
@@ -1408,7 +1408,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     </p>
                                     <button
                                         onClick={() => setLayoutEditMode(false)}
-                                        className="px-4 py-1.5 text-xs font-bold text-white bg-blue-600 rounded hover:bg-blue-700"
+                                        className="px-4 py-1.5 text-xs font-bold text-white bg-slate-800 rounded hover:bg-slate-900"
                                     >
                                         Save Layout
                                     </button>
@@ -1422,20 +1422,18 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 <div className="lg:col-span-1 space-y-4">
                                     {/* Visit History Section - Now in Sidebar */}
                                     <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-                                        <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                                        <div
+                                            className="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 cursor-pointer hover:bg-slate-100 transition-colors group/header"
+                                            onClick={() => setShowVisitFoldersModal(true)}
+                                        >
                                             <div className="flex items-center space-x-2">
-                                                <FileText className="w-3.5 h-3.5 text-slate-500" />
+                                                <FileText className="w-3.5 h-3.5 text-slate-500 group-hover/header:text-slate-800" />
                                                 <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wide">Visit History</h3>
                                                 {filteredNotes.length > 0 && (
                                                     <span className="text-[9px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-bold">{filteredNotes.length}</span>
                                                 )}
                                             </div>
-                                            <button
-                                                onClick={() => setShowVisitFoldersModal(true)}
-                                                className="text-[9px] text-slate-500 hover:text-slate-700 font-bold uppercase tracking-wider"
-                                            >
-                                                View All
-                                            </button>
+                                            <ChevronRight className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover/header:opacity-100 transition-all transform group-hover/header:translate-x-0.5" />
                                         </div>
                                         <div className="p-2">
                                             {filteredNotes.length > 0 ? (
@@ -1688,44 +1686,40 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         </div>
                                     </div>
 
-                                    {/* Vitals Dashboard Module */}
+                                    {/* Vitals Module - Reverted & Compact */}
                                     <div className="bg-white rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow group/card">
                                         <div
                                             className="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 cursor-pointer hover:bg-slate-100/80 transition-colors"
                                             onClick={() => { setPatientChartTab('history'); setShowPatientChart(true); }}
                                         >
                                             <div className="flex items-center space-x-1.5">
-                                                <Activity className="w-4 h-4 text-emerald-600 transition-transform group-hover/card:scale-110" />
+                                                <Activity className="w-4 h-4 text-slate-600 transition-transform group-hover/card:scale-110" />
                                                 <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wider">Vitals</h3>
                                             </div>
                                             <ChevronRight className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover/card:opacity-100 transition-all transform group-hover/card:translate-x-0.5" />
                                         </div>
-                                        <div className="p-2 h-[160px] flex flex-col justify-center">
+                                        <div className="p-3">
                                             {vitals.length > 0 ? vitals.slice(0, 1).map((vital, idx) => (
-                                                <div key={idx} className="space-y-3">
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        <div className="bg-slate-50/50 rounded-lg p-2 border border-slate-100 text-center">
-                                                            <span className="text-[10px] text-slate-400 font-bold uppercase block leading-none mb-1">BP</span>
-                                                            <span className="text-base font-black text-slate-900 leading-none">{vital.bp || '—'}</span>
+                                                <div key={idx} className="space-y-2">
+                                                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                                        <div className="flex items-center justify-between border-b border-slate-50 pb-1">
+                                                            <span className="text-[10px] text-slate-400 font-bold">BP</span>
+                                                            <span className="text-xs font-bold text-slate-900">{vital.bp || '—'}</span>
                                                         </div>
-                                                        <div className="bg-slate-50/50 rounded-lg p-2 border border-slate-100 text-center">
-                                                            <span className="text-[10px] text-slate-400 font-bold uppercase block leading-none mb-1">HR</span>
-                                                            <span className="text-base font-black text-slate-900 leading-none">{vital.hr || '—'}</span>
+                                                        <div className="flex items-center justify-between border-b border-slate-50 pb-1">
+                                                            <span className="text-[10px] text-slate-400 font-bold">HR</span>
+                                                            <span className="text-xs font-bold text-slate-900">{vital.hr || '—'}</span>
                                                         </div>
-                                                        <div className="bg-emerald-50/30 rounded-lg p-2 border border-emerald-100/50 text-center">
-                                                            <span className="text-[10px] text-emerald-600 font-bold uppercase block leading-none mb-1">SpO2</span>
-                                                            <span className="text-base font-black text-emerald-700 leading-none">{vital.spo2 || '—'}<span className="text-[10px]">%</span></span>
+                                                        <div className="flex items-center justify-between border-b border-slate-50 pb-1">
+                                                            <span className="text-[10px] text-slate-400 font-bold">SpO2</span>
+                                                            <span className="text-xs font-bold text-slate-900">{vital.spo2 || '—'}%</span>
                                                         </div>
-                                                        <div className="bg-blue-50/30 rounded-lg p-2 border border-blue-100/50 text-center">
-                                                            <span className="text-[10px] text-blue-600 font-bold uppercase block leading-none mb-1">Temp</span>
-                                                            <span className="text-base font-black text-blue-700 leading-none">{vital.temp || '—'}<span className="text-[10px]">°</span></span>
+                                                        <div className="flex items-center justify-between border-b border-slate-50 pb-1">
+                                                            <span className="text-[10px] text-slate-400 font-bold">Temp</span>
+                                                            <span className="text-xs font-bold text-slate-900">{vital.temp || '—'}°F</span>
                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <div className="h-px bg-slate-100 flex-1"></div>
-                                                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">{new Date(vital.date).toLocaleDateString()}</p>
-                                                        <div className="h-px bg-slate-100 flex-1"></div>
-                                                    </div>
+                                                    <p className="text-[9px] text-slate-400 text-right font-medium italic mt-1">{new Date(vital.date).toLocaleDateString()} {vital.time}</p>
                                                 </div>
                                             )) : (
                                                 <p className="text-[10px] text-slate-400 text-center py-4 italic">No vitals recorded</p>

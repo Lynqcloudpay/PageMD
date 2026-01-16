@@ -496,9 +496,9 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                     <span>{formatDate(patient.dob)}</span>
                                 </div>
 
-                                {/* MRN Pill - Azure Blue */}
-                                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-600 text-white rounded-full text-[10px] font-black tracking-widest uppercase shadow-sm">
-                                    <span className="opacity-70">MRN:</span>
+                                {/* MRN Pill */}
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 text-white rounded-full text-[10px] font-black tracking-widest uppercase shadow-sm">
+                                    <span className="opacity-60">MRN:</span>
                                     <span>{patient.mrn}</span>
                                 </div>
 
