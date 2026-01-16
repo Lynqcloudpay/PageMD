@@ -1291,22 +1291,12 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 <Upload className="w-3 h-3" />
                             </button>
                             <div className="w-px h-6 bg-gray-300 mx-1"></div>
-                            {hasPrivilege('e_prescribe') && (
-                                <button
-                                    onClick={() => setShowEPrescribeEnhanced(true)}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-md transition-all duration-200 hover:shadow-md whitespace-nowrap"
-                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                                    title="Create New Prescription"
-                                >
-                                    <Pill className="w-3.5 h-3.5" />
-                                    <span>e-Prescribe</span>
-                                </button>
-                            )}
                             <button
                                 onClick={() => setShowPrintOrdersModal(true)}
-                                className="flex items-center gap-1 px-2.5 py-1 bg-white text-primary-600 hover:bg-primary-50 text-[11px] font-bold rounded-full border border-primary-200 transition-all"
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-md transition-all duration-200 hover:shadow-md whitespace-nowrap"
+                                style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
                                 title="Print Orders"
                             >
                                 <Printer className="w-3.5 h-3.5" />
