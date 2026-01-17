@@ -2,13 +2,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, Send, X, Loader2, Bot, User } from 'lucide-react';
 import Button from './ui/Button';
 import Card from './ui/Card';
+import { aiAPI } from '../services/api';
 
-// AI Assistant Component - Inspired by Epic's AI features and modern AI assistants
+// AI Assistant Component - Integrated with real LLM services
 const AIAssistant = ({ context, onInsert, onClose }) => {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "Hi! I'm your AI clinical assistant. I can help you with:\n• Generating clinical notes\n• Finding relevant dot phrases\n• Suggesting diagnoses\n• Answering clinical questions\n\nWhat would you like help with?",
+      content: "Hi! I'm your AI clinical assistant. I'm connected and ready to assist you with:\n• Generating clinical notes\n• Finding relevant dot phrases\n• Suggesting diagnoses\n• Answering clinical questions\n\nHow can I help you with this patient today?",
     },
   ]);
   const [input, setInput] = useState('');
@@ -22,35 +23,27 @@ const AIAssistant = ({ context, onInsert, onClose }) => {
   const handleSend = async () => {
     if (!input.trim() || loading) return;
 
+    const patientId = context?.patientId || context?.id;
+    if (!patientId) {
+      setMessages(prev => [...prev, { role: 'assistant', content: "Error: No patient context found. Please open a patient chart to use the assistant." }]);
+      return;
+    }
+
     const userMessage = { role: 'user', content: input };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setLoading(true);
 
-    // Simulate AI response (in production, this would call an AI API)
-    setTimeout(() => {
-      const aiResponse = generateAIResponse(input, context);
-      setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
+    try {
+      const response = await aiAPI.ask(patientId, input, context);
+      setMessages(prev => [...prev, { role: 'assistant', content: response.data.response }]);
+    } catch (error) {
+      console.error('AI Assistant Error:', error);
+      const errorMessage = error.response?.data?.message || "I encountered an error connecting to my core intelligence. Please check your connection or API configuration.";
+      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${errorMessage}` }]);
+    } finally {
       setLoading(false);
-    }, 1000);
-  };
-
-  const generateAIResponse = (userInput, context) => {
-    const lowerInput = userInput.toLowerCase();
-    
-    if (lowerInput.includes('note') || lowerInput.includes('document')) {
-      return `Based on the visit context, here's a suggested note structure:\n\n**HPI:** [Patient presents with...]\n\n**Assessment:** [Consider these diagnoses based on symptoms]\n\n**Plan:** [Recommended treatment plan]\n\nWould you like me to generate a full note?`;
     }
-    
-    if (lowerInput.includes('diagnosis') || lowerInput.includes('diagnose')) {
-      return `Based on the symptoms and findings, consider these diagnoses:\n\n1. Primary diagnosis: [Most likely]\n2. Differential diagnoses:\n   - [Alternative 1]\n   - [Alternative 2]\n\nWould you like ICD-10 codes for these?`;
-    }
-    
-    if (lowerInput.includes('dot phrase') || lowerInput.includes('template')) {
-      return `Here are relevant dot phrases for this visit:\n\n• .chest_pain - For chest pain evaluation\n• .hypertension_followup - For HTN follow-up\n• .diabetes_management - For diabetes care\n\nType the dot phrase (e.g., .chest_pain) to insert it.`;
-    }
-    
-    return `I understand you're asking about: "${userInput}".\n\nI can help you with:\n• Generating clinical documentation\n• Finding relevant templates\n• Suggesting treatment plans\n• Answering clinical questions\n\nCould you be more specific about what you need?`;
   };
 
   const handleInsert = (text) => {
@@ -86,26 +79,23 @@ const AIAssistant = ({ context, onInsert, onClose }) => {
           {messages.map((msg, idx) => (
             <div
               key={idx}
-              className={`flex items-start space-x-3 ${
-                msg.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''
-              }`}
+              className={`flex items-start space-x-3 ${msg.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''
+                }`}
             >
-              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                msg.role === 'user' 
-                  ? 'bg-primary-100 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
-                  : 'text-white'
-              }`}>
+              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${msg.role === 'user'
+                ? 'bg-primary-100 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
+                : 'text-white'
+                }`}>
                 {msg.role === 'user' ? (
                   <User className="w-4 h-4" />
                 ) : (
                   <Bot className="w-4 h-4" />
                 )}
               </div>
-              <div className={`flex-1 rounded-lg p-3 ${
-                msg.role === 'user'
-                  ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-900 dark:text-primary-100'
-                  : 'bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-neutral-100'
-              }`}>
+              <div className={`flex-1 rounded-lg p-3 ${msg.role === 'user'
+                ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-900 dark:text-primary-100'
+                : 'bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-neutral-100'
+                }`}>
                 <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                 {msg.role === 'assistant' && msg.content.includes('Would you like') && (
                   <Button
@@ -157,9 +147,14 @@ const AIAssistant = ({ context, onInsert, onClose }) => {
               Send
             </Button>
           </div>
-          <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-2">
-            Press Enter to send, Shift+Enter for new line
-          </p>
+          <div className="flex flex-col space-y-1 mt-2">
+            <p className="text-[10px] text-neutral-400 dark:text-neutral-500">
+              Press Enter to send, Shift+Enter for new line
+            </p>
+            <p className="text-[10px] items-center flex gap-1 font-bold text-amber-600 dark:text-amber-500 uppercase tracking-tighter">
+              <Bot className="w-3 h-3" /> Clinical Decision Support: AI responses must be reviewed by a licensed provider.
+            </p>
+          </div>
         </div>
       </div>
     </div>

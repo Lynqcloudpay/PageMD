@@ -599,5 +599,11 @@ export const qppAPI = {
   getGaps: (params) => api.get('/qpp/gaps', { params }),
 };
 
+// AI Assistant
+export const aiAPI = {
+  ask: (patientId, question, additionalContext) => api.post(`/ai/patient/${patientId}/ask`, { question, additionalContext }),
+  generateNote: (patientId, visitData) => api.post('/ai/note/generate', { patientId, visitData }),
+};
+
 export default api;
 

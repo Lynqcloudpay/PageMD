@@ -19,6 +19,7 @@ const ordersetRoutes = require('./routes/ordersets');
 const icd10HierarchyRoutes = require('./routes/icd10-hierarchy');
 const { resolveTenant } = require('./middleware/tenant');
 const flagService = require('./services/flagService');
+const aiRoutes = require('./routes/ai');
 
 const app = express();
 // Enable trust proxy for Caddy (reverse proxy) to pass correct IP steps
@@ -170,6 +171,7 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/referrals', referralRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/labs', labRoutes);
+app.use('/api/ai', aiRoutes);
 
 app.use('/api/icd10-hierarchy', icd10HierarchyRoutes);
 app.use('/api/ordersets', ordersetRoutes);
