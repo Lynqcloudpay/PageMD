@@ -37,7 +37,7 @@ const mipsAutoSyncService = {
 
             // Fetch all active clinical providers
             const providersRes = await pool.query(
-                "SELECT id FROM users WHERE role IN ('clinician', 'doctor', 'provider') AND is_active = true"
+                "SELECT id FROM users WHERE role IN ('clinician', 'doctor', 'provider') AND active = true"
             );
             const providerIds = providersRes.rows.map(r => r.id);
 

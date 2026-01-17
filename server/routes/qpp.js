@@ -4,13 +4,7 @@ const pool = require('../db');
 const { audit } = require('../services/auditService');
 const mipsComputationService = require('../services/mipsComputationService');
 
-// Middleware to ensure user is admin
-const isAdmin = (req, res, next) => {
-    if (req.user && (req.user.role === 'admin' || req.user.role === 'super_admin' || req.user.isAdmin)) {
-        return next();
-    }
-    return res.status(403).json({ error: 'Access denied. Admin required.' });
-};
+const { requireAdmin } = require('../middleware/authorization');
 
 // 1. Get Quality Measures Library
 router.get('/measures', async (req, res) => {
@@ -83,7 +77,7 @@ router.get('/scoreboard/:packId', async (req, res) => {
 });
 
 // 4. Submit Attestation
-router.post('/attest', isAdmin, async (req, res) => {
+router.post('/attest', requireAdmin, async (req, res) => {
     try {
         const { measureId, year, isAttested, notes, evidenceLinks } = req.body;
         const clinicId = req.user.tenantId || req.user.clinicId || '00000000-0000-0000-0000-000000000000'; // Fallback if no tenant context
@@ -119,7 +113,7 @@ router.post('/attest', isAdmin, async (req, res) => {
 });
 
 // 5. Trigger Computation
-router.post('/compute', isAdmin, async (req, res) => {
+router.post('/compute', requireAdmin, async (req, res) => {
     try {
         const { packId, providerId, year } = req.body;
 
@@ -128,7 +122,7 @@ router.post('/compute', isAdmin, async (req, res) => {
             providers = [providerId];
         } else {
             // Fetch all active clinical providers
-            const provRes = await pool.query("SELECT id FROM users WHERE role IN ('clinician', 'doctor', 'provider') AND is_active = true");
+            const provRes = await pool.query("SELECT id FROM users WHERE role IN ('clinician', 'doctor', 'provider') AND active = true");
             providers = provRes.rows.map(r => r.id);
         }
 
@@ -172,7 +166,7 @@ router.post('/compute', isAdmin, async (req, res) => {
 });
 
 // 6. Get Gap List (Patient Details)
-router.get('/gaps', isAdmin, async (req, res) => {
+router.get('/gaps', requireAdmin, async (req, res) => {
     try {
         const { measureId, status } = req.query;
         let query = `

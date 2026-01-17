@@ -5,10 +5,12 @@ import {
     ClipboardCheck, Activity, Search, ExternalLink, RefreshCcw, Loader2,
     CheckCircle, XCircle, Clock, FileText, User, Calendar
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { qppAPI } from '../services/api';
 import { showSuccess, showError } from '../utils/toast';
 
 const QualityAndMips = () => {
+    const navigate = useNavigate();
     const [performanceYear, setPerformanceYear] = useState(2026);
     const [activeTab, setActiveTab] = useState('scoreboard');
     const [selectedPackId, setSelectedPackId] = useState('');
@@ -487,7 +489,12 @@ const QualityAndMips = () => {
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <button className="text-blue-600 hover:text-blue-700 text-xs font-bold">Chart Review</button>
+                                                    <button
+                                                        onClick={() => navigate(`/patients?search=${row.chart_id || row.last_name}`)}
+                                                        className="text-blue-600 hover:text-blue-700 text-xs font-bold"
+                                                    >
+                                                        Chart Review
+                                                    </button>
                                                 </td>
                                             </tr>
                                         ))}
