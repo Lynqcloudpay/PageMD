@@ -154,6 +154,21 @@ const Snapshot = ({ showNotesOnly = false }) => {
         }
     };
 
+    const handleAcknowledgeFlag = async (flagId, e) => {
+        if (e) e.stopPropagation();
+        // Optimistic update
+        setActiveFlags(prev => prev.filter(f => f.id !== flagId));
+        try {
+            await patientFlagsAPI.resolve(flagId);
+            showSuccess('Flag acknowledged');
+            fetchFlags();
+        } catch (err) {
+            console.error('Error acknowledging flag:', err);
+            showError('Failed to acknowledge flag');
+            fetchFlags(); // Revert on error
+        }
+    };
+
     const handleSavePlan = async () => {
         if (!planOverride.trim() || !recentNotes[0]) return;
         try {
@@ -667,19 +682,48 @@ const Snapshot = ({ showNotesOnly = false }) => {
             return;
         }
 
+        // Optimistic update: Remove from UI immediately
+        setRecentNotes(prev => prev.filter(n => n.id !== noteId));
+        if (todayDraftVisit?.id === noteId) {
+            setTodayDraftVisit(null);
+        }
+
         try {
             await visitsAPI.delete(noteId);
             showSuccess('Note deleted successfully');
+            // Background refresh to ensure consistency
             refreshPatientData();
         } catch (error) {
             console.error('Error deleting note:', error);
-            // If the note was not found (404), it's effectively deleted, so we refresh anyway.
+            // If 404, it's already gone, essentially success
             if (error.response && error.response.status === 404) {
                 showSuccess('Note deleted successfully');
                 refreshPatientData();
             } else {
-                showError('Failed to delete note. Please try again.');
+                showError('Failed to delete note. Restoring...');
+                refreshPatientData(); // Revert state by re-fetching
             }
+        }
+    };
+
+    const handleAcknowledgeFlag = async (flagId, e) => {
+        if (e) {
+            e.stopPropagation();
+            e.preventDefault();
+        }
+
+        // Optimistic update: Remove from UI immediately
+        setActiveFlags(prev => prev.filter(flag => flag.id !== flagId));
+
+        try {
+            await patientFlagsAPI.acknowledge(flagId); // Assuming an API call to acknowledge the flag
+            showSuccess('Alert acknowledged successfully');
+            // No need to refreshPatientData here, as the optimistic update already removed it.
+            // If there's a backend error, refreshPatientData will bring it back.
+        } catch (error) {
+            console.error('Error acknowledging flag:', error);
+            showError('Failed to acknowledge alert. Restoring...');
+            refreshPatientData(); // Revert state by re-fetching
         }
     };
 
@@ -1586,34 +1630,37 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     {/* Clinical Alerts Banner - High Visibility Inline version */}
                                     {activeFlags.length > 0 && (
                                         <div className="space-y-1.5">
-                                            {activeFlags.map(flag => (
-                                                <div key={flag.id} className="bg-white border-l-4 border-l-rose-500 border-y border-r border-rose-100 rounded-lg p-2.5 flex items-center justify-between shadow-sm hover:shadow-md transition-all animate-in slide-in-from-top-2">
-                                                    <div className="flex items-center gap-2.5">
-                                                        <div className="p-1 px-2 bg-rose-500 text-white rounded text-[8px] font-bold uppercase tracking-widest">
-                                                            Alert
-                                                        </div>
-                                                        <div className="flex flex-col text-left">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-[11px] font-bold text-rose-900 uppercase tracking-tight">{flag.display_label}</span>
-                                                                <span className="w-1 h-1 rounded-full bg-slate-200" />
-                                                                <span className="text-[10px] text-slate-500 font-medium">{flag.severity || 'Medium Severity'}</span>
+                                            {activeFlags.map(flag => {
+                                                const isReminder = flag.flag_type === 'Clinical Reminder' || flag.display_label === 'REMINDER';
+                                                const baseColor = isReminder ? 'blue' : 'rose';
+
+                                                return (
+                                                    <div key={flag.id} className={`bg-white border-l-4 border-l-${baseColor}-500 border-y border-r border-${baseColor}-100 rounded-lg p-2.5 flex items-center justify-between shadow-sm hover:shadow-md transition-all animate-in slide-in-from-top-2`}>
+                                                        <div className="flex items-center gap-2.5">
+                                                            <div className={`p-1 px-2 bg-${baseColor}-500 text-white rounded text-[8px] font-bold uppercase tracking-widest`}>
+                                                                {isReminder ? 'Reminder' : 'Alert'}
                                                             </div>
-                                                            {flag.note && <p className="text-[10px] text-slate-600 font-medium mt-0.5">{flag.note}</p>}
+                                                            <div className="flex flex-col text-left">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className={`text-[11px] font-bold text-${baseColor}-900 uppercase tracking-tight`}>{flag.display_label || (isReminder ? 'Clinical Reminder' : 'Medical Alert')}</span>
+                                                                    <span className="w-1 h-1 rounded-full bg-slate-200" />
+                                                                    <span className="text-[10px] text-slate-500 font-medium">{flag.severity || 'Medium Severity'}</span>
+                                                                </div>
+                                                                {flag.note && <p className="text-[10px] text-slate-600 font-medium mt-0.5">{flag.note}</p>}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-3">
+                                                            <button
+                                                                onClick={(e) => handleAcknowledgeFlag(flag.id, e)}
+                                                                className="p-1 hover:bg-slate-100 rounded text-slate-300 hover:text-slate-500 transition-colors"
+                                                                title="Dismiss"
+                                                            >
+                                                                <X className="w-3.5 h-3.5" />
+                                                            </button>
                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center gap-3">
-                                                        <button className="text-[9px] font-bold text-rose-400 hover:text-rose-600 uppercase tracking-widest transition-colors mr-2">
-                                                            Acknowledge
-                                                        </button>
-                                                        <button
-                                                            onClick={refreshPatientData}
-                                                            className="p-1 hover:bg-slate-100 rounded text-slate-300 transition-colors"
-                                                        >
-                                                            <X className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                )
+                                            })}
                                         </div>
                                     )}
 
@@ -1668,29 +1715,13 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
                                                     >
                                                         <defs>
-                                                            {/* Tron-like Light Mode Filters */}
-                                                            <filter id="tronGlowSys" x="-50%" y="-50%" width="200%" height="200%">
-                                                                <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-                                                                <feMerge>
-                                                                    <feMergeNode in="coloredBlur" />
-                                                                    <feMergeNode in="SourceGraphic" />
-                                                                </feMerge>
-                                                            </filter>
-                                                            <filter id="tronGlowHr" x="-50%" y="-50%" width="200%" height="200%">
-                                                                <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-                                                                <feMerge>
-                                                                    <feMergeNode in="coloredBlur" />
-                                                                    <feMergeNode in="SourceGraphic" />
-                                                                </feMerge>
-                                                            </filter>
-                                                            {/* Tron Gradients */}
-                                                            <linearGradient id="tronSysGradient" x1="0" y1="0" x2="0" y2="1">
-                                                                <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.2} />
-                                                                <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
+                                                            <linearGradient id="gradientSys" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
+                                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                                                             </linearGradient>
-                                                            <linearGradient id="tronHrGradient" x1="0" y1="0" x2="0" y2="1">
-                                                                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.2} />
-                                                                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.0} />
+                                                            <linearGradient id="gradientHr" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="5%" stopColor="#ec4899" stopOpacity={0.2} />
+                                                                <stop offset="95%" stopColor="#ec4899" stopOpacity={0} />
                                                             </linearGradient>
                                                         </defs>
                                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -1739,45 +1770,24 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         <Area
                                                             type="monotone"
                                                             dataKey="sys"
-                                                            stroke="none"
-                                                            fill="url(#neonBp)"
-                                                            connectNulls
-                                                        />
-                                                        <Area
-                                                            type="monotone"
-                                                            dataKey="sys"
-                                                            stroke="none"
-                                                            fill="url(#tronSysGradient)"
-                                                            connectNulls
-                                                        />
-                                                        <Area
-                                                            type="monotone"
-                                                            dataKey="hr"
-                                                            stroke="none"
-                                                            fill="url(#tronHrGradient)"
-                                                            connectNulls
-                                                        />
-                                                        <Line
-                                                            type="monotone"
-                                                            dataKey="sys"
                                                             name="Systolic"
-                                                            stroke="#06b6d4"
+                                                            stroke="#3b82f6"
                                                             strokeWidth={3}
-                                                            dot={{ r: 4, fill: '#06b6d4', strokeWidth: 2, stroke: '#fff' }}
-                                                            activeDot={{ r: 6, strokeWidth: 0, fill: '#06b6d4' }}
+                                                            fill="url(#gradientSys)"
+                                                            dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
+                                                            activeDot={{ r: 6, strokeWidth: 0, fill: '#3b82f6' }}
                                                             connectNulls
-                                                            filter="url(#tronGlowSys)"
                                                         />
-                                                        <Line
+                                                        <Area
                                                             type="monotone"
                                                             dataKey="hr"
                                                             name="Heart Rate"
-                                                            stroke="#8b5cf6"
+                                                            stroke="#ec4899"
                                                             strokeWidth={3}
-                                                            dot={{ r: 4, fill: '#8b5cf6', strokeWidth: 2, stroke: '#fff' }}
-                                                            activeDot={{ r: 6, strokeWidth: 0, fill: '#8b5cf6' }}
+                                                            fill="url(#gradientHr)"
+                                                            dot={{ r: 4, fill: '#ec4899', strokeWidth: 2, stroke: '#fff' }}
+                                                            activeDot={{ r: 6, strokeWidth: 0, fill: '#ec4899' }}
                                                             connectNulls
-                                                            filter="url(#tronGlowHr)"
                                                         />
                                                     </LineChart>
                                                 </ResponsiveContainer>
