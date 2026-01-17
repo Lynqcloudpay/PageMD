@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
-import { Plus, X, FileText, Video, Calendar, User, MessageSquare, Sparkles, Mic } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Plus, X, FileText, Video, Calendar, User, MessageSquare, Sparkles, Mic, HelpCircle } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
 import AIAssistant from './AIAssistant';
 import VoiceRecorder from './VoiceRecorder';
 
-const FloatingActionButton = ({ context }) => {
+const FloatingActionButton = ({ context, onHelp }) => {
   const navigate = useNavigate();
+  const params = useParams(); // Get params for context fallback
   const [isOpen, setIsOpen] = useState(false);
   const [showAI, setShowAI] = useState(false);
   const [showVoice, setShowVoice] = useState(false);
+
+  // Derive context from params if not provided
+  const activeContext = context || (params.id ? { patientId: params.id } : null);
 
   const actions = [
     { icon: User, label: 'New Patient', action: () => navigate('/patients'), bgColor: 'bg-primary-100 dark:bg-primary-900/20', textColor: 'text-primary-600 dark:text-primary-400' },
@@ -18,6 +22,7 @@ const FloatingActionButton = ({ context }) => {
     { icon: MessageSquare, label: 'New Message', action: () => navigate('/messages'), bgColor: 'bg-primary-100 dark:bg-primary-900/20', textColor: 'text-primary-600 dark:text-primary-400' },
     { icon: Sparkles, label: 'AI Assistant', action: () => setShowAI(true), bgColor: 'bg-warning-100 dark:bg-warning-900/20', textColor: 'text-warning-600 dark:text-warning-400' },
     { icon: Mic, label: 'Voice Record', action: () => setShowVoice(true), bgColor: 'bg-error-100 dark:bg-error-900/20', textColor: 'text-error-600 dark:text-error-400' },
+    { icon: HelpCircle, label: 'Get Help', action: () => onHelp && onHelp(), bgColor: 'bg-blue-100 dark:bg-blue-900/20', textColor: 'text-blue-600 dark:text-blue-400' },
   ];
 
   return (
@@ -54,14 +59,13 @@ const FloatingActionButton = ({ context }) => {
         {/* Main FAB */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`w-14 h-14 rounded-full text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center active-scale ${
-            isOpen ? 'rotate-45' : 'rotate-0'
-          }`}
+          className={`w-14 h-14 rounded-full text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center active-scale ${isOpen ? 'rotate-45' : 'rotate-0'
+            }`}
           style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
           onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
           onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
           aria-label="Quick actions"
-          style={{ 
+          style={{
             boxShadow: '0 10px 25px -5px rgba(37, 99, 235, 0.4), 0 8px 10px -6px rgba(37, 99, 235, 0.4)'
           }}
         >
@@ -76,7 +80,7 @@ const FloatingActionButton = ({ context }) => {
       {/* AI Assistant Modal */}
       {showAI && (
         <AIAssistant
-          context={context}
+          context={activeContext}
           onInsert={(text) => {
             // Handle text insertion
             console.log('Insert:', text);

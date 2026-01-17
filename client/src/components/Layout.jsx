@@ -17,6 +17,7 @@ import PatientTabs from './PatientTabs';
 import MobileMenu from './MobileMenu';
 import SupportModal from './SupportModal';
 import BreakTheGlassModal from './BreakTheGlassModal';
+import FloatingActionButton from './FloatingActionButton';
 
 const Layout = ({ children }) => {
     const location = useLocation();
@@ -592,14 +593,8 @@ const Layout = ({ children }) => {
                 </div>
             </main>
 
-            {/* Floating Help Button */}
-            <button
-                onClick={() => setShowSupportModal(true)}
-                className="fixed bottom-4 right-4 w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all z-50 flex items-center justify-center group opacity-70 hover:opacity-100"
-                title="Report an Issue (Shift+?)"
-            >
-                <HelpCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
-            </button>
+            {/* Floating Action Button (includes AI, Voice, and Help) */}
+            <FloatingActionButton onHelp={() => setShowSupportModal(true)} />
 
             {/* Support Modal */}
             <SupportModal isOpen={showSupportModal} onClose={() => setShowSupportModal(false)} />
