@@ -1676,11 +1676,13 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         data={[...vitals]
                                                             .filter(v => (v.bp && v.bp !== 'N/A') || (v.hr && v.hr !== 'N/A'))
                                                             .reverse()
-                                                            .map(v => {
+                                                            .map((v, idx) => {
                                                                 const sys = parseInt(v.bp?.split('/')[0]) || null;
                                                                 const dia = parseInt(v.bp?.split('/')[1]) || null;
                                                                 const hr = parseInt(v.hr) || null;
                                                                 return {
+                                                                    // Using a complex key to ensure uniqueness for Recharts indexing
+                                                                    key: `${v.date}-${idx}-${sys}`,
                                                                     name: v.date === 'Today (Draft)' ? 'Today' : v.date,
                                                                     sys: sys,
                                                                     dia: dia,
@@ -1691,22 +1693,35 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
                                                     >
                                                         <defs>
-                                                            <linearGradient id="gradientSys" x1="0" y1="0" x2="0" y2="1">
-                                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
-                                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                                            {/* Picture 3 Style Multi-layered Gradients */}
+                                                            <linearGradient id="gradientSysMain" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.15} />
+                                                                <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
                                                             </linearGradient>
-                                                            <linearGradient id="gradientHr" x1="0" y1="0" x2="0" y2="1">
-                                                                <stop offset="5%" stopColor="#ec4899" stopOpacity={0.2} />
-                                                                <stop offset="95%" stopColor="#ec4899" stopOpacity={0} />
+                                                            <linearGradient id="gradientSysGlow" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="0%" stopColor="#2563eb" stopOpacity={0.08} />
+                                                                <stop offset="100%" stopColor="#2563eb" stopOpacity={0} />
+                                                            </linearGradient>
+                                                            <linearGradient id="gradientHrMain" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="0%" stopColor="#ec4899" stopOpacity={0.12} />
+                                                                <stop offset="100%" stopColor="#ec4899" stopOpacity={0} />
                                                             </linearGradient>
                                                         </defs>
                                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                                         <XAxis
-                                                            dataKey="name"
+                                                            dataKey="key"
                                                             axisLine={false}
                                                             tickLine={false}
-                                                            tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: '500' }}
-                                                            dy={10}
+                                                            tick={(props) => {
+                                                                const { x, y, payload } = props;
+                                                                // Extract the original date from our composite key
+                                                                const date = payload.value.split('-')[0];
+                                                                return (
+                                                                    <text x={x} y={y + 15} textAnchor="middle" fontSize={9} fill="#94a3b8" fontWeight="500">
+                                                                        {date}
+                                                                    </text>
+                                                                );
+                                                            }}
                                                         />
                                                         <YAxis
                                                             axisLine={false}
@@ -1718,23 +1733,27 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         <Tooltip
                                                             content={({ active, payload, label }) => {
                                                                 if (active && payload && payload.length) {
+                                                                    const sysVal = payload.find(p => p.dataKey === 'sys')?.value;
+                                                                    const hrVal = payload.find(p => p.dataKey === 'hr')?.value;
+                                                                    const dateLabel = label ? label.split('-')[0] : '';
+
                                                                     return (
                                                                         <div className="bg-white/95 backdrop-blur-xl border border-slate-100 shadow-2xl rounded-2xl p-4 ring-1 ring-slate-950/5">
-                                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-50 pb-2">{label}</p>
+                                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-50 pb-2">{dateLabel}</p>
                                                                             <div className="space-y-2.5">
                                                                                 <div className="flex items-center justify-between gap-8">
                                                                                     <div className="flex items-center gap-2">
                                                                                         <div className="w-2 h-2 rounded-full bg-blue-500" />
                                                                                         <span className="text-[11px] font-semibold text-slate-600">BP Systolic</span>
                                                                                     </div>
-                                                                                    <span className="text-[13px] font-bold text-blue-700">{payload[0].value} <small className="text-[9px] text-blue-400 font-medium">mmHg</small></span>
+                                                                                    <span className="text-[13px] font-bold text-blue-700">{sysVal || '--'} <small className="text-[9px] text-blue-400 font-medium">mmHg</small></span>
                                                                                 </div>
                                                                                 <div className="flex items-center justify-between gap-8">
                                                                                     <div className="flex items-center gap-2">
                                                                                         <div className="w-2 h-2 rounded-full bg-rose-500" />
                                                                                         <span className="text-[11px] font-semibold text-slate-600">Heart Rate</span>
                                                                                     </div>
-                                                                                    <span className="text-[13px] font-bold text-rose-700">{payload[1]?.value || '--'} <small className="text-[9px] text-rose-400 font-medium">bpm</small></span>
+                                                                                    <span className="text-[13px] font-bold text-rose-700">{hrVal || '--'} <small className="text-[9px] text-rose-400 font-medium">bpm</small></span>
                                                                                 </div>
                                                                             </div>
                                                                         </div>
@@ -1743,16 +1762,27 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                 return null;
                                                             }}
                                                         />
+                                                        {/* Picture 3 Aesthetic Layers */}
                                                         <Area
                                                             type="monotone"
                                                             dataKey="sys"
-                                                            name="Systolic"
                                                             stroke="#3b82f6"
-                                                            strokeWidth={3}
-                                                            fill="url(#gradientSys)"
+                                                            strokeWidth={4}
+                                                            fill="url(#gradientSysMain)"
                                                             dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
-                                                            activeDot={{ r: 6, strokeWidth: 0, fill: '#3b82f6' }}
+                                                            activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff', fill: '#3b82f6' }}
                                                             connectNulls
+                                                            isAnimationActive={false}
+                                                        />
+                                                        <Area
+                                                            type="natural"
+                                                            dataKey="sys"
+                                                            stroke="#60a5fa"
+                                                            strokeWidth={1}
+                                                            strokeOpacity={0.4}
+                                                            fill="url(#gradientSysGlow)"
+                                                            connectNulls
+                                                            isAnimationActive={false}
                                                         />
                                                         <Area
                                                             type="monotone"
@@ -1760,10 +1790,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             name="Heart Rate"
                                                             stroke="#ec4899"
                                                             strokeWidth={3}
-                                                            fill="url(#gradientHr)"
+                                                            fill="url(#gradientHrMain)"
                                                             dot={{ r: 4, fill: '#ec4899', strokeWidth: 2, stroke: '#fff' }}
-                                                            activeDot={{ r: 6, strokeWidth: 0, fill: '#ec4899' }}
+                                                            activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff', fill: '#ec4899' }}
                                                             connectNulls
+                                                            isAnimationActive={false}
                                                         />
                                                     </AreaChart>
                                                 </ResponsiveContainer>
