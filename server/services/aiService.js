@@ -27,6 +27,33 @@ const AI_MODEL = process.env.AI_MODEL || (AI_PROVIDER === 'openai' ? 'gpt-4-turb
  * @param {Object} additionalContext - Optional UI-provided context (e.g. current draft note)
  * @returns {Promise<string>} AI Response
  */
+/**
+ * Supported Tools Definition
+ */
+const TOOLS = [
+    {
+        type: 'function',
+        function: {
+            name: 'schedule_appointment',
+            description: 'Schedule a new appointment for the patient.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    date: { type: 'string', description: 'Date of appointment (YYYY-MM-DD)' },
+                    time: { type: 'string', description: 'Time of appointment (HH:MM)' },
+                    duration: { type: 'integer', description: 'Duration in minutes (default 30)' },
+                    type: { type: 'string', description: 'Type of appointment (e.g., Follow-up, New Patient, Telehealth)' },
+                    notes: { type: 'string', description: 'Reason for visit or notes' }
+                },
+                required: ['date', 'time']
+            }
+        }
+    }
+];
+
+/**
+ * Main function to ask the AI a clinical question about a patient or perform actions
+ */
 async function askAssistant(userId, patientId, question, additionalContext = {}) {
     try {
         // 1. Gather Clinical context
@@ -36,22 +63,123 @@ async function askAssistant(userId, patientId, question, additionalContext = {})
         const systemPrompt = buildSystemPrompt(context);
 
         // 3. Build the user prompt
-        const userPrompt = `Context: ${JSON.stringify(additionalContext)}\n\nQuestion: ${question}`;
+        const userPrompt = `Context: ${JSON.stringify(additionalContext)}\n\nUser Request: ${question}`;
 
-        // 4. Call LLM
-        let response;
+        // 4. Call LLM with Tools
         if (AI_PROVIDER === 'openai') {
-            response = await callOpenAI(systemPrompt, userPrompt);
-        } else if (AI_PROVIDER === 'anthropic') {
-            response = await callAnthropic(systemPrompt, userPrompt);
+            return await runOpenAIAgentLoop(userId, patientId, systemPrompt, userPrompt);
         } else {
+            // Fallback for providers without tool support yet
+            // (Anthropic also supports tools, but implementing OpenAI first for speed)
+            if (AI_PROVIDER === 'anthropic') {
+                return await callAnthropic(systemPrompt, userPrompt);
+            }
             throw new Error('Unsupported AI Provider');
         }
-
-        return response;
     } catch (error) {
         console.error('AI Assistant Service Error:', error);
         throw error;
+    }
+}
+
+/**
+ * OpenAI Agent Loop - Handles reasoning, tool execution, and final response
+ */
+async function runOpenAIAgentLoop(userId, patientId, systemPrompt, userPrompt) {
+    if (!OPENAI_API_KEY) throw new Error('OpenAI API Key not configured');
+
+    let messages = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+    ];
+
+    // Step 1: Initial Call
+    const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+        model: AI_MODEL,
+        messages: messages,
+        tools: TOOLS,
+        tool_choice: 'auto',
+        temperature: 0.1
+    }, {
+        headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' }
+    });
+
+    const responseMessage = response.data.choices[0].message;
+
+    // Step 2: Check for Tool Calls
+    if (responseMessage.tool_calls) {
+        messages.push(responseMessage); // Add assistant's tool call request to history
+
+        // Execute each tool call
+        for (const toolCall of responseMessage.tool_calls) {
+            const functionName = toolCall.function.name;
+            const functionArgs = JSON.parse(toolCall.function.arguments);
+
+            let toolOutput;
+            if (functionName === 'schedule_appointment') {
+                toolOutput = await scheduleAppointmentTool(userId, patientId, functionArgs);
+            } else {
+                toolOutput = JSON.stringify({ error: "Unknown tool" });
+            }
+
+            messages.push({
+                tool_call_id: toolCall.id,
+                role: 'tool',
+                name: functionName,
+                content: toolOutput
+            });
+        }
+
+        // Step 3: Follow-up Call (LLM interprets tool output)
+        const secondResponse = await axios.post('https://api.openai.com/v1/chat/completions', {
+            model: AI_MODEL,
+            messages: messages
+        }, {
+            headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' }
+        });
+
+        return secondResponse.data.choices[0].message.content;
+    }
+
+    return responseMessage.content;
+}
+
+/**
+ * Tool: Schedule Appointment
+ */
+async function scheduleAppointmentTool(userId, patientId, args) {
+    try {
+        const { date, time, duration = 30, type = 'Follow-up', notes } = args;
+
+        // Validation
+        if (!date || !time) return JSON.stringify({ error: "Date and time are required." });
+
+        // Basic conflict check (simplified for AI agent)
+        const check = await pool.query(
+            `SELECT count(*) FROM appointments WHERE provider_id = $1 AND appointment_date = $2 AND appointment_time = $3`,
+            [userId, date, time]
+        );
+
+        if (parseInt(check.rows[0].count) >= 2) {
+            return JSON.stringify({ error: "Time slot is full (max 2 appointments). Please pick another time." });
+        }
+
+        // Create appointment
+        const result = await pool.query(
+            `INSERT INTO appointments (patient_id, provider_id, appointment_date, appointment_time, duration, appointment_type, notes, created_by, clinic_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, (SELECT clinic_id FROM users WHERE id = $8)) RETURNING id`,
+            [patientId, userId, date, time, duration, type, notes, userId]
+        );
+
+        return JSON.stringify({
+            success: true,
+            message: `Appointment scheduled successfully for ${date} at ${time}.`,
+            appointmentId: result.rows[0].id
+        });
+
+    } catch (dbError) {
+        console.error("Tool Execution Error:", dbError);
+        return JSON.stringify({ error: "Database error while scheduling.", details: dbError.message });
     }
 }
 
@@ -93,8 +221,8 @@ async function gatherPatientContext(patientId) {
         const allergiesRes = await pool.query('SELECT * FROM patient_allergies WHERE patient_id = $1', [patientId]);
         context.allergies = allergiesRes.rows.map(r => r.allergen);
 
-        // Recent Vitals
-        const vitalsRes = await pool.query('SELECT * FROM vitals WHERE patient_id = $1 ORDER BY recorded_at DESC LIMIT 3', [patientId]);
+        // Recent Vitals (Extended history for trending)
+        const vitalsRes = await pool.query('SELECT * FROM vitals WHERE patient_id = $1 ORDER BY recorded_at DESC LIMIT 50', [patientId]);
         context.vitals = vitalsRes.rows;
 
         return context;
