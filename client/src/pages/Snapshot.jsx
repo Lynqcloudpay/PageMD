@@ -1616,11 +1616,13 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     {activeFlags.length > 0 && (
                                         <div className="space-y-1.5">
                                             {activeFlags.map(flag => {
-                                                const isReminder = flag.flag_type === 'Clinical Reminder' || flag.display_label === 'REMINDER';
+                                                const flagLabel = (flag.display_label || '').toUpperCase();
+                                                const flagType = (flag.flag_type || '').toUpperCase();
+                                                const isReminder = flagLabel.includes('REMINDER') || flagType.includes('REMINDER');
                                                 const baseColor = isReminder ? 'blue' : 'rose';
 
                                                 return (
-                                                    <div key={flag.id} className={`bg-white border-l-4 border-l-${baseColor}-500 border-y border-r border-${baseColor}-100 rounded-lg p-2.5 flex items-center shadow-sm hover:shadow-md transition-all animate-in slide-in-from-top-2`}>
+                                                    <div key={flag.id} className={`bg-white border-l-4 border-l-${baseColor}-500 border-y border-r border-${baseColor}-100 rounded-lg p-2.5 flex items-center justify-between shadow-sm hover:shadow-md transition-all group/flag animate-in slide-in-from-top-2`}>
                                                         <div className="flex items-center gap-2.5">
                                                             <div className={`p-1 px-2 bg-${baseColor}-500 text-white rounded text-[8px] font-bold uppercase tracking-widest`}>
                                                                 {isReminder ? 'Reminder' : 'Alert'}
@@ -1634,6 +1636,14 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                 {flag.note && <p className="text-[10px] text-slate-600 font-medium mt-0.5">{flag.note}</p>}
                                                             </div>
                                                         </div>
+                                                        {isReminder && (
+                                                            <button
+                                                                onClick={(e) => handleAcknowledgeFlag(flag.id, e)}
+                                                                className="opacity-0 group-hover/flag:opacity-100 transition-opacity px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg text-[10px] font-bold uppercase border border-blue-100 shadow-sm"
+                                                            >
+                                                                Complete
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 );
                                             })}
@@ -1771,16 +1781,6 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             fill="url(#gradientSysMain)"
                                                             dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
                                                             activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff', fill: '#3b82f6' }}
-                                                            connectNulls
-                                                            isAnimationActive={false}
-                                                        />
-                                                        <Area
-                                                            type="natural"
-                                                            dataKey="sys"
-                                                            stroke="#60a5fa"
-                                                            strokeWidth={1}
-                                                            strokeOpacity={0.4}
-                                                            fill="url(#gradientSysGlow)"
                                                             connectNulls
                                                             isAnimationActive={false}
                                                         />
