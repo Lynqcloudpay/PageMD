@@ -1621,19 +1621,27 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </div>
                                         </div>
 
-                                        <div className="h-48 w-full relative z-10">
-                                            {vitals.filter(v => v.bp !== 'N/A' || v.hr !== 'N/A').length > 0 ? (
+                                        <div className="h-56 w-full relative z-10">
+                                            {vitals.filter(v => (v.bp && v.bp !== 'N/A') || (v.hr && v.hr !== 'N/A')).length > 0 ? (
                                                 <ResponsiveContainer width="100%" height="100%">
-                                                    <AreaChart data={[...vitals].reverse().map(v => {
-                                                        const sys = parseInt(v.bp?.split('/')[0]) || null;
-                                                        const hr = parseInt(v.hr) || null;
-                                                        return {
-                                                            name: v.date === 'Today (Draft)' ? 'Today' : v.date,
-                                                            bp: sys,
-                                                            hr: hr,
-                                                            fullBp: v.bp
-                                                        };
-                                                    })} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                                    <LineChart
+                                                        data={[...vitals]
+                                                            .filter(v => (v.bp && v.bp !== 'N/A') || (v.hr && v.hr !== 'N/A'))
+                                                            .reverse()
+                                                            .map(v => {
+                                                                const sys = parseInt(v.bp?.split('/')[0]) || null;
+                                                                const dia = parseInt(v.bp?.split('/')[1]) || null;
+                                                                const hr = parseInt(v.hr) || null;
+                                                                return {
+                                                                    name: v.date === 'Today (Draft)' ? 'Today' : v.date,
+                                                                    sys: sys,
+                                                                    dia: dia,
+                                                                    hr: hr,
+                                                                    fullBp: v.bp
+                                                                };
+                                                            })}
+                                                        margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
+                                                    >
                                                         <defs>
                                                             <linearGradient id="colorBp" x1="0" y1="0" x2="0" y2="1">
                                                                 <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />
@@ -1644,18 +1652,20 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                 <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
                                                             </linearGradient>
                                                         </defs>
-                                                        <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f1f5f9" />
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                                         <XAxis
                                                             dataKey="name"
                                                             axisLine={false}
                                                             tickLine={false}
-                                                            tick={{ fontSize: 9, fill: '#64748b', fontWeight: 'bold' }}
+                                                            tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: '500' }}
+                                                            dy={10}
                                                         />
                                                         <YAxis
                                                             axisLine={false}
                                                             tickLine={false}
-                                                            tick={{ fontSize: 9, fill: '#64748b', fontWeight: 'bold' }}
-                                                            domain={['dataMin - 10', 'dataMax + 10']}
+                                                            tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: '500' }}
+                                                            domain={['auto', 'auto']}
+                                                            dx={-5}
                                                         />
                                                         <Tooltip
                                                             content={({ active, payload, label }) => {
@@ -1685,29 +1695,27 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                 return null;
                                                             }}
                                                         />
-                                                        <Area
+                                                        <Line
                                                             type="monotone"
-                                                            dataKey="bp"
+                                                            dataKey="sys"
                                                             name="Systolic"
                                                             stroke="#3b82f6"
-                                                            strokeWidth={4}
-                                                            fillOpacity={1}
-                                                            fill="url(#colorBp)"
-                                                            dot={{ r: 5, fill: '#3b82f6', strokeWidth: 3, stroke: '#fff' }}
-                                                            activeDot={{ r: 8, strokeWidth: 0 }}
+                                                            strokeWidth={3}
+                                                            dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
+                                                            activeDot={{ r: 6, strokeWidth: 0 }}
+                                                            connectNulls
                                                         />
-                                                        <Area
+                                                        <Line
                                                             type="monotone"
                                                             dataKey="hr"
                                                             name="Heart Rate"
                                                             stroke="#f43f5e"
-                                                            strokeWidth={4}
-                                                            fillOpacity={1}
-                                                            fill="url(#colorHr)"
-                                                            dot={{ r: 5, fill: '#f43f5e', strokeWidth: 3, stroke: '#fff' }}
-                                                            activeDot={{ r: 8, strokeWidth: 0 }}
+                                                            strokeWidth={3}
+                                                            dot={{ r: 4, fill: '#f43f5e', strokeWidth: 2, stroke: '#fff' }}
+                                                            activeDot={{ r: 6, strokeWidth: 0 }}
+                                                            connectNulls
                                                         />
-                                                    </AreaChart>
+                                                    </LineChart>
                                                 </ResponsiveContainer>
                                             ) : (
                                                 <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
@@ -1726,23 +1734,23 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-blue-200 transition-colors">
                                             <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
+                                                    <div className="p-1.5 bg-blue-50 text-blue-500 rounded-lg">
                                                         <Pill className="w-3.5 h-3.5" />
                                                     </div>
-                                                    <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wide">Active Medications</h3>
+                                                    <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-widest">Active Medications</h3>
                                                 </div>
-                                                <button onClick={() => { setPatientChartTab('medications'); setShowPatientChart(true); }} className="px-2 py-1 bg-white text-[9px] text-blue-600 font-black uppercase border border-blue-100 rounded-lg shadow-sm hover:bg-blue-50 transition-all">Manage All</button>
+                                                <button onClick={() => { setPatientChartTab('medications'); setShowPatientChart(true); }} className="px-2 py-1 bg-white text-[9px] text-blue-500 font-bold uppercase border border-blue-100 rounded-lg shadow-sm hover:bg-blue-50 transition-all">Manage All</button>
                                             </div>
                                             <div className="p-3">
                                                 {(medications || []).filter(m => m.active !== false).length > 0 ? (
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                                         {(medications || []).filter(m => m.active !== false).slice(0, 8).map(med => (
-                                                            <div key={med.id} className="p-3 border border-slate-100 rounded-xl bg-slate-50/30 hover:bg-white hover:border-blue-100 hover:shadow-sm transition-all group">
+                                                            <div key={med.id} className="p-3 border border-slate-100 rounded-xl bg-slate-50/20 hover:bg-white hover:border-blue-100 hover:shadow-sm transition-all group">
                                                                 <div className="flex items-center gap-2 mb-1">
                                                                     <div className="w-1.5 h-1.5 rounded-full bg-blue-400 group-hover:scale-125 transition-transform" />
-                                                                    <p className="font-black text-[11px] text-slate-900 truncate">{decodeHtmlEntities(med.medication_name)}</p>
+                                                                    <p className="font-bold text-[11px] text-slate-900 truncate">{decodeHtmlEntities(med.medication_name)}</p>
                                                                 </div>
-                                                                <p className="text-[10px] text-slate-500 font-bold ml-3.5">{med.dosage} • {med.frequency}</p>
+                                                                <p className="text-[10px] text-slate-500 font-semibold ml-3.5">{med.dosage} • {med.frequency}</p>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -1759,20 +1767,20 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-rose-200 transition-colors">
                                             <div className="px-4 py-3 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="p-1.5 bg-rose-100 text-rose-600 rounded-lg">
+                                                    <div className="p-1.5 bg-rose-50 text-rose-500 rounded-lg">
                                                         <AlertCircle className="w-3.5 h-3.5" />
                                                     </div>
-                                                    <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wide">Problem List</h3>
+                                                    <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-widest">Problem List</h3>
                                                 </div>
-                                                <button onClick={() => { setPatientChartTab('problems'); setShowPatientChart(true); }} className="px-2 py-1 bg-white text-[9px] text-rose-600 font-black uppercase border border-rose-100 rounded-lg shadow-sm hover:bg-rose-50 transition-all">Edit List</button>
+                                                <button onClick={() => { setPatientChartTab('problems'); setShowPatientChart(true); }} className="px-2 py-1 bg-white text-[9px] text-rose-500 font-bold uppercase border border-rose-100 rounded-lg shadow-sm hover:bg-rose-50 transition-all">Edit List</button>
                                             </div>
                                             <div className="p-3">
                                                 {(problems || []).length > 0 ? (
                                                     <div className="space-y-1.5">
                                                         {(problems || []).slice(0, 6).map(prob => (
                                                             <div key={prob.id} className="flex justify-between items-center p-2 rounded-lg bg-slate-50/50 border border-slate-100/50 hover:bg-white hover:border-rose-100 transition-all group">
-                                                                <span className="text-[11px] font-black text-slate-800 truncate mr-2">{prob.name}</span>
-                                                                <span className="text-[8px] bg-white text-rose-600 border border-rose-100 px-1.5 py-0.5 rounded-full font-black uppercase shrink-0 shadow-sm">Active</span>
+                                                                <span className="text-[11px] font-bold text-slate-800 truncate mr-2">{prob.name}</span>
+                                                                <span className="text-[8px] bg-white text-rose-600 border border-rose-100 px-1.5 py-0.5 rounded-full font-bold uppercase shrink-0 shadow-sm">Active</span>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -1789,23 +1797,26 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-indigo-200 transition-colors">
                                             <div className="px-4 py-3 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="p-1.5 bg-indigo-100 text-indigo-600 rounded-lg">
+                                                    <div className="p-1.5 bg-indigo-50 text-indigo-500 rounded-lg">
                                                         <Database className="w-3.5 h-3.5" />
                                                     </div>
-                                                    <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wide">Recent Results</h3>
+                                                    <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-widest">Recent Results</h3>
                                                 </div>
-                                                <button onClick={() => { setPatientChartTab('labs'); setShowPatientChart(true); }} className="px-2 py-1 bg-white text-[9px] text-indigo-600 font-black uppercase border border-indigo-100 rounded-lg shadow-sm hover:bg-indigo-50 transition-all">All Results</button>
+                                                <button onClick={() => { setPatientChartTab('labs'); setShowPatientChart(true); }} className="px-2 py-1 bg-white text-[9px] text-indigo-500 font-bold uppercase border border-indigo-100 rounded-lg shadow-sm hover:bg-indigo-50 transition-all">All Results</button>
                                             </div>
                                             <div className="p-3">
                                                 {orders.length > 0 || documents.length > 0 ? (
                                                     <div className="space-y-2">
                                                         {[...orders.slice(0, 4), ...documents.slice(0, 4)].map((item, idx) => (
-                                                            <div key={idx} className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
+                                                            <div key={idx} className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100 group">
                                                                 <div className="min-w-0 flex-1">
-                                                                    <p className="font-black text-[10px] text-slate-900 truncate leading-tight">{item.order_name || item.name || item.doc_type}</p>
-                                                                    <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">{item.order_date || item.upload_date || 'Finalized'}</p>
+                                                                    <p className="font-bold text-[10px] text-slate-900 truncate leading-tight group-hover:text-blue-600 transition-colors">{item.order_name || item.name || item.doc_type}</p>
+                                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                                        <span className="text-[8px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold uppercase">{item.status || 'Finalized'}</span>
+                                                                        <span className="text-[9px] text-slate-400 font-semibold uppercase">{item.order_date || item.upload_date || 'N/A'}</span>
+                                                                    </div>
                                                                 </div>
-                                                                <div className="w-2 h-2 rounded-full bg-indigo-500 shadow-sm shadow-indigo-200 shrink-0" />
+                                                                <div className={`w-2 h-2 rounded-full shrink-0 ${item.priority === 'urgent' ? 'bg-rose-500 animate-pulse' : 'bg-blue-400'}`} />
                                                             </div>
                                                         ))}
                                                     </div>
