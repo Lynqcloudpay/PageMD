@@ -1,10 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const { authenticate, logAudit } = require('../middleware/auth');
+const { requireAdmin } = require('../middleware/authorization');
 const { audit } = require('../services/auditService');
 const mipsComputationService = require('../services/mipsComputationService');
 
-const { requireAdmin } = require('../middleware/authorization');
+// All routes require authentication
+router.use(authenticate);
 
 // 1. Get Quality Measures Library
 router.get('/measures', async (req, res) => {
