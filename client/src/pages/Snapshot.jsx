@@ -1451,7 +1451,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         <div
                                                             key={note.id}
                                                             className="px-2 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer transition-colors group relative pl-3"
-                                                            onClick={() => handleViewNote(note.id)}
+                                                            onClick={(e) => {
+                                                                // Prevent navigation if clicking delete
+                                                                if (e.target.closest('button')) return;
+                                                                handleViewNote(note.id);
+                                                            }}
                                                         >
                                                             <div className={`absolute left-0 top-2 bottom-2 w-0.5 rounded-full transition-colors ${note.signed ? 'bg-emerald-400' : 'bg-amber-400'}`} />
                                                             <div className="flex items-center justify-between">
@@ -1459,7 +1463,23 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                     <span className="text-[10px] font-bold text-slate-800">{note.type}</span>
                                                                     {!note.signed && <span className="text-[8px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-100 uppercase tracking-wider">Draft</span>}
                                                                 </div>
-                                                                <span className="text-[9px] text-slate-400 font-medium tabular-nums">{note.date}</span>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-[9px] text-slate-400 font-medium tabular-nums">{note.date}</span>
+                                                                    {!note.signed && (
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                if (window.confirm('Are you sure you want to delete this draft?')) {
+                                                                                    handleDeleteNote(note.id);
+                                                                                }
+                                                                            }}
+                                                                            className="p-1 hover:bg-rose-100 text-slate-400 hover:text-rose-500 rounded transition-colors opacity-0 group-hover:opacity-100"
+                                                                            title="Delete Draft"
+                                                                        >
+                                                                            <Trash2 className="w-3 h-3" />
+                                                                        </button>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                             <p className="text-[9px] text-slate-500 truncate mt-0.5">{note.chiefComplaint || "No complaint recorded"}</p>
                                                         </div>
@@ -1646,21 +1666,19 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
                                                     >
                                                         <defs>
-                                                            <filter id="glowSys" x="-20%" y="-20%" width="140%" height="140%">
-                                                                <feGaussianBlur stdDeviation="3" result="blur" />
-                                                                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                                            <filter id="shadowSys" x="-50%" y="-50%" width="200%" height="200%">
+                                                                <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#3b82f6" floodOpacity="0.5" />
                                                             </filter>
-                                                            <filter id="glowHr" x="-20%" y="-20%" width="140%" height="140%">
-                                                                <feGaussianBlur stdDeviation="3" result="blur" />
-                                                                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                                            <filter id="shadowHr" x="-50%" y="-50%" width="200%" height="200%">
+                                                                <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#f43f5e" floodOpacity="0.5" />
                                                             </filter>
                                                             <linearGradient id="neonBp" x1="0" y1="0" x2="0" y2="1">
-                                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15} />
-                                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.02} />
+                                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0} />
                                                             </linearGradient>
                                                             <linearGradient id="neonHr" x1="0" y1="0" x2="0" y2="1">
-                                                                <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.15} />
-                                                                <stop offset="95%" stopColor="#f43f5e" stopOpacity={0.02} />
+                                                                <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
+                                                                <stop offset="95%" stopColor="#f43f5e" stopOpacity={0.0} />
                                                             </linearGradient>
                                                         </defs>
                                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -1715,6 +1733,13 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         />
                                                         <Area
                                                             type="monotone"
+                                                            dataKey="sys"
+                                                            stroke="none"
+                                                            fill="url(#neonBp)"
+                                                            connectNulls
+                                                        />
+                                                        <Area
+                                                            type="monotone"
                                                             dataKey="hr"
                                                             stroke="none"
                                                             fill="url(#neonHr)"
@@ -1725,22 +1750,22 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             dataKey="sys"
                                                             name="Systolic"
                                                             stroke="#3b82f6"
-                                                            strokeWidth={4}
-                                                            dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff', shadow: '0 0 10px rgba(59, 130, 246, 0.5)' }}
-                                                            activeDot={{ r: 7, strokeWidth: 0, fill: '#3b82f6' }}
+                                                            strokeWidth={3}
+                                                            filter="url(#shadowSys)"
+                                                            dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
+                                                            activeDot={{ r: 6, strokeWidth: 0, fill: '#3b82f6' }}
                                                             connectNulls
-                                                            filter="url(#glowSys)"
                                                         />
                                                         <Line
                                                             type="monotone"
                                                             dataKey="hr"
                                                             name="Heart Rate"
                                                             stroke="#f43f5e"
-                                                            strokeWidth={4}
-                                                            dot={{ r: 4, fill: '#f43f5e', strokeWidth: 2, stroke: '#fff', shadow: '0 0 10px rgba(244, 63, 94, 0.5)' }}
-                                                            activeDot={{ r: 7, strokeWidth: 0, fill: '#f43f5e' }}
+                                                            strokeWidth={3}
+                                                            filter="url(#shadowHr)"
+                                                            dot={{ r: 4, fill: '#f43f5e', strokeWidth: 2, stroke: '#fff' }}
+                                                            activeDot={{ r: 6, strokeWidth: 0, fill: '#f43f5e' }}
                                                             connectNulls
-                                                            filter="url(#glowHr)"
                                                         />
                                                     </LineChart>
                                                 </ResponsiveContainer>
