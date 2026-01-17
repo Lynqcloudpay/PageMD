@@ -238,6 +238,35 @@ async function gatherPatientContext(patientId) {
         );
         context.recentVisits = visitsRes.rows;
 
+        // Recent Lab Results (Last 10 orders of type 'lab')
+        const labsRes = await pool.query(
+            `SELECT created_at as date, order_description, order_payload, status
+             FROM orders 
+             WHERE patient_id = $1 AND order_type = 'lab'
+             ORDER BY created_at DESC 
+             LIMIT 10`,
+            [patientId]
+        );
+
+        context.labs = labsRes.rows.map(row => {
+            let results = null;
+            // Parse payload for results if available
+            try {
+                const payload = typeof row.order_payload === 'string' ? JSON.parse(row.order_payload) : row.order_payload;
+                if (payload && payload.results) {
+                    results = payload.results;
+                }
+            } catch (e) {
+                // Ignore parse error
+            }
+            return {
+                date: row.date,
+                test: row.order_description,
+                status: row.status,
+                results: results
+            };
+        });
+
         return context;
     } catch (error) {
         console.warn('Failed to gather complete patient context for AI:', error.message);
