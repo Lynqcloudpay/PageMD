@@ -154,20 +154,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
         }
     };
 
-    const handleAcknowledgeFlag = async (flagId, e) => {
-        if (e) e.stopPropagation();
-        // Optimistic update
-        setActiveFlags(prev => prev.filter(f => f.id !== flagId));
-        try {
-            await patientFlagsAPI.resolve(flagId);
-            showSuccess('Flag acknowledged');
-            fetchFlags();
-        } catch (err) {
-            console.error('Error acknowledging flag:', err);
-            showError('Failed to acknowledge flag');
-            fetchFlags(); // Revert on error
-        }
-    };
+
 
     const handleSavePlan = async () => {
         if (!planOverride.trim() || !recentNotes[0]) return;
@@ -716,14 +703,12 @@ const Snapshot = ({ showNotesOnly = false }) => {
         setActiveFlags(prev => prev.filter(flag => flag.id !== flagId));
 
         try {
-            await patientFlagsAPI.acknowledge(flagId); // Assuming an API call to acknowledge the flag
+            await patientFlagsAPI.acknowledge(flagId);
             showSuccess('Alert acknowledged successfully');
-            // No need to refreshPatientData here, as the optimistic update already removed it.
-            // If there's a backend error, refreshPatientData will bring it back.
         } catch (error) {
             console.error('Error acknowledging flag:', error);
             showError('Failed to acknowledge alert. Restoring...');
-            refreshPatientData(); // Revert state by re-fetching
+            fetchFlags(); // Revert state by re-fetching
         }
     };
 
