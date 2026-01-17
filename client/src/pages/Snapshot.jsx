@@ -6,9 +6,13 @@ import {
     CheckCircle2, Edit, ArrowRight, ExternalLink, UserCircle, Camera, User, X, FileImage, Save, FlaskConical, Database, Trash2, Upload, Layout, RotateCcw, Waves,
     Shield, ShieldAlert, AlertTriangle
 } from 'lucide-react';
-import { visitsAPI, patientsAPI, ordersAPI, referralsAPI, documentsAPI, patientFlagsAPI } from '../services/api';
+import { visitsAPI, patientsAPI, ordersAPI, referralsAPI, documentsAPI, patientFlagsAPI, api } from '../services/api';
 import { format } from 'date-fns';
 import { showError, showSuccess } from '../utils/toast';
+import {
+    AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
+    LineChart, Line, CartesianGrid
+} from 'recharts';
 // GridLayout temporarily disabled to fix 500 error
 // TODO: Re-enable with proper implementation
 // import GridLayout from 'react-grid-layout';
@@ -112,19 +116,61 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const [showPrintOrdersModal, setShowPrintOrdersModal] = useState(false);
     const [activeFlags, setActiveFlags] = useState([]);
 
-    useEffect(() => {
-        const fetchFlags = async () => {
-            if (!id) return;
-            try {
-                const response = await patientFlagsAPI.getByPatient(id);
-                const active = (response.data || []).filter(f => f.status === 'active');
-                setActiveFlags(active);
-            } catch (err) {
-                console.error('Error fetching sticky notes (flags):', err);
-            }
-        };
-        fetchFlags();
+    const fetchFlags = useCallback(async () => {
+        if (!id) return;
+        try {
+            const response = await patientFlagsAPI.getByPatient(id);
+            const active = (response.data || []).filter(f => f.status === 'active');
+            setActiveFlags(active);
+        } catch (err) {
+            console.error('Error fetching sticky notes (flags):', err);
+        }
     }, [id]);
+
+    useEffect(() => {
+        fetchFlags();
+    }, [fetchFlags]);
+
+    const handleSaveReminder = async () => {
+        if (!reminderText.trim()) return;
+        try {
+            setActionLoading(true);
+            await patientFlagsAPI.create({
+                patient_id: id,
+                flag_type: 'Clinical Reminder',
+                display_label: 'REMINDER',
+                severity: 'info',
+                note: reminderText,
+                status: 'active'
+            });
+            setReminderText('');
+            setIsEditingReminder(false);
+            fetchFlags();
+            showSuccess('Clinical reminder added');
+        } catch (err) {
+            showError('Failed to add reminder');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleSavePlan = async () => {
+        if (!planOverride.trim() || !recentNotes[0]) return;
+        try {
+            setActionLoading(true);
+            // Updating the plan of the latest visit note
+            await visitsAPI.update(recentNotes[0].id, {
+                plan: planOverride
+            });
+            setIsEditingPlan(false);
+            refreshPatientData();
+            showSuccess('Care plan updated');
+        } catch (err) {
+            showError('Failed to update care plan');
+        } finally {
+            setActionLoading(false);
+        }
+    };
 
     // EKG States
     const [showEKGModal, setShowEKGModal] = useState(false);
@@ -141,6 +187,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const [ekgFile, setEKGFile] = useState(null);
     const [showChartReview, setShowChartReview] = useState(false);
     const [showSpecialtyTracker, setShowSpecialtyTracker] = useState(false);
+    const [isEditingReminder, setIsEditingReminder] = useState(false);
+    const [reminderText, setReminderText] = useState('');
+    const [isEditingPlan, setIsEditingPlan] = useState(false);
+    const [planOverride, setPlanOverride] = useState('');
 
     // ECHO States
     const [showECHOModal, setShowECHOModal] = useState(false);
@@ -1504,230 +1554,376 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         </div>
                                     )}
 
-                                    {/* Quick Metrics Row */}
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                        {[
-                                            { label: 'Blood Pressure', value: vitals[0]?.bp, unit: 'mmHg', icon: Activity, color: 'text-blue-500', bg: 'bg-blue-50', last: vitals[1]?.bp },
-                                            { label: 'Heart Rate', value: vitals[0]?.hr, unit: 'bpm', icon: Heart, color: 'text-rose-500', bg: 'bg-rose-50', last: vitals[1]?.hr },
-                                            { label: 'Oxygen Sat', value: vitals[0]?.spo2, unit: '%', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-50', last: vitals[1]?.spo2 },
-                                            { label: 'Temperature', value: vitals[0]?.temp, unit: '°F', icon: Activity, color: 'text-amber-500', bg: 'bg-amber-50', last: vitals[1]?.temp }
-                                        ].map((stat, i) => (
-                                            <div key={i} className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group">
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stat.label}</span>
-                                                    <div className={`p-1.5 rounded-lg ${stat.bg} ${stat.color}`}>
-                                                        <stat.icon className="w-3.5 h-3.5" />
+                                    {/* Vitals Trend Wave - Enhanced Clinical Visualization */}
+                                    <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/50 mb-6 relative overflow-hidden group/wave">
+                                        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/30 rounded-full -mr-32 -mt-32 blur-3xl group-hover/wave:bg-blue-100/40 transition-colors duration-1000" />
+
+                                        <div className="flex justify-between items-center mb-6 relative z-10">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-3 bg-gradient-to-br from-indigo-500 to-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200">
+                                                    <Waves className="w-5 h-5 animate-pulse" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">Clinical Trend Wave</h3>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-black text-slate-800">Cardiovascular Performance</span>
+                                                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black uppercase rounded-lg">Stable</span>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-baseline gap-1">
-                                                    <span className="text-xl font-black text-slate-900 tabular-nums leading-none tracking-tight">{stat.value || '--'}</span>
-                                                    <span className="text-[10px] font-bold text-slate-300 uppercase">{stat.unit}</span>
+                                            </div>
+                                            <div className="flex gap-6 bg-slate-50/80 backdrop-blur-md p-2 px-4 rounded-2xl border border-slate-100">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm" />
+                                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Sys. BP</span>
                                                 </div>
-                                                {stat.last && (
-                                                    <div className="mt-2 flex items-center justify-between">
-                                                        <span className="text-[9px] font-medium text-slate-400">Previous: {stat.last}</span>
-                                                        <div className="w-8 h-1 bg-slate-50 rounded-full overflow-hidden">
-                                                            <div className={`h-full ${stat.bg.replace('/50', '').replace('bg-', 'bg-')}`} style={{ width: '60%' }}></div>
-                                                        </div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm" />
+                                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Heart Rate</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="h-48 w-full relative z-10">
+                                            {vitals.filter(v => v.bp !== 'N/A' || v.hr !== 'N/A').length > 0 ? (
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <AreaChart data={[...vitals].reverse().map(v => {
+                                                        const sys = parseInt(v.bp?.split('/')[0]) || null;
+                                                        const hr = parseInt(v.hr) || null;
+                                                        return {
+                                                            name: v.date === 'Today (Draft)' ? 'Today' : v.date,
+                                                            bp: sys,
+                                                            hr: hr,
+                                                            fullBp: v.bp
+                                                        };
+                                                    })} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                                        <defs>
+                                                            <linearGradient id="colorBp" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />
+                                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                                            </linearGradient>
+                                                            <linearGradient id="colorHr" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.25} />
+                                                                <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                                                            </linearGradient>
+                                                        </defs>
+                                                        <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f1f5f9" />
+                                                        <XAxis
+                                                            dataKey="name"
+                                                            axisLine={false}
+                                                            tickLine={false}
+                                                            tick={{ fontSize: 9, fill: '#64748b', fontWeight: 'bold' }}
+                                                        />
+                                                        <YAxis
+                                                            axisLine={false}
+                                                            tickLine={false}
+                                                            tick={{ fontSize: 9, fill: '#64748b', fontWeight: 'bold' }}
+                                                            domain={['dataMin - 10', 'dataMax + 10']}
+                                                        />
+                                                        <Tooltip
+                                                            content={({ active, payload, label }) => {
+                                                                if (active && payload && payload.length) {
+                                                                    return (
+                                                                        <div className="bg-white/90 backdrop-blur-xl border border-white shadow-2xl rounded-2xl p-4 ring-1 ring-slate-950/5">
+                                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-100 pb-2">{label}</p>
+                                                                            <div className="space-y-2.5">
+                                                                                <div className="flex items-center justify-between gap-8">
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                                                                        <span className="text-[11px] font-bold text-slate-600">BP Systolic</span>
+                                                                                    </div>
+                                                                                    <span className="text-[13px] font-black text-blue-700">{payload[0].value} <small className="text-[9px] text-blue-400">mmHg</small></span>
+                                                                                </div>
+                                                                                <div className="flex items-center justify-between gap-8">
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <div className="w-2 h-2 rounded-full bg-rose-500" />
+                                                                                        <span className="text-[11px] font-bold text-slate-600">Heart Rate</span>
+                                                                                    </div>
+                                                                                    <span className="text-[13px] font-black text-rose-700">{payload[1]?.value || '--'} <small className="text-[9px] text-rose-400">bpm</small></span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                }
+                                                                return null;
+                                                            }}
+                                                        />
+                                                        <Area
+                                                            type="monotone"
+                                                            dataKey="bp"
+                                                            name="Systolic"
+                                                            stroke="#3b82f6"
+                                                            strokeWidth={4}
+                                                            fillOpacity={1}
+                                                            fill="url(#colorBp)"
+                                                            dot={{ r: 5, fill: '#3b82f6', strokeWidth: 3, stroke: '#fff' }}
+                                                            activeDot={{ r: 8, strokeWidth: 0 }}
+                                                        />
+                                                        <Area
+                                                            type="monotone"
+                                                            dataKey="hr"
+                                                            name="Heart Rate"
+                                                            stroke="#f43f5e"
+                                                            strokeWidth={4}
+                                                            fillOpacity={1}
+                                                            fill="url(#colorHr)"
+                                                            dot={{ r: 5, fill: '#f43f5e', strokeWidth: 3, stroke: '#fff' }}
+                                                            activeDot={{ r: 8, strokeWidth: 0 }}
+                                                        />
+                                                    </AreaChart>
+                                                </ResponsiveContainer>
+                                            ) : (
+                                                <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
+                                                    <div className="p-4 bg-white rounded-2xl shadow-sm mb-4">
+                                                        <Waves className="w-8 h-8 text-slate-200" />
+                                                    </div>
+                                                    <p className="text-[11px] text-slate-400 font-black uppercase tracking-[0.2em]">No longitudinal vital trends recorded</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Detailed Boards Grid - MOVED UP */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                                        {/* Medications Module */}
+                                        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-blue-200 transition-colors">
+                                            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
+                                                        <Pill className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wide">Active Medications</h3>
+                                                </div>
+                                                <button onClick={() => { setPatientChartTab('medications'); setShowPatientChart(true); }} className="px-2 py-1 bg-white text-[9px] text-blue-600 font-black uppercase border border-blue-100 rounded-lg shadow-sm hover:bg-blue-50 transition-all">Manage All</button>
+                                            </div>
+                                            <div className="p-3">
+                                                {(medications || []).filter(m => m.active !== false).length > 0 ? (
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                        {(medications || []).filter(m => m.active !== false).slice(0, 8).map(med => (
+                                                            <div key={med.id} className="p-3 border border-slate-100 rounded-xl bg-slate-50/30 hover:bg-white hover:border-blue-100 hover:shadow-sm transition-all group">
+                                                                <div className="flex items-center gap-2 mb-1">
+                                                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400 group-hover:scale-125 transition-transform" />
+                                                                    <p className="font-black text-[11px] text-slate-900 truncate">{decodeHtmlEntities(med.medication_name)}</p>
+                                                                </div>
+                                                                <p className="text-[10px] text-slate-500 font-bold ml-3.5">{med.dosage} • {med.frequency}</p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="py-8 text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200 m-1">
+                                                        <Pill className="w-6 h-6 text-slate-200 mx-auto mb-2" />
+                                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-tight">No active medications<br />documented</p>
                                                     </div>
                                                 )}
                                             </div>
-                                        ))}
+                                        </div>
+
+                                        {/* Problems Module */}
+                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-rose-200 transition-colors">
+                                            <div className="px-4 py-3 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="p-1.5 bg-rose-100 text-rose-600 rounded-lg">
+                                                        <AlertCircle className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wide">Problem List</h3>
+                                                </div>
+                                                <button onClick={() => { setPatientChartTab('problems'); setShowPatientChart(true); }} className="px-2 py-1 bg-white text-[9px] text-rose-600 font-black uppercase border border-rose-100 rounded-lg shadow-sm hover:bg-rose-50 transition-all">Edit List</button>
+                                            </div>
+                                            <div className="p-3">
+                                                {(problems || []).length > 0 ? (
+                                                    <div className="space-y-1.5">
+                                                        {(problems || []).slice(0, 6).map(prob => (
+                                                            <div key={prob.id} className="flex justify-between items-center p-2 rounded-lg bg-slate-50/50 border border-slate-100/50 hover:bg-white hover:border-rose-100 transition-all group">
+                                                                <span className="text-[11px] font-black text-slate-800 truncate mr-2">{prob.name}</span>
+                                                                <span className="text-[8px] bg-white text-rose-600 border border-rose-100 px-1.5 py-0.5 rounded-full font-black uppercase shrink-0 shadow-sm">Active</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="py-8 text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200 m-1">
+                                                        <AlertCircle className="w-6 h-6 text-slate-200 mx-auto mb-2" />
+                                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Clear Problem List</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Results Module */}
+                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-indigo-200 transition-colors">
+                                            <div className="px-4 py-3 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="p-1.5 bg-indigo-100 text-indigo-600 rounded-lg">
+                                                        <Database className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wide">Recent Results</h3>
+                                                </div>
+                                                <button onClick={() => { setPatientChartTab('labs'); setShowPatientChart(true); }} className="px-2 py-1 bg-white text-[9px] text-indigo-600 font-black uppercase border border-indigo-100 rounded-lg shadow-sm hover:bg-indigo-50 transition-all">All Results</button>
+                                            </div>
+                                            <div className="p-3">
+                                                {orders.length > 0 || documents.length > 0 ? (
+                                                    <div className="space-y-2">
+                                                        {[...orders.slice(0, 4), ...documents.slice(0, 4)].map((item, idx) => (
+                                                            <div key={idx} className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
+                                                                <div className="min-w-0 flex-1">
+                                                                    <p className="font-black text-[10px] text-slate-900 truncate leading-tight">{item.order_name || item.name || item.doc_type}</p>
+                                                                    <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">{item.order_date || item.upload_date || 'Finalized'}</p>
+                                                                </div>
+                                                                <div className="w-2 h-2 rounded-full bg-indigo-500 shadow-sm shadow-indigo-200 shrink-0" />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="py-8 text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200 m-1">
+                                                        <Database className="w-6 h-6 text-slate-200 mx-auto mb-2" />
+                                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">No recent studies</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
 
                                     {/* Insights Row */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {/* Plan of Care & Continuity Card */}
-                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 hover:shadow-md transition-shadow group">
-                                            <div className="flex justify-between items-center mb-4">
+                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 hover:shadow-md transition-shadow group relative overflow-hidden">
+                                            {/* Accent Gradient */}
+                                            <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-50 rounded-full -mr-12 -mt-12 group-hover:scale-110 transition-transform duration-500" />
+
+                                            <div className="flex justify-between items-center mb-5 relative z-10">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="p-2 bg-indigo-50 text-indigo-500 rounded-xl group-hover:bg-indigo-500 group-hover:text-white transition-all">
-                                                        <FileText className="w-4 h-4" />
+                                                    <div className="p-2.5 bg-indigo-50 text-indigo-500 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm">
+                                                        <FileText className="w-4.5 h-4.5" strokeWidth={2.5} />
                                                     </div>
-                                                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Plan of Care & Next Steps</h3>
+                                                    <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">Plan of Care & Next Steps</h3>
                                                 </div>
-                                                <span className="text-[10px] text-slate-300 font-bold uppercase">Latest Enc: {recentNotes[0]?.date || 'None'}</span>
+                                                <span className="text-[10px] text-slate-400 font-black uppercase bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 tracking-tighter">Latest: {recentNotes[0]?.date || 'None'}</span>
                                             </div>
 
                                             {recentNotes[0] ? (
-                                                <div className="space-y-4">
+                                                <div className="space-y-4 relative z-10">
                                                     <div className="relative">
-                                                        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-indigo-100 rounded-full" />
-                                                        <div className="pl-4">
-                                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Current Clinical Plan</span>
-                                                            <div className="text-[11px] text-slate-700 leading-relaxed font-medium line-clamp-4 italic">
+                                                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-200 to-transparent rounded-full" />
+                                                        <div className="pl-5">
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Current Clinical Plan</span>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setPlanOverride(recentNotes[0].plan || recentNotes[0].assessment || '');
+                                                                        setIsEditingPlan(true);
+                                                                    }}
+                                                                    className="text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                >
+                                                                    <Edit size={14} />
+                                                                </button>
+                                                            </div>
+                                                            <div className="text-[12px] text-slate-700 leading-relaxed font-semibold italic bg-slate-50/50 p-4 rounded-2xl border border-slate-100 shadow-inner">
                                                                 "{recentNotes[0].plan || recentNotes[0].assessment || 'No specific clinical plan was documented in the latest visit note.'}"
                                                             </div>
                                                         </div>
                                                     </div>
 
                                                     {(recentNotes[0].followUp || recentNotes[0].carePlan) && (
-                                                        <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 flex items-start gap-2.5">
-                                                            <Clock className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
+                                                        <div className="bg-indigo-50/50 rounded-2xl p-4 border border-indigo-100 flex items-start gap-3.5 shadow-sm">
+                                                            <div className="p-1.5 bg-white text-indigo-500 rounded-lg shadow-sm">
+                                                                <Clock className="w-4 h-4" />
+                                                            </div>
                                                             <div>
-                                                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-0.5">Follow-up & Coordination</span>
-                                                                <p className="text-[11px] text-slate-900 font-bold leading-tight">
+                                                                <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest block mb-0.5">Execution & Monitoring</span>
+                                                                <p className="text-[12px] text-indigo-900 font-black leading-tight">
                                                                     {recentNotes[0].followUp || recentNotes[0].carePlan}
                                                                 </p>
                                                             </div>
                                                         </div>
                                                     )}
 
-                                                    <div className="flex items-center gap-2 pt-1">
+                                                    <div className="flex items-center gap-3 pt-2">
                                                         <button
-                                                            onClick={() => handleViewNote(recentNotes[0].id)}
-                                                            className="flex-1 py-2 px-3 bg-slate-900 hover:bg-black text-white rounded-xl text-[10px] font-bold transition-all flex items-center justify-center gap-1.5"
+                                                            onClick={(e) => handleViewNote(recentNotes[0].id, e)}
+                                                            className="flex-1 py-3 px-4 bg-slate-900 hover:bg-black text-white rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-200 hover:scale-[1.02]"
                                                         >
-                                                            Open Full Visit Plan
+                                                            <ExternalLink className="w-4 h-4" />
+                                                            Open Full Visit Note
                                                         </button>
-                                                        <button className="p-2 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
-                                                            <Printer className="w-3.5 h-3.5 text-slate-400" />
+                                                        <button className="p-3 border border-slate-200 rounded-2xl hover:bg-slate-50 transition-all text-slate-400 hover:text-slate-600 shadow-sm">
+                                                            <Printer className="w-4.5 h-4.5" />
                                                         </button>
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <div className="py-10 text-center flex flex-col items-center">
-                                                    <div className="p-3 bg-slate-50 rounded-full mb-3">
-                                                        <FileText className="w-6 h-6 text-slate-200" />
+                                                <div className="py-12 text-center flex flex-col items-center bg-slate-50/50 rounded-3xl border border-dashed border-slate-200 m-1">
+                                                    <div className="p-4 bg-white rounded-2xl shadow-sm mb-4">
+                                                        <FileText className="w-8 h-8 text-slate-200" />
                                                     </div>
-                                                    <p className="text-[11px] text-slate-400 font-medium">No active care plans found</p>
+                                                    <p className="text-[11px] text-slate-400 font-black uppercase tracking-widest">No patient encounters found</p>
                                                 </div>
                                             )}
                                         </div>
 
                                         {/* Reminders & Pending Actions Card */}
-                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 hover:shadow-md transition-shadow">
-                                            <div className="flex items-center gap-2 mb-4">
-                                                <div className="p-2 bg-amber-50 text-amber-500 rounded-xl">
-                                                    <CheckCircle2 className="w-4 h-4" />
+                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 hover:shadow-md transition-shadow group relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 w-24 h-24 bg-amber-50 rounded-full -mr-12 -mt-12 group-hover:scale-110 transition-transform duration-500" />
+
+                                            <div className="flex items-center justify-between mb-5 relative z-10">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="p-2.5 bg-amber-50 text-amber-500 rounded-xl group-hover:bg-amber-500 group-hover:text-white transition-all shadow-sm">
+                                                        <CheckCircle2 className="w-4.5 h-4.5" strokeWidth={2.5} />
+                                                    </div>
+                                                    <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">Clinical Reminders</h3>
                                                 </div>
-                                                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Clinical Reminders</h3>
-                                            </div>
-
-                                            <div className="space-y-3">
-                                                {/* Smart-derived Reminders */}
-                                                {(orders.filter(o => o.status === 'pending').length > 0) && (
-                                                    <div className="flex items-start gap-3 p-2.5 bg-amber-50/50 rounded-xl border border-amber-100">
-                                                        <div className="p-1 bg-amber-100 rounded text-amber-600">
-                                                            <FlaskConical className="w-3 h-3" />
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-[11px] font-bold text-amber-900">Pending Lab Result</p>
-                                                            <p className="text-[10px] text-amber-700/80">Patient has {orders.filter(o => o.status === 'pending').length} unfinalized orders</p>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                <div className="flex items-start gap-3 p-2.5 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group">
-                                                    <div className="p-1 bg-slate-100 rounded text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
-                                                        <Users className="w-3 h-3" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-[11px] font-bold text-slate-800 group-hover:text-blue-600">Annual Wellness Visit</p>
-                                                        <p className="text-[10px] text-slate-400">Due in 14 days (suggested sloting)</p>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-start gap-3 p-2.5 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group">
-                                                    <div className="p-1 bg-slate-100 rounded text-slate-400 group-hover:bg-rose-100 group-hover:text-rose-600 transition-colors">
-                                                        <Activity className="w-3 h-3" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-[11px] font-bold text-slate-800 group-hover:text-rose-600">HTN Screening</p>
-                                                        <p className="text-[10px] text-slate-400">Last BP: {vitals[0]?.bp || 'None'} ({vitals[0]?.date || 'Today'})</p>
-                                                    </div>
-                                                </div>
-
-                                                <button className="w-full py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors border-t border-slate-50 mt-1">
-                                                    View All Tasks
+                                                <button
+                                                    onClick={() => setIsEditingReminder(true)}
+                                                    className="p-2 border border-amber-100 rounded-xl text-amber-600 bg-amber-50/50 hover:bg-amber-100 transition-all"
+                                                >
+                                                    <Plus className="w-4 h-4" />
                                                 </button>
                                             </div>
-                                        </div>
-                                    </div>
 
-                                    {/* Detailed Boards Grid */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                        {/* Medications Module */}
-                                        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-                                            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-white">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="p-1.5 bg-blue-50 text-blue-500 rounded-lg">
-                                                        <Pill className="w-3.5 h-3.5" />
-                                                    </div>
-                                                    <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wide">Medications</h3>
-                                                </div>
-                                                <button onClick={() => { setPatientChartTab('medications'); setShowPatientChart(true); }} className="text-[10px] text-blue-500 font-bold hover:underline">View All</button>
-                                            </div>
-                                            <div className="p-3">
-                                                {(medications || []).filter(m => m.active !== false).length > 0 ? (
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                                        {(medications || []).filter(m => m.active !== false).slice(0, 10).map(med => (
-                                                            <div key={med.id} className="p-2 border border-slate-50 rounded-xl bg-slate-50/30 hover:bg-slate-50 transition-colors">
-                                                                <p className="font-bold text-[11px] text-slate-800 truncate">{decodeHtmlEntities(med.medication_name)}</p>
-                                                                <p className="text-[10px] text-slate-400 font-medium">{med.dosage} {med.frequency}</p>
+                                            <div className="space-y-3 relative z-10">
+                                                {/* Sticky Notes / Flags */}
+                                                {activeFlags.map(flag => (
+                                                    <div key={flag.id} className="flex items-start gap-3.5 p-3.5 bg-rose-50 rounded-2xl border border-rose-100 group/flag">
+                                                        <div className="p-1.5 bg-white text-rose-500 rounded-lg shadow-sm ring-1 ring-rose-200">
+                                                            <AlertCircle className="w-3.5 h-3.5" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center justify-between">
+                                                                <p className="text-[11px] font-black text-rose-900 truncate uppercase tracking-tight">{flag.display_label}</p>
+                                                                <span className="text-[8px] font-black text-rose-400 uppercase">{format(new Date(flag.created_at), 'MMM d')}</span>
                                                             </div>
-                                                        ))}
+                                                            <p className="text-[10px] text-rose-700/80 font-bold leading-tight mt-0.5 whitespace-pre-wrap">{flag.note}</p>
+                                                        </div>
                                                     </div>
-                                                ) : (
-                                                    <p className="text-[10px] text-slate-400 text-center py-6 italic">No active medications</p>
-                                                )}
-                                            </div>
-                                        </div>
+                                                ))}
 
-                                        {/* Problems Module */}
-                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-                                            <div className="px-4 py-3 border-b border-slate-100 flex items-center bg-white justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="p-1.5 bg-amber-50 text-amber-500 rounded-lg">
-                                                        <AlertCircle className="w-3.5 h-3.5" />
+                                                {/* Smart-derived Reminders */}
+                                                {(orders.filter(o => o.status === 'pending').length > 0) && (
+                                                    <div className="flex items-start gap-3.5 p-3.5 bg-amber-50/50 rounded-2xl border border-amber-100">
+                                                        <div className="p-1.5 bg-white rounded-lg text-amber-600 shadow-sm border border-amber-100">
+                                                            <FlaskConical className="w-3.5 h-3.5" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[11px] font-black text-amber-900 uppercase tracking-tight">Pending Lab Evaluation</p>
+                                                            <p className="text-[10px] text-amber-700 font-bold mt-0.5">Patient has {orders.filter(o => o.status === 'pending').length} unfinalized diagnostic orders</p>
+                                                        </div>
                                                     </div>
-                                                    <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wide">Problems</h3>
-                                                </div>
-                                                <button onClick={() => { setPatientChartTab('problems'); setShowPatientChart(true); }} className="text-[10px] text-amber-600 font-bold hover:underline">Edit</button>
-                                            </div>
-                                            <div className="p-3">
-                                                {(problems || []).length > 0 ? (
-                                                    <div className="space-y-1.5">
-                                                        {(problems || []).slice(0, 8).map(prob => (
-                                                            <div key={prob.id} className="flex justify-between items-center group">
-                                                                <span className="text-[11px] font-semibold text-slate-700 truncate mr-2">{prob.name}</span>
-                                                                <span className="text-[8px] bg-emerald-50 text-emerald-600 px-1 py-0.5 rounded font-bold uppercase shrink-0">Active</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-[10px] text-slate-400 text-center py-6 italic">No problems listed</p>
                                                 )}
-                                            </div>
-                                        </div>
 
-                                        {/* Results Module */}
-                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-                                            <div className="px-4 py-3 border-b border-slate-100 flex items-center bg-white justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="p-1.5 bg-indigo-50 text-indigo-500 rounded-lg">
-                                                        <FileText className="w-3.5 h-3.5" />
+                                                <div className="flex items-start gap-3.5 p-3.5 border border-slate-100 rounded-2xl hover:bg-blue-50/30 hover:border-blue-100 transition-all cursor-pointer group/task">
+                                                    <div className="p-1.5 bg-slate-50 rounded-lg text-slate-400 group-hover/task:bg-white group-hover/task:text-blue-600 group-hover/task:border-blue-100 border border-transparent transition-all shadow-sm">
+                                                        <Users className="w-3.5 h-3.5" />
                                                     </div>
-                                                    <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wide">Results</h3>
+                                                    <div>
+                                                        <p className="text-[11px] font-black text-slate-800 group-hover/task:text-blue-700 tracking-tight uppercase">Annual Wellness Visit</p>
+                                                        <p className="text-[10px] text-slate-400 font-bold">Due in 14 days • Eligible for CMS-PR99</p>
+                                                    </div>
                                                 </div>
-                                                <button onClick={() => { setPatientChartTab('labs'); setShowPatientChart(true); }} className="text-[10px] text-indigo-500 font-bold hover:underline">View</button>
-                                            </div>
-                                            <div className="p-3">
-                                                {orders.length > 0 || documents.length > 0 ? (
-                                                    <div className="space-y-2">
-                                                        {[...orders.slice(0, 4), ...documents.slice(0, 4)].map((item, idx) => (
-                                                            <div key={idx} className="flex items-center justify-between gap-2 overflow-hidden">
-                                                                <div className="min-w-0 flex-1">
-                                                                    <p className="font-bold text-[10px] text-slate-700 truncate leading-tight">{item.order_name || item.name || item.doc_type}</p>
-                                                                    <p className="text-[8px] text-slate-400 font-medium">{item.order_date || item.upload_date || 'Recent'}</p>
-                                                                </div>
-                                                                <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-[10px] text-slate-400 text-center py-6 italic">No recent results</p>
-                                                )}
+
+                                                <button
+                                                    onClick={() => setShowSpecialtyTracker(true)}
+                                                    className="w-full py-3.5 bg-gradient-to-r from-slate-800 to-slate-900 hover:from-black hover:to-black text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-slate-200 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 mt-2"
+                                                >
+                                                    <Activity className="w-3.5 h-3.5 text-blue-400" />
+                                                    Enter Diagnostic Dashboard
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -1735,9 +1931,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             </div>
                         ) : null}
                     </div>
-
                 </div>
-
             </div>
 
             {/* Demographics Modal */}
@@ -2517,7 +2711,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     setShowPatientChart(true);
                 }}
             />
-        </div>
+        </div >
     );
 };
 

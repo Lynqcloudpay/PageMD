@@ -484,12 +484,17 @@ const TrendDetailView = ({ trend, data, onClose }) => {
                         });
 
                         // Create smooth curve path
-                        const linePath = points.reduce((path, point, i) => {
+                        let linePath = points.reduce((path, point, i) => {
                             if (i === 0) return `M ${point.x} ${point.y}`;
                             const prev = points[i - 1];
                             const cp1x = prev.x + (point.x - prev.x) / 2;
                             return `${path} C ${cp1x} ${prev.y}, ${cp1x} ${point.y}, ${point.x} ${point.y}`;
                         }, '');
+
+                        // Handle single point case - draw a small horizontal line or ensure dot is visible
+                        if (points.length === 1) {
+                            linePath = `M ${points[0].x - 2} ${points[0].y} L ${points[0].x + 2} ${points[0].y}`;
+                        }
 
                         // Area path (fill under the line)
                         const areaPath = `${linePath} L ${points[points.length - 1]?.x} ${height} L ${points[0]?.x} ${height} Z`;
@@ -531,11 +536,11 @@ const TrendDetailView = ({ trend, data, onClose }) => {
                                 const parsedDate = parseDateSafe(d.date);
                                 return (
                                     <div key={i} className="flex items-center justify-between p-2.5 bg-slate-50/80 rounded-xl border border-slate-100 hover:border-slate-200 transition-colors">
-                                        <div className="flex flex-col">
-                                            <span className="text-[10px] font-black text-slate-900 tabular-nums leading-none">
-                                                {d.value} <span className="text-slate-400">{trend.unit}</span>
+                                        <div className="flex flex-col gap-0.5">
+                                            <span className="text-[11px] font-black text-slate-900 tabular-nums leading-tight">
+                                                {d.value} <span className="text-slate-400 font-bold">{trend.unit}</span>
                                             </span>
-                                            <span className="text-[8px] font-bold text-slate-400 uppercase mt-0.5">{parsedDate ? format(parsedDate, 'MMM d, yyyy') : '--'}</span>
+                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">{parsedDate ? format(parsedDate, 'MMM d, yyyy') : '--'}</span>
                                         </div>
                                         <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest bg-white px-1.5 py-0.5 rounded border border-slate-100">{d.source || 'Chart'}</span>
                                     </div>
