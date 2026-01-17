@@ -53,79 +53,76 @@ const AIAssistant = ({ context, onInsert, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl w-full max-w-3xl h-[600px] flex flex-col animate-scale-in">
-        {/* Header */}
-        <div className="p-4 border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: '#3B82F6' }}>
-              <Sparkles className="w-5 h-5 text-white" />
+    <div className="fixed bottom-24 right-6 z-50 animate-slide-up origin-bottom-right">
+      <div
+        className="bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-white/10 w-[400px] h-[500px] flex flex-col overflow-hidden"
+        style={{ boxShadow: '0 20px 40px -10px rgba(0,0,0,0.2)' }}
+      >
+        {/* Header - Minimalist */}
+        <div className="p-3 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between bg-white/50 dark:bg-neutral-900/50">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 shadow-md">
+              <Sparkles className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h3 className="font-semibold text-neutral-900 dark:text-white">AI Clinical Assistant</h3>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">Powered by AI • Clinical decision support</p>
+              <h3 className="text-sm font-semibold text-neutral-900 dark:text-white leading-tight">AI Assistant</h3>
+              <p className="text-[10px] text-neutral-500 dark:text-neutral-400 leading-tight">Clinical Support</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-500 dark:text-neutral-400"
+            className="p-1.5 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-600 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 hide-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 hide-scrollbar bg-gradient-to-b from-transparent to-neutral-50/30 dark:to-neutral-900/30">
           {messages.map((msg, idx) => (
             <div
               key={idx}
-              className={`flex items-start space-x-3 ${msg.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''
+              className={`flex items-start space-x-2 ${msg.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''
                 }`}
             >
-              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${msg.role === 'user'
-                ? 'bg-primary-100 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
-                : 'text-white'
-                }`}>
-                {msg.role === 'user' ? (
-                  <User className="w-4 h-4" />
-                ) : (
-                  <Bot className="w-4 h-4" />
-                )}
-              </div>
-              <div className={`flex-1 rounded-lg p-3 ${msg.role === 'user'
-                ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-900 dark:text-primary-100'
-                : 'bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-neutral-100'
-                }`}>
-                <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+              {msg.role !== 'user' && (
+                <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center bg-neutral-100 dark:bg-neutral-800 text-purple-600 mt-1">
+                  <Bot className="w-3.5 h-3.5" />
+                </div>
+              )}
+              <div
+                className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm shadow-sm ${msg.role === 'user'
+                    ? 'bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-tr-sm'
+                    : 'bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 rounded-tl-sm'
+                  }`}
+              >
+                <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                 {msg.role === 'assistant' && msg.content.includes('Would you like') && (
                   <Button
-                    size="sm"
-                    variant="primary"
-                    className="mt-2"
+                    size="xs"
+                    variant="outline"
+                    className="mt-2 text-xs border-purple-200 text-purple-700 hover:bg-purple-50"
                     onClick={() => handleInsert(msg.content)}
                   >
-                    Insert into Note
+                    Insert text
                   </Button>
                 )}
               </div>
             </div>
           ))}
           {loading && (
-            <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center" style={{ background: '#3B82F6' }}>
-                <Bot className="w-4 h-4 text-white" />
-              </div>
-              <div className="flex-1 rounded-lg p-3 bg-neutral-50 dark:bg-neutral-800/50">
-                <Loader2 className="w-4 h-4 animate-spin text-primary-600" />
-              </div>
+            <div className="flex items-center space-x-2 text-neutral-400 px-2">
+              <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+              <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '300ms' }} />
             </div>
           )}
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input */}
-        <div className="p-4 border-t border-neutral-200 dark:border-neutral-700">
-          <div className="flex items-end space-x-2">
+        {/* Input - Seamless */}
+        <div className="p-3 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border-t border-neutral-100 dark:border-neutral-800">
+          <div className="relative">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -135,24 +132,25 @@ const AIAssistant = ({ context, onInsert, onClose }) => {
                   handleSend();
                 }
               }}
-              placeholder="Ask me anything about this visit..."
-              className="flex-1 px-4 py-2.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
-              rows={2}
+              placeholder="Ask anything..."
+              className="w-full pl-4 pr-10 py-3 bg-neutral-100 dark:bg-neutral-800 border-none rounded-xl text-sm text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:ring-2 focus:ring-purple-500/20 resize-none"
+              rows={1}
+              style={{ minHeight: '44px', maxHeight: '120px' }}
             />
-            <Button
+            <button
               onClick={handleSend}
               disabled={!input.trim() || loading}
-              icon={Send}
+              className={`absolute right-1.5 bottom-1.5 p-2 rounded-lg transition-all ${input.trim() && !loading
+                  ? 'bg-purple-600 text-white shadow-md hover:bg-purple-700 hover:scale-105'
+                  : 'text-neutral-400 cursor-not-allowed'
+                }`}
             >
-              Send
-            </Button>
+              <Send className="w-4 h-4" />
+            </button>
           </div>
-          <div className="flex flex-col space-y-1 mt-2">
-            <p className="text-[10px] text-neutral-400 dark:text-neutral-500">
-              Press Enter to send, Shift+Enter for new line
-            </p>
-            <p className="text-[10px] items-center flex gap-1 font-bold text-amber-600 dark:text-amber-500 uppercase tracking-tighter">
-              <Bot className="w-3 h-3" /> Clinical Decision Support: AI responses must be reviewed by a licensed provider.
+          <div className="flex justify-center mt-2 opacity-60 hover:opacity-100 transition-opacity">
+            <p className="text-[9px] flex items-center gap-1 font-medium text-amber-600 dark:text-amber-500">
+              <Sparkles className="w-2.5 h-2.5" /> AI can make mistakes. Review generated content.
             </p>
           </div>
         </div>
