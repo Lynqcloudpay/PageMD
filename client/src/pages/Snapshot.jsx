@@ -1620,7 +1620,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 const baseColor = isReminder ? 'blue' : 'rose';
 
                                                 return (
-                                                    <div key={flag.id} className={`bg-white border-l-4 border-l-${baseColor}-500 border-y border-r border-${baseColor}-100 rounded-lg p-2.5 flex items-center justify-between shadow-sm hover:shadow-md transition-all animate-in slide-in-from-top-2`}>
+                                                    <div key={flag.id} className={`bg-white border-l-4 border-l-${baseColor}-500 border-y border-r border-${baseColor}-100 rounded-lg p-2.5 flex items-center shadow-sm hover:shadow-md transition-all animate-in slide-in-from-top-2`}>
                                                         <div className="flex items-center gap-2.5">
                                                             <div className={`p-1 px-2 bg-${baseColor}-500 text-white rounded text-[8px] font-bold uppercase tracking-widest`}>
                                                                 {isReminder ? 'Reminder' : 'Alert'}
@@ -1634,17 +1634,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                 {flag.note && <p className="text-[10px] text-slate-600 font-medium mt-0.5">{flag.note}</p>}
                                                             </div>
                                                         </div>
-                                                        <div className="flex items-center gap-3">
-                                                            <button
-                                                                onClick={(e) => handleAcknowledgeFlag(flag.id, e)}
-                                                                className="p-1 hover:bg-slate-100 rounded text-slate-300 hover:text-slate-500 transition-colors"
-                                                                title="Dismiss"
-                                                            >
-                                                                <X className="w-3.5 h-3.5" />
-                                                            </button>
-                                                        </div>
                                                     </div>
-                                                )
+                                                );
                                             })}
                                         </div>
                                     )}
@@ -1681,7 +1672,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         <div className="h-56 w-full relative z-10">
                                             {vitals.filter(v => (v.bp && v.bp !== 'N/A') || (v.hr && v.hr !== 'N/A')).length > 0 ? (
                                                 <ResponsiveContainer width="100%" height="100%">
-                                                    <LineChart
+                                                    <AreaChart
                                                         data={[...vitals]
                                                             .filter(v => (v.bp && v.bp !== 'N/A') || (v.hr && v.hr !== 'N/A'))
                                                             .reverse()
@@ -1774,7 +1765,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             activeDot={{ r: 6, strokeWidth: 0, fill: '#ec4899' }}
                                                             connectNulls
                                                         />
-                                                    </LineChart>
+                                                    </AreaChart>
                                                 </ResponsiveContainer>
                                             ) : (
                                                 <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
