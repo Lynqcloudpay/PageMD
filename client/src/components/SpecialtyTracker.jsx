@@ -458,21 +458,28 @@ const TrendDetailView = ({ trend, data, onClose }) => {
     return (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={onClose}>
             <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in duration-300 border border-slate-200" onClick={e => e.stopPropagation()}>
-                <div className="p-6 border-b border-slate-50 flex justify-between items-start bg-slate-50/30">
-                    <div>
-                        <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{trend.category || 'Specialty Trend'}</h3>
-                        <h2 className="text-xl font-bold text-slate-900 leading-tight">{trend.label}</h2>
-                        <p className="text-[11px] font-medium text-slate-400 mt-1">{data.length} measurements analyzed</p>
+                <div className="p-6 border-b border-slate-100 flex justify-between items-start bg-white">
+                    <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1.5">
+                            <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[9px] font-bold uppercase tracking-wider rounded border border-blue-100">
+                                {trend.category || 'Specialty'}
+                            </span>
+                        </div>
+                        <h2 className="text-xl font-bold text-slate-900 tracking-tight">{trend.label}</h2>
+                        <div className="flex items-center gap-2 mt-1.5">
+                            <Activity className="w-3.5 h-3.5 text-blue-500" />
+                            <p className="text-[11px] font-semibold text-slate-500">{data.length} measurements analyzed</p>
+                        </div>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X className="w-5 h-5 text-slate-300 hover:text-slate-600" /></button>
+                    <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-xl transition-all"><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
                 </div>
                 <div className="p-4 max-h-[60vh] overflow-y-auto">
                     {data.length > 0 && (() => {
                         const chartData = data.slice(0, 10).reverse();
                         const values = chartData.map(d => parseFloat(d.value) || 0);
                         const max = Math.max(...values) || 1;
-                        const min = Math.min(...values) * 0.9;
-                        const range = max - min || 1;
+                        const min = Math.min(...values) * 0.95;
+                        const range = (max - min) || 1;
                         const width = 100;
                         const height = 80;
                         const padding = 10;
@@ -491,38 +498,50 @@ const TrendDetailView = ({ trend, data, onClose }) => {
                             return `${path} C ${cp1x} ${prev.y}, ${cp1x} ${point.y}, ${point.x} ${point.y}`;
                         }, '');
 
-                        // Handle single point case - draw a small horizontal line or ensure dot is visible
                         if (points.length === 1) {
-                            linePath = `M ${points[0].x - 2} ${points[0].y} L ${points[0].x + 2} ${points[0].y}`;
+                            linePath = `M ${points[0].x - 5} ${points[0].y} L ${points[0].x + 5} ${points[0].y}`;
                         }
 
-                        // Area path (fill under the line)
                         const areaPath = `${linePath} L ${points[points.length - 1]?.x} ${height} L ${points[0]?.x} ${height} Z`;
 
+                        // Decide which labels to show to prevent overlap
+                        // For max-w-sm, we can safely show about 4-5 labels
+                        const labelIndices = [];
+                        if (chartData.length > 0) {
+                            labelIndices.push(0);
+                            if (chartData.length > 2) labelIndices.push(Math.floor(chartData.length / 2));
+                            if (chartData.length > 1) labelIndices.push(chartData.length - 1);
+                        }
+
                         return (
-                            <div className="h-44 bg-slate-50 border-b border-slate-100 p-6 flex flex-col justify-center gap-4">
-                                <div className="flex-1 relative">
+                            <div className="bg-slate-50/50 border-y border-slate-100 p-6 flex flex-col gap-6">
+                                <div className="h-32 w-full relative">
                                     <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible" preserveAspectRatio="none">
                                         <defs>
-                                            <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                                <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.2" />
+                                            <linearGradient id="detailGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                                <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.15" />
                                                 <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
                                             </linearGradient>
                                         </defs>
-                                        <path d={areaPath} fill="url(#areaGradient)" />
+                                        <path d={areaPath} fill="url(#detailGradient)" />
                                         <path d={linePath} fill="none" stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                                         {points.map((point, i) => (
-                                            <circle key={i} cx={point.x} cy={point.y} r="2.5" fill="white" stroke="#2563EB" strokeWidth="2" />
+                                            <circle key={i} cx={point.x} cy={point.y} r="2.5" fill="white" stroke="#2563EB" strokeWidth="2" shadow="0 2px 4px rgba(0,0,0,0.1)" />
                                         ))}
                                     </svg>
                                 </div>
-                                <div className="flex justify-between px-1">
+                                <div className="flex justify-between items-center px-1">
                                     {chartData.map((d, i) => {
+                                        const showLabel = labelIndices.includes(i);
                                         const parsedDate = parseDateSafe(d.date);
                                         return (
-                                            <div key={i} className="flex flex-col items-center gap-1">
-                                                <span className="text-[8px] font-black text-slate-400 uppercase">{parsedDate ? format(parsedDate, 'M/d') : ''}</span>
-                                                <span className="text-[9px] font-black text-slate-800 tabular-nums">{d.value}</span>
+                                            <div key={i} className={`flex flex-col items-center gap-1 transition-opacity ${showLabel ? 'opacity-100' : 'opacity-0'}`}>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                                                    {parsedDate ? format(parsedDate, 'M/d') : ''}
+                                                </span>
+                                                <span className="text-[11px] font-bold text-slate-800 tabular-nums">
+                                                    {d.value}
+                                                </span>
                                             </div>
                                         );
                                     })}

@@ -438,10 +438,10 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                     </div>
                 )}
                 {/* Top Bar: Identity & Actions */}
-                <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-blue-700 via-indigo-700 to-indigo-800 text-white relative overflow-hidden shadow-inner">
+                <div className="px-6 py-4 border-b border-blue-100 flex items-center justify-between bg-gradient-to-br from-blue-50/50 via-sky-50 to-indigo-50/50 text-slate-900 relative overflow-hidden shadow-sm">
                     {/* Decorative Background Elements */}
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/10 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none" />
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-100/20 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-100/20 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none" />
 
                     <div className="flex items-center gap-5 relative z-10">
                         {/* Photo */}
@@ -450,14 +450,14 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                 firstName={patient.first_name}
                                 lastName={patient.last_name}
                                 photoUrl={patient.photo_url}
-                                className="w-20 h-20 text-2xl shadow-xl ring-4 ring-white/20 cursor-pointer hover:ring-white/40 hover:scale-105 transition-all duration-300"
+                                className="w-20 h-20 text-2xl shadow-lg ring-4 ring-white/60 cursor-pointer hover:ring-white/80 hover:scale-105 transition-all duration-300"
                                 onClick={() => setIsPhotoModalOpen(true)}
                             />
                             <button
                                 onClick={() => setIsPhotoModalOpen(true)}
-                                className="absolute bottom-0 right-0 p-2 bg-white text-blue-600 rounded-full shadow-2xl border border-blue-100 hover:bg-blue-50 hover:scale-110 transition-all opacity-0 group-hover:opacity-100"
+                                className="absolute bottom-0 right-0 p-2 bg-white text-blue-500 rounded-full shadow-lg border border-blue-100 hover:bg-blue-50 hover:scale-110 transition-all opacity-0 group-hover:opacity-100"
                             >
-                                <Camera size={14} strokeWidth={2.5} />
+                                <Camera size={14} strokeWidth={2} />
                             </button>
                         </div>
 
@@ -465,14 +465,14 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                         <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-3">
                                 <h1
-                                    className="text-2xl font-black tracking-tight cursor-pointer hover:text-white/80 transition-colors drop-shadow-sm select-none"
+                                    className="text-2xl font-bold tracking-tight text-slate-900 cursor-pointer hover:text-blue-600 transition-colors select-none"
                                     onClick={() => navigate(`/patient/${patient?.id || id}/snapshot`)}
                                 >
                                     {patient.first_name || ''} {patient.last_name || ''}
                                 </h1>
                                 <button
                                     onClick={handleEditClick}
-                                    className="p-1.5 bg-white/10 text-white/80 hover:text-white hover:bg-white/20 rounded-full transition-all backdrop-blur-md"
+                                    className="p-1.5 bg-slate-100 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
                                     title="Edit Patient Demographics"
                                 >
                                     <Edit2 size={14} />
@@ -481,19 +481,19 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
 
                             <div className="flex flex-wrap items-center gap-2 mt-1">
                                 {/* Age & Sex Combined Pill */}
-                                <div className="flex items-center gap-2 px-3 py-1 bg-white/15 backdrop-blur-md border border-white/20 text-white rounded-full text-[11px] font-bold shadow-sm">
-                                    <User className="w-3 h-3 opacity-80" />
+                                <div className="flex items-center gap-2 px-3 py-1 bg-white border border-blue-100 text-slate-600 rounded-full text-[11px] font-semibold shadow-sm">
+                                    <User className="w-3 h-3 text-blue-400" />
                                     <span>{calculateAge(patient.dob)}y • {patient.sex === 'M' ? 'Male' : patient.sex === 'F' ? 'Female' : patient.sex || 'N/A'}</span>
                                 </div>
 
                                 {/* DOB Pill */}
-                                <div className="flex items-center gap-2 px-3 py-1 bg-white/15 backdrop-blur-md border border-white/20 text-white rounded-full text-[11px] font-bold shadow-sm">
-                                    <Calendar className="w-3 h-3 opacity-80" />
+                                <div className="flex items-center gap-2 px-3 py-1 bg-white border border-blue-100 text-slate-600 rounded-full text-[11px] font-semibold shadow-sm">
+                                    <Calendar className="w-3 h-3 text-indigo-400" />
                                     <span>{formatDate(patient.dob)}</span>
                                 </div>
 
                                 {/* MRN Pill - Distinct Contrast */}
-                                <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-400 text-amber-950 rounded-full text-[10px] font-black tracking-widest uppercase shadow-md ring-2 ring-amber-400/20">
+                                <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-900 border border-amber-200 rounded-full text-[10px] font-bold tracking-wider uppercase shadow-sm">
                                     <span className="opacity-60">MRN:</span>
                                     <span>{patient.mrn}</span>
                                 </div>
@@ -502,16 +502,16 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                 {activeFlags.length > 0 && (
                                     <button
                                         onClick={() => setIsFlagsPanelOpen(true)}
-                                        className="flex items-center gap-2 px-3 py-1 bg-rose-500 text-white rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg hover:bg-rose-600 hover:scale-105 transition-all animate-in zoom-in duration-300 ring-2 ring-rose-500/20"
+                                        className="flex items-center gap-2 px-3 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm hover:bg-rose-100 transition-all"
                                     >
-                                        <ShieldAlert size={11} fill="currentColor" />
+                                        <ShieldAlert size={11} className="text-rose-500" />
                                         {activeFlags.length} {activeFlags.length === 1 ? 'Clinical Alert' : 'Clinical Alerts'}
                                     </button>
                                 )}
 
                                 {patient.is_restricted && (
-                                    <div className="flex items-center gap-2 px-3 py-1 bg-black/40 backdrop-blur-md text-white rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm ring-2 ring-red-500/30">
-                                        <Lock size={11} fill="currentColor" className="text-red-400" />
+                                    <div className="flex items-center gap-2 px-3 py-1 bg-slate-900 text-white rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                                        <Lock size={11} className="text-rose-400" />
                                         Restricted
                                     </div>
                                 )}
@@ -540,7 +540,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                     alert(err.response?.data?.error || 'Failed to send invitation');
                                 }
                             }}
-                            className="px-4 py-2 text-[13px] font-bold text-white bg-white/15 border border-white/20 rounded-xl hover:bg-white/25 backdrop-blur-lg shadow-xl transition-all flex items-center gap-2"
+                            className="px-4 py-2 text-[13px] font-bold text-blue-700 bg-white border border-blue-100 rounded-xl hover:bg-blue-50 shadow-sm transition-all flex items-center gap-2"
                             title="Invite to Patient Portal"
                         >
                             <Users size={16} />
@@ -555,9 +555,9 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                         />
                         <button
                             onClick={handleOpenChart}
-                            className="px-5 py-2.5 text-[13px] font-black text-blue-700 bg-white rounded-xl hover:bg-blue-50 shadow-2xl shadow-blue-900/20 transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
+                            className="px-5 py-2.5 text-[13px] font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 shadow-md shadow-blue-500/20 transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
                         >
-                            <ExternalLink size={16} strokeWidth={3} />
+                            <ExternalLink size={16} strokeWidth={2} />
                             Open Chart
                         </button>
                     </div>
@@ -568,36 +568,36 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                     {/* Contact */}
                     <div className="bg-white p-2 px-4 border-r border-slate-50">
                         <InfoItem icon={Phone} label="Contact" color="text-blue-500">
-                            <div className="font-bold text-[11px] text-slate-900 leading-tight truncate">{patient.phone || <span className="text-slate-300 font-normal italic">No phone</span>}</div>
+                            <div className="font-semibold text-[11px] text-slate-900 leading-tight truncate">{patient.phone || <span className="text-slate-300 font-normal italic">No phone</span>}</div>
                             {patient.email && <div className="text-slate-400 text-[10px] font-medium truncate leading-tight mt-0.5">{patient.email}</div>}
                         </InfoItem>
                     </div>
                     {/* Address */}
                     <div className="bg-white p-2 px-4 border-r border-slate-50">
                         <InfoItem icon={MapPin} label="Primary Address" color="text-indigo-500">
-                            <div className="font-bold text-[11px] text-slate-900 leading-tight truncate">{patient.address_line1 || <span className="text-slate-300 font-normal italic">Not set</span>}</div>
+                            <div className="font-semibold text-[11px] text-slate-900 leading-tight truncate">{patient.address_line1 || <span className="text-slate-300 font-normal italic">Not set</span>}</div>
                             {patient.city && <div className="text-slate-400 text-[10px] font-medium truncate leading-tight mt-0.5">{patient.city}, {patient.state}</div>}
                         </InfoItem>
                     </div>
                     {/* Insurance */}
                     <div className="bg-white p-2 px-4 border-r border-slate-50">
                         <InfoItem icon={Shield} label="Insurance" color="text-emerald-500">
-                            <div className="font-bold text-[11px] text-slate-900 leading-tight truncate">{patient.insurance_provider || <span className="text-slate-300 font-normal italic">Self Pay</span>}</div>
+                            <div className="font-semibold text-[11px] text-slate-900 leading-tight truncate">{patient.insurance_provider || <span className="text-slate-300 font-normal italic">Self Pay</span>}</div>
                             {patient.insurance_id && <div className="text-slate-400 text-[10px] font-medium truncate leading-tight mt-0.5">ID: {patient.insurance_id}</div>}
                         </InfoItem>
                     </div>
                     {/* Pharmacy */}
                     <div className="bg-white p-2 px-4 border-r border-slate-50">
-                        <InfoItem icon={Pill} label="Pharmacy" color="text-purple-500">
-                            <div className="font-bold text-[11px] text-slate-900 leading-tight truncate">{patient.pharmacy_name || <span className="text-slate-300 font-normal italic">Not set</span>}</div>
-                            {patient.pharmacy_phone && <div className="text-slate-400 text-[10px] font-medium truncate leading-tight mt-0.5">Ph: {patient.pharmacy_phone}</div>}
+                        <InfoItem icon={FlaskConical} label="Pharmacy" color="text-amber-500">
+                            <div className="font-semibold text-[11px] text-slate-900 leading-tight truncate">{patient.pharmacy_name || <span className="text-slate-300 font-normal italic">Not specified</span>}</div>
+                            {patient.pharmacy_phone && <div className="text-slate-400 text-[10px] font-medium truncate leading-tight mt-0.5">{patient.pharmacy_phone}</div>}
                         </InfoItem>
                     </div>
                     {/* Emergency */}
                     <div className="bg-white p-2 px-4">
-                        <InfoItem icon={ShieldAlert} label="Emergency" color="text-rose-500">
-                            <div className="font-bold text-[11px] text-slate-900 leading-tight truncate">{patient.emergency_contact_name || <span className="text-slate-300 font-normal italic">Not set</span>}</div>
-                            <div className="text-slate-400 text-[10px] font-medium truncate leading-tight mt-0.5">{patient.emergency_contact_phone || (patient.emergency_contact_relationship && `Rel: ${patient.emergency_contact_relationship}`)}</div>
+                        <InfoItem icon={ShieldAlert} label="Emergency Contact" color="text-rose-500">
+                            <div className="font-semibold text-[11px] text-slate-900 leading-tight truncate">{patient.emergency_contact_name || <span className="text-slate-300 font-normal italic">Not set</span>}</div>
+                            {patient.emergency_contact_phone && <div className="text-slate-400 text-[10px] font-medium truncate leading-tight mt-0.5">{patient.emergency_contact_phone}</div>}
                         </InfoItem>
                     </div>
                 </div>

@@ -433,13 +433,14 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
             // Fetch additional data in parallel
             try {
-                const [familyHistResponse, socialHistResponse, ordersResponse, referralsResponse, documentsResponse, todayDraftResponse] = await Promise.all([
+                const [familyHistResponse, socialHistResponse, ordersResponse, referralsResponse, documentsResponse, todayDraftResponse, allVisitsResponse] = await Promise.all([
                     patientsAPI.getFamilyHistory(id).catch(() => ({ data: [] })),
                     patientsAPI.getSocialHistory(id).catch(() => ({ data: null })),
                     ordersAPI.getByPatient(id).catch(() => ({ data: [] })),
                     referralsAPI.getByPatient(id).catch(() => ({ data: [] })),
                     documentsAPI.getByPatient(id).catch(() => ({ data: [] })),
-                    visitsAPI.getTodayDraft(id).catch(() => ({ data: { note: null } }))
+                    visitsAPI.getTodayDraft(id).catch(() => ({ data: { note: null } })),
+                    visitsAPI.getByPatient(id).catch(() => ({ data: [] }))
                 ]);
 
                 setFamilyHistory(familyHistResponse?.data || []);
@@ -447,6 +448,43 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 setOrders(ordersResponse?.data || []);
                 setReferrals(referralsResponse?.data || []);
                 setDocuments(documentsResponse?.data || []);
+
+                // Maximize vitals data from all visits
+                const allVisits = allVisitsResponse.data || [];
+                if (allVisits.length > 0) {
+                    const comprehensiveVitals = allVisits
+                        .filter(v => v.vitals)
+                        .map(v => {
+                            const vData = typeof v.vitals === 'string' ? JSON.parse(v.vitals) : v.vitals;
+                            let bpValue = vData.bp || vData.blood_pressure;
+                            if (!bpValue && vData.systolic && vData.diastolic) {
+                                bpValue = `${vData.systolic}/${vData.diastolic}`;
+                            }
+                            return {
+                                id: v.id,
+                                date: v.visit_date ? new Date(v.visit_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : 'Today',
+                                visitDate: v.visit_date,
+                                bp: bpValue || 'N/A',
+                                hr: vData.hr || vData.heart_rate || vData.pulse || 'N/A',
+                                temp: vData.temp || vData.temperature || 'N/A',
+                                rr: vData.rr || vData.respiratory_rate || vData.resp || 'N/A',
+                                spo2: vData.spo2 || vData.oxygen_saturation || vData.o2sat || 'N/A',
+                                weight: vData.weight || 'N/A'
+                            };
+                        });
+
+                    // Merge with existing combinedVitals but avoid duplicates (by id or date/content)
+                    const existingIds = new Set(combinedVitals.map(v => v.id));
+                    comprehensiveVitals.forEach(cv => {
+                        if (!existingIds.has(cv.id)) {
+                            combinedVitals.push(cv);
+                        }
+                    });
+
+                    // Sort by visit date (newest first for the list, chart will reverse it)
+                    combinedVitals.sort((a, b) => new Date(b.visitDate || 0) - new Date(a.visitDate || 0));
+                    setVitals(combinedVitals);
+                }
                 const draftNote = todayDraftResponse.data?.note;
                 setTodayDraftVisit(draftNote || null);
 
@@ -1526,20 +1564,20 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             {activeFlags.map(flag => (
                                                 <div key={flag.id} className="bg-white border-l-4 border-l-rose-500 border-y border-r border-rose-100 rounded-lg p-2.5 flex items-center justify-between shadow-sm hover:shadow-md transition-all animate-in slide-in-from-top-2">
                                                     <div className="flex items-center gap-2.5">
-                                                        <div className="p-1 px-2 bg-rose-500 text-white rounded text-[8px] font-black uppercase tracking-widest">
+                                                        <div className="p-1 px-2 bg-rose-500 text-white rounded text-[8px] font-bold uppercase tracking-widest">
                                                             Alert
                                                         </div>
-                                                        <div className="flex flex-col">
+                                                        <div className="flex flex-col text-left">
                                                             <div className="flex items-center gap-2">
-                                                                <span className="text-[11px] font-black text-rose-900 uppercase tracking-tight">{flag.display_label}</span>
+                                                                <span className="text-[11px] font-bold text-rose-900 uppercase tracking-tight">{flag.display_label}</span>
                                                                 <span className="w-1 h-1 rounded-full bg-slate-200" />
                                                                 <span className="text-[10px] text-slate-500 font-medium">{flag.severity || 'Medium Severity'}</span>
                                                             </div>
-                                                            {flag.note && <p className="text-[10px] text-slate-600 font-semibold mt-0.5">{flag.note}</p>}
+                                                            {flag.note && <p className="text-[10px] text-slate-600 font-medium mt-0.5">{flag.note}</p>}
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-3">
-                                                        <button className="text-[9px] font-black text-rose-400 hover:text-rose-600 uppercase tracking-widest transition-colors mr-2">
+                                                        <button className="text-[9px] font-bold text-rose-400 hover:text-rose-600 uppercase tracking-widest transition-colors mr-2">
                                                             Acknowledge
                                                         </button>
                                                         <button
@@ -1556,29 +1594,29 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
                                     {/* Vitals Trend Wave - Enhanced Clinical Visualization */}
                                     <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/50 mb-6 relative overflow-hidden group/wave">
-                                        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/30 rounded-full -mr-32 -mt-32 blur-3xl group-hover/wave:bg-blue-100/40 transition-colors duration-1000" />
+                                        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/20 rounded-full -mr-32 -mt-32 blur-3xl group-hover/wave:bg-blue-100/30 transition-colors duration-1000" />
 
                                         <div className="flex justify-between items-center mb-6 relative z-10">
                                             <div className="flex items-center gap-3">
-                                                <div className="p-3 bg-gradient-to-br from-indigo-500 to-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200">
-                                                    <Waves className="w-5 h-5 animate-pulse" />
+                                                <div className="p-3 bg-gradient-to-br from-blue-400 to-indigo-500 text-white rounded-2xl shadow-lg shadow-blue-100">
+                                                    <Waves className="w-5 h-5 opacity-90" />
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">Clinical Trend Wave</h3>
+                                                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-0.5 text-left">Clinical Trend Wave</h3>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-sm font-black text-slate-800">Cardiovascular Performance</span>
-                                                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black uppercase rounded-lg">Stable</span>
+                                                        <span className="text-sm font-bold text-slate-800">Cardiovascular Performance</span>
+                                                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[9px] font-bold uppercase rounded-lg border border-emerald-100">Stable</span>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="flex gap-6 bg-slate-50/80 backdrop-blur-md p-2 px-4 rounded-2xl border border-slate-100">
+                                            <div className="flex gap-6 bg-slate-50/50 backdrop-blur-md p-2 px-4 rounded-xl border border-slate-100">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm" />
-                                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Sys. BP</span>
+                                                    <div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm" />
+                                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Sys. BP</span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm" />
-                                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Heart Rate</span>
+                                                    <div className="w-2 h-2 rounded-full bg-rose-500 shadow-sm" />
+                                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Heart Rate</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1623,22 +1661,22 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             content={({ active, payload, label }) => {
                                                                 if (active && payload && payload.length) {
                                                                     return (
-                                                                        <div className="bg-white/90 backdrop-blur-xl border border-white shadow-2xl rounded-2xl p-4 ring-1 ring-slate-950/5">
-                                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-100 pb-2">{label}</p>
+                                                                        <div className="bg-white/95 backdrop-blur-xl border border-slate-100 shadow-2xl rounded-2xl p-4 ring-1 ring-slate-950/5">
+                                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-50 pb-2">{label}</p>
                                                                             <div className="space-y-2.5">
                                                                                 <div className="flex items-center justify-between gap-8">
                                                                                     <div className="flex items-center gap-2">
                                                                                         <div className="w-2 h-2 rounded-full bg-blue-500" />
-                                                                                        <span className="text-[11px] font-bold text-slate-600">BP Systolic</span>
+                                                                                        <span className="text-[11px] font-semibold text-slate-600">BP Systolic</span>
                                                                                     </div>
-                                                                                    <span className="text-[13px] font-black text-blue-700">{payload[0].value} <small className="text-[9px] text-blue-400">mmHg</small></span>
+                                                                                    <span className="text-[13px] font-bold text-blue-700">{payload[0].value} <small className="text-[9px] text-blue-400 font-medium">mmHg</small></span>
                                                                                 </div>
                                                                                 <div className="flex items-center justify-between gap-8">
                                                                                     <div className="flex items-center gap-2">
                                                                                         <div className="w-2 h-2 rounded-full bg-rose-500" />
-                                                                                        <span className="text-[11px] font-bold text-slate-600">Heart Rate</span>
+                                                                                        <span className="text-[11px] font-semibold text-slate-600">Heart Rate</span>
                                                                                     </div>
-                                                                                    <span className="text-[13px] font-black text-rose-700">{payload[1]?.value || '--'} <small className="text-[9px] text-rose-400">bpm</small></span>
+                                                                                    <span className="text-[13px] font-bold text-rose-700">{payload[1]?.value || '--'} <small className="text-[9px] text-rose-400 font-medium">bpm</small></span>
                                                                                 </div>
                                                                             </div>
                                                                         </div>
