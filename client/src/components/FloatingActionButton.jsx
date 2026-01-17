@@ -17,18 +17,18 @@ const FloatingActionButton = ({ context, onHelp }) => { // Kept component name t
         {onHelp && (
           <button
             onClick={onHelp}
-            className="w-10 h-10 rounded-full bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 shadow-lg hover:shadow-xl transition-all flex items-center justify-center hover:scale-105 hover:text-primary-600 dark:hover:text-primary-400 border border-neutral-200 dark:border-neutral-700"
+            className="w-12 h-12 rounded-full bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 shadow-lg hover:shadow-xl transition-all flex items-center justify-center hover:scale-105 hover:text-primary-600 dark:hover:text-primary-400 border border-neutral-200 dark:border-neutral-700"
             aria-label="Get Help"
             title="Help & Support"
           >
-            <HelpCircle className="w-5 h-5" />
+            <HelpCircle className="w-6 h-6" />
           </button>
         )}
 
         {/* AI Assistant Button */}
         <button
           onClick={() => setShowAI(true)}
-          className="w-14 h-14 rounded-full text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center hover:scale-105 animate-pulse-subtle"
+          className="w-12 h-12 rounded-full text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center hover:scale-105 animate-pulse-subtle"
           style={{ background: 'linear-gradient(to right, #8B5CF6, #6366F1)' }}
           aria-label="AI Assistant"
         >
