@@ -334,54 +334,52 @@ const Snapshot = ({ showNotesOnly = false }) => {
             // Set allergies
             setAllergies(snapshot.allergies || []);
 
-            // Set vitals from recent visits
+            // Set vitals from recent visits & merge with notes for maximum completeness
+            let combinedVitals = [];
+
+            // 1. Process recent visits from snapshot
             if (snapshot.recentVisits && snapshot.recentVisits.length > 0) {
-                const vitalsList = snapshot.recentVisits
+                combinedVitals = snapshot.recentVisits
                     .filter(v => v.vitals)
                     .map(v => {
                         const vData = typeof v.vitals === 'string' ? JSON.parse(v.vitals) : v.vitals;
-
-                        // Handle BP reconstruction from systolic/diastolic if explicit BP is missing
                         let bpValue = vData.bp || vData.blood_pressure;
                         if (!bpValue && vData.systolic && vData.diastolic) {
                             bpValue = `${vData.systolic}/${vData.diastolic}`;
                         }
-                        if (!bpValue) bpValue = 'N/A';
-
-                        // Helper to clean potentially double-encoded values
-                        const cleanValue = (val) => {
-                            if (!val || val === 'N/A') return 'N/A';
-                            // If number, return as is
-                            if (typeof val === 'number') return val;
-                            if (typeof val !== 'string') return val;
-                            let str = val;
-                            let prev = '';
-                            let i = 0;
-                            while (str !== prev && i < 5) {
-                                prev = str;
-                                str = str.replace(/&amp;/g, '&')
-                                    .replace(/&#x2F;/g, '/')
-                                    .replace(/&#47;/g, '/');
-                                i++;
-                            }
-                            return str;
-                        };
-
                         return {
                             id: v.id,
-                            date: new Date(v.visit_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }),
-                            bp: cleanValue(bpValue),
-                            hr: cleanValue(vData.hr || vData.heart_rate || vData.pulse || 'N/A'),
-                            temp: cleanValue(vData.temp || vData.temperature || 'N/A'),
-                            rr: cleanValue(vData.rr || vData.respiratory_rate || vData.resp || 'N/A'),
-                            spo2: cleanValue(vData.spo2 || vData.oxygen_saturation || vData.o2sat || 'N/A'),
-                            weight: cleanValue(vData.weight || 'N/A')
+                            date: v.visit_date ? new Date(v.visit_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : 'Today',
+                            bp: bpValue || 'N/A',
+                            hr: vData.hr || vData.heart_rate || vData.pulse || 'N/A',
+                            temp: vData.temp || vData.temperature || 'N/A',
+                            rr: vData.rr || vData.respiratory_rate || vData.resp || 'N/A',
+                            spo2: vData.spo2 || vData.oxygen_saturation || vData.o2sat || 'N/A',
+                            weight: vData.weight || 'N/A'
                         };
                     });
-                setVitals(vitalsList);
-            } else {
-                setVitals([]);
             }
+
+            // 2. If no vitals found in recent visits, check dedicated lastVitals field
+            if (combinedVitals.length === 0 && snapshot.lastVitals) {
+                const vData = typeof snapshot.lastVitals === 'string' ? JSON.parse(snapshot.lastVitals) : snapshot.lastVitals;
+                let bpValue = vData.bp || vData.blood_pressure;
+                if (!bpValue && vData.systolic && vData.diastolic) {
+                    bpValue = `${vData.systolic}/${vData.diastolic}`;
+                }
+                combinedVitals.push({
+                    id: 'last-known',
+                    date: 'Last Known',
+                    bp: bpValue || 'N/A',
+                    hr: vData.hr || vData.heart_rate || vData.pulse || 'N/A',
+                    temp: vData.temp || vData.temperature || 'N/A',
+                    rr: vData.rr || vData.respiratory_rate || vData.resp || 'N/A',
+                    spo2: vData.spo2 || vData.oxygen_saturation || vData.o2sat || 'N/A',
+                    weight: vData.weight || 'N/A'
+                });
+            }
+
+            setVitals(combinedVitals);
 
             // Fetch additional data in parallel
             try {
@@ -399,7 +397,25 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 setOrders(ordersResponse?.data || []);
                 setReferrals(referralsResponse?.data || []);
                 setDocuments(documentsResponse?.data || []);
-                setTodayDraftVisit(todayDraftResponse.data?.note || null);
+                const draftNote = todayDraftResponse.data?.note;
+                setTodayDraftVisit(draftNote || null);
+
+                if (draftNote?.vitals) {
+                    try {
+                        const vData = typeof draftNote.vitals === 'string' ? JSON.parse(draftNote.vitals) : draftNote.vitals;
+                        const draftVitals = {
+                            id: draftNote.id,
+                            date: 'Today (Draft)',
+                            bp: vData.bp || (vData.systolic && vData.diastolic ? `${vData.systolic}/${vData.diastolic}` : 'N/A'),
+                            hr: vData.hr || vData.heart_rate || vData.pulse || 'N/A',
+                            temp: vData.temp || vData.temperature || 'N/A',
+                            rr: vData.rr || vData.respiratory_rate || vData.resp || 'N/A',
+                            spo2: vData.spo2 || vData.oxygen_saturation || vData.o2sat || 'N/A',
+                            weight: vData.weight || 'N/A'
+                        };
+                        setVitals(prev => [draftVitals, ...prev.filter(v => v.id !== draftNote.id)]);
+                    } catch (e) { console.warn('Failed to parse draft vitals', e); }
+                }
             } catch (error) {
                 console.error('Error fetching supplementary data:', error);
             }
@@ -564,60 +580,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
         try {
             await visitsAPI.delete(noteId);
-            // Refresh today's draft visit
-            try {
-                const draftResponse = await visitsAPI.getTodayDraft(id);
-                // New API returns { note: ... } or { note: null }
-                setTodayDraftVisit(draftResponse.data?.note || null);
-            } catch (error) {
-                console.error('Error refreshing today\'s draft visit:', error);
-            }
-            // Refresh notes
-            const response = await visitsAPI.getByPatient(id);
-            if (response.data && response.data.length > 0) {
-                // Format notes using the same logic as in fetchNotes, but include all visits
-                const formattedNotes = response.data.map(visit => {
-                    const rawNote = visit.note_draft || "";
-                    const noteText = typeof rawNote === 'string' ? rawNote : (typeof rawNote === 'object' ? JSON.stringify(rawNote) : String(rawNote));
-                    const ccMatch = String(noteText).match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
-                    const chiefComplaint = ccMatch ? ccMatch[1].trim() : null;
-                    const visitDateObj = new Date(visit.visit_date);
-                    const createdDateObj = visit.created_at ? new Date(visit.created_at) : visitDateObj;
-                    const dateStr = visitDateObj.toLocaleDateString();
-                    const hasTime = visitDateObj.getHours() !== 0 || visitDateObj.getMinutes() !== 0 || visitDateObj.getSeconds() !== 0;
-                    const timeSource = hasTime ? visitDateObj : createdDateObj;
-                    const timeStr = timeSource.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    const dateTimeStr = `${dateStr} ${timeStr}`;
-
-                    return {
-                        id: visit.id,
-                        date: dateStr,
-                        time: timeStr,
-                        dateTime: dateTimeStr,
-                        type: visit.visit_type || "Office Visit",
-                        provider: (() => {
-                            const signedByName = visit.signed_by_first_name && visit.signed_by_last_name
-                                ? `${visit.signed_by_first_name} ${visit.signed_by_last_name}`
-                                : null;
-                            const providerNameFallback = visit.provider_first_name
-                                ? `${visit.provider_first_name} ${visit.provider_last_name}`
-                                : "Provider";
-                            // Use signed_by name unless it's "System Administrator", then use provider name
-                            return ((visit.locked || visit.note_signed_by) && signedByName && signedByName !== 'System Administrator')
-                                ? signedByName
-                                : providerNameFallback;
-                        })(),
-                        chiefComplaint: chiefComplaint,
-                        signed: visit.locked || !!visit.note_signed_by,
-                        fullNote: noteText,
-                        vitals: visit.vitals,
-                        visitDate: visit.visit_date,
-                        visit_date: visit.visit_date,
-                        visit_type: visit.visit_type
-                    };
-                });
-                setRecentNotes(formattedNotes);
-            }
+            // Refresh patient data which will refresh today's draft and notes
+            refreshPatientData();
         } catch (error) {
             console.error('Error deleting note:', error);
             alert('Failed to delete note. Please try again.');
@@ -1351,66 +1315,23 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 </div>
 
                 <div className="px-6">
-                    {/* Sticky Note / Patient Alerts Section */}
-                    {activeFlags.length > 0 && (
-                        <div className="mb-6 flex flex-wrap gap-3">
-                            {activeFlags.map(flag => (
-                                <div
-                                    key={flag.id}
-                                    className={`flex-1 min-w-[280px] p-3 rounded-lg border-l-4 shadow-sm relative group animate-in slide-in-from-top duration-300 ${flag.display_severity === 'critical' ? 'bg-red-50 border-red-500' :
-                                        flag.display_severity === 'warn' ? 'bg-amber-50 border-amber-500' :
-                                            'bg-slate-50 border-slate-400'
-                                        }`}
-                                >
-                                    <div className="flex items-center gap-2.5">
-                                        <div className={`p-1.5 rounded-md ${flag.display_severity === 'critical' ? 'bg-red-100 text-red-600' :
-                                            flag.display_severity === 'warn' ? 'bg-amber-100 text-amber-600' :
-                                                'bg-slate-200 text-slate-600'
-                                            }`}>
-                                            {flag.display_severity === 'critical' ? <ShieldAlert size={16} /> :
-                                                flag.display_severity === 'warn' ? <AlertTriangle size={16} /> :
-                                                    <Shield size={16} />}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between">
-                                                <h3 className={`text-[11px] font-black uppercase tracking-tight truncate ${flag.display_severity === 'critical' ? 'text-red-900' :
-                                                    flag.display_severity === 'warn' ? 'text-amber-900' :
-                                                        'text-slate-900'
-                                                    }`}>
-                                                    {flag.display_label}
-                                                </h3>
-                                                <span className="text-[9px] font-bold text-slate-400 ml-2 whitespace-nowrap">
-                                                    {new Date(flag.created_at).toLocaleDateString()}
-                                                </span>
-                                            </div>
-                                            {flag.note && (
-                                                <p className={`text-[11px] font-medium leading-tight truncate ${flag.display_severity === 'critical' ? 'text-red-800' :
-                                                    flag.display_severity === 'warn' ? 'text-amber-800' :
-                                                        'text-slate-700'
-                                                    }`}>
-                                                    {flag.note}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
 
                     {/* Modular Grid - With Layout Editor Support */}
                     <div className="mb-8">
                         {layoutEditMode ? (
                             <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6">
                                 <div className="flex items-center justify-between">
-                                    <p className="text-sm text-slate-600">
-                                        <strong>Layout Editor Mode:</strong> Use this mode to arrange your modules.
-                                    </p>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                        <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
+                                            Layout Editor Active
+                                        </p>
+                                    </div>
                                     <button
                                         onClick={() => setLayoutEditMode(false)}
-                                        className="px-4 py-1.5 text-xs font-bold text-white bg-slate-800 rounded hover:bg-slate-900"
+                                        className="px-4 py-1.5 text-xs font-bold text-white bg-slate-800 rounded-lg hover:bg-slate-900 transition-all shadow-sm"
                                     >
-                                        Save Layout
+                                        Save Changes
                                     </button>
                                 </div>
                             </div>
@@ -1423,307 +1344,391 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     {/* Visit History Section - Now in Sidebar */}
                                     <div className="bg-white rounded-lg shadow-sm border border-slate-200">
                                         <div
-                                            className="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 cursor-pointer hover:bg-slate-100 transition-colors group/header"
+                                            className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between bg-white cursor-pointer hover:bg-slate-50 transition-colors group/header"
                                             onClick={() => setShowVisitFoldersModal(true)}
                                         >
                                             <div className="flex items-center space-x-2">
-                                                <FileText className="w-3.5 h-3.5 text-slate-500 group-hover/header:text-slate-800" />
+                                                <FileText className="w-3.5 h-3.5 text-slate-400 group-hover/header:text-slate-600" />
                                                 <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wide">Visit History</h3>
                                                 {filteredNotes.length > 0 && (
-                                                    <span className="text-[9px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-bold">{filteredNotes.length}</span>
+                                                    <span className="text-[10px] text-slate-400 font-medium ml-1">({filteredNotes.length})</span>
                                                 )}
                                             </div>
-                                            <ChevronRight className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover/header:opacity-100 transition-all transform group-hover/header:translate-x-0.5" />
+                                            <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover/header:text-slate-500 transition-all transform group-hover/header:translate-x-0.5" />
                                         </div>
-                                        <div className="p-2">
+                                        <div className="p-3 overflow-y-auto scrollbar-hide max-h-[300px]">
                                             {filteredNotes.length > 0 ? (
-                                                <div className="space-y-1.5">
-                                                    {filteredNotes.slice(0, 3).map(note => (
+                                                <div className="space-y-2">
+                                                    {filteredNotes.slice(0, 6).map(note => (
                                                         <div
                                                             key={note.id}
-                                                            className="px-2.5 py-2 bg-slate-50 border border-slate-100 rounded-md hover:bg-slate-100 cursor-pointer transition-colors group"
+                                                            className="px-2 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer transition-colors group relative pl-3"
                                                             onClick={() => handleViewNote(note.id)}
                                                         >
-                                                            <div className="flex items-center justify-between mb-0.5">
-                                                                <span className="text-[11px] font-bold text-slate-900">{note.type}</span>
-                                                                {note.signed ? (
-                                                                    <span className="text-[8px] bg-slate-200 text-slate-600 px-1 rounded font-bold">Signed</span>
-                                                                ) : (
-                                                                    <span className="text-[8px] bg-amber-100 text-amber-700 px-1 rounded font-bold">Draft</span>
-                                                                )}
+                                                            <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-slate-200 group-hover:bg-blue-400 rounded-full transition-colors" />
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-[10px] font-bold text-slate-800">{note.type}</span>
+                                                                <span className="text-[9px] text-slate-400 font-medium tabular-nums">{note.date}</span>
                                                             </div>
-                                                            <div className="text-[9px] text-slate-500 font-medium truncate">{note.dateTime || note.date} • {note.provider}</div>
-                                                            {note.chiefComplaint && (
-                                                                <p className="text-[9px] text-slate-600 mt-1 italic line-clamp-1">"{note.chiefComplaint}"</p>
-                                                            )}
+                                                            <p className="text-[9px] text-slate-500 truncate mt-0.5">{note.chiefComplaint || "No complaint recorded"}</p>
                                                         </div>
                                                     ))}
                                                 </div>
                                             ) : (
-                                                <p className="text-[10px] text-slate-400 text-center py-4">No visits recorded</p>
+                                                <div className="text-center py-6">
+                                                    <FileText className="w-6 h-6 text-slate-200 mx-auto mb-2" />
+                                                    <p className="text-[10px] text-slate-400">No clinical visits</p>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
-                                    {/* Allergies Module */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-                                        <div className="px-2 py-1.5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                                            <div className="flex items-center space-x-1.5">
-                                                <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
-                                                <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-wide">Allergies</h3>
-                                                {allergies.length > 0 && (
-                                                    <span className="text-[9px] bg-rose-100 text-rose-700 px-1 py-0.5 rounded font-bold">{allergies.length}</span>
-                                                )}
+                                    <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                                        <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
+                                            <div className="flex items-center space-x-2">
+                                                <AlertCircle className="w-3.5 h-3.5 text-rose-500 opacity-70" />
+                                                <h3 className="font-bold text-[10px] text-slate-800 uppercase tracking-wider">Allergies</h3>
                                             </div>
                                             <button
-                                                onClick={() => {
-                                                    setPatientChartTab('allergies');
-                                                    setShowPatientChart(true);
-                                                }}
-                                                className="text-[9px] text-slate-500 hover:text-slate-700 font-medium"
+                                                onClick={() => { setPatientChartTab('allergies'); setShowPatientChart(true); }}
+                                                className="text-[9px] text-blue-500 font-bold hover:underline"
                                             >
                                                 Edit
                                             </button>
                                         </div>
-                                        <div className="p-2">
+                                        <div className="p-3">
                                             {allergies.length > 0 ? (
-                                                <div className="space-y-1">
+                                                <div className="space-y-2">
                                                     {allergies.slice(0, 3).map(allergy => (
-                                                        <div key={allergy.id} className="pb-1 border-b border-slate-50 last:border-b-0 last:pb-0">
-                                                            <p className="font-semibold text-[10px] text-slate-900 leading-tight">{allergy.allergen}</p>
-                                                            {allergy.reaction && (
-                                                                <p className="text-[9px] text-slate-500 leading-tight truncate">{allergy.reaction}</p>
-                                                            )}
+                                                        <div key={allergy.id} className="group">
+                                                            <p className="font-bold text-[10px] text-slate-800 leading-tight">{allergy.allergen}</p>
+                                                            <p className="text-[9px] text-slate-400 leading-tight">{allergy.reaction || 'No reaction recorded'}</p>
                                                         </div>
                                                     ))}
-                                                    {allergies.length > 3 && (
-                                                        <p className="text-[9px] text-slate-400 text-center font-medium pt-0.5">+{allergies.length - 3} more</p>
-                                                    )}
                                                 </div>
                                             ) : (
-                                                <p className="text-[10px] text-slate-400 text-center py-1 font-medium">NKA</p>
+                                                <p className="text-[10px] text-slate-400 text-center py-2 italic font-medium">NKA</p>
                                             )}
                                         </div>
                                     </div>
 
                                     {/* Family History Module */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-                                        <div className="px-2 py-1.5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                                            <div className="flex items-center space-x-1.5">
-                                                <Users className="w-3.5 h-3.5 text-slate-600" />
-                                                <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-wide">Family Hx</h3>
+                                    <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                                        <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
+                                            <div className="flex items-center space-x-2">
+                                                <Users className="w-3.5 h-3.5 text-slate-400" />
+                                                <h3 className="font-bold text-[10px] text-slate-800 uppercase tracking-wider">Family History</h3>
                                             </div>
                                             <button
-                                                onClick={() => {
-                                                    setPatientChartTab('family');
-                                                    setShowPatientChart(true);
-                                                }}
-                                                className="text-[9px] text-slate-500 hover:text-slate-700 font-medium"
+                                                onClick={() => { setPatientChartTab('family'); setShowPatientChart(true); }}
+                                                className="text-[9px] text-blue-500 font-bold hover:underline"
                                             >
                                                 Edit
                                             </button>
-                                        </div>
-                                        <div className="p-2">
-                                            {familyHistory.length > 0 ? (
-                                                <div className="space-y-1">
-                                                    {familyHistory.slice(0, 3).map(hist => (
-                                                        <div key={hist.id} className="pb-1 border-b border-slate-50 last:border-b-0 last:pb-0">
-                                                            <p className="font-semibold text-[10px] text-slate-900 leading-tight">{hist.condition}</p>
-                                                            <p className="text-[9px] text-slate-500 leading-tight">{hist.relationship}</p>
-                                                        </div>
-                                                    ))}
-                                                    {familyHistory.length > 3 && (
-                                                        <p className="text-[9px] text-slate-400 text-center font-medium pt-0.5">+{familyHistory.length - 3} more</p>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <p className="text-[10px] text-slate-400 text-center py-1 italic">Not recorded</p>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Social History Module */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-                                        <div className="px-2 py-1.5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                                            <div className="flex items-center space-x-1.5">
-                                                <UserCircle className="w-3.5 h-3.5 text-slate-600" />
-                                                <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-wide">Social Hx</h3>
-                                            </div>
-                                            <button
-                                                onClick={() => {
-                                                    setPatientChartTab('social');
-                                                    setShowPatientChart(true);
-                                                }}
-                                                className="text-[9px] text-slate-500 hover:text-slate-700 font-medium"
-                                            >
-                                                Edit
-                                            </button>
-                                        </div>
-                                        <div className="p-2">
-                                            {socialHistory ? (
-                                                <div className="space-y-0.5 text-[10px]">
-                                                    {socialHistory.smoking_status && (
-                                                        <div className="flex justify-between">
-                                                            <span className="text-slate-500">Smoking:</span>
-                                                            <span className="font-medium text-slate-900">{socialHistory.smoking_status}</span>
-                                                        </div>
-                                                    )}
-                                                    {socialHistory.alcohol_use && (
-                                                        <div className="flex justify-between">
-                                                            <span className="text-slate-500">Alcohol:</span>
-                                                            <span className="font-medium text-slate-900">{socialHistory.alcohol_use}</span>
-                                                        </div>
-                                                    )}
-                                                    {socialHistory.occupation && (
-                                                        <div className="flex justify-between">
-                                                            <span className="text-slate-500">Work:</span>
-                                                            <span className="font-medium text-slate-900 truncate ml-2">{socialHistory.occupation}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <p className="text-[10px] text-slate-400 text-center py-1 italic">Not recorded</p>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                </div>
-
-                                {/* Right Column: Main Grid */}
-                                <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-                                    {/* Medications Module */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow group/card">
-                                        <div
-                                            className="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 cursor-pointer hover:bg-slate-100/80 transition-colors"
-                                            onClick={() => { setPatientChartTab('medications'); setShowPatientChart(true); }}
-                                        >
-                                            <div className="flex items-center space-x-1.5">
-                                                <Pill className="w-4 h-4 text-blue-600 transition-transform group-hover/card:scale-110" />
-                                                <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wider">Medications</h3>
-                                                {(medications || []).filter(m => m.active !== false).length > 0 && <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{(medications || []).filter(m => m.active !== false).length}</span>}
-                                            </div>
-                                            <ChevronRight className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover/card:opacity-100 transition-all transform group-hover/card:translate-x-0.5" />
-                                        </div>
-                                        <div className="p-2 max-h-[160px] overflow-y-auto scrollbar-hide">
-                                            {(medications || []).filter(m => m.active !== false).length > 0 ? (
-                                                <div className="space-y-1">
-                                                    {(medications || []).filter(m => m.active !== false).slice(0, 5).map(med => {
-                                                        const decodedName = decodeHtmlEntities(med.medication_name);
-                                                        return (
-                                                            <div key={med.id} className="pb-1 border-b border-slate-50 last:border-b-0">
-                                                                <p className="font-bold text-[10px] text-slate-900 truncate">{decodedName}</p>
-                                                                <p className="text-[9px] text-slate-500">{med.dosage} {med.frequency}</p>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            ) : (
-                                                <p className="text-[10px] text-slate-400 text-center py-4 italic">No active medications</p>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Problems Module */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow group/card">
-                                        <div
-                                            className="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 cursor-pointer hover:bg-slate-100/80 transition-colors"
-                                            onClick={() => { setPatientChartTab('problems'); setShowPatientChart(true); }}
-                                        >
-                                            <div className="flex items-center space-x-1.5">
-                                                <AlertCircle className="w-4 h-4 text-amber-600 transition-transform group-hover/card:scale-110" />
-                                                <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wider">Problems</h3>
-                                                {(problems || []).length > 0 && <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{(problems || []).length}</span>}
-                                            </div>
-                                            <ChevronRight className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover/card:opacity-100 transition-all transform group-hover/card:translate-x-0.5" />
-                                        </div>
-                                        <div className="p-2 max-h-[160px] overflow-y-auto scrollbar-hide">
-                                            {(problems || []).length > 0 ? (
-                                                <div className="space-y-1">
-                                                    {problems.filter(p => p.status === 'active').slice(0, 5).map(prob => (
-                                                        <div key={prob.id} className="pb-1 border-b border-slate-50 last:border-b-0 flex items-center justify-between gap-2">
-                                                            <p className="font-bold text-[10px] text-slate-900 truncate">
-                                                                {(prob.name || prob.problem_name || '').replace(/^[\d.\s]+/, '')}
-                                                            </p>
-                                                            <span className="text-[8px] bg-slate-100 text-slate-500 px-1 rounded font-black uppercase shrink-0">Active</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <p className="text-[10px] text-slate-400 text-center py-4 italic">No active problems</p>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Results & Documents Module */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow group/card">
-                                        <div
-                                            className="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 cursor-pointer hover:bg-slate-100/80 transition-colors"
-                                            onClick={() => { setPatientChartTab('labs'); setShowPatientChart(true); }}
-                                        >
-                                            <div className="flex items-center space-x-1.5">
-                                                <FileText className="w-4 h-4 text-blue-600 transition-transform group-hover/card:scale-110" />
-                                                <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wider">Results</h3>
-                                            </div>
-                                            <ChevronRight className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover/card:opacity-100 transition-all transform group-hover/card:translate-x-0.5" />
-                                        </div>
-                                        <div className="p-2 max-h-[160px] overflow-y-auto scrollbar-hide">
-                                            {orders.length > 0 || documents.length > 0 ? (
-                                                <div className="space-y-1.5">
-                                                    {[...orders.slice(0, 3), ...documents.slice(0, 3)].map((item, idx) => (
-                                                        <div key={idx} className="pb-1 border-b border-slate-50 last:border-b-0 flex items-center justify-between gap-2">
-                                                            <div className="min-w-0 flex-1">
-                                                                <p className="font-bold text-[10px] text-slate-900 truncate">{item.order_name || item.name || item.doc_type}</p>
-                                                                <p className="text-[8px] text-slate-400">{item.order_date || item.upload_date || 'Recent'}</p>
-                                                            </div>
-                                                            <span className={`text-[8px] px-1 rounded font-black uppercase shrink-0 ${item.order_type === 'lab' || item.doc_type === 'lab' ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-600'}`}>
-                                                                {item.order_type || item.doc_type || 'Result'}
-                                                            </span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <p className="text-[10px] text-slate-400 text-center py-4 italic">No recent results</p>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Vitals Module - Reverted & Compact */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow group/card">
-                                        <div
-                                            className="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 cursor-pointer hover:bg-slate-100/80 transition-colors"
-                                            onClick={() => { setPatientChartTab('history'); setShowPatientChart(true); }}
-                                        >
-                                            <div className="flex items-center space-x-1.5">
-                                                <Activity className="w-4 h-4 text-slate-600 transition-transform group-hover/card:scale-110" />
-                                                <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wider">Vitals</h3>
-                                            </div>
-                                            <ChevronRight className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover/card:opacity-100 transition-all transform group-hover/card:translate-x-0.5" />
                                         </div>
                                         <div className="p-3">
-                                            {vitals.length > 0 ? vitals.slice(0, 1).map((vital, idx) => (
-                                                <div key={idx} className="space-y-2">
-                                                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                                                        <div className="flex items-center justify-between border-b border-slate-50 pb-1">
-                                                            <span className="text-[10px] text-slate-400 font-bold">BP</span>
-                                                            <span className="text-xs font-bold text-slate-900">{vital.bp || '—'}</span>
+                                            {familyHistory.length > 0 ? (
+                                                <div className="space-y-2">
+                                                    {familyHistory.slice(0, 3).map(hist => (
+                                                        <div key={hist.id}>
+                                                            <p className="font-bold text-[10px] text-slate-800 leading-tight">{hist.condition}</p>
+                                                            <p className="text-[9px] text-slate-400 leading-tight">{hist.relationship}</p>
                                                         </div>
-                                                        <div className="flex items-center justify-between border-b border-slate-50 pb-1">
-                                                            <span className="text-[10px] text-slate-400 font-bold">HR</span>
-                                                            <span className="text-xs font-bold text-slate-900">{vital.hr || '—'}</span>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-[10px] text-slate-400 text-center py-2 italic font-medium">Not recorded</p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                                        <div className="px-3 py-2 border-b border-slate-100 flex items-center space-x-2">
+                                            <Users className="w-3.5 h-3.5 text-slate-400" />
+                                            <h3 className="font-bold text-[10px] text-slate-800 uppercase tracking-wider">Social History</h3>
+                                        </div>
+                                        <div className="p-3">
+                                            {socialHistory ? (
+                                                <div className="space-y-2">
+                                                    <div className="flex justify-between items-center text-[10px]">
+                                                        <span className="text-slate-400 font-medium">Smoking</span>
+                                                        <span className="font-bold text-slate-700">{socialHistory.smoking_status || '—'}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center text-[10px]">
+                                                        <span className="text-slate-400 font-medium">Alcohol</span>
+                                                        <span className="font-bold text-slate-700">{socialHistory.alcohol_use || '—'}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center text-[10px]">
+                                                        <span className="text-slate-400 font-medium">Occupation</span>
+                                                        <span className="font-bold text-slate-700 truncate ml-2 max-w-[80px] text-right">{socialHistory.occupation || '—'}</span>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <p className="text-[10px] text-slate-400 text-center py-2 italic">Not recorded</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                {/* Main Dashboard Content */}
+                                <div className="lg:col-span-3 space-y-5">
+                                    {/* Clinical Alerts Banner - High Visibility Inline version */}
+                                    {activeFlags.length > 0 && (
+                                        <div className="space-y-1.5">
+                                            {activeFlags.map(flag => (
+                                                <div key={flag.id} className="bg-white border-l-4 border-l-rose-500 border-y border-r border-rose-100 rounded-lg p-2.5 flex items-center justify-between shadow-sm hover:shadow-md transition-all animate-in slide-in-from-top-2">
+                                                    <div className="flex items-center gap-2.5">
+                                                        <div className="p-1 px-2 bg-rose-500 text-white rounded text-[8px] font-black uppercase tracking-widest">
+                                                            Alert
                                                         </div>
-                                                        <div className="flex items-center justify-between border-b border-slate-50 pb-1">
-                                                            <span className="text-[10px] text-slate-400 font-bold">SpO2</span>
-                                                            <span className="text-xs font-bold text-slate-900">{vital.spo2 || '—'}%</span>
-                                                        </div>
-                                                        <div className="flex items-center justify-between border-b border-slate-50 pb-1">
-                                                            <span className="text-[10px] text-slate-400 font-bold">Temp</span>
-                                                            <span className="text-xs font-bold text-slate-900">{vital.temp || '—'}°F</span>
+                                                        <div className="flex flex-col">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-[11px] font-black text-rose-900 uppercase tracking-tight">{flag.display_label}</span>
+                                                                <span className="w-1 h-1 rounded-full bg-slate-200" />
+                                                                <span className="text-[10px] text-slate-500 font-medium">{flag.severity || 'Medium Severity'}</span>
+                                                            </div>
+                                                            {flag.note && <p className="text-[10px] text-slate-600 font-semibold mt-0.5">{flag.note}</p>}
                                                         </div>
                                                     </div>
-                                                    <p className="text-[9px] text-slate-400 text-right font-medium italic mt-1">{new Date(vital.date).toLocaleDateString()} {vital.time}</p>
+                                                    <div className="flex items-center gap-3">
+                                                        <button className="text-[9px] font-black text-rose-400 hover:text-rose-600 uppercase tracking-widest transition-colors mr-2">
+                                                            Acknowledge
+                                                        </button>
+                                                        <button
+                                                            onClick={refreshPatientData}
+                                                            className="p-1 hover:bg-slate-100 rounded text-slate-300 transition-colors"
+                                                        >
+                                                            <X className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            )) : (
-                                                <p className="text-[10px] text-slate-400 text-center py-4 italic">No vitals recorded</p>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Quick Metrics Row */}
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        {[
+                                            { label: 'Blood Pressure', value: vitals[0]?.bp, unit: 'mmHg', icon: Activity, color: 'text-blue-500', bg: 'bg-blue-50', last: vitals[1]?.bp },
+                                            { label: 'Heart Rate', value: vitals[0]?.hr, unit: 'bpm', icon: Heart, color: 'text-rose-500', bg: 'bg-rose-50', last: vitals[1]?.hr },
+                                            { label: 'Oxygen Sat', value: vitals[0]?.spo2, unit: '%', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-50', last: vitals[1]?.spo2 },
+                                            { label: 'Temperature', value: vitals[0]?.temp, unit: '°F', icon: Activity, color: 'text-amber-500', bg: 'bg-amber-50', last: vitals[1]?.temp }
+                                        ].map((stat, i) => (
+                                            <div key={i} className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stat.label}</span>
+                                                    <div className={`p-1.5 rounded-lg ${stat.bg} ${stat.color}`}>
+                                                        <stat.icon className="w-3.5 h-3.5" />
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-baseline gap-1">
+                                                    <span className="text-xl font-black text-slate-900 tabular-nums leading-none tracking-tight">{stat.value || '--'}</span>
+                                                    <span className="text-[10px] font-bold text-slate-300 uppercase">{stat.unit}</span>
+                                                </div>
+                                                {stat.last && (
+                                                    <div className="mt-2 flex items-center justify-between">
+                                                        <span className="text-[9px] font-medium text-slate-400">Previous: {stat.last}</span>
+                                                        <div className="w-8 h-1 bg-slate-50 rounded-full overflow-hidden">
+                                                            <div className={`h-full ${stat.bg.replace('/50', '').replace('bg-', 'bg-')}`} style={{ width: '60%' }}></div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Insights Row */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* Plan of Care & Continuity Card */}
+                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 hover:shadow-md transition-shadow group">
+                                            <div className="flex justify-between items-center mb-4">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="p-2 bg-indigo-50 text-indigo-500 rounded-xl group-hover:bg-indigo-500 group-hover:text-white transition-all">
+                                                        <FileText className="w-4 h-4" />
+                                                    </div>
+                                                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Plan of Care & Next Steps</h3>
+                                                </div>
+                                                <span className="text-[10px] text-slate-300 font-bold uppercase">Latest Enc: {recentNotes[0]?.date || 'None'}</span>
+                                            </div>
+
+                                            {recentNotes[0] ? (
+                                                <div className="space-y-4">
+                                                    <div className="relative">
+                                                        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-indigo-100 rounded-full" />
+                                                        <div className="pl-4">
+                                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Current Clinical Plan</span>
+                                                            <div className="text-[11px] text-slate-700 leading-relaxed font-medium line-clamp-4 italic">
+                                                                "{recentNotes[0].plan || recentNotes[0].assessment || 'No specific clinical plan was documented in the latest visit note.'}"
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {(recentNotes[0].followUp || recentNotes[0].carePlan) && (
+                                                        <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 flex items-start gap-2.5">
+                                                            <Clock className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
+                                                            <div>
+                                                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-0.5">Follow-up & Coordination</span>
+                                                                <p className="text-[11px] text-slate-900 font-bold leading-tight">
+                                                                    {recentNotes[0].followUp || recentNotes[0].carePlan}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="flex items-center gap-2 pt-1">
+                                                        <button
+                                                            onClick={() => handleViewNote(recentNotes[0].id)}
+                                                            className="flex-1 py-2 px-3 bg-slate-900 hover:bg-black text-white rounded-xl text-[10px] font-bold transition-all flex items-center justify-center gap-1.5"
+                                                        >
+                                                            Open Full Visit Plan
+                                                        </button>
+                                                        <button className="p-2 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
+                                                            <Printer className="w-3.5 h-3.5 text-slate-400" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="py-10 text-center flex flex-col items-center">
+                                                    <div className="p-3 bg-slate-50 rounded-full mb-3">
+                                                        <FileText className="w-6 h-6 text-slate-200" />
+                                                    </div>
+                                                    <p className="text-[11px] text-slate-400 font-medium">No active care plans found</p>
+                                                </div>
                                             )}
+                                        </div>
+
+                                        {/* Reminders & Pending Actions Card */}
+                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 hover:shadow-md transition-shadow">
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <div className="p-2 bg-amber-50 text-amber-500 rounded-xl">
+                                                    <CheckCircle2 className="w-4 h-4" />
+                                                </div>
+                                                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Clinical Reminders</h3>
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                {/* Smart-derived Reminders */}
+                                                {(orders.filter(o => o.status === 'pending').length > 0) && (
+                                                    <div className="flex items-start gap-3 p-2.5 bg-amber-50/50 rounded-xl border border-amber-100">
+                                                        <div className="p-1 bg-amber-100 rounded text-amber-600">
+                                                            <FlaskConical className="w-3 h-3" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[11px] font-bold text-amber-900">Pending Lab Result</p>
+                                                            <p className="text-[10px] text-amber-700/80">Patient has {orders.filter(o => o.status === 'pending').length} unfinalized orders</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                <div className="flex items-start gap-3 p-2.5 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                                                    <div className="p-1 bg-slate-100 rounded text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                                                        <Users className="w-3 h-3" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[11px] font-bold text-slate-800 group-hover:text-blue-600">Annual Wellness Visit</p>
+                                                        <p className="text-[10px] text-slate-400">Due in 14 days (suggested sloting)</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-start gap-3 p-2.5 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                                                    <div className="p-1 bg-slate-100 rounded text-slate-400 group-hover:bg-rose-100 group-hover:text-rose-600 transition-colors">
+                                                        <Activity className="w-3 h-3" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[11px] font-bold text-slate-800 group-hover:text-rose-600">HTN Screening</p>
+                                                        <p className="text-[10px] text-slate-400">Last BP: {vitals[0]?.bp || 'None'} ({vitals[0]?.date || 'Today'})</p>
+                                                    </div>
+                                                </div>
+
+                                                <button className="w-full py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors border-t border-slate-50 mt-1">
+                                                    View All Tasks
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Detailed Boards Grid */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        {/* Medications Module */}
+                                        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
+                                            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-white">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="p-1.5 bg-blue-50 text-blue-500 rounded-lg">
+                                                        <Pill className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wide">Medications</h3>
+                                                </div>
+                                                <button onClick={() => { setPatientChartTab('medications'); setShowPatientChart(true); }} className="text-[10px] text-blue-500 font-bold hover:underline">View All</button>
+                                            </div>
+                                            <div className="p-3">
+                                                {(medications || []).filter(m => m.active !== false).length > 0 ? (
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                        {(medications || []).filter(m => m.active !== false).slice(0, 10).map(med => (
+                                                            <div key={med.id} className="p-2 border border-slate-50 rounded-xl bg-slate-50/30 hover:bg-slate-50 transition-colors">
+                                                                <p className="font-bold text-[11px] text-slate-800 truncate">{decodeHtmlEntities(med.medication_name)}</p>
+                                                                <p className="text-[10px] text-slate-400 font-medium">{med.dosage} {med.frequency}</p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-[10px] text-slate-400 text-center py-6 italic">No active medications</p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Problems Module */}
+                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
+                                            <div className="px-4 py-3 border-b border-slate-100 flex items-center bg-white justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="p-1.5 bg-amber-50 text-amber-500 rounded-lg">
+                                                        <AlertCircle className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wide">Problems</h3>
+                                                </div>
+                                                <button onClick={() => { setPatientChartTab('problems'); setShowPatientChart(true); }} className="text-[10px] text-amber-600 font-bold hover:underline">Edit</button>
+                                            </div>
+                                            <div className="p-3">
+                                                {(problems || []).length > 0 ? (
+                                                    <div className="space-y-1.5">
+                                                        {(problems || []).slice(0, 8).map(prob => (
+                                                            <div key={prob.id} className="flex justify-between items-center group">
+                                                                <span className="text-[11px] font-semibold text-slate-700 truncate mr-2">{prob.name}</span>
+                                                                <span className="text-[8px] bg-emerald-50 text-emerald-600 px-1 py-0.5 rounded font-bold uppercase shrink-0">Active</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-[10px] text-slate-400 text-center py-6 italic">No problems listed</p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Results Module */}
+                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
+                                            <div className="px-4 py-3 border-b border-slate-100 flex items-center bg-white justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="p-1.5 bg-indigo-50 text-indigo-500 rounded-lg">
+                                                        <FileText className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wide">Results</h3>
+                                                </div>
+                                                <button onClick={() => { setPatientChartTab('labs'); setShowPatientChart(true); }} className="text-[10px] text-indigo-500 font-bold hover:underline">View</button>
+                                            </div>
+                                            <div className="p-3">
+                                                {orders.length > 0 || documents.length > 0 ? (
+                                                    <div className="space-y-2">
+                                                        {[...orders.slice(0, 4), ...documents.slice(0, 4)].map((item, idx) => (
+                                                            <div key={idx} className="flex items-center justify-between gap-2 overflow-hidden">
+                                                                <div className="min-w-0 flex-1">
+                                                                    <p className="font-bold text-[10px] text-slate-700 truncate leading-tight">{item.order_name || item.name || item.doc_type}</p>
+                                                                    <p className="text-[8px] text-slate-400 font-medium">{item.order_date || item.upload_date || 'Recent'}</p>
+                                                                </div>
+                                                                <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-[10px] text-slate-400 text-center py-6 italic">No recent results</p>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1736,273 +1741,275 @@ const Snapshot = ({ showNotesOnly = false }) => {
             </div>
 
             {/* Demographics Modal */}
-            {showDemographicsModal && demographicsField && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" onClick={() => {
-                    setShowDemographicsModal(false);
-                    setDemographicsField(null);
-                }}>
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                                {demographicsField === 'phone' && 'Edit Phone'}
-                                {demographicsField === 'email' && 'Edit Email'}
-                                {demographicsField === 'address' && 'Edit Address'}
-                                {demographicsField === 'insurance' && 'Edit Insurance'}
-                                {demographicsField === 'pharmacy' && 'Edit Pharmacy'}
-                                {demographicsField === 'emergency' && 'Edit Emergency Contact'}
-                            </h3>
-                            <button
-                                onClick={() => {
-                                    setShowDemographicsModal(false);
-                                    setDemographicsField(null);
-                                }}
-                                className="p-1 hover:bg-gray-100 rounded text-gray-500"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="space-y-4">
-                            {/* Phone */}
-                            {demographicsField === 'phone' && (
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                                    <input
-                                        type="tel"
-                                        value={demographicsForm.phone}
-                                        onChange={(e) => {
-                                            const formatted = formatPhoneInput(e.target.value);
-                                            setDemographicsForm({ ...demographicsForm, phone: formatted });
-                                        }}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                        placeholder="(555) 123-4567"
-                                        maxLength={14}
-                                        autoFocus
-                                    />
-                                </div>
-                            )}
-
-                            {/* Email */}
-                            {demographicsField === 'email' && (
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                                    <input
-                                        type="email"
-                                        value={demographicsForm.email}
-                                        onChange={(e) => setDemographicsForm({ ...demographicsForm, email: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                        placeholder="patient@example.com"
-                                        autoFocus
-                                    />
-                                </div>
-                            )}
-
-                            {/* Address */}
-                            {demographicsField === 'address' && (
-                                <div className="space-y-3">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
-                                        <input
-                                            type="text"
-                                            value={demographicsForm.address_line1}
-                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, address_line1: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                            placeholder="123 Main St"
-                                            autoFocus
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                                            <input
-                                                type="text"
-                                                value={demographicsForm.city}
-                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, city: e.target.value })}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                                placeholder="City"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                                            <input
-                                                type="text"
-                                                value={demographicsForm.state}
-                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, state: e.target.value })}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                                placeholder="State"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
-                                        <input
-                                            type="text"
-                                            value={demographicsForm.zip}
-                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, zip: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                            placeholder="12345"
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Insurance */}
-                            {demographicsField === 'insurance' && (
-                                <div className="space-y-3">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Insurance Provider</label>
-                                        <input
-                                            type="text"
-                                            value={demographicsForm.insurance_provider}
-                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, insurance_provider: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                            placeholder="Insurance Company Name"
-                                            autoFocus
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Policy/Group Number</label>
-                                        <input
-                                            type="text"
-                                            value={demographicsForm.insurance_id}
-                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, insurance_id: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                            placeholder="Policy or Group Number"
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Pharmacy */}
-                            {demographicsField === 'pharmacy' && (
-                                <div className="space-y-3">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Pharmacy Name</label>
-                                        <input
-                                            type="text"
-                                            value={demographicsForm.pharmacy_name}
-                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, pharmacy_name: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                            placeholder="Pharmacy Name"
-                                            autoFocus
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Pharmacy Phone</label>
-                                        <input
-                                            type="tel"
-                                            value={demographicsForm.pharmacy_phone}
-                                            onChange={(e) => {
-                                                const formatted = formatPhoneInput(e.target.value);
-                                                setDemographicsForm({ ...demographicsForm, pharmacy_phone: formatted });
-                                            }}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                            placeholder="(555) 123-4567"
-                                            maxLength={14}
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Emergency Contact */}
-                            {demographicsField === 'emergency' && (
-                                <div className="space-y-3">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
-                                        <input
-                                            type="text"
-                                            value={demographicsForm.emergency_contact_name}
-                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, emergency_contact_name: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                            placeholder="Full Name"
-                                            autoFocus
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                                        <input
-                                            type="tel"
-                                            value={demographicsForm.emergency_contact_phone}
-                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, emergency_contact_phone: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                            placeholder="(555) 123-4567"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Relationship</label>
-                                        <input
-                                            type="text"
-                                            value={demographicsForm.emergency_contact_relationship}
-                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, emergency_contact_relationship: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                            placeholder="e.g., Spouse, Parent, Friend"
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="flex space-x-3 pt-2">
-                                <button
-                                    onClick={handleSaveDemographics}
-                                    className="flex-1 px-4 py-2 text-white rounded-md flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
-                                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                                >
-                                    <Save className="w-4 h-4" />
-                                    <span>Save</span>
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        // Clear the field
-                                        const clearedForm = { ...demographicsForm };
-                                        switch (demographicsField) {
-                                            case 'phone':
-                                                clearedForm.phone = '';
-                                                break;
-                                            case 'email':
-                                                clearedForm.email = '';
-                                                break;
-                                            case 'address':
-                                                clearedForm.address_line1 = '';
-                                                clearedForm.city = '';
-                                                clearedForm.state = '';
-                                                clearedForm.zip = '';
-                                                break;
-                                            case 'insurance':
-                                                clearedForm.insurance_provider = '';
-                                                clearedForm.insurance_id = '';
-                                                break;
-                                            case 'pharmacy':
-                                                clearedForm.pharmacy_name = '';
-                                                clearedForm.pharmacy_phone = '';
-                                                break;
-                                            case 'emergency':
-                                                clearedForm.emergency_contact_name = '';
-                                                clearedForm.emergency_contact_phone = '';
-                                                clearedForm.emergency_contact_relationship = '';
-                                                break;
-                                        }
-                                        setDemographicsForm(clearedForm);
-                                    }}
-                                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                                >
-                                    Clear
-                                </button>
+            {
+                showDemographicsModal && demographicsField && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" onClick={() => {
+                        setShowDemographicsModal(false);
+                        setDemographicsField(null);
+                    }}>
+                        <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-semibold text-gray-900">
+                                    {demographicsField === 'phone' && 'Edit Phone'}
+                                    {demographicsField === 'email' && 'Edit Email'}
+                                    {demographicsField === 'address' && 'Edit Address'}
+                                    {demographicsField === 'insurance' && 'Edit Insurance'}
+                                    {demographicsField === 'pharmacy' && 'Edit Pharmacy'}
+                                    {demographicsField === 'emergency' && 'Edit Emergency Contact'}
+                                </h3>
                                 <button
                                     onClick={() => {
                                         setShowDemographicsModal(false);
                                         setDemographicsField(null);
                                     }}
-                                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                                    className="p-1 hover:bg-gray-100 rounded text-gray-500"
                                 >
-                                    Cancel
+                                    <X className="w-5 h-5" />
                                 </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                {/* Phone */}
+                                {demographicsField === 'phone' && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                                        <input
+                                            type="tel"
+                                            value={demographicsForm.phone}
+                                            onChange={(e) => {
+                                                const formatted = formatPhoneInput(e.target.value);
+                                                setDemographicsForm({ ...demographicsForm, phone: formatted });
+                                            }}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                            placeholder="(555) 123-4567"
+                                            maxLength={14}
+                                            autoFocus
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Email */}
+                                {demographicsField === 'email' && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                                        <input
+                                            type="email"
+                                            value={demographicsForm.email}
+                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, email: e.target.value })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                            placeholder="patient@example.com"
+                                            autoFocus
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Address */}
+                                {demographicsField === 'address' && (
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
+                                            <input
+                                                type="text"
+                                                value={demographicsForm.address_line1}
+                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, address_line1: e.target.value })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                placeholder="123 Main St"
+                                                autoFocus
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                                                <input
+                                                    type="text"
+                                                    value={demographicsForm.city}
+                                                    onChange={(e) => setDemographicsForm({ ...demographicsForm, city: e.target.value })}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                    placeholder="City"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                                                <input
+                                                    type="text"
+                                                    value={demographicsForm.state}
+                                                    onChange={(e) => setDemographicsForm({ ...demographicsForm, state: e.target.value })}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                    placeholder="State"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
+                                            <input
+                                                type="text"
+                                                value={demographicsForm.zip}
+                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, zip: e.target.value })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                placeholder="12345"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Insurance */}
+                                {demographicsField === 'insurance' && (
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Insurance Provider</label>
+                                            <input
+                                                type="text"
+                                                value={demographicsForm.insurance_provider}
+                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, insurance_provider: e.target.value })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                placeholder="Insurance Company Name"
+                                                autoFocus
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Policy/Group Number</label>
+                                            <input
+                                                type="text"
+                                                value={demographicsForm.insurance_id}
+                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, insurance_id: e.target.value })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                placeholder="Policy or Group Number"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Pharmacy */}
+                                {demographicsField === 'pharmacy' && (
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Pharmacy Name</label>
+                                            <input
+                                                type="text"
+                                                value={demographicsForm.pharmacy_name}
+                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, pharmacy_name: e.target.value })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                placeholder="Pharmacy Name"
+                                                autoFocus
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Pharmacy Phone</label>
+                                            <input
+                                                type="tel"
+                                                value={demographicsForm.pharmacy_phone}
+                                                onChange={(e) => {
+                                                    const formatted = formatPhoneInput(e.target.value);
+                                                    setDemographicsForm({ ...demographicsForm, pharmacy_phone: formatted });
+                                                }}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                placeholder="(555) 123-4567"
+                                                maxLength={14}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Emergency Contact */}
+                                {demographicsField === 'emergency' && (
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
+                                            <input
+                                                type="text"
+                                                value={demographicsForm.emergency_contact_name}
+                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, emergency_contact_name: e.target.value })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                placeholder="Full Name"
+                                                autoFocus
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                                            <input
+                                                type="tel"
+                                                value={demographicsForm.emergency_contact_phone}
+                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, emergency_contact_phone: e.target.value })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                placeholder="(555) 123-4567"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Relationship</label>
+                                            <input
+                                                type="text"
+                                                value={demographicsForm.emergency_contact_relationship}
+                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, emergency_contact_relationship: e.target.value })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                placeholder="e.g., Spouse, Parent, Friend"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="flex space-x-3 pt-2">
+                                    <button
+                                        onClick={handleSaveDemographics}
+                                        className="flex-1 px-4 py-2 text-white rounded-md flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
+                                        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
+                                    >
+                                        <Save className="w-4 h-4" />
+                                        <span>Save</span>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            // Clear the field
+                                            const clearedForm = { ...demographicsForm };
+                                            switch (demographicsField) {
+                                                case 'phone':
+                                                    clearedForm.phone = '';
+                                                    break;
+                                                case 'email':
+                                                    clearedForm.email = '';
+                                                    break;
+                                                case 'address':
+                                                    clearedForm.address_line1 = '';
+                                                    clearedForm.city = '';
+                                                    clearedForm.state = '';
+                                                    clearedForm.zip = '';
+                                                    break;
+                                                case 'insurance':
+                                                    clearedForm.insurance_provider = '';
+                                                    clearedForm.insurance_id = '';
+                                                    break;
+                                                case 'pharmacy':
+                                                    clearedForm.pharmacy_name = '';
+                                                    clearedForm.pharmacy_phone = '';
+                                                    break;
+                                                case 'emergency':
+                                                    clearedForm.emergency_contact_name = '';
+                                                    clearedForm.emergency_contact_phone = '';
+                                                    clearedForm.emergency_contact_relationship = '';
+                                                    break;
+                                            }
+                                            setDemographicsForm(clearedForm);
+                                        }}
+                                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                                    >
+                                        Clear
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setShowDemographicsModal(false);
+                                            setDemographicsField(null);
+                                        }}
+                                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Unified Patient Chart Panel */}
             <PatientChartPanel
@@ -2045,13 +2052,15 @@ const Snapshot = ({ showNotesOnly = false }) => {
             />
 
             {/* Visit Chart View Modal */}
-            {selectedVisitForView && (
-                <VisitChartView
-                    visitId={selectedVisitForView.visitId}
-                    patientId={selectedVisitForView.patientId}
-                    onClose={() => setSelectedVisitForView(null)}
-                />
-            )}
+            {
+                selectedVisitForView && (
+                    <VisitChartView
+                        visitId={selectedVisitForView.visitId}
+                        patientId={selectedVisitForView.patientId}
+                        onClose={() => setSelectedVisitForView(null)}
+                    />
+                )
+            }
 
 
             {/* Document Upload Modal */}
@@ -2206,18 +2215,20 @@ const Snapshot = ({ showNotesOnly = false }) => {
             </Modal>
 
             {/* Enhanced E-Prescribe Modal */}
-            {hasPrivilege('e_prescribe') && (
-                <EPrescribeEnhanced
-                    isOpen={showEPrescribeEnhanced}
-                    onClose={() => setShowEPrescribeEnhanced(false)}
-                    onSuccess={() => {
-                        // Refresh patient data to show new prescription
-                        refreshPatientData();
-                        setShowEPrescribeEnhanced(false);
-                    }}
-                    patientId={id}
-                />
-            )}
+            {
+                hasPrivilege('e_prescribe') && (
+                    <EPrescribeEnhanced
+                        isOpen={showEPrescribeEnhanced}
+                        onClose={() => setShowEPrescribeEnhanced(false)}
+                        onSuccess={() => {
+                            // Refresh patient data to show new prescription
+                            refreshPatientData();
+                            setShowEPrescribeEnhanced(false);
+                        }}
+                        patientId={id}
+                    />
+                )
+            }
 
             {/* Stress Test Upload Modal */}
             <Modal
@@ -2506,7 +2517,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     setShowPatientChart(true);
                 }}
             />
-        </div >
+        </div>
     );
 };
 

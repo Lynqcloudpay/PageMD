@@ -211,22 +211,45 @@ const parseDateSafe = (dateStr) => {
 };
 
 // ============== MINI SPARKLINE COMPONENT ==============
-const MiniSparkline = ({ data, color = 'blue', width = 60, height = 20 }) => {
-    if (!data || data.length < 2) return null;
+const MiniSparkline = ({ data, color = 'blue', width = 50, height = 16 }) => {
+    if (!data || data.length < 2) return <div className="w-[50px] h-[16px] border-b border-slate-100 opacity-30" />;
     const values = data.map(d => parseFloat(d.value) || 0).filter(v => !isNaN(v) && v !== 0);
-    if (values.length < 2) return null;
+    if (values.length < 2) return <div className="w-[50px] h-[16px] border-b border-slate-100 opacity-30" />;
     const min = Math.min(...values);
     const max = Math.max(...values);
     const range = max - min || 1;
+
     const points = values.map((v, i) => {
-        const x = (i / (values.length - 1)) * width;
+        const x = (i / Math.max(values.length - 1, 1)) * width;
         const y = height - ((v - min) / range) * height;
-        return `${x},${y}`;
-    }).join(' ');
+        return { x, y };
+    });
+
+    let linePath = points.reduce((path, point, i) => {
+        if (i === 0) return `M ${point.x} ${point.y}`;
+        const prev = points[i - 1];
+        const cp1x = prev.x + (point.x - prev.x) / 2;
+        return `${path} C ${cp1x} ${prev.y}, ${cp1x} ${point.y}, ${point.x} ${point.y}`;
+    }, '');
+
+    // If only one point, show a small horizontal dash
+    if (values.length === 1) {
+        linePath = `M 0 ${height / 2} L ${width} ${height / 2}`;
+    }
+
     const strokeColor = color === 'emerald' ? '#10b981' : color === 'rose' ? '#f43f5e' : color === 'amber' ? '#f59e0b' : '#3b82f6';
+
     return (
-        <svg width={width} height={height} className="opacity-70">
-            <polyline points={points} fill="none" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <svg width={width} height={height} className="overflow-visible">
+            <path
+                d={linePath}
+                fill="none"
+                stroke={strokeColor}
+                strokeWidth="1.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="opacity-70"
+            />
         </svg>
     );
 };
@@ -262,15 +285,15 @@ const TrendCard = ({ trend, data, onClick, onRemove, editable, onDragStart, onDr
                 else if (v < (trend.thresholds.low || 0)) statusColor = 'amber';
                 else statusColor = 'emerald';
             }
-            else if (trend.thresholds.high || trend.thresholds.low) statusColor = 'emerald';
+            else statusColor = 'emerald';
         }
     }
 
     const colorMap = {
-        rose: { bg: 'bg-rose-50/50', border: 'border-rose-200', text: 'text-rose-600', value: 'text-rose-900', spark: 'rose' },
-        amber: { bg: 'bg-amber-50/50', border: 'border-amber-200', text: 'text-amber-600', value: 'text-amber-900', spark: 'amber' },
-        emerald: { bg: 'bg-emerald-50/50', border: 'border-emerald-200', text: 'text-emerald-600', value: 'text-emerald-900', spark: 'emerald' },
-        slate: { bg: 'bg-slate-50/50', border: 'border-slate-200', text: 'text-slate-500', value: 'text-slate-900', spark: 'slate' },
+        rose: { bg: 'bg-rose-50/20', border: 'border-rose-100', text: 'text-rose-600', value: 'text-slate-900', spark: 'rose', indicator: 'bg-rose-400' },
+        amber: { bg: 'bg-amber-50/20', border: 'border-amber-100', text: 'text-amber-600', value: 'text-slate-900', spark: 'amber', indicator: 'bg-amber-400' },
+        emerald: { bg: 'bg-emerald-50/20', border: 'border-emerald-100', text: 'text-emerald-600', value: 'text-slate-900', spark: 'emerald', indicator: 'bg-emerald-400' },
+        slate: { bg: 'bg-slate-50/20', border: 'border-slate-100', text: 'text-slate-400', value: 'text-slate-900', spark: 'slate', indicator: 'bg-slate-200' },
     };
     const colors = colorMap[statusColor];
     const displayValue = value != null ? (typeof value === 'number' ? (Number.isInteger(value) ? value : value.toFixed(1)) : value) : '--';
@@ -282,46 +305,46 @@ const TrendCard = ({ trend, data, onClick, onRemove, editable, onDragStart, onDr
             onDragStart={onDragStart}
             onDragOver={onDragOver}
             onDrop={onDrop}
-            className={`${colors.bg} ${colors.border} border rounded-xl p-2.5 text-left hover:shadow-md transition-all group w-full relative ${editable ? 'cursor-move ring-2 ring-blue-500/20 shadow-sm border-blue-200' : ''}`}
+            className={`${colors.bg} ${colors.border} border rounded-xl p-3 text-left hover:shadow-md hover:border-slate-200 transition-all group w-full relative ${editable ? 'cursor-move ring-2 ring-blue-500/10 shadow-sm border-blue-200' : ''}`}
         >
+            <div className={`absolute top-3 left-0 w-0.5 h-4 rounded-r-full ${colors.indicator}`} />
+
             {editable && (
-                <div className="absolute top-1 left-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-1 left-2 opacity-30 group-hover:opacity-100 transition-opacity">
                     <div className="grid grid-cols-2 gap-0.5">
-                        <div className="w-0.5 h-0.5 rounded-full bg-slate-400" />
-                        <div className="w-0.5 h-0.5 rounded-full bg-slate-400" />
-                        <div className="w-0.5 h-0.5 rounded-full bg-slate-400" />
-                        <div className="w-0.5 h-0.5 rounded-full bg-slate-400" />
+                        {[1, 2, 3, 4].map(i => <div key={i} className="w-0.5 h-0.5 rounded-full bg-slate-300" />)}
                     </div>
                 </div>
             )}
             {editable && onRemove && (
                 <button
                     onClick={(e) => { e.stopPropagation(); onRemove(trend.id); }}
-                    className="absolute -top-1.5 -right-1.5 p-1 bg-rose-500 text-white rounded-full shadow-sm hover:bg-rose-600 z-10"
+                    className="absolute -top-1.5 -right-1.5 p-1 bg-white border border-slate-100 text-slate-400 rounded-full shadow-sm hover:bg-rose-500 hover:text-white transition-colors z-10"
                 >
                     <X className="w-2.5 h-2.5" />
                 </button>
             )}
             <button onClick={onClick} className="w-full text-left">
-                <div className="flex justify-between items-start mb-0.5">
-                    <span className={`text-[9px] font-black uppercase tracking-tight ${colors.text} ${editable ? 'ml-4' : ''}`}>{trend.label}</span>
-                    {trend.goal && <span className="text-[8px] font-bold text-slate-400/80 uppercase">Goal {trend.goal}</span>}
+                <div className="flex justify-between items-start mb-0.5 overflow-hidden">
+                    <span className={`text-[9.5px] font-black text-slate-500 uppercase tracking-tighter truncate leading-none mr-2 ${editable ? 'ml-4' : 'ml-1'}`}>{trend.label}</span>
+                    {trend.goal && <span className="text-[7.5px] font-black text-slate-300 uppercase tracking-widest shrink-0 mt-0.5">Goal {trend.goal}</span>}
                 </div>
-                <div className="flex items-end justify-between gap-2">
-                    <div className="min-w-0">
-                        <div className={`text-lg font-black ${colors.value} tabular-nums leading-none tracking-tight flex items-baseline gap-0.5`}>
-                            {displayValue}<span className="text-[10px] font-bold text-slate-400 uppercase">{trend.unit}</span>
+                <div className="flex items-end justify-between min-w-0">
+                    <div className="min-w-0 flex-1">
+                        <div className={`text-xl font-black ${colors.value} tabular-nums leading-none tracking-tighter flex items-baseline gap-0.5`}>
+                            {displayValue}<span className="text-[9px] font-black text-slate-400 leading-none uppercase tracking-tighter">{trend.unit}</span>
                         </div>
                         {delta && (
-                            <div className={`flex items-center gap-0.5 text-[9px] font-black uppercase mt-1 ${deltaType === 'up' ? 'text-rose-500' : 'text-emerald-500'}`}>
-                                {deltaType === 'up' ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
+                            <div className={`flex items-center gap-0.5 text-[10px] font-semibold mt-1.5 ${deltaType === 'up' ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                {deltaType === 'up' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                                 {delta}
                             </div>
                         )}
+                        {!delta && <div className="h-4" />}
                     </div>
-                    <div className="flex flex-col items-end shrink-0">
-                        <MiniSparkline data={data} color={colors.spark} height={18} />
-                        {parsedDate && <span className="text-[8px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">{format(parsedDate, 'M/d/yy')}</span>}
+                    <div className="flex flex-col items-end shrink-0 pointer-events-none mb-0.5">
+                        <MiniSparkline data={data} color={colors.spark} />
+                        {parsedDate && <span className="text-[9px] font-medium text-slate-300 mt-1 uppercase tracking-tighter">{format(parsedDate, 'M/d')}</span>}
                     </div>
                 </div>
             </button>
@@ -433,14 +456,15 @@ const TrackerPickerModal = ({ isOpen, onClose, currentTrackerIds, onSave }) => {
 const TrendDetailView = ({ trend, data, onClose }) => {
     if (!trend) return null;
     return (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-                <div className="p-4 border-b border-slate-200 flex justify-between items-center">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={onClose}>
+            <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in duration-300 border border-slate-200" onClick={e => e.stopPropagation()}>
+                <div className="p-6 border-b border-slate-50 flex justify-between items-start bg-slate-50/30">
                     <div>
-                        <h3 className="text-lg font-bold text-slate-900">{trend.label} Trend</h3>
-                        <p className="text-xs text-slate-500">{data.length} data points</p>
+                        <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{trend.category || 'Specialty Trend'}</h3>
+                        <h2 className="text-xl font-bold text-slate-900 leading-tight">{trend.label}</h2>
+                        <p className="text-[11px] font-medium text-slate-400 mt-1">{data.length} measurements analyzed</p>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-400" /></button>
+                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X className="w-5 h-5 text-slate-300 hover:text-slate-600" /></button>
                 </div>
                 <div className="p-4 max-h-[60vh] overflow-y-auto">
                     {data.length > 0 && (() => {
@@ -451,7 +475,7 @@ const TrendDetailView = ({ trend, data, onClose }) => {
                         const range = max - min || 1;
                         const width = 100;
                         const height = 80;
-                        const padding = 4;
+                        const padding = 10;
 
                         const points = values.map((val, i) => {
                             const x = padding + (i / Math.max(values.length - 1, 1)) * (width - padding * 2);
@@ -463,52 +487,61 @@ const TrendDetailView = ({ trend, data, onClose }) => {
                         const linePath = points.reduce((path, point, i) => {
                             if (i === 0) return `M ${point.x} ${point.y}`;
                             const prev = points[i - 1];
-                            const cpx1 = prev.x + (point.x - prev.x) / 3;
-                            const cpx2 = prev.x + 2 * (point.x - prev.x) / 3;
-                            return `${path} C ${cpx1} ${prev.y}, ${cpx2} ${point.y}, ${point.x} ${point.y}`;
+                            const cp1x = prev.x + (point.x - prev.x) / 2;
+                            return `${path} C ${cp1x} ${prev.y}, ${cp1x} ${point.y}, ${point.x} ${point.y}`;
                         }, '');
 
                         // Area path (fill under the line)
-                        const areaPath = `${linePath} L ${points[points.length - 1]?.x || padding} ${height - padding} L ${padding} ${height - padding} Z`;
+                        const areaPath = `${linePath} L ${points[points.length - 1]?.x} ${height} L ${points[0]?.x} ${height} Z`;
 
                         return (
-                            <div className="h-32 bg-gradient-to-b from-blue-50 to-white rounded-lg border border-slate-200 p-4 mb-4 relative overflow-hidden">
-                                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full" preserveAspectRatio="none">
-                                    <defs>
-                                        <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                            <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.4" />
-                                            <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.05" />
-                                        </linearGradient>
-                                    </defs>
-                                    <path d={areaPath} fill="url(#areaGradient)" />
-                                    <path d={linePath} fill="none" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                    {points.map((point, i) => (
-                                        <circle key={i} cx={point.x} cy={point.y} r="3" fill="white" stroke="#3B82F6" strokeWidth="1.5" />
-                                    ))}
-                                </svg>
-                                <div className="absolute bottom-1 left-0 right-0 flex justify-between px-4 text-[8px] text-slate-400">
+                            <div className="h-44 bg-slate-50 border-b border-slate-100 p-6 flex flex-col justify-center gap-4">
+                                <div className="flex-1 relative">
+                                    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible" preserveAspectRatio="none">
+                                        <defs>
+                                            <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                                <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.2" />
+                                                <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
+                                            </linearGradient>
+                                        </defs>
+                                        <path d={areaPath} fill="url(#areaGradient)" />
+                                        <path d={linePath} fill="none" stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                                        {points.map((point, i) => (
+                                            <circle key={i} cx={point.x} cy={point.y} r="2.5" fill="white" stroke="#2563EB" strokeWidth="2" />
+                                        ))}
+                                    </svg>
+                                </div>
+                                <div className="flex justify-between px-1">
                                     {chartData.map((d, i) => {
                                         const parsedDate = parseDateSafe(d.date);
-                                        return <span key={i}>{parsedDate ? format(parsedDate, 'M/d') : ''}</span>;
+                                        return (
+                                            <div key={i} className="flex flex-col items-center gap-1">
+                                                <span className="text-[8px] font-black text-slate-400 uppercase">{parsedDate ? format(parsedDate, 'M/d') : ''}</span>
+                                                <span className="text-[9px] font-black text-slate-800 tabular-nums">{d.value}</span>
+                                            </div>
+                                        );
                                     })}
                                 </div>
                             </div>
                         );
                     })()}
-                    <div className="space-y-1">
-                        <div className="grid grid-cols-3 gap-2 text-[10px] font-bold text-slate-400 uppercase px-2">
-                            <span>Date</span><span>Value</span><span>Source</span>
+                    <div className="p-4 bg-white">
+                        <div className="space-y-1.5 max-h-[30vh] overflow-y-auto pr-1">
+                            {data.length > 0 ? data.map((d, i) => {
+                                const parsedDate = parseDateSafe(d.date);
+                                return (
+                                    <div key={i} className="flex items-center justify-between p-2.5 bg-slate-50/80 rounded-xl border border-slate-100 hover:border-slate-200 transition-colors">
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-black text-slate-900 tabular-nums leading-none">
+                                                {d.value} <span className="text-slate-400">{trend.unit}</span>
+                                            </span>
+                                            <span className="text-[8px] font-bold text-slate-400 uppercase mt-0.5">{parsedDate ? format(parsedDate, 'MMM d, yyyy') : '--'}</span>
+                                        </div>
+                                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest bg-white px-1.5 py-0.5 rounded border border-slate-100">{d.source || 'Chart'}</span>
+                                    </div>
+                                );
+                            }) : <div className="text-center text-slate-400 py-4">No data available</div>}
                         </div>
-                        {data.length > 0 ? data.map((d, i) => {
-                            const parsedDate = parseDateSafe(d.date);
-                            return (
-                                <div key={i} className="grid grid-cols-3 gap-2 text-xs text-slate-700 px-2 py-1.5 bg-slate-50 rounded">
-                                    <span>{parsedDate ? format(parsedDate, 'M/d/yyyy') : '--'}</span>
-                                    <span className="font-semibold">{d.value} {trend.unit}</span>
-                                    <span className="text-slate-400">{d.source || 'Chart'}</span>
-                                </div>
-                            );
-                        }) : <div className="text-center text-slate-400 py-4">No data available</div>}
                     </div>
                 </div>
             </div>
@@ -779,21 +812,21 @@ const SpecialtyTracker = ({ isOpen, onClose, patientId, patientData, vitals = []
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        <select value={selectedSpecialty} onChange={(e) => setSelectedSpecialty(e.target.value)} className="flex-1 px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <select value={selectedSpecialty} onChange={(e) => setSelectedSpecialty(e.target.value)} className="flex-1 px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 transition-all outline-none">
                             {Object.values(DEFAULT_SPECIALTY_TEMPLATES).map(s => (
-                                <option key={s.id} value={s.id}>{s.label}{customPrefs[s.id] ? ' ✨' : ''}</option>
+                                <option key={s.id} value={s.id}>{s.label}</option>
                             ))}
                         </select>
-                        <button onClick={() => setShowTrackerPicker(true)} className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors" title="Customize trackers">
-                            <Settings className="w-4 h-4 text-slate-600" />
+                        <button onClick={() => setShowTrackerPicker(true)} className="px-3 py-2 bg-slate-50 border border-slate-100 hover:bg-slate-100 rounded-lg transition-colors" title="Customize trackers">
+                            <Settings className="w-4 h-4 text-slate-400" />
                         </button>
                     </div>
                     {isCustomized && (
-                        <div className="mt-2 flex items-center justify-between px-2 py-1.5 bg-blue-50/50 rounded-lg border border-blue-100 ring-1 ring-blue-500/10 shadow-inner">
-                            <span className="text-[9px] text-blue-700 font-black uppercase tracking-wider flex items-center gap-1">
-                                <Sliders className="w-3 h-3" /> Personal Layout Active
+                        <div className="mt-3 flex items-center justify-between px-3 py-2 bg-blue-50/30 rounded-lg border border-blue-100/50">
+                            <span className="text-[10px] text-blue-600 font-semibold flex items-center gap-1.5">
+                                <Sliders className="w-3.5 h-3.5" /> Customized layout
                             </span>
-                            <button onClick={handleResetToDefault} className="text-[9px] text-blue-600 font-bold hover:underline uppercase tracking-wider">Reset to Default</button>
+                            <button onClick={handleResetToDefault} className="text-[10px] text-blue-500 font-bold hover:underline">Reset</button>
                         </div>
                     )}
                 </div>

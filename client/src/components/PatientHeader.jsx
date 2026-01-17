@@ -446,7 +446,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                 firstName={patient.first_name}
                                 lastName={patient.last_name}
                                 photoUrl={patient.photo_url}
-                                className="w-24 h-24 text-3xl shadow-md ring-2 ring-white cursor-pointer hover:ring-blue-100 transition-all"
+                                className="w-20 h-20 text-2xl shadow-sm ring-2 ring-white cursor-pointer hover:ring-blue-100 transition-all"
                                 onClick={() => setIsPhotoModalOpen(true)}
                             />
                             <button
@@ -460,7 +460,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                         {/* Name & Key Stats */}
                         <div>
                             <div className="flex items-center gap-3 mb-1">
-                                <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                                <h1 className="text-xl font-black text-slate-900 tracking-tighter flex items-center gap-2">
                                     <span
                                         className="cursor-pointer hover:text-slate-700 transition-colors"
                                         onClick={() => navigate(`/patient/${patient?.id || id}/snapshot`)}
@@ -568,58 +568,40 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                 </div>
 
                 {/* Detail Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-px bg-gray-200">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-px bg-slate-100 border-t border-slate-100">
                     {/* Contact */}
-                    <div className="bg-white p-2">
+                    <div className="bg-white p-1.5 px-3">
                         <InfoItem icon={Phone} label="Contact">
-                            <div className="font-medium">{patient.phone || <span className="text-gray-400 italic">No phone</span>}</div>
-                            {patient.email && <div className="text-gray-600 truncate">{patient.email}</div>}
-                            {patient.phone_cell && <div className="text-gray-500 text-[10px]">Cell: {patient.phone_cell}</div>}
+                            <div className="font-bold text-[11px] leading-tight truncate">{patient.phone || <span className="text-slate-300">No phone</span>}</div>
+                            {patient.email && <div className="text-slate-500 text-[10px] truncate leading-tight">{patient.email}</div>}
                         </InfoItem>
                     </div>
                     {/* Address */}
-                    <div className="bg-white p-2">
+                    <div className="bg-white p-1.5 px-3">
                         <InfoItem icon={MapPin} label="Address">
-                            <div className="font-medium">{patient.address_line1 || <span className="text-gray-400 italic">Not set</span>}</div>
-                            {patient.city && <div>{patient.city}, {patient.state} {patient.zip}</div>}
+                            <div className="font-bold text-[11px] leading-tight truncate">{patient.address_line1 || <span className="text-slate-300 italic">Not set</span>}</div>
+                            {patient.city && <div className="text-slate-500 text-[10px] truncate leading-tight">{patient.city}, {patient.state}</div>}
                         </InfoItem>
                     </div>
                     {/* Insurance */}
-                    <div className="bg-white p-2">
+                    <div className="bg-white p-1.5 px-3">
                         <InfoItem icon={Shield} label="Insurance">
-                            <div className="font-medium">{patient.insurance_provider || <span className="text-gray-400 italic">Self Pay</span>}</div>
-                            {patient.insurance_provider && (
-                                <div className="space-y-0.5 mt-0.5 text-[11px] text-gray-600">
-                                    {patient.insurance_id && <div>ID: <span className="font-mono text-gray-800">{patient.insurance_id}</span></div>}
-                                    {patient.insurance_group_number && <div>Grp: {patient.insurance_group_number}</div>}
-                                    {patient.insurance_plan_name && <div>Plan: {patient.insurance_plan_name}</div>}
-                                    {patient.insurance_subscriber_name && <div>Sub: {patient.insurance_subscriber_name}</div>}
-                                </div>
-                            )}
+                            <div className="font-bold text-[11px] leading-tight truncate">{patient.insurance_provider || <span className="text-slate-300">Self Pay</span>}</div>
+                            {patient.insurance_id && <div className="text-slate-500 text-[10px] truncate leading-tight">ID: {patient.insurance_id}</div>}
                         </InfoItem>
                     </div>
                     {/* Pharmacy */}
-                    <div className="bg-white p-2">
-                        <InfoItem icon={Activity} label="Pharmacy">
-                            <div className="font-medium">{patient.pharmacy_name || <span className="text-gray-400 italic">Not set</span>}</div>
-                            {patient.pharmacy_name && (
-                                <div className="space-y-0.5 mt-0.5 text-[11px] text-gray-600">
-                                    {patient.pharmacy_phone && <div>Ph: {patient.pharmacy_phone}</div>}
-                                    {patient.pharmacy_address && <div className="leading-tight">{patient.pharmacy_address}</div>}
-                                </div>
-                            )}
+                    <div className="bg-white p-1.5 px-3">
+                        <InfoItem icon={Pill} label="Pharmacy">
+                            <div className="font-bold text-[11px] leading-tight truncate">{patient.pharmacy_name || <span className="text-slate-300">Not set</span>}</div>
+                            {patient.pharmacy_phone && <div className="text-slate-500 text-[10px] truncate leading-tight">Ph: {patient.pharmacy_phone}</div>}
                         </InfoItem>
                     </div>
                     {/* Emergency */}
-                    <div className="bg-white p-2">
-                        <InfoItem icon={AlertCircle} label="Emergency">
-                            <div className="font-medium">{patient.emergency_contact_name || <span className="text-gray-400 italic">Not set</span>}</div>
-                            {patient.emergency_contact_name && (
-                                <div className="space-y-0.5 mt-0.5 text-[11px] text-gray-600">
-                                    {patient.emergency_contact_relationship && <div>Rel: {patient.emergency_contact_relationship}</div>}
-                                    {patient.emergency_contact_phone && <div>Ph: {patient.emergency_contact_phone}</div>}
-                                </div>
-                            )}
+                    <div className="bg-white p-1.5 px-3">
+                        <InfoItem icon={Users} label="Emergency">
+                            <div className="font-bold text-[11px] leading-tight truncate">{patient.emergency_contact_name || <span className="text-slate-300">Not set</span>}</div>
+                            {patient.emergency_contact_phone && <div className="text-slate-500 text-[10px] truncate leading-tight">Ph: {patient.emergency_contact_phone}</div>}
                         </InfoItem>
                     </div>
                 </div>
