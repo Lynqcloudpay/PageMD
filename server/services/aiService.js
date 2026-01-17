@@ -225,6 +225,19 @@ async function gatherPatientContext(patientId) {
         const vitalsRes = await pool.query('SELECT * FROM vitals WHERE patient_id = $1 ORDER BY recorded_at DESC LIMIT 50', [patientId]);
         context.vitals = vitalsRes.rows;
 
+        // Recent Visits & Notes (Last 5 visits with full note content)
+        const visitsRes = await pool.query(
+            `SELECT v.visit_date, v.note_type, v.status, v.note_draft, v.encounter_date, 
+                    u.first_name || ' ' || u.last_name as provider_name 
+             FROM visits v 
+             LEFT JOIN users u ON v.provider_id = u.id 
+             WHERE v.patient_id = $1 
+             ORDER BY v.visit_date DESC 
+             LIMIT 5`,
+            [patientId]
+        );
+        context.recentVisits = visitsRes.rows;
+
         return context;
     } catch (error) {
         console.warn('Failed to gather complete patient context for AI:', error.message);
