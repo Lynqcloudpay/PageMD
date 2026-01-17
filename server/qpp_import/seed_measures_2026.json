@@ -1,0 +1,111 @@
+[
+    {
+        "performance_year": 2026,
+        "category": "QUALITY",
+        "qpp_id": "236",
+        "title": "Controlling High Blood Pressure",
+        "description": "Percentage of patients 18-85 years of age who had a diagnosis of hypertension and whose blood pressure was adequately controlled (<140/90 mmHg) during the measurement period.",
+        "measure_type": "eCQM",
+        "specialty_set": [
+            "Cardiology",
+            "Family Medicine",
+            "Internal Medicine",
+            "Nephrology"
+        ],
+        "spec_url": "https://qpp.cms.gov/mips/explore-measures/quality-measures#236"
+    },
+    {
+        "performance_year": 2026,
+        "category": "QUALITY",
+        "qpp_id": "001",
+        "title": "Diabetes: Hemoglobin A1c (HbA1c) Poor Control (>9%)",
+        "description": "Percentage of patients 18-75 years of age with diabetes who had hemoglobin A1c > 9.0% during the measurement period.",
+        "measure_type": "eCQM",
+        "specialty_set": [
+            "Endocrinology",
+            "Family Medicine",
+            "Internal Medicine"
+        ],
+        "spec_url": "https://qpp.cms.gov/mips/explore-measures/quality-measures#001"
+    },
+    {
+        "performance_year": 2026,
+        "category": "QUALITY",
+        "qpp_id": "128",
+        "title": "Preventive Care and Screening: Body Mass Index (BMI) Screening and Follow-Up Plan",
+        "description": "Percentage of patients aged 18 years and older with a BMI documented during the current encounter or during the previous twelve months AND when the BMI is outside of normal parameters, a follow-up plan is documented during the encounter or during the previous twelve months of the current encounter.",
+        "measure_type": "MIPS_CQM",
+        "specialty_set": [
+            "Family Medicine",
+            "Internal Medicine",
+            "Geriatrics"
+        ],
+        "spec_url": "https://qpp.cms.gov/mips/explore-measures/quality-measures#128"
+    },
+    {
+        "performance_year": 2026,
+        "category": "QUALITY",
+        "qpp_id": "226",
+        "title": "Preventive Care and Screening: Tobacco Use: Screening and Cessation Intervention",
+        "description": "Percentage of patients aged 18 years and older who were screened for tobacco use one or more times during the measurement period AND who received tobacco cessation intervention if identified as a tobacco user.",
+        "measure_type": "MIPS_CQM",
+        "specialty_set": [
+            "Family Medicine",
+            "Internal Medicine",
+            "Pulmonology"
+        ],
+        "spec_url": "https://qpp.cms.gov/mips/explore-measures/quality-measures#226"
+    },
+    {
+        "performance_year": 2026,
+        "category": "QUALITY",
+        "qpp_id": "110",
+        "title": "Preventive Care and Screening: Influenza Immunization",
+        "description": "Percentage of patients aged 6 months and older seen for a visit between October 1 and March 31 who received an influenza immunization OR who reported previous receipt of an influenza immunization.",
+        "measure_type": "eCQM",
+        "specialty_set": [
+            "Family Medicine",
+            "Internal Medicine",
+            "Pediatrics"
+        ],
+        "spec_url": "https://qpp.cms.gov/mips/explore-measures/quality-measures#110"
+    },
+    {
+        "performance_year": 2026,
+        "category": "QUALITY",
+        "qpp_id": "130",
+        "title": "Gaps in Care: Colorectal Cancer Screening",
+        "description": "Percentage of patients 45-75 years of age who had appropriate screening for colorectal cancer.",
+        "measure_type": "eCQM",
+        "specialty_set": [
+            "Gastroenterology",
+            "Family Medicine",
+            "Internal Medicine"
+        ],
+        "spec_url": "https://qpp.cms.gov/mips/explore-measures/quality-measures#130"
+    },
+    {
+        "performance_year": 2026,
+        "category": "IA",
+        "qpp_id": "IA_EPA_1",
+        "title": "Provide 24/7 Access to MIPS Eligible Clinicians or Groups Who Have Real-Time Access to Patient's Medical Record",
+        "description": "Provide 24/7 access to MIPS eligible clinicians or groups who have real-time access to patient's medical record for advice about urgent and emergent care.",
+        "measure_type": "attestation",
+        "specialty_set": [
+            "All"
+        ],
+        "spec_url": "https://qpp.cms.gov/mips/explore-measures/improvement-activities#IA_EPA_1"
+    },
+    {
+        "performance_year": 2026,
+        "category": "PI",
+        "qpp_id": "PI_PCP_1",
+        "title": "Provide Patients Electronic Access to Their Health Information",
+        "description": "For at least one unique patient seen by the MIPS eligible clinician, the patient (or the patient-authorized representative) is provided timely access to view online, download, and transmit their health information.",
+        "measure_type": "attestation",
+        "specialty_set": [
+            "All"
+        ],
+        "spec_url": "https://qpp.cms.gov/mips/promoting-interoperability"
+    }
+]

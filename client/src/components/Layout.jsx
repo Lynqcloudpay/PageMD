@@ -5,7 +5,7 @@ import {
     Clock, History, User, ClipboardList, BarChart3,
     MessageSquare, Video, Moon, Sun, Menu, ChevronRight, Bell,
     Zap, Command, DollarSign, Shield, Shield as ShieldCheck, AlertCircle, HelpCircle, Inbox, ShieldAlert,
-    AlertTriangle, CalendarPlus
+    AlertTriangle, CalendarPlus, Target
 } from 'lucide-react';
 import { usePatient } from '../context/PatientContext';
 import { useAuth } from '../context/AuthContext';
@@ -185,6 +185,7 @@ const Layout = ({ children }) => {
         { path: '/telehealth', icon: Video, label: 'Telehealth', badge: null },
         // Admin items - requires users:manage or reports:view
         ...(canManageUsers ? [
+            { path: '/admin/quality-mips', icon: Target, label: 'Quality & MIPS', badge: null },
             { path: '/users', icon: Shield, label: 'User Management', badge: null },
             { path: '/compliance', icon: ShieldCheck, label: 'Compliance', badge: privacyAlertsCount > 0 ? privacyAlertsCount : null },
             { path: '/admin-settings', icon: Settings, label: 'Settings', badge: null }

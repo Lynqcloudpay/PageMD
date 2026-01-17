@@ -44,6 +44,7 @@ const AppointmentRequests = React.lazy(() => import('./pages/AppointmentRequests
 const Profile = React.lazy(() => import('./pages/Profile'));
 const FeeSheet = React.lazy(() => import('./pages/FeeSheet'));
 const Compliance = React.lazy(() => import('./pages/Compliance'));
+const QualityAndMips = React.lazy(() => import('./pages/QualityAndMips'));
 
 const PlatformAdminLogin = React.lazy(() => import('./pages/PlatformAdminLogin'));
 const PlatformAdminDashboard = React.lazy(() => import('./pages/PlatformAdminDashboard'));
@@ -320,6 +321,13 @@ function App() {
                                                         <ProtectedRoute>
                                                             <ErrorBoundary>
                                                                 <Layout><AdminSettings /></Layout>
+                                                            </ErrorBoundary>
+                                                        </ProtectedRoute>
+                                                    } />
+                                                    <Route path="/admin/quality-mips" element={
+                                                        <ProtectedRoute>
+                                                            <ErrorBoundary>
+                                                                <Layout><QualityAndMips /></Layout>
                                                             </ErrorBoundary>
                                                         </ProtectedRoute>
                                                     } />

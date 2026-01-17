@@ -269,6 +269,9 @@ app.use('/api/patient-flags', patientFlagsRoutes);
 // Support
 app.use('/api/support', require('./routes/support'));
 
+// QPP / MIPS Workspace
+app.use('/api/qpp', require('./routes/qpp'));
+
 // Sales inquiries (public - no auth required)
 app.use('/api/sales', require('./routes/sales'));
 

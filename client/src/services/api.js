@@ -589,5 +589,14 @@ export const patientFlagsAPI = {
   acknowledge: (id) => api.post(`/patient-flags/${id}/acknowledge`),
 };
 
+// QPP / MIPS Workspace
+export const qppAPI = {
+  getMeasures: (year) => api.get('/qpp/measures', { params: { year } }),
+  getPacks: (year) => api.get('/qpp/packs', { params: { year } }),
+  getScoreboard: (packId) => api.get(`/qpp/scoreboard/${packId}`),
+  submitAttestation: (data) => api.post('/qpp/attest', data),
+  compute: (data) => api.post('/qpp/compute', data),
+};
+
 export default api;
 
