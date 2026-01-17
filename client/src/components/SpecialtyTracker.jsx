@@ -65,6 +65,11 @@ const ALL_TRACKERS = [
     { id: 'ferritin', label: 'Ferritin', unit: 'ng/mL', source: 'labs', labName: 'ferritin', thresholds: { low: 30 }, category: 'Other' },
     { id: 'b12', label: 'Vitamin B12', unit: 'pg/mL', source: 'labs', labName: 'b12', thresholds: { low: 200 }, category: 'Other' },
     { id: 'uacr', label: 'UACR', unit: 'mg/g', source: 'labs', labName: 'uacr', thresholds: { high: 30, critical: 300 }, category: 'Renal' },
+
+    // Special Studies (Cardiology)
+    { id: 'ef', label: 'EF (Echo/Cath)', unit: '%', source: 'documents', tagKey: 'ef', thresholds: { low: 50, critical: 35 }, category: 'Cardiology' },
+    { id: 'mets', label: 'METS (Stress)', unit: '', source: 'documents', tagKey: 'mets', thresholds: { low: 7, critical: 5 }, goal: '>10', category: 'Cardiology' },
+    { id: 'pasp', label: 'PASP', unit: 'mmHg', source: 'documents', tagKey: 'pasp', thresholds: { high: 35, critical: 50 }, category: 'Cardiology' },
 ];
 
 // Get tracker by ID from master list
@@ -77,7 +82,7 @@ const DEFAULT_SPECIALTY_TEMPLATES = {
         label: 'Cardiology',
         icon: Heart,
         color: 'rose',
-        trackerIds: ['sbp', 'dbp', 'hr', 'weight', 'ldl', 'a1c', 'cr', 'k'],
+        trackerIds: ['ef', 'sbp', 'dbp', 'hr', 'mets', 'pasp', 'weight', 'ldl', 'a1c', 'cr', 'k'],
         status: [
             { id: 'anticoag', label: 'Anticoagulation', checkMeds: ['warfarin', 'eliquis', 'xarelto', 'pradaxa', 'apixaban', 'rivaroxaban', 'dabigatran', 'coumadin'] },
             { id: 'antiplatelet', label: 'Antiplatelet', checkMeds: ['aspirin', 'plavix', 'clopidogrel', 'brilinta', 'ticagrelor', 'effient', 'prasugrel'] },
@@ -227,7 +232,7 @@ const MiniSparkline = ({ data, color = 'blue', width = 60, height = 20 }) => {
 };
 
 // ============== TREND CARD COMPONENT ==============
-const TrendCard = ({ trend, data, onClick, onRemove, editable }) => {
+const TrendCard = ({ trend, data, onClick, onRemove, editable, onDragStart, onDragOver, onDrop }) => {
     const latest = data[0];
     const previous = data[1];
     const value = latest?.value;
@@ -251,50 +256,72 @@ const TrendCard = ({ trend, data, onClick, onRemove, editable }) => {
             if (trend.thresholds.critical && v >= trend.thresholds.critical) statusColor = 'rose';
             else if (trend.thresholds.high && v >= trend.thresholds.high) statusColor = 'amber';
             else if (trend.thresholds.low && v <= trend.thresholds.low) statusColor = 'amber';
+            // Specific for EF/METS where high is good
+            else if (trend.id === 'ef' || trend.id === 'mets') {
+                if (v < (trend.thresholds.critical || 0)) statusColor = 'rose';
+                else if (v < (trend.thresholds.low || 0)) statusColor = 'amber';
+                else statusColor = 'emerald';
+            }
             else if (trend.thresholds.high || trend.thresholds.low) statusColor = 'emerald';
         }
     }
 
     const colorMap = {
-        rose: { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700', value: 'text-rose-900' },
-        amber: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', value: 'text-amber-900' },
-        emerald: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', value: 'text-emerald-900' },
-        slate: { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-600', value: 'text-slate-900' },
+        rose: { bg: 'bg-rose-50/50', border: 'border-rose-200', text: 'text-rose-600', value: 'text-rose-900', spark: 'rose' },
+        amber: { bg: 'bg-amber-50/50', border: 'border-amber-200', text: 'text-amber-600', value: 'text-amber-900', spark: 'amber' },
+        emerald: { bg: 'bg-emerald-50/50', border: 'border-emerald-200', text: 'text-emerald-600', value: 'text-emerald-900', spark: 'emerald' },
+        slate: { bg: 'bg-slate-50/50', border: 'border-slate-200', text: 'text-slate-500', value: 'text-slate-900', spark: 'slate' },
     };
     const colors = colorMap[statusColor];
     const displayValue = value != null ? (typeof value === 'number' ? (Number.isInteger(value) ? value : value.toFixed(1)) : value) : '--';
     const parsedDate = parseDateSafe(date);
 
     return (
-        <div className={`${colors.bg} ${colors.border} border rounded-xl p-3 text-left hover:shadow-md transition-all group w-full relative`}>
+        <div
+            draggable={editable}
+            onDragStart={onDragStart}
+            onDragOver={onDragOver}
+            onDrop={onDrop}
+            className={`${colors.bg} ${colors.border} border rounded-xl p-2.5 text-left hover:shadow-md transition-all group w-full relative ${editable ? 'cursor-move ring-2 ring-blue-500/20 shadow-sm border-blue-200' : ''}`}
+        >
+            {editable && (
+                <div className="absolute top-1 left-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
+                    <div className="grid grid-cols-2 gap-0.5">
+                        <div className="w-0.5 h-0.5 rounded-full bg-slate-400" />
+                        <div className="w-0.5 h-0.5 rounded-full bg-slate-400" />
+                        <div className="w-0.5 h-0.5 rounded-full bg-slate-400" />
+                        <div className="w-0.5 h-0.5 rounded-full bg-slate-400" />
+                    </div>
+                </div>
+            )}
             {editable && onRemove && (
                 <button
                     onClick={(e) => { e.stopPropagation(); onRemove(trend.id); }}
-                    className="absolute -top-1.5 -right-1.5 p-1 bg-rose-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-rose-600 z-10"
+                    className="absolute -top-1.5 -right-1.5 p-1 bg-rose-500 text-white rounded-full shadow-sm hover:bg-rose-600 z-10"
                 >
-                    <X className="w-3 h-3" />
+                    <X className="w-2.5 h-2.5" />
                 </button>
             )}
             <button onClick={onClick} className="w-full text-left">
-                <div className="flex justify-between items-start mb-1">
-                    <span className={`text-[10px] font-bold uppercase tracking-wider ${colors.text}`}>{trend.label}</span>
-                    {trend.goal && <span className="text-[8px] font-medium text-slate-400 bg-white px-1 rounded">Goal: {trend.goal}</span>}
+                <div className="flex justify-between items-start mb-0.5">
+                    <span className={`text-[9px] font-black uppercase tracking-tight ${colors.text} ${editable ? 'ml-4' : ''}`}>{trend.label}</span>
+                    {trend.goal && <span className="text-[8px] font-bold text-slate-400/80 uppercase">Goal {trend.goal}</span>}
                 </div>
-                <div className="flex items-end justify-between">
-                    <div>
-                        <div className={`text-xl font-bold ${colors.value} tabular-nums`}>
-                            {displayValue}<span className="text-xs font-medium text-slate-400 ml-0.5">{trend.unit}</span>
+                <div className="flex items-end justify-between gap-2">
+                    <div className="min-w-0">
+                        <div className={`text-lg font-black ${colors.value} tabular-nums leading-none tracking-tight flex items-baseline gap-0.5`}>
+                            {displayValue}<span className="text-[10px] font-bold text-slate-400 uppercase">{trend.unit}</span>
                         </div>
                         {delta && (
-                            <div className={`flex items-center gap-0.5 text-[10px] font-semibold ${deltaType === 'up' ? 'text-rose-500' : 'text-emerald-500'}`}>
-                                {deltaType === 'up' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                            <div className={`flex items-center gap-0.5 text-[9px] font-black uppercase mt-1 ${deltaType === 'up' ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                {deltaType === 'up' ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
                                 {delta}
                             </div>
                         )}
                     </div>
-                    <div className="flex flex-col items-end">
-                        <MiniSparkline data={data} color={statusColor} />
-                        {parsedDate && <span className="text-[9px] text-slate-400 mt-1">{format(parsedDate, 'M/d/yy')}</span>}
+                    <div className="flex flex-col items-end shrink-0">
+                        <MiniSparkline data={data} color={colors.spark} height={18} />
+                        {parsedDate && <span className="text-[8px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">{format(parsedDate, 'M/d/yy')}</span>}
                     </div>
                 </div>
             </button>
@@ -576,6 +603,23 @@ const SpecialtyTracker = ({ isOpen, onClose, patientId, patientData, vitals = []
                     }
                 });
             }
+            if (trend.source === 'documents' && documents.length > 0) {
+                documents.forEach(doc => {
+                    const tags = doc.tags || [];
+                    const tag = tags.find(t => t.startsWith(`${trend.tagKey}:`));
+                    if (tag) {
+                        const valStr = tag.split(':')[1];
+                        const value = parseFloat(valStr);
+                        if (!isNaN(value)) {
+                            data.push({
+                                value,
+                                date: doc.created_at || doc.date,
+                                source: doc.file_name || doc.doc_type || 'Document'
+                            });
+                        }
+                    }
+                });
+            }
             data.sort((a, b) => {
                 const dateA = parseDateSafe(a.date);
                 const dateB = parseDateSafe(b.date);
@@ -584,7 +628,7 @@ const SpecialtyTracker = ({ isOpen, onClose, patientId, patientData, vitals = []
             trendData[trend.id] = data.slice(0, 10);
         });
         return trendData;
-    }, [specialty, activeTrackers, vitals, labResults]);
+    }, [specialty, activeTrackers, vitals, labResults, documents]);
 
     // Medication status
     const medicationStatus = useMemo(() => {
@@ -680,6 +724,16 @@ const SpecialtyTracker = ({ isOpen, onClose, patientId, patientData, vitals = []
         setCustomPrefs(prev => ({ ...prev, [selectedSpecialty]: newTrackerIds }));
     };
 
+    const handleReorder = (dragIndex, dropIndex) => {
+        const newIds = [...specialty.trackerIds];
+        const draggedItem = newIds[dragIndex];
+        newIds.splice(dragIndex, 1);
+        newIds.splice(dropIndex, 0, draggedItem);
+        setCustomPrefs(prev => ({ ...prev, [selectedSpecialty]: newIds }));
+    };
+
+    const [draggedIndex, setDraggedIndex] = useState(null);
+
     const handleRemoveTracker = (trackerId) => {
         const newIds = specialty.trackerIds.filter(id => id !== trackerId);
         setCustomPrefs(prev => ({ ...prev, [selectedSpecialty]: newIds }));
@@ -735,9 +789,11 @@ const SpecialtyTracker = ({ isOpen, onClose, patientId, patientData, vitals = []
                         </button>
                     </div>
                     {isCustomized && (
-                        <div className="mt-2 flex items-center justify-between px-2 py-1 bg-amber-50 rounded-lg border border-amber-200">
-                            <span className="text-[10px] text-amber-700 font-medium">✨ Customized</span>
-                            <button onClick={handleResetToDefault} className="text-[10px] text-amber-600 hover:underline">Reset to Default</button>
+                        <div className="mt-2 flex items-center justify-between px-2 py-1.5 bg-blue-50/50 rounded-lg border border-blue-100 ring-1 ring-blue-500/10 shadow-inner">
+                            <span className="text-[9px] text-blue-700 font-black uppercase tracking-wider flex items-center gap-1">
+                                <Sliders className="w-3 h-3" /> Personal Layout Active
+                            </span>
+                            <button onClick={handleResetToDefault} className="text-[9px] text-blue-600 font-bold hover:underline uppercase tracking-wider">Reset to Default</button>
                         </div>
                     )}
                 </div>
@@ -776,12 +832,22 @@ const SpecialtyTracker = ({ isOpen, onClose, patientId, patientData, vitals = []
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
-                            {visibleTrends.map(trend => (
+                            {visibleTrends.map((trend, idx) => (
                                 <TrendCard
-                                    key={trend.id} trend={trend} data={extractTrendData[trend.id] || []}
+                                    key={trend.id}
+                                    trend={trend}
+                                    data={extractTrendData[trend.id] || []}
                                     onClick={() => handleTrendClick(trend)}
                                     onRemove={editMode ? handleRemoveTracker : null}
                                     editable={editMode}
+                                    onDragStart={() => setDraggedIndex(idx)}
+                                    onDragOver={(e) => { e.preventDefault(); }}
+                                    onDrop={() => {
+                                        if (draggedIndex !== null && draggedIndex !== idx) {
+                                            handleReorder(draggedIndex, idx);
+                                        }
+                                        setDraggedIndex(null);
+                                    }}
                                 />
                             ))}
                             {activeTrackers.length === 0 && (
