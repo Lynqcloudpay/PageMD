@@ -499,15 +499,23 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                 </div>
 
                                 {/* Status Flags */}
-                                {activeFlags.length > 0 && (
-                                    <button
-                                        onClick={() => setIsFlagsPanelOpen(true)}
-                                        className="flex items-center gap-2 px-3 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm hover:bg-rose-100 transition-all"
-                                    >
+                                {/* Status Flags */}
+                                <button
+                                    onClick={() => setIsFlagsPanelOpen(true)}
+                                    className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all ${activeFlags.length > 0
+                                            ? 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
+                                            : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
+                                        }`}
+                                >
+                                    {activeFlags.length > 0 ? (
                                         <ShieldAlert size={11} className="text-rose-500" />
-                                        {activeFlags.length} {activeFlags.length === 1 ? 'Clinical Alert' : 'Clinical Alerts'}
-                                    </button>
-                                )}
+                                    ) : (
+                                        <Shield size={11} className="text-slate-400" />
+                                    )}
+                                    {activeFlags.length > 0
+                                        ? `${activeFlags.length} ${activeFlags.length === 1 ? 'Clinical Alert' : 'Clinical Alerts'}`
+                                        : 'Clinical Alerts'}
+                                </button>
 
                                 {patient.is_restricted && (
                                     <div className="flex items-center gap-2 px-3 py-1 bg-slate-900 text-white rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm">

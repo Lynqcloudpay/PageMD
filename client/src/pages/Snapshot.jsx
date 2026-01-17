@@ -1453,9 +1453,12 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             className="px-2 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer transition-colors group relative pl-3"
                                                             onClick={() => handleViewNote(note.id)}
                                                         >
-                                                            <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-slate-200 group-hover:bg-blue-400 rounded-full transition-colors" />
+                                                            <div className={`absolute left-0 top-2 bottom-2 w-0.5 rounded-full transition-colors ${note.signed ? 'bg-emerald-400' : 'bg-amber-400'}`} />
                                                             <div className="flex items-center justify-between">
-                                                                <span className="text-[10px] font-bold text-slate-800">{note.type}</span>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-[10px] font-bold text-slate-800">{note.type}</span>
+                                                                    {!note.signed && <span className="text-[8px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-100 uppercase tracking-wider">Draft</span>}
+                                                                </div>
                                                                 <span className="text-[9px] text-slate-400 font-medium tabular-nums">{note.date}</span>
                                                             </div>
                                                             <p className="text-[9px] text-slate-500 truncate mt-0.5">{note.chiefComplaint || "No complaint recorded"}</p>
@@ -1643,13 +1646,21 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
                                                     >
                                                         <defs>
-                                                            <linearGradient id="colorBp" x1="0" y1="0" x2="0" y2="1">
-                                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />
-                                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                                            <filter id="glowSys" x="-20%" y="-20%" width="140%" height="140%">
+                                                                <feGaussianBlur stdDeviation="3" result="blur" />
+                                                                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                                            </filter>
+                                                            <filter id="glowHr" x="-20%" y="-20%" width="140%" height="140%">
+                                                                <feGaussianBlur stdDeviation="3" result="blur" />
+                                                                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                                            </filter>
+                                                            <linearGradient id="neonBp" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15} />
+                                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.02} />
                                                             </linearGradient>
-                                                            <linearGradient id="colorHr" x1="0" y1="0" x2="0" y2="1">
-                                                                <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.25} />
-                                                                <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                                                            <linearGradient id="neonHr" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.15} />
+                                                                <stop offset="95%" stopColor="#f43f5e" stopOpacity={0.02} />
                                                             </linearGradient>
                                                         </defs>
                                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -1695,25 +1706,41 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                 return null;
                                                             }}
                                                         />
+                                                        <Area
+                                                            type="monotone"
+                                                            dataKey="sys"
+                                                            stroke="none"
+                                                            fill="url(#neonBp)"
+                                                            connectNulls
+                                                        />
+                                                        <Area
+                                                            type="monotone"
+                                                            dataKey="hr"
+                                                            stroke="none"
+                                                            fill="url(#neonHr)"
+                                                            connectNulls
+                                                        />
                                                         <Line
                                                             type="monotone"
                                                             dataKey="sys"
                                                             name="Systolic"
                                                             stroke="#3b82f6"
-                                                            strokeWidth={3}
-                                                            dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
-                                                            activeDot={{ r: 6, strokeWidth: 0 }}
+                                                            strokeWidth={4}
+                                                            dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff', shadow: '0 0 10px rgba(59, 130, 246, 0.5)' }}
+                                                            activeDot={{ r: 7, strokeWidth: 0, fill: '#3b82f6' }}
                                                             connectNulls
+                                                            filter="url(#glowSys)"
                                                         />
                                                         <Line
                                                             type="monotone"
                                                             dataKey="hr"
                                                             name="Heart Rate"
                                                             stroke="#f43f5e"
-                                                            strokeWidth={3}
-                                                            dot={{ r: 4, fill: '#f43f5e', strokeWidth: 2, stroke: '#fff' }}
-                                                            activeDot={{ r: 6, strokeWidth: 0 }}
+                                                            strokeWidth={4}
+                                                            dot={{ r: 4, fill: '#f43f5e', strokeWidth: 2, stroke: '#fff', shadow: '0 0 10px rgba(244, 63, 94, 0.5)' }}
+                                                            activeDot={{ r: 7, strokeWidth: 0, fill: '#f43f5e' }}
                                                             connectNulls
+                                                            filter="url(#glowHr)"
                                                         />
                                                     </LineChart>
                                                 </ResponsiveContainer>
@@ -1842,9 +1869,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     <div className="p-2.5 bg-indigo-50 text-indigo-500 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm">
                                                         <FileText className="w-4.5 h-4.5" strokeWidth={2.5} />
                                                     </div>
-                                                    <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">Plan of Care & Next Steps</h3>
+                                                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Plan of Care & Next Steps</h3>
                                                 </div>
-                                                <span className="text-[10px] text-slate-400 font-black uppercase bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 tracking-tighter">Latest: {recentNotes[0]?.date || 'None'}</span>
+                                                <span className="text-[10px] text-slate-400 font-bold uppercase bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 tracking-tighter">Latest: {recentNotes[0]?.date || 'None'}</span>
                                             </div>
 
                                             {recentNotes[0] ? (
@@ -1853,7 +1880,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-200 to-transparent rounded-full" />
                                                         <div className="pl-5">
                                                             <div className="flex items-center justify-between mb-2">
-                                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Current Clinical Plan</span>
+                                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Current Clinical Plan</span>
                                                                 <button
                                                                     onClick={() => {
                                                                         setPlanOverride(recentNotes[0].plan || recentNotes[0].assessment || '');
@@ -1876,8 +1903,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                 <Clock className="w-4 h-4" />
                                                             </div>
                                                             <div>
-                                                                <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest block mb-0.5">Execution & Monitoring</span>
-                                                                <p className="text-[12px] text-indigo-900 font-black leading-tight">
+                                                                <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest block mb-0.5">Execution & Monitoring</span>
+                                                                <p className="text-[12px] text-indigo-900 font-bold leading-tight">
                                                                     {recentNotes[0].followUp || recentNotes[0].carePlan}
                                                                 </p>
                                                             </div>
@@ -1887,13 +1914,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     <div className="flex items-center gap-3 pt-2">
                                                         <button
                                                             onClick={(e) => handleViewNote(recentNotes[0].id, e)}
-                                                            className="flex-1 py-3 px-4 bg-slate-900 hover:bg-black text-white rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-200 hover:scale-[1.02]"
+                                                            className="flex-1 py-3 px-4 bg-slate-900 hover:bg-black text-white rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-200 hover:scale-[1.02]"
                                                         >
                                                             <ExternalLink className="w-4 h-4" />
                                                             Open Full Visit Note
-                                                        </button>
-                                                        <button className="p-3 border border-slate-200 rounded-2xl hover:bg-slate-50 transition-all text-slate-400 hover:text-slate-600 shadow-sm">
-                                                            <Printer className="w-4.5 h-4.5" />
                                                         </button>
                                                     </div>
                                                 </div>
@@ -1902,7 +1926,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     <div className="p-4 bg-white rounded-2xl shadow-sm mb-4">
                                                         <FileText className="w-8 h-8 text-slate-200" />
                                                     </div>
-                                                    <p className="text-[11px] text-slate-400 font-black uppercase tracking-widest">No patient encounters found</p>
+                                                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">No patient encounters found</p>
                                                 </div>
                                             )}
                                         </div>
@@ -1916,7 +1940,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     <div className="p-2.5 bg-amber-50 text-amber-500 rounded-xl group-hover:bg-amber-500 group-hover:text-white transition-all shadow-sm">
                                                         <CheckCircle2 className="w-4.5 h-4.5" strokeWidth={2.5} />
                                                     </div>
-                                                    <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">Clinical Reminders</h3>
+                                                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Clinical Reminders</h3>
                                                 </div>
                                                 <button
                                                     onClick={() => setIsEditingReminder(true)}
@@ -1935,10 +1959,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         </div>
                                                         <div className="flex-1 min-w-0">
                                                             <div className="flex items-center justify-between">
-                                                                <p className="text-[11px] font-black text-rose-900 truncate uppercase tracking-tight">{flag.display_label}</p>
-                                                                <span className="text-[8px] font-black text-rose-400 uppercase">{format(new Date(flag.created_at), 'MMM d')}</span>
+                                                                <p className="text-[11px] font-bold text-rose-900 truncate uppercase tracking-tight">{flag.display_label}</p>
+                                                                <span className="text-[8px] font-bold text-rose-400 uppercase">{format(new Date(flag.created_at), 'MMM d')}</span>
                                                             </div>
-                                                            <p className="text-[10px] text-rose-700/80 font-bold leading-tight mt-0.5 whitespace-pre-wrap">{flag.note}</p>
+                                                            <p className="text-[10px] text-rose-700/80 font-semibold leading-tight mt-0.5 whitespace-pre-wrap">{flag.note}</p>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -2743,6 +2767,77 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     />
                 )
             }
+            {/* Clinical Reminder Edit Modal */}
+            <Modal
+                isOpen={isEditingReminder}
+                onClose={() => setIsEditingReminder(false)}
+                title="Add Clinical Reminder"
+            >
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Reminder Note</label>
+                        <textarea
+                            value={reminderText}
+                            onChange={(e) => setReminderText(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent h-24"
+                            placeholder="e.g. Patient requires annual eye exam."
+                            autoFocus
+                        />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2">
+                        <button
+                            onClick={() => setIsEditingReminder(false)}
+                            className="px-4 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-md"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSaveReminder}
+                            disabled={!reminderText.trim() || actionLoading}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-md font-bold hover:bg-blue-700 disabled:opacity-50"
+                        >
+                            {actionLoading ? 'Saving...' : 'Save Reminder'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Plan of Care Edit Modal */}
+            <Modal
+                isOpen={isEditingPlan}
+                onClose={() => setIsEditingPlan(false)}
+                title="Update Plan of Care"
+            >
+                <div className="space-y-4">
+                    <p className="text-sm text-slate-500 mb-2">Updates will be saved to the most recent visit note.</p>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Current Plan</label>
+                        <textarea
+                            value={planOverride}
+                            onChange={(e) => setPlanOverride(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent h-32"
+                            placeholder="Update the forward-looking plan..."
+                            autoFocus
+                        />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2">
+                        <button
+                            onClick={() => setIsEditingPlan(false)}
+                            className="px-4 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-md"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSavePlan}
+                            disabled={!planOverride.trim() || actionLoading}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-md font-bold hover:bg-blue-700 disabled:opacity-50"
+                        >
+                            {actionLoading ? 'Saving...' : 'Update Plan'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
             {/* Specialty Tracker Drawer */}
             <SpecialtyTracker
                 isOpen={showSpecialtyTracker}
