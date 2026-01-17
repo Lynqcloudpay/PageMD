@@ -1038,12 +1038,21 @@ router.post('/:id/medications', requirePermission('meds:prescribe'), async (req,
 router.post('/:id/problems', requirePermission('notes:create'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { problemName, icd10Code, onsetDate } = req.body;
+    const {
+      problemName, problem_name,
+      icd10Code, icd10_code,
+      onsetDate, onset_date,
+      status
+    } = req.body;
+
+    const finalName = problemName || problem_name;
+    const finalCode = icd10Code || icd10_code;
+    const finalOnset = onsetDate || onset_date;
 
     const result = await pool.query(
-      `INSERT INTO problems (patient_id, problem_name, icd10_code, onset_date)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [id, problemName, icd10Code, onsetDate]
+      `INSERT INTO problems (patient_id, problem_name, icd10_code, onset_date, status)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [id, finalName, finalCode, finalOnset, status || 'active']
     );
 
     await logAudit(req.user.id, 'add_problem', 'problem', result.rows[0].id, {}, req.ip);

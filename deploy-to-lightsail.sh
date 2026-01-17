@@ -4,87 +4,96 @@
 
 HOST="pagemdemr.com"
 USER="ubuntu"
-# Default to emr directory, but allow override
-DIR="${DEPLOY_DIR:-/home/ubuntu/emr}"
-KEY_PATH="$1"
+DIR="/home/ubuntu/emr"
 
-SSH_CMD="ssh"
-if [ ! -z "$KEY_PATH" ]; then
-  SSH_CMD="ssh -i $KEY_PATH"
+# Get absolute path to key
+RELATIVE_KEY_PATH="$1"
+if [[ "$RELATIVE_KEY_PATH" != /* ]]; then
+  KEY_PATH="$(pwd)/$RELATIVE_KEY_PATH"
+else
+  KEY_PATH="$RELATIVE_KEY_PATH"
 fi
 
-echo "🚀 Deploying to $USER@$HOST..."
+echo "🚀 Starting Hybrid Deployment to $USER@$HOST..."
 
-$SSH_CMD $USER@$HOST << EOF
+# 1. LOCAL BUILD (CRITICAL: Offloads 2GB+ RAM usage from 1GB VPS)
+if [ -d "client" ] && [ -f "client/package.json" ]; then
+  echo "📦 Building frontend locally..."
+  cd client
+  if [ -d "node_modules" ]; then
+    rm -f dist.tar.gz
+    npm run build
+    if [ $? -eq 0 ]; then
+      echo "🗜️  Packaging local build..."
+      tar -czf dist.tar.gz -C dist .
+      echo "📤 Uploading pre-built artifacts..."
+      scp -i "$KEY_PATH" dist.tar.gz "$USER@$HOST:$DIR/client/dist.tar.gz"
+      LOCAL_BUILD_SUCCESS=true
+    else
+      echo "❌ ERROR: Local build failed."
+      exit 1
+    fi
+  else
+    echo "⚠️  WARNING: Local node_modules missing. Local build skipped."
+  fi
+  cd ..
+fi
+
+echo "🌐 Connecting to server for deployment..."
+
+ssh -i "$KEY_PATH" "$USER@$HOST" << EOF
   set -e
   
-  echo "📂 Navigating to app directory..."
-  cd $DIR
+  cd "$DIR"
   
   echo "⬇️  Pulling latest changes..."
   git merge --abort 2>/dev/null || true
   git reset --hard HEAD 2>/dev/null || true
-  git stash || true
   git fetch origin
-  git reset --hard origin/main || git pull origin main
+  git reset --hard origin/main
   
   cd deploy
   
   echo "⚙️  Checking environment variables..."
-  if [ -f .env.prod ]; then
-    echo "⚙️  Purging legacy domain from .env.prod..."
-    sed -i 's/yourdomain.com/pagemdemr.com/g' .env.prod
-    sed -i 's/bemypcp.com/pagemdemr.com/g' .env.prod
-    
-    if ! grep -q "PATIENT_PORTAL_ENABLED" .env.prod; then
-      echo "" >> .env.prod
-      echo "PATIENT_PORTAL_ENABLED=true" >> .env.prod
-      echo "PORTAL_URL=https://pagemdemr.com/portal" >> .env.prod
-    fi
+  cp -f .env.prod .env || true
+  
+  # 2. FRONTEND HANDLING (FIX 404 ROOT CAUSE)
+  if [ -f ../client/dist.tar.gz ]; then
+    echo "📦 Using pre-built artifacts. Cleaning destination..."
+    sudo rm -rf ../client/dist
+    mkdir -p ../client/dist
+    tar -xzf ../client/dist.tar.gz -C ../client/dist
+    rm ../client/dist.tar.gz
   else
-    cp env.prod.example .env.prod
-    sed -i 's/yourdomain.com/pagemdemr.com/g' .env.prod
+    echo "⚠️  WARNING: Building on server..."
+    docker run --rm -v "\$(pwd)/../client:/app" -v "emr_node_modules:/app/node_modules" -w /app node:18-alpine sh -c "npm install --legacy-peer-deps && npm run build"
   fi
-  
-  # Docker Compose reads .env by default, not .env.prod
-  cp .env.prod .env
-  
-  echo "📦 Building frontend (using Docker container)..."
-  
-  # Ensure no stale .env files interfere with the build
-  rm -f ../client/.env ../client/.env.production ../client/.env.production.local
-  
-  # Use Docker to build frontend with a persistent volume for node_modules to speed up builds
-  docker run --rm \
-    -v "$DIR/client:/app" \
-    -v "emr_node_modules:/app/node_modules" \
-    -w /app \
-    node:18-alpine \
-    sh -c "npm install --legacy-peer-deps && npm run build"
     
-  echo "📂 Copying build artifacts to deployment directory..."
-  rm -rf static/*
+  echo "📂 Refreshing static artifacts..."
+  # Use static/* to preserve the directory mount point
+  sudo rm -rf static/*
   mkdir -p static
-  cp -r ../client/dist/* static/
+  # Using sudo cp to ensure it works even if static/ is mounted or special
+  sudo cp -r ../client/dist/* static/
+  sudo chown -R $USER:$USER static/
     
-  echo "🔄 Building API service (using BuildKit)..."
+  echo "🔄 Building & Restarting services..."
   DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build api
-  
-  echo "🚀 Rolling update of services..."
   docker compose -f docker-compose.prod.yml up -d --remove-orphans
   
-  echo "🔄 Running database schema updates..."
-  # Wait for API container to be ready
-  sleep 10
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/update_patients_schema.js || echo "⚠️ Patients schema update failed, check logs"
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/create_ordersets_table.js || echo "⚠️ Ordersets schema update failed, check logs"
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-superbill-enhancements.js || echo "⚠️ Superbill migration failed, check logs"
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-patient-portal.js || echo "⚠️ Patient Portal migration failed, check logs"
-  
-  echo "🧹 Cleaning up old images..."
-  docker image prune -f
+  echo "🌍 Verifying static files..."
+  if [ -f static/index.html ]; then
+    echo "✅ index.html present in static directory"
+  else
+    echo "❌ ERROR: index.html missing from static directory"
+    exit 1
+  fi
   
   echo "✅ Deployment complete!"
-  echo "🌍 Checking site status..."
-  curl -I https://pagemdemr.com
+  echo -n "🌍 Site Status (pagemdemr.com): "
+  curl -s -o /dev/null -w "%{http_code}" https://pagemdemr.com
+  echo ""
 EOF
+
+# Local Cleanup
+rm -f client/dist.tar.gz

@@ -426,9 +426,9 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
         e.preventDefault();
         try {
             await patientsAPI.addProblem(patientId, {
-                problem_name: probForm.problemName,
-                icd10_code: probForm.icd10Code,
-                onset_date: probForm.onsetDate,
+                problemName: probForm.problemName,
+                icd10Code: probForm.icd10Code,
+                onsetDate: probForm.onsetDate,
                 status: probForm.status
             });
             setShowAddProbForm(false);
@@ -605,9 +605,9 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                     onSave={async (item) => {
                                                         try {
                                                             await patientsAPI.addProblem(patientId, {
-                                                                problem_name: item.problemName,
-                                                                icd10_code: item.icd10Code,
-                                                                onset_date: item.onsetDate,
+                                                                problemName: item.problemName,
+                                                                icd10Code: item.icd10Code,
+                                                                onsetDate: item.onsetDate,
                                                                 status: item.status
                                                             });
                                                             setShowAddProbForm(false);

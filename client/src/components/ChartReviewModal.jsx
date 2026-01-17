@@ -359,59 +359,63 @@ const ChartReviewModal = ({
                                     </button>
                                 </div>
                             </div>
-                            <div style={{ width: '100%', height: 160 }}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={vitalsTrendData} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
-                                        <defs>
-                                            <linearGradient id="hrG" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.4} />
-                                                <stop offset="100%" stopColor="#f43f5e" stopOpacity={0} />
-                                            </linearGradient>
-                                            <linearGradient id="bpG" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor="#2563eb" stopOpacity={0.4} />
-                                                <stop offset="100%" stopColor="#2563eb" stopOpacity={0} />
-                                            </linearGradient>
-                                            <linearGradient id="bmiG" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor="#9333ea" stopOpacity={0.4} />
-                                                <stop offset="100%" stopColor="#9333ea" stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                        <XAxis
-                                            dataKey="uniqueKey"
-                                            axisLine={false}
-                                            tickLine={false}
-                                            tick={({ x, y, payload }) => {
-                                                const dateLabel = vitalsTrendData.find(d => d.uniqueKey === payload.value)?.name || '';
-                                                return <text x={x} y={y + 10} textAnchor="middle" fill="#94a3b8" fontSize={9}>{dateLabel}</text>;
-                                            }}
-                                        />
-                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 9 }} domain={[0, 'dataMax + 20']} width={25} />
-                                        <Tooltip
-                                            content={({ active, payload, label }) => {
-                                                if (active && payload && payload.length) {
-                                                    const dateLabel = payload[0]?.payload?.name || '';
-                                                    return (
-                                                        <div className="bg-white border border-slate-200 rounded-md shadow-lg p-2 text-[10px]">
-                                                            <div className="font-bold text-slate-500 mb-1 border-b border-slate-100 pb-1">{dateLabel}</div>
-                                                            {payload.map((p, i) => (
-                                                                <div key={i} className="flex items-center gap-2 mb-0.5">
-                                                                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: p.color }}></div>
-                                                                    <span className="text-slate-600 font-medium">{p.name}:</span>
-                                                                    <span className="font-bold ml-auto" style={{ color: p.color }}>{p.value}</span>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    );
-                                                }
-                                                return null;
-                                            }}
-                                        />
-                                        {selectedVitals.hr && <Area type="monotone" dataKey="hr" name="Heart Rate" stroke="#f43f5e" strokeWidth={2} fill="url(#hrG)" dot={{ r: 2, fill: '#f43f5e' }} />}
-                                        {selectedVitals.bp && <Area type="monotone" dataKey="sys" name="BP Systolic" stroke="#2563eb" strokeWidth={2} fill="url(#bpG)" dot={{ r: 2, fill: '#2563eb' }} />}
-                                        {selectedVitals.bmi && <Area type="monotone" dataKey="bmi" name="BMI" stroke="#9333ea" strokeWidth={2} fill="url(#bmiG)" dot={{ r: 2, fill: '#9333ea' }} />}
-                                    </AreaChart>
-                                </ResponsiveContainer>
+                            <div style={{ width: '100%', height: 160, minWidth: 0 }}>
+                                {vitalsTrendData && vitalsTrendData.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={vitalsTrendData} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
+                                            <defs>
+                                                <linearGradient id="hrG" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.4} />
+                                                    <stop offset="100%" stopColor="#f43f5e" stopOpacity={0} />
+                                                </linearGradient>
+                                                <linearGradient id="bpG" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="0%" stopColor="#2563eb" stopOpacity={0.4} />
+                                                    <stop offset="100%" stopColor="#2563eb" stopOpacity={0} />
+                                                </linearGradient>
+                                                <linearGradient id="bmiG" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="0%" stopColor="#9333ea" stopOpacity={0.4} />
+                                                    <stop offset="100%" stopColor="#9333ea" stopOpacity={0} />
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                            <XAxis
+                                                dataKey="uniqueKey"
+                                                axisLine={false}
+                                                tickLine={false}
+                                                tick={({ x, y, payload }) => {
+                                                    const dateLabel = vitalsTrendData.find(d => d.uniqueKey === payload.value)?.name || '';
+                                                    return <text x={x} y={y + 10} textAnchor="middle" fill="#94a3b8" fontSize={9}>{dateLabel}</text>;
+                                                }}
+                                            />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 9 }} domain={[0, 'dataMax + 20']} width={25} />
+                                            <Tooltip
+                                                content={({ active, payload, label }) => {
+                                                    if (active && payload && payload.length) {
+                                                        const dateLabel = payload[0]?.payload?.name || '';
+                                                        return (
+                                                            <div className="bg-white border border-slate-200 rounded-md shadow-lg p-2 text-[10px]">
+                                                                <div className="font-bold text-slate-500 mb-1 border-b border-slate-100 pb-1">{dateLabel}</div>
+                                                                {payload.map((p, i) => (
+                                                                    <div key={i} className="flex items-center gap-2 mb-0.5">
+                                                                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: p.color }}></div>
+                                                                        <span className="text-slate-600 font-medium">{p.name}:</span>
+                                                                        <span className="font-bold ml-auto" style={{ color: p.color }}>{p.value}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return null;
+                                                }}
+                                            />
+                                            {selectedVitals.hr && <Area type="monotone" dataKey="hr" name="Heart Rate" stroke="#f43f5e" strokeWidth={2} fill="url(#hrG)" dot={{ r: 2, fill: '#f43f5e' }} />}
+                                            {selectedVitals.bp && <Area type="monotone" dataKey="sys" name="BP Systolic" stroke="#2563eb" strokeWidth={2} fill="url(#bpG)" dot={{ r: 2, fill: '#2563eb' }} />}
+                                            {selectedVitals.bmi && <Area type="monotone" dataKey="bmi" name="BMI" stroke="#9333ea" strokeWidth={2} fill="url(#bmiG)" dot={{ r: 2, fill: '#9333ea' }} />}
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="flex items-center justify-center h-full text-slate-400 text-[10px] italic">No trend data available</div>
+                                )}
                             </div>
                         </div>
 
