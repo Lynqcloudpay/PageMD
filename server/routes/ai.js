@@ -2,14 +2,14 @@ const express = require('express');
 const router = express.Router();
 const aiService = require('../services/aiService');
 const { requirePermission } = require('../services/authorization');
-const auth = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth');
 
 /**
  * @route   POST /api/ai/patient/:patientId/ask
  * @desc    Ask a clinical question about a patient
  * @access  Private (Requires patients:view_chart permission)
  */
-router.post('/patient/:patientId/ask', auth, requirePermission('patients:view_chart'), async (req, res) => {
+router.post('/patient/:patientId/ask', authenticate, requirePermission('patients:view_chart'), async (req, res) => {
     try {
         const { patientId } = req.params;
         const { question, additionalContext } = req.body;
@@ -40,7 +40,7 @@ router.post('/patient/:patientId/ask', auth, requirePermission('patients:view_ch
  * @desc    Generate a clinical note draft
  * @access  Private (Requires notes:create permission)
  */
-router.post('/note/generate', auth, requirePermission('notes:create'), async (req, res) => {
+router.post('/note/generate', authenticate, requirePermission('notes:create'), async (req, res) => {
     try {
         const { patientId, visitData } = req.body;
 
