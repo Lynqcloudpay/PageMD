@@ -135,7 +135,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
         if (!reminderText.trim()) return;
         try {
             setActionLoading(true);
-            await patientFlagsAPI.create({
+            await patientFlagsAPI.create(id, {
                 patient_id: id,
                 flag_type: 'Clinical Reminder',
                 display_label: 'REMINDER',
@@ -1467,12 +1467,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                     <span className="text-[9px] text-slate-400 font-medium tabular-nums">{note.date}</span>
                                                                     {!note.signed && (
                                                                         <button
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                if (window.confirm('Are you sure you want to delete this draft?')) {
-                                                                                    handleDeleteNote(note.id);
-                                                                                }
-                                                                            }}
+                                                                            onClick={(e) => handleDeleteNote(note.id, e)}
                                                                             className="p-1 hover:bg-rose-100 text-slate-400 hover:text-rose-500 rounded transition-colors opacity-0 group-hover:opacity-100"
                                                                             title="Delete Draft"
                                                                         >
