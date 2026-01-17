@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
     Target, Info, AlertTriangle, CheckCircle2, ChevronRight,
     Filter, Download, Settings2, BarChart3, Users2,
-    ClipboardCheck, Activity, Search, ExternalLink, RefreshCcw, Loader2
+    ClipboardCheck, Activity, Search, ExternalLink, RefreshCcw, Loader2,
+    CheckCircle, XCircle, Clock, FileText, User, Calendar
 } from 'lucide-react';
 import { qppAPI } from '../services/api';
 import { showSuccess, showError } from '../utils/toast';
@@ -16,6 +17,10 @@ const QualityAndMips = () => {
     const [packs, setPacks] = useState([]);
     const [scoreboardData, setScoreboardData] = useState(null);
     const [measures, setMeasures] = useState([]);
+    const [gaps, setGaps] = useState([]);
+    const [selectedMeasure, setSelectedMeasure] = useState(null);
+    const [isAttesting, setIsAttesting] = useState(false);
+    const [attestationNotes, setAttestationNotes] = useState('');
 
     // Fetch packs and measures on load/year change
     useEffect(() => {
@@ -41,36 +46,65 @@ const QualityAndMips = () => {
         fetchData();
     }, [performanceYear]);
 
-    // Fetch scoreboard when pack changes
+    // Fetch scoreboard and gaps
     useEffect(() => {
-        if (selectedPackId && activeTab === 'scoreboard') {
-            const fetchScoreboard = async () => {
-                try {
-                    const res = await qppAPI.getScoreboard(selectedPackId);
-                    setScoreboardData(res.data);
-                } catch (error) {
-                    showError('Failed to load scoreboard data');
+        const fetchDetails = async () => {
+            if (!selectedPackId) return;
+            try {
+                const [scoreRes, gapsRes] = await Promise.all([
+                    qppAPI.getScoreboard(selectedPackId),
+                    qppAPI.getGaps({ status: 'gap' })
+                ]);
+                setScoreboardData(scoreRes.data);
+                setGaps(gapsRes.data);
+
+                // Auto-compute once if everything is 0 and not loading
+                if (scoreRes.data.scores.length === 0 && activeTab === 'scoreboard' && !loading) {
+                    console.log("Empty scoreboard, triggering auto-compute...");
+                    handleCompute(true);
                 }
-            };
-            fetchScoreboard();
-        }
+            } catch (error) {
+                console.error(error);
+            }
+        };
+        fetchDetails();
     }, [selectedPackId, activeTab]);
 
-    const handleCompute = async () => {
-        setLoading(true);
+    const handleCompute = async (silent = false) => {
+        if (!silent) setLoading(true);
         try {
             await qppAPI.compute({
                 packId: selectedPackId,
                 year: performanceYear
             });
-            showSuccess('MIPS Computation complete! Scoreboard refreshed.');
-            // Refresh scoreboard
+            if (!silent) showSuccess('MIPS Computation complete! Scoreboard refreshed.');
+            const res = await qppAPI.getScoreboard(selectedPackId);
+            setScoreboardData(res.data);
+            const gapRes = await qppAPI.getGaps({ status: 'gap' });
+            setGaps(gapRes.data);
+        } catch (error) {
+            if (!silent) showError('Failed to run computation');
+        } finally {
+            if (!silent) setLoading(false);
+        }
+    };
+
+    const handleAttest = async (measure) => {
+        try {
+            await qppAPI.submitAttestation({
+                measureId: measure.id,
+                year: performanceYear,
+                isAttested: true,
+                notes: attestationNotes
+            });
+            showSuccess(`Successfully attested to ${measure.qpp_id}`);
+            setIsAttesting(false);
+            setAttestationNotes('');
+            // Refresh
             const res = await qppAPI.getScoreboard(selectedPackId);
             setScoreboardData(res.data);
         } catch (error) {
-            showError('Failed to run computation');
-        } finally {
-            setLoading(false);
+            showError('Failed to submit attestation');
         }
     };
 
@@ -100,7 +134,7 @@ const QualityAndMips = () => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-slate-50 font-bold">
+        <div className="flex flex-col h-full bg-slate-50 font-bold relative">
             {/* Header / Global Controls */}
             <div className="bg-white border-b border-slate-200 px-6 py-4">
                 <div className="flex items-center justify-between mb-4">
@@ -127,12 +161,12 @@ const QualityAndMips = () => {
                             ))}
                         </div>
                         <button
-                            onClick={handleCompute}
+                            onClick={() => handleCompute()}
                             disabled={loading}
                             className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all disabled:opacity-50"
                         >
                             <RefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                            Sync CMS Data
+                            Sync Patient Data
                         </button>
                     </div>
                 </div>
@@ -209,7 +243,7 @@ const QualityAndMips = () => {
                                 {/* Stats Grid */}
                                 <div className="grid grid-cols-4 gap-4">
                                     {getStatCards().map((card, i) => (
-                                        <div key={i} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                                        <div key={i} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm transform hover:scale-[1.02] transition-all cursor-default">
                                             <div className="flex items-center justify-between mb-3 text-slate-900 font-bold">
                                                 <div className={`p-2 rounded-lg ${card.status === 'success' ? 'bg-emerald-50 text-emerald-600' : card.status === 'warning' ? 'bg-amber-50 text-amber-600' : 'bg-slate-50 text-slate-600'}`}>
                                                     <card.icon className="w-5 h-5" />
@@ -222,10 +256,10 @@ const QualityAndMips = () => {
                                             <p className="text-xs text-slate-500 font-medium mt-1">{card.label}</p>
                                             {card.target && (
                                                 <div className="mt-4 flex items-center justify-between">
-                                                    <div className="flex-1 h-1.5 bg-slate-100 rounded-full mr-3">
+                                                    <div className="flex-1 h-1.5 bg-slate-100 rounded-full mr-3 overflow-hidden">
                                                         <div
                                                             className={`h-full rounded-full ${card.status === 'success' ? 'bg-emerald-500' : card.status === 'warning' ? 'bg-amber-500' : 'bg-slate-300'}`}
-                                                            style={{ width: card.value.includes('%') ? card.value : (card.value.includes('/') ? `${(parseInt(card.value.split('/')[0]) / parseInt(card.value.split('/')[1])) * 100}%` : '0%') }}
+                                                            style={{ width: card.value.includes('%') ? card.value : (card.value.includes('/') ? `${(parseInt(card.value.split('/')[0]) / (parseInt(card.value.split('/')[1]) || 1)) * 100}%` : '0%') }}
                                                         />
                                                     </div>
                                                     <span className="text-[10px] font-bold text-slate-400">Target: {card.target}</span>
@@ -243,10 +277,15 @@ const QualityAndMips = () => {
                                                 <AlertTriangle className="w-4 h-4 text-amber-500" />
                                                 Critical Performance Gaps
                                             </h3>
-                                            <button className="text-xs font-bold text-blue-600 hover:text-blue-700">View All</button>
+                                            <button
+                                                onClick={() => setActiveTab('gaps')}
+                                                className="text-xs font-bold text-blue-600 hover:text-blue-700"
+                                            >
+                                                View All
+                                            </button>
                                         </div>
                                         <div className="divide-y divide-slate-100">
-                                            {(scoreboardData?.measures || []).filter(m => m.category === 'QUALITY').slice(0, 3).map((m, i) => {
+                                            {(scoreboardData?.measures || []).filter(m => m.category === 'QUALITY').slice(0, 4).map((m, i) => {
                                                 const score = (scoreboardData?.scores || []).find(s => s.measure_id === m.id);
                                                 const den = score?.denominator_count || 0;
                                                 const num = score?.numerator_count || 0;
@@ -300,7 +339,7 @@ const QualityAndMips = () => {
                                                     </div>
                                                 ))}
                                                 {(!scoreboardData?.pack?.cost_refs || scoreboardData.pack.cost_refs.length === 0) && (
-                                                    <div className="text-slate-400 text-xs italic p-2 text-center">No cost references mapped.</div>
+                                                    <div className="text-slate-400 text-xs italic p-2 text-center">No cost references mapped for this pack.</div>
                                                 )}
                                             </div>
                                         </div>
@@ -340,42 +379,49 @@ const QualityAndMips = () => {
                                         <th className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Measure Title</th>
                                         <th className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Category</th>
                                         <th className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Type</th>
-                                        <th className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Logic</th>
                                         <th className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {measures.map((row, i) => (
-                                        <tr key={i} className="hover:bg-slate-50/50 transition-all group font-bold">
-                                            <td className="px-6 py-4 text-xs font-bold text-blue-600">{row.qpp_id}</td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm font-semibold text-slate-900 overflow-hidden text-ellipsis whitespace-nowrap max-w-md">{row.title}</div>
-                                                <div className="text-[10px] text-slate-400 mt-0.5">Performance Year: {performanceYear}</div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${row.category === 'QUALITY' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
-                                                    {row.category}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-xs text-slate-600 font-medium">{row.measure_type}</td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-1.5">
-                                                    <div className={`w-1.5 h-1.5 rounded-full ${row.category === 'QUALITY' ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                                                    <span className="text-xs font-semibold text-slate-700">{row.category === 'QUALITY' ? 'Computed' : 'Manual'}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <a
-                                                    href={row.spec_url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="p-1.5 rounded-lg hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-200 text-slate-400 hover:text-blue-600 transition-all"
-                                                >
-                                                    <ExternalLink className="w-4 h-4" />
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {measures.map((row, i) => {
+                                        const isAttested = (scoreboardData?.attestations || []).find(a => a.measure_id === row.id)?.is_attested;
+                                        return (
+                                            <tr key={i} className="hover:bg-slate-50/50 transition-all group font-bold">
+                                                <td className="px-6 py-4 text-xs font-bold text-blue-600">{row.qpp_id}</td>
+                                                <td className="px-6 py-4">
+                                                    <div className="text-sm font-semibold text-slate-900 overflow-hidden text-ellipsis whitespace-nowrap max-w-md">{row.title}</div>
+                                                    <div className="text-[10px] text-slate-400 mt-0.5">Performance Year: {performanceYear}</div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${row.category === 'QUALITY' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
+                                                        {row.category}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-xs text-slate-600 font-medium">{row.measure_type}</td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <a
+                                                            href={row.spec_url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="p-1.5 rounded-lg hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-200 text-slate-400 hover:text-blue-600 transition-all"
+                                                            title="View CMS Specs"
+                                                        >
+                                                            <ExternalLink className="w-4 h-4" />
+                                                        </a>
+                                                        {row.category !== 'QUALITY' && (
+                                                            <button
+                                                                onClick={() => { setSelectedMeasure(row); setIsAttesting(true); }}
+                                                                className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase transition-all ${isAttested ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-blue-600 text-white shadow-sm hover:bg-blue-700'}`}
+                                                            >
+                                                                {isAttested ? 'Attested' : 'Attest Now'}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                     {measures.length === 0 && (
                                         <tr>
                                             <td colSpan="6" className="px-6 py-20 text-center text-slate-400 italic text-sm">
@@ -390,12 +436,132 @@ const QualityAndMips = () => {
                 )}
 
                 {activeTab === 'gaps' && (
-                    <div className="flex items-center justify-center h-full text-slate-400 italic text-sm animate-pulse">
-                        <Users2 className="w-8 h-8 mr-3 opacity-20" />
-                        Patient level gap logic coming in Phase 5...
+                    <div className="space-y-6 animate-fade-in">
+                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-white">
+                                <div>
+                                    <h3 className="text-base font-bold text-slate-900">Patient Measure Gaps</h3>
+                                    <p className="text-xs text-slate-500 mt-1">Identified patients who meet measure denominators but missing numerator success</p>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+                                    <span className="flex items-center gap-1"><AlertTriangle className="w-3 h-3 text-amber-500" /> {gaps.length} Total Gaps</span>
+                                </div>
+                            </div>
+                            <div className="p-0 overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-50 border-b border-slate-200">
+                                            <th className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Patient</th>
+                                            <th className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Measure</th>
+                                            <th className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Status</th>
+                                            <th className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Last Run</th>
+                                            <th className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {gaps.map((row, i) => (
+                                            <tr key={i} className="hover:bg-slate-50/50 transition-all font-bold group">
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                                                            <User className="w-4 h-4" />
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-sm font-semibold text-slate-900">{row.last_name}, {row.first_name}</div>
+                                                            <div className="text-[10px] text-slate-400">ID: {row.chart_id} • DOB: {new Date(row.dob).toLocaleDateString()}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="text-sm font-semibold text-slate-700">{row.qpp_id}: {row.measure_title}</div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-amber-50 text-amber-700 text-[10px] font-bold uppercase w-fit">
+                                                        <AlertTriangle className="w-3 h-3" /> Gap Identified
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-xs text-slate-400 font-medium">
+                                                    <div className="flex items-center gap-1">
+                                                        <Clock className="w-3 h-3" />
+                                                        {new Date(row.last_computed_at).toLocaleDateString()}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <button className="text-blue-600 hover:text-blue-700 text-xs font-bold">Chart Review</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {gaps.length === 0 && (
+                                            <tr>
+                                                <td colSpan="5" className="px-6 py-20 text-center text-slate-400 italic text-sm">
+                                                    No patient gaps found. Click "Sync Patient Data" to refresh.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>
+
+            {/* Attestation Modal */}
+            {isAttesting && selectedMeasure && (
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="bg-blue-600 px-6 py-4 text-white flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <ClipboardCheck className="w-6 h-6" />
+                                <h3 className="text-lg font-bold">Measure Attestation</h3>
+                            </div>
+                            <button onClick={() => setIsAttesting(false)} className="text-blue-100 hover:text-white transition-colors">
+                                <XCircle className="w-6 h-6" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-1">Selected Measure</h4>
+                                <div className="text-lg font-bold text-slate-800">{selectedMeasure.qpp_id}: {selectedMeasure.title}</div>
+                                <p className="text-xs text-slate-500 mt-2 italic leading-relaxed">{selectedMeasure.description}</p>
+                            </div>
+
+                            <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Attestation Notes / Documentation Reference</label>
+                                <textarea
+                                    value={attestationNotes}
+                                    onChange={(e) => setAttestationNotes(e.target.value)}
+                                    className="w-full bg-white border border-slate-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500/20 outline-none min-h-[100px]"
+                                    placeholder="Enter details on how the clinic met this objective..."
+                                />
+                            </div>
+
+                            <div className="bg-amber-50 border border-amber-100 p-3 rounded-lg flex gap-3">
+                                <Info className="w-5 h-5 text-amber-500 shrink-0" />
+                                <p className="text-[11px] text-amber-800 font-medium">
+                                    By attesting, you confirm that your organization has maintained required evidence of compliance
+                                    and it is available for CMS audit purposes.
+                                </p>
+                            </div>
+
+                            <div className="flex items-center gap-3 pt-4">
+                                <button
+                                    onClick={() => setIsAttesting(false)}
+                                    className="flex-1 px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-200 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => handleAttest(selectedMeasure)}
+                                    className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all"
+                                >
+                                    Confirm Attestation
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

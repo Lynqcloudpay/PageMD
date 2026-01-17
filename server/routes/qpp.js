@@ -171,4 +171,38 @@ router.post('/compute', isAdmin, async (req, res) => {
     }
 });
 
+// 6. Get Gap List (Patient Details)
+router.get('/gaps', isAdmin, async (req, res) => {
+    try {
+        const { measureId, status } = req.query;
+        let query = `
+            SELECT 
+                pms.*,
+                p.first_name, p.last_name, p.dob, p.chart_id,
+                m.qpp_id, m.title as measure_title
+            FROM patient_measure_states pms
+            JOIN patients p ON p.id = pms.patient_id
+            JOIN qpp_measures m ON m.id = pms.measure_id
+            WHERE 1=1
+        `;
+        const params = [];
+
+        if (measureId) {
+            params.push(measureId);
+            query += ` AND pms.measure_id = $${params.length}`;
+        }
+        if (status === 'gap') {
+            query += ` AND pms.numerator_status = false AND pms.denominator_status = true`;
+        }
+
+        query += ` ORDER BY p.last_name, p.first_name LIMIT 100`;
+
+        const result = await pool.query(query, params);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching gap list:', error);
+        res.status(500).json({ error: 'Failed to fetch gap list' });
+    }
+});
+
 module.exports = router;

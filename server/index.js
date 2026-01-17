@@ -272,6 +272,10 @@ app.use('/api/support', require('./routes/support'));
 // QPP / MIPS Workspace
 app.use('/api/qpp', require('./routes/qpp'));
 
+// Start MIPS Auto-Sync Background Service
+const mipsAutoSyncService = require('./services/mipsAutoSyncService');
+mipsAutoSyncService.start();
+
 // Sales inquiries (public - no auth required)
 app.use('/api/sales', require('./routes/sales'));
 

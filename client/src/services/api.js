@@ -596,6 +596,7 @@ export const qppAPI = {
   getScoreboard: (packId) => api.get(`/qpp/scoreboard/${packId}`),
   submitAttestation: (data) => api.post('/qpp/attest', data),
   compute: (data) => api.post('/qpp/compute', data),
+  getGaps: (params) => api.get('/qpp/gaps', { params }),
 };
 
 export default api;
