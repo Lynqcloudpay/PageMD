@@ -1468,7 +1468,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                     {!note.signed && (
                                                                         <button
                                                                             onClick={(e) => handleDeleteNote(note.id, e)}
-                                                                            className="p-1 hover:bg-rose-100 text-slate-400 hover:text-rose-500 rounded transition-colors opacity-0 group-hover:opacity-100"
+                                                                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-400 hover:text-rose-600 rounded-md transition-all ml-1 shadow-sm border border-rose-100"
                                                                             title="Delete Draft"
                                                                         >
                                                                             <Trash2 className="w-3 h-3" />
