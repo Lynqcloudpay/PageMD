@@ -1618,7 +1618,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             {activeFlags.map(flag => {
                                                 const flagLabel = (flag.display_label || '').toUpperCase();
                                                 const flagType = (flag.flag_type || '').toUpperCase();
-                                                const isReminder = flagLabel.includes('REMINDER') || flagType.includes('REMINDER');
+                                                const flagNote = (flag.note || '').toUpperCase();
+                                                // Aggressive check: if type, label OR NOTE contains 'remind', treat as reminder
+                                                const isReminder = flagLabel.includes('REMINDER') || flagType.includes('REMINDER') || flagNote.includes('REMIND');
                                                 const baseColor = isReminder ? 'blue' : 'rose';
 
                                                 return (
@@ -1629,7 +1631,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             </div>
                                                             <div className="flex flex-col text-left">
                                                                 <div className="flex items-center gap-2">
-                                                                    <span className={`text-[11px] font-bold text-${baseColor}-900 uppercase tracking-tight`}>{flag.display_label || (isReminder ? 'Clinical Reminder' : 'Medical Alert')}</span>
+                                                                    {/* FORCE the label to be Clinical Reminder if our logic detects it, overriding the DB label */}
+                                                                    <span className={`text-[11px] font-bold text-${baseColor}-900 uppercase tracking-tight`}>{isReminder ? 'CLINICAL REMINDER' : (flag.display_label || 'MEDICAL ALERT')}</span>
                                                                     <span className="w-1 h-1 rounded-full bg-slate-200" />
                                                                     <span className="text-[10px] text-slate-500 font-medium">{flag.severity || 'Medium Severity'}</span>
                                                                 </div>
