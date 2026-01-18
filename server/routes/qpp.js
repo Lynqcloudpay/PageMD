@@ -83,7 +83,7 @@ router.get('/scoreboard/:packId', async (req, res) => {
 router.post('/attest', requireAdmin, async (req, res) => {
     try {
         const { measureId, year, isAttested, notes, evidenceLinks } = req.body;
-        const clinicId = req.user.tenantId || req.user.clinicId || '00000000-0000-0000-0000-000000000000'; // Fallback if no tenant context
+        const clinicId = req.user.clinic_id || '00000000-0000-0000-0000-000000000000';
 
         const result = await pool.query(
             `INSERT INTO tenant_attestations (

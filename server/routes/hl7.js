@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../db');
 const { authenticate, requireRole, logAudit } = require('../middleware/auth');
 const { HL7Parser, HL7Generator } = require('../middleware/hl7');
+const MotherWriteService = require('../mother/MotherWriteService');
 
 const router = express.Router();
 
@@ -9,7 +10,7 @@ const router = express.Router();
 router.post('/receive', async (req, res) => {
   try {
     const message = req.body.message || req.body;
-    
+
     if (typeof message !== 'string') {
       return res.status(400).json({ error: 'Invalid HL7 message format' });
     }
@@ -27,27 +28,45 @@ router.post('/receive', async (req, res) => {
         );
 
         if (patient.rows.length > 0) {
-          // Store lab result
-          await pool.query(
-            `INSERT INTO orders (patient_id, order_type, test_name, result_value, result_units, 
-             reference_range, status, completed_at, external_id)
-             VALUES ($1, 'Lab', $2, $3, $4, $5, 'completed', CURRENT_TIMESTAMP, $6)`,
-            [
-              patient.rows[0].id,
-              result.observationId,
-              result.observationValue,
-              result.units,
-              result.referenceRange,
-              parsed.messageType.messageControlId
-            ]
-          );
+          const patientId = patient.rows[0].id;
+          const clinicId = req.clinic?.id || '00000000-0000-0000-0000-000000000000';
+
+          // Store lab result with Mother event
+          await MotherWriteService.performWrite(clinicId, {
+            patientId: patientId,
+            eventType: 'ORDER_RESULTED',
+            payload: {
+              test_name: result.observationId,
+              value: result.observationValue,
+              units: result.units,
+              reference_range: result.referenceRange,
+              status: 'completed',
+              external_id: parsed.messageType.messageControlId
+            },
+            sourceModule: 'HL7_LISTENER'
+          }, async (client) => {
+            // Legacy Insert
+            await client.query(
+              `INSERT INTO orders (patient_id, order_type, test_name, result_value, result_units, 
+               reference_range, status, completed_at, external_id)
+               VALUES ($1, 'Lab', $2, $3, $4, $5, 'completed', CURRENT_TIMESTAMP, $6)`,
+              [
+                patientId,
+                result.observationId,
+                result.observationValue,
+                result.units,
+                result.referenceRange,
+                parsed.messageType.messageControlId
+              ]
+            );
+          });
         }
       }
     }
 
     // Send ACK
     const ack = `MSH|^~\\&|EMR|CLINIC|LAB|FACILITY|${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}||ACK|ACK001|P|2.5\rMSA|AA|${parsed.messageType?.messageControlId || 'MSG001'}\r`;
-    
+
     res.set('Content-Type', 'text/plain');
     res.send(ack);
   } catch (error) {
@@ -60,7 +79,7 @@ router.post('/receive', async (req, res) => {
 router.post('/send', authenticate, requireRole('clinician'), async (req, res) => {
   try {
     const { orderId } = req.body;
-    
+
     const order = await pool.query(
       `SELECT o.*, p.mrn, p.first_name, p.last_name, p.dob, p.sex
        FROM orders o

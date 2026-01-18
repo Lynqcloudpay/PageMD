@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { authenticate, logAudit } = require('../middleware/auth');
+const MotherWriteService = require('../mother/MotherWriteService');
 
 const router = express.Router();
 router.use(authenticate);
@@ -48,15 +49,15 @@ router.post('/', async (req, res) => {
   try {
     const { patientId, toUserId, subject, body, messageType, priority } = req.body;
 
-    const result = await pool.query(
-      `INSERT INTO messages (patient_id, from_user_id, to_user_id, subject, body, message_type, priority)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [patientId || null, req.user.id, toUserId || null, subject, body, messageType || 'message', priority || 'normal']
-    );
+    const result = await MotherWriteService.sendMessage(req.user.clinic_id, patientId, {
+      toUserId,
+      subject,
+      body,
+      messageType: messageType || 'message',
+      priority: priority || 'normal'
+    }, req.user.id);
 
-    await logAudit(req.user.id, 'create_message', 'message', result.rows[0].id, {}, req.ip);
-
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(result.legacyResult);
   } catch (error) {
     console.error('Error creating message:', error);
     res.status(500).json({ error: 'Failed to create message' });

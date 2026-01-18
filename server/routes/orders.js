@@ -2,6 +2,8 @@ const express = require('express');
 const pool = require('../db');
 const { authenticate, requireRole, logAudit } = require('../middleware/auth');
 const { requirePermission } = require('../services/authorization');
+const MotherWriteService = require('../mother/MotherWriteService');
+const TenantDb = require('../mother/TenantDb');
 
 const router = express.Router();
 router.use(authenticate);
@@ -261,14 +263,13 @@ router.post('/', requirePermission('orders:create'), async (req, res) => {
     );
     if (byName.rows[0]?.id) return byName.rows[0].id;
 
-    // 3) Create new
-    const created = await client.query(
-      `INSERT INTO problems (patient_id, problem_name, icd10_code, status)
-       VALUES ($1, $2, $3, 'active')
-       RETURNING id`,
-      [patientId, name, icd10]
-    );
-    return created.rows[0]?.id || null;
+    // 3) Create new using Mother system
+    const motherRes = await MotherWriteService.addDiagnosis(req.user.clinic_id, patientId, {
+      problemName: name,
+      icd10Code: icd10,
+      status: 'active'
+    }, req.user.id, client);
+    return motherRes.legacyResult?.id || null;
   };
 
   try {
@@ -328,14 +329,13 @@ router.post('/', requirePermission('orders:create'), async (req, res) => {
       }
     }
 
-    // Create the order
-    const orderInsert = await client.query(
-      `INSERT INTO orders (patient_id, visit_id, order_type, ordered_by, order_payload)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
-      [patientId, visitId, orderType, req.user.id, payloadValue]
-    );
-    const order = orderInsert.rows[0];
+    // Create the order using MotherWriteService (handles legacy shadow write)
+    const result = await MotherWriteService.placeOrder(req.user.clinic_id, patientId, visitId, {
+      order_type: orderType,
+      ordered_by: req.user.id,
+      order_payload: payloadValue
+    }, req.user.id, client);
+    const order = result.legacyResult || result; // backward compatibility with legacy row returns
 
     // ---- Resolve diagnoses to real problems.id ----
     const problemIds = new Set();
@@ -401,6 +401,30 @@ router.post('/', requirePermission('orders:create'), async (req, res) => {
       [order.id, orderType]
     );
 
+    // Emit Mother event
+    try {
+      await MotherWriteService.performWrite(req.user.clinic_id, {
+        patientId,
+        encounterId: visitId,
+        eventType: 'ORDER_PLACED',
+        payload: {
+          order_id: order.id,
+          order_type: orderType,
+          description: payloadValue?.description || payloadValue?.test_name || orderType,
+          status: 'pending',
+          diagnoses: diagnosesResult.rows.map(d => ({
+            problem_id: d.id,
+            problem_name: d.problem_name,
+            icd10_code: d.icd10_code
+          }))
+        },
+        sourceModule: 'ORDERS_UI',
+        actorUserId: req.user.id
+      });
+    } catch (motherErr) {
+      console.error('Failed to emit Mother event for order:', motherErr);
+    }
+
     // Non-blocking audit
     try {
       await logAudit(req.user.id, 'create_order', 'order', order.id, { orderType, diagnosisCount: problemIds.size }, req.ip);
@@ -440,61 +464,27 @@ router.put('/:id', requirePermission('orders:create'), async (req, res) => {
     const { id } = req.params;
     const { status, externalOrderId, reviewed, comment, orderPayload } = req.body;
 
-    const updates = [];
-    const values = [];
-    let paramIndex = 1;
-
-    if (status !== undefined) {
-      updates.push(`status = $${paramIndex}`);
-      values.push(status);
-      paramIndex++;
-    }
-
-    if (externalOrderId) {
-      updates.push(`external_order_id = $${paramIndex}`);
-      values.push(externalOrderId);
-      paramIndex++;
-    }
-
+    const updatesObj = {};
+    if (status !== undefined) updatesObj.status = status;
+    if (externalOrderId) updatesObj.external_order_id = externalOrderId;
     if (reviewed !== undefined) {
-      updates.push(`reviewed = $${paramIndex}`);
-      values.push(reviewed);
-      paramIndex++;
-
+      updatesObj.reviewed = reviewed;
       if (reviewed) {
-        updates.push(`reviewed_at = CURRENT_TIMESTAMP`);
-        updates.push(`reviewed_by = $${paramIndex}`);
-        values.push(req.user.id);
-        paramIndex++;
+        updatesObj.reviewed_at = new Date().toISOString();
+        updatesObj.reviewed_by = req.user.id;
       }
     }
 
     if (comment !== undefined && comment.trim()) {
-      // If comment is provided, add it to the comments array with timestamp
-      // IMPORTANT: Always preserve all previous comments for legal record keeping
+      // Fetch existing comments to append
       const currentOrder = await pool.query('SELECT comments FROM orders WHERE id = $1', [id]);
-      let existingComments = currentOrder.rows[0]?.comments || [];
+      if (currentOrder.rows.length === 0) return res.status(404).json({ error: 'Order not found' });
 
-      console.log('Current order comments before update:', existingComments);
-
-      // Parse existing comments if they're stored as a string
+      let existingComments = currentOrder.rows[0].comments || [];
       if (typeof existingComments === 'string') {
-        try {
-          existingComments = JSON.parse(existingComments);
-        } catch (e) {
-          console.error('Error parsing existing comments:', e);
-          // If parsing fails, start with empty array
-          existingComments = [];
-        }
+        try { existingComments = JSON.parse(existingComments); } catch (e) { existingComments = []; }
       }
-
-      // Ensure existingComments is an array
-      if (!Array.isArray(existingComments)) {
-        console.warn('Existing comments is not an array, resetting:', existingComments);
-        existingComments = [];
-      }
-
-      console.log('Existing comments count:', existingComments.length);
+      if (!Array.isArray(existingComments)) existingComments = [];
 
       const newComment = {
         comment: comment.trim(),
@@ -503,47 +493,24 @@ router.put('/:id', requirePermission('orders:create'), async (req, res) => {
         userName: `${req.user.first_name} ${req.user.last_name}` || 'Unknown'
       };
 
-      // Append new comment to existing comments (never delete previous comments)
-      const updatedComments = [...existingComments, newComment];
-
-      console.log('Updated comments count:', updatedComments.length);
-      console.log('All comments:', JSON.stringify(updatedComments, null, 2));
-
-      updates.push(`comments = $${paramIndex}`);
-      values.push(JSON.stringify(updatedComments));
-      paramIndex++;
-
-      // Also update the legacy comment field for backward compatibility (keep most recent)
-      updates.push(`comment = $${paramIndex}`);
-      values.push(comment.trim());
-      paramIndex++;
+      updatesObj.comments = JSON.stringify([...existingComments, newComment]);
+      updatesObj.comment = comment.trim(); // legacy single comment field
     }
 
-    if (orderPayload) {
-      updates.push(`order_payload = $${paramIndex}`);
-      values.push(JSON.stringify(orderPayload));
-      paramIndex++;
-    }
+    if (orderPayload) updatesObj.order_payload = JSON.stringify(orderPayload);
 
-    if (updates.length === 0) {
+    if (Object.keys(updatesObj).length === 0) {
       return res.status(400).json({ error: 'No fields to update' });
     }
 
-    updates.push(`updated_at = CURRENT_TIMESTAMP`);
-    values.push(id);
+    const motherResult = await MotherWriteService.updateOrder(req.user.clinic_id, null, id, updatesObj, req.user.id);
 
-    const result = await pool.query(
-      `UPDATE orders SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
-      values
-    );
-
-    if (result.rows.length === 0) {
+    if (!motherResult.legacyResult) {
       return res.status(404).json({ error: 'Order not found' });
     }
 
     await logAudit(req.user.id, 'update_order', 'order', id, { status, reviewed }, req.ip);
-
-    res.json(result.rows[0]);
+    res.json(motherResult.legacyResult);
   } catch (error) {
     console.error('Error updating order:', error);
     res.status(500).json({ error: 'Failed to update order' });

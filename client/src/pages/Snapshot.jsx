@@ -7,6 +7,7 @@ import {
     Shield, ShieldAlert, AlertTriangle
 } from 'lucide-react';
 import { visitsAPI, patientsAPI, ordersAPI, referralsAPI, documentsAPI, patientFlagsAPI, api } from '../services/api';
+import ChartGateway from '../api/ChartGateway';
 import { format } from 'date-fns';
 import { showError, showSuccess } from '../utils/toast';
 import {
@@ -115,6 +116,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const [showNewVisitDropdown, setShowNewVisitDropdown] = useState(false);
     const [showPrintOrdersModal, setShowPrintOrdersModal] = useState(false);
     const [activeFlags, setActiveFlags] = useState([]);
+    const [motherDataStatus, setMotherDataStatus] = useState('pending'); // 'pending' | 'ok' | 'error' | 'disabled'
 
     const fetchFlags = useCallback(async () => {
         if (!id) return;
@@ -343,48 +345,55 @@ const Snapshot = ({ showNotesOnly = false }) => {
             setLoading(true);
         }
         try {
+            // MOTHER INTEGRATION: First try to fetch from Mother endpoints
+            let motherSummary = null;
+            try {
+                motherSummary = await ChartGateway.getPatientSummary(id);
+                setMotherDataStatus('ok');
+                console.log('[Mother] Summary loaded successfully');
+            } catch (motherErr) {
+                console.warn('[Mother] Failed to fetch summary, falling back to legacy:', motherErr.message);
+                setMotherDataStatus('error');
+            }
+
+            // If Mother data is available, use it for state (meds, problems, allergies, vitals)
+            if (motherSummary?.state) {
+                const motherState = motherSummary.state;
+
+                // Set problems from Mother
+                if (motherState.problems && motherState.problems.length > 0) {
+                    setProblems(motherState.problems.map(p => ({
+                        id: p.id,
+                        name: p.problem_name,
+                        icd: p.icd10_code,
+                        status: p.status,
+                        onset: p.onset_date
+                    })));
+                }
+
+                // Set medications from Mother
+                if (motherState.medications) {
+                    setMedications(motherState.medications);
+                }
+
+                // Set allergies from Mother
+                if (motherState.allergies) {
+                    setAllergies(motherState.allergies);
+                }
+
+                // Set demographics from Mother
+                if (motherSummary.demographics) {
+                    setPatient(motherSummary.demographics);
+                }
+            }
+
             // Fetch patient snapshot (includes basic info, problems, meds, allergies, and recent visits)
+            // This supplements Mother data with additional fields
             const snapshotResponse = await patientsAPI.getSnapshot(id);
             const snapshot = snapshotResponse.data;
-            setPatient(snapshot.patient);
 
-            // Also fetch full patient data to ensure we have photo_url and other details
-            try {
-                const fullPatientResponse = await patientsAPI.get(id);
-                if (fullPatientResponse.data) {
-                    const patientData = { ...snapshot.patient, ...fullPatientResponse.data };
-                    setPatient(prev => ({ ...prev, ...patientData }));
-
-                    // Add to patient tabs for session-based switching
-                    addTab({
-                        id: patientData.id,
-                        first_name: patientData.first_name,
-                        last_name: patientData.last_name,
-                        mrn: patientData.mrn
-                    });
-                }
-            } catch (error) {
-                console.warn('Could not fetch full patient data:', error);
-            }
-
-            // Set problems
-            if (snapshot.problems && snapshot.problems.length > 0) {
-                setProblems(snapshot.problems.map(p => ({
-                    id: p.id,
-                    name: p.problem_name,
-                    icd: p.icd10_code,
-                    status: p.status,
-                    onset: p.onset_date
-                })));
-            } else {
-                setProblems([]);
-            }
-
-            // Set medications
-            setMedications(snapshot.medications || []);
-
-            // Set allergies
-            setAllergies(snapshot.allergies || []);
+            // Merge patient data (prefer existing Mother data if set)
+            setPatient(prev => prev ? { ...snapshot.patient, ...prev } : snapshot.patient);
 
             // Set vitals from recent visits & merge with notes for maximum completeness
             let combinedVitals = [];
@@ -1294,6 +1303,18 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
     return (
         <div className="min-h-screen bg-neutral-50">
+            {/* Mother System Debug Banner - Dev Only */}
+            {process.env.NODE_ENV === 'development' && (
+                <div className={`px-4 py-1 text-xs font-mono text-center ${motherDataStatus === 'ok' ? 'bg-green-100 text-green-800' :
+                        motherDataStatus === 'error' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-600'
+                    }`}>
+                    Mother Data: {motherDataStatus.toUpperCase()} |
+                    Meds: {medications.length} |
+                    Dx: {problems.length} |
+                    Allergies: {allergies.length}
+                </div>
+            )}
             <div className="w-full px-4">
                 <PatientHeader
                     patient={patient}

@@ -6,6 +6,9 @@ const emailService = require('../services/emailService');
 const path = require('path');
 const fs = require('fs');
 const pdfService = require('../services/pdfService');
+const MotherWriteService = require('../mother/MotherWriteService');
+const DocumentStoreService = require('../mother/DocumentStoreService');
+const TenantDb = require('../mother/TenantDb');
 
 const router = express.Router();
 
@@ -253,260 +256,267 @@ router.post('/session/:id/approve', authenticate, async (req, res) => {
 
         let targetPatientId = linkToPatientId;
 
-        if (!targetPatientId) {
-            const finalMRN = data.mrn || String(Math.floor(100000 + Math.random() * 900000));
+        await TenantDb.withTenantDb(req.clinic.id, async (client) => {
+            await client.query('BEGIN');
+            try {
+                if (!targetPatientId) {
+                    const finalMRN = data.mrn || String(Math.floor(100000 + Math.random() * 900000));
 
-            // Map sex value from intake form to database constraint format
-            const mapSex = (val) => {
-                if (!val) return null;
-                const lower = val.toLowerCase();
-                if (lower === 'male' || lower === 'm') return 'M';
-                if (lower === 'female' || lower === 'f') return 'F';
-                return 'Other';
-            };
+                    // Map sex value from intake form to database constraint format
+                    const mapSex = (val) => {
+                        if (!val) return null;
+                        const lower = val.toLowerCase();
+                        if (lower === 'male' || lower === 'm') return 'M';
+                        if (lower === 'female' || lower === 'f') return 'F';
+                        return 'Other';
+                    };
 
-            const patientData = {
-                mrn: finalMRN,
-                first_name: data.firstName || session.prefill_json.firstName,
-                last_name: data.lastName || session.prefill_json.lastName,
-                dob: data.dob || session.prefill_json.dob,
-                sex: mapSex(data.sex),
-                preferred_language: data.preferredLanguage,
-                phone: data.phone || session.prefill_json.phone,
-                phone_secondary: data.phoneSecondary,
-                email: data.email,
-                address_line1: data.addressLine1,
-                address_line2: data.addressLine2,
-                city: data.city,
-                state: data.state,
-                zip: data.zip,
-                communication_preference: data.preferredContactMethod,
-                emergency_contact_name: data.ecName,
-                emergency_contact_phone: data.ecPhone,
-                emergency_contact_relationship: data.ecRelationship,
-                insurance_provider: data.primaryInsuranceCarrier || data.primary_insurance_carrier,
-                insurance_id: data.primaryMemberId || data.primary_member_id,
-                insurance_group_number: data.primaryGroupNumber || data.primary_group_number,
-                insurance_subscriber_name: data.primaryPolicyholderName || data.primary_policyholder_name,
-                insurance_subscriber_dob: data.primaryPolicyholderDob || data.primary_policyholder_dob,
-                occupation: data.occupation,
-                clinic_id: req.clinic.id,
-                phone_normalized: (data.phone || session.prefill_json.phone || '').replace(/\D/g, '')
-            };
+                    const patientData = {
+                        mrn: finalMRN,
+                        first_name: data.firstName || session.prefill_json.firstName,
+                        last_name: data.lastName || session.prefill_json.lastName,
+                        dob: data.dob || session.prefill_json.dob,
+                        sex: mapSex(data.sex),
+                        preferred_language: data.preferredLanguage,
+                        phone: data.phone || session.prefill_json.phone,
+                        phone_secondary: data.phoneSecondary,
+                        email: data.email,
+                        address_line1: data.addressLine1,
+                        address_line2: data.addressLine2,
+                        city: data.city,
+                        state: data.state,
+                        zip: data.zip,
+                        communication_preference: data.preferredContactMethod,
+                        emergency_contact_name: data.ecName,
+                        emergency_contact_phone: data.ecPhone,
+                        emergency_contact_relationship: data.ecRelationship,
+                        insurance_provider: data.primaryInsuranceCarrier || data.primary_insurance_carrier,
+                        insurance_id: data.primaryMemberId || data.primary_member_id,
+                        insurance_group_number: data.primaryGroupNumber || data.primary_group_number,
+                        insurance_subscriber_name: data.primaryPolicyholderName || data.primary_policyholder_name,
+                        insurance_subscriber_dob: data.primaryPolicyholderDob || data.primary_policyholder_dob,
+                        occupation: data.occupation,
+                        clinic_id: req.clinic.id,
+                        phone_normalized: (data.phone || session.prefill_json.phone || '').replace(/\D/g, '')
+                    };
 
-            const encrypted = await patientEncryptionService.preparePatientForStorage(patientData);
-            const fields = Object.keys(encrypted).filter(k => k !== 'encryption_metadata');
-            const values = fields.map(f => encrypted[f]);
-            fields.push('encryption_metadata');
-            values.push(JSON.stringify(encrypted.encryption_metadata));
+                    const motherRes = await MotherWriteService.createPatient(req.clinic.id, patientData, req.user.id, client);
+                    targetPatientId = motherRes.legacyResult.id;
+                } else {
+                    // If linking to an existing patient, update their demographic info
+                    const mapSex = (val) => {
+                        if (!val) return null;
+                        const lower = val.toLowerCase();
+                        if (lower === 'male' || lower === 'm') return 'M';
+                        if (lower === 'female' || lower === 'f') return 'F';
+                        return 'Other';
+                    };
 
-            const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
-            const patientRes = await pool.query(
-                `INSERT INTO patients (${fields.join(', ')}) VALUES (${placeholders}) RETURNING id`,
-                values
-            );
-            targetPatientId = patientRes.rows[0].id;
-        } else {
-            // If linking to an existing patient, update their demographic info
-            const mapSex = (val) => {
-                if (!val) return null;
-                const lower = val.toLowerCase();
-                if (lower === 'male' || lower === 'm') return 'M';
-                if (lower === 'female' || lower === 'f') return 'F';
-                return 'Other';
-            };
+                    const patientData = {
+                        first_name: data.firstName || session.prefill_json.firstName,
+                        last_name: data.lastName || session.prefill_json.lastName,
+                        dob: data.dob || session.prefill_json.dob,
+                        sex: mapSex(data.sex),
+                        preferred_language: data.preferredLanguage,
+                        phone: data.phone || session.prefill_json.phone,
+                        phone_secondary: data.phoneSecondary,
+                        email: data.email,
+                        address_line1: data.addressLine1,
+                        address_line2: data.addressLine2,
+                        city: data.city,
+                        state: data.state,
+                        zip: data.zip,
+                        communication_preference: data.preferredContactMethod,
+                        emergency_contact_name: data.ecName,
+                        emergency_contact_phone: data.ecPhone,
+                        emergency_contact_relationship: data.ecRelationship,
+                        insurance_provider: data.primaryInsuranceCarrier || data.primary_insurance_carrier,
+                        insurance_id: data.primaryMemberId || data.primary_member_id,
+                        insurance_group_number: data.primaryGroupNumber || data.primary_group_number,
+                        insurance_subscriber_name: data.primaryPolicyholderName || data.primary_policyholder_name,
+                        insurance_subscriber_dob: data.primaryPolicyholderDob || data.primary_policyholder_dob,
+                        occupation: data.occupation,
+                        phone_normalized: (data.phone || session.prefill_json.phone || '').replace(/\D/g, '')
+                    };
 
-            const patientData = {
-                first_name: data.firstName || session.prefill_json.firstName,
-                last_name: data.lastName || session.prefill_json.lastName,
-                dob: data.dob || session.prefill_json.dob,
-                sex: mapSex(data.sex),
-                preferred_language: data.preferredLanguage,
-                phone: data.phone || session.prefill_json.phone,
-                phone_secondary: data.phoneSecondary,
-                email: data.email,
-                address_line1: data.addressLine1,
-                address_line2: data.addressLine2,
-                city: data.city,
-                state: data.state,
-                zip: data.zip,
-                communication_preference: data.preferredContactMethod,
-                emergency_contact_name: data.ecName,
-                emergency_contact_phone: data.ecPhone,
-                emergency_contact_relationship: data.ecRelationship,
-                insurance_provider: data.primaryInsuranceCarrier || data.primary_insurance_carrier,
-                insurance_id: data.primaryMemberId || data.primary_member_id,
-                insurance_group_number: data.primaryGroupNumber || data.primary_group_number,
-                insurance_subscriber_name: data.primaryPolicyholderName || data.primary_policyholder_name,
-                insurance_subscriber_dob: data.primaryPolicyholderDob || data.primary_policyholder_dob,
-                occupation: data.occupation,
-                phone_normalized: (data.phone || session.prefill_json.phone || '').replace(/\D/g, '')
-            };
-
-            const encrypted = await patientEncryptionService.preparePatientForStorage(patientData);
-            const fields = Object.keys(encrypted).filter(k => k !== 'encryption_metadata');
-            const setClause = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
-            const values = fields.map(f => encrypted[f]);
-
-            // Add metadata
-            values.push(JSON.stringify(encrypted.encryption_metadata));
-            values.push(targetPatientId);
-            values.push(req.clinic.id);
-
-            await pool.query(
-                `UPDATE patients SET ${setClause}, encryption_metadata = $${values.length - 2} WHERE id = $${values.length - 1} AND clinic_id = $${values.length}`,
-                values
-            );
-        }
-
-        // Handle Clinical History Mapping (Sync for both new and linked patients)
-        // 1. Allergies
-        if (data.allergyList && data.allergyList.length > 0) {
-            for (const a of data.allergyList) {
-                const allergenName = a.allergen || a.name;
-                const existing = await pool.query('SELECT 1 FROM allergies WHERE patient_id = $1 AND allergen = $2', [targetPatientId, allergenName]);
-                if (existing.rows.length === 0) {
-                    await pool.query('INSERT INTO allergies (patient_id, allergen, reaction, severity) VALUES ($1, $2, $3, $4)', [targetPatientId, allergenName, a.reaction, a.severity]);
+                    await MotherWriteService.updatePatient(req.clinic.id, targetPatientId, patientData, req.user.id, client);
                 }
-            }
-        }
 
-        // 2. Medications
-        if (data.medsList && data.medsList.length > 0) {
-            for (const m of data.medsList) {
-                const medName = m.name;
-                const existing = await pool.query('SELECT 1 FROM medications WHERE patient_id = $1 AND medication_name = $2', [targetPatientId, medName]);
-                if (existing.rows.length === 0) {
-                    await pool.query('INSERT INTO medications (patient_id, medication_name, dosage, frequency) VALUES ($1, $2, $3, $4)', [targetPatientId, medName, m.dose, m.frequency]);
+                // Handle Clinical History Mapping (Sync for both new and linked patients)
+                // 1. Allergies
+                if (data.allergyList && data.allergyList.length > 0) {
+                    for (const a of data.allergyList) {
+                        const allergenName = a.allergen || a.name;
+                        await MotherWriteService.addAllergy(req.clinic.id, targetPatientId, {
+                            allergen: allergenName,
+                            reaction: a.reaction,
+                            severity: a.severity
+                        }, req.user.id, client);
+                    }
                 }
-            }
-        }
 
-        // 3. Past Medical History (populate problems)
-        if (data.pmhConditions && data.pmhConditions.length > 0) {
-            for (const condition of data.pmhConditions) {
-                const existing = await pool.query('SELECT 1 FROM problems WHERE patient_id = $1 AND problem_name = $2', [targetPatientId, condition]);
-                if (existing.rows.length === 0) {
-                    await pool.query('INSERT INTO problems (patient_id, problem_name, status) VALUES ($1, $2, $3)', [targetPatientId, condition, 'active']);
+                // 2. Medications
+                if (data.medsList && data.medsList.length > 0) {
+                    for (const m of data.medsList) {
+                        const medName = m.name;
+                        const existing = await client.query('SELECT 1 FROM medications WHERE patient_id = $1 AND medication_name = $2', [targetPatientId, medName]);
+                        if (existing.rows.length === 0) {
+                            await MotherWriteService.addMedication(req.clinic.id, targetPatientId, null, {
+                                medication_name: medName,
+                                dosage: m.dose,
+                                frequency: m.frequency,
+                                status: 'active'
+                            }, req.user.id, client);
+                        }
+                    }
                 }
+
+                // 3. Past Medical History (populate problems)
+                if (data.pmhConditions && data.pmhConditions.length > 0) {
+                    for (const condition of data.pmhConditions) {
+                        const existing = await client.query('SELECT 1 FROM problems WHERE patient_id = $1 AND problem_name = $2', [targetPatientId, condition]);
+                        if (existing.rows.length === 0) {
+                            await MotherWriteService.addDiagnosis(req.clinic.id, targetPatientId, null, {
+                                problem_name: condition,
+                                status: 'active'
+                            }, req.user.id, client);
+                        }
+                    }
+                }
+                if (data.pmhOtherText) {
+                    const existing = await client.query('SELECT 1 FROM problems WHERE patient_id = $1 AND problem_name = $2', [targetPatientId, data.pmhOtherText]);
+                    if (existing.rows.length === 0) {
+                        await MotherWriteService.addDiagnosis(req.clinic.id, targetPatientId, null, {
+                            problem_name: data.pmhOtherText,
+                            status: 'active'
+                        }, req.user.id, client);
+                    }
+                }
+
+                // 4. Family History
+                const fhx = [];
+                if (data.fhxHeartDisease) fhx.push('Heart Disease');
+                if (data.fhxDiabetes) fhx.push('Diabetes');
+                if (data.fhxCancer) fhx.push('Cancer');
+                if (data.fhxStroke) fhx.push('Stroke');
+                if (data.fhxOtherText) fhx.push(`Other: ${data.fhxOtherText}`);
+
+                for (const f of fhx) {
+                    const existing = await client.query('SELECT 1 FROM family_history WHERE patient_id = $1 AND condition = $2', [targetPatientId, f]);
+                    if (existing.rows.length === 0) {
+                        await MotherWriteService.addFamilyHistory(req.clinic.id, targetPatientId, {
+                            condition: f,
+                            relationship: 'Family'
+                        }, req.user.id, client);
+                    }
+                }
+
+                // 5. Social History
+                if (data.tobaccoUse || data.alcoholUse || data.recreationalDrugUse || data.occupation) {
+                    const existing = await client.query('SELECT id FROM social_history WHERE patient_id = $1', [targetPatientId]);
+                    const shData = {
+                        smoking_status: data.tobaccoUse || null,
+                        alcohol_use: data.alcoholUse || null,
+                        occupation: data.occupation || null,
+                        drug_use: data.recreationalDrugUse || null
+                    };
+
+                    if (existing.rows.length > 0) {
+                        await MotherWriteService.updateSocialHistory(req.clinic.id, targetPatientId, shData, req.user.id, client);
+                    } else {
+                        await MotherWriteService.addSocialHistory(req.clinic.id, targetPatientId, shData, req.user.id, client);
+                    }
+                }
+
+                await client.query(`UPDATE intake_sessions SET status = 'APPROVED', patient_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [targetPatientId, id]);
+
+                // --- PDF Legal Packet Generation ---
+                try {
+                    const settingsRes = await client.query('SELECT key, value FROM intake_settings WHERE category = $1', ['legal']);
+                    const templates = {};
+                    settingsRes.rows.forEach(r => templates[r.key] = r.value);
+
+                    const practiceRes = await client.query('SELECT practice_name, logo_url, address_line1, address_line2, city, state, zip, phone, email FROM practice_settings LIMIT 1');
+                    const p = practiceRes.rows[0] || {};
+                    const clinicData = {
+                        name: p.practice_name || req.clinic.name,
+                        address: [p.address_line1, p.address_line2, `${p.city || ''} ${p.state || ''} ${p.zip || ''}`.trim()].filter(Boolean).join('\n'),
+                        phone: p.phone || req.clinic.phone,
+                        email: p.email || req.clinic.email
+                    };
+
+                    const isSpanish = data.language === 'es';
+                    const forms = [
+                        { key: 'consentHIPAA', label: isSpanish ? 'Aviso de Privacidad (HIPAA)' : 'HIPAA Notice Acknowledgement', policy: isSpanish ? templates.hipaa_notice_es : templates.hipaa_notice },
+                        { key: 'consentTreat', label: isSpanish ? 'Consentimiento para Tratamiento' : 'Consent to Medical Treatment', policy: isSpanish ? templates.consent_to_treat_es : templates.consent_to_treat },
+                        { key: 'consentAOB', label: isSpanish ? 'Asignación de Beneficios' : 'Assignment of Benefits', policy: isSpanish ? templates.assignment_of_benefits_es : templates.assignment_of_benefits },
+                        { key: 'consentROI', label: isSpanish ? 'Autorización para Divulgar Información' : 'Authorization to Release Information', policy: isSpanish ? templates.release_of_information_es : templates.release_of_information }
+                    ].map(f => {
+                        let processed = f.policy || '';
+                        processed = processed
+                            .replace(/{CLINIC_NAME}/g, clinicData.name)
+                            .replace(/{CLINIC_ADDRESS}/g, clinicData.address)
+                            .replace(/{CLINIC_PHONE}/g, clinicData.phone)
+                            .replace(/{PRIVACY_EMAIL}/g, clinicData.email || 'privacy@pagemd.com')
+                            .replace(/{EFFECTIVE_DATE}/g, new Date(session.submitted_at || Date.now()).toLocaleDateString(isSpanish ? 'es-US' : 'en-US'))
+                            .replace(/{ROI_LIST}/g, (data.roiPeople || []).map(p => `${p.name} (${p.relationship})`).join(', ') || (isSpanish ? 'NINGUNO LISTADO' : 'NONE LISTED'));
+                        return { ...f, processedPolicy: processed };
+                    });
+
+                    const pdfBuffer = await pdfService.generateIntakeLegalPDF({
+                        clinic: clinicData,
+                        session,
+                        patientId: targetPatientId,
+                        signerName: data.signature,
+                        ip: session.ip_address || 'N/A',
+                        userAgent: session.user_agent || 'N/A',
+                        forms,
+                        language: data.language
+                    });
+
+                    const filename = `intake_legal_${id}_${Date.now()}.pdf`;
+                    const uploadDir = process.env.UPLOAD_DIR || './uploads';
+                    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+                    const filePath = path.join(uploadDir, filename);
+                    fs.writeFileSync(filePath, pdfBuffer);
+
+                    const urlPath = `/uploads/${filename}`;
+
+                    // Use DocumentStoreService
+                    await DocumentStoreService.storeDocument(client, {
+                        clinicId: req.clinic.id,
+                        patientId: targetPatientId,
+                        docType: 'other',
+                        title: 'Intake Legal Packet.pdf',
+                        filePath: urlPath,
+                        mimeType: 'application/pdf',
+                        fileSize: pdfBuffer.length,
+                        tags: ['legal', 'consent', 'intake', 'hipaa'],
+                        authorUserId: req.user.id
+                    });
+
+                } catch (pdfErr) {
+                    console.error('[Intake] PDF Packet generation failed:', pdfErr);
+                }
+
+                await client.query(`
+                    UPDATE inbox_items SET 
+                        status = 'completed', 
+                        completed_at = CURRENT_TIMESTAMP, 
+                        completed_by = $1,
+                        patient_id = $2
+                    WHERE reference_id = $3 AND type = 'intake_registration'
+                `, [req.user.id, targetPatientId, id]);
+
+                await logIntakeAudit(client, req.clinic.id, 'staff', req.user.id, 'approve', 'intake_sessions', id, req);
+
+                await client.query('COMMIT');
+                res.json({ success: true, patientId: targetPatientId });
+            } catch (innerErr) {
+                await client.query('ROLLBACK');
+                throw innerErr;
             }
-        }
-        if (data.pmhOtherText) {
-            const existing = await pool.query('SELECT 1 FROM problems WHERE patient_id = $1 AND problem_name = $2', [targetPatientId, data.pmhOtherText]);
-            if (existing.rows.length === 0) {
-                await pool.query('INSERT INTO problems (patient_id, problem_name, status) VALUES ($1, $2, $3)', [targetPatientId, data.pmhOtherText, 'active']);
-            }
-        }
-
-        // 4. Family History
-        const fhx = [];
-        if (data.fhxHeartDisease) fhx.push('Heart Disease');
-        if (data.fhxDiabetes) fhx.push('Diabetes');
-        if (data.fhxCancer) fhx.push('Cancer');
-        if (data.fhxStroke) fhx.push('Stroke');
-        if (data.fhxOtherText) fhx.push(`Other: ${data.fhxOtherText}`);
-
-        for (const f of fhx) {
-            const existing = await pool.query('SELECT 1 FROM family_history WHERE patient_id = $1 AND condition = $2', [targetPatientId, f]);
-            if (existing.rows.length === 0) {
-                await pool.query('INSERT INTO family_history (patient_id, condition, relationship) VALUES ($1, $2, $3)', [targetPatientId, f, 'Family']);
-            }
-        }
-
-        // 5. Social History
-        if (data.tobaccoUse || data.alcoholUse || data.recreationalDrugUse || data.occupation) {
-            const existing = await pool.query('SELECT id FROM social_history WHERE patient_id = $1', [targetPatientId]);
-            if (existing.rows.length > 0) {
-                await pool.query(`
-                    UPDATE social_history SET
-                        smoking_status = COALESCE($2, smoking_status),
-                        alcohol_use = COALESCE($3, alcohol_use),
-                        occupation = COALESCE($4, occupation),
-                        drug_use = COALESCE($5, drug_use)
-                    WHERE patient_id = $1
-                `, [targetPatientId, data.tobaccoUse || null, data.alcoholUse || null, data.occupation || null, data.recreationalDrugUse || null]);
-            } else {
-                await pool.query(`
-                    INSERT INTO social_history (patient_id, smoking_status, alcohol_use, occupation, drug_use)
-                    VALUES ($1, $2, $3, $4, $5)
-                `, [targetPatientId, data.tobaccoUse || null, data.alcoholUse || null, data.occupation || null, data.recreationalDrugUse || null]);
-            }
-        }
-
-        await pool.query(`UPDATE intake_sessions SET status = 'APPROVED', patient_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [targetPatientId, id]);
-
-        // --- PDF Legal Packet Generation ---
-        try {
-            const settingsRes = await pool.query('SELECT key, value FROM intake_settings WHERE category = $1', ['legal']);
-            const templates = {};
-            settingsRes.rows.forEach(r => templates[r.key] = r.value);
-
-            const practiceRes = await pool.query('SELECT practice_name, logo_url, address_line1, address_line2, city, state, zip, phone, email FROM practice_settings LIMIT 1');
-            const p = practiceRes.rows[0] || {};
-            const clinicData = {
-                name: p.practice_name || req.clinic.name,
-                address: [p.address_line1, p.address_line2, `${p.city || ''} ${p.state || ''} ${p.zip || ''}`.trim()].filter(Boolean).join('\n'),
-                phone: p.phone || req.clinic.phone,
-                email: p.email || req.clinic.email
-            };
-
-            const isSpanish = data.language === 'es';
-            const forms = [
-                { key: 'consentHIPAA', label: isSpanish ? 'Aviso de Privacidad (HIPAA)' : 'HIPAA Notice Acknowledgement', policy: isSpanish ? templates.hipaa_notice_es : templates.hipaa_notice },
-                { key: 'consentTreat', label: isSpanish ? 'Consentimiento para Tratamiento' : 'Consent to Medical Treatment', policy: isSpanish ? templates.consent_to_treat_es : templates.consent_to_treat },
-                { key: 'consentAOB', label: isSpanish ? 'Asignación de Beneficios' : 'Assignment of Benefits', policy: isSpanish ? templates.assignment_of_benefits_es : templates.assignment_of_benefits },
-                { key: 'consentROI', label: isSpanish ? 'Autorización para Divulgar Información' : 'Authorization to Release Information', policy: isSpanish ? templates.release_of_information_es : templates.release_of_information }
-            ].map(f => {
-                let processed = f.policy || '';
-                processed = processed
-                    .replace(/{CLINIC_NAME}/g, clinicData.name)
-                    .replace(/{CLINIC_ADDRESS}/g, clinicData.address)
-                    .replace(/{CLINIC_PHONE}/g, clinicData.phone)
-                    .replace(/{PRIVACY_EMAIL}/g, clinicData.email || 'privacy@pagemd.com')
-                    .replace(/{EFFECTIVE_DATE}/g, new Date(session.submitted_at || Date.now()).toLocaleDateString(isSpanish ? 'es-US' : 'en-US'))
-                    .replace(/{ROI_LIST}/g, (data.roiPeople || []).map(p => `${p.name} (${p.relationship})`).join(', ') || (isSpanish ? 'NINGUNO LISTADO' : 'NONE LISTED'));
-                return { ...f, processedPolicy: processed };
-            });
-
-            const pdfBuffer = await pdfService.generateIntakeLegalPDF({
-                clinic: clinicData,
-                session,
-                patientId: targetPatientId,
-                signerName: data.signature,
-                ip: session.ip_address || 'N/A',
-                userAgent: session.user_agent || 'N/A',
-                forms,
-                language: data.language
-            });
-
-            const filename = `intake_legal_${id}_${Date.now()}.pdf`;
-            const uploadDir = process.env.UPLOAD_DIR || './uploads';
-            if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-            const filePath = path.join(uploadDir, filename);
-            fs.writeFileSync(filePath, pdfBuffer);
-
-            const urlPath = `/uploads/${filename}`;
-            await pool.query(`
-                INSERT INTO documents (patient_id, uploader_id, doc_type, filename, file_path, mime_type, file_size, tags)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            `, [targetPatientId, req.user.id, 'other', 'Intake Legal Packet.pdf', urlPath, 'application/pdf', pdfBuffer.length, ['legal', 'consent', 'intake', 'hipaa']]);
-
-        } catch (pdfErr) {
-            console.error('[Intake] PDF Packet generation failed:', pdfErr);
-        }
-
-        await pool.query(`
-            UPDATE inbox_items SET 
-                status = 'completed', 
-                completed_at = CURRENT_TIMESTAMP, 
-                completed_by = $1,
-                patient_id = $2
-            WHERE reference_id = $3 AND type = 'intake_registration'
-        `, [req.user.id, targetPatientId, id]);
-
-        await logIntakeAudit(pool, req.clinic.id, 'staff', req.user.id, 'approve', 'intake_sessions', id, req);
-
-        res.json({ success: true, patientId: targetPatientId });
+        });
     } catch (error) {
         console.error('[Intake] Approval failed:', error);
         res.status(500).json({ error: 'System error' });

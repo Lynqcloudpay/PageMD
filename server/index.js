@@ -172,6 +172,7 @@ app.use('/api/referrals', referralRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/labs', labRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/mother', require('./routes/mother'));
 
 app.use('/api/icd10-hierarchy', icd10HierarchyRoutes);
 app.use('/api/ordersets', ordersetRoutes);

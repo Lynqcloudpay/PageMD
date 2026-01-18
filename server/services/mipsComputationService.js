@@ -82,14 +82,18 @@ const mipsComputationService = {
      * Denominator: Patients 18-85 with Hypertension diagnosis.
      * Numerator: Most recent BP < 140/90.
      */
+    /**
+     * CMS 165 (QPP 236): Controlling High Blood Pressure
+     * Denominator: Patients 18-85 with Hypertension diagnosis.
+     * Numerator: Most recent BP < 140/90.
+     */
     async computeHypertension(providerId, start, end) {
         // Find patients seen by this provider in the period with HTN diagnosis
-        // Using ICD-10 ranges like I10, I11, I12, I13, I15 (Essential/Secondary HTN)
         const denQuery = `
             SELECT DISTINCT p.id 
             FROM patients p
             JOIN visits v ON v.patient_id = p.id
-            JOIN patient_problems prob ON prob.patient_id = p.id
+            JOIN problems prob ON prob.patient_id = p.id
             WHERE v.provider_id = $1 
               AND v.visit_date BETWEEN $2 AND $3
               AND (prob.icd10_code LIKE 'I10%' OR prob.icd10_code LIKE 'I11%' OR prob.icd10_code LIKE 'I12%' OR prob.icd10_code LIKE 'I13%' OR prob.icd10_code LIKE 'I15%')
@@ -106,12 +110,13 @@ const mipsComputationService = {
         // For each patient in denominator, find most recent BP in performance period
         for (const pId of denIds) {
             const bpQuery = `
-                SELECT systolic, diastolic 
-                FROM visit_vitals vv
-                JOIN visits v ON v.id = vv.visit_id
+                SELECT (vitals->>'bp_systolic')::numeric as systolic, (vitals->>'bp_diastolic')::numeric as diastolic 
+                FROM visits v
                 WHERE v.patient_id = $1 
                   AND v.visit_date BETWEEN $2 AND $3
-                  AND systolic IS NOT NULL AND diastolic IS NOT NULL
+                  AND vitals IS NOT NULL
+                  AND vitals->>'bp_systolic' IS NOT NULL 
+                  AND vitals->>'bp_diastolic' IS NOT NULL
                 ORDER BY v.visit_date DESC, v.created_at DESC
                 LIMIT 1
             `;
@@ -139,7 +144,7 @@ const mipsComputationService = {
             SELECT DISTINCT p.id 
             FROM patients p
             JOIN visits v ON v.patient_id = p.id
-            JOIN patient_problems prob ON prob.patient_id = p.id
+            JOIN problems prob ON prob.patient_id = p.id
             WHERE v.provider_id = $1 
               AND v.visit_date BETWEEN $2 AND $3
               AND (prob.icd10_code LIKE 'E10%' OR prob.icd10_code LIKE 'E11%')
@@ -156,12 +161,14 @@ const mipsComputationService = {
         // For each patient, find most recent A1c lab result
         for (const pId of denIds) {
             const labQuery = `
-                SELECT value 
-                FROM lab_results lr
-                WHERE lr.patient_id = $1
-                  AND lr.test_name ILIKE '%A1c%'
-                  AND lr.result_date BETWEEN $2 AND $3
-                ORDER BY lr.result_date DESC
+                SELECT order_payload
+                FROM orders o
+                WHERE o.patient_id = $1
+                  AND o.order_type = 'lab'
+                  AND (o.order_payload->>'test_name' ILIKE '%A1c%' OR o.order_payload->>'name' ILIKE '%A1c%')
+                  AND o.updated_at BETWEEN $2 AND $3
+                  AND o.status = 'completed'
+                ORDER BY o.updated_at DESC
                 LIMIT 1
             `;
             const labRes = await pool.query(labQuery, [pId, start, end]);
@@ -171,8 +178,16 @@ const mipsComputationService = {
                 numCount++;
                 numIds.push(pId);
             } else {
-                const value = parseFloat(labRes.rows[0].value);
-                if (isNaN(value) || value > 9.0) {
+                const payload = labRes.rows[0].order_payload;
+                const results = payload.results;
+                let testValue = null;
+
+                if (Array.isArray(results)) {
+                    const testResult = results.find(r => (r.test || r.name || '').toLowerCase().includes('a1c'));
+                    if (testResult) testValue = parseFloat(testResult.value || testResult.result);
+                }
+
+                if (testValue === null || isNaN(testValue) || testValue > 9.0) {
                     numCount++;
                     numIds.push(pId);
                 }

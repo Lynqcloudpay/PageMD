@@ -3,6 +3,7 @@ const pool = require('../db');
 const { authenticate } = require('../middleware/auth');
 const { requirePermission, audit } = require('../services/authorization');
 const { preparePatientForResponse } = require('../services/patientEncryptionService');
+const MotherWriteService = require('../mother/MotherWriteService');
 
 const router = express.Router();
 router.use(authenticate);
@@ -250,11 +251,17 @@ router.post('/', requirePermission('schedule:edit'), async (req, res) => {
       });
     }
 
-    const result = await pool.query(
-      `INSERT INTO appointments (patient_id, provider_id, appointment_date, appointment_time, duration, appointment_type, notes, created_by, clinic_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [patientId, finalProviderId, date, time, duration || 30, type || 'Follow-up', notes || null, req.user.id, req.user?.clinic_id]
-    );
+    const res = await MotherWriteService.scheduleAppointment(req.user.clinic_id, patientId, {
+      providerId: finalProviderId,
+      date,
+      time,
+      duration: duration || 30,
+      type: type || 'Follow-up',
+      notes: notes || null
+    }, req.user.id);
+
+    const result = { rows: [res.legacyResult] };
+
 
     // Fetch the full appointment with patient and provider names
     const fullResult = await pool.query(

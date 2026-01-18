@@ -11,6 +11,9 @@ const patientEncryptionService = require('../services/patientEncryptionService')
 const emailService = require('../services/emailService');
 const { enforcePrivacy, auditAccess } = require('../middleware/privacy');
 const privacyService = require('../services/privacyService');
+const MotherWriteService = require('../mother/MotherWriteService');
+const DocumentStoreService = require('../mother/DocumentStoreService');
+const TenantDb = require('../mother/TenantDb');
 
 const router = express.Router();
 
@@ -980,15 +983,17 @@ router.post('/:id/allergies', requirePermission('patients:view_chart'), async (r
     const { id } = req.params;
     const { allergen, reaction, severity, onsetDate } = req.body;
 
-    const result = await pool.query(
-      `INSERT INTO allergies (patient_id, allergen, reaction, severity, onset_date)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [id, allergen, reaction, severity, onsetDate]
-    );
+    const motherResult = await MotherWriteService.addAllergy(req.user.clinic_id, id, {
+      allergen,
+      reaction,
+      severity,
+      onset_date: onsetDate
+    }, req.user.id);
 
-    await logAudit(req.user.id, 'add_allergy', 'allergy', result.rows[0].id, {}, req.ip);
+    const allergy = motherResult.legacyResult;
+    await logAudit(req.user.id, 'add_allergy', 'allergy', allergy.id, {}, req.ip);
 
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(allergy);
   } catch (error) {
     console.error('Error adding allergy:', error);
     res.status(500).json({ error: 'Failed to add allergy' });
@@ -1012,20 +1017,32 @@ router.post('/:id/medications', requirePermission('meds:prescribe'), async (req,
       console.warn(`[CLINICAL] High severity warnings for ${medicationName}:`, warnings);
     }
 
-    const result = await pool.query(
-      `INSERT INTO medications (patient_id, medication_name, dosage, frequency, route, start_date, prescriber_id, active, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [id, medicationName, dosage, frequency, route, startDate || new Date().toISOString(), req.user.id, true, 'active']
-    );
+    // Emit Mother event via addMedication which wraps both legacy and event ledger
+    let motherResult;
+    try {
+      motherResult = await MotherWriteService.addMedication(req.user.clinic_id, id, null, {
+        medication_name: medicationName,
+        dosage,
+        frequency,
+        route,
+        status: 'active',
+        start_date: startDate || new Date().toISOString()
+      }, req.user.id);
+    } catch (motherErr) {
+      console.error('Failed to add medication via Mother:', motherErr);
+      return res.status(500).json({ error: 'Failed to record medication' });
+    }
 
-    await logAudit(req.user.id, 'add_medication', 'medication', result.rows[0].id, {
+    const medication = motherResult.legacyResult;
+
+    await logAudit(req.user.id, 'add_medication', 'medication', medication.id, {
       medication: medicationName,
       status: 'active',
       warnings: warnings.length > 0 ? warnings : null
     }, req.ip);
 
     res.status(201).json({
-      ...result.rows[0],
+      ...medication,
       warnings: warnings.length > 0 ? warnings : undefined
     });
   } catch (error) {
@@ -1049,15 +1066,25 @@ router.post('/:id/problems', requirePermission('notes:create'), async (req, res)
     const finalCode = icd10Code || icd10_code;
     const finalOnset = onsetDate || onset_date;
 
-    const result = await pool.query(
-      `INSERT INTO problems (patient_id, problem_name, icd10_code, onset_date, status)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [id, finalName, finalCode, finalOnset, status || 'active']
-    );
+    // Emit Mother event via addDiagnosis which wraps both legacy and event ledger
+    let motherResult;
+    try {
+      motherResult = await MotherWriteService.addDiagnosis(req.user.clinic_id, id, null, {
+        problem_name: finalName,
+        icd10_code: finalCode,
+        status: status || 'active',
+        onset_date: finalOnset
+      }, req.user.id);
+    } catch (motherErr) {
+      console.error('Failed to add problem via Mother:', motherErr);
+      return res.status(500).json({ error: 'Failed to record problem' });
+    }
 
-    await logAudit(req.user.id, 'add_problem', 'problem', result.rows[0].id, {}, req.ip);
+    const problem = motherResult.legacyResult;
 
-    res.status(201).json(result.rows[0]);
+    await logAudit(req.user.id, 'add_problem', 'problem', problem.id, {}, req.ip);
+
+    res.status(201).json(problem);
   } catch (error) {
     console.error('Error adding problem:', error);
     res.status(500).json({ error: 'Failed to add problem' });
@@ -1070,49 +1097,17 @@ router.put('/problems/:problemId', requirePermission('notes:edit'), async (req, 
     const { problemId } = req.params;
     const { problemName, icd10Code, onsetDate, status } = req.body;
 
-    const updates = [];
-    const values = [];
-    let paramIndex = 1;
+    const motherResult = await MotherWriteService.updateDiagnosis(req.user.clinic_id, null, problemId, {
+      problemName, icd10Code, onsetDate, status
+    }, req.user.id);
 
-    if (problemName !== undefined) {
-      updates.push(`problem_name = $${paramIndex}`);
-      values.push(problemName);
-      paramIndex++;
-    }
-    if (icd10Code !== undefined) {
-      updates.push(`icd10_code = $${paramIndex}`);
-      values.push(icd10Code);
-      paramIndex++;
-    }
-    if (onsetDate !== undefined) {
-      updates.push(`onset_date = $${paramIndex}`);
-      values.push(onsetDate);
-      paramIndex++;
-    }
-    if (status !== undefined) {
-      updates.push(`status = $${paramIndex}`);
-      values.push(status);
-      paramIndex++;
-    }
-
-    if (updates.length === 0) {
-      return res.status(400).json({ error: 'No fields to update' });
-    }
-
-    updates.push(`updated_at = CURRENT_TIMESTAMP`);
-    values.push(problemId);
-
-    const result = await pool.query(
-      `UPDATE problems SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
-      values
-    );
-
-    if (result.rows.length === 0) {
+    if (!motherResult.legacyResult) {
       return res.status(404).json({ error: 'Problem not found' });
     }
 
+    const problem = motherResult.legacyResult;
     await logAudit(req.user.id, 'update_problem', 'problem', problemId, {}, req.ip);
-    res.json(result.rows[0]);
+    res.json(problem);
   } catch (error) {
     console.error('Error updating problem:', error);
     res.status(500).json({ error: 'Failed to update problem' });
@@ -1124,9 +1119,9 @@ router.delete('/problems/:problemId', requirePermission('notes:edit'), async (re
   try {
     const { problemId } = req.params;
 
-    const result = await pool.query('DELETE FROM problems WHERE id = $1 RETURNING *', [problemId]);
+    const motherResult = await MotherWriteService.deleteDiagnosis(req.user.clinic_id, null, problemId, req.user.id);
 
-    if (result.rows.length === 0) {
+    if (!motherResult.legacyResult) {
       return res.status(404).json({ error: 'Problem not found' });
     }
 
@@ -1371,53 +1366,16 @@ router.put('/allergies/:allergyId', requirePermission('patients:view_chart'), as
     const { allergyId } = req.params;
     const { allergen, reaction, severity, onsetDate, active } = req.body;
 
-    const updates = [];
-    const values = [];
-    let paramIndex = 1;
+    const motherResult = await MotherWriteService.updateAllergy(req.user.clinic_id, null, allergyId, {
+      allergen, reaction, severity, onset_date: onsetDate, active
+    }, req.user.id);
 
-    if (allergen !== undefined) {
-      updates.push(`allergen = $${paramIndex}`);
-      values.push(allergen);
-      paramIndex++;
-    }
-    if (reaction !== undefined) {
-      updates.push(`reaction = $${paramIndex}`);
-      values.push(reaction);
-      paramIndex++;
-    }
-    if (severity !== undefined) {
-      updates.push(`severity = $${paramIndex}`);
-      values.push(severity);
-      paramIndex++;
-    }
-    if (onsetDate !== undefined) {
-      updates.push(`onset_date = $${paramIndex}`);
-      values.push(onsetDate);
-      paramIndex++;
-    }
-    if (active !== undefined) {
-      updates.push(`active = $${paramIndex}`);
-      values.push(active);
-      paramIndex++;
-    }
-
-    if (updates.length === 0) {
-      return res.status(400).json({ error: 'No fields to update' });
-    }
-
-    values.push(allergyId);
-
-    const result = await pool.query(
-      `UPDATE allergies SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
-      values
-    );
-
-    if (result.rows.length === 0) {
+    if (motherResult.legacyResult === null) {
       return res.status(404).json({ error: 'Allergy not found' });
     }
 
     await logAudit(req.user.id, 'update_allergy', 'allergy', allergyId, {}, req.ip);
-    res.json(result.rows[0]);
+    res.json(motherResult.legacyResult);
   } catch (error) {
     console.error('Error updating allergy:', error);
     res.status(500).json({ error: 'Failed to update allergy' });
@@ -1428,9 +1386,8 @@ router.put('/allergies/:allergyId', requirePermission('patients:view_chart'), as
 router.delete('/allergies/:allergyId', requirePermission('patients:view_chart'), async (req, res) => {
   try {
     const { allergyId } = req.params;
-    const result = await pool.query('DELETE FROM allergies WHERE id = $1 RETURNING *', [allergyId]);
-
-    if (result.rows.length === 0) {
+    const motherResult = await MotherWriteService.removeAllergy(req.user.clinic_id, null, allergyId, req.user.id);
+    if (!motherResult.legacyResult) {
       return res.status(404).json({ error: 'Allergy not found' });
     }
 
@@ -1448,69 +1405,17 @@ router.put('/medications/:medicationId', requirePermission('meds:prescribe'), as
     const { medicationId } = req.params;
     const { medicationName, dosage, frequency, route, startDate, endDate, active, status } = req.body;
 
-    const updates = [];
-    const values = [];
-    let paramIndex = 1;
+    const motherResult = await MotherWriteService.updateMedication(req.user.clinic_id, null, medicationId, {
+      medication_name: medicationName, dosage, frequency, route, start_date: startDate, end_date: endDate, active, status
+    }, req.user.id);
 
-    if (medicationName !== undefined) {
-      updates.push(`medication_name = $${paramIndex}`);
-      values.push(medicationName);
-      paramIndex++;
-    }
-    if (dosage !== undefined) {
-      updates.push(`dosage = $${paramIndex}`);
-      values.push(dosage);
-      paramIndex++;
-    }
-    if (frequency !== undefined) {
-      updates.push(`frequency = $${paramIndex}`);
-      values.push(frequency);
-      paramIndex++;
-    }
-    if (route !== undefined) {
-      updates.push(`route = $${paramIndex}`);
-      values.push(route);
-      paramIndex++;
-    }
-    if (startDate !== undefined) {
-      updates.push(`start_date = $${paramIndex}`);
-      values.push(startDate);
-      paramIndex++;
-    }
-    if (endDate !== undefined) {
-      updates.push(`end_date = $${paramIndex}`);
-      values.push(endDate);
-      paramIndex++;
-    }
-    if (active !== undefined) {
-      updates.push(`active = $${paramIndex}`);
-      values.push(active);
-      paramIndex++;
-    }
-    if (status !== undefined) {
-      updates.push(`status = $${paramIndex}`);
-      values.push(status);
-      paramIndex++;
-    }
-
-    if (updates.length === 0) {
-      return res.status(400).json({ error: 'No fields to update' });
-    }
-
-    updates.push(`updated_at = CURRENT_TIMESTAMP`);
-    values.push(medicationId);
-
-    const result = await pool.query(
-      `UPDATE medications SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
-      values
-    );
-
-    if (result.rows.length === 0) {
+    if (!motherResult.legacyResult) {
       return res.status(404).json({ error: 'Medication not found' });
     }
 
+    const medication = motherResult.legacyResult;
     await logAudit(req.user.id, 'update_medication', 'medication', medicationId, {}, req.ip);
-    res.json(result.rows[0]);
+    res.json(medication);
   } catch (error) {
     console.error('Error updating medication:', error);
     res.status(500).json({ error: 'Failed to update medication' });
@@ -1521,9 +1426,9 @@ router.put('/medications/:medicationId', requirePermission('meds:prescribe'), as
 router.delete('/medications/:medicationId', requirePermission('meds:prescribe'), async (req, res) => {
   try {
     const { medicationId } = req.params;
-    const result = await pool.query('DELETE FROM medications WHERE id = $1 RETURNING *', [medicationId]);
+    const motherResult = await MotherWriteService.deleteMedication(req.user.clinic_id, null, medicationId, req.user.id);
 
-    if (result.rows.length === 0) {
+    if (!motherResult.legacyResult) {
       return res.status(404).json({ error: 'Medication not found' });
     }
 
@@ -1545,23 +1450,19 @@ router.post('/:id/photo', requirePermission('patients:edit_demographics'), uploa
     }
 
     // NEW LOGIC FOR OPTION A (Store as Document)
-    // 1. Insert into documents table
-    const docResult = await pool.query(
-      `INSERT INTO documents (
-        patient_id, uploader_id, doc_type, filename, file_path, mime_type, file_size
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-      [
-        id,
-        req.user.id,
-        'profile_photo',
-        req.file.originalname,
-        `/uploads/patient-photos/${req.file.filename}`,
-        req.file.mimetype,
-        req.file.size
-      ]
-    );
+    // 1. Storage of document using DocumentStoreService
+    const docData = {
+      patient_id: id,
+      uploader_id: req.user.id,
+      doc_type: 'profile_photo',
+      filename: req.file.originalname,
+      file_path: `/uploads/patient-photos/${req.file.filename}`,
+      mime_type: req.file.mimetype,
+      file_size: req.file.size
+    };
 
-    const docId = docResult.rows[0].id;
+    const docResult = await DocumentStoreService.storeDocument(req.user.clinic_id, docData);
+    const docId = docResult.document.id;
     const photoUrl = `/api/documents/${docId}/file`;
 
     // 2. Update patient record
@@ -1609,23 +1510,19 @@ router.post('/:id/photo/base64', requirePermission('patients:edit_demographics')
     const filepath = path.join(patientPhotosDir, filename);
     fs.writeFileSync(filepath, buffer);
 
-    // Store as Document
-    const docResult = await pool.query(
-      `INSERT INTO documents (
-        patient_id, uploader_id, doc_type, filename, file_path, mime_type, file_size
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-      [
-        id,
-        req.user.id,
-        'profile_photo',
-        `webcam_capture.${extension}`,
-        `/uploads/patient-photos/${filename}`,
-        match ? `image/${extension}` : 'image/jpeg',
-        buffer.length
-      ]
-    );
+    // Store as Document using DocumentStoreService
+    const docData = {
+      patient_id: id,
+      uploader_id: req.user.id,
+      doc_type: 'profile_photo',
+      filename: `webcam_capture.${extension}`,
+      file_path: `/uploads/patient-photos/${filename}`,
+      mime_type: match ? `image/${extension}` : 'image/jpeg',
+      file_size: buffer.length
+    };
 
-    const docId = docResult.rows[0].id;
+    const docResult = await DocumentStoreService.storeDocument(req.user.clinic_id, docData);
+    const docId = docResult.document.id;
     const photoUrl = `/api/documents/${docId}/file`;
 
     // Update patient record

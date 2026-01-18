@@ -18,7 +18,14 @@
     "seed-codes": "node scripts/seed-codes.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:encryption": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/patient-encryption.test.js",
-    "test:hipaa": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/hipaa-integration.test.js"
+    "test:hipaa": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/hipaa-integration.test.js",
+    "mother:check": "node scripts/mother-guardrails.js",
+    "mother:migrate": "node scripts/run-sql-migration.js scripts/migrations/20260117_mother_patient_system.sql",
+    "mother:backfill": "node scripts/mother_migration/backfill_clinical_data.js",
+    "mother:rebuild": "node scripts/rebuild-projections.js",
+    "mother:audit": "node scripts/mother_audit/run_mother_audit.js",
+    "mother:reconcile": "node scripts/reconcile-projections.js",
+    "mother:smoke": "node scripts/mother_audit/mother_smoke_test.js"
   },
   "dependencies": {
     "argon2": "^0.31.2",

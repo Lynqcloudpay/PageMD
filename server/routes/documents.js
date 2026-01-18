@@ -5,6 +5,8 @@ const fs = require('fs');
 const pool = require('../db');
 const { authenticate, requireRole, logAudit } = require('../middleware/auth');
 const { requirePermission } = require('../services/authorization');
+const DocumentStoreService = require('../mother/DocumentStoreService');
+const TenantDb = require('../mother/TenantDb');
 
 const router = express.Router();
 router.use(authenticate);
@@ -66,83 +68,53 @@ router.post('/', requirePermission('patients:view_chart'), upload.single('file')
       console.error(`[DOC-UPLOAD][${requestId}] Validation failed: Missing patientId`);
       return res.status(400).json({
         error: 'Missing patientId',
-        receivedBody: req.body // Help debug if fields are arriving after the file
+        receivedBody: req.body
       });
     }
 
-    // Safety: Trim IDs to prevent potential FK issues with whitespace
+    // Safety: Trim IDs
     patientId = patientId.trim();
     if (visitId) visitId = visitId.trim();
 
-    console.log(`[DOC-UPLOAD][${requestId}] Request: patientId=${patientId}, visitId=${visitId}, docType=${docType}, file=${req.file.originalname}`);
-
-    // Determine query executor (prefer transactional client)
-    const dbClient = req.dbClient || pool._currentClient || pool;
-    if (!req.dbClient && !pool._currentClient) {
-      console.warn(`[DOC-UPLOAD][${requestId}] WARNING: No transactional client found. Falling back to global pool.`);
-    }
-
-    // Sanitize docType to match DB CHECK constraint: ('imaging', 'consult', 'lab', 'other')
+    // Sanitize docType
     const validDocTypes = ['imaging', 'consult', 'lab', 'other'];
     if (!docType) {
       docType = 'other';
     } else {
       docType = docType.toLowerCase().trim();
-      // Map common subtypes to valid categories
       const imagingTypes = ['echo', 'ekg', 'stress', 'stress_test', 'stress-test', 'cardiac_cath', 'cardiac-cath', 'cath'];
-      if (imagingTypes.includes(docType)) {
-        docType = 'imaging';
-      }
-      // If still not valid category, check if it's one of the allowed ones
-      if (!validDocTypes.includes(docType)) {
-        docType = 'other';
-      }
+      if (imagingTypes.includes(docType)) docType = 'imaging';
+      if (!validDocTypes.includes(docType)) docType = 'other';
     }
 
-    // Store URL path as /uploads/ (API base URL already includes /api prefix)
     const urlPath = `/uploads/${req.file.filename}`;
 
-    // Execute query
-    const result = await dbClient.query(
-      `INSERT INTO documents (
-        patient_id, visit_id, uploader_id, doc_type, filename, file_path, mime_type, file_size, tags
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [
-        patientId,
-        visitId || null,
-        req.user.id,
-        docType,
-        req.file.originalname,
-        urlPath,
-        req.file.mimetype,
-        req.file.size,
-        tags && typeof tags === 'string' ? tags.split(',') : (Array.isArray(tags) ? tags : []),
-      ]
-    );
+    const dbClient = req.dbClient || pool._currentClient || pool;
+
+    const storedDoc = await DocumentStoreService.storeDocument(dbClient, {
+      clinicId: req.user.clinic_id,
+      patientId,
+      encounterId: visitId,
+      docType,
+      title: req.file.originalname,
+      filePath: urlPath,
+      mimeType: req.file.mimetype,
+      fileSize: req.file.size,
+      status: 'unreviewed',
+      authorUserId: req.user.id,
+      tags: tags && typeof tags === 'string' ? tags.split(',') : (Array.isArray(tags) ? tags : []),
+    });
 
     try {
-      await logAudit(req.user.id, 'upload_document', 'document', result.rows[0].id, { docType }, req.ip);
-    } catch (auditError) {
-      console.error(`[DOC-UPLOAD][${requestId}] Audit log failed:`, auditError.message);
+      await logAudit(req.user.id, 'upload_document', 'document', storedDoc.legacyId, { docType }, req.ip);
+    } catch (auditErr) {
+      console.error(`[DOC-UPLOAD][${requestId}] Audit logging failed:`, auditErr.message);
     }
 
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(storedDoc);
   } catch (error) {
     console.error(`[DOC-UPLOAD][${requestId}] Error uploading document:`, error);
-    console.error(`[DOC-UPLOAD][${requestId}] Error details:`, {
-      message: error.message,
-      code: error.code,
-      detail: error.detail,
-      constraint: error.constraint,
-      table: error.table,
-      body: req.body // Log body to see if fields arrived
-    });
-    res.status(500).json({
-      error: 'Failed to upload document',
-      message: error.message,
-      detail: error.detail,
-      code: error.code
-    });
+    res.status(500).json({ error: 'Failed to upload document' });
   }
 });
 
@@ -157,18 +129,11 @@ router.get('/:id/file', requirePermission('patients:view_chart'), async (req, re
     }
 
     const doc = result.rows[0];
-
-    // Handle three possible path formats:
-    // 1. New format: /uploads/filename (preferred)
-    // 2. Old API format: /api/uploads/filename  
-    // 3. Legacy filesystem path: ./uploads/filename
     let actualPath;
     if (doc.file_path.startsWith('/uploads/') || doc.file_path.startsWith('/api/uploads/')) {
-      // URL path format - preserve subdirectory structure relative to uploads folder
       const relativePath = doc.file_path.replace(/^\/api/, '').replace(/^\/uploads\//, '');
       actualPath = path.join(uploadDir, relativePath);
     } else {
-      // Legacy filesystem path
       actualPath = doc.file_path;
     }
 
@@ -189,51 +154,27 @@ router.get('/:id/file', requirePermission('patients:view_chart'), async (req, re
 router.put('/:id', requirePermission('patients:view_chart'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { reviewed, comment } = req.body;
+    const { reviewed, comment, visit_id } = req.body;
 
-    const updates = [];
-    const values = [];
-    let paramIndex = 1;
-
-    if (req.body.visit_id !== undefined) {
-      updates.push(`visit_id = $${paramIndex}`);
-      values.push(req.body.visit_id); // Can be null to unlink
-      paramIndex++;
-    }
-
+    const updatesObj = {};
+    if (visit_id !== undefined) updatesObj.visit_id = visit_id;
     if (reviewed !== undefined) {
-      updates.push(`reviewed = $${paramIndex}`);
-      values.push(reviewed);
-      paramIndex++;
-
+      updatesObj.reviewed = reviewed;
       if (reviewed) {
-        updates.push(`reviewed_at = CURRENT_TIMESTAMP`);
-        updates.push(`reviewed_by = $${paramIndex}`);
-        values.push(req.user.id);
-        paramIndex++;
+        updatesObj.reviewed_at = new Date().toISOString();
+        updatesObj.reviewed_by = req.user.id;
       }
     }
 
     if (comment !== undefined) {
-      // If comment is provided, add it to the comments array with timestamp
-      // IMPORTANT: Always preserve all previous comments for legal record keeping
       const currentDoc = await pool.query('SELECT comments FROM documents WHERE id = $1', [id]);
-      let existingComments = currentDoc.rows[0]?.comments || [];
+      if (currentDoc.rows.length === 0) return res.status(404).json({ error: 'Document not found' });
 
-      // Parse existing comments if they're stored as a string
+      let existingComments = currentDoc.rows[0].comments || [];
       if (typeof existingComments === 'string') {
-        try {
-          existingComments = JSON.parse(existingComments);
-        } catch (e) {
-          // If parsing fails, start with empty array
-          existingComments = [];
-        }
+        try { existingComments = JSON.parse(existingComments); } catch (e) { existingComments = []; }
       }
-
-      // Ensure existingComments is an array
-      if (!Array.isArray(existingComments)) {
-        existingComments = [];
-      }
+      if (!Array.isArray(existingComments)) existingComments = [];
 
       const newComment = {
         comment: comment.trim(),
@@ -242,37 +183,22 @@ router.put('/:id', requirePermission('patients:view_chart'), async (req, res) =>
         userName: `${req.user.first_name} ${req.user.last_name}` || 'Unknown'
       };
 
-      // Append new comment to existing comments (never delete previous comments)
-      const updatedComments = [...existingComments, newComment];
-
-      updates.push(`comments = $${paramIndex}`);
-      values.push(JSON.stringify(updatedComments));
-      paramIndex++;
-
-      // Also update the legacy comment field for backward compatibility (keep most recent)
-      updates.push(`comment = $${paramIndex}`);
-      values.push(comment.trim());
-      paramIndex++;
+      updatesObj.comments = JSON.stringify([...existingComments, newComment]);
+      updatesObj.comment = comment.trim();
     }
 
-    if (updates.length === 0) {
+    if (Object.keys(updatesObj).length === 0) {
       return res.status(400).json({ error: 'No fields to update' });
     }
 
-    values.push(id);
+    const result = await DocumentStoreService.updateDocument(pool, id, updatesObj, req.user.id);
 
-    const result = await pool.query(
-      `UPDATE documents SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
-      values
-    );
-
-    if (result.rows.length === 0) {
+    if (!result) {
       return res.status(404).json({ error: 'Document not found' });
     }
 
     await logAudit(req.user.id, 'update_document', 'document', id, { reviewed }, req.ip);
-
-    res.json(result.rows[0]);
+    res.json(result);
   } catch (error) {
     console.error('Error updating document:', error);
     res.status(500).json({ error: 'Failed to update document' });
@@ -283,21 +209,13 @@ router.put('/:id', requirePermission('patients:view_chart'), async (req, res) =>
 router.delete('/:id', requirePermission('patients:view_chart'), async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await pool.query('SELECT file_path FROM documents WHERE id = $1', [id]);
+    const result = await DocumentStoreService.deleteDocument(pool, id, req.user.id, true);
 
-    if (result.rows.length === 0) {
+    if (!result) {
       return res.status(404).json({ error: 'Document not found' });
     }
 
-    const filePath = result.rows[0].file_path;
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-
-    await pool.query('DELETE FROM documents WHERE id = $1', [id]);
-
     await logAudit(req.user.id, 'delete_document', 'document', id, {}, req.ip);
-
     res.json({ message: 'Document deleted' });
   } catch (error) {
     console.error('Error deleting document:', error);
@@ -306,6 +224,3 @@ router.delete('/:id', requirePermission('patients:view_chart'), async (req, res)
 });
 
 module.exports = router;
-
-
-

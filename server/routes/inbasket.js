@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../db');
 const { authenticate, requireRole, logAudit } = require('../middleware/auth');
 const { enrichWithPatientNames, getPatientDisplayName } = require('../services/patientNameUtils');
+const MotherWriteService = require('../mother/MotherWriteService');
 
 const router = express.Router();
 router.use(authenticate);
@@ -545,13 +546,33 @@ router.put('/:id', async (req, res) => {
 
     const result = await pool.query(query, params);
 
-    // Propagate completion to original orders/docs if applicable
+    // Propagate completion to original orders/docs if applicable with Mother events
     if (status === 'completed' && result.rows[0].reference_id) {
       const item = result.rows[0];
+      const clinicId = req.user.clinic_id;
+
       if (item.reference_table === 'orders') {
-        await pool.query("UPDATE orders SET reviewed = true, reviewed_at = CURRENT_TIMESTAMP, reviewed_by = $1 WHERE id = $2", [req.user.id, item.reference_id]);
+        const orderId = item.reference_id;
+        await MotherWriteService.performWrite(clinicId, {
+          patientId: item.patient_id,
+          eventType: 'ORDER_REVIEWED',
+          payload: { order_id: orderId, status: 'reviewed' },
+          sourceModule: 'INBASKET',
+          actorUserId: req.user.id
+        }, async (client) => {
+          await client.query("UPDATE orders SET reviewed = true, reviewed_at = CURRENT_TIMESTAMP, reviewed_by = $1 WHERE id = $2", [req.user.id, orderId]);
+        });
       } else if (item.reference_table === 'documents') {
-        await pool.query("UPDATE documents SET reviewed = true, reviewed_at = CURRENT_TIMESTAMP, reviewed_by = $1 WHERE id = $2", [req.user.id, item.reference_id]);
+        const docId = item.reference_id;
+        await MotherWriteService.performWrite(clinicId, {
+          patientId: item.patient_id,
+          eventType: 'DOCUMENT_REVIEWED',
+          payload: { document_id: docId, status: 'reviewed' },
+          sourceModule: 'INBASKET',
+          actorUserId: req.user.id
+        }, async (client) => {
+          await client.query("UPDATE documents SET reviewed = true, reviewed_at = CURRENT_TIMESTAMP, reviewed_by = $1 WHERE id = $2", [req.user.id, docId]);
+        });
       } else if (item.reference_table === 'portal_messages') {
         await pool.query("UPDATE portal_messages SET read_at = CURRENT_TIMESTAMP WHERE id = $1", [item.reference_id]);
       }

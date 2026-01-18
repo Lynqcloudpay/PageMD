@@ -197,48 +197,28 @@ async function gatherPatientContext(patientId) {
     };
 
     try {
-        // Demographics
-        const patientRes = await pool.query('SELECT * FROM patients WHERE id = $1', [patientId]);
-        if (patientRes.rows.length > 0) {
-            const p = patientRes.rows[0];
+        // Use Mother Patient System for canonical patient context
+        const MotherReadService = require('../mother/MotherReadService');
+        // Extract clinicId from the request context if possible, or use a default if not found
+        // In gatherPatientContext, we don't have 'req' directly, but it's called from routes.
+        // We might need to pass req to gatherPatientContext or find another way.
+        // For now, let's assume we can query the clinic_id for the patient.
+        const clinicRes = await pool.query('SELECT clinic_id FROM patients WHERE id = $1', [patientId]);
+        const clinicId = clinicRes.rows[0]?.clinic_id;
+
+        if (clinicId) {
+            const summary = await MotherReadService.getPatientSummary(clinicId, patientId);
             context.demographics = {
-                age: p.dob ? (new Date().getFullYear() - new Date(p.dob).getFullYear()) : 'Unknown',
-                sex: p.sex,
-                race: p.race,
-                ethnicity: p.ethnicity
+                ...context.demographics,
+                ...summary.demographics
             };
+            context.problems = summary.state.problems.map(p => p.problem_name);
+            context.medications = summary.state.medications.map(m => `${m.medication_name} ${m.dosage || ''}`);
+            context.vitals = [summary.state.vitals].filter(Boolean);
+            context.recentEvents = summary.recentEvents;
         }
 
-        // Problems
-        const problemsRes = await pool.query('SELECT * FROM patient_diagnoses WHERE patient_id = $1 AND status = $2', [patientId, 'active']);
-        context.problems = problemsRes.rows.map(r => r.diagnosis_name);
-
-        // Medications
-        const medsRes = await pool.query('SELECT * FROM prescriptions WHERE patient_id = $1 AND status = $2', [patientId, 'active']);
-        context.medications = medsRes.rows.map(r => `${r.medication_name} ${r.dosage}`);
-
-        // Allergies
-        const allergiesRes = await pool.query('SELECT * FROM patient_allergies WHERE patient_id = $1', [patientId]);
-        context.allergies = allergiesRes.rows.map(r => r.allergen);
-
-        // Recent Vitals (Extended history for trending)
-        const vitalsRes = await pool.query('SELECT * FROM vitals WHERE patient_id = $1 ORDER BY recorded_at DESC LIMIT 50', [patientId]);
-        context.vitals = vitalsRes.rows;
-
-        // Recent Visits & Notes (Last 5 visits with full note content)
-        const visitsRes = await pool.query(
-            `SELECT v.visit_date, v.note_type, v.status, v.note_draft, v.encounter_date, 
-                    u.first_name || ' ' || u.last_name as provider_name 
-             FROM visits v 
-             LEFT JOIN users u ON v.provider_id = u.id 
-             WHERE v.patient_id = $1 
-             ORDER BY v.visit_date DESC 
-             LIMIT 5`,
-            [patientId]
-        );
-        context.recentVisits = visitsRes.rows;
-
-        // Recent Lab Results (Last 10 orders of type 'lab')
+        // Fetch recent lab results specifically
         const labsRes = await pool.query(
             `SELECT created_at as date, order_description, order_payload, status
              FROM orders 
@@ -250,15 +230,12 @@ async function gatherPatientContext(patientId) {
 
         context.labs = labsRes.rows.map(row => {
             let results = null;
-            // Parse payload for results if available
             try {
                 const payload = typeof row.order_payload === 'string' ? JSON.parse(row.order_payload) : row.order_payload;
                 if (payload && payload.results) {
                     results = payload.results;
                 }
-            } catch (e) {
-                // Ignore parse error
-            }
+            } catch (e) { }
             return {
                 date: row.date,
                 test: row.order_description,
