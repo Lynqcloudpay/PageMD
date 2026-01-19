@@ -1660,10 +1660,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     )}
 
                                     {/* Vitals Trend Wave - Enhanced Clinical Visualization */}
-                                    <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/50 mb-6 relative overflow-hidden group/wave">
+                                    <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/50 mb-6 relative overflow-hidden group/wave isolate">
                                         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/20 rounded-full -mr-32 -mt-32 blur-3xl group-hover/wave:bg-blue-100/30 transition-colors duration-1000" />
 
-                                        <div className="flex justify-between items-center mb-6 relative z-10">
+                                        <div className="flex justify-between items-center mb-6 relative">
                                             <div className="flex items-center gap-3">
                                                 <div className="p-3 bg-gradient-to-br from-blue-400 to-indigo-500 text-white rounded-2xl shadow-lg shadow-blue-100">
                                                     <Waves className="w-5 h-5 opacity-90" />
