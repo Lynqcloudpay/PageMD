@@ -220,7 +220,7 @@ Email: {PRIVACY_EMAIL}`
 async function seedIntakeSettings() {
     const client = await pool.connect();
     try {
-        const schemasRes = await client.query("SELECT schema_name FROM public.clinics WHERE status = 'active' UNION SELECT 'public'");
+        const schemasRes = await client.query("SELECT schema_name FROM public.clinics WHERE status = 'active'");
         const schemas = schemasRes.rows.map(r => r.schema_name);
 
         for (const schema of schemas) {
