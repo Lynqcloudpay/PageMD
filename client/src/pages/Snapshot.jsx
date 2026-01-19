@@ -1688,7 +1688,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </div>
                                         </div>
 
-                                        <div className="h-56 w-full relative z-10">
+                                        <div className="h-56 w-full relative">
                                             {vitals.filter(v => (v.bp && v.bp !== 'N/A') || (v.hr && v.hr !== 'N/A')).length > 0 ? (
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     <AreaChart
