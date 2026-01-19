@@ -50,7 +50,6 @@ const Inbasket = () => {
     const [loadingDetails, setLoadingDetails] = useState(false);
     const [replyText, setReplyText] = useState('');
 
-    // Compose State
     const [showCompose, setShowCompose] = useState(false);
     const [showIntakeReview, setShowIntakeReview] = useState(false);
     const [composeData, setComposeData] = useState({
@@ -61,9 +60,20 @@ const Inbasket = () => {
         priority: 'normal',
         assignedUserId: user?.id
     });
-    const [patientQuery, setPatientQuery] = useState('');
+
+    // Advanced Patient Search State
+    const [searchFields, setSearchFields] = useState({
+        name: '',
+        dob: '',
+        phone: '',
+        mrn: ''
+    });
     const [patientResults, setPatientResults] = useState([]);
     const [isSearchingPatients, setIsSearchingPatients] = useState(false);
+    const [selectedPatient, setSelectedPatient] = useState(null);
+
+    // Global Filter State
+    const [showBackground, setShowBackground] = useState(false);
 
     // Assignment Modal
     const [showAssignModal, setShowAssignModal] = useState(false);
@@ -215,12 +225,20 @@ const Inbasket = () => {
             if (!cat?.types.includes(item.type)) return false;
         }
 
-        // 2. Search Filter
+        // 2. Background Task Filter (Hide unless showBackground is true)
+        const isBackground = item.type === 'document' && (!item.body || item.body === 'Document Upload');
+        if (isBackground && !showBackground) return false;
+
+        // 3. Search Filter
         if (searchQuery) {
             const q = searchQuery.toLowerCase();
             const patientName = getPatientDisplayName(item).toLowerCase();
+            const mrn = (item.patient_mrn || '').toLowerCase();
+            const dob = (item.patient_dob || '');
             return (
                 patientName.includes(q) ||
+                mrn.includes(q) ||
+                dob.includes(q) ||
                 item.subject?.toLowerCase().includes(q) ||
                 item.body?.toLowerCase().includes(q)
             );
@@ -285,34 +303,59 @@ const Inbasket = () => {
         }
     };
 
-    const handlePatientSearch = async (query) => {
-        setPatientQuery(query);
-        if (query.length < 2) {
+    const triggerPatientSearch = async () => {
+        const hasFilters = Object.values(searchFields).some(v => v.trim() !== '');
+        if (!hasFilters) {
             setPatientResults([]);
             return;
         }
+
         setIsSearchingPatients(true);
         try {
-            const res = await patientsAPI.search(query);
+            const res = await patientsAPI.search(searchFields);
             setPatientResults(res.data || []);
         } catch (e) {
             console.error('Patient search error:', e);
+            showError('Patient search failed');
         } finally {
             setIsSearchingPatients(false);
         }
     };
+
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            triggerPatientSearch();
+        }, 400);
+        return () => clearTimeout(timeoutId);
+    }, [searchFields]);
 
     const handleComposeSubmit = async () => {
         if (!composeData.subject || (!composeData.assignedUserId && composeData.type === 'task')) {
             showError('Subject and recipient are required');
             return;
         }
+
+        if (composeData.type === 'portal_message' && !selectedPatient) {
+            showError('A patient must be selected to send a portal message');
+            return;
+        }
+
         try {
-            await inboxAPI.create(composeData);
-            showSuccess('Item created');
+            if (composeData.type === 'portal_message') {
+                await inboxAPI.sendPatientMessage({
+                    patientId: selectedPatient.id,
+                    subject: composeData.subject,
+                    body: composeData.body
+                });
+                showSuccess('Portal message sent to patient');
+            } else {
+                await inboxAPI.create(composeData);
+                showSuccess('Item created');
+            }
             setShowCompose(false);
             setComposeData({ type: 'task', subject: '', body: '', patientId: '', priority: 'normal', assignedUserId: user?.id });
-            setPatientQuery('');
+            setSearchFields({ name: '', dob: '', phone: '', mrn: '' });
+            setSelectedPatient(null);
             setPatientResults([]);
             fetchData(true);
         } catch (e) {
@@ -410,10 +453,23 @@ const Inbasket = () => {
                 </div>
 
                 <div className="p-4 border-t border-gray-100">
-                    <h3 className="text-xs font-bold text-gray-400 uppercase mb-2">View</h3>
+                    <h3 className="text-xs font-bold text-gray-400 uppercase mb-2">View Filters</h3>
                     <div className="space-y-1">
-                        <button onClick={() => setFilterStatus('new')} className={`w-full text-left px-2 py-1 text-sm rounded ${filterStatus === 'new' ? 'bg-blue-50 text-blue-700' : 'text-gray-600'}`}>Current</button>
-                        <button onClick={() => setFilterStatus('completed')} className={`w-full text-left px-2 py-1 text-sm rounded ${filterStatus === 'completed' ? 'bg-blue-50 text-blue-700' : 'text-gray-600'}`}>Completed</button>
+                        <button onClick={() => setFilterStatus('new')} className={`w-full text-left px-2 py-1 text-sm rounded ${filterStatus === 'new' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-50 transition-colors'}`}>Current Items</button>
+                        <button onClick={() => setFilterStatus('completed')} className={`w-full text-left px-2 py-1 text-sm rounded ${filterStatus === 'completed' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-50 transition-colors'}`}>Completed</button>
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                            <input
+                                type="checkbox"
+                                checked={showBackground}
+                                onChange={e => setShowBackground(e.target.checked)}
+                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-xs font-medium text-gray-600 group-hover:text-gray-900 transition-colors">Show Background Activities</span>
+                        </label>
+                        <p className="text-[10px] text-gray-400 mt-1 pl-6 italic">Hidden uploads/system logs</p>
                     </div>
                 </div>
             </div>
@@ -594,7 +650,7 @@ const Inbasket = () => {
                                                     try {
                                                         await inboxAPI.denyAppointment(selectedItem.id);
                                                         showSuccess('Appointment request denied');
-                                                        fetchItems();
+                                                        fetchData(true);
                                                         setSelectedItem(null);
                                                     } catch (e) {
                                                         console.error('Failed to deny:', e);
@@ -748,70 +804,122 @@ const Inbasket = () => {
                                     <select
                                         value={composeData.type}
                                         onChange={e => setComposeData({ ...composeData, type: e.target.value })}
-                                        className="w-full border border-gray-300 rounded-lg p-2 text-sm"
+                                        className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
                                     >
-                                        <option value="task">Clinical Task</option>
-                                        <option value="message">Staff Message</option>
+                                        <option value="task">Internal Task</option>
+                                        <option value="message">Internal Staff Message</option>
+                                        <option value="portal_message">Outgoing Patient Message (Portal)</option>
                                         <option value="refill">Rx Request</option>
                                     </select>
                                 </div>
-                                <div className="flex-1">
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Priority</label>
+                                {composeData.type !== 'portal_message' && (
+                                    <div className="flex-1">
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Priority</label>
+                                        <select
+                                            value={composeData.priority}
+                                            onChange={e => setComposeData({ ...composeData, priority: e.target.value })}
+                                            className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+                                        >
+                                            <option value="normal">Normal</option>
+                                            <option value="urgent">Urgent</option>
+                                            <option value="stat">STAT</option>
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
+
+                            {composeData.type !== 'portal_message' && (
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Assign To</label>
                                     <select
-                                        value={composeData.priority}
-                                        onChange={e => setComposeData({ ...composeData, priority: e.target.value })}
-                                        className="w-full border border-gray-300 rounded-lg p-2 text-sm"
+                                        value={composeData.assignedUserId}
+                                        onChange={e => setComposeData({ ...composeData, assignedUserId: e.target.value })}
+                                        className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
                                     >
-                                        <option value="normal">Normal</option>
-                                        <option value="urgent">Urgent</option>
-                                        <option value="stat">STAT</option>
+                                        <option value="">Unassigned</option>
+                                        {users.map(u => (
+                                            <option key={u.id} value={u.id}>{u.first_name} {u.last_name} ({u.role})</option>
+                                        ))}
                                     </select>
                                 </div>
-                            </div>
+                            )}
 
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Assign To</label>
-                                <select
-                                    value={composeData.assignedUserId}
-                                    onChange={e => setComposeData({ ...composeData, assignedUserId: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg p-2 text-sm"
-                                >
-                                    <option value="">Unassigned</option>
-                                    {users.map(u => (
-                                        <option key={u.id} value={u.id}>{u.first_name} {u.last_name} ({u.role})</option>
-                                    ))}
-                                </select>
-                            </div>
+                            <div className="border border-gray-100 rounded-xl p-4 bg-gray-50/50">
+                                <label className="block text-[10px] font-black text-blue-600 uppercase mb-2 tracking-widest">Select Patient</label>
 
-                            <div className="relative">
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Attached Patient (Optional)</label>
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                    <input
-                                        type="text"
-                                        placeholder="Search patient name..."
-                                        value={patientQuery}
-                                        onChange={e => handlePatientSearch(e.target.value)}
-                                        className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm"
-                                    />
-                                </div>
+                                {selectedPatient ? (
+                                    <div className="flex items-center justify-between p-3 bg-blue-100 border border-blue-200 rounded-lg animate-in fade-in slide-in-from-top-1">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs">
+                                                {selectedPatient.name?.[0] || 'P'}
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-blue-900">{selectedPatient.name || `${selectedPatient.first_name} ${selectedPatient.last_name}`}</p>
+                                                <p className="text-[10px] text-blue-700">MRN: {selectedPatient.mrn} • DOB: {selectedPatient.dob || selectedPatient.date_of_birth}</p>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => setSelectedPatient(null)} className="p-1 hover:bg-blue-200 rounded-full text-blue-600 transition-colors">
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <input
+                                                type="text"
+                                                placeholder="Name"
+                                                className="border border-gray-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 transition-all"
+                                                value={searchFields.name}
+                                                onChange={e => setSearchFields({ ...searchFields, name: e.target.value })}
+                                            />
+                                            <input
+                                                type="text"
+                                                placeholder="DOB (MM/DD/YYYY)"
+                                                className="border border-gray-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 transition-all"
+                                                value={searchFields.dob}
+                                                onChange={e => setSearchFields({ ...searchFields, dob: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <input
+                                                type="text"
+                                                placeholder="Phone"
+                                                className="border border-gray-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 transition-all"
+                                                value={searchFields.phone}
+                                                onChange={e => setSearchFields({ ...searchFields, phone: e.target.value })}
+                                            />
+                                            <input
+                                                type="text"
+                                                placeholder="MRN"
+                                                className="border border-gray-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 transition-all"
+                                                value={searchFields.mrn}
+                                                onChange={e => setSearchFields({ ...searchFields, mrn: e.target.value })}
+                                            />
+                                        </div>
 
-                                {patientResults.length > 0 && (
-                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 shadow-lg rounded-lg z-10 max-h-40 overflow-y-auto">
-                                        {patientResults.map(p => (
-                                            <button
-                                                key={p.id}
-                                                onClick={() => {
-                                                    setComposeData({ ...composeData, patientId: p.id });
-                                                    setPatientQuery(`${p.first_name} ${p.last_name}`);
-                                                    setPatientResults([]);
-                                                }}
-                                                className="w-full text-left p-2 hover:bg-gray-50 text-sm border-b border-gray-100"
-                                            >
-                                                <span className="font-bold">{p.first_name} {p.last_name}</span>
-                                                <span className="text-gray-400 ml-2">DOB: {p.dob ? format(new Date(p.dob), 'MM/dd/yyyy') : 'N/A'}</span>
-                                            </button>
-                                        ))}
+                                        {patientResults.length > 0 && (
+                                            <div className="border border-gray-100 rounded-lg overflow-hidden shadow-inner max-h-40 overflow-y-auto bg-white">
+                                                {patientResults.map(p => (
+                                                    <button
+                                                        key={p.id}
+                                                        onClick={() => {
+                                                            setSelectedPatient(p);
+                                                            setComposeData({ ...composeData, patientId: p.id });
+                                                        }}
+                                                        className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b border-gray-50 last:border-0 flex items-center justify-between group transition-colors"
+                                                    >
+                                                        <div>
+                                                            <p className="text-sm font-semibold text-gray-800 group-hover:text-blue-700">{p.name || `${p.first_name} ${p.last_name}`}</p>
+                                                            <p className="text-[10px] text-gray-500">MRN: {p.mrn} • DOB: {p.dob || p.date_of_birth}</p>
+                                                        </div>
+                                                        <Plus className="w-4 h-4 text-gray-300 group-hover:text-blue-500" />
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {isSearchingPatients && (
+                                            <p className="text-[10px] text-gray-400 italic">Searching...</p>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -823,7 +931,7 @@ const Inbasket = () => {
                                     placeholder="Brief title of the task/message"
                                     value={composeData.subject}
                                     onChange={e => setComposeData({ ...composeData, subject: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg p-2 text-sm"
+                                    className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
                                 />
                             </div>
 
@@ -833,7 +941,7 @@ const Inbasket = () => {
                                     placeholder="Provide detailed instructions or the message content..."
                                     value={composeData.body}
                                     onChange={e => setComposeData({ ...composeData, body: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg p-2 text-sm h-32 resize-none"
+                                    className="w-full border border-gray-300 rounded-lg p-2 text-sm h-32 resize-none focus:ring-2 focus:ring-blue-500 transition-all"
                                 />
                             </div>
                         </div>
@@ -841,13 +949,13 @@ const Inbasket = () => {
                         <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
                             <button
                                 onClick={() => setShowCompose(false)}
-                                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-100"
+                                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-100 transition-colors"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleComposeSubmit}
-                                className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700"
+                                className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700 active:scale-95 transition-all"
                             >
                                 Send / Create
                             </button>
@@ -857,153 +965,155 @@ const Inbasket = () => {
             )}
 
             {/* Appointment Approval Modal */}
-            {showApproveModal && selectedItem && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="p-4 border-b border-gray-200 bg-emerald-50 flex justify-between items-center shrink-0">
-                            <div>
-                                <h3 className="text-lg font-bold text-emerald-900 flex items-center gap-2">
-                                    <Calendar className="w-5 h-5" /> Approve & Schedule Appointment
-                                </h3>
-                                <p className="text-sm text-emerald-600 mt-1">Schedule this patient's appointment request</p>
-                            </div>
-                            <button onClick={() => setShowApproveModal(false)} className="text-emerald-800 hover:bg-emerald-100 p-1 rounded-full"><X className="w-5 h-5" /></button>
-                        </div>
-
-                        <div className="flex flex-col md:flex-row h-full overflow-hidden">
-                            {/* Left Column: Form */}
-                            <div className="p-6 space-y-5 flex-1 overflow-y-auto">
+            {
+                showApproveModal && selectedItem && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh]">
+                            <div className="p-4 border-b border-gray-200 bg-emerald-50 flex justify-between items-center shrink-0">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Provider</label>
-                                    <select
-                                        value={approvalData.providerId}
-                                        onChange={e => setApprovalData({ ...approvalData, providerId: e.target.value })}
-                                        className="w-full border border-gray-300 rounded-lg p-2 text-sm"
-                                    >
-                                        <option value="">Select provider...</option>
-                                        {users.filter(u => u.role === 'clinician' || u.role === 'physician').map(u => (
-                                            <option key={u.id} value={u.id}>Dr. {u.last_name}, {u.first_name}</option>
-                                        ))}
-                                        {users.filter(u => u.role !== 'clinician' && u.role !== 'physician').map(u => (
-                                            <option key={u.id} value={u.id}>{u.last_name}, {u.first_name}</option>
-                                        ))}
-                                    </select>
+                                    <h3 className="text-lg font-bold text-emerald-900 flex items-center gap-2">
+                                        <Calendar className="w-5 h-5" /> Approve & Schedule Appointment
+                                    </h3>
+                                    <p className="text-sm text-emerald-600 mt-1">Schedule this patient's appointment request</p>
                                 </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                                        <input
-                                            type="date"
-                                            value={approvalData.appointmentDate}
-                                            onChange={e => setApprovalData({ ...approvalData, appointmentDate: e.target.value })}
-                                            min={new Date().toISOString().split('T')[0]}
-                                            className="w-full border border-gray-300 rounded-lg p-2 text-sm"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
-                                        <input
-                                            type="time"
-                                            value={approvalData.appointmentTime}
-                                            onChange={e => setApprovalData({ ...approvalData, appointmentTime: e.target.value })}
-                                            className="w-full border border-gray-300 rounded-lg p-2 text-sm"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
-                                    <select
-                                        value={approvalData.duration}
-                                        onChange={e => setApprovalData({ ...approvalData, duration: parseInt(e.target.value) })}
-                                        className="w-full border border-gray-300 rounded-lg p-2 text-sm"
-                                    >
-                                        <option value={15}>15 minutes</option>
-                                        <option value={30}>30 minutes</option>
-                                        <option value={45}>45 minutes</option>
-                                        <option value={60}>60 minutes</option>
-                                    </select>
-                                </div>
-                                {details?.body && (
-                                    <div className="bg-amber-50 p-3 rounded-lg border border-amber-100">
-                                        <p className="text-xs font-bold text-amber-600 uppercase mb-1">Patient's Request</p>
-                                        <p className="text-sm text-amber-900 whitespace-pre-wrap">{details.body}</p>
-                                    </div>
-                                )}
+                                <button onClick={() => setShowApproveModal(false)} className="text-emerald-800 hover:bg-emerald-100 p-1 rounded-full"><X className="w-5 h-5" /></button>
                             </div>
 
-                            {/* Right Column: Schedule Browser */}
-                            <div className="w-full md:w-[380px] bg-slate-50 border-t md:border-t-0 md:border-l border-slate-200 p-4 flex flex-col overflow-y-auto">
-                                {approvalData.providerId ? (
-                                    <DaySchedulePreview
-                                        date={approvalData.appointmentDate}
-                                        providerId={approvalData.providerId}
-                                        selectedTime={approvalData.appointmentTime}
-                                        duration={approvalData.duration}
-                                        onDateChange={(newDate) => setApprovalData(prev => ({ ...prev, appointmentDate: newDate }))}
-                                        suggestedSlots={suggestedSlots}
-                                        onSlotClick={(slot) => {
-                                            // Toggle slot selection
-                                            setSuggestedSlots(prev => {
-                                                const exists = prev.find(s => s.date === slot.date && s.time === slot.time);
-                                                if (exists) return prev.filter(s => s !== exists);
-                                                return [...prev, slot];
-                                            });
+                            <div className="flex flex-col md:flex-row h-full overflow-hidden">
+                                {/* Left Column: Form */}
+                                <div className="p-6 space-y-5 flex-1 overflow-y-auto">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Provider</label>
+                                        <select
+                                            value={approvalData.providerId}
+                                            onChange={e => setApprovalData({ ...approvalData, providerId: e.target.value })}
+                                            className="w-full border border-gray-300 rounded-lg p-2 text-sm"
+                                        >
+                                            <option value="">Select provider...</option>
+                                            {users.filter(u => u.role === 'clinician' || u.role === 'physician').map(u => (
+                                                <option key={u.id} value={u.id}>Dr. {u.last_name}, {u.first_name}</option>
+                                            ))}
+                                            {users.filter(u => u.role !== 'clinician' && u.role !== 'physician').map(u => (
+                                                <option key={u.id} value={u.id}>{u.last_name}, {u.first_name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                                            <input
+                                                type="date"
+                                                value={approvalData.appointmentDate}
+                                                onChange={e => setApprovalData({ ...approvalData, appointmentDate: e.target.value })}
+                                                min={new Date().toISOString().split('T')[0]}
+                                                className="w-full border border-gray-300 rounded-lg p-2 text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                                            <input
+                                                type="time"
+                                                value={approvalData.appointmentTime}
+                                                onChange={e => setApprovalData({ ...approvalData, appointmentTime: e.target.value })}
+                                                className="w-full border border-gray-300 rounded-lg p-2 text-sm"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
+                                        <select
+                                            value={approvalData.duration}
+                                            onChange={e => setApprovalData({ ...approvalData, duration: parseInt(e.target.value) })}
+                                            className="w-full border border-gray-300 rounded-lg p-2 text-sm"
+                                        >
+                                            <option value={15}>15 minutes</option>
+                                            <option value={30}>30 minutes</option>
+                                            <option value={45}>45 minutes</option>
+                                            <option value={60}>60 minutes</option>
+                                        </select>
+                                    </div>
+                                    {details?.body && (
+                                        <div className="bg-amber-50 p-3 rounded-lg border border-amber-100">
+                                            <p className="text-xs font-bold text-amber-600 uppercase mb-1">Patient's Request</p>
+                                            <p className="text-sm text-amber-900 whitespace-pre-wrap">{details.body}</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Right Column: Schedule Browser */}
+                                <div className="w-full md:w-[380px] bg-slate-50 border-t md:border-t-0 md:border-l border-slate-200 p-4 flex flex-col overflow-y-auto">
+                                    {approvalData.providerId ? (
+                                        <DaySchedulePreview
+                                            date={approvalData.appointmentDate}
+                                            providerId={approvalData.providerId}
+                                            selectedTime={approvalData.appointmentTime}
+                                            duration={approvalData.duration}
+                                            onDateChange={(newDate) => setApprovalData(prev => ({ ...prev, appointmentDate: newDate }))}
+                                            suggestedSlots={suggestedSlots}
+                                            onSlotClick={(slot) => {
+                                                // Toggle slot selection
+                                                setSuggestedSlots(prev => {
+                                                    const exists = prev.find(s => s.date === slot.date && s.time === slot.time);
+                                                    if (exists) return prev.filter(s => s !== exists);
+                                                    return [...prev, slot];
+                                                });
+                                            }}
+                                        />
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full text-slate-400 text-sm">
+                                            Select a provider to view schedule
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-between gap-3 shrink-0">
+                                {suggestedSlots.length > 0 ? (
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                await inboxAPI.suggestSlots(selectedItem.id, {
+                                                    slots: suggestedSlots.map(s => ({ date: s.date, time: s.time }))
+                                                });
+                                                setShowApproveModal(false);
+                                                setSuggestedSlots([]);
+                                                showSuccess('Alternative times sent to patient');
+                                                fetchData(true);
+                                            } catch (e) {
+                                                console.error('Failed to suggest slots:', e);
+                                                showError('Failed to send suggestions');
+                                            }
                                         }}
-                                    />
+                                        className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg text-sm font-bold hover:from-amber-600 hover:to-orange-600 shadow-sm flex items-center gap-2"
+                                    >
+                                        <Clock className="w-4 h-4" />
+                                        Send {suggestedSlots.length} Alternative{suggestedSlots.length > 1 ? 's' : ''}
+                                    </button>
                                 ) : (
-                                    <div className="flex items-center justify-center h-full text-slate-400 text-sm">
-                                        Select a provider to view schedule
+                                    <div className="text-xs text-gray-400 flex items-center">
+                                        Click available slots to suggest alternatives
                                     </div>
                                 )}
-                            </div>
-                        </div>
-
-                        <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-between gap-3 shrink-0">
-                            {suggestedSlots.length > 0 ? (
-                                <button
-                                    onClick={async () => {
-                                        try {
-                                            await inboxAPI.suggestSlots(selectedItem.id, {
-                                                slots: suggestedSlots.map(s => ({ date: s.date, time: s.time }))
-                                            });
-                                            setShowApproveModal(false);
-                                            setSuggestedSlots([]);
-                                            showSuccess('Alternative times sent to patient');
-                                            fetchData(true);
-                                        } catch (e) {
-                                            console.error('Failed to suggest slots:', e);
-                                            showError('Failed to send suggestions');
-                                        }
-                                    }}
-                                    className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg text-sm font-bold hover:from-amber-600 hover:to-orange-600 shadow-sm flex items-center gap-2"
-                                >
-                                    <Clock className="w-4 h-4" />
-                                    Send {suggestedSlots.length} Alternative{suggestedSlots.length > 1 ? 's' : ''}
-                                </button>
-                            ) : (
-                                <div className="text-xs text-gray-400 flex items-center">
-                                    Click available slots to suggest alternatives
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setShowApproveModal(false)}
+                                        className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-100"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleApproveAppointment}
+                                        className="px-6 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-emerald-700 flex items-center gap-1"
+                                    >
+                                        <CheckCircle className="w-4 h-4" /> Schedule
+                                    </button>
                                 </div>
-                            )}
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setShowApproveModal(false)}
-                                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-100"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleApproveAppointment}
-                                    className="px-6 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-emerald-700 flex items-center gap-1"
-                                >
-                                    <CheckCircle className="w-4 h-4" /> Schedule
-                                </button>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Intake Review Modal */}
             <IntakeReviewModal
@@ -1019,7 +1129,7 @@ const Inbasket = () => {
                     }
                 }}
             />
-        </div>
+        </div >
     );
 };
 

@@ -121,7 +121,7 @@ async function batchGetPatientNames(patientIds) {
     const uniqueIds = [...new Set(patientIds.filter(Boolean))];
 
     const result = await pool.query(
-        `SELECT id, first_name, last_name, encryption_metadata 
+        `SELECT id, first_name, last_name, dob, mrn, encryption_metadata 
      FROM patients 
      WHERE id = ANY($1)`,
         [uniqueIds]
@@ -134,7 +134,9 @@ async function batchGetPatientNames(patientIds) {
         nameMap.set(row.id, {
             first_name: decrypted.first_name || '',
             last_name: decrypted.last_name || '',
-            display_name: getPatientDisplayName(decrypted)
+            display_name: getPatientDisplayName(decrypted),
+            dob: decrypted.dob,
+            mrn: decrypted.mrn
         });
     }
 
@@ -158,13 +160,15 @@ async function enrichWithPatientNames(records, idField = 'patient_id') {
 
     return records.map(record => {
         const patientId = record[idField];
-        const names = nameMap.get(patientId) || { display_name: 'Unknown Patient', first_name: '', last_name: '' };
+        const names = nameMap.get(patientId) || { display_name: 'Unknown Patient', first_name: '', last_name: '', dob: '', mrn: '' };
 
         return {
             ...record,
             patientName: names.display_name,
             patient_first_name: names.first_name,
             patient_last_name: names.last_name,
+            patient_dob: names.dob,
+            patient_mrn: names.mrn
         };
     });
 }

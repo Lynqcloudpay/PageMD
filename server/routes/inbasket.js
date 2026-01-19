@@ -146,7 +146,8 @@ async function syncInboxItems(tenantId, schema) {
       )
   `, [tenantId]);
 
-    // 3. Sync Documents
+    // 3. Sync Documents (Only if they have a clinical doc_type or are tagged as 'clinical')
+    // Background uploads without a type are often administrative noise.
     await client.query(`
     INSERT INTO inbox_items (
       id, tenant_id, patient_id, type, priority, status, 
@@ -162,6 +163,7 @@ async function syncInboxItems(tenantId, schema) {
       uploader_id, created_at, created_at
     FROM documents
     WHERE (reviewed IS NULL OR reviewed = false)
+      AND (doc_type IS NOT NULL AND doc_type NOT IN ('other', 'administrative', 'background_upload'))
       AND NOT EXISTS (
         SELECT 1 FROM inbox_items i2 
         WHERE i2.reference_id = documents.id AND i2.reference_table = 'documents'
@@ -243,27 +245,26 @@ async function syncInboxItems(tenantId, schema) {
     )
   `, [tenantId]);
 
-    // 7. Sync Portal Message Threads (Unread threads)
-    // CLEANUP: Remove old individual portal message items (migration to threads)
+    // 7. Sync Portal Message Threads (Grouped by Patient - "Closed Loop")
+    // CLEANUP: Remove old individual portal message items
     await client.query(`
         DELETE FROM inbox_items 
-        WHERE reference_table = 'portal_messages' 
+        WHERE reference_table = 'portal_message_threads' 
           AND status != 'completed'
     `);
 
-    // Insert new items for threads that don't have an active item
-    // If it's an Appointment Support thread, mark as portal_appointment to group in sidebar
+    // Insert ONE item per patient if they have ANY unread portal messages
     await client.query(`
     INSERT INTO inbox_items(
       id, tenant_id, patient_id, type, priority, status,
       subject, body, reference_id, reference_table,
       assigned_user_id, created_at, updated_at
     )
-    SELECT
+    SELECT DISTINCT ON (t.patient_id)
       gen_random_uuid(), $1, t.patient_id, 
-      CASE WHEN t.subject ILIKE 'Appointment Support%' THEN 'portal_appointment' ELSE 'portal_message' END,
+      'portal_message',
       'normal', 'new',
-      'Portal: ' || t.subject,
+      'Patient Conversation',
       (SELECT body FROM portal_messages WHERE thread_id = t.id AND sender_portal_account_id IS NOT NULL ORDER BY created_at DESC LIMIT 1),
       t.id, 'portal_message_threads',
       COALESCE(t.assigned_user_id, p.primary_care_provider), t.updated_at, t.updated_at
@@ -275,33 +276,9 @@ async function syncInboxItems(tenantId, schema) {
           AND m.sender_portal_account_id IS NOT NULL 
           AND m.read_at IS NULL
     )
-    AND NOT EXISTS(
-        SELECT 1 FROM inbox_items i2 
-        WHERE i2.reference_id = t.id AND i2.reference_table = 'portal_message_threads' AND i2.status != 'completed'
-    )
+    ORDER BY t.patient_id, t.updated_at DESC
     `, [tenantId]);
 
-    // Update existing active items if thread updated
-    await client.query(`
-    UPDATE inbox_items i
-    SET 
-        body = sub.latest_body,
-        updated_at = sub.thread_updated_at,
-        status = 'new'
-    FROM (
-        SELECT t.id as thread_id, t.updated_at as thread_updated_at,
-        (SELECT body FROM portal_messages WHERE thread_id = t.id AND sender_portal_account_id IS NOT NULL ORDER BY created_at DESC LIMIT 1) as latest_body
-        FROM portal_message_threads t
-        WHERE EXISTS (
-             SELECT 1 FROM portal_messages m 
-             WHERE m.thread_id = t.id AND m.sender_portal_account_id IS NOT NULL AND m.read_at IS NULL
-        )
-    ) sub
-    WHERE i.reference_id = sub.thread_id 
-      AND i.reference_table = 'portal_message_threads'
-      AND i.status != 'completed'
-      AND i.updated_at < sub.thread_updated_at
-    `);
 
     // 8. Sync Portal Appointment Requests
     await client.query(`
@@ -557,6 +534,8 @@ router.put('/:id', async (req, res) => {
         await pool.query("UPDATE documents SET reviewed = true, reviewed_at = CURRENT_TIMESTAMP, reviewed_by = $1 WHERE id = $2", [req.user.id, item.reference_id]);
       } else if (item.reference_table === 'portal_messages') {
         await pool.query("UPDATE portal_messages SET read_at = CURRENT_TIMESTAMP WHERE id = $1", [item.reference_id]);
+      } else if (item.reference_table === 'portal_message_threads') {
+        await pool.query("UPDATE portal_messages SET read_at = CURRENT_TIMESTAMP WHERE thread_id = $1 AND sender_portal_account_id IS NOT NULL AND read_at IS NULL", [item.reference_id]);
       }
     }
 
@@ -632,11 +611,12 @@ router.post('/:id/notes', async (req, res) => {
         // Mark messages as read
         await client.query("UPDATE portal_messages SET read_at = CURRENT_TIMESTAMP WHERE thread_id = $1 AND sender_portal_account_id IS NOT NULL", [threadId]);
 
-        // Mark inbox item as read/handled? 
-        // Actually, if we reply, we usually keep it open until we click "Done".
-        // But we should mark it as "read" so it doesn't look like "new" (bold).
+        // Mark inbox item as read/handled
         await client.query("UPDATE inbox_items SET status = 'read', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [id]);
       }
+    } else if (item && item.status === 'new') {
+      // Mark as read even for internal notes
+      await client.query("UPDATE inbox_items SET status = 'read', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [id]);
     }
 
     await client.query('COMMIT');
@@ -803,6 +783,59 @@ router.post('/:id/suggest-slots', async (req, res) => {
     await client.query('ROLLBACK');
     console.error('Error suggesting slots:', error);
     res.status(500).json({ error: 'Failed to suggest slots' });
+  } finally {
+    client.release();
+  }
+});
+
+// POST /patient-message - Initiate a new message to a patient
+router.post('/patient-message', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { patientId, subject, body } = req.body;
+
+    if (!patientId || !body) {
+      return res.status(400).json({ error: 'Patient and message body are required' });
+    }
+
+    await client.query('BEGIN');
+
+    // 1. Find or create a thread for this patient
+    // We try to find a thread with the same subject, or create a new one
+    let threadId;
+    const existingThread = await client.query(
+      "SELECT id FROM portal_message_threads WHERE patient_id = $1 AND subject = $2 AND archived = false LIMIT 1",
+      [patientId, subject || 'General Inquiry']
+    );
+
+    if (existingThread.rows.length > 0) {
+      threadId = existingThread.rows[0].id;
+    } else {
+      const newThread = await client.query(
+        "INSERT INTO portal_message_threads (patient_id, subject, last_message_at, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING id",
+        [patientId, subject || 'General Inquiry']
+      );
+      threadId = newThread.rows[0].id;
+    }
+
+    // 2. Insert the message
+    await client.query(
+      "INSERT INTO portal_messages (thread_id, sender_user_id, sender_id, sender_type, body, read_at) VALUES ($1, $2, $2, 'staff', $3, CURRENT_TIMESTAMP)",
+      [threadId, req.user.id, body]
+    );
+
+    // 3. Update thread timestamp
+    await client.query(
+      "UPDATE portal_message_threads SET last_message_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
+      [threadId]
+    );
+
+    await client.query('COMMIT');
+    res.json({ success: true, threadId });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error initiating patient message:', error);
+    res.status(500).json({ error: 'Failed to send message' });
   } finally {
     client.release();
   }

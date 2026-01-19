@@ -196,7 +196,7 @@ export const inboxAPI = {
   addNote: (id, note, isExternal = false) => api.post(`/inbox/${id}/notes`, { note, isExternal }),
   approveAppointment: (id, data) => api.post(`/inbox/${id}/approve-appointment`, data),
   denyAppointment: (id) => api.post(`/inbox/${id}/deny-appointment`),
-  suggestSlots: (id, data) => api.post(`/inbox/${id}/suggest-slots`, data),
+  sendPatientMessage: (data) => api.post('/inbox/patient-message', data),
 
   // Legacy aliases (mapped to new endpoints)
   markReviewed: (type, id, data) => api.put(`/inbox/${id}`, { status: 'completed', ...data }), // Note: backend handles status update
