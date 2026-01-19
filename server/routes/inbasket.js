@@ -117,8 +117,8 @@ async function syncInboxItems(tenantId, schema) {
       AND (status = 'completed' OR result_value IS NOT NULL)
       AND (reviewed IS NULL OR reviewed = false)
       AND NOT EXISTS (
-        SELECT 1 FROM inbox_items 
-        WHERE reference_id = orders.id AND reference_table = 'orders'
+        SELECT 1 FROM inbox_items i2 
+        WHERE i2.reference_id = orders.id AND i2.reference_table = 'orders'
       )
   `, [tenantId]);
 
@@ -141,8 +141,8 @@ async function syncInboxItems(tenantId, schema) {
       AND (status = 'completed' OR result_value IS NOT NULL)
       AND (reviewed IS NULL OR reviewed = false)
       AND NOT EXISTS (
-        SELECT 1 FROM inbox_items 
-        WHERE reference_id = orders.id AND reference_table = 'orders'
+        SELECT 1 FROM inbox_items i2 
+        WHERE i2.reference_id = orders.id AND i2.reference_table = 'orders'
       )
   `, [tenantId]);
 
@@ -162,10 +162,9 @@ async function syncInboxItems(tenantId, schema) {
       uploader_id, created_at, created_at
     FROM documents
     WHERE (reviewed IS NULL OR reviewed = false)
-    ${tenantId ? 'AND tenant_id = $1' : ''}
       AND NOT EXISTS (
-        SELECT 1 FROM inbox_items 
-        WHERE reference_id = documents.id AND reference_table = 'documents'
+        SELECT 1 FROM inbox_items i2 
+        WHERE i2.reference_id = documents.id AND i2.reference_table = 'documents'
       )
   `, [tenantId]);
 
@@ -186,8 +185,8 @@ async function syncInboxItems(tenantId, schema) {
     FROM referrals
     WHERE (status IS NULL OR status = 'pending' OR status = 'new')
       AND NOT EXISTS (
-        SELECT 1 FROM inbox_items 
-        WHERE reference_id = referrals.id AND reference_table = 'referrals'
+        SELECT 1 FROM inbox_items i2 
+        WHERE i2.reference_id = referrals.id AND i2.reference_table = 'referrals'
       )
   `, [tenantId]);
 
@@ -208,8 +207,8 @@ async function syncInboxItems(tenantId, schema) {
     FROM visits
     WHERE status = 'draft' AND note_signed_at IS NULL
       AND NOT EXISTS (
-        SELECT 1 FROM inbox_items 
-        WHERE reference_id = visits.id AND reference_table = 'visits'
+        SELECT 1 FROM inbox_items i2 
+        WHERE i2.reference_id = visits.id AND i2.reference_table = 'visits'
       )
   `, [tenantId]);
 
@@ -239,8 +238,8 @@ async function syncInboxItems(tenantId, schema) {
       CASE WHEN task_status = 'completed' THEN created_at ELSE NULL END
     FROM messages
     WHERE NOT EXISTS (
-        SELECT 1 FROM inbox_items 
-        WHERE reference_id = messages.id AND reference_table = 'messages'
+        SELECT 1 FROM inbox_items i2 
+        WHERE i2.reference_id = messages.id AND i2.reference_table = 'messages'
     )
   `, [tenantId]);
 
@@ -277,8 +276,8 @@ async function syncInboxItems(tenantId, schema) {
           AND m.read_at IS NULL
     )
     AND NOT EXISTS(
-        SELECT 1 FROM inbox_items 
-        WHERE reference_id = t.id AND reference_table = 'portal_message_threads' AND status != 'completed'
+        SELECT 1 FROM inbox_items i2 
+        WHERE i2.reference_id = t.id AND i2.reference_table = 'portal_message_threads' AND i2.status != 'completed'
     )
     `, [tenantId]);
 
@@ -321,8 +320,8 @@ async function syncInboxItems(tenantId, schema) {
     JOIN patients p ON ar.patient_id = p.id
     WHERE ar.status = 'pending'
       AND NOT EXISTS(
-        SELECT 1 FROM inbox_items 
-        WHERE reference_id = ar.id AND reference_table = 'portal_appointment_requests'
+        SELECT 1 FROM inbox_items i2 
+        WHERE i2.reference_id = ar.id AND i2.reference_table = 'portal_appointment_requests'
       )
     `, [tenantId]);
 

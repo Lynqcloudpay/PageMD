@@ -408,6 +408,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             rr: vData.rr || vData.respiratory_rate || vData.resp || 'N/A',
                             spo2: vData.spo2 || vData.oxygen_saturation || vData.o2sat || 'N/A',
                             weight: vData.weight || 'N/A',
+                            visitDate: v.visit_date || v.date || v.created_at,
                             createdAt: v.created_at
                         };
                     });
@@ -487,12 +488,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
                     // Sort by visit date (newest first for the list, chart will reverse it)
                     combinedVitals.sort((a, b) => {
-                        const dateDiff = new Date(b.visitDate || 0) - new Date(a.visitDate || 0);
-                        if (dateDiff === 0) {
-                            // Secondary sort by creation time (newest first)
-                            return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-                        }
-                        return dateDiff;
+                        const dateA = new Date(a.visitDate || a.createdAt);
+                        const dateB = new Date(b.visitDate || b.createdAt);
+                        if (dateB - dateA !== 0) return dateB - dateA;
+                        return new Date(b.createdAt) - new Date(a.createdAt);
                     });
                     setVitals(combinedVitals);
                 }
@@ -1322,7 +1321,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 />
 
                 {/* Quick Navigation Bar - Neutralized */}
-                <div className="px-6 py-2 bg-white border-b border-gray-200 mb-6 shadow-sm sticky top-0 z-10">
+                <div className="px-6 py-2 bg-white border-b border-gray-200 mb-6 shadow-sm sticky top-0 z-[5]">
                     <div className="flex items-center justify-between gap-1">
                         <div className="flex items-center gap-1 overflow-x-auto flex-1 scrollbar-hide">
                             <button
@@ -1697,17 +1696,20 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             .filter(v => (v.bp && v.bp !== 'N/A') || (v.hr && v.hr !== 'N/A'))
                                                             .reverse()
                                                             .map((v, idx) => {
-                                                                const sys = parseInt(v.bp?.split('/')[0]) || null;
-                                                                const dia = parseInt(v.bp?.split('/')[1]) || null;
+                                                                // Decode HTML entities like &#x2F; (slash) 
+                                                                const bpRaw = String(v.fullBp || v.bp || '');
+                                                                const bpClean = bpRaw.replace(/&#x2F;/g, '/').replace(/&slash;/g, '/');
+
+                                                                const sys = parseInt(bpClean.split('/')[0]) || null;
+                                                                const dia = parseInt(bpClean.split('/')[1]) || null;
                                                                 const hr = parseInt(v.hr) || null;
                                                                 return {
-                                                                    // Using a complex key to ensure uniqueness for Recharts indexing
-                                                                    key: `${v.date}-${idx}-${sys}`,
+                                                                    key: `${v.date}-${idx}-${sys || 'nan'}`,
                                                                     name: v.date === 'Today (Draft)' ? 'Today' : v.date,
                                                                     sys: sys,
                                                                     dia: dia,
                                                                     hr: hr,
-                                                                    fullBp: v.bp
+                                                                    fullBp: bpClean
                                                                 };
                                                             })}
                                                         margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
