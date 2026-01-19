@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../../db');
 const { authenticatePortal, requirePortalPermission } = require('../../middleware/portalAuth');
 const { body, validationResult } = require('express-validator');
+const { syncInboxItems } = require('../inbasket');
 
 const router = express.Router();
 
@@ -113,6 +114,13 @@ router.post('/threads', [
 
         await client.query('COMMIT');
 
+        // Trigger inbasket sync so staff sees it immediately
+        try {
+            await syncInboxItems(req.clinic?.id, req.clinic?.schema_name);
+        } catch (syncError) {
+            console.error('[Portal Messages] Sync error (non-blocking):', syncError);
+        }
+
         res.status(201).json({ success: true, threadId });
     } catch (error) {
         await client.query('ROLLBACK');
@@ -205,6 +213,13 @@ router.post('/threads/:id', [
         }
 
         await pool.query('COMMIT');
+
+        // Trigger inbasket sync so staff sees it immediately
+        try {
+            await syncInboxItems(req.clinic?.id, req.clinic?.schema_name);
+        } catch (syncError) {
+            console.error('[Portal Messages] Sync error (non-blocking):', syncError);
+        }
 
         res.json({ success: true });
     } catch (error) {

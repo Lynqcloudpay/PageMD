@@ -337,8 +337,8 @@ async function syncInboxItems(tenantId, schema) {
 router.get('/', async (req, res) => {
   try {
     const { status = 'new', type, assignedTo } = req.query;
-    const tenantId = req.user.tenantId || req.user.tenant_id || null;
-    const schema = req.user.schema || req.user.schema_name || 'tenant_sandbox'; // Fallback for safety
+    const tenantId = req.clinic?.id || null;
+    const schema = req.clinic?.schema_name || 'public';
 
     // Trigger sync first - always run since we use schema-based multi-tenancy
     await syncInboxItems(tenantId, schema);
@@ -396,7 +396,11 @@ router.get('/', async (req, res) => {
 // GET /stats - Counters for sidebar
 router.get('/stats', async (req, res) => {
   try {
-    await ensureSchema();
+    const tenantId = req.clinic?.id || null;
+    const schema = req.clinic?.schema_name || 'public';
+
+    await syncInboxItems(tenantId, schema);
+
     const counts = await pool.query(`
       SELECT
         COUNT(*) FILTER(WHERE status NOT IN('completed', 'archived')) as all_count,
@@ -805,4 +809,4 @@ router.post('/:id/suggest-slots', async (req, res) => {
   }
 });
 
-module.exports = router;
+module.exports = { router, syncInboxItems };

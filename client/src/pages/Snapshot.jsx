@@ -407,7 +407,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             temp: vData.temp || vData.temperature || 'N/A',
                             rr: vData.rr || vData.respiratory_rate || vData.resp || 'N/A',
                             spo2: vData.spo2 || vData.oxygen_saturation || vData.o2sat || 'N/A',
-                            weight: vData.weight || 'N/A'
+                            weight: vData.weight || 'N/A',
+                            createdAt: v.created_at
                         };
                     });
             }
@@ -471,7 +472,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 temp: vData.temp || vData.temperature || 'N/A',
                                 rr: vData.rr || vData.respiratory_rate || vData.resp || 'N/A',
                                 spo2: vData.spo2 || vData.oxygen_saturation || vData.o2sat || 'N/A',
-                                weight: vData.weight || 'N/A'
+                                weight: vData.weight || 'N/A',
+                                createdAt: v.created_at
                             };
                         });
 
@@ -484,7 +486,14 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     });
 
                     // Sort by visit date (newest first for the list, chart will reverse it)
-                    combinedVitals.sort((a, b) => new Date(b.visitDate || 0) - new Date(a.visitDate || 0));
+                    combinedVitals.sort((a, b) => {
+                        const dateDiff = new Date(b.visitDate || 0) - new Date(a.visitDate || 0);
+                        if (dateDiff === 0) {
+                            // Secondary sort by creation time (newest first)
+                            return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+                        }
+                        return dateDiff;
+                    });
                     setVitals(combinedVitals);
                 }
                 const draftNote = todayDraftResponse.data?.note;
@@ -501,7 +510,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             temp: vData.temp || vData.temperature || 'N/A',
                             rr: vData.rr || vData.respiratory_rate || vData.resp || 'N/A',
                             spo2: vData.spo2 || vData.oxygen_saturation || vData.o2sat || 'N/A',
-                            weight: vData.weight || 'N/A'
+                            weight: vData.weight || 'N/A',
+                            createdAt: draftNote.created_at
                         };
                         setVitals(prev => [draftVitals, ...prev.filter(v => v.id !== draftNote.id)]);
                     } catch (e) { console.warn('Failed to parse draft vitals', e); }

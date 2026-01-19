@@ -11,7 +11,7 @@ const pool = new Pool({
 
 async function migrate() {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
 
@@ -53,11 +53,12 @@ async function migrate() {
         pharmacy_address TEXT,
         pharmacy_phone VARCHAR(20),
         photo_url TEXT,
+        photo_document_id UUID,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    
+
     // Add pharmacy columns if they don't exist (for existing databases)
     await client.query(`
       DO $$ 
@@ -73,6 +74,9 @@ async function migrate() {
         END IF;
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='patients' AND column_name='photo_url') THEN
           ALTER TABLE patients ADD COLUMN photo_url TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='patients' AND column_name='photo_document_id') THEN
+          ALTER TABLE patients ADD COLUMN photo_document_id UUID;
         END IF;
       END $$;
     `);
@@ -200,7 +204,7 @@ async function migrate() {
         patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
         visit_id UUID REFERENCES visits(id),
         uploader_id UUID NOT NULL REFERENCES users(id),
-        doc_type VARCHAR(50) CHECK (doc_type IN ('imaging', 'consult', 'lab', 'other')),
+        doc_type VARCHAR(50) CHECK (doc_type IN ('imaging', 'consult', 'lab', 'other', 'profile_photo', 'visit_note', 'note', 'patient_education', 'consent')),
         filename VARCHAR(255) NOT NULL,
         file_path VARCHAR(500) NOT NULL,
         mime_type VARCHAR(100),
@@ -391,7 +395,7 @@ async function migrate() {
       ADD COLUMN IF NOT EXISTS comment TEXT,
       ADD COLUMN IF NOT EXISTS comments JSONB DEFAULT '[]'::jsonb
     `);
-    
+
     // Add reviewed fields to documents table
     await client.query(`
       ALTER TABLE documents

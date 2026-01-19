@@ -246,7 +246,7 @@ app.use('/api/compliance', require('./routes/compliance'));
 // Inbox
 // Uses commercial-grade inbasket implementation (server/routes/inbasket.js)
 const inboxRoutes = require('./routes/inbasket');
-app.use('/api/inbox', inboxRoutes);
+app.use('/api/inbox', inboxRoutes.router);
 
 // Appointments
 const appointmentRoutes = require('./routes/appointments');

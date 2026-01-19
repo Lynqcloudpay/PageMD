@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../../db');
 const { authenticatePortal, requirePortalPermission } = require('../../middleware/portalAuth');
 const { body, validationResult } = require('express-validator');
+const { syncInboxItems } = require('../inbasket');
 
 const router = express.Router();
 
@@ -78,6 +79,13 @@ router.post('/requests', requirePortalPermission('can_request_appointments'), [
             ) VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *
         `, [patientId, portalAccountId, preferredDate, preferredTimeRange, appointmentType, reason, providerId]);
+
+        // Trigger inbasket sync so staff sees it immediately
+        try {
+            await syncInboxItems(req.clinic?.id, req.clinic?.schema_name);
+        } catch (syncError) {
+            console.error('[Portal Appointments] Sync error (non-blocking):', syncError);
+        }
 
         res.status(201).json(result.rows[0]);
     } catch (error) {
