@@ -253,7 +253,26 @@ async function syncInboxItems(tenantId, schema) {
   `, [tenantId]);
 
     // 7. Sync Portal Message Threads (Grouped by Patient - "Closed Loop")
-    // UPSERT: Insert or update stable item for each active thread
+    // UPDATE existing active threads with latest message
+    await client.query(`
+      UPDATE inbox_items
+      SET 
+        body = (SELECT body FROM portal_messages WHERE thread_id = inbox_items.reference_id AND sender_portal_account_id IS NOT NULL ORDER BY created_at DESC LIMIT 1),
+        updated_at = t.updated_at,
+        status = 'new'
+      FROM portal_message_threads t
+      WHERE inbox_items.reference_id = t.id 
+        AND inbox_items.reference_table = 'portal_message_threads'
+        AND inbox_items.status != 'completed'
+        AND EXISTS (
+            SELECT 1 FROM portal_messages m 
+            WHERE m.thread_id = t.id 
+              AND m.sender_portal_account_id IS NOT NULL 
+              AND m.read_at IS NULL
+        )
+    `);
+
+    // INSERT new threads that aren't in the inbox yet
     await client.query(`
     INSERT INTO inbox_items(
       tenant_id, patient_id, type, priority, status,
@@ -276,12 +295,12 @@ async function syncInboxItems(tenantId, schema) {
           AND m.sender_portal_account_id IS NOT NULL 
           AND m.read_at IS NULL
     )
+    AND NOT EXISTS (
+        SELECT 1 FROM inbox_items i2 
+        WHERE i2.reference_id = t.id AND i2.reference_table = 'portal_message_threads'
+          AND i2.status != 'completed'
+    )
     ORDER BY t.patient_id, t.updated_at DESC
-    ON CONFLICT (reference_id, reference_table) WHERE status != 'completed'
-    DO UPDATE SET
-      body = EXCLUDED.body,
-      updated_at = EXCLUDED.updated_at,
-      status = CASE WHEN inbox_items.status = 'completed' THEN 'completed' ELSE 'new' END
     `, [tenantId]);
 
     // CLEANUP: If a thread no longer has unread messages, we don't necessarily delete it 
