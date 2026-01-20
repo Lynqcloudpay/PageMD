@@ -20,7 +20,7 @@ const TASK_CATEGORIES = [
     { id: 'portal_appointments', label: 'Appt Requests', icon: Calendar, color: 'amber', types: ['portal_appointment'] },
     { id: 'documents', label: 'Documents', icon: FileText, color: 'orange', types: ['document', 'new_patient_registration'] },
     { id: 'referrals', label: 'Referrals', icon: Send, color: 'indigo', types: ['referral'] },
-    { id: 'tasks', label: 'Tasks', icon: CheckCircle, color: 'green', types: ['task', 'note'] },
+    { id: 'tasks', label: 'Tasks', icon: CheckCircleIcon, color: 'green', types: ['task', 'note'] },
     { id: 'refills', label: 'Rx Requests', icon: Pill, color: 'red', types: ['refill'] },
 ];
 
@@ -901,7 +901,7 @@ const Inbasket = () => {
                                                 onClick={() => setShowApproveModal(true)}
                                                 className="flex-1 px-3 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 flex items-center justify-center gap-1"
                                             >
-                                                <CheckCircle className="w-4 h-4" /> Approve & Schedule
+                                                <CheckCircleIcon className="w-4 h-4" /> Approve & Schedule
                                             </button>
                                             <button
                                                 onClick={async () => {
@@ -1026,7 +1026,7 @@ const Inbasket = () => {
                                     onClick={() => handleAction('complete')}
                                     className="px-3 py-1.5 bg-green-600 text-white font-medium text-sm rounded-md hover:bg-green-700 shadow-sm flex items-center gap-1"
                                 >
-                                    <CheckCircle className="w-4 h-4" /> Done
+                                    <CheckCircleIcon className="w-4 h-4" /> Done
                                 </button>
                             </div>
                         </div>
@@ -1408,7 +1408,7 @@ const Inbasket = () => {
                                         onClick={handleApproveAppointment}
                                         className="px-6 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-emerald-700 flex items-center gap-1"
                                     >
-                                        <CheckCircle className="w-4 h-4" /> Schedule
+                                        <CheckCircleIcon className="w-4 h-4" /> Schedule
                                     </button>
                                 </div>
                             </div>
