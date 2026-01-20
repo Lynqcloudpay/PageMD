@@ -1533,92 +1533,37 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             )}
                                         </div>
                                     </div>
-                                    <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-                                        <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
+                                    {/* Problems Module - MOVED TO SIDEBAR */}
+                                    <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
+                                        <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between bg-white hover:bg-slate-50 transition-colors group/problem-header">
                                             <div className="flex items-center space-x-2">
                                                 <AlertCircle className="w-3.5 h-3.5 text-rose-500 opacity-70" />
-                                                <h3 className="font-bold text-[10px] text-slate-800 uppercase tracking-wider">Allergies</h3>
+                                                <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-widest">Problem List</h3>
                                             </div>
                                             <button
-                                                onClick={() => { setPatientChartTab('allergies'); setShowPatientChart(true); }}
+                                                onClick={() => { setPatientChartTab('problems'); setShowPatientChart(true); }}
                                                 className="text-[9px] text-blue-500 font-bold hover:underline"
                                             >
                                                 Edit
                                             </button>
                                         </div>
-                                        <div className="p-3">
-                                            {allergies.length > 0 ? (
-                                                <div className="space-y-2">
-                                                    {allergies.slice(0, 3).map(allergy => (
-                                                        <div key={allergy.id} className="group">
-                                                            <p className="font-bold text-[10px] text-slate-800 leading-tight">{allergy.allergen}</p>
-                                                            <p className="text-[9px] text-slate-400 leading-tight">{allergy.reaction || 'No reaction recorded'}</p>
+                                        <div className="p-2">
+                                            {(problems || []).length > 0 ? (
+                                                <div className="space-y-1">
+                                                    {(problems || []).slice(0, 8).map(prob => (
+                                                        <div key={prob.id} className="flex justify-between items-center px-2 py-1.5 rounded hover:bg-slate-50 transition-colors">
+                                                            <span className="text-[10px] font-medium text-slate-700 truncate mr-2">{prob.name}</span>
+                                                            <span className="text-[7px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-1.5 py-0.5 rounded-full font-bold uppercase shrink-0">Active</span>
                                                         </div>
                                                     ))}
                                                 </div>
                                             ) : (
-                                                <p className="text-[10px] text-slate-400 text-center py-2 italic font-medium">NKA</p>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Family History Module */}
-                                    <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-                                        <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
-                                            <div className="flex items-center space-x-2">
-                                                <Users className="w-3.5 h-3.5 text-slate-400" />
-                                                <h3 className="font-bold text-[10px] text-slate-800 uppercase tracking-wider">Family History</h3>
-                                            </div>
-                                            <button
-                                                onClick={() => { setPatientChartTab('family'); setShowPatientChart(true); }}
-                                                className="text-[9px] text-blue-500 font-bold hover:underline"
-                                            >
-                                                Edit
-                                            </button>
-                                        </div>
-                                        <div className="p-3">
-                                            {familyHistory.length > 0 ? (
-                                                <div className="space-y-2">
-                                                    {familyHistory.slice(0, 3).map(hist => (
-                                                        <div key={hist.id}>
-                                                            <p className="font-bold text-[10px] text-slate-800 leading-tight">{hist.condition}</p>
-                                                            <p className="text-[9px] text-slate-400 leading-tight">{hist.relationship}</p>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <p className="text-[10px] text-slate-400 text-center py-2 italic font-medium">Not recorded</p>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-                                        <div className="px-3 py-2 border-b border-slate-100 flex items-center space-x-2">
-                                            <Users className="w-3.5 h-3.5 text-slate-400" />
-                                            <h3 className="font-bold text-[10px] text-slate-800 uppercase tracking-wider">Social History</h3>
-                                        </div>
-                                        <div className="p-3">
-                                            {socialHistory ? (
-                                                <div className="space-y-2">
-                                                    <div className="flex justify-between items-center text-[10px]">
-                                                        <span className="text-slate-400 font-medium">Smoking</span>
-                                                        <span className="font-bold text-slate-700">{socialHistory.smoking_status || '—'}</span>
-                                                    </div>
-                                                    <div className="flex justify-between items-center text-[10px]">
-                                                        <span className="text-slate-400 font-medium">Alcohol</span>
-                                                        <span className="font-bold text-slate-700">{socialHistory.alcohol_use || '—'}</span>
-                                                    </div>
-                                                    <div className="flex justify-between items-center text-[10px]">
-                                                        <span className="text-slate-400 font-medium">Occupation</span>
-                                                        <span className="font-bold text-slate-700 truncate ml-2 max-w-[80px] text-right">{socialHistory.occupation || '—'}</span>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <p className="text-[10px] text-slate-400 text-center py-2 italic">Not recorded</p>
+                                                <p className="text-[10px] text-slate-400 text-center py-2 italic font-medium">Inactive</p>
                                             )}
                                         </div>
                                     </div>
                                 </div>
+
                                 {/* Main Dashboard Content */}
                                 <div className="lg:col-span-3 space-y-5">
                                     {/* Clinical Alerts Banner - High Visibility Inline version */}
@@ -1822,6 +1767,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     </div>
 
                                     {/* Detailed Boards Grid - MOVED UP */}
+                                    {/* Detailed Boards Grid - ARRANGED FOR BETTER FLOW */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                                         {/* Medications Module */}
                                         <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-blue-200 transition-colors">
@@ -1836,14 +1782,22 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </div>
                                             <div className="p-3">
                                                 {(medications || []).filter(m => m.active !== false).length > 0 ? (
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                    <div className="space-y-1">
                                                         {(medications || []).filter(m => m.active !== false).slice(0, 8).map(med => (
-                                                            <div key={med.id} className="p-3 border border-slate-100 rounded-xl bg-slate-50/20 hover:bg-white hover:border-blue-100 hover:shadow-sm transition-all group">
-                                                                <div className="flex items-center gap-2 mb-1">
-                                                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400 group-hover:scale-125 transition-transform" />
-                                                                    <p className="font-bold text-[11px] text-slate-900 truncate">{decodeHtmlEntities(med.medication_name)}</p>
+                                                            <div key={med.id} className="flex items-center justify-between p-2.5 border border-slate-100 rounded-xl bg-white hover:bg-blue-50/30 hover:border-blue-100 transition-all group">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500 font-semibold text-[10px]">
+                                                                        {decodeHtmlEntities(med.medication_name)?.[0]?.toUpperCase()}
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-[11px] text-slate-700 font-medium group-hover:text-blue-600 transition-colors">{decodeHtmlEntities(med.medication_name)}</p>
+                                                                        <p className="text-[10px] text-slate-400 font-medium">{med.dosage} • {med.frequency}</p>
+                                                                    </div>
                                                                 </div>
-                                                                <p className="text-[10px] text-slate-500 font-semibold ml-3.5">{med.dosage} • {med.frequency}</p>
+                                                                <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                                                    <span className="text-[9px] font-medium text-emerald-600 uppercase">Active</span>
+                                                                </div>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -1856,72 +1810,80 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </div>
                                         </div>
 
-                                        {/* Problems Module */}
-                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-rose-200 transition-colors">
+                                        {/* Allergies Module - MOVED HERE */}
+                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-amber-200 transition-colors">
                                             <div className="px-4 py-3 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="p-1.5 bg-rose-50 text-rose-500 rounded-lg">
+                                                    <div className="p-1.5 bg-amber-50 text-amber-500 rounded-lg">
                                                         <AlertCircle className="w-3.5 h-3.5" />
                                                     </div>
-                                                    <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-widest">Problem List</h3>
+                                                    <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-widest">Allergies</h3>
                                                 </div>
-                                                <button onClick={() => { setPatientChartTab('problems'); setShowPatientChart(true); }} className="px-2 py-1 bg-white text-[9px] text-rose-500 font-bold uppercase border border-rose-100 rounded-lg shadow-sm hover:bg-rose-50 transition-all">Edit List</button>
+                                                <button onClick={() => { setPatientChartTab('allergies'); setShowPatientChart(true); }} className="px-2 py-1 bg-white text-[9px] text-blue-500 font-bold uppercase border border-blue-100 rounded-lg shadow-sm hover:bg-blue-50 transition-all">Edit</button>
                                             </div>
                                             <div className="p-3">
-                                                {(problems || []).length > 0 ? (
+                                                {allergies.length > 0 ? (
                                                     <div className="space-y-1.5">
-                                                        {(problems || []).slice(0, 6).map(prob => (
-                                                            <div key={prob.id} className="flex justify-between items-center p-2 rounded-lg bg-slate-50/50 border border-slate-100/50 hover:bg-white hover:border-rose-100 transition-all group">
-                                                                <span className="text-[11px] font-bold text-slate-800 truncate mr-2">{prob.name}</span>
-                                                                <span className="text-[8px] bg-white text-rose-600 border border-rose-100 px-1.5 py-0.5 rounded-full font-bold uppercase shrink-0 shadow-sm">Active</span>
+                                                        {allergies.slice(0, 6).map(allergy => (
+                                                            <div key={allergy.id} className="p-2 rounded-lg bg-slate-50/50 border border-slate-100/50 hover:bg-white hover:border-amber-100 transition-all group">
+                                                                <p className="text-[11px] text-slate-800 font-medium leading-tight">{allergy.allergen}</p>
+                                                                <p className="text-[9px] text-slate-500 font-medium leading-tight">{allergy.reaction || 'No reaction'}</p>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 ) : (
-                                                    <div className="py-8 text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200 m-1">
-                                                        <AlertCircle className="w-6 h-6 text-slate-200 mx-auto mb-2" />
-                                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Clear Problem List</p>
-                                                    </div>
+                                                    <p className="text-[10px] text-slate-400 text-center py-8 italic font-medium">NKA</p>
                                                 )}
                                             </div>
                                         </div>
 
-                                        {/* Results Module */}
-                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-indigo-200 transition-colors">
+                                        {/* History Module - Combined Family/Social */}
+                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-slate-300 transition-colors">
                                             <div className="px-4 py-3 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="p-1.5 bg-indigo-50 text-indigo-500 rounded-lg">
-                                                        <Database className="w-3.5 h-3.5" />
+                                                    <div className="p-1.5 bg-slate-100 text-slate-500 rounded-lg">
+                                                        <Users className="w-3.5 h-3.5" />
                                                     </div>
-                                                    <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-widest">Recent Results</h3>
+                                                    <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-widest">History</h3>
                                                 </div>
-                                                <button onClick={() => { setPatientChartTab('labs'); setShowPatientChart(true); }} className="px-2 py-1 bg-white text-[9px] text-indigo-500 font-bold uppercase border border-indigo-100 rounded-lg shadow-sm hover:bg-indigo-50 transition-all">All Results</button>
+                                                <button onClick={() => { setPatientChartTab('family'); setShowPatientChart(true); }} className="px-2 py-1 bg-white text-[9px] text-blue-500 font-bold uppercase border border-blue-100 rounded-lg shadow-sm hover:bg-blue-50 transition-all">Edit</button>
                                             </div>
-                                            <div className="p-3">
-                                                {orders.length > 0 || documents.length > 0 ? (
-                                                    <div className="space-y-2">
-                                                        {[...orders.slice(0, 4), ...documents.slice(0, 4)].map((item, idx) => (
-                                                            <div key={idx} className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100 group">
-                                                                <div className="min-w-0 flex-1">
-                                                                    <p className="font-bold text-[10px] text-slate-900 truncate leading-tight group-hover:text-blue-600 transition-colors">{item.order_name || item.name || item.doc_type}</p>
-                                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                                        <span className="text-[8px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold uppercase">{item.status || 'Finalized'}</span>
-                                                                        <span className="text-[9px] text-slate-400 font-semibold uppercase">{item.order_date || item.upload_date || 'N/A'}</span>
-                                                                    </div>
+                                            <div className="p-3 space-y-3">
+                                                {/* Social History mini view */}
+                                                <div className="space-y-1">
+                                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Social</p>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <div className="p-1 px-2 rounded-lg bg-blue-50/50 border border-blue-100/20">
+                                                            <p className="text-[8px] font-bold text-blue-400 uppercase">Smoker</p>
+                                                            <p className="text-[10px] font-medium text-slate-700">{socialHistory?.smoking_status === 'Never smoker' ? 'No' : socialHistory?.smoking_status || '—'}</p>
+                                                        </div>
+                                                        <div className="p-1 px-2 rounded-lg bg-purple-50/50 border border-purple-100/20">
+                                                            <p className="text-[8px] font-bold text-purple-400 uppercase">Alcohol</p>
+                                                            <p className="text-[10px] font-medium text-slate-700">{socialHistory?.alcohol_use || '—'}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Family History mini view */}
+                                                <div className="space-y-1">
+                                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Family</p>
+                                                    {familyHistory.length > 0 ? (
+                                                        <div className="space-y-1">
+                                                            {familyHistory.slice(0, 3).map(hist => (
+                                                                <div key={hist.id} className="flex justify-between items-center text-[10px]">
+                                                                    <span className="text-slate-600 font-medium truncate max-w-[80px]">{hist.condition}</span>
+                                                                    <span className="text-slate-400 text-[9px] font-bold">{hist.relationship}</span>
                                                                 </div>
-                                                                <div className={`w-2 h-2 rounded-full shrink-0 ${item.priority === 'urgent' ? 'bg-rose-500 animate-pulse' : 'bg-blue-400'}`} />
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                ) : (
-                                                    <div className="py-8 text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200 m-1">
-                                                        <Database className="w-6 h-6 text-slate-200 mx-auto mb-2" />
-                                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">No recent studies</p>
-                                                    </div>
-                                                )}
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-[9px] text-slate-400 italic">No family history</p>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
+
 
 
                                 </div>

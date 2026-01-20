@@ -64,6 +64,9 @@ const Inbasket = () => {
         assignedUserId: user?.id
     });
 
+    // Tracking for initial URL selection
+    const initialSelectionDone = React.useRef(false);
+
     // Advanced Patient Search State
     const [searchFields, setSearchFields] = useState({ name: '', dob: '', phone: '', mrn: '' });
     const [patientResults, setPatientResults] = useState([]);
@@ -170,24 +173,25 @@ const Inbasket = () => {
 
     // Handle initial selection from URL query param (?id=... or ?filter=...)
     useEffect(() => {
+        // If we already manually cleared selection or performed initial selection,
+        // don't let items polling override it unless the ID in URL actually changed
         const searchParams = new URLSearchParams(location.search);
         const itemId = searchParams.get('id');
         const filterType = searchParams.get('filter');
 
-        // Pre-select category based on filter param
-        if (filterType === 'portal_appointment') {
-            // Select the portal_appointments category directly
+        // Initial setup of category based on filter
+        if (!initialSelectionDone.current && filterType === 'portal_appointment') {
             setSelectedCategory('portal_appointments');
-            setSearchQuery(''); // Clear any existing search
+            setSearchQuery('');
         }
 
-        if (itemId && items.length > 0) {
+        if (itemId && items.length > 0 && !initialSelectionDone.current) {
             const item = items.find(i => String(i.id) === String(itemId));
             if (item) {
                 setSelectedItem(item);
-                // Also set filter status to 'all' or the item's status to ensure it shows up in list
                 if (item.status === 'completed') setFilterStatus('completed');
                 else setFilterStatus('new');
+                initialSelectionDone.current = true;
             }
         }
     }, [location.search, items]);
@@ -559,27 +563,36 @@ const Inbasket = () => {
                         {['portal_messages', 'tasks', 'messages', 'refills'].includes(selectedCategory) && (
                             <button
                                 onClick={() => {
-                                    if (selectedCategory === 'portal_messages' || selectedCategory === 'messages') {
-                                        // Open new chat pane (iMessage style)
-                                        setShowNewChat(!showNewChat);
-                                        setSelectedItem(null); // Clear any selected item
-                                        setSelectedPatient(null);
-                                        setSelectedStaff(null);
-                                        setNewChatMessage('');
-                                        setSearchFields({ name: '', dob: '', phone: '', mrn: '' });
-                                        setPatientResults([]);
-                                        const type = selectedCategory === 'portal_messages' ? 'portal_message' : 'message';
-                                        setComposeData(prev => ({ ...prev, type, subject: '', body: '' }));
-                                    } else {
-                                        // For tasks and refills, we might still need a modal or just show an error for now as we focus on messages
-                                        const typeMap = { 'tasks': 'task', 'refills': 'refill' };
-                                        setComposeData(prev => ({ ...prev, type: typeMap[selectedCategory] || 'task' }));
-                                    }
+                                    // Toggle new chat pane for any category that supports it
+                                    setShowNewChat(!showNewChat);
+                                    setSelectedItem(null); // Clear any selected item
+                                    setSelectedPatient(null);
+                                    setSelectedStaff(null);
+                                    setNewChatMessage('');
+                                    setSearchFields({ name: '', dob: '', phone: '', mrn: '' });
+                                    setPatientResults([]);
+
+                                    const typeMap = {
+                                        'portal_messages': 'portal_message',
+                                        'messages': 'message',
+                                        'tasks': 'task',
+                                        'refills': 'refill'
+                                    };
+                                    const type = typeMap[selectedCategory] || 'task';
+                                    setComposeData(prev => ({ ...prev, type, subject: '', body: '' }));
                                 }}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all animate-in fade-in slide-in-from-left-2 shadow-sm active:scale-95 ${showNewChat && (selectedCategory === 'portal_messages' || selectedCategory === 'messages') ? 'bg-gray-100 text-gray-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all animate-in fade-in slide-in-from-left-2 shadow-sm active:scale-95 ${showNewChat && (selectedCategory === 'portal_messages' || selectedCategory === 'messages' || selectedCategory === 'tasks' || selectedCategory === 'refills') ? 'bg-gray-100 text-gray-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
                             >
-                                {showNewChat && (selectedCategory === 'portal_messages' || selectedCategory === 'messages') ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                                {showNewChat && (selectedCategory === 'portal_messages' || selectedCategory === 'messages') ? 'Cancel' : `New ${selectedCategory === 'messages' ? 'Staff Message' : TASK_CATEGORIES.find(c => c.id === selectedCategory)?.label.replace('s', '') || 'Item'}`}
+                                {showNewChat && (selectedCategory === 'portal_messages' || selectedCategory === 'messages' || selectedCategory === 'tasks' || selectedCategory === 'refills') ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                                {showNewChat && (selectedCategory === 'portal_messages' || selectedCategory === 'messages' || selectedCategory === 'tasks' || selectedCategory === 'refills') ? (
+                                    'Cancel'
+                                ) : (
+                                    `New ${selectedCategory === 'messages' ? 'Staff Message' :
+                                        selectedCategory === 'portal_messages' ? 'Patient Message' :
+                                            selectedCategory === 'tasks' ? 'Task' :
+                                                selectedCategory === 'refills' ? 'Rx Request' :
+                                                    'Item'}`
+                                )}
                             </button>
                         )}
                     </div>
@@ -1061,14 +1074,14 @@ const Inbasket = () => {
                                                     });
                                                 } else {
                                                     await inboxAPI.create({
-                                                        type: 'message',
+                                                        type: composeData.type,
                                                         subject: composeData.subject || 'Message',
                                                         body: newChatMessage,
                                                         assignedUserId: selectedStaff.id,
                                                         priority: 'normal'
                                                     });
                                                 }
-                                                showSuccess('Message sent!');
+                                                showSuccess(`${composeData.type === 'task' ? 'Task' : 'Message'} created!`);
                                                 setShowNewChat(false);
                                                 setNewChatMessage('');
                                                 setSelectedPatient(null);
