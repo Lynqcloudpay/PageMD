@@ -201,6 +201,7 @@ export const inboxAPI = {
   // Legacy aliases (mapped to new endpoints)
   markReviewed: (type, id, data) => api.put(`/inbox/${id}`, { status: 'completed', ...data }), // Note: backend handles status update
   saveComment: (type, id, data) => api.post(`/inbox/${id}/notes`, { note: data.comment }),
+  delete: (id) => api.delete(`/inbox/${id}`),
 };
 
 // Appointments

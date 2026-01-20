@@ -322,6 +322,7 @@ async function syncInboxItems(tenantId, schema) {
       WHERE inbox_items.patient_id = sub.patient_id 
         AND inbox_items.type = 'portal_message'
         AND inbox_items.status != 'completed'
+        AND (inbox_items.status != 'archived' OR sub.latest_at > inbox_items.updated_at)
     `);
 
     // INSERT new items for patients who don't have an active portal_message item yet
@@ -418,6 +419,10 @@ router.get('/', async (req, res) => {
         paramCount++;
         query += ` AND i.status = $${paramCount} `;
         params.push('completed');
+      } else if (status === 'archived') {
+        paramCount++;
+        query += ` AND i.status = $${paramCount} `;
+        params.push('archived');
       } else {
         // Default view: everything not completed/archived
         query += ` AND i.status NOT IN('completed', 'archived')`;
@@ -620,6 +625,33 @@ router.put('/:id', async (req, res) => {
   } catch (error) {
     console.error('Error updating item:', error);
     res.status(500).json({ error: 'Failed' });
+  }
+});
+
+// DELETE /:id - Delete/Archive an item (Soft Delete for Audit)
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Commercial Grade: Soft Delete (Archive) instead of permanent removal
+    // This preserves the record for audit purposes
+    await pool.query("UPDATE inbox_items SET status = 'archived', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [id]);
+
+    // Audit Log
+    try {
+      await logAudit(req.user.id, 'inbox.delete', 'inbox_item', id, {
+        action: 'archive',
+        reason: 'User archived conversation',
+        timestamp: new Date().toISOString()
+      }, req.ip);
+    } catch (auditErr) {
+      console.warn('Failed to log audit for inbox delete:', auditErr);
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting item:', error);
+    res.status(500).json({ error: 'Failed to delete item' });
   }
 });
 
@@ -880,6 +912,7 @@ router.post('/patient-message', async (req, res) => {
     // 1. Find or create a thread for this patient
     // We try to find a thread with the same subject, or create a new one
     let threadId;
+    let isNewThread = false;
     const existingThread = await client.query(
       "SELECT id FROM portal_message_threads WHERE patient_id = $1 AND subject = $2 AND archived = false LIMIT 1",
       [patientId, subject || 'General Inquiry']
@@ -893,6 +926,7 @@ router.post('/patient-message', async (req, res) => {
         [patientId, subject || 'General Inquiry']
       );
       threadId = newThread.rows[0].id;
+      isNewThread = true;
     }
 
     // 2. Insert the message
@@ -907,8 +941,44 @@ router.post('/patient-message', async (req, res) => {
       [threadId]
     );
 
+    // 4. Create or update an inbox item so staff can see the thread in Portal Messages
+    // Look for existing active inbox item for this patient's portal messages
+    const existingInboxItem = await client.query(
+      "SELECT id FROM inbox_items WHERE patient_id = $1 AND type = 'portal_message' AND status != 'completed' LIMIT 1",
+      [patientId]
+    );
+
+    let inboxItemId;
+    if (existingInboxItem.rows.length > 0) {
+      inboxItemId = existingInboxItem.rows[0].id;
+      // Update the existing inbox item with new message info (mark as 'read' since staff initiated)
+      await client.query(`
+        UPDATE inbox_items 
+        SET subject = $1, body = $2, reference_id = $3, updated_at = CURRENT_TIMESTAMP, status = 'read'
+        WHERE id = $4
+      `, [subject || 'General Inquiry', body, threadId, inboxItemId]);
+    } else {
+      // Create a new inbox item (with status 'read' since it's staff-initiated, not awaiting action)
+      const newItem = await client.query(`
+        INSERT INTO inbox_items (
+          patient_id, type, priority, status, subject, body, 
+          reference_id, reference_table, created_by, assigned_user_id
+        ) VALUES ($1, 'portal_message', 'normal', 'read', $2, $3, $4, 'portal_message_threads', $5, $5)
+        RETURNING id
+      `, [patientId, subject || 'General Inquiry', body, threadId, req.user.id]);
+      inboxItemId = newItem.rows[0].id;
+    }
+
+    // Fetch the full inbox item to return to frontend
+    const fullItem = await client.query(`
+        SELECT i.*, p.first_name as patient_first_name, p.last_name as patient_last_name, p.dob as patient_dob, p.mrn
+        FROM inbox_items i
+        JOIN patients p ON i.patient_id = p.id
+        WHERE i.id = $1
+    `, [inboxItemId]);
+
     await client.query('COMMIT');
-    res.json({ success: true, threadId });
+    res.json({ success: true, item: fullItem.rows[0], threadId });
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error initiating patient message:', error);

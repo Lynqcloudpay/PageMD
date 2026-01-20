@@ -4,7 +4,7 @@ import {
     CheckCircle as CheckCircleIcon, Clock, AlertTriangle, MessageSquare, FileText, Inbox,
     Pill, FlaskConical, Image, Send, RefreshCw, Filter, Search,
     ChevronRight, X, Plus, Bell, User, Calendar, Phone, Paperclip,
-    ArrowRight, Check, ArrowLeft, ChevronLeft, Eye, UserPlus, Mail
+    ArrowRight, Check, ArrowLeft, ChevronLeft, Eye, UserPlus, Mail, Trash2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
@@ -50,8 +50,9 @@ const Inbasket = () => {
     const [loadingDetails, setLoadingDetails] = useState(false);
     const [replyText, setReplyText] = useState('');
 
-    const [showCompose, setShowCompose] = useState(false);
     const [showInlineCompose, setShowInlineCompose] = useState(false);
+    const [showNewChat, setShowNewChat] = useState(false); // iMessage-style new chat pane
+    const [newChatMessage, setNewChatMessage] = useState('');
     const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
     const [showIntakeReview, setShowIntakeReview] = useState(false);
     const [composeData, setComposeData] = useState({
@@ -350,6 +351,23 @@ const Inbasket = () => {
         return () => clearTimeout(timeoutId);
     }, [searchFields]);
 
+    const handleDelete = async (item = selectedItem) => {
+        if (!item) return;
+        if (!window.confirm('Are you sure you want to delete this conversation? This will remove it from your inbox but keep the history in the chart.')) return;
+
+        try {
+            await inboxAPI.delete(item.id);
+            showSuccess('Conversation deleted from inbox');
+            if (selectedItem?.id === item.id) {
+                setSelectedItem(null);
+            }
+            fetchData(true);
+        } catch (e) {
+            console.error(e);
+            showError('Failed to delete conversation');
+        }
+    };
+
     const handleComposeSubmit = async () => {
         if (!composeData.subject || (!composeData.assignedUserId && composeData.type === 'task')) {
             showError('Subject and recipient are required');
@@ -363,17 +381,22 @@ const Inbasket = () => {
 
         try {
             if (composeData.type === 'portal_message') {
-                await inboxAPI.sendPatientMessage({
+                const response = await inboxAPI.sendPatientMessage({
                     patientId: selectedPatient.id,
                     subject: composeData.subject,
                     body: composeData.body
                 });
+
+                // Immediately select the returned inbox item to show the chat
+                if (response.data?.item) {
+                    setSelectedItem(response.data.item);
+                }
                 showSuccess('Portal message sent to patient');
             } else {
                 await inboxAPI.create(composeData);
                 showSuccess('Item created');
             }
-            setShowCompose(false);
+            setShowNewChat(false);
             setShowInlineCompose(false);
             setComposeData({ type: 'task', subject: '', body: '', patientId: '', priority: 'normal', assignedUserId: user?.id });
             setSearchFields({ name: '', dob: '', phone: '', mrn: '' });
@@ -478,7 +501,12 @@ const Inbasket = () => {
                                             // Pre-select type based on category
                                             const typeMap = { 'portal_messages': 'portal_message', 'tasks': 'task', 'messages': 'message' };
                                             setComposeData(prev => ({ ...prev, type: typeMap[cat.id] || 'task' }));
-                                            setShowCompose(true);
+                                            if (cat.id === 'portal_messages' || cat.id === 'messages') {
+                                                setShowNewChat(true);
+                                                setSelectedItem(null);
+                                                const type = cat.id === 'portal_messages' ? 'portal_message' : 'message';
+                                                setComposeData(prev => ({ ...prev, type }));
+                                            }
                                         }}
                                         className={`absolute right-10 top-1/2 -translate-y-1/2 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-200 text-gray-400`}
                                         title={`New ${cat.label}`}
@@ -532,24 +560,26 @@ const Inbasket = () => {
                             <button
                                 onClick={() => {
                                     if (selectedCategory === 'portal_messages' || selectedCategory === 'messages') {
-                                        setShowInlineCompose(!showInlineCompose);
+                                        // Open new chat pane (iMessage style)
+                                        setShowNewChat(!showNewChat);
+                                        setSelectedItem(null); // Clear any selected item
+                                        setSelectedPatient(null);
+                                        setSelectedStaff(null);
+                                        setNewChatMessage('');
+                                        setSearchFields({ name: '', dob: '', phone: '', mrn: '' });
+                                        setPatientResults([]);
                                         const type = selectedCategory === 'portal_messages' ? 'portal_message' : 'message';
-                                        setComposeData(prev => ({ ...prev, type }));
-                                        if (selectedCategory === 'messages') {
-                                            setSelectedStaff(null);
-                                        } else {
-                                            setSelectedPatient(null);
-                                        }
+                                        setComposeData(prev => ({ ...prev, type, subject: '', body: '' }));
                                     } else {
+                                        // For tasks and refills, we might still need a modal or just show an error for now as we focus on messages
                                         const typeMap = { 'tasks': 'task', 'refills': 'refill' };
                                         setComposeData(prev => ({ ...prev, type: typeMap[selectedCategory] || 'task' }));
-                                        setShowCompose(true);
                                     }
                                 }}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all animate-in fade-in slide-in-from-left-2 shadow-sm active:scale-95 ${showInlineCompose && (selectedCategory === 'portal_messages' || selectedCategory === 'messages') ? 'bg-gray-100 text-gray-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all animate-in fade-in slide-in-from-left-2 shadow-sm active:scale-95 ${showNewChat && (selectedCategory === 'portal_messages' || selectedCategory === 'messages') ? 'bg-gray-100 text-gray-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
                             >
-                                {showInlineCompose && (selectedCategory === 'portal_messages' || selectedCategory === 'messages') ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                                {showInlineCompose && (selectedCategory === 'portal_messages' || selectedCategory === 'messages') ? 'Cancel' : `New ${selectedCategory === 'messages' ? 'Staff Message' : TASK_CATEGORIES.find(c => c.id === selectedCategory)?.label.replace('s', '') || 'Item'}`}
+                                {showNewChat && (selectedCategory === 'portal_messages' || selectedCategory === 'messages') ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                                {showNewChat && (selectedCategory === 'portal_messages' || selectedCategory === 'messages') ? 'Cancel' : `New ${selectedCategory === 'messages' ? 'Staff Message' : TASK_CATEGORIES.find(c => c.id === selectedCategory)?.label.replace('s', '') || 'Item'}`}
                             </button>
                         )}
                     </div>
@@ -571,198 +601,11 @@ const Inbasket = () => {
                         </div>
                     ) : (
                         <div className="divide-y divide-gray-100">
-                            {showInlineCompose && (selectedCategory === 'portal_messages' || selectedCategory === 'messages') && (
-                                <div className="p-6 bg-blue-50/50 border-b border-blue-100 animate-in slide-in-from-top-4 duration-300">
-                                    <div className="max-w-xl mx-auto space-y-4">
-                                        {selectedCategory === 'portal_messages' ? (
-                                            /* Portal Message Inline Composer */
-                                            !selectedPatient ? (
-                                                <div className="space-y-3">
-                                                    <div className="flex justify-between items-center bg-blue-50/50 p-2 rounded-lg border border-blue-100/50">
-                                                        <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">1. Find Patient</label>
-                                                        <button
-                                                            onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
-                                                            className="text-[10px] bg-white px-2 py-1 rounded border border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white transition-all font-bold shadow-sm"
-                                                        >
-                                                            {showAdvancedSearch ? 'Switch to Name Search' : 'Search by DOB / Phone'}
-                                                        </button>
-                                                    </div>
-
-                                                    {showAdvancedSearch ? (
-                                                        <div className="grid grid-cols-2 gap-2 p-2 bg-gray-50 rounded-xl border border-gray-100 animate-in fade-in slide-in-from-top-1 duration-200">
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Name"
-                                                                autoFocus
-                                                                className="px-3 py-2 border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
-                                                                value={searchFields.name}
-                                                                onChange={e => setSearchFields({ ...searchFields, name: e.target.value })}
-                                                            />
-                                                            <input
-                                                                type="text"
-                                                                placeholder="DOB (MM/DD/YYYY)"
-                                                                className="px-3 py-2 border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
-                                                                value={searchFields.dob}
-                                                                onChange={e => setSearchFields({ ...searchFields, dob: e.target.value })}
-                                                            />
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Phone"
-                                                                className="px-3 py-2 border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
-                                                                value={searchFields.phone}
-                                                                onChange={e => setSearchFields({ ...searchFields, phone: e.target.value })}
-                                                            />
-                                                            <input
-                                                                type="text"
-                                                                placeholder="MRN"
-                                                                className="px-3 py-2 border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
-                                                                value={searchFields.mrn}
-                                                                onChange={e => setSearchFields({ ...searchFields, mrn: e.target.value })}
-                                                            />
-                                                        </div>
-                                                    ) : (
-                                                        <div className="relative group animate-in fade-in slide-in-from-top-1 duration-200">
-                                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400 group-focus-within:text-blue-600" />
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Search Name, DOB, Phone or MRN..."
-                                                                autoFocus
-                                                                className="w-full pl-10 pr-4 py-3 border-2 border-blue-100 rounded-2xl bg-white text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none shadow-sm font-medium"
-                                                                value={searchFields.name}
-                                                                onChange={e => setSearchFields({ ...searchFields, name: e.target.value })}
-                                                            />
-                                                        </div>
-                                                    )}
-
-                                                    {isSearchingPatients && (
-                                                        <div className="flex items-center justify-center gap-2 py-4 text-xs text-blue-500 font-bold uppercase tracking-widest animate-pulse">
-                                                            <RefreshCw className="w-4 h-4 animate-spin" /> Searching Database...
-                                                        </div>
-                                                    )}
-
-                                                    {patientResults.length > 0 && (
-                                                        <div className="border border-blue-100 rounded-2xl overflow-hidden shadow-xl max-h-56 overflow-y-auto bg-white/80 backdrop-blur-sm ring-1 ring-blue-500/5 mt-1">
-                                                            {patientResults.map(p => (
-                                                                <button
-                                                                    key={p.id}
-                                                                    onClick={() => setSelectedPatient(p)}
-                                                                    className="w-full text-left px-4 py-3 hover:bg-blue-600 hover:text-white border-b border-blue-50 last:border-0 flex justify-between items-center group transition-all"
-                                                                >
-                                                                    <div>
-                                                                        <p className="text-sm font-black group-hover:text-white text-gray-900">{getPatientDisplayName(p)}</p>
-                                                                        <p className="text-[10px] group-hover:text-blue-100 text-gray-500 uppercase font-black tracking-tighter">
-                                                                            MRN: {p.mrn || 'N/A'} • DOB: {p.dob ? format(new Date(p.dob), 'MM/dd/yyyy') : 'N/A'}
-                                                                        </p>
-                                                                    </div>
-                                                                    <div className="bg-blue-100 text-blue-600 p-2 rounded-full opacity-0 group-hover:opacity-100 group-hover:bg-white group-hover:text-blue-600 transition-all scale-75 group-hover:scale-100">
-                                                                        <Plus className="w-4 h-4" />
-                                                                    </div>
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-blue-200 shadow-sm animate-in zoom-in-95">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black shadow-md">
-                                                            {getPatientDisplayName(selectedPatient)[0]}
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-black text-gray-900">{getPatientDisplayName(selectedPatient)}</p>
-                                                            <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest">Secure Chat Terminal</p>
-                                                        </div>
-                                                    </div>
-                                                    <button onClick={() => setSelectedPatient(null)} className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors rounded-full">
-                                                        <X className="w-5 h-5" />
-                                                    </button>
-                                                </div>
-                                            )
-                                        ) : (
-                                            /* Internal Staff Message Inline Composer */
-                                            !selectedStaff ? (
-                                                <div className="space-y-3">
-                                                    <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">1. Select Staff Recipient</label>
-                                                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1">
-                                                        {users.filter(u => u.id !== user.id).map(u => (
-                                                            <button
-                                                                key={u.id}
-                                                                onClick={() => {
-                                                                    setSelectedStaff(u);
-                                                                    setComposeData(prev => ({ ...prev, assignedUserId: u.id }));
-                                                                }}
-                                                                className="flex items-center gap-3 p-3 bg-white border border-gray-100 shadow-sm rounded-xl hover:border-blue-500 hover:shadow-md transition-all text-left"
-                                                            >
-                                                                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500">
-                                                                    {u.first_name[0]}{u.last_name[0]}
-                                                                </div>
-                                                                <div className="min-w-0">
-                                                                    <p className="text-xs font-bold text-gray-900 truncate">{u.first_name} {u.last_name}</p>
-                                                                    <p className="text-[9px] text-gray-400 uppercase font-black">{u.role || 'Staff'}</p>
-                                                                </div>
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-blue-200 shadow-sm animate-in zoom-in-95">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black shadow-md">
-                                                            {selectedStaff.first_name[0]}{selectedStaff.last_name[0]}
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-black text-gray-900">{selectedStaff.first_name} {selectedStaff.last_name}</p>
-                                                            <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest">Internal Staff Chat</p>
-                                                        </div>
-                                                    </div>
-                                                    <button onClick={() => {
-                                                        setSelectedStaff(null);
-                                                        setComposeData(prev => ({ ...prev, assignedUserId: user?.id }));
-                                                    }} className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors rounded-full">
-                                                        <X className="w-5 h-5" />
-                                                    </button>
-                                                </div>
-                                            )
-                                        )}
-
-                                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                            <div className="relative">
-                                                <div className="absolute top-3 left-3 flex items-center gap-2">
-                                                    <Mail className="w-4 h-4 text-gray-400" />
-                                                </div>
-                                                <input
-                                                    type="text"
-                                                    placeholder="Conversation Topic / Subject..."
-                                                    className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
-                                                    value={composeData.subject}
-                                                    onChange={e => setComposeData({ ...composeData, subject: e.target.value })}
-                                                />
-                                            </div>
-                                            <textarea
-                                                placeholder="Type your message here..."
-                                                className="w-full p-4 border border-gray-200 rounded-2xl text-sm min-h-[120px] focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none shadow-sm transition-all"
-                                                value={composeData.body}
-                                                onChange={e => setComposeData({ ...composeData, body: e.target.value })}
-                                            />
-
-                                            <div className="flex justify-end gap-3 pt-2">
-                                                <button
-                                                    onClick={handleComposeSubmit}
-                                                    disabled={!composeData.body || !composeData.subject || (selectedCategory === 'portal_messages' ? !selectedPatient : !selectedStaff)}
-                                                    className="px-8 py-3 bg-blue-600 text-white rounded-xl text-sm font-black shadow-lg shadow-blue-600/20 hover:bg-blue-700 disabled:opacity-50 disabled:grayscale transition-all flex items-center gap-2 active:scale-95"
-                                                >
-                                                    <Send className="w-4 h-4" /> Send Secure Message
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
                             {filteredItems.map(item => (
                                 <div
                                     key={item.id}
                                     onClick={() => setSelectedItem(item)}
-                                    className={`flex items-start gap-4 p-4 cursor-pointer hover:bg-gray-50 transition-colors ${selectedItem?.id === item.id ? 'bg-blue-50/50 ring-1 ring-inset ring-blue-100' : ''} ${item.status === 'new' ? 'border-l-4 border-l-blue-500 pl-3' : 'border-l-4 border-l-transparent pl-3'}`}
+                                    className={`group flex items-start gap-4 p-4 cursor-pointer hover:bg-gray-50 transition-colors ${selectedItem?.id === item.id ? 'bg-blue-50/50 ring-1 ring-inset ring-blue-100' : ''} ${item.status === 'new' ? 'border-l-4 border-l-blue-500 pl-3' : 'border-l-4 border-l-transparent pl-3'}`}
                                 >
                                     <div className="mt-1">{getCategoryIcon(item.type)}</div>
                                     <div className="flex-1 min-w-0">
@@ -770,7 +613,19 @@ const Inbasket = () => {
                                             <h3 className={`text-sm truncate pr-2 ${item.status === 'new' ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
                                                 {item.subject || 'No Subject'}
                                             </h3>
-                                            <span className="text-xs text-gray-500 whitespace-nowrap">{format(new Date(item.created_at || item.createdAt), 'MMM d, h:mm a')}</span>
+                                            <div className="flex items-center gap-2 pl-2 flex-shrink-0">
+                                                <span className="text-xs text-gray-500 whitespace-nowrap group-hover:text-gray-400 transition-colors">{format(new Date(item.created_at || item.createdAt), 'MMM d, h:mm a')}</span>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDelete(item);
+                                                    }}
+                                                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-all transform scale-90 hover:scale-100"
+                                                    title="Delete from Inbox"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </div>
                                         <p className="text-sm text-gray-600 truncate mt-0.5">
                                             {getPatientDisplayName(item)}
@@ -807,7 +662,19 @@ const Inbasket = () => {
                                 </span>
                                 <span className="text-xs text-gray-500 capitalize">{selectedItem.type.replace('_', ' ')}</span>
                             </div>
-                            <button onClick={() => setSelectedItem(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDelete();
+                                    }}
+                                    className="text-gray-300 hover:text-red-500 transition-colors p-1"
+                                    title="Delete from Inbox"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => setSelectedItem(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+                            </div>
                         </div>
                         <h2 className="text-lg font-bold text-gray-900 leading-tight mb-1">{selectedItem.subject}</h2>
                         <button onClick={() => openPatientChart(selectedItem)} className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1">
@@ -932,9 +799,14 @@ const Inbasket = () => {
                                         </div>
                                         <div className="space-y-6">
                                             {details.notes.map(note => {
+                                                const isStaff = note.sender_type === 'staff' || note.sender_type === 'provider';
                                                 const isPatient = note.sender_type === 'patient';
+
+                                                // If sender_type is missing, assume patient if it's an inbound message ID, or staff otherwise
+                                                // Ideally your backend ensures sender_type is always present.
+
                                                 return (
-                                                    <div key={note.id} className={`flex gap-3 ${!isPatient ? 'flex-row-reverse' : ''}`}>
+                                                    <div key={note.id} className={`flex gap-3 ${isStaff ? 'flex-row-reverse' : ''}`}>
                                                         {/* Avatar */}
                                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0 shadow-sm border ${isPatient
                                                             ? 'bg-white border-gray-200 text-gray-500'
@@ -1034,6 +906,222 @@ const Inbasket = () => {
                 </div>
             )}
 
+            {/* New Chat Pane (iMessage style) - for Portal Messages and Staff Messages */}
+            {showNewChat && !selectedItem && (
+                <div className="w-[450px] bg-white border-l border-gray-200 flex flex-col shadow-xl z-20">
+                    {/* Header */}
+                    <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-white">
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="text-lg font-bold text-gray-900">
+                                {composeData.type === 'portal_message' ? 'New Patient Message' : 'New Staff Message'}
+                            </h3>
+                            <button onClick={() => setShowNewChat(false)} className="text-gray-400 hover:text-gray-600">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Search Bar */}
+                        {composeData.type === 'portal_message' ? (
+                            // Patient Search
+                            !selectedPatient ? (
+                                <div className="space-y-2">
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search patient by name, MRN, or DOB..."
+                                            autoFocus
+                                            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                            value={searchFields.name}
+                                            onChange={e => setSearchFields({ ...searchFields, name: e.target.value })}
+                                        />
+                                    </div>
+                                    {isSearchingPatients && (
+                                        <div className="flex items-center gap-2 text-xs text-gray-400 py-2">
+                                            <RefreshCw className="w-3 h-3 animate-spin" /> Searching...
+                                        </div>
+                                    )}
+                                    {patientResults.length > 0 && (
+                                        <div className="border border-gray-100 rounded-xl overflow-hidden max-h-48 overflow-y-auto bg-white shadow-lg">
+                                            {patientResults.map(p => (
+                                                <button
+                                                    key={p.id}
+                                                    onClick={() => setSelectedPatient(p)}
+                                                    className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-gray-50 last:border-0 flex items-center gap-3 transition-colors"
+                                                >
+                                                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
+                                                        {getPatientDisplayName(p)[0]}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-semibold text-gray-900 truncate">{getPatientDisplayName(p)}</p>
+                                                        <p className="text-xs text-gray-500">MRN: {p.mrn || 'N/A'} • DOB: {p.dob ? format(new Date(p.dob), 'MM/dd/yyyy') : 'N/A'}</p>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                                    <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                                        {getPatientDisplayName(selectedPatient)[0]}
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-bold text-gray-900">{getPatientDisplayName(selectedPatient)}</p>
+                                        <p className="text-xs text-blue-600">Patient Portal</p>
+                                    </div>
+                                    <button onClick={() => setSelectedPatient(null)} className="p-1.5 hover:bg-blue-100 rounded-full text-blue-600">
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            )
+                        ) : (
+                            // Staff Search
+                            !selectedStaff ? (
+                                <div className="space-y-2">
+                                    <p className="text-xs text-gray-500 font-medium">Select recipient:</p>
+                                    <div className="max-h-48 overflow-y-auto space-y-1">
+                                        {users.filter(u => u.id !== user.id).map(u => (
+                                            <button
+                                                key={u.id}
+                                                onClick={() => setSelectedStaff(u)}
+                                                className="w-full text-left px-3 py-2.5 hover:bg-blue-50 rounded-lg flex items-center gap-3 transition-colors border border-transparent hover:border-blue-200"
+                                            >
+                                                <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-xs">
+                                                    {u.first_name?.[0]}{u.last_name?.[0]}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-medium text-gray-900">{u.first_name} {u.last_name}</p>
+                                                    <p className="text-xs text-gray-500 capitalize">{u.role || 'Staff'}</p>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-xl border border-purple-100">
+                                    <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+                                        {selectedStaff.first_name?.[0]}{selectedStaff.last_name?.[0]}
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-bold text-gray-900">{selectedStaff.first_name} {selectedStaff.last_name}</p>
+                                        <p className="text-xs text-purple-600 capitalize">{selectedStaff.role || 'Staff'}</p>
+                                    </div>
+                                    <button onClick={() => setSelectedStaff(null)} className="p-1.5 hover:bg-purple-100 rounded-full text-purple-600">
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            )
+                        )}
+                    </div>
+
+                    {/* Chat Area (empty for new chat) */}
+                    <div className="flex-1 flex items-center justify-center bg-gray-50/50">
+                        {(composeData.type === 'portal_message' && !selectedPatient) || (composeData.type !== 'portal_message' && !selectedStaff) ? (
+                            <div className="text-center text-gray-400">
+                                <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                                <p className="text-sm">Select a {composeData.type === 'portal_message' ? 'patient' : 'staff member'} to start</p>
+                            </div>
+                        ) : (
+                            <div className="text-center text-gray-400">
+                                <Send className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                                <p className="text-sm">Type your message below</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Message Input */}
+                    {((composeData.type === 'portal_message' && selectedPatient) || (composeData.type !== 'portal_message' && selectedStaff)) && (
+                        <div className="p-4 border-t border-gray-200 bg-white">
+                            <div className="mb-3">
+                                <input
+                                    type="text"
+                                    placeholder="Subject (optional)"
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={composeData.subject}
+                                    onChange={e => setComposeData({ ...composeData, subject: e.target.value })}
+                                />
+                            </div>
+                            <div className="flex gap-2">
+                                <textarea
+                                    placeholder="Type your message..."
+                                    className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                    rows={3}
+                                    value={newChatMessage}
+                                    onChange={e => setNewChatMessage(e.target.value)}
+                                    onKeyDown={async e => {
+                                        if (e.key === 'Enter' && !e.shiftKey && newChatMessage.trim()) {
+                                            e.preventDefault();
+                                            try {
+                                                if (composeData.type === 'portal_message') {
+                                                    await inboxAPI.sendPatientMessage({
+                                                        patientId: selectedPatient.id,
+                                                        subject: composeData.subject || 'Message',
+                                                        body: newChatMessage
+                                                    });
+                                                } else {
+                                                    await inboxAPI.create({
+                                                        type: 'message',
+                                                        subject: composeData.subject || 'Message',
+                                                        body: newChatMessage,
+                                                        assignedUserId: selectedStaff.id,
+                                                        priority: 'normal'
+                                                    });
+                                                }
+                                                showSuccess('Message sent!');
+                                                setShowNewChat(false);
+                                                setNewChatMessage('');
+                                                setSelectedPatient(null);
+                                                setSelectedStaff(null);
+                                                fetchData(true);
+                                            } catch (err) {
+                                                showError('Failed to send message');
+                                            }
+                                        }
+                                    }}
+                                />
+                            </div>
+                            <div className="flex justify-end mt-3">
+                                <button
+                                    disabled={!newChatMessage.trim()}
+                                    onClick={async () => {
+                                        if (!newChatMessage.trim()) return;
+                                        try {
+                                            if (composeData.type === 'portal_message') {
+                                                await inboxAPI.sendPatientMessage({
+                                                    patientId: selectedPatient.id,
+                                                    subject: composeData.subject || 'Message',
+                                                    body: newChatMessage
+                                                });
+                                            } else {
+                                                await inboxAPI.create({
+                                                    type: 'message',
+                                                    subject: composeData.subject || 'Message',
+                                                    body: newChatMessage,
+                                                    assignedUserId: selectedStaff.id,
+                                                    priority: 'normal'
+                                                });
+                                            }
+                                            showSuccess('Message sent!');
+                                            setShowNewChat(false);
+                                            setNewChatMessage('');
+                                            setSelectedPatient(null);
+                                            setSelectedStaff(null);
+                                            fetchData(true);
+                                        } catch (err) {
+                                            showError('Failed to send message');
+                                        }
+                                    }}
+                                    className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
+                                >
+                                    <Send className="w-4 h-4" /> Send
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Assignment Modal */}
             {showAssignModal && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
@@ -1065,206 +1153,7 @@ const Inbasket = () => {
                 </div>
             )}
             {/* Compose Modal */}
-            {showCompose && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
-                            <h3 className="text-lg font-bold">New Task / Message</h3>
-                            <button onClick={() => setShowCompose(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
-                        </div>
 
-                        <div className="p-6 space-y-4 overflow-y-auto">
-                            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex flex-col gap-3">
-                                <label className="block text-[10px] font-black text-blue-600 uppercase tracking-widest">1. Choose Communication Type</label>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <button
-                                        onClick={() => setComposeData({ ...composeData, type: 'task' })}
-                                        className={`p-3 rounded-lg border text-left transition-all ${composeData.type !== 'portal_message' ? 'bg-white border-blue-500 ring-1 ring-blue-500 shadow-sm' : 'bg-gray-50 border-gray-200 hover:border-gray-300'}`}
-                                    >
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <MessageSquare className={`w-4 h-4 ${composeData.type !== 'portal_message' ? 'text-blue-600' : 'text-gray-400'}`} />
-                                            <span className={`text-sm font-bold ${composeData.type !== 'portal_message' ? 'text-blue-900' : 'text-gray-500'}`}>Internal</span>
-                                        </div>
-                                        <p className="text-[10px] text-gray-500 leading-tight">Staff tasks, notes, or internal messages.</p>
-                                    </button>
-
-                                    <button
-                                        onClick={() => setComposeData({ ...composeData, type: 'portal_message' })}
-                                        className={`p-3 rounded-lg border text-left transition-all ${composeData.type === 'portal_message' ? 'bg-white border-blue-500 ring-1 ring-blue-500 shadow-sm' : 'bg-gray-50 border-gray-200 hover:border-gray-300'}`}
-                                    >
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <Send className={`w-4 h-4 ${composeData.type === 'portal_message' ? 'text-blue-600' : 'text-gray-400'}`} />
-                                            <span className={`text-sm font-bold ${composeData.type === 'portal_message' ? 'text-blue-900' : 'text-gray-500'}`}>Patient Portal</span>
-                                        </div>
-                                        <p className="text-[10px] text-gray-500 leading-tight">Send a secure message to the patient's portal.</p>
-                                    </button>
-                                </div>
-
-                                {composeData.type !== 'portal_message' && (
-                                    <div className="flex gap-4 mt-1">
-                                        <div className="flex-1">
-                                            <label className="block text-[10px] font-bold text-blue-400 uppercase mb-1">Sub-Type</label>
-                                            <select
-                                                value={composeData.type}
-                                                onChange={e => setComposeData({ ...composeData, type: e.target.value })}
-                                                className="w-full border border-gray-200 rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500"
-                                            >
-                                                <option value="task">Clinical Task</option>
-                                                <option value="message">Staff Message</option>
-                                                <option value="refill">Rx Refill Request</option>
-                                            </select>
-                                        </div>
-                                        <div className="flex-1">
-                                            <label className="block text-[10px] font-bold text-blue-400 uppercase mb-1">Priority</label>
-                                            <select
-                                                value={composeData.priority}
-                                                onChange={e => setComposeData({ ...composeData, priority: e.target.value })}
-                                                className="w-full border border-gray-200 rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500"
-                                            >
-                                                <option value="normal">Normal</option>
-                                                <option value="urgent">Urgent</option>
-                                                <option value="stat">STAT</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {composeData.type !== 'portal_message' && (
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Assign To</label>
-                                    <select
-                                        value={composeData.assignedUserId}
-                                        onChange={e => setComposeData({ ...composeData, assignedUserId: e.target.value })}
-                                        className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-                                    >
-                                        <option value="">Unassigned</option>
-                                        {users.map(u => (
-                                            <option key={u.id} value={u.id}>{u.first_name} {u.last_name} ({u.role})</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            )}
-
-                            <div className="border border-gray-100 rounded-xl p-4 bg-gray-50/50">
-                                <label className="block text-[10px] font-black text-blue-600 uppercase mb-2 tracking-widest">Select Patient</label>
-
-                                {selectedPatient ? (
-                                    <div className="flex items-center justify-between p-3 bg-blue-100 border border-blue-200 rounded-lg animate-in fade-in slide-in-from-top-1">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs">
-                                                {selectedPatient.name?.[0] || 'P'}
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-bold text-blue-900">{selectedPatient.name || `${selectedPatient.first_name} ${selectedPatient.last_name}`}</p>
-                                                <p className="text-[10px] text-blue-700">MRN: {selectedPatient.mrn} • DOB: {selectedPatient.dob || selectedPatient.date_of_birth}</p>
-                                            </div>
-                                        </div>
-                                        <button onClick={() => setSelectedPatient(null)} className="p-1 hover:bg-blue-200 rounded-full text-blue-600 transition-colors">
-                                            <X className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-3">
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <input
-                                                type="text"
-                                                placeholder="Name"
-                                                className="border border-gray-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 transition-all"
-                                                value={searchFields.name}
-                                                onChange={e => setSearchFields({ ...searchFields, name: e.target.value })}
-                                            />
-                                            <input
-                                                type="text"
-                                                placeholder="DOB (MM/DD/YYYY)"
-                                                className="border border-gray-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 transition-all"
-                                                value={searchFields.dob}
-                                                onChange={e => setSearchFields({ ...searchFields, dob: e.target.value })}
-                                            />
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <input
-                                                type="text"
-                                                placeholder="Phone"
-                                                className="border border-gray-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 transition-all"
-                                                value={searchFields.phone}
-                                                onChange={e => setSearchFields({ ...searchFields, phone: e.target.value })}
-                                            />
-                                            <input
-                                                type="text"
-                                                placeholder="MRN"
-                                                className="border border-gray-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 transition-all"
-                                                value={searchFields.mrn}
-                                                onChange={e => setSearchFields({ ...searchFields, mrn: e.target.value })}
-                                            />
-                                        </div>
-
-                                        {patientResults.length > 0 && (
-                                            <div className="border border-gray-100 rounded-lg overflow-hidden shadow-inner max-h-40 overflow-y-auto bg-white">
-                                                {patientResults.map(p => (
-                                                    <button
-                                                        key={p.id}
-                                                        onClick={() => {
-                                                            setSelectedPatient(p);
-                                                            setComposeData({ ...composeData, patientId: p.id });
-                                                        }}
-                                                        className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b border-gray-50 last:border-0 flex items-center justify-between group transition-colors"
-                                                    >
-                                                        <div>
-                                                            <p className="text-sm font-semibold text-gray-800 group-hover:text-blue-700">{p.name || `${p.first_name} ${p.last_name}`}</p>
-                                                            <p className="text-[10px] text-gray-500">MRN: {p.mrn} • DOB: {p.dob || p.date_of_birth}</p>
-                                                        </div>
-                                                        <Plus className="w-4 h-4 text-gray-300 group-hover:text-blue-500" />
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                        {isSearchingPatients && (
-                                            <p className="text-[10px] text-gray-400 italic">Searching...</p>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Subject</label>
-                                <input
-                                    type="text"
-                                    placeholder="Brief title of the task/message"
-                                    value={composeData.subject}
-                                    onChange={e => setComposeData({ ...composeData, subject: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Instructions / Body</label>
-                                <textarea
-                                    placeholder="Provide detailed instructions or the message content..."
-                                    value={composeData.body}
-                                    onChange={e => setComposeData({ ...composeData, body: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg p-2 text-sm h-32 resize-none focus:ring-2 focus:ring-blue-500 transition-all"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
-                            <button
-                                onClick={() => setShowCompose(false)}
-                                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-100 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleComposeSubmit}
-                                className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700 active:scale-95 transition-all"
-                            >
-                                Send / Create
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Appointment Approval Modal */}
             {
