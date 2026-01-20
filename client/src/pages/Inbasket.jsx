@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-    CheckCircle as CheckCircleIcon, Clock, AlertTriangle, MessageSquare, FileText,
+    CheckCircle as CheckCircleIcon, Clock, AlertTriangle, MessageSquare, FileText, Inbox,
     Pill, FlaskConical, Image, Send, RefreshCw, Filter, Search,
     ChevronRight, X, Plus, Bell, User, Calendar, Phone, Paperclip,
     ArrowRight, Check, ArrowLeft, ChevronLeft, Eye, UserPlus, Mail
