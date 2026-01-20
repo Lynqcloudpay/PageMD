@@ -51,6 +51,7 @@ const Inbasket = () => {
     const [replyText, setReplyText] = useState('');
 
     const [showCompose, setShowCompose] = useState(false);
+    const [showInlineCompose, setShowInlineCompose] = useState(false);
     const [showIntakeReview, setShowIntakeReview] = useState(false);
     const [composeData, setComposeData] = useState({
         type: 'task',
@@ -354,6 +355,7 @@ const Inbasket = () => {
                 showSuccess('Item created');
             }
             setShowCompose(false);
+            setShowInlineCompose(false);
             setComposeData({ type: 'task', subject: '', body: '', patientId: '', priority: 'normal', assignedUserId: user?.id });
             setSearchFields({ name: '', dob: '', phone: '', mrn: '' });
             setSelectedPatient(null);
@@ -403,12 +405,6 @@ const Inbasket = () => {
                         <Inbox className="w-5 h-5" /> In Basket
                     </h2>
 
-                    <button
-                        onClick={() => setShowCompose(true)}
-                        className="w-full mb-4 py-2 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg flex items-center justify-center gap-2 font-bold shadow-sm hover:shadow-md transition-all active:scale-95"
-                    >
-                        <Plus className="w-5 h-5" /> Compose New
-                    </button>
 
                     <div className="flex gap-2 text-xs">
                         <button
@@ -435,22 +431,45 @@ const Inbasket = () => {
                         <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-xs">{filteredItems.length}</span>
                     </button>
 
-                    {TASK_CATEGORIES.map(cat => (
-                        <button
-                            key={cat.id}
-                            onClick={() => setSelectedCategory(cat.id)}
-                            className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${selectedCategory === cat.id ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
-                        >
-                            <span className="flex items-center gap-2">
-                                <cat.icon className={`w-4 h-4 text-${cat.color}-500`} />
-                                {cat.label}
-                            </span>
-                            {/* Note: counting locally based on types, or use stats if available per type */}
-                            <span className="bg-gray-50 text-gray-400 px-2 py-0.5 rounded-full text-xs">
-                                {items.filter(i => cat.types.includes(i.type)).length}
-                            </span>
-                        </button>
-                    ))}
+                    {TASK_CATEGORIES.map(cat => {
+                        const canCompose = ['portal_messages', 'tasks', 'messages'].includes(cat.id);
+                        const isSelected = selectedCategory === cat.id;
+
+                        return (
+                            <div key={cat.id} className="group relative">
+                                <button
+                                    onClick={() => setSelectedCategory(cat.id)}
+                                    className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-all ${isSelected ? 'bg-blue-50 text-blue-900 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}
+                                >
+                                    <span className="flex items-center gap-2">
+                                        <cat.icon className={`w-4 h-4 ${isSelected ? 'text-blue-600' : 'text-gray-400'}`} />
+                                        {cat.label}
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${isSelected ? 'bg-blue-100 text-blue-700' : 'bg-gray-50 text-gray-400'}`}>
+                                            {items.filter(i => cat.types.includes(i.type)).length}
+                                        </span>
+                                    </div>
+                                </button>
+                                {canCompose && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedCategory(cat.id);
+                                            // Pre-select type based on category
+                                            const typeMap = { 'portal_messages': 'portal_message', 'tasks': 'task', 'messages': 'message' };
+                                            setComposeData(prev => ({ ...prev, type: typeMap[cat.id] || 'task' }));
+                                            setShowCompose(true);
+                                        }}
+                                        className={`absolute right-10 top-1/2 -translate-y-1/2 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-200 text-gray-400`}
+                                        title={`New ${cat.label}`}
+                                    >
+                                        <Plus className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
 
                 <div className="p-4 border-t border-gray-100">
@@ -477,20 +496,44 @@ const Inbasket = () => {
 
             {/* Main List */}
             <div className="flex-1 flex flex-col min-w-0 bg-white">
-                <div className="h-14 border-b border-gray-200 flex items-center px-4 justify-between bg-white">
-                    <div className="relative max-w-md w-full">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                            placeholder="Search..."
-                            className="w-full pl-9 pr-4 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
+                <div className="h-14 border-b border-gray-200 flex items-center px-4 justify-between bg-white sticky top-0 z-10">
+                    <div className="flex items-center gap-4 flex-1">
+                        <div className="relative max-w-xs w-full">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                placeholder="Search list..."
+                                className="w-full pl-9 pr-4 py-1.5 text-sm border border-gray-200 rounded-lg bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
+                            />
+                        </div>
+
+                        {['portal_messages', 'tasks', 'messages', 'refills'].includes(selectedCategory) && (
+                            <button
+                                onClick={() => {
+                                    if (selectedCategory === 'portal_messages') {
+                                        setShowInlineCompose(!showInlineCompose);
+                                        setComposeData(prev => ({ ...prev, type: 'portal_message' }));
+                                    } else {
+                                        const typeMap = { 'tasks': 'task', 'messages': 'message', 'refills': 'refill' };
+                                        setComposeData(prev => ({ ...prev, type: typeMap[selectedCategory] || 'task' }));
+                                        setShowCompose(true);
+                                    }
+                                }}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all animate-in fade-in slide-in-from-left-2 shadow-sm active:scale-95 ${showInlineCompose && selectedCategory === 'portal_messages' ? 'bg-gray-100 text-gray-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                            >
+                                {showInlineCompose && selectedCategory === 'portal_messages' ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                                {showInlineCompose && selectedCategory === 'portal_messages' ? 'Cancel' : `New ${TASK_CATEGORIES.find(c => c.id === selectedCategory)?.label.replace('s', '') || 'Item'}`}
+                            </button>
+                        )}
                     </div>
-                    <button onClick={() => fetchData(true)} className={`p-2 text-gray-500 hover:bg-gray-100 rounded-full ${refreshing ? 'animate-spin' : ''}`}>
-                        <RefreshCw className="w-5 h-5" />
-                    </button>
+
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => fetchData(true)} className={`p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded-full transition-colors ${refreshing ? 'animate-spin text-blue-500' : ''}`}>
+                            <RefreshCw className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto">
@@ -503,6 +546,92 @@ const Inbasket = () => {
                         </div>
                     ) : (
                         <div className="divide-y divide-gray-100">
+                            {showInlineCompose && selectedCategory === 'portal_messages' && (
+                                <div className="p-6 bg-blue-50/50 border-b border-blue-100 animate-in slide-in-from-top-4 duration-300">
+                                    <div className="max-w-xl mx-auto space-y-4">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h3 className="text-sm font-bold text-blue-900 flex items-center gap-2">
+                                                <Send className="w-4 h-4 text-blue-600" /> Start New Portal Conversation
+                                            </h3>
+                                            <button onClick={() => setShowInlineCompose(false)} className="text-gray-400 hover:text-gray-600">
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
+
+                                        {/* Simplified Patient Search */}
+                                        {!selectedPatient ? (
+                                            <div className="space-y-2">
+                                                <label className="block text-[10px] font-black text-blue-400 uppercase tracking-widest">1. Find Patient</label>
+                                                <div className="relative">
+                                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Search Name, DOB, Phone or MRN..."
+                                                        className="w-full pl-9 pr-4 py-2 border border-blue-200 rounded-xl bg-white text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                                                        value={searchFields.name}
+                                                        onChange={e => setSearchFields({ ...searchFields, name: e.target.value })}
+                                                    />
+                                                </div>
+                                                {isSearchingPatients && <div className="text-center py-2 text-xs text-gray-500">Searching...</div>}
+                                                {patientResults.length > 0 && (
+                                                    <div className="bg-white border border-blue-100 rounded-xl overflow-hidden shadow-lg max-h-48 overflow-y-auto">
+                                                        {patientResults.map(p => (
+                                                            <button
+                                                                key={p.id}
+                                                                onClick={() => setSelectedPatient(p)}
+                                                                className="w-full text-left px-4 py-2 hover:bg-blue-50 border-b border-blue-50 last:border-0 flex justify-between items-center group transition-colors"
+                                                            >
+                                                                <div>
+                                                                    <p className="text-sm font-bold text-gray-900 group-hover:text-blue-700">{getPatientDisplayName(p)}</p>
+                                                                    <p className="text-[10px] text-gray-500 italic">MRN: {p.mrn} • DOB: {format(new Date(p.dob), 'MM/dd/yyyy')}</p>
+                                                                </div>
+                                                                <div className="bg-blue-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <Plus className="w-3 h-3" />
+                                                                </div>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-blue-200 shadow-sm animate-in zoom-in-95">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold">
+                                                        {selectedPatient.first_name[0]}{selectedPatient.last_name[0]}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-bold text-gray-900">{getPatientDisplayName(selectedPatient)}</p>
+                                                        <p className="text-[10px] text-gray-500 uppercase tracking-tight">Portal Account Ready</p>
+                                                    </div>
+                                                </div>
+                                                <button onClick={() => setSelectedPatient(null)} className="text-xs text-blue-600 font-bold hover:underline">Change</button>
+                                            </div>
+                                        )}
+
+                                        {/* Simplified Message Body */}
+                                        <div className="space-y-2">
+                                            <label className="block text-[10px] font-black text-blue-400 uppercase tracking-widest">2. Message Content</label>
+                                            <textarea
+                                                placeholder="Type your message to the patient..."
+                                                className="w-full border border-blue-200 rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-500 min-h-[120px] outline-none shadow-inner"
+                                                value={composeData.body}
+                                                onChange={e => setComposeData({ ...composeData, body: e.target.value })}
+                                            />
+                                        </div>
+
+                                        <div className="flex justify-end gap-3 pt-2">
+                                            <button onClick={() => { setShowInlineCompose(false); setSelectedPatient(null); setComposeData(prev => ({ ...prev, body: '' })); }} className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">Cancel</button>
+                                            <button
+                                                disabled={!selectedPatient || !composeData.body.trim()}
+                                                onClick={handleComposeSubmit}
+                                                className="px-6 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:grayscale flex items-center gap-2"
+                                            >
+                                                <Send className="w-4 h-4" /> Send Secure Message
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                             {filteredItems.map(item => (
                                 <div
                                     key={item.id}

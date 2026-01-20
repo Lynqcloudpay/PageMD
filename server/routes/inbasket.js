@@ -265,26 +265,66 @@ async function syncInboxItems(tenantId, schema) {
     `);
 
     // 7. Sync Portal Message Threads (Grouped by Patient - "Closed Loop")
-    // UPDATE existing active threads with latest message
+    // FIRST: Cleanup any pre-existing duplicates (one item per patient for portal messages)
+    await client.query(`
+      DELETE FROM inbox_items a
+      USING inbox_items b
+      WHERE a.type = 'portal_message' 
+        AND b.type = 'portal_message'
+        AND a.patient_id = b.patient_id
+        AND a.status != 'completed'
+        AND b.status != 'completed'
+        AND a.created_at < b.created_at
+    `);
+
+    // UPDATE existing active items with latest message across ALL patient threads
     await client.query(`
       UPDATE inbox_items
       SET 
-        body = (SELECT body FROM portal_messages WHERE thread_id = inbox_items.reference_id AND sender_portal_account_id IS NOT NULL ORDER BY created_at DESC LIMIT 1),
-        updated_at = t.updated_at,
+        body = sub.latest_body,
+        subject = sub.latest_subject,
+        updated_at = sub.latest_at,
+        reference_id = sub.latest_thread_id,
         status = 'new'
-      FROM portal_message_threads t
-      WHERE inbox_items.reference_id = t.id 
-        AND inbox_items.reference_table = 'portal_message_threads'
-        AND inbox_items.status != 'completed'
-        AND EXISTS (
+      FROM (
+        SELECT 
+          t.patient_id,
+          MAX(t.updated_at) as latest_at,
+          (
+            SELECT t4.subject 
+            FROM portal_message_threads t4 
+            WHERE t4.patient_id = t.patient_id 
+            ORDER BY t4.updated_at DESC LIMIT 1
+          ) as latest_subject,
+          (
+            SELECT m.body 
+            FROM portal_messages m 
+            JOIN portal_message_threads t2 ON m.thread_id = t2.id 
+            WHERE t2.patient_id = t.patient_id 
+              AND m.sender_portal_account_id IS NOT NULL 
+            ORDER BY m.created_at DESC LIMIT 1
+          ) as latest_body,
+          (
+            SELECT t3.id 
+            FROM portal_message_threads t3 
+            WHERE t3.patient_id = t.patient_id 
+            ORDER BY t3.updated_at DESC LIMIT 1
+          ) as latest_thread_id
+        FROM portal_message_threads t
+        WHERE EXISTS (
             SELECT 1 FROM portal_messages m 
             WHERE m.thread_id = t.id 
               AND m.sender_portal_account_id IS NOT NULL 
               AND m.read_at IS NULL
         )
+        GROUP BY t.patient_id
+      ) sub
+      WHERE inbox_items.patient_id = sub.patient_id 
+        AND inbox_items.type = 'portal_message'
+        AND inbox_items.status != 'completed'
     `);
 
-    // INSERT new threads that aren't in the inbox yet
+    // INSERT new items for patients who don't have an active portal_message item yet
     await client.query(`
     INSERT INTO inbox_items(
       tenant_id, patient_id, type, priority, status,
@@ -295,8 +335,8 @@ async function syncInboxItems(tenantId, schema) {
       $1, t.patient_id, 
       'portal_message',
       'normal', 'new',
-      'Patient Conversation',
-      (SELECT body FROM portal_messages WHERE thread_id = t.id AND sender_portal_account_id IS NOT NULL ORDER BY created_at DESC LIMIT 1),
+      (SELECT subject FROM portal_message_threads t4 WHERE t4.patient_id = t.patient_id ORDER BY t4.updated_at DESC LIMIT 1),
+      (SELECT body FROM portal_messages m2 JOIN portal_message_threads t2 ON m2.thread_id = t2.id WHERE t2.patient_id = t.patient_id AND m2.sender_portal_account_id IS NOT NULL ORDER BY m2.created_at DESC LIMIT 1),
       t.id, 'portal_message_threads',
       COALESCE(t.assigned_user_id, p.primary_care_provider), t.updated_at, t.updated_at
     FROM portal_message_threads t
@@ -309,7 +349,8 @@ async function syncInboxItems(tenantId, schema) {
     )
     AND NOT EXISTS (
         SELECT 1 FROM inbox_items i2 
-        WHERE i2.reference_id = t.id AND i2.reference_table = 'portal_message_threads'
+        WHERE i2.patient_id = t.patient_id 
+          AND i2.type = 'portal_message'
           AND i2.status != 'completed'
     )
     ORDER BY t.patient_id, t.updated_at DESC
@@ -466,14 +507,14 @@ router.get('/:id', async (req, res) => {
 
     let notes = notesRes.rows;
 
-    // If it's a thread, fetch thread history and merge (excluding duplicates from internal notes if any)
-    // We prioritize portal_messages for the conversation history
-    if (item.type === 'portal_message' && item.reference_table === 'portal_message_threads') {
+    // If it's a portal message, fetch ALL message history for this patient across all threads
+    if (item.type === 'portal_message') {
       const threadMsgs = await pool.query(`
             SELECT 
                 m.id, 
                 m.body as note, 
                 m.created_at,
+                t.subject as thread_subject,
                 CASE 
                     WHEN m.sender_type = 'staff' THEN u.first_name 
                     ELSE $2 
@@ -484,17 +525,13 @@ router.get('/:id', async (req, res) => {
                 END as last_name,
                 m.sender_type
             FROM portal_messages m
+            JOIN portal_message_threads t ON m.thread_id = t.id
             LEFT JOIN users u ON m.sender_user_id = u.id
-            WHERE m.thread_id = $1
+            WHERE t.patient_id = $1
             ORDER BY m.created_at ASC
-        `, [item.reference_id, item.patient_first_name, item.patient_last_name]);
+        `, [item.patient_id, item.patient_first_name, item.patient_last_name]);
 
-      // Filter out inbox_notes that are just copies of portal messages to avoid duplication if we were listing them?
-      // Actually inbox_notes are internal usually. 
-      // If we want to show strict history, we use threadMsgs + internal only notes.
       const internalNotes = notes.filter(n => n.is_internal);
-
-      // Combine and sort
       notes = [...threadMsgs.rows, ...internalNotes].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     }
 
