@@ -65,6 +65,13 @@ async function ensureSchema(client) {
     await db.query(`CREATE INDEX IF NOT EXISTS idx_inbox_status ON inbox_items(status)`);
     await db.query(`CREATE INDEX IF NOT EXISTS idx_inbox_reference ON inbox_items(reference_id)`);
 
+    // Stable Syncing: Ensure we don't duplicate active items and can use ON CONFLICT
+    await db.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_inbox_active_reference 
+        ON inbox_items(reference_id, reference_table) 
+        WHERE status != 'completed'
+    `);
+
     // 3. Self-healing migration for portal_appointment_requests
     // This ensures that existing schemas get the provider_id column we recently added.
     try {
@@ -246,22 +253,15 @@ async function syncInboxItems(tenantId, schema) {
   `, [tenantId]);
 
     // 7. Sync Portal Message Threads (Grouped by Patient - "Closed Loop")
-    // CLEANUP: Remove old individual portal message items
-    await client.query(`
-        DELETE FROM inbox_items 
-        WHERE reference_table = 'portal_message_threads' 
-          AND status != 'completed'
-    `);
-
-    // Insert ONE item per patient if they have ANY unread portal messages
+    // UPSERT: Insert or update stable item for each active thread
     await client.query(`
     INSERT INTO inbox_items(
-      id, tenant_id, patient_id, type, priority, status,
+      tenant_id, patient_id, type, priority, status,
       subject, body, reference_id, reference_table,
       assigned_user_id, created_at, updated_at
     )
     SELECT DISTINCT ON (t.patient_id)
-      gen_random_uuid(), $1, t.patient_id, 
+      $1, t.patient_id, 
       'portal_message',
       'normal', 'new',
       'Patient Conversation',
@@ -277,7 +277,16 @@ async function syncInboxItems(tenantId, schema) {
           AND m.read_at IS NULL
     )
     ORDER BY t.patient_id, t.updated_at DESC
+    ON CONFLICT (reference_id, reference_table) WHERE status != 'completed'
+    DO UPDATE SET
+      body = EXCLUDED.body,
+      updated_at = EXCLUDED.updated_at,
+      status = CASE WHEN inbox_items.status = 'completed' THEN 'completed' ELSE 'new' END
     `, [tenantId]);
+
+    // CLEANUP: If a thread no longer has unread messages, we don't necessarily delete it 
+    // unless we want it to DISAPPEAR from In-Basket. Usually, we keep it as 'read' 
+    // until someone marks it 'completed'.
 
 
     // 8. Sync Portal Appointment Requests
