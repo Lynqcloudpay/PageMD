@@ -52,6 +52,7 @@ const Inbasket = () => {
 
     const [showCompose, setShowCompose] = useState(false);
     const [showInlineCompose, setShowInlineCompose] = useState(false);
+    const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
     const [showIntakeReview, setShowIntakeReview] = useState(false);
     const [composeData, setComposeData] = useState({
         type: 'task',
@@ -63,15 +64,11 @@ const Inbasket = () => {
     });
 
     // Advanced Patient Search State
-    const [searchFields, setSearchFields] = useState({
-        name: '',
-        dob: '',
-        phone: '',
-        mrn: ''
-    });
+    const [searchFields, setSearchFields] = useState({ name: '', dob: '', phone: '', mrn: '' });
     const [patientResults, setPatientResults] = useState([]);
     const [isSearchingPatients, setIsSearchingPatients] = useState(false);
     const [selectedPatient, setSelectedPatient] = useState(null);
+    const [selectedStaff, setSelectedStaff] = useState(null);
 
     // Global Filter State
     const [showBackground, setShowBackground] = useState(false);
@@ -251,6 +248,23 @@ const Inbasket = () => {
 
     // --- Actions ---
 
+    const chatEndRef = useRef(null);
+    const historyRef = useRef(null);
+
+    const scrollToChatBottom = () => {
+        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    const scrollToHistory = () => {
+        historyRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    useEffect(() => {
+        if (details?.notes) {
+            scrollToChatBottom();
+        }
+    }, [details]);
+
     const handleAction = async (action, note = null) => {
         if (!selectedItem) return;
 
@@ -259,24 +273,22 @@ const Inbasket = () => {
                 await inboxAPI.update(selectedItem.id, { status: 'completed' });
                 showSuccess('Item marked as completed');
                 setSelectedItem(null);
+                setDetails(null);
                 fetchData(true); // Refresh list
             } else if (action === 'reply' && note) {
                 await inboxAPI.addNote(selectedItem.id, note, false);
                 showSuccess('Internal note added');
                 setReplyText('');
-                // Refresh details only
+                // Refresh details
                 const res = await inboxAPI.getDetails(selectedItem.id);
                 setDetails(res.data);
             } else if (action === 'replyExternal' && note) {
                 await inboxAPI.addNote(selectedItem.id, note, true);
                 showSuccess('Reply sent to patient');
                 setReplyText('');
-                // Refresh details only & list (it might mark as read/complete)
+                // Refresh details
                 const res = await inboxAPI.getDetails(selectedItem.id);
                 setDetails(res.data);
-                fetchData(true);
-            } else if (action === 'assign') {
-                // handled by modal
             }
         } catch (e) {
             console.error('Action failed:', e);
@@ -314,11 +326,17 @@ const Inbasket = () => {
 
         setIsSearchingPatients(true);
         try {
-            const res = await patientsAPI.search(searchFields);
+            // Clean fields to avoid sending empty strings that might confuse backend
+            const cleanFields = {};
+            if (searchFields.name?.trim()) cleanFields.name = searchFields.name.trim();
+            if (searchFields.dob?.trim()) cleanFields.dob = searchFields.dob.trim();
+            if (searchFields.phone?.trim()) cleanFields.phone = searchFields.phone.trim();
+            if (searchFields.mrn?.trim()) cleanFields.mrn = searchFields.mrn.trim();
+
+            const res = await patientsAPI.search(cleanFields);
             setPatientResults(res.data || []);
         } catch (e) {
             console.error('Patient search error:', e);
-            showError('Patient search failed');
         } finally {
             setIsSearchingPatients(false);
         }
@@ -328,6 +346,7 @@ const Inbasket = () => {
         const timeoutId = setTimeout(() => {
             triggerPatientSearch();
         }, 400);
+
         return () => clearTimeout(timeoutId);
     }, [searchFields]);
 
@@ -512,19 +531,25 @@ const Inbasket = () => {
                         {['portal_messages', 'tasks', 'messages', 'refills'].includes(selectedCategory) && (
                             <button
                                 onClick={() => {
-                                    if (selectedCategory === 'portal_messages') {
+                                    if (selectedCategory === 'portal_messages' || selectedCategory === 'messages') {
                                         setShowInlineCompose(!showInlineCompose);
-                                        setComposeData(prev => ({ ...prev, type: 'portal_message' }));
+                                        const type = selectedCategory === 'portal_messages' ? 'portal_message' : 'message';
+                                        setComposeData(prev => ({ ...prev, type }));
+                                        if (selectedCategory === 'messages') {
+                                            setSelectedStaff(null);
+                                        } else {
+                                            setSelectedPatient(null);
+                                        }
                                     } else {
-                                        const typeMap = { 'tasks': 'task', 'messages': 'message', 'refills': 'refill' };
+                                        const typeMap = { 'tasks': 'task', 'refills': 'refill' };
                                         setComposeData(prev => ({ ...prev, type: typeMap[selectedCategory] || 'task' }));
                                         setShowCompose(true);
                                     }
                                 }}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all animate-in fade-in slide-in-from-left-2 shadow-sm active:scale-95 ${showInlineCompose && selectedCategory === 'portal_messages' ? 'bg-gray-100 text-gray-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all animate-in fade-in slide-in-from-left-2 shadow-sm active:scale-95 ${showInlineCompose && (selectedCategory === 'portal_messages' || selectedCategory === 'messages') ? 'bg-gray-100 text-gray-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
                             >
-                                {showInlineCompose && selectedCategory === 'portal_messages' ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                                {showInlineCompose && selectedCategory === 'portal_messages' ? 'Cancel' : `New ${TASK_CATEGORIES.find(c => c.id === selectedCategory)?.label.replace('s', '') || 'Item'}`}
+                                {showInlineCompose && (selectedCategory === 'portal_messages' || selectedCategory === 'messages') ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                                {showInlineCompose && (selectedCategory === 'portal_messages' || selectedCategory === 'messages') ? 'Cancel' : `New ${selectedCategory === 'messages' ? 'Staff Message' : TASK_CATEGORIES.find(c => c.id === selectedCategory)?.label.replace('s', '') || 'Item'}`}
                             </button>
                         )}
                     </div>
@@ -546,88 +571,189 @@ const Inbasket = () => {
                         </div>
                     ) : (
                         <div className="divide-y divide-gray-100">
-                            {showInlineCompose && selectedCategory === 'portal_messages' && (
+                            {showInlineCompose && (selectedCategory === 'portal_messages' || selectedCategory === 'messages') && (
                                 <div className="p-6 bg-blue-50/50 border-b border-blue-100 animate-in slide-in-from-top-4 duration-300">
                                     <div className="max-w-xl mx-auto space-y-4">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <h3 className="text-sm font-bold text-blue-900 flex items-center gap-2">
-                                                <Send className="w-4 h-4 text-blue-600" /> Start New Portal Conversation
-                                            </h3>
-                                            <button onClick={() => setShowInlineCompose(false)} className="text-gray-400 hover:text-gray-600">
-                                                <X className="w-4 h-4" />
-                                            </button>
-                                        </div>
+                                        {selectedCategory === 'portal_messages' ? (
+                                            /* Portal Message Inline Composer */
+                                            !selectedPatient ? (
+                                                <div className="space-y-3">
+                                                    <div className="flex justify-between items-center bg-blue-50/50 p-2 rounded-lg border border-blue-100/50">
+                                                        <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">1. Find Patient</label>
+                                                        <button
+                                                            onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
+                                                            className="text-[10px] bg-white px-2 py-1 rounded border border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white transition-all font-bold shadow-sm"
+                                                        >
+                                                            {showAdvancedSearch ? 'Switch to Name Search' : 'Search by DOB / Phone'}
+                                                        </button>
+                                                    </div>
 
-                                        {/* Simplified Patient Search */}
-                                        {!selectedPatient ? (
-                                            <div className="space-y-2">
-                                                <label className="block text-[10px] font-black text-blue-400 uppercase tracking-widest">1. Find Patient</label>
-                                                <div className="relative">
-                                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Search Name, DOB, Phone or MRN..."
-                                                        className="w-full pl-9 pr-4 py-2 border border-blue-200 rounded-xl bg-white text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none"
-                                                        value={searchFields.name}
-                                                        onChange={e => setSearchFields({ ...searchFields, name: e.target.value })}
-                                                    />
+                                                    {showAdvancedSearch ? (
+                                                        <div className="grid grid-cols-2 gap-2 p-2 bg-gray-50 rounded-xl border border-gray-100 animate-in fade-in slide-in-from-top-1 duration-200">
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Name"
+                                                                autoFocus
+                                                                className="px-3 py-2 border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+                                                                value={searchFields.name}
+                                                                onChange={e => setSearchFields({ ...searchFields, name: e.target.value })}
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                placeholder="DOB (MM/DD/YYYY)"
+                                                                className="px-3 py-2 border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+                                                                value={searchFields.dob}
+                                                                onChange={e => setSearchFields({ ...searchFields, dob: e.target.value })}
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Phone"
+                                                                className="px-3 py-2 border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+                                                                value={searchFields.phone}
+                                                                onChange={e => setSearchFields({ ...searchFields, phone: e.target.value })}
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                placeholder="MRN"
+                                                                className="px-3 py-2 border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+                                                                value={searchFields.mrn}
+                                                                onChange={e => setSearchFields({ ...searchFields, mrn: e.target.value })}
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="relative group animate-in fade-in slide-in-from-top-1 duration-200">
+                                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400 group-focus-within:text-blue-600" />
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Search Name, DOB, Phone or MRN..."
+                                                                autoFocus
+                                                                className="w-full pl-10 pr-4 py-3 border-2 border-blue-100 rounded-2xl bg-white text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none shadow-sm font-medium"
+                                                                value={searchFields.name}
+                                                                onChange={e => setSearchFields({ ...searchFields, name: e.target.value })}
+                                                            />
+                                                        </div>
+                                                    )}
+
+                                                    {isSearchingPatients && (
+                                                        <div className="flex items-center justify-center gap-2 py-4 text-xs text-blue-500 font-bold uppercase tracking-widest animate-pulse">
+                                                            <RefreshCw className="w-4 h-4 animate-spin" /> Searching Database...
+                                                        </div>
+                                                    )}
+
+                                                    {patientResults.length > 0 && (
+                                                        <div className="border border-blue-100 rounded-2xl overflow-hidden shadow-xl max-h-56 overflow-y-auto bg-white/80 backdrop-blur-sm ring-1 ring-blue-500/5 mt-1">
+                                                            {patientResults.map(p => (
+                                                                <button
+                                                                    key={p.id}
+                                                                    onClick={() => setSelectedPatient(p)}
+                                                                    className="w-full text-left px-4 py-3 hover:bg-blue-600 hover:text-white border-b border-blue-50 last:border-0 flex justify-between items-center group transition-all"
+                                                                >
+                                                                    <div>
+                                                                        <p className="text-sm font-black group-hover:text-white text-gray-900">{getPatientDisplayName(p)}</p>
+                                                                        <p className="text-[10px] group-hover:text-blue-100 text-gray-500 uppercase font-black tracking-tighter">
+                                                                            MRN: {p.mrn || 'N/A'} • DOB: {p.dob ? format(new Date(p.dob), 'MM/dd/yyyy') : 'N/A'}
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="bg-blue-100 text-blue-600 p-2 rounded-full opacity-0 group-hover:opacity-100 group-hover:bg-white group-hover:text-blue-600 transition-all scale-75 group-hover:scale-100">
+                                                                        <Plus className="w-4 h-4" />
+                                                                    </div>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                {isSearchingPatients && <div className="text-center py-2 text-xs text-gray-500">Searching...</div>}
-                                                {patientResults.length > 0 && (
-                                                    <div className="bg-white border border-blue-100 rounded-xl overflow-hidden shadow-lg max-h-48 overflow-y-auto">
-                                                        {patientResults.map(p => (
+                                            ) : (
+                                                <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-blue-200 shadow-sm animate-in zoom-in-95">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black shadow-md">
+                                                            {getPatientDisplayName(selectedPatient)[0]}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-black text-gray-900">{getPatientDisplayName(selectedPatient)}</p>
+                                                            <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest">Secure Chat Terminal</p>
+                                                        </div>
+                                                    </div>
+                                                    <button onClick={() => setSelectedPatient(null)} className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors rounded-full">
+                                                        <X className="w-5 h-5" />
+                                                    </button>
+                                                </div>
+                                            )
+                                        ) : (
+                                            /* Internal Staff Message Inline Composer */
+                                            !selectedStaff ? (
+                                                <div className="space-y-3">
+                                                    <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">1. Select Staff Recipient</label>
+                                                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1">
+                                                        {users.filter(u => u.id !== user.id).map(u => (
                                                             <button
-                                                                key={p.id}
-                                                                onClick={() => setSelectedPatient(p)}
-                                                                className="w-full text-left px-4 py-2 hover:bg-blue-50 border-b border-blue-50 last:border-0 flex justify-between items-center group transition-colors"
+                                                                key={u.id}
+                                                                onClick={() => {
+                                                                    setSelectedStaff(u);
+                                                                    setComposeData(prev => ({ ...prev, assignedUserId: u.id }));
+                                                                }}
+                                                                className="flex items-center gap-3 p-3 bg-white border border-gray-100 shadow-sm rounded-xl hover:border-blue-500 hover:shadow-md transition-all text-left"
                                                             >
-                                                                <div>
-                                                                    <p className="text-sm font-bold text-gray-900 group-hover:text-blue-700">{getPatientDisplayName(p)}</p>
-                                                                    <p className="text-[10px] text-gray-500 italic">MRN: {p.mrn} • DOB: {format(new Date(p.dob), 'MM/dd/yyyy')}</p>
+                                                                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500">
+                                                                    {u.first_name[0]}{u.last_name[0]}
                                                                 </div>
-                                                                <div className="bg-blue-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                    <Plus className="w-3 h-3" />
+                                                                <div className="min-w-0">
+                                                                    <p className="text-xs font-bold text-gray-900 truncate">{u.first_name} {u.last_name}</p>
+                                                                    <p className="text-[9px] text-gray-400 uppercase font-black">{u.role || 'Staff'}</p>
                                                                 </div>
                                                             </button>
                                                         ))}
                                                     </div>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-blue-200 shadow-sm animate-in zoom-in-95">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold">
-                                                        {selectedPatient.first_name[0]}{selectedPatient.last_name[0]}
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm font-bold text-gray-900">{getPatientDisplayName(selectedPatient)}</p>
-                                                        <p className="text-[10px] text-gray-500 uppercase tracking-tight">Portal Account Ready</p>
-                                                    </div>
                                                 </div>
-                                                <button onClick={() => setSelectedPatient(null)} className="text-xs text-blue-600 font-bold hover:underline">Change</button>
-                                            </div>
+                                            ) : (
+                                                <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-blue-200 shadow-sm animate-in zoom-in-95">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black shadow-md">
+                                                            {selectedStaff.first_name[0]}{selectedStaff.last_name[0]}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-black text-gray-900">{selectedStaff.first_name} {selectedStaff.last_name}</p>
+                                                            <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest">Internal Staff Chat</p>
+                                                        </div>
+                                                    </div>
+                                                    <button onClick={() => {
+                                                        setSelectedStaff(null);
+                                                        setComposeData(prev => ({ ...prev, assignedUserId: user?.id }));
+                                                    }} className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors rounded-full">
+                                                        <X className="w-5 h-5" />
+                                                    </button>
+                                                </div>
+                                            )
                                         )}
 
-                                        {/* Simplified Message Body */}
-                                        <div className="space-y-2">
-                                            <label className="block text-[10px] font-black text-blue-400 uppercase tracking-widest">2. Message Content</label>
+                                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                            <div className="relative">
+                                                <div className="absolute top-3 left-3 flex items-center gap-2">
+                                                    <Mail className="w-4 h-4 text-gray-400" />
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Conversation Topic / Subject..."
+                                                    className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+                                                    value={composeData.subject}
+                                                    onChange={e => setComposeData({ ...composeData, subject: e.target.value })}
+                                                />
+                                            </div>
                                             <textarea
-                                                placeholder="Type your message to the patient..."
-                                                className="w-full border border-blue-200 rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-500 min-h-[120px] outline-none shadow-inner"
+                                                placeholder="Type your message here..."
+                                                className="w-full p-4 border border-gray-200 rounded-2xl text-sm min-h-[120px] focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none shadow-sm transition-all"
                                                 value={composeData.body}
                                                 onChange={e => setComposeData({ ...composeData, body: e.target.value })}
                                             />
-                                        </div>
 
-                                        <div className="flex justify-end gap-3 pt-2">
-                                            <button onClick={() => { setShowInlineCompose(false); setSelectedPatient(null); setComposeData(prev => ({ ...prev, body: '' })); }} className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">Cancel</button>
-                                            <button
-                                                disabled={!selectedPatient || !composeData.body.trim()}
-                                                onClick={handleComposeSubmit}
-                                                className="px-6 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:grayscale flex items-center gap-2"
-                                            >
-                                                <Send className="w-4 h-4" /> Send Secure Message
-                                            </button>
+                                            <div className="flex justify-end gap-3 pt-2">
+                                                <button
+                                                    onClick={handleComposeSubmit}
+                                                    disabled={!composeData.body || !composeData.subject || (selectedCategory === 'portal_messages' ? !selectedPatient : !selectedStaff)}
+                                                    className="px-8 py-3 bg-blue-600 text-white rounded-xl text-sm font-black shadow-lg shadow-blue-600/20 hover:bg-blue-700 disabled:opacity-50 disabled:grayscale transition-all flex items-center gap-2 active:scale-95"
+                                                >
+                                                    <Send className="w-4 h-4" /> Send Secure Message
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -739,7 +865,9 @@ const Inbasket = () => {
                                             <p className="text-sm font-medium text-blue-900">Incoming Portal Message</p>
                                             <p className="text-xs text-blue-600">Reply to patient via the Message center</p>
                                         </div>
-                                        <button onClick={() => openPatientChart(selectedItem)} className="text-blue-600 text-xs font-bold whitespace-nowrap">Open Thread</button>
+                                        <button onClick={scrollToHistory} className="text-blue-600 text-xs font-black uppercase tracking-widest hover:underline flex items-center gap-1">
+                                            <MessageSquare className="w-3 h-3" /> View Conversation
+                                        </button>
                                     </div>
                                 )}
                                 {details?.type === 'new_patient_registration' && (
@@ -797,31 +925,49 @@ const Inbasket = () => {
 
                                 {/* Thread / Notes */}
                                 {details?.notes && details.notes.length > 0 && (
-                                    <div className="border-t border-gray-100 pt-4 mt-6">
-                                        <h3 className="text-xs font-bold text-gray-400 uppercase mb-3">Activity</h3>
-                                        <div className="space-y-4">
+                                    <div className="border-t border-gray-100 pt-6 mt-6 scroll-mt-20" ref={historyRef}>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Conversation History</h3>
+                                            <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-bold">Secure Encryption Active</span>
+                                        </div>
+                                        <div className="space-y-6">
                                             {details.notes.map(note => {
                                                 const isPatient = note.sender_type === 'patient';
                                                 return (
-                                                    <div key={note.id} className={`flex gap-3 ${isPatient ? 'flex-row-reverse' : ''}`}>
-                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${isPatient ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                    <div key={note.id} className={`flex gap-3 ${!isPatient ? 'flex-row-reverse' : ''}`}>
+                                                        {/* Avatar */}
+                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0 shadow-sm border ${isPatient
+                                                            ? 'bg-white border-gray-200 text-gray-500'
+                                                            : 'bg-blue-600 border-blue-700 text-white'
+                                                            }`}>
                                                             {note.first_name ? note.first_name[0] : 'U'}
                                                         </div>
-                                                        <div className={`flex flex-col ${isPatient ? 'items-end' : 'items-start'} max-w-[85%]`}>
-                                                            <div className={`flex items-baseline gap-2 mb-1 ${isPatient ? 'flex-row-reverse' : ''}`}>
-                                                                <span className="text-sm font-bold text-gray-900">{note.first_name} {note.last_name}</span>
-                                                                <span className="text-xs text-gray-400">{format(new Date(note.created_at), 'MMM d, h:mm a')}</span>
+
+                                                        {/* Bubble Container */}
+                                                        <div className={`flex flex-col ${!isPatient ? 'items-end' : 'items-start'} max-w-[80%]`}>
+                                                            <div className={`flex items-baseline gap-2 mb-1.5 ${!isPatient ? 'flex-row-reverse text-right' : 'text-left'}`}>
+                                                                <span className={`text-[11px] font-black tracking-tight ${!isPatient ? 'text-blue-700' : 'text-gray-900'}`}>
+                                                                    {note.first_name} {note.last_name}
+                                                                </span>
+                                                                <span className="text-[9px] text-gray-400 font-bold uppercase">{format(new Date(note.created_at), 'h:mm a')}</span>
                                                             </div>
-                                                            <div className={`px-4 py-2 rounded-2xl text-sm whitespace-pre-wrap ${isPatient
-                                                                ? 'bg-emerald-600 text-white rounded-tr-none'
-                                                                : 'bg-white border border-gray-200 text-gray-700 rounded-tl-none shadow-sm'
+
+                                                            <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm transition-all ${!isPatient
+                                                                ? 'bg-blue-600 text-white rounded-tr-none ring-1 ring-blue-700'
+                                                                : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none'
                                                                 }`}>
                                                                 {note.note}
                                                             </div>
+                                                            {!isPatient && (
+                                                                <div className="mt-1 flex items-center gap-1 text-[9px] font-bold text-gray-400 uppercase tracking-tighter">
+                                                                    <CheckCircle className="w-2.5 h-2.5 text-blue-500" /> Delivered to Portal
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 );
                                             })}
+                                            <div ref={chatEndRef} className="h-2" />
                                         </div>
                                     </div>
                                 )}
