@@ -1547,18 +1547,23 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 Edit
                                             </button>
                                         </div>
-                                        <div className="p-2">
+                                        <div className="p-2 max-h-[220px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
                                             {(problems || []).length > 0 ? (
-                                                <div className="space-y-1">
-                                                    {(problems || []).slice(0, 8).map(prob => (
-                                                        <div key={prob.id} className="flex justify-between items-center px-2 py-1.5 rounded hover:bg-slate-50 transition-colors">
-                                                            <span className="text-[10px] font-medium text-slate-700 truncate mr-2">{prob.name}</span>
-                                                            <span className="text-[7px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-1.5 py-0.5 rounded-full font-bold uppercase shrink-0">Active</span>
+                                                <div className="space-y-0.5">
+                                                    {(problems || []).map(prob => (
+                                                        <div key={prob.id} className="flex justify-between items-center px-2 py-1.5 rounded-md hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100 group">
+                                                            <span className="text-[10px] font-semibold text-slate-700 truncate mr-2 group-hover:text-blue-700">{prob.name}</span>
+                                                            <div className="flex items-center gap-1 shrink-0">
+                                                                <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                                                                <span className="text-[8px] text-emerald-600 font-bold uppercase tracking-tighter">Act</span>
+                                                            </div>
                                                         </div>
                                                     ))}
                                                 </div>
                                             ) : (
-                                                <p className="text-[10px] text-slate-400 text-center py-2 italic font-medium">Inactive</p>
+                                                <div className="py-4 text-center">
+                                                    <p className="text-[10px] text-slate-400 italic font-medium">No active problems</p>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
@@ -1778,31 +1783,35 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     </div>
                                                     <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-widest">Active Medications</h3>
                                                 </div>
-                                                <button onClick={() => { setPatientChartTab('medications'); setShowPatientChart(true); }} className="px-2 py-1 bg-white text-[9px] text-blue-500 font-bold uppercase border border-blue-100 rounded-lg shadow-sm hover:bg-blue-50 transition-all">Manage All</button>
+                                                <button onClick={() => { setPatientChartTab('medications'); setShowPatientChart(true); }} className="px-2.5 py-1 bg-white text-[9px] text-blue-600 font-bold uppercase border border-blue-200 rounded-md shadow-sm hover:bg-blue-50 transition-all active:scale-95">Manage All</button>
                                             </div>
-                                            <div className="p-3">
+                                            <div className="p-3 max-h-[380px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
                                                 {(medications || []).filter(m => m.active !== false).length > 0 ? (
-                                                    <div className="space-y-1">
-                                                        {(medications || []).filter(m => m.active !== false).slice(0, 8).map(med => (
-                                                            <div key={med.id} className="flex items-center justify-between p-2.5 border border-slate-100 rounded-xl bg-white hover:bg-blue-50/30 hover:border-blue-100 transition-all group">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500 font-semibold text-[10px]">
-                                                                        {decodeHtmlEntities(med.medication_name)?.[0]?.toUpperCase()}
-                                                                    </div>
-                                                                    <div>
-                                                                        <p className="text-[11px] text-slate-700 font-medium group-hover:text-blue-600 transition-colors">{decodeHtmlEntities(med.medication_name)}</p>
-                                                                        <p className="text-[10px] text-slate-400 font-medium">{med.dosage} • {med.frequency}</p>
-                                                                    </div>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                        {(medications || []).filter(m => m.active !== false).map(med => (
+                                                            <div key={med.id} className="flex flex-col p-2.5 border border-slate-100 rounded-xl bg-slate-50/50 hover:bg-white hover:border-blue-200 hover:shadow-sm transition-all group relative overflow-hidden">
+                                                                <div className="absolute top-0 right-0 p-1">
+                                                                    <div className="w-1 h-1 rounded-full bg-emerald-400" />
                                                                 </div>
-                                                                <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                                                                    <span className="text-[9px] font-medium text-emerald-600 uppercase">Active</span>
+                                                                <div className="flex items-start gap-2.5">
+                                                                    <div className="w-7 h-7 rounded-md bg-white border border-blue-100 flex items-center justify-center text-blue-600 font-bold text-[10px] shadow-sm shrink-0 uppercase">
+                                                                        {decodeHtmlEntities(med.medication_name)?.[0]}
+                                                                    </div>
+                                                                    <div className="min-w-0">
+                                                                        <p className="text-[11px] text-slate-800 font-bold leading-tight truncate group-hover:text-blue-700 transition-colors">
+                                                                            {decodeHtmlEntities(med.medication_name)}
+                                                                        </p>
+                                                                        <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
+                                                                            <span className="text-[9px] text-slate-500 font-semibold whitespace-nowrap">{med.dosage || 'No dosage'}</span>
+                                                                            <span className="text-[9px] text-slate-400 font-medium whitespace-nowrap">{med.frequency || 'No frequency'}</span>
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 ) : (
-                                                    <div className="py-8 text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200 m-1">
+                                                    <div className="py-12 text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200 m-1">
                                                         <Pill className="w-6 h-6 text-slate-200 mx-auto mb-2" />
                                                         <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-tight">No active medications<br />documented</p>
                                                     </div>
@@ -1821,18 +1830,20 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 </div>
                                                 <button onClick={() => { setPatientChartTab('allergies'); setShowPatientChart(true); }} className="px-2 py-1 bg-white text-[9px] text-blue-500 font-bold uppercase border border-blue-100 rounded-lg shadow-sm hover:bg-blue-50 transition-all">Edit</button>
                                             </div>
-                                            <div className="p-3">
+                                            <div className="p-3 max-h-[380px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
                                                 {allergies.length > 0 ? (
                                                     <div className="space-y-1.5">
-                                                        {allergies.slice(0, 6).map(allergy => (
+                                                        {allergies.map(allergy => (
                                                             <div key={allergy.id} className="p-2 rounded-lg bg-slate-50/50 border border-slate-100/50 hover:bg-white hover:border-amber-100 transition-all group">
-                                                                <p className="text-[11px] text-slate-800 font-medium leading-tight">{allergy.allergen}</p>
+                                                                <p className="text-[11px] text-slate-800 font-bold leading-tight">{allergy.allergen}</p>
                                                                 <p className="text-[9px] text-slate-500 font-medium leading-tight">{allergy.reaction || 'No reaction'}</p>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 ) : (
-                                                    <p className="text-[10px] text-slate-400 text-center py-8 italic font-medium">NKA</p>
+                                                    <div className="py-8 text-center">
+                                                        <p className="text-[10px] text-slate-400 italic font-medium">NKA</p>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
@@ -1848,36 +1859,38 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 </div>
                                                 <button onClick={() => { setPatientChartTab('family'); setShowPatientChart(true); }} className="px-2 py-1 bg-white text-[9px] text-blue-500 font-bold uppercase border border-blue-100 rounded-lg shadow-sm hover:bg-blue-50 transition-all">Edit</button>
                                             </div>
-                                            <div className="p-3 space-y-3">
+                                            <div className="p-3 space-y-3 max-h-[380px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
                                                 {/* Social History mini view */}
-                                                <div className="space-y-1">
-                                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Social</p>
+                                                <div className="space-y-1.5">
+                                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Client Profile</p>
                                                     <div className="grid grid-cols-2 gap-2">
-                                                        <div className="p-1 px-2 rounded-lg bg-blue-50/50 border border-blue-100/20">
-                                                            <p className="text-[8px] font-bold text-blue-400 uppercase">Smoker</p>
-                                                            <p className="text-[10px] font-medium text-slate-700">{socialHistory?.smoking_status === 'Never smoker' ? 'No' : socialHistory?.smoking_status || '—'}</p>
+                                                        <div className="p-1.5 px-2.5 rounded-xl bg-blue-50/40 border border-blue-100/30">
+                                                            <p className="text-[8px] font-bold text-blue-500 uppercase tracking-tighter">Smoker</p>
+                                                            <p className="text-[10px] font-bold text-slate-800">{socialHistory?.smoking_status === 'Never smoker' ? 'No' : socialHistory?.smoking_status || '—'}</p>
                                                         </div>
-                                                        <div className="p-1 px-2 rounded-lg bg-purple-50/50 border border-purple-100/20">
-                                                            <p className="text-[8px] font-bold text-purple-400 uppercase">Alcohol</p>
-                                                            <p className="text-[10px] font-medium text-slate-700">{socialHistory?.alcohol_use || '—'}</p>
+                                                        <div className="p-1.5 px-2.5 rounded-xl bg-purple-50/40 border border-purple-100/30">
+                                                            <p className="text-[8px] font-bold text-purple-500 uppercase tracking-tighter">Alcohol</p>
+                                                            <p className="text-[10px] font-bold text-slate-800">{socialHistory?.alcohol_use || '—'}</p>
                                                         </div>
                                                     </div>
                                                 </div>
 
                                                 {/* Family History mini view */}
-                                                <div className="space-y-1">
-                                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Family</p>
+                                                <div className="space-y-1.5">
+                                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest pt-1">Genetic History</p>
                                                     {familyHistory.length > 0 ? (
-                                                        <div className="space-y-1">
-                                                            {familyHistory.slice(0, 3).map(hist => (
-                                                                <div key={hist.id} className="flex justify-between items-center text-[10px]">
-                                                                    <span className="text-slate-600 font-medium truncate max-w-[80px]">{hist.condition}</span>
-                                                                    <span className="text-slate-400 text-[9px] font-bold">{hist.relationship}</span>
+                                                        <div className="grid grid-cols-1 gap-1">
+                                                            {familyHistory.map(hist => (
+                                                                <div key={hist.id} className="flex justify-between items-center px-2 py-1.5 rounded-lg bg-slate-50/30 border border-slate-100/50">
+                                                                    <span className="text-slate-800 text-[10px] font-bold truncate max-w-[120px]">{hist.condition}</span>
+                                                                    <span className="text-slate-400 text-[9px] font-bold tracking-tight bg-white px-1.5 py-0.5 rounded border border-slate-100">{hist.relationship}</span>
                                                                 </div>
                                                             ))}
                                                         </div>
                                                     ) : (
-                                                        <p className="text-[9px] text-slate-400 italic">No family history</p>
+                                                        <div className="py-4 text-center">
+                                                            <p className="text-[9px] text-slate-400 italic">No family history documented</p>
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>
