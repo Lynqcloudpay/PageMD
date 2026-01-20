@@ -226,7 +226,8 @@ const Inbasket = () => {
         }
 
         // 2. Background Task Filter (Hide unless showBackground is true)
-        const isBackground = item.type === 'document' && (!item.body || item.body === 'Document Upload');
+        const isBackground = (item.type === 'document' && (!item.body || ['other', 'profile_photo', 'background_upload', 'administrative'].includes(item.body))) ||
+            item.type === 'new_patient_registration';
         if (isBackground && !showBackground) return false;
 
         // 3. Search Filter
@@ -431,7 +432,7 @@ const Inbasket = () => {
                         className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${selectedCategory === 'all' ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
                     >
                         <span className="flex items-center gap-2"><Inbox className="w-4 h-4" /> All Categories</span>
-                        <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-xs">{items.length}</span>
+                        <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-xs">{filteredItems.length}</span>
                     </button>
 
                     {TASK_CATEGORIES.map(cat => (
@@ -798,32 +799,58 @@ const Inbasket = () => {
                         </div>
 
                         <div className="p-6 space-y-4 overflow-y-auto">
-                            <div className="flex gap-4">
-                                <div className="flex-1">
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Type</label>
-                                    <select
-                                        value={composeData.type}
-                                        onChange={e => setComposeData({ ...composeData, type: e.target.value })}
-                                        className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+                            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex flex-col gap-3">
+                                <label className="block text-[10px] font-black text-blue-600 uppercase tracking-widest">1. Choose Communication Type</label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        onClick={() => setComposeData({ ...composeData, type: 'task' })}
+                                        className={`p-3 rounded-lg border text-left transition-all ${composeData.type !== 'portal_message' ? 'bg-white border-blue-500 ring-1 ring-blue-500 shadow-sm' : 'bg-gray-50 border-gray-200 hover:border-gray-300'}`}
                                     >
-                                        <option value="task">Internal Task</option>
-                                        <option value="message">Internal Staff Message</option>
-                                        <option value="portal_message">Outgoing Patient Message (Portal)</option>
-                                        <option value="refill">Rx Request</option>
-                                    </select>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <MessageSquare className={`w-4 h-4 ${composeData.type !== 'portal_message' ? 'text-blue-600' : 'text-gray-400'}`} />
+                                            <span className={`text-sm font-bold ${composeData.type !== 'portal_message' ? 'text-blue-900' : 'text-gray-500'}`}>Internal</span>
+                                        </div>
+                                        <p className="text-[10px] text-gray-500 leading-tight">Staff tasks, notes, or internal messages.</p>
+                                    </button>
+
+                                    <button
+                                        onClick={() => setComposeData({ ...composeData, type: 'portal_message' })}
+                                        className={`p-3 rounded-lg border text-left transition-all ${composeData.type === 'portal_message' ? 'bg-white border-blue-500 ring-1 ring-blue-500 shadow-sm' : 'bg-gray-50 border-gray-200 hover:border-gray-300'}`}
+                                    >
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <Send className={`w-4 h-4 ${composeData.type === 'portal_message' ? 'text-blue-600' : 'text-gray-400'}`} />
+                                            <span className={`text-sm font-bold ${composeData.type === 'portal_message' ? 'text-blue-900' : 'text-gray-500'}`}>Patient Portal</span>
+                                        </div>
+                                        <p className="text-[10px] text-gray-500 leading-tight">Send a secure message to the patient's portal.</p>
+                                    </button>
                                 </div>
+
                                 {composeData.type !== 'portal_message' && (
-                                    <div className="flex-1">
-                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Priority</label>
-                                        <select
-                                            value={composeData.priority}
-                                            onChange={e => setComposeData({ ...composeData, priority: e.target.value })}
-                                            className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-                                        >
-                                            <option value="normal">Normal</option>
-                                            <option value="urgent">Urgent</option>
-                                            <option value="stat">STAT</option>
-                                        </select>
+                                    <div className="flex gap-4 mt-1">
+                                        <div className="flex-1">
+                                            <label className="block text-[10px] font-bold text-blue-400 uppercase mb-1">Sub-Type</label>
+                                            <select
+                                                value={composeData.type}
+                                                onChange={e => setComposeData({ ...composeData, type: e.target.value })}
+                                                className="w-full border border-gray-200 rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500"
+                                            >
+                                                <option value="task">Clinical Task</option>
+                                                <option value="message">Staff Message</option>
+                                                <option value="refill">Rx Refill Request</option>
+                                            </select>
+                                        </div>
+                                        <div className="flex-1">
+                                            <label className="block text-[10px] font-bold text-blue-400 uppercase mb-1">Priority</label>
+                                            <select
+                                                value={composeData.priority}
+                                                onChange={e => setComposeData({ ...composeData, priority: e.target.value })}
+                                                className="w-full border border-gray-200 rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500"
+                                            >
+                                                <option value="normal">Normal</option>
+                                                <option value="urgent">Urgent</option>
+                                                <option value="stat">STAT</option>
+                                            </select>
+                                        </div>
                                     </div>
                                 )}
                             </div>

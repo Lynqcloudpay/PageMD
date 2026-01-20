@@ -252,6 +252,18 @@ async function syncInboxItems(tenantId, schema) {
     )
   `, [tenantId]);
 
+    // NEW: Cleanup administrative clutter that might have leaked in or was already there
+    // This removes standard registration logs and administrative documents from the main list by marking them completed
+    await client.query(`
+      UPDATE inbox_items
+      SET status = 'completed', updated_at = CURRENT_TIMESTAMP
+      WHERE (
+        (type = 'document' AND body IN ('other', 'profile_photo', 'background_upload', 'administrative'))
+        OR type = 'new_patient_registration'
+      )
+      AND status = 'new'
+    `);
+
     // 7. Sync Portal Message Threads (Grouped by Patient - "Closed Loop")
     // UPDATE existing active threads with latest message
     await client.query(`
