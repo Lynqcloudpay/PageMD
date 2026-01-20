@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-    Inbox, CheckCircle, Clock, AlertTriangle, MessageSquare, FileText,
+    CheckCircle as CheckCircleIcon, Clock, AlertTriangle, MessageSquare, FileText,
     Pill, FlaskConical, Image, Send, RefreshCw, Filter, Search,
     ChevronRight, X, Plus, Bell, User, Calendar, Phone, Paperclip,
-    ArrowRight, Check, ArrowLeft, ChevronLeft, Eye, UserPlus
+    ArrowRight, Check, ArrowLeft, ChevronLeft, Eye, UserPlus, Mail
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
@@ -960,7 +960,7 @@ const Inbasket = () => {
                                                             </div>
                                                             {!isPatient && (
                                                                 <div className="mt-1 flex items-center gap-1 text-[9px] font-bold text-gray-400 uppercase tracking-tighter">
-                                                                    <CheckCircle className="w-2.5 h-2.5 text-blue-500" /> Delivered to Portal
+                                                                    <CheckCircleIcon className="w-2.5 h-2.5 text-blue-500" /> Delivered to Portal
                                                                 </div>
                                                             )}
                                                         </div>
