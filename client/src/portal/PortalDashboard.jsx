@@ -147,16 +147,6 @@ const PortalDashboard = () => {
         return () => clearInterval(interval);
     }, []);
 
-    if (loading) return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50">
-            <div className="flex flex-col items-center gap-4">
-                <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                <div className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Accessing Secure Records...</div>
-            </div>
-        </div>
-    );
-
-
     const content = useMemo(() => {
         switch (activeTab) {
             case 'messages':
@@ -308,6 +298,15 @@ const PortalDashboard = () => {
                 );
         }
     }, [activeTab, patient, activeNotifications, stats]);
+
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-50">
+            <div className="flex flex-col items-center gap-4">
+                <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                <div className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Accessing Secure Records...</div>
+            </div>
+        </div>
+    );
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] flex selection:bg-blue-100">
