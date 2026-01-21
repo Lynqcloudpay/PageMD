@@ -4,7 +4,7 @@ import {
     AlertCircle, Activity, Pill, FileText, Clock, Eye, ChevronDown, ChevronUp, ChevronRight, Plus,
     Phone, Mail, MapPin, CreditCard, Building2, Users, Heart, Printer, Scissors,
     CheckCircle2, Edit, ArrowRight, ExternalLink, UserCircle, Camera, User, X, FileImage, Save, FlaskConical, Database, Trash2, Upload, Layout, RotateCcw, Waves,
-    Shield, ShieldAlert, ShieldPlus, AlertTriangle
+    Shield, ShieldAlert, ShieldPlus, AlertTriangle, ShieldCheck, Check
 } from 'lucide-react';
 import { visitsAPI, patientsAPI, ordersAPI, referralsAPI, documentsAPI, patientFlagsAPI, api } from '../services/api';
 import { format } from 'date-fns';
@@ -1534,6 +1534,74 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     <p className="text-[10px] text-slate-400">No clinical visits</p>
                                                 </div>
                                             )}
+                                        </div>
+                                    </div>
+
+                                    {/* Health Maintenance Section - Filling the gap with clinical value */}
+                                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden group/hm hover:border-blue-200 transition-all duration-300">
+                                        <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
+                                            <div className="flex items-center gap-2">
+                                                <div className="p-1.5 bg-blue-50 text-blue-500 rounded-lg group-hover/hm:scale-110 transition-transform">
+                                                    <ShieldCheck className="w-3.5 h-3.5" />
+                                                </div>
+                                                <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-widest">Health Maintenance</h3>
+                                            </div>
+                                            <span className="text-[9px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">Live</span>
+                                        </div>
+                                        <div className="p-4 space-y-4">
+                                            {/* Screening Item: Influenza */}
+                                            <div className="flex items-center justify-between group/item">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-bold text-slate-700">Influenza Vaccine</span>
+                                                    <span className="text-[9px] text-slate-400 font-medium italic">Due Annually (Fall)</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[8px] font-black text-rose-500 uppercase tracking-tighter bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100 animate-pulse">OVERDUE</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Screening Item: PCV20 */}
+                                            <div className="flex items-center justify-between group/item decoration-slate-200">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-bold text-slate-700">Pneumococcal (PCV20)</span>
+                                                    <span className="text-[9px] text-slate-400 font-medium">Last: 11/22/2023</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="p-1 bg-emerald-50 rounded-full border border-emerald-100 text-emerald-500">
+                                                        <Check className="w-2.5 h-2.5" />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Screening Item: Colonoscopy */}
+                                            <div className="flex items-center justify-between group/item">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-bold text-slate-700">Colonoscopy</span>
+                                                    <span className="text-[9px] text-slate-400 font-medium italic">Due: 05/2026</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[8px] font-black text-amber-600 uppercase tracking-tighter bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">DUE SOON</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Screening Item: AAA (Example Specialty) */}
+                                            {patient?.sex === 'M' && (
+                                                <div className="flex items-center justify-between group/item">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[10px] font-bold text-slate-700">AAA Screening</span>
+                                                        <span className="text-[9px] text-slate-400 font-medium italic">USPSTF Grade B</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-slate-300">
+                                                        <Clock className="w-3 h-3" />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <div className="pt-2">
+                                                <button className="w-full py-2 bg-slate-50 border border-slate-100 text-[10px] font-bold text-slate-500 hover:text-blue-600 hover:bg-white hover:border-blue-200 hover:shadow-sm transition-all rounded-xl flex items-center justify-center gap-2 group/btn">
+                                                    Clinical Quality Measures <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

@@ -1275,10 +1275,12 @@ router.post('/:id/surgical-history', requirePermission('notes:edit'), async (req
     const { id } = req.params;
     const { procedure_name, date, surgeon, facility, notes } = req.body;
 
+    const sanitizedDate = (date === '' || date === null || date === undefined) ? null : date;
+
     const result = await pool.query(
       `INSERT INTO surgical_history (patient_id, procedure_name, date, surgeon, facility, notes)
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [id, procedure_name, date, surgeon, facility, notes]
+      [id, procedure_name, sanitizedDate, surgeon, facility, notes]
     );
 
     await logAudit(req.user.id, 'add_surgical_history', 'surgical_history', result.rows[0].id, {}, req.ip);
@@ -1305,7 +1307,7 @@ router.put('/surgical-history/:historyId', requirePermission('notes:edit'), asyn
     }
     if (date !== undefined) {
       updates.push(`date = $${paramIndex++}`);
-      values.push(date);
+      values.push((date === '' || date === null) ? null : date);
     }
     if (surgeon !== undefined) {
       updates.push(`surgeon = $${paramIndex++}`);
