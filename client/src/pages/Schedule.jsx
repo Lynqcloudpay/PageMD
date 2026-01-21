@@ -354,7 +354,8 @@ const Schedule = () => {
         type: 'Follow-up',
         time: '09:00',
         duration: 30,
-        date: format(new Date(), 'yyyy-MM-dd')
+        date: format(new Date(), 'yyyy-MM-dd'),
+        visitMethod: 'office'
     });
     const [patientSearch, setPatientSearch] = useState('');
     const [patientSearchResults, setPatientSearchResults] = useState([]);
@@ -682,7 +683,8 @@ const Schedule = () => {
                 date: selectedDate,
                 time: selectedTime,
                 duration: newAppt.duration,
-                type: newAppt.type
+                type: newAppt.type,
+                visitMethod: newAppt.visitMethod
             });
 
             // Auto-address the follow-up if this was a reschedule from Cancellations
@@ -714,7 +716,8 @@ const Schedule = () => {
                 type: 'Follow-up',
                 time: '09:00',
                 duration: 30,
-                date: format(currentDate, 'yyyy-MM-dd')
+                date: format(currentDate, 'yyyy-MM-dd'),
+                visitMethod: 'office'
             });
             setPatientSearch('');
         } catch (error) {
@@ -1294,13 +1297,42 @@ const Schedule = () => {
                                             <select
                                                 className="w-full py-2 px-3 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                                 value={newAppt.type}
-                                                onChange={(e) => setNewAppt({ ...newAppt, type: e.target.value })}
+                                                onChange={(e) => {
+                                                    const newType = e.target.value;
+                                                    const updates = { type: newType };
+                                                    if (newType === 'Telehealth Visit') {
+                                                        updates.visitMethod = 'telehealth';
+                                                    }
+                                                    setNewAppt({ ...newAppt, ...updates });
+                                                }}
                                             >
                                                 <option value="Follow-up">Follow-up</option>
                                                 <option value="New Patient">New Patient</option>
                                                 <option value="Sick Visit">Sick Visit</option>
                                                 <option value="Physical">Physical</option>
+                                                <option value="Telehealth Visit">Telehealth Visit</option>
                                             </select>
+                                        </div>
+                                    </div>
+
+                                    {/* Visit Method Toggle */}
+                                    <div className="mb-4">
+                                        <label className="text-xs font-semibold text-slate-700 mb-2 block">Visit Method</label>
+                                        <div className="flex bg-slate-100 p-1 rounded-xl w-fit">
+                                            <button
+                                                type="button"
+                                                onClick={() => setNewAppt({ ...newAppt, visitMethod: 'office' })}
+                                                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${newAppt.visitMethod === 'office' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                            >
+                                                Office
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setNewAppt({ ...newAppt, visitMethod: 'telehealth' })}
+                                                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${newAppt.visitMethod === 'telehealth' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                            >
+                                                Telehealth
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

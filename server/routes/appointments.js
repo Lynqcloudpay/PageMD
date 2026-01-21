@@ -114,7 +114,8 @@ router.get('/', requirePermission('schedule:view'), async (req, res) => {
         current_room: row.current_room ?? null,
         checkout_time: row.checkout_time ?? null,
         cancellation_reason: row.cancellation_reason ?? null,
-        patient_dob: row.patient_dob
+        patient_dob: row.patient_dob,
+        visit_method: row.visit_method || 'office'
       };
     }));
 
@@ -204,7 +205,8 @@ router.get('/:id', requirePermission('schedule:view'), async (req, res) => {
       arrival_time: row.arrival_time ?? null,
       current_room: row.current_room ?? null,
       checkout_time: row.checkout_time ?? null,
-      cancellation_reason: row.cancellation_reason ?? null
+      cancellation_reason: row.cancellation_reason ?? null,
+      visit_method: row.visit_method || 'office'
     };
 
     res.json(appointment);
@@ -217,7 +219,7 @@ router.get('/:id', requirePermission('schedule:view'), async (req, res) => {
 // Create appointment
 router.post('/', requirePermission('schedule:edit'), async (req, res) => {
   try {
-    const { patientId, providerId, date, time, duration, type, notes } = req.body;
+    const { patientId, providerId, date, time, duration, type, notes, visitMethod } = req.body;
 
     if (!patientId || !date || !time) {
       return res.status(400).json({ error: 'Patient ID, date, and time are required' });
@@ -251,9 +253,9 @@ router.post('/', requirePermission('schedule:edit'), async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO appointments (patient_id, provider_id, appointment_date, appointment_time, duration, appointment_type, notes, created_by, clinic_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [patientId, finalProviderId, date, time, duration || 30, type || 'Follow-up', notes || null, req.user.id, req.user?.clinic_id]
+      `INSERT INTO appointments (patient_id, provider_id, appointment_date, appointment_time, duration, appointment_type, notes, created_by, clinic_id, visit_method)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      [patientId, finalProviderId, date, time, duration || 30, type || 'Follow-up', notes || null, req.user.id, req.user?.clinic_id, visitMethod || 'office']
     );
 
     // Fetch the full appointment with patient and provider names
@@ -328,7 +330,8 @@ router.post('/', requirePermission('schedule:edit'), async (req, res) => {
       arrival_time: row.arrival_time ?? null,
       current_room: row.current_room ?? null,
       checkout_time: row.checkout_time ?? null,
-      cancellation_reason: row.cancellation_reason ?? null
+      cancellation_reason: row.cancellation_reason ?? null,
+      visit_method: row.visit_method || 'office'
     };
 
     res.status(201).json(appointment);
@@ -343,7 +346,7 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
   try {
     const { id } = req.params;
     const {
-      date, time, duration, type, status, notes, providerId
+      date, time, duration, type, status, notes, providerId, visitMethod
     } = req.body;
 
     // Accept both snake_case and camelCase for patient status fields (for compatibility)
@@ -400,6 +403,11 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
       paramCount++;
       updates.push(`provider_id = $${paramCount}`);
       params.push(providerId);
+    }
+    if (visitMethod !== undefined) {
+      paramCount++;
+      updates.push(`visit_method = $${paramCount}`);
+      params.push(visitMethod);
     }
 
     // Patient status fields - require schedule:status_update permission
@@ -706,7 +714,8 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
       arrival_time: row.arrival_time ?? null,
       current_room: row.current_room ?? null,
       checkout_time: row.checkout_time ?? null,
-      cancellation_reason: row.cancellation_reason ?? null
+      cancellation_reason: row.cancellation_reason ?? null,
+      visit_method: row.visit_method || 'office'
     };
 
     res.json(appointment);

@@ -80,11 +80,15 @@ async function ensureSchema(client) {
             BEGIN 
                 IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'portal_appointment_requests') THEN
                     ALTER TABLE portal_appointment_requests ADD COLUMN IF NOT EXISTS provider_id UUID REFERENCES users(id);
+                    ALTER TABLE portal_appointment_requests ADD COLUMN IF NOT EXISTS visit_method VARCHAR(20) DEFAULT 'office';
+                END IF;
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'appointments') THEN
+                    ALTER TABLE appointments ADD COLUMN IF NOT EXISTS visit_method VARCHAR(20) DEFAULT 'office';
                 END IF;
             END $$;
         `);
     } catch (e) {
-      console.warn('Self-healing migration failed (provider_id):', e.message);
+      console.warn('Self-healing migration failed (visit_method):', e.message);
     }
 
   } catch (error) {
@@ -775,9 +779,9 @@ router.post('/:id/approve-appointment', async (req, res) => {
 
     // 3. Create the actual appointment
     await client.query(`
-      INSERT INTO appointments (patient_id, provider_id, appointment_date, appointment_time, duration, appointment_type, status, created_by, notes)
-      VALUES ($1, $2, $3, $4, $5, $6, 'scheduled', $7, $8)
-    `, [request.patient_id, providerId, appointmentDate, appointmentTime, duration, request.appointment_type || 'Follow-up', req.user.id, 'Scheduled from portal request: ' + (request.reason || '')]);
+      INSERT INTO appointments (patient_id, provider_id, appointment_date, appointment_time, duration, appointment_type, status, created_by, notes, visit_method)
+      VALUES ($1, $2, $3, $4, $5, $6, 'scheduled', $7, $8, $9)
+    `, [request.patient_id, providerId, appointmentDate, appointmentTime, duration, request.appointment_type || 'Follow-up', req.user.id, 'Scheduled from portal request: ' + (request.reason || ''), request.visit_method || 'office']);
 
     // 4. Update the portal_appointment_request as approved
     await client.query(`

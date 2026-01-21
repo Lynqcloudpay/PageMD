@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     Calendar, CheckCircle, Clock, X, RefreshCw, Search,
     User, Phone, FileText, ChevronRight, AlertCircle, CalendarPlus,
-    ChevronLeft, Check, Send, Eye
+    ChevronLeft, Check, Send, Eye, Video
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
@@ -341,8 +341,8 @@ const AppointmentRequests = () => {
                                 >
                                     <div className="flex justify-between items-start mb-1">
                                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${req.status === 'new' ? 'bg-amber-100 text-amber-700' :
-                                                req.status === 'pending_patient' ? 'bg-blue-100 text-blue-700' :
-                                                    'bg-gray-100 text-gray-500'
+                                            req.status === 'pending_patient' ? 'bg-blue-100 text-blue-700' :
+                                                'bg-gray-100 text-gray-500'
                                             }`}>
                                             {req.status === 'new' ? 'NEW' :
                                                 req.status === 'pending_patient' ? 'PENDING RESPONSE' :
@@ -481,6 +481,16 @@ const AppointmentRequests = () => {
                                     <div className="p-4 bg-white border border-gray-100 rounded-xl shadow-sm">
                                         <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Channel</p>
                                         <p className="text-sm font-bold text-amber-600">Patient Portal</p>
+                                    </div>
+                                    <div className="p-4 bg-white border border-gray-100 rounded-xl shadow-sm">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Requested Method</p>
+                                        <p className={`text-sm font-bold flex items-center gap-1.5 ${selectedRequest.visit_method === 'telehealth' ? 'text-emerald-600' : 'text-blue-600'}`}>
+                                            {selectedRequest.visit_method === 'telehealth' ? (
+                                                <><Video className="w-4 h-4" /> Telehealth</>
+                                            ) : (
+                                                <><User className="w-4 h-4" /> Office Visit</>
+                                            )}
+                                        </p>
                                     </div>
                                 </div>
                             </div>

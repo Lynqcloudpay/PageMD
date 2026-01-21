@@ -15,7 +15,8 @@ import {
     MapPin,
     CalendarPlus,
     MessageCircle,
-    XCircle
+    XCircle,
+    Video
 } from 'lucide-react';
 import { format } from 'date-fns';
 

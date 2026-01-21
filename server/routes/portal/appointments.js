@@ -69,16 +69,16 @@ router.post('/requests', requirePortalPermission('can_request_appointments'), [
             return res.status(400).json({ errors: errors.array() });
         }
 
-        const { preferredDate, preferredTimeRange, appointmentType, reason, providerId } = req.body;
+        const { preferredDate, preferredTimeRange, appointmentType, reason, providerId, visitMethod } = req.body;
         const patientId = req.portalAccount.patient_id;
         const portalAccountId = req.portalAccount.id;
 
         const result = await pool.query(`
             INSERT INTO portal_appointment_requests (
-                patient_id, portal_account_id, preferred_date, preferred_time_range, appointment_type, reason, provider_id
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                patient_id, portal_account_id, preferred_date, preferred_time_range, appointment_type, reason, provider_id, visit_method
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *
-        `, [patientId, portalAccountId, preferredDate, preferredTimeRange, appointmentType, reason, providerId]);
+        `, [patientId, portalAccountId, preferredDate, preferredTimeRange, appointmentType, reason, providerId, visitMethod || 'office']);
 
         // Trigger inbasket sync so staff sees it immediately
         try {
