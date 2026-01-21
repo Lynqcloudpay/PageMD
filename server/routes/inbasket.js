@@ -84,6 +84,12 @@ async function ensureSchema(client) {
                 END IF;
                 IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'appointments') THEN
                     ALTER TABLE appointments ADD COLUMN IF NOT EXISTS visit_method VARCHAR(20) DEFAULT 'office';
+                    -- Update appointment type constraint to allow Telehealth Visit
+                    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'appointments_appointment_type_check') THEN
+                        ALTER TABLE appointments DROP CONSTRAINT appointments_appointment_type_check;
+                    END IF;
+                    ALTER TABLE appointments ADD CONSTRAINT appointments_appointment_type_check 
+                        CHECK (appointment_type IN ('Follow-up', 'New Patient', 'Sick Visit', 'Physical', 'Telehealth Visit', 'Other'));
                 END IF;
             END $$;
         `);
