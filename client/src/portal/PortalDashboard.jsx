@@ -96,9 +96,10 @@ const PortalDashboard = () => {
                 if (unreadCount > 0) {
                     newNotifs.push({
                         id: 'unread-msgs',
-                        type: 'message',
+                        type: 'action', // Prominent styling
                         message: `You have ${unreadCount} new message${unreadCount > 1 ? 's' : ''}`,
-                        action: 'messages'
+                        action: 'messages',
+                        priority: 'high'
                     });
                 }
 
@@ -109,7 +110,8 @@ const PortalDashboard = () => {
                         id: 'appt-slots',
                         type: 'action',
                         message: `Action Required: Review suggested appointment slots`,
-                        action: 'messages'
+                        action: 'messages',
+                        priority: 'urgent'
                     });
                 }
 
@@ -439,16 +441,16 @@ const NavItem = ({ icon, label, active, onClick, badge }) => (
     <button
         onClick={onClick}
         className={`w-full flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 ${active
-            ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
-            : 'text-slate-400 hover:text-slate-800 hover:bg-slate-50'
+            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+            : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
             }`}
     >
         <div className="flex items-center gap-3.5">
-            <span className="transition-transform duration-500">{icon}</span>
-            <span className="font-bold text-[11px] uppercase tracking-widest">{label}</span>
+            <span className={`transition-transform duration-500 ${active ? 'scale-110' : 'group-hover:scale-110'}`}>{icon}</span>
+            <span className="font-bold text-[11px] uppercase tracking-widest leading-none">{label}</span>
         </div>
         {badge > 0 && (
-            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black transition-all duration-300 ${active ? 'bg-white text-blue-600' : 'bg-blue-600 text-white shadow-md shadow-blue-200 animate-pulse-subtle'}`}>
+            <span className={`min-w-[1.5rem] h-6 flex items-center justify-center px-1.5 rounded-full text-[10px] font-black transition-all duration-300 shadow-sm ${active ? 'bg-white text-blue-600' : 'bg-red-500 text-white animate-pulse pulse-red'}`}>
                 {badge}
             </span>
         )}
@@ -482,19 +484,27 @@ const Notifications = ({ notifications, onAction }) => {
                     <div
                         key={n.id}
                         onClick={() => onAction(n.action)}
-                        className={`p-5 rounded-[2rem] flex items-center justify-between gap-5 shadow-lg transition-all cursor-pointer group hover:-translate-y-1 ${n.type === 'action' ? 'bg-red-50 border border-red-100 text-red-900 shadow-red-100' : 'bg-white border border-slate-100 shadow-slate-200/50'}`}
+                        className={`p-6 rounded-[2.5rem] flex items-center justify-between gap-5 shadow-2xl transition-all cursor-pointer group hover:-translate-y-2 border-2 notification-card ${n.type === 'action'
+                            ? 'type-action bg-gradient-to-br from-red-50 to-white border-red-200 text-red-900 shadow-red-200/50 animate-glow-red'
+                            : 'bg-white border-transparent shadow-slate-200/50'
+                            }`}
                     >
-                        <div className="flex items-center gap-4">
-                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 backdrop-blur-sm group-hover:scale-110 transition-transform ${n.type === 'action' ? 'bg-red-500 text-white shadow-xl shadow-red-200' : 'bg-blue-50'}`}>
-                                <Bell className={`w-6 h-6 ${n.type === 'action' ? 'text-white' : 'text-blue-600'}`} />
+                        <div className="flex items-center gap-6">
+                            <div className={`w-16 h-16 rounded-3xl flex items-center justify-center shrink-0 backdrop-blur-sm group-hover:scale-110 transition-transform ${n.type === 'action' ? 'bg-red-500 text-white shadow-2xl shadow-red-300 animate-pulse' : 'bg-blue-600 text-white'}`}>
+                                <Bell className={`w-8 h-8 text-white`} />
                             </div>
                             <div>
-                                <h4 className={`font-bold text-sm tracking-tight ${n.type === 'action' ? 'text-red-900' : 'text-slate-800'}`}>{n.message}</h4>
-                                <p className={`text-[10px] font-bold uppercase tracking-widest ${n.type === 'action' ? 'text-red-500' : 'text-slate-400'}`}>High Priority</p>
+                                <h4 className={`font-black text-lg tracking-tight mb-1 ${n.type === 'action' ? 'text-red-950' : 'text-slate-900'}`}>{n.message}</h4>
+                                <div className="flex items-center gap-2">
+                                    <div className={`w-2.5 h-2.5 rounded-full ${n.type === 'action' ? 'bg-red-600 animate-ping' : 'bg-blue-600'}`} />
+                                    <p className={`text-[12px] font-black uppercase tracking-[0.2em] ${n.type === 'action' ? 'text-red-600' : 'text-slate-500'}`}>
+                                        {n.priority === 'urgent' ? 'Requires Immediate Action' : 'Urgent Notification'}
+                                    </p>
+                                </div>
                             </div>
                         </div>
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${n.type === 'action' ? 'bg-red-100 text-red-600' : 'bg-slate-50 text-slate-400 group-hover:bg-blue-600 group-hover:text-white'}`}>
-                            <ChevronRight className="w-5 h-5" />
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${n.type === 'action' ? 'bg-red-100 text-red-600 group-hover:bg-red-600 group-hover:text-white shadow-inner' : 'bg-slate-50 text-slate-400 group-hover:bg-blue-600 group-hover:text-white'}`}>
+                            <ChevronRight className="w-7 h-7" />
                         </div>
                     </div>
                 ))}
@@ -547,8 +557,54 @@ const PremiumStyles = () => (
             appearance: none;
         }
 
-        .notification-card-action {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        /* Premium Effects */
+        @keyframes glow-red {
+            0%, 100% { box-shadow: 0 0 5px rgba(239, 68, 68, 0.2); }
+            50% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.6); }
+        }
+        @keyframes glow-blue {
+            0%, 100% { box-shadow: 0 0 5px rgba(37, 99, 235, 0.2); }
+            50% { box-shadow: 0 0 20px rgba(37, 99, 235, 0.6); }
+        }
+        @keyframes bounce-subtle {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+        .animate-glow-red {
+            animation: glow-red 2s infinite;
+        }
+        .animate-glow-blue {
+            animation: glow-blue 2s infinite;
+        }
+        .pulse-red {
+            animation: pulse-red 1.5s infinite;
+        }
+        @keyframes pulse-red {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .sidebar-item-active {
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+        }
+        .notification-card {
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+        .notification-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: #EF4444;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .notification-card.type-action::before {
+            opacity: 1;
         }
     `}</style>
 );
