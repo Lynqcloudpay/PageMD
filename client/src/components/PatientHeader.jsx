@@ -3,7 +3,7 @@ import {
     Phone, Mail, MapPin, Shield, Activity,
     AlertCircle, Edit2, Camera, X, Check,
     ExternalLink, Calendar, FileText, Upload, Pill, Receipt, Users,
-    Lock, User, ShieldAlert, FlaskConical
+    Lock, User, ShieldAlert, FlaskConical, ChevronDown
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
@@ -16,8 +16,6 @@ import FlagAcknowledgmentModal from './FlagAcknowledgmentModal';
 import { patientFlagsAPI, patientsAPI } from '../services/api';
 import { format } from 'date-fns';
 import PatientPhotoModal from './PatientPhotoModal';
-
-// Robust date formatter that ignores timezones completely
 
 // Robust date formatter that ignores timezones completely
 const formatDate = (dateString) => {
@@ -61,6 +59,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
     const [loading, setLoading] = useState(false);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+    const [isPortalMenuOpen, setIsPortalMenuOpen] = useState(false);
     const [inviteData, setInviteData] = useState(null);
     const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
 
@@ -531,40 +530,73 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
 
                     {/* Primary Actions */}
                     <div className="flex items-center gap-3 relative z-10">
-                        <button
-                            onClick={async () => {
-                                if (!patient.email) {
-                                    alert('An email address is required to invite a patient to the portal.');
-                                    return;
-                                }
+                        {/* Portal Dropdown */}
+                        <div className="relative">
+                            <button
+                                onClick={() => setIsPortalMenuOpen(!isPortalMenuOpen)}
+                                className={`px-4 py-2 text-[13px] font-bold rounded-xl border transition-all flex items-center gap-2 shadow-sm ${isPortalMenuOpen
+                                    ? 'bg-blue-50 border-blue-200 text-blue-700'
+                                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                                    }`}
+                            >
+                                <Users size={16} />
+                                Patient Portal
+                                <ChevronDown size={14} className={`transition-transform duration-200 ${isPortalMenuOpen ? 'rotate-180' : ''}`} />
+                            </button>
 
-                                try {
-                                    const response = await api.post(`/patients/${patient.id}/portal-invite`, {
-                                        email: patient.email
-                                    });
-                                    if (response.data.success) {
-                                        setInviteData(response.data);
-                                        setIsInviteModalOpen(true);
-                                    }
-                                } catch (err) {
-                                    alert(err.response?.data?.error || 'Failed to send invitation');
-                                }
-                            }}
-                            className="px-4 py-2 text-[13px] font-bold text-blue-700 bg-white border border-blue-100 rounded-xl hover:bg-blue-50 shadow-sm transition-all flex items-center gap-2"
-                            title="Invite to Patient Portal"
-                        >
-                            <Users size={16} />
-                            Invite to Portal
-                        </button>
+                            {isPortalMenuOpen && (
+                                <>
+                                    <div
+                                        className="fixed inset-0 z-[90]"
+                                        onClick={() => setIsPortalMenuOpen(false)}
+                                    />
+                                    <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-100 rounded-2xl shadow-2xl z-[100] py-2 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+                                        <div className="px-4 py-2 mb-1">
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Portal Management</p>
+                                        </div>
+                                        <button
+                                            onClick={async () => {
+                                                setIsPortalMenuOpen(false);
+                                                if (!patient.email) {
+                                                    alert('An email address is required to invite a patient to the portal.');
+                                                    return;
+                                                }
+                                                try {
+                                                    const response = await api.post(`/patients/${patient.id}/portal-invite`, {
+                                                        email: patient.email
+                                                    });
+                                                    if (response.data.success) {
+                                                        setInviteData(response.data);
+                                                        setIsInviteModalOpen(true);
+                                                    }
+                                                } catch (err) {
+                                                    alert(err.response?.data?.error || 'Failed to send invitation');
+                                                }
+                                            }}
+                                            className="w-full px-4 py-3 text-left text-[11px] font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 transition-colors"
+                                        >
+                                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                                                <Users size={14} />
+                                            </div>
+                                            Generate Invite Link
+                                        </button>
 
-                        <button
-                            onClick={() => setIsResetModalOpen(true)}
-                            className="px-4 py-2 text-[13px] font-bold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 shadow-sm transition-all flex items-center gap-2"
-                            title="Reset Portal Password"
-                        >
-                            <Lock size={16} />
-                            Reset Portal Pass
-                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setIsPortalMenuOpen(false);
+                                                setIsResetModalOpen(true);
+                                            }}
+                                            className="w-full px-4 py-3 text-left text-[11px] font-bold text-slate-700 hover:bg-amber-50 hover:text-amber-700 flex items-center gap-3 transition-colors border-t border-slate-50"
+                                        >
+                                            <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600">
+                                                <Lock size={14} />
+                                            </div>
+                                            Reset Portal Password
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
 
                         <PortalInviteModal
                             isOpen={isInviteModalOpen}
@@ -586,6 +618,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                             Open Chart
                         </button>
                     </div>
+
                 </div>
 
                 {/* Detail Grid */}
