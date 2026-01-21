@@ -116,6 +116,10 @@ export const patientsAPI = {
   deleteFamilyHistory: (historyId) => api.delete(`/patients/family-history/${historyId}`),
   getSocialHistory: (patientId) => api.get(`/patients/${patientId}/social-history`),
   saveSocialHistory: (patientId, data) => api.post(`/patients/${patientId}/social-history`, data),
+  getSurgicalHistory: (patientId) => api.get(`/patients/${patientId}/surgical-history`),
+  addSurgicalHistory: (patientId, data) => api.post(`/patients/${patientId}/surgical-history`, data),
+  updateSurgicalHistory: (historyId, data) => api.put(`/patients/surgical-history/${historyId}`, data),
+  deleteSurgicalHistory: (historyId) => api.delete(`/patients/surgical-history/${historyId}`),
   uploadPhoto: (patientId, formData) => api.post(`/patients/${patientId}/photo`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),

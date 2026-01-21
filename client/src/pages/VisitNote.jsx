@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
     Save, Lock, FileText, ChevronDown, ChevronUp, Plus, ClipboardList,
     Sparkles, ArrowLeft, Zap, Search, X, Printer, History,
-    Activity, CheckSquare, Square, Trash2, Pill, Users, UserCircle, ChevronRight,
+    Activity, ActivitySquare, CheckSquare, Square, Trash2, Pill, Users, UserCircle, ChevronRight,
     DollarSign, Eye, Calendar, AlertCircle, Stethoscope, ScrollText, Copy, RotateCcw,
     PanelRight, RefreshCw, StopCircle, FileImage, FlaskConical, Heart, Waves, FilePlus
 } from 'lucide-react';
@@ -23,7 +23,7 @@ import { useAuth } from '../context/AuthContext';
 import { ordersCatalogAPI, visitsAPI, codesAPI, patientsAPI, icd10API, documentsAPI, documentsAPIUpdate } from '../services/api';
 import { format } from 'date-fns';
 import { hpiDotPhrases } from '../data/hpiDotPhrases';
-import { ProblemInput, MedicationInput, AllergyInput, FamilyHistoryInput } from '../components/PAMFOSInputs';
+import { ProblemInput, MedicationInput, AllergyInput, FamilyHistoryInput, SurgicalHistoryInput } from '../components/PAMFOSInputs';
 
 import PrintOrdersModal from '../components/PrintOrdersModal';
 import ResultImportModal from '../components/ResultImportModal';
@@ -283,6 +283,7 @@ const VisitNote = () => {
 
     // Patient History State (PAMFOS)
     const [familyHistory, setFamilyHistory] = useState([]);
+    const [surgicalHistory, setSurgicalHistory] = useState([]);
     const [socialHistory, setSocialHistory] = useState(null);
     const [showHistoryModal, setShowHistoryModal] = useState(false); // For extended editing if needed
 
@@ -606,6 +607,11 @@ const VisitNote = () => {
                 .then(response => setFamilyHistory(response.data || []))
                 .catch(error => console.error('Error fetching family history:', error));
 
+            // Fetch Surgical History
+            patientsAPI.getSurgicalHistory(id)
+                .then(response => setSurgicalHistory(response.data || []))
+                .catch(error => console.error('Error fetching surgical history:', error));
+
             // Fetch Social History
             const fetchSocialHistory = () => {
                 patientsAPI.getSocialHistory(id)
@@ -622,6 +628,11 @@ const VisitNote = () => {
                 patientsAPI.getFamilyHistory(id)
                     .then(response => setFamilyHistory(response.data || []))
                     .catch(error => console.error('Error refreshing family history:', error));
+
+                // Refresh Surgical History
+                patientsAPI.getSurgicalHistory(id)
+                    .then(response => setSurgicalHistory(response.data || []))
+                    .catch(error => console.error('Error refreshing surgical history:', error));
 
                 // Also refresh snapshot data as it might have changed
                 patientsAPI.getSnapshot(id)
@@ -2662,6 +2673,45 @@ const VisitNote = () => {
                                                 window.dispatchEvent(new Event('patient-data-updated'));
                                                 showToast('Family history deleted', 'success');
                                             } catch (e) { showToast('Failed to delete family history', 'error'); }
+                                        }}
+                                    />
+
+                                    {/* S - Surgical History */}
+                                    <HistoryList
+                                        title="Surgical History"
+                                        icon={<ActivitySquare className="w-4 h-4 text-blue-600" />}
+                                        items={surgicalHistory}
+                                        emptyMessage="No surgical history recorded"
+                                        renderItem={(surg) => (
+                                            <div className="flex justify-between items-start w-full">
+                                                <div>
+                                                    <span className="font-medium text-gray-900">{surg.procedure_name}</span>
+                                                    {surg.date && (
+                                                        <span className="text-gray-500 text-[10px] ml-2">
+                                                            ({format(new Date(surg.date), 'MM/dd/yyyy')})
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {surg.surgeon && <span className="text-gray-500 text-xs">{surg.surgeon}</span>}
+                                            </div>
+                                        )}
+                                        renderInput={(props) => <SurgicalHistoryInput {...props} />}
+                                        onAdd={async (data) => {
+                                            try {
+                                                const res = await patientsAPI.addSurgicalHistory(id, data);
+                                                setSurgicalHistory(prev => [res.data, ...prev]);
+                                                window.dispatchEvent(new Event('patient-data-updated'));
+                                                showToast('Surgical history added', 'success');
+                                            } catch (e) { showToast('Failed to add surgical history', 'error'); }
+                                        }}
+                                        onDelete={async (itemId) => {
+                                            if (!confirm('Are you sure?')) return;
+                                            try {
+                                                await patientsAPI.deleteSurgicalHistory(itemId);
+                                                setSurgicalHistory(prev => prev.filter(h => h.id !== itemId));
+                                                window.dispatchEvent(new Event('patient-data-updated'));
+                                                showToast('Surgical history deleted', 'success');
+                                            } catch (e) { showToast('Failed to delete surgical history', 'error'); }
                                         }}
                                     />
 

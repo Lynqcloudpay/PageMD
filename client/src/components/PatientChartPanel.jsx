@@ -12,7 +12,7 @@ import { format } from 'date-fns';
 import DoseSpotPrescribe from './DoseSpotPrescribe';
 import VisitChartView from './VisitChartView';
 import PrintOrdersModal from './PrintOrdersModal';
-import { ProblemInput, MedicationInput, AllergyInput, FamilyHistoryInput } from './PAMFOSInputs';
+import { ProblemInput, MedicationInput, AllergyInput, FamilyHistoryInput, SurgicalHistoryInput } from './PAMFOSInputs';
 
 const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview' }) => {
     const navigate = useNavigate();
@@ -57,6 +57,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
     const [medications, setMedications] = useState([]);
     const [allergies, setAllergies] = useState([]);
     const [familyHistory, setFamilyHistory] = useState([]);
+    const [surgicalHistory, setSurgicalHistory] = useState([]);
     const [socialHistory, setSocialHistory] = useState(null);
 
     // Form States
@@ -77,6 +78,9 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
         smoking_status: '', alcohol_use: '', drug_use: '',
         occupation: '', exercise_frequency: '', marital_status: ''
     });
+
+    const [showAddSurgicalForm, setShowAddSurgicalForm] = useState(false);
+    const [surgicalForm, setSurgicalForm] = useState({ procedure_name: '', date: format(new Date(), 'yyyy-MM-dd'), surgeon: '', facility: '', notes: '' });
 
 
 
@@ -236,16 +240,18 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
 
             // Fetch Problems & others
             try {
-                const [probRes, allergiesRes, famRes, socRes] = await Promise.all([
+                const [probRes, allergiesRes, famRes, socRes, surgRes] = await Promise.all([
                     patientsAPI.getProblems(patientId),
                     patientsAPI.getAllergies(patientId),
                     patientsAPI.getFamilyHistory(patientId),
-                    patientsAPI.getSocialHistory(patientId)
+                    patientsAPI.getSocialHistory(patientId),
+                    patientsAPI.getSurgicalHistory(patientId)
                 ]);
                 setProblems(probRes.data || []);
                 setAllergies(allergiesRes.data || []);
                 setFamilyHistory(famRes.data || []);
                 setSocialHistory(socRes.data || null);
+                setSurgicalHistory(surgRes.data || []);
             } catch (e) {
                 console.warn('Failed to fetch additional patient data', e);
             }
@@ -306,6 +312,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
         { id: 'medications', label: 'Medications', icon: Pill },
         { id: 'allergies', label: 'Allergies', icon: AlertCircle },
         { id: 'family', label: 'Family History', icon: Users },
+        { id: 'surgical', label: 'Surgical History', icon: ActivitySquare },
         { id: 'social', label: 'Social History', icon: UserCircle },
         { id: 'labs', label: 'Labs / Studies', icon: FlaskConical },
         { id: 'documents', label: 'Documents', icon: FileImage },
@@ -393,6 +400,18 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
         }
     };
 
+    const handleDeleteSurgicalHistory = async (id) => {
+        if (!confirm('Permanently delete this surgical history record?')) return;
+        try {
+            await patientsAPI.deleteSurgicalHistory(id);
+            window.dispatchEvent(new CustomEvent('patient-data-updated'));
+            fetchAllData();
+        } catch (error) {
+            console.error('Delete surgical error:', error);
+            alert('Failed to delete surgical history');
+        }
+    };
+
     const handleUpdateSocialHistory = async (data) => {
         try {
             await patientsAPI.updateSocialHistory(patientId, data);
@@ -471,6 +490,20 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
         } catch (error) {
             console.error('Add family hx error:', error);
             alert('Failed to add family history');
+        }
+    };
+
+    const handleQuickAddSurgicalHx = async (e) => {
+        e.preventDefault();
+        try {
+            await patientsAPI.addSurgicalHistory(patientId, surgicalForm);
+            setShowAddSurgicalForm(false);
+            setSurgicalForm({ procedure_name: '', date: format(new Date(), 'yyyy-MM-dd'), surgeon: '', facility: '', notes: '' });
+            window.dispatchEvent(new CustomEvent('patient-data-updated'));
+            fetchAllData();
+        } catch (error) {
+            console.error('Add surgical hx error:', error);
+            alert('Failed to add surgical history');
         }
     };
 
@@ -1184,6 +1217,63 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                             {fam.age_at_diagnosis && <div className="text-[10px] text-gray-400 mt-1 uppercase font-bold tracking-tight">Age of Onset: {fam.age_at_diagnosis} yr</div>}
                                                         </div>
                                                         <button onClick={() => handleDeleteFamilyHistory(fam.id)} className="opacity-0 group-hover:opacity-100 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 className="w-4 h-4" /></button>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* SURGICAL HISTORY TAB */}
+                                {activeTab === 'surgical' && (
+                                    <div className="space-y-6">
+                                        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                            <div className="flex items-center gap-3">
+                                                <div className="bg-blue-100 p-2 rounded-lg"><ActivitySquare className="w-5 h-5 text-blue-600" /></div>
+                                                <div>
+                                                    <span className="text-sm font-bold text-gray-900">Surgical History</span>
+                                                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Past procedures & operations</p>
+                                                </div>
+                                            </div>
+                                            <button onClick={() => setShowAddSurgicalForm(!showAddSurgicalForm)} className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-all shadow-sm">
+                                                <Plus className="w-3.5 h-3.5" />{showAddSurgicalForm ? 'Cancel' : 'Add Procedure'}
+                                            </button>
+                                        </div>
+
+                                        {showAddSurgicalForm && (
+                                            <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 animate-fade-in mb-4">
+                                                <SurgicalHistoryInput
+                                                    onSave={async (item) => {
+                                                        try {
+                                                            await patientsAPI.addSurgicalHistory(patientId, item);
+                                                            setShowAddSurgicalForm(false);
+                                                            window.dispatchEvent(new CustomEvent('patient-data-updated'));
+                                                            fetchAllData();
+                                                        } catch (error) {
+                                                            console.error('Add surgical error:', error);
+                                                            alert('Failed to add surgical history');
+                                                        }
+                                                    }}
+                                                    onCancel={() => setShowAddSurgicalForm(false)}
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div className="space-y-2">
+                                            {surgicalHistory.length === 0 ? (
+                                                <div className="text-center py-8 bg-gray-50/50 rounded-xl border-2 border-dashed border-gray-100 text-gray-400 text-sm italic">No surgical history on file</div>
+                                            ) : (
+                                                surgicalHistory.map(surg => (
+                                                    <div key={surg.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all group flex items-start justify-between">
+                                                        <div>
+                                                            <div className="font-bold text-gray-900">{surg.procedure_name}</div>
+                                                            <div className="text-xs text-gray-500 mt-1 flex items-center gap-3">
+                                                                {surg.date && <span>Date: {new Date(surg.date).toLocaleDateString()}</span>}
+                                                                {surg.surgeon && <span>Surgeon: {surg.surgeon}</span>}
+                                                            </div>
+                                                            {surg.notes && <div className="text-xs text-gray-400 mt-2 line-clamp-2">{surg.notes}</div>}
+                                                        </div>
+                                                        <button onClick={() => handleDeleteSurgicalHistory(surg.id)} className="opacity-0 group-hover:opacity-100 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 className="w-4 h-4" /></button>
                                                     </div>
                                                 ))
                                             )}

@@ -1254,6 +1254,112 @@ router.delete('/family-history/:historyId', requirePermission('notes:edit'), asy
   }
 });
 
+// Get surgical history
+router.get('/:id/surgical-history', requirePermission('patients:view_chart'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      'SELECT * FROM surgical_history WHERE patient_id = $1 ORDER BY date DESC',
+      [id]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching surgical history:', error);
+    res.status(500).json({ error: 'Failed to fetch surgical history' });
+  }
+});
+
+// Add surgical history
+router.post('/:id/surgical-history', requirePermission('notes:edit'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { procedure_name, date, surgeon, facility, notes } = req.body;
+
+    const result = await pool.query(
+      `INSERT INTO surgical_history (patient_id, procedure_name, date, surgeon, facility, notes)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [id, procedure_name, date, surgeon, facility, notes]
+    );
+
+    await logAudit(req.user.id, 'add_surgical_history', 'surgical_history', result.rows[0].id, {}, req.ip);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error adding surgical history:', error);
+    res.status(500).json({ error: 'Failed to add surgical history' });
+  }
+});
+
+// Update surgical history
+router.put('/surgical-history/:historyId', requirePermission('notes:edit'), async (req, res) => {
+  try {
+    const { historyId } = req.params;
+    const { procedure_name, date, surgeon, facility, notes } = req.body;
+
+    const updates = [];
+    const values = [];
+    let paramIndex = 1;
+
+    if (procedure_name !== undefined) {
+      updates.push(`procedure_name = $${paramIndex++}`);
+      values.push(procedure_name);
+    }
+    if (date !== undefined) {
+      updates.push(`date = $${paramIndex++}`);
+      values.push(date);
+    }
+    if (surgeon !== undefined) {
+      updates.push(`surgeon = $${paramIndex++}`);
+      values.push(surgeon);
+    }
+    if (facility !== undefined) {
+      updates.push(`facility = $${paramIndex++}`);
+      values.push(facility);
+    }
+    if (notes !== undefined) {
+      updates.push(`notes = $${paramIndex++}`);
+      values.push(notes);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    values.push(historyId);
+    const result = await pool.query(
+      `UPDATE surgical_history SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${paramIndex} RETURNING *`,
+      values
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Surgical history not found' });
+    }
+
+    await logAudit(req.user.id, 'update_surgical_history', 'surgical_history', historyId, {}, req.ip);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating surgical history:', error);
+    res.status(500).json({ error: 'Failed to update surgical history' });
+  }
+});
+
+// Delete surgical history
+router.delete('/surgical-history/:historyId', requirePermission('notes:edit'), async (req, res) => {
+  try {
+    const { historyId } = req.params;
+    const result = await pool.query('DELETE FROM surgical_history WHERE id = $1 RETURNING *', [historyId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Surgical history not found' });
+    }
+
+    await logAudit(req.user.id, 'delete_surgical_history', 'surgical_history', historyId, {}, req.ip);
+    res.json({ message: 'Surgical history deleted' });
+  } catch (error) {
+    console.error('Error deleting surgical history:', error);
+    res.status(500).json({ error: 'Failed to delete surgical history' });
+  }
+});
+
 // Get social history
 router.get('/:id/social-history', requirePermission('patients:view_chart'), async (req, res) => {
   try {

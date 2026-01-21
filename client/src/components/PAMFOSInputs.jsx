@@ -283,4 +283,52 @@ const FamilyHistoryInput = ({ onSave, onCancel }) => {
     );
 };
 
-export { ProblemInput, MedicationInput, AllergyInput, FamilyHistoryInput };
+const SurgicalHistoryInput = ({ onSave, onCancel }) => {
+    const [formData, setFormData] = useState({ procedure_name: '', date: '', surgeon: '', facility: '', notes: '' });
+
+    const handleSave = () => {
+        if (!formData.procedure_name) return;
+        onSave(formData);
+    };
+
+    return (
+        <div className="bg-gray-50 p-2 rounded border border-gray-200 space-y-2">
+            <input
+                type="text"
+                value={formData.procedure_name}
+                onChange={(e) => setFormData({ ...formData, procedure_name: e.target.value })}
+                placeholder="Procedure (e.g. Appendectomy)..."
+                className="w-full text-sm border-gray-300 rounded focus:ring-primary-500 focus:border-primary-500 p-1.5"
+                autoFocus
+            />
+            <div className="grid grid-cols-2 gap-2">
+                <input
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    className="text-xs border-gray-300 rounded p-1.5"
+                />
+                <input
+                    type="text"
+                    value={formData.surgeon}
+                    onChange={(e) => setFormData({ ...formData, surgeon: e.target.value })}
+                    placeholder="Surgeon..."
+                    className="text-xs border-gray-300 rounded p-1.5"
+                />
+            </div>
+            <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="Notes..."
+                className="w-full text-xs border-gray-300 rounded p-1.5"
+                rows="2"
+            />
+            <div className="flex justify-end gap-2 pt-1 border-t border-gray-200">
+                <button onClick={onCancel} className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1">Cancel</button>
+                <button onClick={handleSave} disabled={!formData.procedure_name} className="text-xs bg-primary-600 text-white px-3 py-1 rounded hover:bg-primary-700 disabled:opacity-50">Save</button>
+            </div>
+        </div>
+    );
+};
+
+export { ProblemInput, MedicationInput, AllergyInput, FamilyHistoryInput, SurgicalHistoryInput };
