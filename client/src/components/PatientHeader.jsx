@@ -10,6 +10,7 @@ import api from '../services/api';
 import { usePermissions } from '../hooks/usePermissions';
 import PatientHeaderPhoto from './PatientHeaderPhoto';
 import PortalInviteModal from './PortalInviteModal';
+import PortalResetPasswordModal from './PortalResetPasswordModal';
 import PatientFlagsManager from './PatientFlagsManager';
 import FlagAcknowledgmentModal from './FlagAcknowledgmentModal';
 import { patientFlagsAPI, patientsAPI } from '../services/api';
@@ -59,6 +60,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
     const [editForm, setEditForm] = useState({});
     const [loading, setLoading] = useState(false);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    const [isResetModalOpen, setIsResetModalOpen] = useState(false);
     const [inviteData, setInviteData] = useState(null);
     const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
 
@@ -503,8 +505,8 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                 <button
                                     onClick={() => setIsFlagsPanelOpen(true)}
                                     className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all ${activeFlags.length > 0
-                                            ? 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
-                                            : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
+                                        ? 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
+                                        : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
                                         }`}
                                 >
                                     {activeFlags.length > 0 ? (
@@ -555,11 +557,26 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                             Invite to Portal
                         </button>
 
+                        <button
+                            onClick={() => setIsResetModalOpen(true)}
+                            className="px-4 py-2 text-[13px] font-bold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 shadow-sm transition-all flex items-center gap-2"
+                            title="Reset Portal Password"
+                        >
+                            <Lock size={16} />
+                            Reset Portal Pass
+                        </button>
+
                         <PortalInviteModal
                             isOpen={isInviteModalOpen}
                             onClose={() => setIsInviteModalOpen(false)}
                             patient={patient}
                             inviteData={inviteData}
+                        />
+
+                        <PortalResetPasswordModal
+                            isOpen={isResetModalOpen}
+                            onClose={() => setIsResetModalOpen(false)}
+                            patient={patient}
                         />
                         <button
                             onClick={handleOpenChart}

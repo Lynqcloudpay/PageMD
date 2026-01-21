@@ -62,6 +62,7 @@ const PortalDashboard = React.lazy(() => import('./portal/PortalDashboard'));
 const PortalRegister = React.lazy(() => import('./portal/PortalRegister'));
 const PortalForgotPassword = React.lazy(() => import('./portal/PortalForgotPassword'));
 const PortalResetPassword = React.lazy(() => import('./portal/PortalResetPassword'));
+const PortalTelehealth = React.lazy(() => import('./portal/PortalTelehealth'));
 const PublicIntake = React.lazy(() => import('./pages/PublicIntake'));
 const DigitalIntake = React.lazy(() => import('./pages/DigitalIntake'));
 
@@ -172,6 +173,7 @@ function App() {
                                                     <Route path="/portal/register" element={<PortalRegister />} />
                                                     <Route path="/portal/forgot-password" element={<PortalForgotPassword />} />
                                                     <Route path="/portal/reset-password" element={<PortalResetPassword />} />
+                                                    <Route path="/portal/telehealth" element={<PortalTelehealth />} />
                                                     <Route path="/portal/dashboard" element={<PortalDashboard />} />
                                                     <Route path="/portal" element={<Navigate to="/portal/dashboard" replace />} />
                                                     <Route path="/dashboard" element={

@@ -18,11 +18,13 @@ import {
     FlaskConical,
     Menu,
     X,
-    Bell
+    Bell,
+    Video
 } from 'lucide-react';
 import PortalMessages from './PortalMessages';
 import PortalAppointments from './PortalAppointments';
 import PortalHealthRecord from './PortalHealthRecord';
+import PortalTelehealth from './PortalTelehealth';
 
 const PortalDashboard = () => {
     const [patient, setPatient] = useState(null);
@@ -129,6 +131,8 @@ const PortalDashboard = () => {
                 return <PortalMessages />;
             case 'appointments':
                 return <PortalAppointments onMessageShortcut={(tab) => setActiveTab(tab)} />;
+            case 'telehealth':
+                return <PortalTelehealth />;
             case 'record':
                 return <PortalHealthRecord />;
             case 'overview':
@@ -195,6 +199,23 @@ const PortalDashboard = () => {
                                         </div>
                                         <div className="flex items-center gap-2 text-white/90 font-bold text-xs uppercase tracking-widest">
                                             Schedule now <ChevronRight className="w-4 h-4" />
+                                        </div>
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={() => setActiveTab('telehealth')}
+                                    className="group relative h-1/2 w-full text-left bg-emerald-600 hover:bg-emerald-700 rounded-[2.5rem] p-8 shadow-xl shadow-emerald-200/40 transition-all hover:-translate-y-1 border border-slate-50"
+                                >
+                                    <div className="relative h-full flex flex-col justify-between">
+                                        <div>
+                                            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mb-4 backdrop-blur-md">
+                                                <Video className="w-5 h-5 text-white" />
+                                            </div>
+                                            <h3 className="text-xl font-bold text-white tracking-tight leading-tight">Join Telehealth<br />Visit</h3>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-white/60 font-bold text-xs uppercase tracking-widest transition-colors">
+                                            Start session <ChevronRight className="w-4 h-4" />
                                         </div>
                                     </div>
                                 </button>
@@ -290,6 +311,12 @@ const PortalDashboard = () => {
                             active={activeTab === 'appointments'}
                             onClick={() => setActiveTab('appointments')}
                         />
+                        <NavItem
+                            icon={<Video className="w-4.5 h-4.5" />}
+                            label="Telehealth"
+                            active={activeTab === 'telehealth'}
+                            onClick={() => setActiveTab('telehealth')}
+                        />
                     </nav>
                 </div>
 
@@ -349,6 +376,12 @@ const PortalDashboard = () => {
                             label="Appointments"
                             active={activeTab === 'appointments'}
                             onClick={() => { setActiveTab('appointments'); setIsMobileMenuOpen(false); }}
+                        />
+                        <NavItem
+                            icon={<Video size={18} />}
+                            label="Telehealth"
+                            active={activeTab === 'telehealth'}
+                            onClick={() => { setActiveTab('telehealth'); setIsMobileMenuOpen(false); }}
                         />
                     </nav>
                 </div>

@@ -11,6 +11,7 @@ const patientEncryptionService = require('../services/patientEncryptionService')
 const emailService = require('../services/emailService');
 const { enforcePrivacy, auditAccess } = require('../middleware/privacy');
 const privacyService = require('../services/privacyService');
+const passwordService = require('../services/passwordService');
 
 const router = express.Router();
 
@@ -497,6 +498,56 @@ router.post('/:id/portal-invite', requirePermission('patients:edit_demographics'
   } catch (error) {
     console.error('Portal invitation error:', error);
     res.status(500).json({ error: 'Failed to generate portal invitation' });
+  }
+});
+
+/**
+ * Admin portal password reset
+ * POST /api/patients/:id/portal/reset-password
+ */
+router.post('/:id/portal/reset-password', requirePermission('patients:edit_demographics'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { password } = req.body;
+
+    if (!password || password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+    }
+
+    // 1. Check if patient exists
+    const patientResult = await pool.query('SELECT first_name, last_name FROM patients WHERE id = $1', [id]);
+    if (patientResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Patient not found' });
+    }
+
+    // 2. Check if portal account exists
+    const accountResult = await pool.query('SELECT id, email FROM patient_portal_accounts WHERE patient_id = $1', [id]);
+    if (accountResult.rows.length === 0) {
+      return res.status(400).json({
+        error: 'No portal account found for this patient. Please invite them first.',
+        code: 'NO_PORTAL_ACCOUNT'
+      });
+    }
+
+    const { email } = accountResult.rows[0];
+
+    // 3. Hash new password
+    const passwordHash = await passwordService.hashPassword(password);
+
+    // 4. Update portal account
+    await pool.query('UPDATE patient_portal_accounts SET password_hash = $1, updated_at = NOW() WHERE patient_id = $2', [passwordHash, id]);
+
+    // 5. Audit
+    await logAudit(req.user.id, 'patient_portal_password_reset_admin', 'patient', id, { email }, req.ip);
+
+    res.json({
+      success: true,
+      message: 'Patient portal password has been reset successfully.'
+    });
+
+  } catch (error) {
+    console.error('Admin portal password reset error:', error);
+    res.status(500).json({ error: 'Failed to reset portal password' });
   }
 });
 

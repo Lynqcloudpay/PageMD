@@ -142,7 +142,7 @@ const PortalMessages = () => {
     );
 
     return (
-        <div className="flex flex-col h-[calc(100vh-180px)] max-h-[850px] border border-slate-100 rounded-[2rem] overflow-hidden bg-white shadow-xl shadow-slate-200/50 animate-in fade-in duration-500">
+        <div className="flex flex-col h-[70vh] md:h-[calc(100vh-180px)] max-h-[850px] border border-slate-100 rounded-[2rem] overflow-hidden bg-white shadow-xl shadow-slate-200/50 animate-in fade-in duration-500">
             <div className="flex flex-1 overflow-hidden">
                 {/* Threads Sidebar */}
                 <div className={`w-full md:w-80 lg:w-96 border-r border-slate-50 flex flex-col bg-slate-50/20 ${selectedThread || showNewThreadForm ? 'hidden md:flex' : 'flex'}`}>
@@ -357,18 +357,24 @@ const PortalMessages = () => {
                                 ))}
                             </div>
 
-                            <div className="p-5 bg-white border-t border-slate-50">
-                                <form onSubmit={handleSendMessage} className="flex items-center gap-3 bg-slate-100/50 p-1.5 pl-5 rounded-[1.5rem] focus-within:ring-4 focus-within:ring-blue-600/5 transition-all">
-                                    <input
-                                        type="text"
+                            <div className="p-4 md:p-5 bg-white border-t border-slate-50">
+                                <form onSubmit={handleSendMessage} className="flex items-end gap-3 bg-slate-100/50 p-1.5 pl-5 rounded-[1.5rem] focus-within:ring-4 focus-within:ring-blue-600/5 transition-all">
+                                    <textarea
                                         value={newMessage}
                                         onChange={(e) => setNewMessage(e.target.value)}
-                                        className="flex-1 py-2.5 bg-transparent border-none outline-none font-medium text-[13px] text-slate-800 placeholder:text-slate-400"
+                                        className="flex-1 py-2.5 bg-transparent border-none outline-none font-medium text-[13px] text-slate-800 placeholder:text-slate-400 resize-none max-h-32 min-h-[40px] custom-scrollbar"
                                         placeholder="Type your reply..."
+                                        rows={1}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                e.preventDefault();
+                                                handleSendMessage(e);
+                                            }
+                                        }}
                                     />
                                     <button
                                         type="submit"
-                                        className="w-10 h-10 bg-blue-600 text-white rounded-2xl flex items-center justify-center hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 hover:-translate-y-0.5"
+                                        className="w-10 h-10 bg-blue-600 text-white rounded-2xl flex items-center justify-center hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 hover:-translate-y-0.5 mb-0.5 shrink-0"
                                     >
                                         <Send className="w-4 h-4" />
                                     </button>

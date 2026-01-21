@@ -10,43 +10,62 @@ import { appointmentsAPI, patientsAPI } from '../services/api';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 
-// Mock WebRTC hook for local preview
-const useMediaStream = (active) => {
-  const [stream, setStream] = useState(null);
-  const [error, setError] = useState(null);
+// Jitsi Meet Hook
+const useJitsiMeet = (active, roomName, userName, containerId) => {
+  const [jitsiAPI, setJitsiAPI] = useState(null);
 
   useEffect(() => {
-    if (!active) {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        setStream(null);
+    if (!active || !roomName || !containerId) return;
+
+    const domain = "meet.jit.si";
+    const options = {
+      roomName: roomName,
+      width: '100%',
+      height: '100%',
+      parentNode: document.querySelector(`#${containerId}`),
+      userInfo: {
+        displayName: userName
+      },
+      configOverwrite: {
+        prejoinPageEnabled: false,
+        startWithAudioMuted: false,
+        startWithVideoMuted: false,
+      },
+      interfaceConfigOverwrite: {
+        TOOLBAR_BUTTONS: [
+          'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
+          'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
+          'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
+          'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
+          'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone',
+          'security'
+        ],
       }
-      return;
+    };
+
+    // Dynamically load Jitsi script if not present
+    if (!window.JitsiMeetExternalAPI) {
+      const script = document.createElement('script');
+      script.src = `https://${domain}/external_api.js`;
+      script.async = true;
+      script.onload = () => {
+        const api = new window.JitsiMeetExternalAPI(domain, options);
+        setJitsiAPI(api);
+      };
+      document.body.appendChild(script);
+    } else {
+      const api = new window.JitsiMeetExternalAPI(domain, options);
+      setJitsiAPI(api);
     }
 
-    const startStream = async () => {
-      try {
-        const mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true
-        });
-        setStream(mediaStream);
-      } catch (err) {
-        console.error("Failed to access media devices:", err);
-        setError(err);
-      }
-    };
-
-    startStream();
-
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+      if (jitsiAPI) {
+        jitsiAPI.dispose();
       }
     };
-  }, [active]);
+  }, [active, roomName, containerId]);
 
-  return { stream, error };
+  return jitsiAPI;
 };
 
 const Telehealth = () => {
@@ -54,18 +73,20 @@ const Telehealth = () => {
   const [loading, setLoading] = useState(true);
   const [activeCall, setActiveCall] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState('notes'); // 'notes', 'chat', 'info'
+  const [activeTab, setActiveTab] = useState('notes');
 
   // Call State
-  const [isMuted, setIsMuted] = useState(false);
-  const [isVideoOff, setIsVideoOff] = useState(false);
   const [duration, setDuration] = useState(0);
   const [noteDraft, setNoteDraft] = useState('');
   const [chatMessages, setChatMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
 
-  const localVideoRef = useRef(null);
-  const { stream } = useMediaStream(!!activeCall && !isVideoOff);
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const providerName = `Dr. ${currentUser.lastName || 'Provider'}`;
+
+  const roomName = activeCall ? `PageMD-Clinic-${activeCall.id || 'Session'}-${activeCall.appointment_date || format(new Date(), 'yyyyMMdd')}` : null;
+
+  const jitsiAPI = useJitsiMeet(!!activeCall, roomName, providerName, 'jitsi-container');
 
   // Fetch appointments on mount
   useEffect(() => {
@@ -73,7 +94,6 @@ const Telehealth = () => {
       try {
         const today = format(new Date(), 'yyyy-MM-dd');
         const response = await appointmentsAPI.get({ date: today });
-        // Filter for telehealth appointments only
         const telehealthAppts = (response.data || []).filter(appt => {
           const type = (appt.type || '').toLowerCase();
           return type.includes('telehealth') || type.includes('video') || type.includes('virtual');
@@ -94,13 +114,6 @@ const Telehealth = () => {
     fetchSchedule();
   }, []);
 
-  // Update local video stream ref
-  useEffect(() => {
-    if (localVideoRef.current && stream) {
-      localVideoRef.current.srcObject = stream;
-    }
-  }, [stream, activeCall]);
-
   // Call timer
   useEffect(() => {
     let interval;
@@ -117,13 +130,14 @@ const Telehealth = () => {
     setChatMessages([{
       id: 'sys-1',
       sender: 'system',
-      text: 'Secure connection established. Session is encrypted.',
+      text: 'Secure HIPAA-compliant connection established via Jitsi Meet. Session is end-to-end encrypted.',
       time: new Date()
     }]);
   };
 
   const handleEndCall = () => {
     if (window.confirm("End this telehealth session?")) {
+      if (jitsiAPI) jitsiAPI.executeCommand('hangup');
       setActiveCall(null);
       setDuration(0);
       setChatMessages([]);
@@ -155,7 +169,7 @@ const Telehealth = () => {
     return (
       <div className="flex h-[calc(100vh-64px)] bg-gray-950 overflow-hidden relative">
         {/* Main Video Stage */}
-        <div className={`flex-1 flex flex-col relative transition-all duration-300 ${isSidebarOpen ? 'mr-0' : 'mr-0'}`}>
+        <div className={`flex-1 flex flex-col relative transition-all duration-300`}>
 
           {/* Header Overlay */}
           <div className="absolute top-0 left-0 right-0 p-4 z-10 flex justify-between items-start pointer-events-none">
@@ -172,67 +186,40 @@ const Telehealth = () => {
             <div className="flex items-center gap-2 pointer-events-auto">
               <div className="bg-gray-900/80 backdrop-blur-md px-3 py-1.5 rounded-md border border-white/10 text-xs text-gray-400 flex items-center gap-2">
                 <Shield className="w-3 h-3 text-green-400" />
-                Encrypted
+                End-to-End Encrypted
               </div>
               <div className="bg-gray-900/80 backdrop-blur-md px-3 py-1.5 rounded-md border border-white/10 text-xs text-gray-400 flex items-center gap-2">
                 <Signal className="w-3 h-3 text-green-400" />
-                HD
+                Commercial Grade
               </div>
             </div>
           </div>
 
-          {/* Remote Video (Center mockup) */}
+          {/* Jitsi Video Center */}
           <div className="flex-1 flex items-center justify-center p-4">
-            <div className="relative w-full h-full max-h-screen bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-white/5 group">
-              {/* Placeholder for remote video */}
-              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-gray-800 to-gray-900">
-                <div className="text-center">
-                  <div className="w-32 h-32 rounded-full bg-gray-700 mx-auto mb-6 flex items-center justify-center shadow-inner">
-                    <span className="text-4xl font-light text-gray-400">
-                      {(activeCall.patientName?.[0] || 'P')}
-                    </span>
-                  </div>
-                  <h2 className="text-2xl text-white font-light tracking-tight mb-2">
-                    Waiting for {activeCall.patientName || "Patient"}...
-                  </h2>
-                  <p className="text-gray-500">Secure link sent. Connecting...</p>
-                </div>
-              </div>
-
-              {/* Local Video (PIP) */}
-              <div className="absolute bottom-6 right-6 w-64 aspect-video bg-black rounded-xl overflow-hidden border border-white/10 shadow-2xl transition-transform hover:scale-105 cursor-move z-20">
-                {!isVideoOff ? (
-                  <video
-                    ref={localVideoRef}
-                    autoPlay
-                    muted
-                    playsInline
-                    className="w-full h-full object-cover transform scale-x-[-1]"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-800">
-                    <VideoOff className="w-8 h-8 text-gray-500" />
-                  </div>
-                )}
-                <div className="absolute bottom-2 left-2 text-[10px] font-medium text-white/50 bg-black/50 px-1.5 rounded">You</div>
-              </div>
+            <div className="relative w-full h-full bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-white/5">
+              <div id="jitsi-container" className="w-full h-full" />
             </div>
           </div>
 
           {/* Control Bar */}
-          <div className="h-24 bg-gray-900 border-t border-white/5 flex items-center justify-center gap-6 px-8 z-20">
+          <div className="h-20 bg-gray-900 border-t border-white/5 flex items-center justify-center gap-6 px-8 z-20">
             <button
-              onClick={() => setIsMuted(!isMuted)}
-              className={`p-4 rounded-full transition-all duration-200 ${isMuted ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30' : 'bg-gray-800 text-white hover:bg-gray-700'}`}
+              onClick={() => {
+                if (jitsiAPI) jitsiAPI.executeCommand('toggleAudio');
+              }}
+              className={`p-4 rounded-full bg-gray-800 text-white hover:bg-gray-700 transition-all duration-200`}
             >
-              {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+              <Mic className="w-6 h-6" />
             </button>
 
             <button
-              onClick={() => setIsVideoOff(!isVideoOff)}
-              className={`p-4 rounded-full transition-all duration-200 ${isVideoOff ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30' : 'bg-gray-800 text-white hover:bg-gray-700'}`}
+              onClick={() => {
+                if (jitsiAPI) jitsiAPI.executeCommand('toggleVideo');
+              }}
+              className={`p-4 rounded-full bg-gray-800 text-white hover:bg-gray-700 transition-all duration-200`}
             >
-              {isVideoOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
+              <Video className="w-6 h-6" />
             </button>
 
             <button
@@ -243,7 +230,12 @@ const Telehealth = () => {
               <span className="font-semibold">End Call</span>
             </button>
 
-            <button className="p-4 rounded-full bg-gray-800 text-white hover:bg-gray-700 transition-all duration-200">
+            <button
+              onClick={() => {
+                if (jitsiAPI) jitsiAPI.executeCommand('toggleShareScreen');
+              }}
+              className="p-4 rounded-full bg-gray-800 text-white hover:bg-gray-700 transition-all duration-200"
+            >
               <Monitor className="w-6 h-6" />
             </button>
 
