@@ -57,7 +57,7 @@ const JitsiMeetComponent = ({ roomName, userName, onEndCall }) => {
     return <div id="jitsi-container" className="w-full h-full bg-slate-900" />;
 };
 
-const PortalTelehealth = () => {
+const PortalTelehealth = ({ onSchedule }) => {
     const [appointments, setAppointments] = useState([]);
     const [activeCall, setActiveCall] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -66,7 +66,8 @@ const PortalTelehealth = () => {
     const apiBase = import.meta.env.VITE_API_URL || '/api';
     const token = localStorage.getItem('portalToken');
     const headers = { Authorization: `Bearer ${token}` };
-    const patient = JSON.parse(localStorage.getItem('patient') || '{}');
+    const patientStr = localStorage.getItem('patient');
+    const patient = patientStr ? JSON.parse(patientStr) : {};
 
     useEffect(() => {
         fetchAppointments();
@@ -100,9 +101,18 @@ const PortalTelehealth = () => {
         setActiveCall(null);
     };
 
+    const handleScheduleNavigation = () => {
+        if (onSchedule) {
+            onSchedule();
+        } else {
+            // Fallback for standalone route
+            window.location.href = '/portal/dashboard?tab=appointments';
+        }
+    };
+
     if (activeCall) {
         const roomName = `PageMD-Clinic-${activeCall.id}-${activeCall.appointment_date.split('T')[0].replace(/-/g, '')}`;
-        const userName = `${patient.firstName} ${patient.lastName}`;
+        const userName = `${patient.firstName || 'Patient'} ${patient.lastName || ''}`;
 
         return (
             <div className="fixed inset-0 bg-slate-950 z-[9999] flex flex-col">
@@ -151,12 +161,13 @@ const PortalTelehealth = () => {
                         You don't have any telehealth appointments scheduled for today. When you do, a join button will appear here.
                     </p>
                     <button
-                        onClick={() => window.location.href = '/portal/appointments'}
+                        onClick={handleScheduleNavigation}
                         className="px-8 py-3.5 bg-blue-600 text-white rounded-2xl font-bold text-[11px] uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-200"
                     >
                         Schedule a Visit
                     </button>
                 </div>
+
             ) : (
                 <div className="grid gap-6">
                     {appointments.map(appt => (

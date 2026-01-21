@@ -125,6 +125,15 @@ const PortalDashboard = () => {
         </div>
     );
 
+    useEffect(() => {
+        // Handle tab selection via query param
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get('tab');
+        if (tab && ['overview', 'messages', 'appointments', 'record', 'telehealth'].includes(tab)) {
+            setActiveTab(tab);
+        }
+    }, [window.location.search]);
+
     const renderContent = () => {
         switch (activeTab) {
             case 'messages':
@@ -132,7 +141,7 @@ const PortalDashboard = () => {
             case 'appointments':
                 return <PortalAppointments onMessageShortcut={(tab) => setActiveTab(tab)} />;
             case 'telehealth':
-                return <PortalTelehealth />;
+                return <PortalTelehealth onSchedule={() => setActiveTab('appointments')} />;
             case 'record':
                 return <PortalHealthRecord />;
             case 'overview':

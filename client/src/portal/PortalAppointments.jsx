@@ -281,32 +281,35 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 gap-8">
-                {/* SCHEDULED - TABLE VIEW */}
-                <div className="space-y-3">
-                    <SectionLabel icon={<Calendar size={14} className="text-blue-500" />} title="Scheduled" count={scheduled.length} />
-                    <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+            <div className="grid grid-cols-1 gap-12">
+                {/* 1. SCHEDULED - TABLE VIEW */}
+                <div className="space-y-4">
+                    <SectionLabel icon={<Calendar size={14} className="text-blue-500" />} title="Scheduled Visits" count={scheduled.length} />
+                    <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-50/50">
-                                    <th className="px-5 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Date & Time</th>
-                                    <th className="px-5 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Clinician</th>
-                                    <th className="px-5 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Status</th>
-                                    <th className="px-5 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100"></th>
+                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Date & Time</th>
+                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Clinician</th>
+                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Status</th>
+                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100"></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
                                 {scheduled.map(appt => (
                                     <tr key={appt.id} className="hover:bg-slate-50/30 transition-colors group">
-                                        <td className="px-5 py-4">
+                                        <td className="px-6 py-5">
                                             <div className="font-bold text-slate-800 text-sm">{format(new Date(appt.appointment_date), 'MMM d, yyyy')}</div>
-                                            <div className="text-[10px] font-bold text-slate-400">{appt.appointment_time.slice(0, 5)}</div>
+                                            <div className="text-[10px] font-bold text-slate-400 uppercase">{appt.appointment_time.slice(0, 5)}</div>
                                         </td>
-                                        <td className="px-5 py-4">
+                                        <td className="px-6 py-5">
+                                            <div className="text-sm font-bold text-slate-700">Dr. {appt.provider_last_name}</div>
+                                        </td>
+                                        <td className="px-6 py-5">
                                             {(() => {
                                                 const effectiveStatus = (appt.patient_status === 'cancelled' || appt.patient_status === 'no_show') ? appt.patient_status : appt.status;
                                                 return (
-                                                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter ${effectiveStatus === 'confirmed' || effectiveStatus === 'scheduled' ? 'bg-emerald-50 text-emerald-600' :
+                                                    <span className={`px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${effectiveStatus === 'confirmed' || effectiveStatus === 'scheduled' ? 'bg-emerald-50 text-emerald-600' :
                                                         effectiveStatus === 'arrived' ? 'bg-blue-50 text-blue-600' :
                                                             (effectiveStatus === 'cancelled' || effectiveStatus === 'no_show') ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-500'
                                                         }`}>
@@ -315,7 +318,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                                 );
                                             })()}
                                         </td>
-                                        <td className="px-5 py-4 text-right">
+                                        <td className="px-6 py-5 text-right">
                                             <button onClick={() => onMessageShortcut?.('messages')} className="p-2 text-slate-300 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-all">
                                                 <ArrowUpRight size={16} />
                                             </button>
@@ -323,55 +326,18 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                     </tr>
                                 ))}
                                 {scheduled.length === 0 && (
-                                    <tr><td colSpan="4" className="px-5 py-8 text-center text-xs text-slate-400 font-bold uppercase tracking-widest">No scheduled visits</td></tr>
+                                    <tr><td colSpan="4" className="px-6 py-12 text-center text-xs text-slate-300 font-bold uppercase tracking-[0.2em] italic">No upcoming visits found</td></tr>
                                 )}
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                {/* PAST VISITS - TABLE VIEW */}
-                <div className="space-y-3 pt-4">
-                    <SectionLabel icon={<History size={14} className="text-slate-400" />} title="Past Visits" count={past.length} />
-                    <div className="bg-slate-50/50 rounded-2xl border border-slate-100 overflow-hidden shadow-sm opacity-80 hover:opacity-100 transition-opacity">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50">
-                                    <th className="px-5 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Date & Time</th>
-                                    <th className="px-5 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Clinician</th>
-                                    <th className="px-5 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Status</th>
-                                    <th className="px-5 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100"></th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {past.map(appt => (
-                                    <tr key={appt.id} className="hover:bg-slate-100/50 transition-colors">
-                                        <td className="px-5 py-4">
-                                            <div className="font-bold text-slate-500 text-sm">{format(new Date(appt.appointment_date), 'MMM d, yyyy')}</div>
-                                            <div className="text-[10px] font-bold text-slate-300">{appt.appointment_time.slice(0, 5)}</div>
-                                        </td>
-                                        <td className="px-5 py-4 font-bold text-slate-500 text-sm">Dr. {appt.provider_last_name}</td>
-                                        <td className="px-5 py-4">
-                                            <span className="px-2 py-0.5 bg-slate-200 text-slate-500 rounded text-[8px] font-black uppercase tracking-tighter">
-                                                {appt.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-5 py-4 text-right"></td>
-                                    </tr>
-                                ))}
-                                {past.length === 0 && (
-                                    <tr><td colSpan="4" className="px-5 py-8 text-center text-xs text-slate-400 font-bold uppercase tracking-widest">No past visits</td></tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                {/* PENDING / CANCELLED GRID */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-3">
-                        <SectionLabel icon={<Clock size={14} className="text-amber-500" />} title="Pending Requests" count={pending.length} />
-                        <div className="space-y-2">
+                {/* 2. PENDING REQUESTS */}
+                <div className="space-y-4">
+                    <SectionLabel icon={<Clock size={14} className="text-amber-500" />} title="Pending Requests" count={pending.length} />
+                    {pending.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {pending.map(req => (
                                 <CompactCard
                                     key={req.id}
@@ -392,63 +358,99 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                     }}
                                 />
                             ))}
-                            {pending.length === 0 && <div className="p-6 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-[10px] font-bold text-slate-300 uppercase tracking-widest">No pending requests</div>}
                         </div>
-                    </div>
+                    ) : (
+                        <div className="p-10 text-center bg-slate-50/50 rounded-[2rem] border border-dashed border-slate-200">
+                            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.2em]">No processing requests</p>
+                        </div>
+                    )}
+                </div>
 
-                    <div className="space-y-3">
+                {/* 3. PAST VISITS - TABLE VIEW */}
+                <div className="space-y-4">
+                    <SectionLabel icon={<History size={14} className="text-slate-400" />} title="Past Visits" count={past.length} />
+                    <div className="bg-white rounded-[2rem] border border-slate-50 overflow-hidden shadow-sm opacity-90 transition-opacity">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-slate-50/30">
+                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-300 border-b border-slate-50">Date & Time</th>
+                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-300 border-b border-slate-50">Clinician</th>
+                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-300 border-b border-slate-50">Status</th>
+                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-300 border-b border-slate-50"></th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {past.map(appt => (
+                                    <tr key={appt.id} className="hover:bg-slate-50/30 transition-colors">
+                                        <td className="px-6 py-4">
+                                            <div className="font-bold text-slate-400 text-sm">{format(new Date(appt.appointment_date), 'MMM d, yyyy')}</div>
+                                            <div className="text-[10px] font-bold text-slate-300">{appt.appointment_time.slice(0, 5)}</div>
+                                        </td>
+                                        <td className="px-6 py-4 font-bold text-slate-400 text-sm">Dr. {appt.provider_last_name}</td>
+                                        <td className="px-6 py-4">
+                                            <span className="px-2 py-0.5 bg-slate-100 text-slate-400 rounded text-[8px] font-black uppercase tracking-widest">
+                                                Seen
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right"></td>
+                                    </tr>
+                                ))}
+                                {past.length === 0 && (
+                                    <tr><td colSpan="4" className="px-6 py-12 text-center text-xs text-slate-200 font-bold uppercase tracking-[0.2em] italic">No visit history found</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* 4. CANCELLED / DENIED */}
+                {(cancelledRequests.length > 0 || cancelledAppts.length > 0) && (
+                    <div className="space-y-4 pt-4 border-t border-slate-100">
                         <div className="flex justify-between items-center">
-                            <SectionLabel icon={<XCircle size={14} className="text-red-400" />} title="Cancelled" count={cancelledRequests.length + cancelledAppts.length} />
-                            {cancelledRequests.length > 0 && (
-                                <button
-                                    onClick={async () => {
-                                        if (!window.confirm('Clear all cancelled/denied records?')) return;
-                                        try {
-                                            await Promise.all(cancelledRequests.map(req =>
-                                                axios.delete(`${apiBase}/portal/appointments/requests/${req.id}/clear`, { headers })
-                                            ));
-                                            fetchData();
-                                        } catch (e) {
-                                            console.error('Failed to clear:', e);
-                                        }
-                                    }}
-                                    className="text-[9px] font-bold text-red-400 hover:text-red-600 uppercase tracking-widest"
-                                >
-                                    Clear Requests
-                                </button>
-                            )}
+                            <SectionLabel icon={<XCircle size={14} className="text-red-300" />} title="Cancelled & Denied" count={cancelledRequests.length + cancelledAppts.length} />
+                            <button
+                                onClick={async () => {
+                                    if (!window.confirm('Clear all history records?')) return;
+                                    try {
+                                        await Promise.all(cancelledRequests.map(req =>
+                                            axios.delete(`${apiBase}/portal/appointments/requests/${req.id}/clear`, { headers })
+                                        ));
+                                        fetchData();
+                                    } catch (e) {
+                                        console.error('Failed to clear:', e);
+                                    }
+                                }}
+                                className="text-[9px] font-black text-red-300 hover:text-red-500 uppercase tracking-widest transition-colors"
+                            >
+                                Clear All
+                            </button>
                         </div>
-                        <div className="space-y-2">
-                            {/* Cancelled Appointments */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                             {cancelledAppts.map(appt => {
                                 const isNoShow = appt.patient_status === 'no_show';
                                 return (
-                                    <div key={appt.id} className="p-4 rounded-2xl border border-transparent bg-slate-50 opacity-60 flex items-center justify-between">
+                                    <div key={appt.id} className="p-4 rounded-2xl border border-transparent bg-slate-50/50 opacity-60 flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-xl bg-slate-200 text-slate-400 flex flex-col items-center justify-center shrink-0">
                                                 <span className="text-sm font-black leading-none">{format(new Date(appt.appointment_date), 'dd')}</span>
                                                 <span className="text-[8px] font-bold uppercase">{format(new Date(appt.appointment_date), 'MMM')}</span>
                                             </div>
                                             <div>
-                                                <h4 className="text-xs font-bold text-slate-800">{format(new Date(appt.appointment_date), 'MMM do')}</h4>
-                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Visit {isNoShow ? 'No Show' : 'Cancelled'}</p>
+                                                <h4 className="text-xs font-bold text-slate-400 italic">Sch {format(new Date(appt.appointment_date), 'MMM do')}</h4>
+                                                <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">{isNoShow ? 'No Show' : 'Cancelled'}</p>
                                             </div>
                                         </div>
-                                        <span className="text-[8px] font-black uppercase text-slate-400">{isNoShow ? 'No Show' : 'Cancelled'}</span>
                                     </div>
                                 );
                             })}
-
-                            {/* Cancelled Requests */}
                             {cancelledRequests.map(req => (
                                 <CompactCard key={req.id} req={req} type="cancelled" />
                             ))}
-
-                            {cancelledRequests.length === 0 && cancelledAppts.length === 0 && <div className="p-6 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-[10px] font-bold text-slate-300 uppercase tracking-widest">No cancelled records</div>}
                         </div>
                     </div>
-                </div>
+                )}
             </div>
+
 
             {/* REQUEST FORM MODAL */}
             {showRequestForm && (
