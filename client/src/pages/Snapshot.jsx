@@ -1822,43 +1822,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </div>
                                         </div>
 
-                                        {/* Middle Stack: Surgical & Allergies */}
+                                        {/* Middle Stack: Allergies & Surgical */}
                                         <div className="flex flex-col gap-4 h-[416px]">
-                                            {/* Surgical History */}
-                                            <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-purple-200 transition-colors">
+                                            {/* Allergies - Increased Height */}
+                                            <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-amber-200 transition-colors">
                                                 <div className="px-4 py-2.5 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="p-1 bg-purple-50 text-purple-500 rounded-md">
-                                                            <Scissors className="w-3 h-3" />
-                                                        </div>
-                                                        <h3 className="font-semibold text-[10px] text-slate-800 uppercase tracking-widest">Surgical History</h3>
-                                                    </div>
-                                                    <button onClick={() => { setPatientChartTab('surgical'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
-                                                </div>
-                                                <div className="p-2.5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
-                                                    {(surgicalHistory || []).length > 0 ? (
-                                                        <div className="space-y-1.5">
-                                                            {surgicalHistory.map(surg => (
-                                                                <div key={surg.id} className="text-[10px] p-2 rounded-lg bg-slate-50/30 border border-slate-100/50">
-                                                                    <div className="flex justify-between items-start">
-                                                                        <span className="font-bold text-slate-800 leading-tight">{surg.procedure_name}</span>
-                                                                        <span className="text-[8px] font-black text-slate-400 shrink-0 ml-2">{surg.date ? new Date(surg.date).getFullYear() : '—'}</span>
-                                                                    </div>
-                                                                    {surg.notes && <p className="text-[9px] text-slate-500 italic mt-0.5 line-clamp-1">{surg.notes}</p>}
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    ) : (
-                                                        <div className="h-full flex items-center justify-center">
-                                                            <p className="text-[9px] text-slate-400 italic">No surgical history</p>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Allergies - Compact */}
-                                            <div className="h-[140px] bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-amber-200 transition-colors">
-                                                <div className="px-4 py-2 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
                                                     <div className="flex items-center gap-2">
                                                         <div className="p-1 bg-amber-50 text-amber-500 rounded-md">
                                                             <AlertCircle className="w-3 h-3" />
@@ -1887,12 +1855,44 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     )}
                                                 </div>
                                             </div>
+
+                                            {/* Surgical History - Compact but with more space */}
+                                            <div className="h-[160px] bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-purple-200 transition-colors">
+                                                <div className="px-4 py-2 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="p-1 bg-purple-50 text-purple-500 rounded-md">
+                                                            <Scissors className="w-3 h-3" />
+                                                        </div>
+                                                        <h3 className="font-semibold text-[10px] text-slate-800 uppercase tracking-widest">Surgical History</h3>
+                                                    </div>
+                                                    <button onClick={() => { setPatientChartTab('surgical'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
+                                                </div>
+                                                <div className="p-2.5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+                                                    {(surgicalHistory || []).length > 0 ? (
+                                                        <div className="space-y-1.5">
+                                                            {surgicalHistory.map(surg => (
+                                                                <div key={surg.id} className="text-[10px] p-2 rounded-lg bg-slate-50/30 border border-slate-100/50">
+                                                                    <div className="flex justify-between items-start">
+                                                                        <span className="font-bold text-slate-800 leading-tight">{surg.procedure_name}</span>
+                                                                        <span className="text-[8px] font-black text-slate-400 shrink-0 ml-2">{surg.date ? new Date(surg.date).getFullYear() : '—'}</span>
+                                                                    </div>
+                                                                    {surg.notes && <p className="text-[9px] text-slate-500 italic mt-0.5 line-clamp-1">{surg.notes}</p>}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="h-full flex items-center justify-center">
+                                                            <p className="text-[9px] text-slate-400 italic">No surgical history</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
 
                                         {/* Right Stack: Social & Family */}
                                         <div className="flex flex-col gap-4 h-[416px]">
-                                            {/* Social History */}
-                                            <div className="h-[140px] bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-indigo-200 transition-colors">
+                                            {/* Social History - Increased Height */}
+                                            <div className="h-[160px] bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-indigo-200 transition-colors">
                                                 <div className="px-4 py-2 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
                                                     <div className="flex items-center gap-2">
                                                         <div className="p-1 bg-indigo-50 text-indigo-500 rounded-md">

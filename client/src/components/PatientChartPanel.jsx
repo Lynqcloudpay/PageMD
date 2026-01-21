@@ -319,8 +319,6 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
         { id: 'images', label: 'Imaging', icon: Image },
         { id: 'ekg', label: 'EKG', icon: ActivitySquare },
         { id: 'echo', label: 'ECHO', icon: HeartPulse },
-        { id: 'stress', label: 'Stress Test', icon: Zap },
-        { id: 'cath', label: 'Cardiac Cath', icon: Waves },
         { id: 'referrals', label: 'Referrals', icon: ExternalLink },
         { id: 'billing', label: 'Billing & Superbills', icon: Receipt }
     ];
