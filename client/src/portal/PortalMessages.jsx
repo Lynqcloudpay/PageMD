@@ -183,9 +183,12 @@ const PortalMessages = () => {
                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600" />
                                 )}
                                 <div className="flex justify-between items-start mb-1.5">
-                                    <h3 className={`font-bold tracking-tight truncate flex-1 text-xs ${thread.unread_count > 0 ? 'text-blue-600' : 'text-slate-700'}`}>
-                                        {thread.subject}
-                                    </h3>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className={`font-bold tracking-tight truncate text-xs ${thread.unread_count > 0 ? 'text-blue-600' : 'text-slate-700'}`}>
+                                            {thread.staff_first_name || 'Care Team'}
+                                        </h3>
+                                        <p className="text-[10px] text-slate-400 truncate font-medium">{thread.subject}</p>
+                                    </div>
                                     <div className="flex items-center gap-2">
                                         <span className="text-[9px] text-slate-400 font-bold">
                                             {new Date(thread.last_message_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
@@ -303,7 +306,7 @@ const PortalMessages = () => {
                                     >
                                         <div className="flex items-center gap-2 mb-1.5 px-2">
                                             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                                                {msg.sender_user_id ? `${msg.staff_last_name}` : 'You'} • {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                {msg.sender_user_id ? `${msg.staff_first_name || 'Care Team'}` : 'You'} • {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </span>
                                         </div>
                                         <div className={`max-w-[85%] lg:max-w-[75%] p-4 px-5 rounded-[1.8rem] shadow-sm text-sm ${msg.sender_portal_account_id

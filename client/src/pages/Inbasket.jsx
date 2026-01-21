@@ -492,9 +492,11 @@ const Inbasket = () => {
                                         {cat.label}
                                     </span>
                                     <div className="flex items-center gap-2">
-                                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${isSelected ? 'bg-blue-100 text-blue-700' : 'bg-gray-50 text-gray-400'}`}>
-                                            {items.filter(i => cat.types.includes(i.type)).length}
-                                        </span>
+                                        {items.filter(i => cat.types.includes(i.type)).length > 0 && (
+                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all duration-500 ${isSelected ? 'bg-white text-blue-600 shadow-sm' : 'bg-blue-600 text-white shadow-md shadow-blue-100'}`}>
+                                                {items.filter(i => cat.types.includes(i.type)).length}
+                                            </span>
+                                        )}
                                     </div>
                                 </button>
                                 {canCompose && (
@@ -832,7 +834,7 @@ const Inbasket = () => {
                                                         <div className={`flex flex-col ${!isPatient ? 'items-end' : 'items-start'} max-w-[80%]`}>
                                                             <div className={`flex items-baseline gap-2 mb-1.5 ${!isPatient ? 'flex-row-reverse text-right' : 'text-left'}`}>
                                                                 <span className={`text-[11px] font-black tracking-tight ${!isPatient ? 'text-blue-700' : 'text-gray-900'}`}>
-                                                                    {note.first_name} {note.last_name}
+                                                                    {note.first_name || 'Care Team'}
                                                                 </span>
                                                                 <span className="text-[9px] text-gray-400 font-bold uppercase">{format(new Date(note.created_at), 'h:mm a')}</span>
                                                             </div>

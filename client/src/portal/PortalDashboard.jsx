@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard,
     MessageSquare,
@@ -32,7 +32,19 @@ const PortalDashboard = () => {
     const [activeTab, setActiveTab] = useState('overview'); // overview, messages, appointments, record
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [activeNotifications, setActiveNotifications] = useState([]);
+    const [stats, setStats] = useState({ messages: 0, appointments: 0 });
     const navigate = useNavigate();
+
+    const location = useLocation();
+
+    useEffect(() => {
+        // Handle tab selection via query param
+        const params = new URLSearchParams(location.search);
+        const tab = params.get('tab');
+        if (tab && ['overview', 'messages', 'appointments', 'record', 'telehealth'].includes(tab)) {
+            setActiveTab(tab);
+        }
+    }, [location.search]);
 
     useEffect(() => {
         const fetchDashboard = async () => {
@@ -82,16 +94,26 @@ const PortalDashboard = () => {
                 // Check messages
                 const unreadCount = msgsRes.data.reduce((acc, t) => acc + (parseInt(t.unread_count) || 0), 0);
                 if (unreadCount > 0) {
-                    newNotifs.push(`You have ${unreadCount} new message${unreadCount > 1 ? 's' : ''}`);
+                    newNotifs.push({
+                        id: 'unread-msgs',
+                        type: 'message',
+                        message: `You have ${unreadCount} new message${unreadCount > 1 ? 's' : ''}`,
+                        action: 'messages'
+                    });
                 }
 
                 // NEW: Specifically check for appointment suggestions
                 const hasSuggestions = msgsRes.data.some(t => t.last_message_body?.includes('[SUGGEST_SLOT:'));
                 if (hasSuggestions) {
-                    newNotifs.push(`Action Required: Review suggested appointment slots`);
+                    newNotifs.push({
+                        id: 'appt-slots',
+                        type: 'action',
+                        message: `Action Required: Review suggested appointment slots`,
+                        action: 'messages'
+                    });
                 }
 
-                // Check appointment updates (recent updates in last 72h)
+                // Check appointment updates
                 const threeDaysAgo = new Date();
                 threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
@@ -101,10 +123,19 @@ const PortalDashboard = () => {
                 );
 
                 if (recentUpdates.length > 0) {
-                    newNotifs.push(`${recentUpdates.length} appointment request${recentUpdates.length > 1 ? 's were' : ' was'} updated recently`);
+                    newNotifs.push({
+                        id: 'appt-updates',
+                        type: 'info',
+                        message: `${recentUpdates.length} appointment update${recentUpdates.length > 1 ? 's' : ''}`,
+                        action: 'appointments'
+                    });
                 }
 
                 setActiveNotifications(newNotifs);
+                setStats({
+                    messages: unreadCount,
+                    appointments: reqsRes.data.filter(r => r.status === 'pending').length
+                });
 
             } catch (err) {
                 console.error('Notification check failed', err);
@@ -125,16 +156,8 @@ const PortalDashboard = () => {
         </div>
     );
 
-    useEffect(() => {
-        // Handle tab selection via query param
-        const params = new URLSearchParams(window.location.search);
-        const tab = params.get('tab');
-        if (tab && ['overview', 'messages', 'appointments', 'record', 'telehealth'].includes(tab)) {
-            setActiveTab(tab);
-        }
-    }, [window.location.search]);
 
-    const renderContent = () => {
+    const content = useMemo(() => {
         switch (activeTab) {
             case 'messages':
                 return <PortalMessages />;
@@ -149,8 +172,10 @@ const PortalDashboard = () => {
                 return (
                     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
                         {/* Notifications */}
-                        <Notifications notifications={activeNotifications} onClick={() => setActiveTab('messages')} />
-                        <PremiumCSS />
+                        <Notifications
+                            notifications={activeNotifications}
+                            onAction={(action) => setActiveTab(action)}
+                        />
 
                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                             {/* Patient Info Card */}
@@ -282,12 +307,13 @@ const PortalDashboard = () => {
                     </div>
                 );
         }
-    };
+    }, [activeTab, patient, activeNotifications, stats]);
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] flex selection:bg-blue-100">
             {/* Desktop Sidebar */}
             <aside className="w-[260px] hidden lg:flex flex-col fixed inset-y-0 left-0 bg-white border-r border-slate-100 z-50">
+                <PremiumStyles />
                 <div className="p-8">
                     <div className="flex items-center gap-3 mb-10">
                         <img src="/logo.png" alt="PageMD Logo" className="h-8 object-contain" />
@@ -313,12 +339,14 @@ const PortalDashboard = () => {
                             label="Messages"
                             active={activeTab === 'messages'}
                             onClick={() => setActiveTab('messages')}
+                            badge={stats.messages}
                         />
                         <NavItem
                             icon={<Calendar className="w-4.5 h-4.5" />}
                             label="Appointments"
                             active={activeTab === 'appointments'}
                             onClick={() => setActiveTab('appointments')}
+                            badge={stats.appointments}
                         />
                         <NavItem
                             icon={<Video className="w-4.5 h-4.5" />}
@@ -379,12 +407,14 @@ const PortalDashboard = () => {
                             label="Messages"
                             active={activeTab === 'messages'}
                             onClick={() => { setActiveTab('messages'); setIsMobileMenuOpen(false); }}
+                            badge={stats.messages}
                         />
                         <NavItem
                             icon={<Calendar size={18} />}
                             label="Appointments"
                             active={activeTab === 'appointments'}
                             onClick={() => { setActiveTab('appointments'); setIsMobileMenuOpen(false); }}
+                            badge={stats.appointments}
                         />
                         <NavItem
                             icon={<Video size={18} />}
@@ -399,23 +429,30 @@ const PortalDashboard = () => {
             {/* Main Content Area */}
             <div className="flex-1 lg:ml-[260px] overflow-x-hidden min-h-screen">
                 <main className="max-w-7xl mx-auto p-6 md:p-10 pt-24 lg:pt-12">
-                    {renderContent()}
+                    {content}
                 </main>
             </div>
         </div>
     );
 };
 
-const NavItem = ({ icon, label, active, onClick }) => (
+const NavItem = ({ icon, label, active, onClick, badge }) => (
     <button
         onClick={onClick}
-        className={`w-full flex items-center gap-3.5 p-3.5 rounded-xl transition-all duration-300 ${active
+        className={`w-full flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 ${active
             ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
             : 'text-slate-400 hover:text-slate-800 hover:bg-slate-50'
             }`}
     >
-        <span className="transition-transform duration-500">{icon}</span>
-        <span className="font-bold text-[11px] uppercase tracking-widest">{label}</span>
+        <div className="flex items-center gap-3.5">
+            <span className="transition-transform duration-500">{icon}</span>
+            <span className="font-bold text-[11px] uppercase tracking-widest">{label}</span>
+        </div>
+        {badge > 0 && (
+            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black transition-all duration-300 ${active ? 'bg-white text-blue-600' : 'bg-blue-600 text-white shadow-md shadow-blue-200 animate-pulse-subtle'}`}>
+                {badge}
+            </span>
+        )}
     </button>
 );
 
@@ -436,42 +473,46 @@ const QuickCard = ({ title, icon, status, count, onClick }) => (
     </div>
 );
 
-const Notifications = ({ notifications, onClick }) => {
+const Notifications = ({ notifications, onAction }) => {
     if (notifications.length === 0) return null;
     return (
-        <div
-            onClick={onClick}
-            className="bg-blue-600 text-white p-6 rounded-[2rem] flex items-start sm:items-center gap-5 shadow-xl shadow-blue-200/50 cursor-pointer hover:bg-blue-700 transition-all group"
-        >
-            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center shrink-0 backdrop-blur-sm group-hover:scale-110 transition-transform">
-                <Bell className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex-1">
-                <h4 className="font-bold text-lg mb-1 tracking-tight">New Activity</h4>
-                <div className="space-y-1">
-                    {notifications.map((n, i) => (
-                        <p key={i} className="text-sm font-medium text-blue-100 leading-snug flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 bg-blue-300 rounded-full" /> {n}
-                        </p>
-                    ))}
-                </div>
-            </div>
-            <div className="hidden sm:block">
-                <ChevronRight className="w-6 h-6 text-white/50 group-hover:text-white transition-colors" />
+        <div className="space-y-3">
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-6">Pending Actions</h3>
+            <div className="space-y-3">
+                {notifications.map((n) => (
+                    <div
+                        key={n.id}
+                        onClick={() => onAction(n.action)}
+                        className={`p-5 rounded-[2rem] flex items-center justify-between gap-5 shadow-lg transition-all cursor-pointer group hover:-translate-y-1 ${n.type === 'action' ? 'bg-amber-500 text-white shadow-amber-200' : 'bg-white border border-slate-100 shadow-slate-200/50'}`}
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 backdrop-blur-sm group-hover:scale-110 transition-transform ${n.type === 'action' ? 'bg-white/20' : 'bg-blue-50'}`}>
+                                <Bell className={`w-6 h-6 ${n.type === 'action' ? 'text-white' : 'text-blue-600'}`} />
+                            </div>
+                            <div>
+                                <h4 className={`font-bold text-sm tracking-tight ${n.type === 'action' ? 'text-white' : 'text-slate-800'}`}>{n.message}</h4>
+                                <p className={`text-[10px] font-bold uppercase tracking-widest ${n.type === 'action' ? 'text-white/70' : 'text-slate-400'}`}>Requires attention</p>
+                            </div>
+                        </div>
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${n.type === 'action' ? 'bg-white/20 text-white' : 'bg-slate-50 text-slate-400 group-hover:bg-blue-600 group-hover:text-white'}`}>
+                            <ChevronRight className="w-5 h-5" />
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     );
 };
 
 // CSS Injection for premium animations & refined input styles
-const PremiumCSS = () => (
+const PremiumStyles = () => (
     <style>{`
         @keyframes pulse-subtle {
             0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.95; transform: scale(1.005); }
+            50% { opacity: 0.9; transform: scale(1.05); }
         }
         .animate-pulse-subtle {
-            animation: pulse-subtle 3s ease-in-out infinite;
+            animation: pulse-subtle 2s ease-in-out infinite;
         }
         .portal-input {
             width: 100%;
@@ -505,6 +546,10 @@ const PremiumCSS = () => (
             background-position: right 1rem center;
             background-size: 1rem;
             appearance: none;
+        }
+
+        .notification-card-action {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
         }
     `}</style>
 );

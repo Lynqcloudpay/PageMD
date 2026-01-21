@@ -20,8 +20,11 @@ router.get('/threads', async (req, res) => {
         const result = await pool.query(`
             SELECT t.*, 
                 (SELECT body FROM portal_messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) as last_message_body,
-                (SELECT COUNT(*) FROM portal_messages WHERE thread_id = t.id AND read_at IS NULL AND sender_user_id IS NOT NULL) as unread_count
+                (SELECT COUNT(*) FROM portal_messages WHERE thread_id = t.id AND read_at IS NULL AND sender_user_id IS NOT NULL) as unread_count,
+                u.first_name as staff_first_name,
+                u.last_name as staff_last_name
             FROM portal_message_threads t
+            LEFT JOIN users u ON t.assigned_user_id = u.id
             WHERE t.patient_id = $1
             ORDER BY t.last_message_at DESC
         `, [patientId]);
