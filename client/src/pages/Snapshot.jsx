@@ -6,8 +6,11 @@ import {
     CheckCircle2, Edit, ArrowRight, ExternalLink, UserCircle, Camera, User, X, FileImage, Save, FlaskConical, Database, Trash2, Upload, Layout, RotateCcw, Waves,
     Shield, ShieldAlert, ShieldPlus, AlertTriangle, ShieldCheck, Check, Pin, Settings2, Calendar, Edit3, Trash
 } from 'lucide-react';
-import { visitsAPI, patientsAPI, ordersAPI, referralsAPI, documentsAPI, patientFlagsAPI, api } from '../services/api';
-import { format } from 'date-fns';
+import {
+    visitsAPI, patientsAPI, ordersAPI, referralsAPI, documentsAPI, patientFlagsAPI, api
+} from '../services/api';
+import { format, differenceInDays } from 'date-fns';
+import { DEFAULT_SPECIALTY_TEMPLATES, ALL_TRACKERS } from '../components/SpecialtyTracker';
 import { showError, showSuccess } from '../utils/toast';
 import {
     AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -121,7 +124,23 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const [stickyNoteText, setStickyNoteText] = useState('');
     const [showHMEditModal, setShowHMEditModal] = useState(false);
     const [selectedHMItem, setSelectedHMItem] = useState(null);
-    const [hmForm, setHmForm] = useState({ item_name: '', status: 'Pending', due_date: '', notes: '' });
+    const [hmSpecialtyFilter, setHmSpecialtyFilter] = useState('Cardiology');
+    const [hmForm, setHmForm] = useState({
+        item_name: '',
+        status: 'Pending',
+        last_performed: '',
+        due_date: '',
+        notes: '',
+        specialty_focus: 'Cardiology'
+    });
+
+    const HM_PRESETS = {
+        'Cardiology': ['Lipid Profile', 'Echocardiogram', 'Stress Test', 'Coronary CT', 'Holter Monitor'],
+        'Primary Care': ['Annual Physical', 'Flu Shot', 'Colonoscopy', 'Mammogram', 'Pap Smear', 'Bone Density'],
+        'Endocrinology': ['HbA1c', 'TSH', 'Retinal Eye Exam', 'Foot Exam', 'Microalbumin'],
+        'Gastroenterology': ['Colonoscopy', 'EGD', 'Liver Ultrasound', 'Hepatitis Screen'],
+        'Pulmonology': ['PFTs', 'Low Dose CT Chest', 'Sleep Study']
+    };
 
     const fetchFlags = useCallback(async () => {
         if (!id) return;
@@ -141,9 +160,15 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const handleSaveSticky = async () => {
         try {
             setActionLoading(true);
-            await patientsAPI.update(id, { reminder_note: stickyNoteText });
+            // Send both variants to ensure compatibility with backend field mapping
+            await patientsAPI.update(id, {
+                reminderNote: stickyNoteText,
+                reminder_note: stickyNoteText
+            });
             setIsEditingSticky(false);
             showSuccess('Sticky note updated');
+            // Refresh data to ensure state is in sync
+            refreshPatientData();
         } catch (err) {
             showError('Failed to save sticky note');
         } finally {
@@ -158,11 +183,20 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 item_name: item.item_name,
                 status: item.status,
                 due_date: item.due_date ? item.due_date.split('T')[0] : '',
-                notes: item.notes || ''
+                last_performed: item.last_performed ? item.last_performed.split('T')[0] : '',
+                notes: item.notes || '',
+                specialty_focus: item.specialty_focus || hmSpecialtyFilter
             });
         } else {
             setSelectedHMItem(null);
-            setHmForm({ item_name: '', status: 'Pending', due_date: '', notes: '' });
+            setHmForm({
+                item_name: '',
+                status: 'Pending',
+                due_date: '',
+                last_performed: '',
+                notes: '',
+                specialty_focus: hmSpecialtyFilter
+            });
         }
         setShowHMEditModal(true);
     };
@@ -407,24 +441,19 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const refreshPatientData = useCallback(async () => {
         if (!id) return;
 
-        // Only show full loading screen if we don't have patient data yet
         if (!patient) {
             setLoading(true);
         }
         try {
-            // Fetch patient snapshot (includes basic info, problems, meds, allergies, and recent visits)
             const snapshotResponse = await patientsAPI.getSnapshot(id);
             const snapshot = snapshotResponse.data;
             setPatient(snapshot.patient);
 
-            // Also fetch full patient data to ensure we have photo_url and other details
             try {
                 const fullPatientResponse = await patientsAPI.get(id);
                 if (fullPatientResponse.data) {
                     const patientData = { ...snapshot.patient, ...fullPatientResponse.data };
-                    setPatient(prev => ({ ...prev, ...patientData }));
-
-                    // Add to patient tabs for session-based switching
+                    setPatient(patientData);
                     addTab({
                         id: patientData.id,
                         first_name: patientData.first_name,
@@ -436,8 +465,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 console.warn('Could not fetch full patient data:', error);
             }
 
-            // Set problems
-            if (snapshot.problems && snapshot.problems.length > 0) {
+            if (snapshot.problems) {
                 setProblems(snapshot.problems.map(p => ({
                     id: p.id,
                     name: p.problem_name,
@@ -445,21 +473,17 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     status: p.status,
                     onset: p.onset_date
                 })));
-            } else {
-                setProblems([]);
             }
-
-            // Set medications
             setMedications(snapshot.medications || []);
-
-            // Set allergies
             setAllergies(snapshot.allergies || []);
 
-            // Set vitals from recent visits & merge with notes for maximum completeness
-            let combinedVitals = [];
+            // Set Sticky Note from patient record
+            if (snapshot.patient?.reminder_note !== undefined) {
+                setStickyNoteText(snapshot.patient.reminder_note || '');
+            }
 
-            // 1. Process recent visits from snapshot
-            if (snapshot.recentVisits && snapshot.recentVisits.length > 0) {
+            let combinedVitals = [];
+            if (snapshot.recentVisits) {
                 combinedVitals = snapshot.recentVisits
                     .filter(v => v.vitals)
                     .map(v => {
@@ -470,46 +494,25 @@ const Snapshot = ({ showNotesOnly = false }) => {
                         }
                         return {
                             id: v.id,
-                            date: v.visit_date ? new Date(v.visit_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : 'Today',
+                            date: v.visit_date ? format(new Date(v.visit_date), 'M/d/yy') : (v.created_at ? format(new Date(v.created_at), 'M/d/yy') : 'N/A'),
+                            time: v.visit_date ? format(new Date(v.visit_date), 'HH:mm') : (v.created_at ? format(new Date(v.created_at), 'HH:mm') : ''),
+                            visitDate: v.visit_date || v.created_at,
                             bp: bpValue || 'N/A',
-                            hr: vData.hr || vData.heart_rate || vData.pulse || 'N/A',
+                            hr: vData.pulse || vData.pulse_rate || vData.hr || vData.heart_rate || null, // Use null for clean Recharts handling
                             temp: vData.temp || vData.temperature || 'N/A',
-                            rr: vData.rr || vData.respiratory_rate || vData.resp || 'N/A',
-                            spo2: vData.spo2 || vData.oxygen_saturation || vData.o2sat || 'N/A',
+                            rr: vData.rr || vData.resp_rate || 'N/A',
+                            spo2: vData.spo2 || vData.oxygen_saturation || 'N/A',
                             weight: vData.weight || 'N/A',
-                            visitDate: v.visit_date || v.date || v.created_at,
                             createdAt: v.created_at
                         };
                     });
             }
 
-            // 2. If no vitals found in recent visits, check dedicated lastVitals field
-            if (combinedVitals.length === 0 && snapshot.lastVitals) {
-                const vData = typeof snapshot.lastVitals === 'string' ? JSON.parse(snapshot.lastVitals) : snapshot.lastVitals;
-                let bpValue = vData.bp || vData.blood_pressure;
-                if (!bpValue && vData.systolic && vData.diastolic) {
-                    bpValue = `${vData.systolic}/${vData.diastolic}`;
-                }
-                combinedVitals.push({
-                    id: 'last-known',
-                    date: 'Last Known',
-                    bp: bpValue || 'N/A',
-                    hr: vData.hr || vData.heart_rate || vData.pulse || 'N/A',
-                    temp: vData.temp || vData.temperature || 'N/A',
-                    rr: vData.rr || vData.respiratory_rate || vData.resp || 'N/A',
-                    spo2: vData.spo2 || vData.oxygen_saturation || vData.o2sat || 'N/A',
-                    weight: vData.weight || 'N/A'
-                });
-            }
-
-            setVitals(combinedVitals);
-
-            // Fetch additional data in parallel
             try {
                 const [
                     familyHistResponse, surgicalHistResponse, socialHistResponse,
                     ordersResponse, referralsResponse, documentsResponse,
-                    todayDraftResponse, allVisitsResponse, hmResponse
+                    todayDraftResponse, hmResponse, allVisitsResponse
                 ] = await Promise.all([
                     patientsAPI.getFamilyHistory(id).catch(() => ({ data: [] })),
                     patientsAPI.getSurgicalHistory(id).catch(() => ({ data: [] })),
@@ -518,8 +521,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     referralsAPI.getByPatient(id).catch(() => ({ data: [] })),
                     documentsAPI.getByPatient(id).catch(() => ({ data: [] })),
                     visitsAPI.getTodayDraft(id).catch(() => ({ data: { note: null } })),
-                    visitsAPI.getByPatient(id).catch(() => ({ data: [] })),
-                    patientsAPI.getHealthMaintenance(id).catch(() => ({ data: [] }))
+                    patientsAPI.getHealthMaintenance(id).catch(() => ({ data: [] })),
+                    visitsAPI.getByPatient(id).catch(() => ({ data: [] }))
                 ]);
 
                 setFamilyHistory(familyHistResponse?.data || []);
@@ -529,14 +532,14 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 setReferrals(referralsResponse?.data || []);
                 setDocuments(documentsResponse?.data || []);
                 setHealthMaintenance(hmResponse?.data || []);
-                if (snapshot.patient?.reminder_note !== undefined) {
-                    setStickyNoteText(snapshot.patient.reminder_note || '');
-                }
 
-                // Maximize vitals data from all visits
+                const draftNote = todayDraftResponse.data?.note;
+                setTodayDraftVisit(draftNote || null);
+
+                // Process ALL historical visits for a complete trend graph
                 const allVisits = allVisitsResponse.data || [];
                 if (allVisits.length > 0) {
-                    const comprehensiveVitals = allVisits
+                    const historicalVitals = allVisits
                         .filter(v => v.vitals)
                         .map(v => {
                             const vData = typeof v.vitals === 'string' ? JSON.parse(v.vitals) : v.vitals;
@@ -546,37 +549,26 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             }
                             return {
                                 id: v.id,
-                                date: v.visit_date ? new Date(v.visit_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : 'Today',
+                                date: v.visit_date ? format(new Date(v.visit_date), 'M/d/yy') : 'N/A',
                                 visitDate: v.visit_date,
                                 bp: bpValue || 'N/A',
-                                hr: vData.hr || vData.heart_rate || vData.pulse || 'N/A',
+                                hr: vData.pulse || vData.pulse_rate || vData.hr || vData.heart_rate || null,
                                 temp: vData.temp || vData.temperature || 'N/A',
-                                rr: vData.rr || vData.respiratory_rate || vData.resp || 'N/A',
-                                spo2: vData.spo2 || vData.oxygen_saturation || vData.o2sat || 'N/A',
+                                rr: vData.rr || vData.resp_rate || 'N/A',
+                                spo2: vData.spo2 || vData.oxygen_saturation || 'N/A',
                                 weight: vData.weight || 'N/A',
                                 createdAt: v.created_at
                             };
                         });
 
-                    // Merge with existing combinedVitals but avoid duplicates (by id or date/content)
+                    // Merge historical with snapshot recent (avoiding duplicates)
                     const existingIds = new Set(combinedVitals.map(v => v.id));
-                    comprehensiveVitals.forEach(cv => {
-                        if (!existingIds.has(cv.id)) {
-                            combinedVitals.push(cv);
+                    historicalVitals.forEach(hv => {
+                        if (!existingIds.has(hv.id)) {
+                            combinedVitals.push(hv);
                         }
                     });
-
-                    // Sort by visit date (newest first for the list, chart will reverse it)
-                    combinedVitals.sort((a, b) => {
-                        const dateA = new Date(a.visitDate || a.createdAt);
-                        const dateB = new Date(b.visitDate || b.createdAt);
-                        if (dateB - dateA !== 0) return dateB - dateA;
-                        return new Date(b.createdAt) - new Date(a.createdAt);
-                    });
-                    setVitals(combinedVitals);
                 }
-                const draftNote = todayDraftResponse.data?.note;
-                setTodayDraftVisit(draftNote || null);
 
                 if (draftNote?.vitals) {
                     try {
@@ -584,30 +576,84 @@ const Snapshot = ({ showNotesOnly = false }) => {
                         const draftVitals = {
                             id: draftNote.id,
                             date: 'Today (Draft)',
+                            visitDate: draftNote.visit_date || new Date().toISOString(),
                             bp: vData.bp || (vData.systolic && vData.diastolic ? `${vData.systolic}/${vData.diastolic}` : 'N/A'),
-                            hr: vData.hr || vData.heart_rate || vData.pulse || 'N/A',
+                            hr: vData.pulse || vData.pulse_rate || vData.hr || vData.heart_rate || null,
                             temp: vData.temp || vData.temperature || 'N/A',
-                            rr: vData.rr || vData.respiratory_rate || vData.resp || 'N/A',
-                            spo2: vData.spo2 || vData.oxygen_saturation || vData.o2sat || 'N/A',
+                            rr: vData.rr || vData.resp_rate || 'N/A',
+                            spo2: vData.spo2 || vData.oxygen_saturation || 'N/A',
                             weight: vData.weight || 'N/A',
                             createdAt: draftNote.created_at
                         };
-                        setVitals(prev => [draftVitals, ...prev.filter(v => v.id !== draftNote.id)]);
+                        combinedVitals = [draftVitals, ...combinedVitals.filter(v => v.id !== draftNote.id)];
                     } catch (e) { console.warn('Failed to parse draft vitals', e); }
                 }
+
+                combinedVitals.sort((a, b) => new Date(b.visitDate || b.createdAt) - new Date(a.visitDate || a.createdAt));
+                setVitals(combinedVitals);
             } catch (error) {
                 console.error('Error fetching supplementary data:', error);
             }
         } catch (error) {
             console.error('Core data refresh failed:', error);
-            setProblems([]);
-            setMedications([]);
-            setAllergies([]);
-            setVitals([]);
         } finally {
             setLoading(false);
         }
     }, [id, addTab]);
+
+    // Compute Automated Tracking Items (Sync with SpecialtyTracker)
+    const combinedOptimizationItems = useMemo(() => {
+        const manualItems = healthMaintenance.filter(i => i.specialty_focus === hmSpecialtyFilter);
+        const templateKey = hmSpecialtyFilter.toLowerCase().replace(' ', '_');
+        const template = DEFAULT_SPECIALTY_TEMPLATES[templateKey];
+
+        if (!template) return manualItems;
+
+        const autoItems = [];
+        const now = new Date();
+
+        // Calculate demographics for intervals
+        const dob = patient?.dob || patient?.date_of_birth;
+        const age = dob ? differenceInDays(now, new Date(dob)) / 365.25 : 0;
+        const gender = (patient?.sex || '').toLowerCase();
+
+        (template.due || []).forEach(due => {
+            // Demographics check (simplified sync)
+            if (due.gender && gender && due.gender !== gender) return;
+            if (due.minAge && age < due.minAge) return;
+
+            // Check if we already have a manual override for this
+            const hasManual = manualItems.some(m =>
+                (m.item_name || '').toLowerCase().includes(due.label.toLowerCase()) ||
+                (due.label || '').toLowerCase().includes((m.item_name || '').toLowerCase())
+            );
+
+            if (!hasManual) {
+                autoItems.push({
+                    id: `auto-${due.id}`,
+                    item_name: due.label,
+                    status: 'Automated',
+                    is_automated: true,
+                    description: `Interval: ${due.intervalDays} days`
+                });
+            }
+        });
+
+        // Add key metrics being tracked
+        (template.trackerIds || []).slice(0, 3).forEach(trackId => {
+            const tracker = ALL_TRACKERS.find(t => t.id === trackId);
+            if (tracker) {
+                autoItems.push({
+                    id: `metric-${tracker.id}`,
+                    item_name: `Track: ${tracker.label}`,
+                    status: 'Tracking',
+                    is_metric: true
+                });
+            }
+        });
+
+        return [...manualItems, ...autoItems];
+    }, [healthMaintenance, hmSpecialtyFilter, patient]);
 
     // Handle Break-the-Glass authorization
     useEffect(() => {
@@ -1555,8 +1601,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 {/* Left Column: Compact Reference Cards + Visit History */}
                                 <div className="lg:col-span-1 space-y-4">
                                     {/* Sticky Note / Quick Reminder */}
-                                    <div className="bg-yellow-50/50 rounded-lg border-2 border-dashed border-yellow-200 p-4 relative group/sticky hover:shadow-md transition-all">
-                                        <div className="flex items-center justify-between mb-2">
+                                    <div className="bg-yellow-50/50 rounded-lg border-2 border-dashed border-yellow-200 p-4 relative group/sticky hover:shadow-md transition-all h-[120px] flex flex-col">
+                                        <div className="flex items-center justify-between mb-2 shrink-0">
                                             <div className="flex items-center gap-2">
                                                 <Pin className="w-3.5 h-3.5 text-yellow-600 -rotate-12" />
                                                 <h3 className="text-[11px] font-black text-yellow-800 uppercase tracking-widest">Sticky Note</h3>
@@ -1572,19 +1618,21 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 </div>
                                             )}
                                         </div>
-                                        {isEditingSticky ? (
-                                            <textarea
-                                                className="w-full bg-white/50 border border-yellow-200 rounded p-2 text-[11px] font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-yellow-300 resize-none min-h-[80px]"
-                                                value={stickyNoteText}
-                                                onChange={(e) => setStickyNoteText(e.target.value)}
-                                                placeholder="Write a clinical reminder here..."
-                                                autoFocus
-                                            />
-                                        ) : (
-                                            <p className="text-[11px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap">
-                                                {stickyNoteText || "No active reminders for this patient. Click edit to add one."}
-                                            </p>
-                                        )}
+                                        <div className="flex-1 overflow-y-auto scrollbar-hide">
+                                            {isEditingSticky ? (
+                                                <textarea
+                                                    className="w-full h-full bg-white/50 border border-yellow-200 rounded p-2 text-[11px] font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-yellow-300 resize-none"
+                                                    value={stickyNoteText}
+                                                    onChange={(e) => setStickyNoteText(e.target.value)}
+                                                    placeholder="Write a clinical reminder here..."
+                                                    autoFocus
+                                                />
+                                            ) : (
+                                                <p className="text-[11px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap">
+                                                    {stickyNoteText || "No active reminders for this patient. Click edit to add one."}
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
 
                                     {/* Visit History Section */}
@@ -1603,7 +1651,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </div>
                                             <ChevronRight className="w-3 h-3 text-slate-300 group-hover/header:text-slate-500 group-hover/header:translate-x-0.5 transition-all" />
                                         </div>
-                                        <div className="p-3 overflow-y-auto scrollbar-hide h-[240px]">
+                                        <div className="p-3 overflow-y-auto scrollbar-hide h-[180px]">
                                             {filteredNotes.length > 0 ? (
                                                 <div className="space-y-2">
                                                     {filteredNotes.slice(0, 5).map(note => (
@@ -1643,26 +1691,38 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 <div className="p-1.5 bg-blue-50 text-blue-500 rounded-lg">
                                                     <ShieldCheck className="w-3.5 h-3.5" />
                                                 </div>
-                                                <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-widest">Cardiology Optimization</h3>
+                                                <select
+                                                    value={hmSpecialtyFilter}
+                                                    onChange={(e) => setHmSpecialtyFilter(e.target.value)}
+                                                    className="bg-transparent text-[11px] font-bold text-slate-800 uppercase tracking-widest outline-none cursor-pointer hover:text-blue-600 transition-colors"
+                                                >
+                                                    {Object.keys(HM_PRESETS).map(spec => (
+                                                        <option key={spec} value={spec}>{spec} Optimization</option>
+                                                    ))}
+                                                </select>
                                             </div>
-                                            <button onClick={() => handleEditHM(null)} className="p-1 hover:bg-blue-50 rounded-full transition-colors">
+                                            <button onClick={() => handleEditHM(null)} className="p-1 hover:bg-blue-50 rounded-full transition-colors z-10 cursor-pointer">
                                                 <Plus className="w-3.5 h-3.5 text-blue-500" />
                                             </button>
                                         </div>
-                                        <div className="p-4 space-y-4">
-                                            {healthMaintenance.length > 0 ? (
-                                                healthMaintenance.map(item => (
-                                                    <div key={item.id} className="flex items-center justify-between group/item cursor-pointer" onClick={() => handleEditHM(item)}>
+                                        <div className="p-4 space-y-4 h-[200px] overflow-y-auto scrollbar-hide">
+                                            {combinedOptimizationItems.length > 0 ? (
+                                                combinedOptimizationItems.map(item => (
+                                                    <div key={item.id} className="flex items-center justify-between group/item cursor-pointer" onClick={() => !item.is_automated && !item.is_metric && handleEditHM(item)}>
                                                         <div className="flex flex-col min-w-0">
-                                                            <span className="text-[10px] font-bold text-slate-700 truncate">{item.item_name}</span>
+                                                            <span className={`text-[10px] font-bold truncate ${item.is_automated || item.is_metric ? 'text-slate-400 italic' : 'text-slate-700'}`}>
+                                                                {item.item_name}
+                                                            </span>
                                                             <span className="text-[9px] text-slate-400 font-medium">
-                                                                {item.status === 'Completed' ? `Last: ${new Date(item.last_performed).toLocaleDateString()}` : `Due: ${new Date(item.due_date).toLocaleDateString()}`}
+                                                                {item.is_metric ? 'Continuous Metric' : item.is_automated ? item.description : item.status === 'Completed' ? `Last: ${new Date(item.last_performed).toLocaleDateString()}` : `Due: ${new Date(item.due_date).toLocaleDateString()}`}
                                                             </span>
                                                         </div>
                                                         <div className="flex items-center gap-2">
-                                                            <span className={`text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded border ${item.status === 'Overdue' ? 'text-rose-500 bg-rose-50 border-rose-100 animate-pulse' :
-                                                                item.status === 'Completed' ? 'text-emerald-500 bg-emerald-50 border-emerald-100' :
-                                                                    'text-blue-500 bg-blue-50 border-blue-100'
+                                                            <span className={`text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded border ${item.is_automated ? 'text-indigo-400 border-indigo-100 bg-indigo-50/30' :
+                                                                item.is_metric ? 'text-slate-300 border-slate-100 bg-slate-50' :
+                                                                    item.status === 'Overdue' ? 'text-rose-500 bg-rose-50 border-rose-100 animate-pulse' :
+                                                                        item.status === 'Completed' ? 'text-emerald-500 bg-emerald-50 border-emerald-100' :
+                                                                            'text-blue-500 bg-blue-50 border-blue-100'
                                                                 }`}>
                                                                 {item.status}
                                                             </span>
@@ -1769,7 +1829,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             .map((v, idx) => {
                                                                 // Decode HTML entities like &#x2F; (slash) 
                                                                 const bpRaw = String(v.fullBp || v.bp || '');
-                                                                const bpClean = bpRaw.replace(/&#x2F;/g, '/').replace(/&slash;/g, '/');
+                                                                const bpClean = bpRaw.replace(/&amp;/g, '&').replace(/&#x2F;/g, '/').replace(/&slash;/g, '/').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
 
                                                                 const sys = parseInt(bpClean.split('/')[0]) || null;
                                                                 const dia = parseInt(bpClean.split('/')[1]) || null;
@@ -2000,7 +2060,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </div>
 
                                             {/* Surgical History - Compact but with more space */}
-                                            <div className="h-[160px] bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-purple-200 transition-colors">
+                                            <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-purple-200 transition-colors">
                                                 <div className="px-4 py-2 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
                                                     <div className="flex items-center gap-2">
                                                         <div className="p-1 bg-purple-50 text-purple-500 rounded-md">
@@ -2066,7 +2126,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </div>
 
                                             {/* Social History - Fixed Bottom to align with Surgical */}
-                                            <div className="h-[160px] bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-indigo-200 transition-colors">
+                                            <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-indigo-200 transition-colors">
                                                 <div className="px-4 py-2 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
                                                     <div className="flex items-center gap-2">
                                                         <div className="p-1 bg-indigo-50 text-indigo-500 rounded-md">
@@ -2951,6 +3011,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 medications={medications}
                 documents={documents}
                 problems={problems}
+                healthMaintenance={healthMaintenance}
                 onOpenChart={(tab) => {
                     setShowSpecialtyTracker(false);
                     setPatientChartTab(tab || 'hub');
@@ -2985,14 +3046,38 @@ const PatientHeaderPhoto = ({ firstName, lastName }) => {
                         </div>
                         <div className="p-6 space-y-4">
                             <div>
+                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5">Specialty Focus</label>
+                                <select
+                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none mb-3"
+                                    value={hmForm.specialty_focus}
+                                    onChange={(e) => setHmForm({ ...hmForm, specialty_focus: e.target.value })}
+                                >
+                                    {Object.keys(HM_PRESETS).map(spec => (
+                                        <option key={spec} value={spec}>{spec}</option>
+                                    ))}
+                                </select>
+
                                 <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5">Item Name</label>
-                                <input
-                                    type="text"
-                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={hmForm.item_name}
-                                    onChange={(e) => setHmForm({ ...hmForm, item_name: e.target.value })}
-                                    placeholder="e.g. Echo, Lipid Profile..."
-                                />
+                                <div className="space-y-2">
+                                    <input
+                                        type="text"
+                                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={hmForm.item_name}
+                                        onChange={(e) => setHmForm({ ...hmForm, item_name: e.target.value })}
+                                        placeholder="Type or select from suggestions..."
+                                    />
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {HM_PRESETS[hmForm.specialty_focus]?.map(preset => (
+                                            <button
+                                                key={preset}
+                                                onClick={() => setHmForm({ ...hmForm, item_name: preset })}
+                                                className="px-2 py-1 text-[9px] font-bold bg-white border border-slate-200 rounded-md hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-colors"
+                                            >
+                                                {preset}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>

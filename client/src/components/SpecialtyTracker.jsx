@@ -9,7 +9,7 @@ import { format, differenceInDays, parseISO, subDays } from 'date-fns';
 import { labsAPI } from '../services/api';
 
 // ============== MASTER LIST OF ALL AVAILABLE TRACKERS ==============
-const ALL_TRACKERS = [
+export const ALL_TRACKERS = [
     // Vitals
     { id: 'sbp', label: 'Systolic BP', unit: 'mmHg', source: 'vitals', vitalKey: 'bp', extractor: (v) => { const bp = v?.bp; if (!bp || bp === 'N/A') return null; const parts = String(bp).split('/'); return parts[0] ? parseInt(parts[0]) : null; }, thresholds: { low: 90, high: 140, critical: 180 }, goal: '<130', category: 'Vitals' },
     { id: 'dbp', label: 'Diastolic BP', unit: 'mmHg', source: 'vitals', vitalKey: 'bp', extractor: (v) => { const bp = v?.bp; if (!bp || bp === 'N/A') return null; const parts = String(bp).split('/'); return parts[1] ? parseInt(parts[1]) : null; }, thresholds: { low: 60, high: 90, critical: 110 }, goal: '<80', category: 'Vitals' },
@@ -76,7 +76,7 @@ const ALL_TRACKERS = [
 const getTrackerById = (id) => ALL_TRACKERS.find(t => t.id === id);
 
 // ============== SPECIALTY TEMPLATES ==============
-const DEFAULT_SPECIALTY_TEMPLATES = {
+export const DEFAULT_SPECIALTY_TEMPLATES = {
     cardiology: {
         id: 'cardiology',
         label: 'Cardiology',
@@ -574,7 +574,12 @@ const TrendDetailView = ({ trend, data, onClose }) => {
 };
 
 // ============== MAIN SPECIALTY TRACKER COMPONENT ==============
-const SpecialtyTracker = ({ isOpen, onClose, patientId, patientData, vitals = [], labs = [], medications = [], documents = [], problems = [], onOpenChart }) => {
+const SpecialtyTracker = ({
+    isOpen, onClose, patientId, patientData,
+    vitals = [], labs = [], medications = [],
+    documents = [], problems = [], healthMaintenance = [],
+    onOpenChart
+}) => {
     const [selectedSpecialty, setSelectedSpecialty] = useState('cardiology');
     const [timeRange, setTimeRange] = useState(90);
     const [isPinned, setIsPinned] = useState(false);
@@ -726,17 +731,31 @@ const SpecialtyTracker = ({ isOpen, onClose, patientId, patientData, vitals = []
             let lastDate = null;
             let overdue = false;
 
-            // 3. Check Labs
+            // 3. Check Manual Maintenance Table (highest priority override)
+            if (healthMaintenance && healthMaintenance.length > 0) {
+                const manual = healthMaintenance.find(m =>
+                    (m.item_name || '').toLowerCase().includes(due.label.toLowerCase()) ||
+                    (due.label || '').toLowerCase().includes((m.item_name || '').toLowerCase())
+                );
+                if (manual && manual.last_performed) {
+                    lastDate = manual.last_performed;
+                }
+            }
+
+            // 4. Check Labs (if not found in manual or manual is older)
             if (due.labName && labResults.length > 0) {
                 const searchTerm = due.labName.toLowerCase();
                 const matchingLabs = labResults.filter(lab => (lab.test_name || '').toLowerCase().includes(searchTerm));
                 if (matchingLabs.length > 0) {
                     matchingLabs.sort((a, b) => (parseDateSafe(b.result_date) || 0) - (parseDateSafe(a.result_date) || 0));
-                    lastDate = matchingLabs[0].result_date || matchingLabs[0].created_at;
+                    const labDate = matchingLabs[0].result_date || matchingLabs[0].created_at;
+                    if (!lastDate || (labDate && new Date(labDate) > new Date(lastDate))) {
+                        lastDate = labDate;
+                    }
                 }
             }
 
-            // 4. Check Documents (e.g. Colonoscopy reports)
+            // 5. Check Documents
             if (due.docKeywords && documents && documents.length > 0) {
                 const keywords = due.docKeywords;
                 const matchingDocs = documents.filter(d => {
@@ -747,14 +766,13 @@ const SpecialtyTracker = ({ isOpen, onClose, patientId, patientData, vitals = []
                 if (matchingDocs.length > 0) {
                     matchingDocs.sort((a, b) => (parseDateSafe(b.created_at || b.date) || 0) - (parseDateSafe(a.created_at || a.date) || 0));
                     const docDate = matchingDocs[0].created_at || matchingDocs[0].date;
-                    // Use the most recent date found from either labs or docs
                     if (!lastDate || (docDate && new Date(docDate) > new Date(lastDate))) {
                         lastDate = docDate;
                     }
                 }
             }
 
-            // 5. Determine Overdue Status
+            // 6. Determine Overdue Status
             if (lastDate) {
                 const parsedDate = parseDateSafe(lastDate);
                 if (parsedDate) overdue = differenceInDays(now, parsedDate) > due.intervalDays;
@@ -764,7 +782,7 @@ const SpecialtyTracker = ({ isOpen, onClose, patientId, patientData, vitals = []
             items.push({ ...due, lastDate, overdue });
         });
         return items.slice(0, 10);
-    }, [specialty, labResults, documents, patientData]);
+    }, [specialty, labResults, documents, patientData, healthMaintenance]);
 
     const visibleTrends = showMore ? activeTrackers : activeTrackers.slice(0, 8);
 

@@ -550,15 +550,109 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
       }
     }
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Signing visit:', {
-        id,
-        noteDraftLength: noteDraftToSave.length,
-        hasVitals: !!vitals,
-        vitalsData: vitals,
-        vitalsValue: vitalsValue ? (typeof vitalsValue === 'string' ? vitalsValue.substring(0, 100) : 'object') : null
-      });
+    // First, get the visit to find the patient_id
+    const visitCheck = await pool.query('SELECT patient_id FROM visits WHERE id = $1', [id]);
+    if (visitCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Visit not found' });
     }
+    const patientId = visitCheck.rows[0].patient_id;
+
+    // ============================================================
+    // CLINICAL SNAPSHOT: Capture complete patient state at signing
+    // This is frozen and cannot be changed after signing
+    // ============================================================
+    const patientEncryptionService = require('../services/patientEncryptionService');
+
+    // Fetch all patient data for the snapshot
+    const [
+      patientRes,
+      allergiesRes,
+      medicationsRes,
+      problemsRes,
+      familyHistoryRes,
+      socialHistoryRes,
+      visitDocumentsRes
+    ] = await Promise.all([
+      pool.query('SELECT * FROM patients WHERE id = $1', [patientId]),
+      pool.query('SELECT * FROM allergies WHERE patient_id = $1 AND active = true ORDER BY created_at DESC', [patientId]),
+      pool.query('SELECT * FROM medications WHERE patient_id = $1 AND active = true ORDER BY created_at DESC', [patientId]),
+      pool.query('SELECT * FROM problems WHERE patient_id = $1 AND status = $2 ORDER BY created_at DESC', [patientId, 'active']),
+      pool.query('SELECT * FROM family_history WHERE patient_id = $1 ORDER BY created_at DESC', [patientId]),
+      pool.query('SELECT * FROM social_history WHERE patient_id = $1 LIMIT 1', [patientId]),
+      pool.query('SELECT id, filename, doc_type, tags, created_at, comment FROM documents WHERE visit_id = $1', [id])
+    ]);
+
+    // Decrypt patient PHI for the snapshot
+    let patientData = patientRes.rows[0] || {};
+    try {
+      patientData = await patientEncryptionService.decryptPatientPHI(patientData);
+    } catch (e) {
+      console.warn('Failed to decrypt patient for snapshot, using raw data:', e.message);
+    }
+
+    // Build the clinical snapshot
+    const clinicalSnapshot = {
+      captured_at: new Date().toISOString(),
+      captured_by: req.user.id,
+      captured_by_name: `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim(),
+
+      // Patient Demographics (frozen at sign time)
+      demographics: {
+        first_name: patientData.first_name,
+        last_name: patientData.last_name,
+        middle_name: patientData.middle_name,
+        dob: patientData.dob,
+        sex: patientData.sex,
+        mrn: patientData.mrn,
+        phone: patientData.phone,
+        email: patientData.email,
+        address_line1: patientData.address_line1,
+        address_line2: patientData.address_line2,
+        city: patientData.city,
+        state: patientData.state,
+        zip: patientData.zip,
+        insurance_provider: patientData.insurance_provider,
+        insurance_id: patientData.insurance_id,
+        pharmacy_name: patientData.pharmacy_name,
+        pharmacy_phone: patientData.pharmacy_phone,
+        emergency_contact_name: patientData.emergency_contact_name,
+        emergency_contact_phone: patientData.emergency_contact_phone,
+        emergency_contact_relationship: patientData.emergency_contact_relationship
+      },
+
+      // Allergies (frozen)
+      allergies: (allergiesRes.rows || []).map(a => ({
+        id: a.id, allergen: a.allergen, reaction: a.reaction, severity: a.severity, onset_date: a.onset_date
+      })),
+
+      // Medications (frozen)
+      medications: (medicationsRes.rows || []).map(m => ({
+        id: m.id, medication_name: m.medication_name, dosage: m.dosage, frequency: m.frequency, route: m.route, start_date: m.start_date
+      })),
+
+      // Problems (frozen)
+      problems: (problemsRes.rows || []).map(p => ({
+        id: p.id, problem_name: p.problem_name, icd_code: p.icd_code, onset_date: p.onset_date, status: p.status
+      })),
+
+      // Family History (frozen)
+      family_history: (familyHistoryRes.rows || []).map(f => ({
+        id: f.id, condition: f.condition, relationship: f.relationship, age_of_onset: f.age_of_onset
+      })),
+
+      // Social History (frozen)
+      social_history: socialHistoryRes.rows[0] ? {
+        smoking_status: socialHistoryRes.rows[0].smoking_status,
+        alcohol_use: socialHistoryRes.rows[0].alcohol_use,
+        occupation: socialHistoryRes.rows[0].occupation,
+        exercise_frequency: socialHistoryRes.rows[0].exercise_frequency
+      } : null,
+
+      // Documents/Labs linked to this visit (frozen metadata)
+      documents: (visitDocumentsRes.rows || []).map(d => ({
+        id: d.id, filename: d.filename, doc_type: d.doc_type, tags: d.tags, created_at: d.created_at
+      }))
+    };
 
     let result;
     try {
@@ -571,10 +665,11 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
                status = 'signed',
                note_signed_at = CURRENT_TIMESTAMP,
                note_signed_by = $3,
+               clinical_snapshot = $5,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $2 
            RETURNING *`,
-          [noteDraftToSave, id, req.user.id, vitalsValue]
+          [noteDraftToSave, id, req.user.id, vitalsValue, JSON.stringify(clinicalSnapshot)]
         );
       } else {
         result = await pool.query(
@@ -583,10 +678,11 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
                status = 'signed',
                note_signed_at = CURRENT_TIMESTAMP,
                note_signed_by = $3,
+               clinical_snapshot = $4,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $2 
            RETURNING *`,
-          [noteDraftToSave, id, req.user.id]
+          [noteDraftToSave, id, req.user.id, JSON.stringify(clinicalSnapshot)]
         );
       }
     } catch (dbError) {
@@ -599,10 +695,11 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
                  status = 'signed',
                  note_signed_at = CURRENT_TIMESTAMP,
                  note_signed_by = $3,
+                 clinical_snapshot = $5,
                  updated_at = CURRENT_TIMESTAMP
              WHERE id::text = $2 OR CAST(id AS TEXT) = $2
              RETURNING *`,
-            [noteDraftToSave, id, req.user.id, vitalsValue]
+            [noteDraftToSave, id, req.user.id, vitalsValue, JSON.stringify(clinicalSnapshot)]
           );
         } else {
           result = await pool.query(
@@ -611,10 +708,11 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
                  status = 'signed',
                  note_signed_at = CURRENT_TIMESTAMP,
                  note_signed_by = $3,
+                 clinical_snapshot = $4,
                  updated_at = CURRENT_TIMESTAMP
              WHERE id::text = $2 OR CAST(id AS TEXT) = $2
              RETURNING *`,
-            [noteDraftToSave, id, req.user.id]
+            [noteDraftToSave, id, req.user.id, JSON.stringify(clinicalSnapshot)]
           );
         }
       } else {
@@ -626,14 +724,14 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
       return res.status(404).json({ error: 'Visit not found' });
     }
 
-    await logAudit(req.user.id, 'sign_visit', 'visit', id, {}, req.ip);
+    await logAudit(req.user.id, 'sign_visit', 'visit', id, { snapshot_captured: true }, req.ip);
 
     res.json(result.rows[0]);
   } catch (error) {
     safeLogger.error('Error signing visit', {
       message: error.message,
       code: error.code,
-      visitId: id,
+      visitId: req.params.id,
       requestBody: req.bodyForLogging || req.body,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });

@@ -11,6 +11,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     const [allVisits, setAllVisits] = useState([]);
     const [showPatientChart, setShowPatientChart] = useState(false);
     const [patient, setPatient] = useState(null);
+    const [snapshot, setSnapshot] = useState(null);
     const [visit, setVisit] = useState(null);
     const [allergies, setAllergies] = useState([]);
     const [medications, setMedications] = useState([]);
@@ -207,14 +208,59 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                 documentsAPI.getByPatient(patientId).catch(() => ({ data: [] }))
             ]);
 
-            setPatient(patientRes.data);
-            setVisit(visitRes.data);
-            setAllergies(allergiesRes.data || []);
-            setMedications(medicationsRes.data || []);
-            setProblems(problemsRes.data || []);
-            setFamilyHistory(familyHistoryRes.data || []);
-            setSocialHistory(socialHistoryRes.data);
+            const visitData = visitRes.data;
+            setVisit(visitData);
             setAllVisits(allVisitsRes.data || []);
+
+            // ================================================================
+            // CLINICAL SNAPSHOT: For signed notes, use frozen data from signing
+            // ================================================================
+            const isSigned = visitData?.note_signed_at || visitData?.locked;
+            let parsedSnapshot = null;
+
+            if (isSigned && visitData?.clinical_snapshot) {
+                try {
+                    parsedSnapshot = typeof visitData.clinical_snapshot === 'string'
+                        ? JSON.parse(visitData.clinical_snapshot)
+                        : visitData.clinical_snapshot;
+
+                    // Validate snapshot structure
+                    if (!parsedSnapshot || !parsedSnapshot.demographics) {
+                        console.warn('Snapshot missing demographics, ignoring');
+                        parsedSnapshot = null;
+                    }
+                } catch (e) {
+                    console.warn('Failed to parse clinical_snapshot:', e);
+                }
+            }
+
+            setSnapshot(parsedSnapshot);
+
+            if (parsedSnapshot && parsedSnapshot.demographics) {
+                // Use FROZEN snapshot data for signed notes
+
+                // Demographics from snapshot
+                // IMPORTANT: Ensure we preserve IDs from live data but strictly override display fields
+                setPatient({
+                    ...patientRes.data, // Keep id, mrn
+                    ...parsedSnapshot.demographics // Override with frozen data
+                });
+
+                // Use snapshot data for clinical history
+                setAllergies(parsedSnapshot.allergies || []);
+                setMedications(parsedSnapshot.medications || []);
+                setProblems(parsedSnapshot.problems || []);
+                setFamilyHistory(parsedSnapshot.family_history || []);
+                setSocialHistory(parsedSnapshot.social_history || null);
+            } else {
+                // Use LIVE/CURRENT data
+                setPatient(patientRes.data);
+                setAllergies(allergiesRes.data || []);
+                setMedications(medicationsRes.data || []);
+                setProblems(problemsRes.data || []);
+                setFamilyHistory(familyHistoryRes.data || []);
+                setSocialHistory(socialHistoryRes.data);
+            }
 
             // Filter documents for this visit
             const allDocs = documentsRes?.data || [];
@@ -236,12 +282,12 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                 });
             }
 
-            if (visitRes.data.addendums) {
-                setAddendums(Array.isArray(visitRes.data.addendums) ? visitRes.data.addendums : JSON.parse(visitRes.data.addendums || '[]'));
+            if (visitData.addendums) {
+                setAddendums(Array.isArray(visitData.addendums) ? visitData.addendums : JSON.parse(visitData.addendums || '[]'));
             }
 
-            if (visitRes.data.vitals) {
-                let v = visitRes.data.vitals;
+            if (visitData.vitals) {
+                let v = visitData.vitals;
                 if (typeof v === 'string') {
                     try { v = JSON.parse(v); } catch (e) { v = null; }
                 }
@@ -258,8 +304,8 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                 }
             }
 
-            if (visitRes.data.note_draft) {
-                const parsed = parseNoteText(visitRes.data.note_draft);
+            if (visitData.note_draft) {
+                const parsed = parseNoteText(visitData.note_draft);
                 const planStructured = parsed.plan ? parsePlanText(parsed.plan) : [];
                 setNoteData({
                     ...parsed,
@@ -647,8 +693,13 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                         </div>
                                     </div>
                                     <div className="text-right flex flex-col items-end gap-2">
-                                        <div className="bg-blue-50/50 text-blue-700 px-3 py-1 rounded-md border border-blue-100/50">
+                                        <div className="bg-blue-50/50 text-blue-700 px-3 py-1 rounded-md border border-blue-100/50 flex flex-col items-end">
                                             <span className="text-[10px] font-bold uppercase tracking-wider">Clinical Record</span>
+                                            {isSigned && (
+                                                <span className="text-[9px] font-medium text-blue-500">
+                                                    {snapshot ? `Snapshot: ${format(new Date(visit.note_signed_at), 'MM/dd/yy')}` : '⚠️ Live Data (Snapshot Missing)'}
+                                                </span>
+                                            )}
                                         </div>
                                         <div>
                                             <div className="text-[15px] font-bold text-slate-700 tracking-tight">{visitDate}</div>
@@ -684,7 +735,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                         <div className="space-y-1 pl-6 border-l border-blue-100/60">
                                             <div className="text-blue-400 font-bold uppercase text-[9px] tracking-wide mb-0.5">Address</div>
                                             <div className="text-slate-600 font-medium text-[10px] leading-snug">
-                                                {patient.street_address}<br />
+                                                {patient.address_line1}<br />
                                                 {[patient.city, patient.state, patient.zip].filter(Boolean).join(', ')}
                                             </div>
                                         </div>

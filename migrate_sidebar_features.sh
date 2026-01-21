@@ -25,20 +25,36 @@ for SCHEMA in $SCHEMAS; do
     );
     CREATE INDEX IF NOT EXISTS idx_health_maintenance_patient ON health_maintenance(patient_id);
     
-    -- Insert default cardiology focus items if none exist for existing patients
+    -- Insert default items for each specialty if they don't exist
+    
+    -- Cardiology
     INSERT INTO health_maintenance (patient_id, item_name, status, due_date, specialty_focus)
-    SELECT id, 'Lipid Profile (Annual)', 'Due Soon', CURRENT_DATE + interval '1 month', 'Cardiology'
+    SELECT id, 'Lipid Profile', 'Due Soon', CURRENT_DATE + interval '1 month', 'Cardiology'
     FROM patients
-    WHERE id NOT IN (SELECT patient_id FROM health_maintenance WHERE item_name = 'Lipid Profile (Annual)');
+    WHERE id NOT IN (SELECT patient_id FROM health_maintenance WHERE item_name = 'Lipid Profile' AND specialty_focus = 'Cardiology');
 
+    -- Primary Care
     INSERT INTO health_maintenance (patient_id, item_name, status, due_date, specialty_focus)
-    SELECT id, 'Echocardiogram', 'Pending', CURRENT_DATE + interval '6 months', 'Cardiology'
+    SELECT id, 'Annual Physical', 'Pending', CURRENT_DATE + interval '3 months', 'Primary Care'
     FROM patients
-    WHERE id NOT IN (SELECT patient_id FROM health_maintenance WHERE item_name = 'Echocardiogram');
+    WHERE id NOT IN (SELECT patient_id FROM health_maintenance WHERE item_name = 'Annual Physical' AND specialty_focus = 'Primary Care');
 
+    -- Endocrinology
     INSERT INTO health_maintenance (patient_id, item_name, status, due_date, specialty_focus)
-    SELECT id, 'Stress Test', 'Scheduled', CURRENT_DATE + interval '2 weeks', 'Cardiology'
+    SELECT id, 'HbA1c Monitoring', 'Due Soon', CURRENT_DATE + interval '2 weeks', 'Endocrinology'
     FROM patients
-    WHERE id NOT IN (SELECT patient_id FROM health_maintenance WHERE item_name = 'Stress Test');
+    WHERE id NOT IN (SELECT patient_id FROM health_maintenance WHERE item_name = 'HbA1c Monitoring' AND specialty_focus = 'Endocrinology');
+
+    -- Gastroenterology
+    INSERT INTO health_maintenance (patient_id, item_name, status, due_date, specialty_focus)
+    SELECT id, 'Colonoscopy Screening', 'Scheduled', CURRENT_DATE + interval '6 months', 'Gastroenterology'
+    FROM patients
+    WHERE id NOT IN (SELECT patient_id FROM health_maintenance WHERE item_name = 'Colonoscopy Screening' AND specialty_focus = 'Gastroenterology');
+
+    -- Pulmonology
+    INSERT INTO health_maintenance (patient_id, item_name, status, due_date, specialty_focus)
+    SELECT id, 'PFTs Baseline', 'Pending', CURRENT_DATE + interval '1 year', 'Pulmonology'
+    FROM patients
+    WHERE id NOT IN (SELECT patient_id FROM health_maintenance WHERE item_name = 'PFTs Baseline' AND specialty_focus = 'Pulmonology');
   \""
 done

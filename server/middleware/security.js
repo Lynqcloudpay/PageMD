@@ -6,7 +6,7 @@ const validator = require('validator');
 const isDevelopment = process.env.NODE_ENV !== 'production';
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: isDevelopment ? 5000 : 2000, // Production: ~2.2 req/sec sustained per IP. Sufficient for auto-save.
+  max: isDevelopment ? 10000 : 5000, // Production: Increased to 5000 to handle bursts from dashboard widgets
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -21,7 +21,7 @@ const apiLimiter = rateLimit({
 // Stricter auth rate limiting to prevent brute force
 const authLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute window
-  max: isDevelopment ? 100 : 10, // Production: 10 attempts per minute per IP.
+  max: isDevelopment ? 100 : 50, // Production: 50 attempts per minute per IP.
   message: 'Too many login attempts, please try again later.',
   skipSuccessfulRequests: true,
   standardHeaders: true,

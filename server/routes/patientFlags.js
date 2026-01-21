@@ -10,8 +10,11 @@ const { requirePermission } = require('../services/authorization');
 router.get('/types', authenticate, async (req, res) => {
     try {
         const clinicId = req.user.clinic_id || req.user.clinicId;
+        // Return both clinic-specific flags and system default flags
         const result = await pool.query(
-            'SELECT * FROM flag_types WHERE clinic_id = $1 ORDER BY severity = \'critical\' DESC, label ASC',
+            `SELECT * FROM flag_types 
+             WHERE clinic_id = $1 OR (clinic_id IS NULL AND is_default = true)
+             ORDER BY severity = 'critical' DESC, label ASC`,
             [clinicId]
         );
         res.json(result.rows);
