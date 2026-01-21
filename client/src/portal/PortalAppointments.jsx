@@ -36,7 +36,8 @@ const PortalAppointments = ({ onMessageShortcut }) => {
         appointmentType: 'Follow-up',
         reason: '',
         providerId: '',
-        exactTime: ''
+        exactTime: '',
+        visitMethod: 'office' // office, telehealth
     });
 
     const apiBase = import.meta.env.VITE_API_URL || '/api';
@@ -106,7 +107,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
             };
             await axios.post(`${apiBase}/portal/appointments/requests`, submissionData, { headers });
             setShowRequestForm(false);
-            setFormData({ preferredDate: '', preferredTimeRange: 'morning', appointmentType: 'Follow-up', reason: '', providerId: '', exactTime: '' });
+            setFormData({ preferredDate: '', preferredTimeRange: 'morning', appointmentType: 'Follow-up', reason: '', providerId: '', exactTime: '', visitMethod: 'office' });
             fetchData();
         } catch (err) {
             setError('Failed to submit appointment request.');
@@ -226,18 +227,18 @@ const PortalAppointments = ({ onMessageShortcut }) => {
             {withSuggestions.length > 0 && (
                 <div className="space-y-3">
                     <div className="flex items-center gap-2 ml-1">
-                        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-700">Action Required</h3>
+                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-red-700">Action Required</h3>
                     </div>
                     {withSuggestions.map(req => {
                         let slots = [];
                         try { slots = typeof req.suggested_slots === 'string' ? JSON.parse(req.suggested_slots) : req.suggested_slots; } catch (e) { }
                         return (
-                            <div key={req.id} className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 rounded-2xl p-5 shadow-sm">
+                            <div key={req.id} className="bg-gradient-to-br from-red-50 to-rose-50 border border-red-100 rounded-2xl p-5 shadow-sm">
                                 <div className="flex items-center justify-between mb-4">
                                     <div>
-                                        <h4 className="font-bold text-emerald-900 text-sm">Choose Your Appointment Time</h4>
-                                        <p className="text-[10px] text-emerald-600 font-medium mt-0.5">
+                                        <h4 className="font-bold text-red-900 text-sm">Choose Your Appointment Time</h4>
+                                        <p className="text-[10px] text-red-600 font-medium mt-0.5">
                                             Your requested date wasn't available. Please select one of these options:
                                         </p>
                                     </div>
@@ -260,17 +261,17 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                                         setError('Failed to accept slot. Please try again.');
                                                     }
                                                 }}
-                                                className="flex items-center gap-3 p-3 bg-white hover:bg-emerald-600 hover:text-white rounded-xl border border-emerald-100 hover:border-emerald-600 transition-all group"
+                                                className="flex items-center gap-3 p-3 bg-white hover:bg-red-600 hover:text-white rounded-xl border border-red-100 hover:border-red-600 transition-all group"
                                             >
-                                                <div className="w-10 h-10 bg-emerald-100 group-hover:bg-white/20 rounded-lg flex flex-col items-center justify-center shrink-0">
-                                                    <span className="text-sm font-black text-emerald-700 group-hover:text-white leading-none">{format(d, 'd')}</span>
-                                                    <span className="text-[7px] font-bold text-emerald-500 group-hover:text-white/80 uppercase">{format(d, 'MMM')}</span>
+                                                <div className="w-10 h-10 bg-red-100 group-hover:bg-white/20 rounded-lg flex flex-col items-center justify-center shrink-0">
+                                                    <span className="text-sm font-black text-red-700 group-hover:text-white leading-none">{format(d, 'd')}</span>
+                                                    <span className="text-[7px] font-bold text-red-500 group-hover:text-white/80 uppercase">{format(d, 'MMM')}</span>
                                                 </div>
                                                 <div className="text-left flex-1">
-                                                    <div className="font-bold text-sm text-emerald-900 group-hover:text-white">{format(d, 'EEEE')}</div>
-                                                    <div className="text-[10px] font-medium text-emerald-600 group-hover:text-white/80">{format(d, 'h:mm a')}</div>
+                                                    <div className="font-bold text-sm text-red-900 group-hover:text-white">{format(d, 'EEEE')}</div>
+                                                    <div className="text-[10px] font-medium text-red-600 group-hover:text-white/80">{format(d, 'h:mm a')}</div>
                                                 </div>
-                                                <CheckCircle2 className="w-5 h-5 text-emerald-400 group-hover:text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                <CheckCircle2 className="w-5 h-5 text-red-400 group-hover:text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                                             </button>
                                         );
                                     })}
@@ -351,7 +352,8 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                             appointmentType: req.appointment_type || 'Follow-up',
                                             reason: req.reason || '',
                                             providerId: req.provider_id || '',
-                                            exactTime: ''
+                                            exactTime: '',
+                                            visitMethod: req.visit_method || 'office'
                                         });
                                         handleCancelRequest(req.id);
                                         setShowRequestForm(true);
@@ -474,14 +476,47 @@ const PortalAppointments = ({ onMessageShortcut }) => {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Visit Type</label>
+                                    <div className="flex bg-slate-50 p-1 rounded-2xl border border-slate-100">
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, visitMethod: 'office' })}
+                                            className={`flex-1 flex flex-col items-center py-2.5 rounded-xl transition-all ${formData.visitMethod === 'office' ? 'bg-white shadow-md shadow-slate-200/50 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+                                        >
+                                            <MapPin size={14} className="mb-1" />
+                                            <span className="text-[9px] font-black uppercase tracking-widest">Office</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, visitMethod: 'telehealth' })}
+                                            className={`flex-1 flex flex-col items-center py-2.5 rounded-xl transition-all ${formData.visitMethod === 'telehealth' ? 'bg-white shadow-md shadow-slate-200/50 text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}
+                                        >
+                                            <Video size={14} className="mb-1" />
+                                            <span className="text-[9px] font-black uppercase tracking-widest">Virtual</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Urgency</label>
+                                    <select value={formData.appointmentType} onChange={(e) => setFormData({ ...formData, appointmentType: e.target.value })} className="portal-input">
+                                        <option value="Routine Follow-up">Routine Follow-up</option>
+                                        <option value="New Concern">New Concern</option>
+                                        <option value="Urgent Care">Urgent Care</option>
+                                        <option value="Lab Review">Lab Review</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Date</label>
                                     <input type="date" required value={formData.preferredDate} onChange={(e) => setFormData({ ...formData, preferredDate: e.target.value })} min={new Date().toISOString().split('T')[0]} className="portal-input" />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Time</label>
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Preferred Time</label>
                                     <select value={formData.preferredTimeRange} onChange={(e) => setFormData({ ...formData, preferredTimeRange: e.target.value })} className="portal-input">
-                                        <option value="morning">Morning</option>
-                                        <option value="afternoon">Afternoon</option>
+                                        <option value="morning">Morning (8am-12pm)</option>
+                                        <option value="afternoon">Afternoon (12pm-5pm)</option>
                                     </select>
                                 </div>
                             </div>

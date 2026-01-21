@@ -482,18 +482,18 @@ const Notifications = ({ notifications, onAction }) => {
                     <div
                         key={n.id}
                         onClick={() => onAction(n.action)}
-                        className={`p-5 rounded-[2rem] flex items-center justify-between gap-5 shadow-lg transition-all cursor-pointer group hover:-translate-y-1 ${n.type === 'action' ? 'bg-amber-500 text-white shadow-amber-200' : 'bg-white border border-slate-100 shadow-slate-200/50'}`}
+                        className={`p-5 rounded-[2rem] flex items-center justify-between gap-5 shadow-lg transition-all cursor-pointer group hover:-translate-y-1 ${n.type === 'action' ? 'bg-red-50 border border-red-100 text-red-900 shadow-red-100' : 'bg-white border border-slate-100 shadow-slate-200/50'}`}
                     >
                         <div className="flex items-center gap-4">
-                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 backdrop-blur-sm group-hover:scale-110 transition-transform ${n.type === 'action' ? 'bg-white/20' : 'bg-blue-50'}`}>
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 backdrop-blur-sm group-hover:scale-110 transition-transform ${n.type === 'action' ? 'bg-red-500 text-white shadow-xl shadow-red-200' : 'bg-blue-50'}`}>
                                 <Bell className={`w-6 h-6 ${n.type === 'action' ? 'text-white' : 'text-blue-600'}`} />
                             </div>
                             <div>
-                                <h4 className={`font-bold text-sm tracking-tight ${n.type === 'action' ? 'text-white' : 'text-slate-800'}`}>{n.message}</h4>
-                                <p className={`text-[10px] font-bold uppercase tracking-widest ${n.type === 'action' ? 'text-white/70' : 'text-slate-400'}`}>Requires attention</p>
+                                <h4 className={`font-bold text-sm tracking-tight ${n.type === 'action' ? 'text-red-900' : 'text-slate-800'}`}>{n.message}</h4>
+                                <p className={`text-[10px] font-bold uppercase tracking-widest ${n.type === 'action' ? 'text-red-500' : 'text-slate-400'}`}>High Priority</p>
                             </div>
                         </div>
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${n.type === 'action' ? 'bg-white/20 text-white' : 'bg-slate-50 text-slate-400 group-hover:bg-blue-600 group-hover:text-white'}`}>
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${n.type === 'action' ? 'bg-red-100 text-red-600' : 'bg-slate-50 text-slate-400 group-hover:bg-blue-600 group-hover:text-white'}`}>
                             <ChevronRight className="w-5 h-5" />
                         </div>
                     </div>

@@ -180,7 +180,7 @@ const PortalTelehealth = ({ onSchedule }) => {
                                 <div>
                                     <div className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1">Upcoming appointment</div>
                                     <h3 className="text-xl font-bold text-slate-800">Telehealth Visit</h3>
-                                    <p className="text-slate-500 text-sm">Provider: Dr. {appt.provider_last_name}</p>
+                                    <p className="text-slate-500 text-sm">Provider: Dr. {appt.provider_first_name} {appt.provider_last_name}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-4">
