@@ -1489,7 +1489,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </div>
                                             <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover/header:text-slate-500 transition-all transform group-hover/header:translate-x-0.5" />
                                         </div>
-                                        <div className="p-3 overflow-y-auto scrollbar-hide max-h-[300px]">
+                                        <div className="p-3 overflow-y-auto scrollbar-hide h-[280px]">
                                             {filteredNotes.length > 0 ? (
                                                 <div className="space-y-2">
                                                     {filteredNotes.slice(0, 6).map(note => (
@@ -1547,16 +1547,12 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 Edit
                                             </button>
                                         </div>
-                                        <div className="p-2 max-h-[220px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+                                        <div className="p-2 h-[280px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
                                             {(problems || []).length > 0 ? (
                                                 <div className="space-y-0.5">
                                                     {(problems || []).map(prob => (
                                                         <div key={prob.id} className="flex justify-between items-center px-2 py-1.5 rounded-md hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100 group">
                                                             <span className="text-[10px] font-semibold text-slate-700 truncate mr-2 group-hover:text-blue-700">{prob.name}</span>
-                                                            <div className="flex items-center gap-1 shrink-0">
-                                                                <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
-                                                                <span className="text-[8px] text-emerald-600 font-bold uppercase tracking-tighter">Act</span>
-                                                            </div>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -1775,7 +1771,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     {/* Detailed Boards Grid - ARRANGED FOR BETTER FLOW */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                                         {/* Medications Module */}
-                                        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-blue-200 transition-colors">
+                                        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-blue-200 transition-colors h-[400px]">
                                             <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
                                                 <div className="flex items-center gap-2">
                                                     <div className="p-1.5 bg-blue-50 text-blue-500 rounded-lg">
@@ -1785,7 +1781,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 </div>
                                                 <button onClick={() => { setPatientChartTab('medications'); setShowPatientChart(true); }} className="px-2.5 py-1 bg-white text-[9px] text-blue-600 font-bold uppercase border border-blue-200 rounded-md shadow-sm hover:bg-blue-50 transition-all active:scale-95">Manage All</button>
                                             </div>
-                                            <div className="p-3 max-h-[380px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+                                            <div className="p-3 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
                                                 {(medications || []).filter(m => m.active !== false).length > 0 ? (
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                         {(medications || []).filter(m => m.active !== false).map(med => (
@@ -1820,7 +1816,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         </div>
 
                                         {/* Allergies Module - MOVED HERE */}
-                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-amber-200 transition-colors">
+                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-amber-200 transition-colors h-[400px]">
                                             <div className="px-4 py-3 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
                                                 <div className="flex items-center gap-2">
                                                     <div className="p-1.5 bg-amber-50 text-amber-500 rounded-lg">
@@ -1830,7 +1826,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 </div>
                                                 <button onClick={() => { setPatientChartTab('allergies'); setShowPatientChart(true); }} className="px-2 py-1 bg-white text-[9px] text-blue-500 font-bold uppercase border border-blue-100 rounded-lg shadow-sm hover:bg-blue-50 transition-all">Edit</button>
                                             </div>
-                                            <div className="p-3 max-h-[380px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+                                            <div className="p-3 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
                                                 {allergies.length > 0 ? (
                                                     <div className="space-y-1.5">
                                                         {allergies.map(allergy => (
@@ -1849,7 +1845,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         </div>
 
                                         {/* History Module - Combined Family/Social */}
-                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-slate-300 transition-colors">
+                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-slate-300 transition-colors h-[400px]">
                                             <div className="px-4 py-3 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
                                                 <div className="flex items-center gap-2">
                                                     <div className="p-1.5 bg-slate-100 text-slate-500 rounded-lg">
@@ -1859,10 +1855,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 </div>
                                                 <button onClick={() => { setPatientChartTab('family'); setShowPatientChart(true); }} className="px-2 py-1 bg-white text-[9px] text-blue-500 font-bold uppercase border border-blue-100 rounded-lg shadow-sm hover:bg-blue-50 transition-all">Edit</button>
                                             </div>
-                                            <div className="p-3 space-y-3 max-h-[380px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+                                            <div className="p-3 space-y-3 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
                                                 {/* Social History mini view */}
                                                 <div className="space-y-1.5">
-                                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Client Profile</p>
+                                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Social History</p>
                                                     <div className="grid grid-cols-2 gap-2">
                                                         <div className="p-1.5 px-2.5 rounded-xl bg-blue-50/40 border border-blue-100/30">
                                                             <p className="text-[8px] font-bold text-blue-500 uppercase tracking-tighter">Smoker</p>
@@ -1877,7 +1873,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
                                                 {/* Family History mini view */}
                                                 <div className="space-y-1.5">
-                                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest pt-1">Genetic History</p>
+                                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest pt-1">Family History</p>
                                                     {familyHistory.length > 0 ? (
                                                         <div className="grid grid-cols-1 gap-1">
                                                             {familyHistory.map(hist => (
