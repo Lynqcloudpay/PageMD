@@ -1788,35 +1788,32 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 </div>
                                                 <button onClick={() => { setPatientChartTab('medications'); setShowPatientChart(true); }} className="px-2.5 py-1 bg-white text-[9px] text-blue-600 font-bold uppercase border border-blue-200 rounded-md shadow-sm hover:bg-blue-50 transition-all active:scale-95">Manage All</button>
                                             </div>
-                                            <div className="p-3 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+                                            <div className="p-2.5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
                                                 {(medications || []).filter(m => m.active !== false).length > 0 ? (
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                    <div className="space-y-0.5">
                                                         {(medications || []).filter(m => m.active !== false).map(med => (
-                                                            <div key={med.id} className="flex flex-col p-2.5 border border-slate-100 rounded-xl bg-slate-50/50 hover:bg-white hover:border-blue-200 hover:shadow-sm transition-all group relative overflow-hidden">
-                                                                <div className="absolute top-0 right-0 p-1">
-                                                                    <div className="w-1 h-1 rounded-full bg-emerald-400" />
-                                                                </div>
-                                                                <div className="flex items-start gap-2.5">
-                                                                    <div className="w-7 h-7 rounded-md bg-white border border-blue-100 flex items-center justify-center text-blue-600 font-bold text-[10px] shadow-sm shrink-0 uppercase">
-                                                                        {decodeHtmlEntities(med.medication_name)?.[0]}
-                                                                    </div>
-                                                                    <div className="min-w-0">
-                                                                        <p className="text-[11px] text-slate-800 font-bold leading-tight truncate group-hover:text-blue-700 transition-colors">
+                                                            <div key={med.id} className="flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 group">
+                                                                <div className="flex items-center gap-3 min-w-0">
+                                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
+                                                                    <div className="flex items-baseline gap-2">
+                                                                        <span className="text-[10px] font-bold text-slate-800 truncate group-hover:text-blue-700 leading-tight">
                                                                             {decodeHtmlEntities(med.medication_name)}
-                                                                        </p>
-                                                                        <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
-                                                                            <span className="text-[9px] text-slate-500 font-semibold whitespace-nowrap">{med.dosage || 'No dosage'}</span>
-                                                                            <span className="text-[9px] text-slate-400 font-medium whitespace-nowrap">{med.frequency || 'No frequency'}</span>
-                                                                        </div>
+                                                                        </span>
+                                                                        <span className="text-[9px] text-slate-400 font-medium whitespace-nowrap">
+                                                                            {med.dosage && `${med.dosage} `}{med.frequency && `— ${med.frequency}`}
+                                                                        </span>
                                                                     </div>
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-[8px] text-blue-500 font-black bg-blue-50 px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">ACTIVE</span>
                                                                 </div>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 ) : (
-                                                    <div className="py-12 text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200 m-1">
-                                                        <Pill className="w-6 h-6 text-slate-200 mx-auto mb-2" />
-                                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-tight">No active medications documented</p>
+                                                    <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                                                        <Pill className="w-6 h-6 text-slate-200 mb-2" />
+                                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest text-center">No active medications</p>
                                                     </div>
                                                 )}
                                             </div>
