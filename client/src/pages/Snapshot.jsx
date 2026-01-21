@@ -1537,1276 +1537,1275 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
                                 {/* Main Dashboard Content */}
-                        <div className="lg:col-span-3 space-y-5">
-                            {/* Clinical Alerts Banner - High Visibility Inline version */}
-                            {activeFlags.length > 0 && (
-                                <div className="space-y-1.5">
-                                    {activeFlags.map(flag => {
-                                        const flagLabel = (flag.display_label || '').toUpperCase();
-                                        const flagType = (flag.flag_type || '').toUpperCase();
-                                        const isReminder = flagLabel.includes('REMINDER') || flagType.includes('REMINDER');
-                                        const baseColor = isReminder ? 'blue' : 'rose';
+                                <div className="lg:col-span-3 space-y-5">
+                                    {/* Clinical Alerts Banner - High Visibility Inline version */}
+                                    {activeFlags.length > 0 && (
+                                        <div className="space-y-1.5">
+                                            {activeFlags.map(flag => {
+                                                const flagLabel = (flag.display_label || '').toUpperCase();
+                                                const flagType = (flag.flag_type || '').toUpperCase();
+                                                const isReminder = flagLabel.includes('REMINDER') || flagType.includes('REMINDER');
+                                                const baseColor = isReminder ? 'blue' : 'rose';
 
-                                        return (
-                                            <div key={flag.id} className={`bg-white border-l-4 border-l-${baseColor}-500 border-y border-r border-${baseColor}-100 rounded-lg p-2.5 flex items-center justify-between shadow-sm hover:shadow-md transition-all group/flag animate-in slide-in-from-top-2`}>
-                                                <div className="flex items-center gap-2.5">
-                                                    <div className={`p-1 px-2 bg-${baseColor}-500 text-white rounded text-[8px] font-bold uppercase tracking-widest`}>
-                                                        {isReminder ? 'Reminder' : 'Alert'}
-                                                    </div>
-                                                    <div className="flex flex-col text-left">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className={`text-[11px] font-bold text-${baseColor}-900 uppercase tracking-tight`}>{isReminder ? 'Clinical Reminder' : (flag.display_label || 'Medical Alert')}</span>
-                                                            <span className="w-1 h-1 rounded-full bg-slate-200" />
-                                                            <span className="text-[10px] text-slate-500 font-medium">{flag.severity || 'Medium Severity'}</span>
-                                                        </div>
-                                                        {flag.note && <p className="text-[10px] text-slate-600 font-medium mt-0.5">{flag.note}</p>}
-                                                    </div>
-                                                </div>
-                                                {isReminder && (
-                                                    <button
-                                                        onClick={(e) => handleAcknowledgeFlag(flag.id, e)}
-                                                        className="opacity-0 group-hover/flag:opacity-100 transition-opacity px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg text-[10px] font-bold uppercase border border-blue-100 shadow-sm"
-                                                    >
-                                                        Complete
-                                                    </button>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-
-                            {/* Vitals Trend Wave - Enhanced Clinical Visualization */}
-                            <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/50 mb-6 relative overflow-hidden group/wave isolate">
-                                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/20 rounded-full -mr-32 -mt-32 blur-3xl group-hover/wave:bg-blue-100/30 transition-colors duration-1000" />
-
-                                <div className="flex justify-between items-center mb-6 relative">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-3 bg-gradient-to-br from-blue-400 to-indigo-500 text-white rounded-2xl shadow-lg shadow-blue-100">
-                                            <Waves className="w-5 h-5 opacity-90" />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-0.5 text-left">Clinical Trend Wave</h3>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm font-bold text-slate-800">Cardiovascular Performance</span>
-                                                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[9px] font-bold uppercase rounded-lg border border-emerald-100">Stable</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-6 bg-slate-50/50 backdrop-blur-md p-2 px-4 rounded-xl border border-slate-100">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm" />
-                                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Sys. BP</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-2 h-2 rounded-full bg-rose-500 shadow-sm" />
-                                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Heart Rate</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="h-56 w-full relative min-h-[224px]">
-                                    {vitals.filter(v => (v.bp && v.bp !== 'N/A') || (v.hr && v.hr !== 'N/A')).length > 0 ? (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <AreaChart
-                                                data={[...vitals]
-                                                    .filter(v => (v.bp && v.bp !== 'N/A') || (v.hr && v.hr !== 'N/A'))
-                                                    .reverse()
-                                                    .map((v, idx) => {
-                                                        // Decode HTML entities like &#x2F; (slash) 
-                                                        const bpRaw = String(v.fullBp || v.bp || '');
-                                                        const bpClean = bpRaw.replace(/&#x2F;/g, '/').replace(/&slash;/g, '/');
-
-                                                        const sys = parseInt(bpClean.split('/')[0]) || null;
-                                                        const dia = parseInt(bpClean.split('/')[1]) || null;
-                                                        const hr = parseInt(v.hr) || null;
-                                                        return {
-                                                            key: `${v.date}-${idx}-${sys || 'nan'}`,
-                                                            name: v.date === 'Today (Draft)' ? 'Today' : v.date,
-                                                            sys: sys,
-                                                            dia: dia,
-                                                            hr: hr,
-                                                            fullBp: bpClean
-                                                        };
-                                                    })}
-                                                margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
-                                            >
-                                                <defs>
-                                                    {/* Picture 3 Style Multi-layered Gradients */}
-                                                    <linearGradient id="gradientSysMain" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.15} />
-                                                        <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
-                                                    </linearGradient>
-                                                    <linearGradient id="gradientSysGlow" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="0%" stopColor="#2563eb" stopOpacity={0.08} />
-                                                        <stop offset="100%" stopColor="#2563eb" stopOpacity={0} />
-                                                    </linearGradient>
-                                                    <linearGradient id="gradientHrMain" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="0%" stopColor="#ec4899" stopOpacity={0.12} />
-                                                        <stop offset="100%" stopColor="#ec4899" stopOpacity={0} />
-                                                    </linearGradient>
-                                                </defs>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                                <XAxis
-                                                    dataKey="key"
-                                                    axisLine={false}
-                                                    tickLine={false}
-                                                    tick={(props) => {
-                                                        const { x, y, payload } = props;
-                                                        // Extract the original date from our composite key
-                                                        const date = payload.value.split('-')[0];
-                                                        return (
-                                                            <text x={x} y={y + 15} textAnchor="middle" fontSize={9} fill="#94a3b8" fontWeight="500">
-                                                                {date}
-                                                            </text>
-                                                        );
-                                                    }}
-                                                />
-                                                <YAxis
-                                                    axisLine={false}
-                                                    tickLine={false}
-                                                    tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: '500' }}
-                                                    domain={['auto', 'auto']}
-                                                    dx={-5}
-                                                />
-                                                <Tooltip
-                                                    content={({ active, payload, label }) => {
-                                                        if (active && payload && payload.length) {
-                                                            const sysVal = payload.find(p => p.dataKey === 'sys')?.value;
-                                                            const hrVal = payload.find(p => p.dataKey === 'hr')?.value;
-                                                            const dateLabel = label ? label.split('-')[0] : '';
-
-                                                            return (
-                                                                <div className="bg-white/95 backdrop-blur-xl border border-slate-100 shadow-2xl rounded-2xl p-4 ring-1 ring-slate-950/5">
-                                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-50 pb-2">{dateLabel}</p>
-                                                                    <div className="space-y-2.5">
-                                                                        <div className="flex items-center justify-between gap-8">
-                                                                            <div className="flex items-center gap-2">
-                                                                                <div className="w-2 h-2 rounded-full bg-blue-500" />
-                                                                                <span className="text-[11px] font-semibold text-slate-600">BP Systolic</span>
-                                                                            </div>
-                                                                            <span className="text-[13px] font-bold text-blue-700">{sysVal || '--'} <small className="text-[9px] text-blue-400 font-medium">mmHg</small></span>
-                                                                        </div>
-                                                                        <div className="flex items-center justify-between gap-8">
-                                                                            <div className="flex items-center gap-2">
-                                                                                <div className="w-2 h-2 rounded-full bg-rose-500" />
-                                                                                <span className="text-[11px] font-semibold text-slate-600">Heart Rate</span>
-                                                                            </div>
-                                                                            <span className="text-[13px] font-bold text-rose-700">{hrVal || '--'} <small className="text-[9px] text-rose-400 font-medium">bpm</small></span>
-                                                                        </div>
-                                                                    </div>
+                                                return (
+                                                    <div key={flag.id} className={`bg-white border-l-4 border-l-${baseColor}-500 border-y border-r border-${baseColor}-100 rounded-lg p-2.5 flex items-center justify-between shadow-sm hover:shadow-md transition-all group/flag animate-in slide-in-from-top-2`}>
+                                                        <div className="flex items-center gap-2.5">
+                                                            <div className={`p-1 px-2 bg-${baseColor}-500 text-white rounded text-[8px] font-bold uppercase tracking-widest`}>
+                                                                {isReminder ? 'Reminder' : 'Alert'}
+                                                            </div>
+                                                            <div className="flex flex-col text-left">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className={`text-[11px] font-bold text-${baseColor}-900 uppercase tracking-tight`}>{isReminder ? 'Clinical Reminder' : (flag.display_label || 'Medical Alert')}</span>
+                                                                    <span className="w-1 h-1 rounded-full bg-slate-200" />
+                                                                    <span className="text-[10px] text-slate-500 font-medium">{flag.severity || 'Medium Severity'}</span>
                                                                 </div>
-                                                            );
-                                                        }
-                                                        return null;
-                                                    }}
-                                                />
-                                                {/* Picture 3 Aesthetic Layers */}
-                                                <Area
-                                                    type="monotone"
-                                                    dataKey="sys"
-                                                    stroke="#3b82f6"
-                                                    strokeWidth={4}
-                                                    fill="url(#gradientSysMain)"
-                                                    dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
-                                                    activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff', fill: '#3b82f6' }}
-                                                    connectNulls
-                                                    isAnimationActive={false}
-                                                />
-                                                <Area
-                                                    type="monotone"
-                                                    dataKey="hr"
-                                                    name="Heart Rate"
-                                                    stroke="#ec4899"
-                                                    strokeWidth={3}
-                                                    fill="url(#gradientHrMain)"
-                                                    dot={{ r: 4, fill: '#ec4899', strokeWidth: 2, stroke: '#fff' }}
-                                                    activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff', fill: '#ec4899' }}
-                                                    connectNulls
-                                                    isAnimationActive={false}
-                                                />
-                                            </AreaChart>
-                                        </ResponsiveContainer>
-                                    ) : (
-                                        <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
-                                            <div className="p-4 bg-white rounded-2xl shadow-sm mb-4">
-                                                <Waves className="w-8 h-8 text-slate-200" />
-                                            </div>
-                                            <p className="text-[11px] text-slate-400 font-black uppercase tracking-[0.2em]">No longitudinal vital trends recorded</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Detailed Boards Grid - MOVED UP */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                {/* Column 1: Problems - Geometric Match */}
-                                <div className="flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:border-rose-200 transition-colors h-[416px]">
-                                    <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
-                                        <div className="flex items-center gap-2">
-                                            <div className="p-1.5 bg-rose-50 text-rose-500 rounded-lg">
-                                                <Activity className="w-3.5 h-3.5" />
-                                            </div>
-                                            <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-widest">Problem List</h3>
-                                        </div>
-                                        <button onClick={() => { setPatientChartTab('problems'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
-                                    </div>
-                                    <div className="p-2.5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
-                                        {(problems || []).length > 0 ? (
-                                            <div className="space-y-0.5">
-                                                {(problems || []).map(prob => (
-                                                    <div key={prob.id} className="flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 group">
-                                                        <div className="flex items-center gap-3 min-w-0">
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
-                                                            <span className="text-[10px] font-bold text-slate-800 truncate group-hover:text-rose-700 leading-tight">{prob.name}</span>
+                                                                {flag.note && <p className="text-[10px] text-slate-600 font-medium mt-0.5">{flag.note}</p>}
+                                                            </div>
                                                         </div>
-                                                        {prob.icd && <span className="text-[8px] text-slate-400 font-bold bg-slate-100 px-1 rounded shrink-0 ml-2">{prob.icd}</span>}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                                                <Activity className="w-6 h-6 text-slate-200 mb-2" />
-                                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest text-center">No active problems</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Column 2: Medications - Now Compact lg:col-span-1 */}
-                                <div className="flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:border-blue-200 transition-colors h-[416px]">
-                                    <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
-                                        <div className="flex items-center gap-2">
-                                            <div className="p-1.5 bg-blue-50 text-blue-500 rounded-lg">
-                                                <Pill className="w-3.5 h-3.5" />
-                                            </div>
-                                            <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-widest">Medications</h3>
-                                        </div>
-                                        <button onClick={() => { setPatientChartTab('medications'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
-                                    </div>
-                                    <div className="p-2.5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
-                                        {(medications || []).filter(m => m.active !== false).length > 0 ? (
-                                            <div className="space-y-0.5">
-                                                {(medications || []).filter(m => m.active !== false).map(med => (
-                                                    <div key={med.id} className="flex flex-col px-2.5 py-1.5 rounded-lg hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 group">
-                                                        <div className="flex items-center gap-2 min-w-0">
-                                                            <div className="w-1 h-1 rounded-full bg-emerald-400 flex-shrink-0" />
-                                                            <span className="text-[10px] font-bold text-slate-800 truncate group-hover:text-blue-700 leading-tight">
-                                                                {decodeHtmlEntities(med.medication_name)}
-                                                            </span>
-                                                        </div>
-                                                        {(med.dosage || med.frequency) && (
-                                                            <p className="text-[9px] text-slate-400 font-medium ml-3 mt-0.5">
-                                                                {med.dosage}{med.dosage && med.frequency ? ' — ' : ''}{med.frequency}
-                                                            </p>
+                                                        {isReminder && (
+                                                            <button
+                                                                onClick={(e) => handleAcknowledgeFlag(flag.id, e)}
+                                                                className="opacity-0 group-hover/flag:opacity-100 transition-opacity px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg text-[10px] font-bold uppercase border border-blue-100 shadow-sm"
+                                                            >
+                                                                Complete
+                                                            </button>
                                                         )}
                                                     </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                                                <Pill className="w-6 h-6 text-slate-200 mb-2" />
-                                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest text-center">No active medications</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Middle Stack: Allergies & Surgical */}
-                                <div className="flex flex-col gap-4 h-[416px]">
-                                    {/* Allergies - Increased Height */}
-                                    <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-amber-200 transition-colors">
-                                        <div className="px-4 py-2.5 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <div className="p-1 bg-amber-50 text-amber-500 rounded-md">
-                                                    <AlertCircle className="w-3 h-3" />
-                                                </div>
-                                                <h3 className="font-semibold text-[10px] text-slate-800 uppercase tracking-widest">Allergies</h3>
-                                            </div>
-                                            <button onClick={() => { setPatientChartTab('allergies'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
+                                                );
+                                            })}
                                         </div>
-                                        <div className="p-2.5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
-                                            {(allergies || []).length > 0 ? (
-                                                <div className="space-y-1">
-                                                    {allergies.map(allergy => (
-                                                        <div key={allergy.id} className="flex items-center justify-between px-2 py-1 rounded bg-rose-50/20 border border-rose-100/10">
-                                                            <div className="flex items-center gap-2 min-w-0">
-                                                                <div className="w-1 h-1 rounded-full bg-rose-500 shrink-0" />
-                                                                <span className="text-[10px] font-bold text-rose-800 truncate">{allergy.allergen}</span>
-                                                            </div>
-                                                            <span className="text-[8px] font-bold text-rose-400 uppercase tracking-widest shrink-0 ml-2">{allergy.severity || 'Reaction'}</span>
-                                                        </div>
-                                                    ))}
+                                    )}
+
+                                    {/* Vitals Trend Wave - Enhanced Clinical Visualization */}
+                                    <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/50 mb-6 relative overflow-hidden group/wave isolate">
+                                        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/20 rounded-full -mr-32 -mt-32 blur-3xl group-hover/wave:bg-blue-100/30 transition-colors duration-1000" />
+
+                                        <div className="flex justify-between items-center mb-6 relative">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-3 bg-gradient-to-br from-blue-400 to-indigo-500 text-white rounded-2xl shadow-lg shadow-blue-100">
+                                                    <Waves className="w-5 h-5 opacity-90" />
                                                 </div>
+                                                <div>
+                                                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-0.5 text-left">Clinical Trend Wave</h3>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-bold text-slate-800">Cardiovascular Performance</span>
+                                                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[9px] font-bold uppercase rounded-lg border border-emerald-100">Stable</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-6 bg-slate-50/50 backdrop-blur-md p-2 px-4 rounded-xl border border-slate-100">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm" />
+                                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Sys. BP</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 rounded-full bg-rose-500 shadow-sm" />
+                                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Heart Rate</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="h-56 w-full relative min-h-[224px]">
+                                            {vitals.filter(v => (v.bp && v.bp !== 'N/A') || (v.hr && v.hr !== 'N/A')).length > 0 ? (
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <AreaChart
+                                                        data={[...vitals]
+                                                            .filter(v => (v.bp && v.bp !== 'N/A') || (v.hr && v.hr !== 'N/A'))
+                                                            .reverse()
+                                                            .map((v, idx) => {
+                                                                // Decode HTML entities like &#x2F; (slash) 
+                                                                const bpRaw = String(v.fullBp || v.bp || '');
+                                                                const bpClean = bpRaw.replace(/&#x2F;/g, '/').replace(/&slash;/g, '/');
+
+                                                                const sys = parseInt(bpClean.split('/')[0]) || null;
+                                                                const dia = parseInt(bpClean.split('/')[1]) || null;
+                                                                const hr = parseInt(v.hr) || null;
+                                                                return {
+                                                                    key: `${v.date}-${idx}-${sys || 'nan'}`,
+                                                                    name: v.date === 'Today (Draft)' ? 'Today' : v.date,
+                                                                    sys: sys,
+                                                                    dia: dia,
+                                                                    hr: hr,
+                                                                    fullBp: bpClean
+                                                                };
+                                                            })}
+                                                        margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
+                                                    >
+                                                        <defs>
+                                                            {/* Picture 3 Style Multi-layered Gradients */}
+                                                            <linearGradient id="gradientSysMain" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.15} />
+                                                                <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                                                            </linearGradient>
+                                                            <linearGradient id="gradientSysGlow" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="0%" stopColor="#2563eb" stopOpacity={0.08} />
+                                                                <stop offset="100%" stopColor="#2563eb" stopOpacity={0} />
+                                                            </linearGradient>
+                                                            <linearGradient id="gradientHrMain" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="0%" stopColor="#ec4899" stopOpacity={0.12} />
+                                                                <stop offset="100%" stopColor="#ec4899" stopOpacity={0} />
+                                                            </linearGradient>
+                                                        </defs>
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                        <XAxis
+                                                            dataKey="key"
+                                                            axisLine={false}
+                                                            tickLine={false}
+                                                            tick={(props) => {
+                                                                const { x, y, payload } = props;
+                                                                // Extract the original date from our composite key
+                                                                const date = payload.value.split('-')[0];
+                                                                return (
+                                                                    <text x={x} y={y + 15} textAnchor="middle" fontSize={9} fill="#94a3b8" fontWeight="500">
+                                                                        {date}
+                                                                    </text>
+                                                                );
+                                                            }}
+                                                        />
+                                                        <YAxis
+                                                            axisLine={false}
+                                                            tickLine={false}
+                                                            tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: '500' }}
+                                                            domain={['auto', 'auto']}
+                                                            dx={-5}
+                                                        />
+                                                        <Tooltip
+                                                            content={({ active, payload, label }) => {
+                                                                if (active && payload && payload.length) {
+                                                                    const sysVal = payload.find(p => p.dataKey === 'sys')?.value;
+                                                                    const hrVal = payload.find(p => p.dataKey === 'hr')?.value;
+                                                                    const dateLabel = label ? label.split('-')[0] : '';
+
+                                                                    return (
+                                                                        <div className="bg-white/95 backdrop-blur-xl border border-slate-100 shadow-2xl rounded-2xl p-4 ring-1 ring-slate-950/5">
+                                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-50 pb-2">{dateLabel}</p>
+                                                                            <div className="space-y-2.5">
+                                                                                <div className="flex items-center justify-between gap-8">
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                                                                        <span className="text-[11px] font-semibold text-slate-600">BP Systolic</span>
+                                                                                    </div>
+                                                                                    <span className="text-[13px] font-bold text-blue-700">{sysVal || '--'} <small className="text-[9px] text-blue-400 font-medium">mmHg</small></span>
+                                                                                </div>
+                                                                                <div className="flex items-center justify-between gap-8">
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <div className="w-2 h-2 rounded-full bg-rose-500" />
+                                                                                        <span className="text-[11px] font-semibold text-slate-600">Heart Rate</span>
+                                                                                    </div>
+                                                                                    <span className="text-[13px] font-bold text-rose-700">{hrVal || '--'} <small className="text-[9px] text-rose-400 font-medium">bpm</small></span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                }
+                                                                return null;
+                                                            }}
+                                                        />
+                                                        {/* Picture 3 Aesthetic Layers */}
+                                                        <Area
+                                                            type="monotone"
+                                                            dataKey="sys"
+                                                            stroke="#3b82f6"
+                                                            strokeWidth={4}
+                                                            fill="url(#gradientSysMain)"
+                                                            dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
+                                                            activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff', fill: '#3b82f6' }}
+                                                            connectNulls
+                                                            isAnimationActive={false}
+                                                        />
+                                                        <Area
+                                                            type="monotone"
+                                                            dataKey="hr"
+                                                            name="Heart Rate"
+                                                            stroke="#ec4899"
+                                                            strokeWidth={3}
+                                                            fill="url(#gradientHrMain)"
+                                                            dot={{ r: 4, fill: '#ec4899', strokeWidth: 2, stroke: '#fff' }}
+                                                            activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff', fill: '#ec4899' }}
+                                                            connectNulls
+                                                            isAnimationActive={false}
+                                                        />
+                                                    </AreaChart>
+                                                </ResponsiveContainer>
                                             ) : (
-                                                <div className="h-full flex items-center justify-center">
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full border border-slate-100">NKDA</span>
+                                                <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
+                                                    <div className="p-4 bg-white rounded-2xl shadow-sm mb-4">
+                                                        <Waves className="w-8 h-8 text-slate-200" />
+                                                    </div>
+                                                    <p className="text-[11px] text-slate-400 font-black uppercase tracking-[0.2em]">No longitudinal vital trends recorded</p>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
 
-                                    {/* Surgical History - Compact but with more space */}
-                                    <div className="h-[160px] bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-purple-200 transition-colors">
-                                        <div className="px-4 py-2 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <div className="p-1 bg-purple-50 text-purple-500 rounded-md">
-                                                    <Scissors className="w-3 h-3" />
+                                    {/* Detailed Boards Grid - MOVED UP */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        {/* Column 1: Problems - Geometric Match */}
+                                        <div className="flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:border-rose-200 transition-colors h-[416px]">
+                                            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="p-1.5 bg-rose-50 text-rose-500 rounded-lg">
+                                                        <Activity className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-widest">Problem List</h3>
                                                 </div>
-                                                <h3 className="font-semibold text-[10px] text-slate-800 uppercase tracking-widest">Surgical History</h3>
+                                                <button onClick={() => { setPatientChartTab('problems'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
                                             </div>
-                                            <button onClick={() => { setPatientChartTab('surgical'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
-                                        </div>
-                                        <div className="p-2.5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
-                                            {(surgicalHistory || []).length > 0 ? (
-                                                <div className="space-y-1.5">
-                                                    {surgicalHistory.map(surg => (
-                                                        <div key={surg.id} className="text-[10px] p-2 rounded-lg bg-slate-50/30 border border-slate-100/50">
-                                                            <div className="flex justify-between items-start">
-                                                                <span className="font-bold text-slate-800 leading-tight">{surg.procedure_name}</span>
-                                                                <span className="text-[8px] font-black text-slate-400 shrink-0 ml-2">{surg.date ? new Date(surg.date).getFullYear() : '—'}</span>
+                                            <div className="p-2.5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+                                                {(problems || []).length > 0 ? (
+                                                    <div className="space-y-0.5">
+                                                        {(problems || []).map(prob => (
+                                                            <div key={prob.id} className="flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 group">
+                                                                <div className="flex items-center gap-3 min-w-0">
+                                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
+                                                                    <span className="text-[10px] font-bold text-slate-800 truncate group-hover:text-rose-700 leading-tight">{prob.name}</span>
+                                                                </div>
+                                                                {prob.icd && <span className="text-[8px] text-slate-400 font-bold bg-slate-100 px-1 rounded shrink-0 ml-2">{prob.icd}</span>}
                                                             </div>
-                                                            {surg.notes && <p className="text-[9px] text-slate-500 italic mt-0.5 line-clamp-1">{surg.notes}</p>}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <div className="h-full flex items-center justify-center">
-                                                    <p className="text-[9px] text-slate-400 italic">No surgical history</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Column 4: Social & Family Stack */}
-                                <div className="flex flex-col gap-4 h-[416px]">
-                                    {/* Family History - Top */}
-                                    <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-emerald-200 transition-colors">
-                                        <div className="px-4 py-2.5 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <div className="p-1 bg-emerald-50 text-emerald-500 rounded-md">
-                                                    <ShieldPlus className="w-3 h-3" />
-                                                </div>
-                                                <h3 className="font-semibold text-[10px] text-slate-800 uppercase tracking-widest">Family History</h3>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                                                        <Activity className="w-6 h-6 text-slate-200 mb-2" />
+                                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest text-center">No active problems</p>
+                                                    </div>
+                                                )}
                                             </div>
-                                            <button onClick={() => { setPatientChartTab('family'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
                                         </div>
-                                        <div className="p-2.5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
-                                            {(familyHistory || []).length > 0 ? (
-                                                <div className="space-y-1">
-                                                    {familyHistory.map(fam => (
-                                                        <div key={fam.id} className="flex flex-col px-2 py-1.5 rounded-lg bg-emerald-50/20 border border-emerald-100/10">
-                                                            <div className="flex items-center justify-between">
-                                                                <span className="text-[10px] font-bold text-slate-800">{fam.condition}</span>
-                                                                <span className="text-[8px] font-bold text-emerald-600 uppercase bg-white px-1 rounded border border-emerald-100">{fam.relationship}</span>
+
+                                        {/* Column 2: Medications - Now Compact lg:col-span-1 */}
+                                        <div className="flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:border-blue-200 transition-colors h-[416px]">
+                                            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="p-1.5 bg-blue-50 text-blue-500 rounded-lg">
+                                                        <Pill className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-widest">Medications</h3>
+                                                </div>
+                                                <button onClick={() => { setPatientChartTab('medications'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
+                                            </div>
+                                            <div className="p-2.5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+                                                {(medications || []).filter(m => m.active !== false).length > 0 ? (
+                                                    <div className="space-y-0.5">
+                                                        {(medications || []).filter(m => m.active !== false).map(med => (
+                                                            <div key={med.id} className="flex flex-col px-2.5 py-1.5 rounded-lg hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 group">
+                                                                <div className="flex items-center gap-2 min-w-0">
+                                                                    <div className="w-1 h-1 rounded-full bg-emerald-400 flex-shrink-0" />
+                                                                    <span className="text-[10px] font-bold text-slate-800 truncate group-hover:text-blue-700 leading-tight">
+                                                                        {decodeHtmlEntities(med.medication_name)}
+                                                                    </span>
+                                                                </div>
+                                                                {(med.dosage || med.frequency) && (
+                                                                    <p className="text-[9px] text-slate-400 font-medium ml-3 mt-0.5">
+                                                                        {med.dosage}{med.dosage && med.frequency ? ' — ' : ''}{med.frequency}
+                                                                    </p>
+                                                                )}
                                                             </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                                                        <Pill className="w-6 h-6 text-slate-200 mb-2" />
+                                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest text-center">No active medications</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Middle Stack: Allergies & Surgical */}
+                                        <div className="flex flex-col gap-4 h-[416px]">
+                                            {/* Allergies - Increased Height */}
+                                            <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-amber-200 transition-colors">
+                                                <div className="px-4 py-2.5 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="p-1 bg-amber-50 text-amber-500 rounded-md">
+                                                            <AlertCircle className="w-3 h-3" />
                                                         </div>
-                                                    ))}
+                                                        <h3 className="font-semibold text-[10px] text-slate-800 uppercase tracking-widest">Allergies</h3>
+                                                    </div>
+                                                    <button onClick={() => { setPatientChartTab('allergies'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
                                                 </div>
-                                            ) : (
-                                                <div className="h-full flex items-center justify-center">
-                                                    <p className="text-[9px] text-slate-400 italic">No family history</p>
+                                                <div className="p-2.5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+                                                    {(allergies || []).length > 0 ? (
+                                                        <div className="space-y-1">
+                                                            {allergies.map(allergy => (
+                                                                <div key={allergy.id} className="flex items-center justify-between px-2 py-1 rounded bg-rose-50/20 border border-rose-100/10">
+                                                                    <div className="flex items-center gap-2 min-w-0">
+                                                                        <div className="w-1 h-1 rounded-full bg-rose-500 shrink-0" />
+                                                                        <span className="text-[10px] font-bold text-rose-800 truncate">{allergy.allergen}</span>
+                                                                    </div>
+                                                                    <span className="text-[8px] font-bold text-rose-400 uppercase tracking-widest shrink-0 ml-2">{allergy.severity || 'Reaction'}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="h-full flex items-center justify-center">
+                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full border border-slate-100">NKDA</span>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
+                                            </div>
+
+                                            {/* Surgical History - Compact but with more space */}
+                                            <div className="h-[160px] bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-purple-200 transition-colors">
+                                                <div className="px-4 py-2 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="p-1 bg-purple-50 text-purple-500 rounded-md">
+                                                            <Scissors className="w-3 h-3" />
+                                                        </div>
+                                                        <h3 className="font-semibold text-[10px] text-slate-800 uppercase tracking-widest">Surgical History</h3>
+                                                    </div>
+                                                    <button onClick={() => { setPatientChartTab('surgical'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
+                                                </div>
+                                                <div className="p-2.5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+                                                    {(surgicalHistory || []).length > 0 ? (
+                                                        <div className="space-y-1.5">
+                                                            {surgicalHistory.map(surg => (
+                                                                <div key={surg.id} className="text-[10px] p-2 rounded-lg bg-slate-50/30 border border-slate-100/50">
+                                                                    <div className="flex justify-between items-start">
+                                                                        <span className="font-bold text-slate-800 leading-tight">{surg.procedure_name}</span>
+                                                                        <span className="text-[8px] font-black text-slate-400 shrink-0 ml-2">{surg.date ? new Date(surg.date).getFullYear() : '—'}</span>
+                                                                    </div>
+                                                                    {surg.notes && <p className="text-[9px] text-slate-500 italic mt-0.5 line-clamp-1">{surg.notes}</p>}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="h-full flex items-center justify-center">
+                                                            <p className="text-[9px] text-slate-400 italic">No surgical history</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Column 4: Social & Family Stack */}
+                                        <div className="flex flex-col gap-4 h-[416px]">
+                                            {/* Family History - Top */}
+                                            <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-emerald-200 transition-colors">
+                                                <div className="px-4 py-2.5 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="p-1 bg-emerald-50 text-emerald-500 rounded-md">
+                                                            <ShieldPlus className="w-3 h-3" />
+                                                        </div>
+                                                        <h3 className="font-semibold text-[10px] text-slate-800 uppercase tracking-widest">Family History</h3>
+                                                    </div>
+                                                    <button onClick={() => { setPatientChartTab('family'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
+                                                </div>
+                                                <div className="p-2.5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+                                                    {(familyHistory || []).length > 0 ? (
+                                                        <div className="space-y-1">
+                                                            {familyHistory.map(fam => (
+                                                                <div key={fam.id} className="flex flex-col px-2 py-1.5 rounded-lg bg-emerald-50/20 border border-emerald-100/10">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <span className="text-[10px] font-bold text-slate-800">{fam.condition}</span>
+                                                                        <span className="text-[8px] font-bold text-emerald-600 uppercase bg-white px-1 rounded border border-emerald-100">{fam.relationship}</span>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="h-full flex items-center justify-center">
+                                                            <p className="text-[9px] text-slate-400 italic">No family history</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Social History - Fixed Bottom to align with Surgical */}
+                                            <div className="h-[160px] bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-indigo-200 transition-colors">
+                                                <div className="px-4 py-2 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="p-1 bg-indigo-50 text-indigo-500 rounded-md">
+                                                            <Users className="w-3 h-3" />
+                                                        </div>
+                                                        <h3 className="font-semibold text-[10px] text-slate-800 uppercase tracking-widest">Social History</h3>
+                                                    </div>
+                                                    <button onClick={() => { setPatientChartTab('social'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
+                                                </div>
+                                                <div className="p-2.5 flex-1">
+                                                    <div className="grid grid-cols-2 gap-2 mt-1">
+                                                        <div className="p-2 rounded-xl bg-blue-50/40 border border-blue-100/30 text-center">
+                                                            <p className="text-[7px] font-bold text-blue-400 uppercase tracking-tighter mb-0.5">Smoking</p>
+                                                            <p className="text-[10px] font-bold text-slate-700 truncate">{socialHistory?.smoking_status === 'Never smoker' ? 'Never' : (socialHistory?.smoking_status || '—')}</p>
+                                                        </div>
+                                                        <div className="p-2 rounded-xl bg-purple-50/40 border border-purple-100/30 text-center">
+                                                            <p className="text-[7px] font-bold text-purple-400 uppercase tracking-tighter mb-0.5">Alcohol</p>
+                                                            <p className="text-[10px] font-bold text-slate-700 truncate">{socialHistory?.alcohol_use || '—'}</p>
+                                                        </div>
+                                                        <div className="p-2 rounded-xl bg-emerald-50/40 border border-emerald-100/30 text-center">
+                                                            <p className="text-[7px] font-bold text-emerald-400 uppercase tracking-tighter mb-0.5">Occupation</p>
+                                                            <p className="text-[10px] font-bold text-slate-700 truncate">{socialHistory?.occupation || '—'}</p>
+                                                        </div>
+                                                        <div className="p-2 rounded-xl bg-amber-50/40 border border-amber-100/30 text-center">
+                                                            <p className="text-[7px] font-bold text-amber-400 uppercase tracking-tighter mb-0.5">Exercise</p>
+                                                            <p className="text-[10px] font-bold text-slate-700 truncate">{socialHistory?.exercise_frequency || '—'}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    {/* Social History - Fixed Bottom to align with Surgical */}
-                                    <div className="h-[160px] bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-indigo-200 transition-colors">
-                                        <div className="px-4 py-2 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <div className="p-1 bg-indigo-50 text-indigo-500 rounded-md">
-                                                    <Users className="w-3 h-3" />
-                                                </div>
-                                                <h3 className="font-semibold text-[10px] text-slate-800 uppercase tracking-widest">Social History</h3>
-                                            </div>
-                                            <button onClick={() => { setPatientChartTab('social'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
-                                        </div>
-                                        <div className="p-2.5 flex-1">
-                                            <div className="grid grid-cols-2 gap-2 mt-1">
-                                                <div className="p-2 rounded-xl bg-blue-50/40 border border-blue-100/30 text-center">
-                                                    <p className="text-[7px] font-bold text-blue-400 uppercase tracking-tighter mb-0.5">Smoking</p>
-                                                    <p className="text-[10px] font-bold text-slate-700 truncate">{socialHistory?.smoking_status === 'Never smoker' ? 'Never' : (socialHistory?.smoking_status || '—')}</p>
-                                                </div>
-                                                <div className="p-2 rounded-xl bg-purple-50/40 border border-purple-100/30 text-center">
-                                                    <p className="text-[7px] font-bold text-purple-400 uppercase tracking-tighter mb-0.5">Alcohol</p>
-                                                    <p className="text-[10px] font-bold text-slate-700 truncate">{socialHistory?.alcohol_use || '—'}</p>
-                                                </div>
-                                                <div className="p-2 rounded-xl bg-emerald-50/40 border border-emerald-100/30 text-center">
-                                                    <p className="text-[7px] font-bold text-emerald-400 uppercase tracking-tighter mb-0.5">Occupation</p>
-                                                    <p className="text-[10px] font-bold text-slate-700 truncate">{socialHistory?.occupation || '—'}</p>
-                                                </div>
-                                                <div className="p-2 rounded-xl bg-amber-50/40 border border-amber-100/30 text-center">
-                                                    <p className="text-[7px] font-bold text-amber-400 uppercase tracking-tighter mb-0.5">Exercise</p>
-                                                    <p className="text-[10px] font-bold text-slate-700 truncate">{socialHistory?.exercise_frequency || '—'}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+
+
                                 </div>
                             </div>
-
-
-
-                        </div>
-                    </div>
                         ) : null}
+                    </div>
                 </div>
             </div>
-        </div>
 
-            {/* Demographics Modal */ }
-    {
-        showDemographicsModal && demographicsField && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" onClick={() => {
-                setShowDemographicsModal(false);
-                setDemographicsField(null);
-            }}>
-                <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                            {demographicsField === 'phone' && 'Edit Phone'}
-                            {demographicsField === 'email' && 'Edit Email'}
-                            {demographicsField === 'address' && 'Edit Address'}
-                            {demographicsField === 'insurance' && 'Edit Insurance'}
-                            {demographicsField === 'pharmacy' && 'Edit Pharmacy'}
-                            {demographicsField === 'emergency' && 'Edit Emergency Contact'}
-                        </h3>
+            {/* Demographics Modal */}
+            {
+                showDemographicsModal && demographicsField && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" onClick={() => {
+                        setShowDemographicsModal(false);
+                        setDemographicsField(null);
+                    }}>
+                        <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-semibold text-gray-900">
+                                    {demographicsField === 'phone' && 'Edit Phone'}
+                                    {demographicsField === 'email' && 'Edit Email'}
+                                    {demographicsField === 'address' && 'Edit Address'}
+                                    {demographicsField === 'insurance' && 'Edit Insurance'}
+                                    {demographicsField === 'pharmacy' && 'Edit Pharmacy'}
+                                    {demographicsField === 'emergency' && 'Edit Emergency Contact'}
+                                </h3>
+                                <button
+                                    onClick={() => {
+                                        setShowDemographicsModal(false);
+                                        setDemographicsField(null);
+                                    }}
+                                    className="p-1 hover:bg-gray-100 rounded text-gray-500"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                {/* Phone */}
+                                {demographicsField === 'phone' && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                                        <input
+                                            type="tel"
+                                            value={demographicsForm.phone}
+                                            onChange={(e) => {
+                                                const formatted = formatPhoneInput(e.target.value);
+                                                setDemographicsForm({ ...demographicsForm, phone: formatted });
+                                            }}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                            placeholder="(555) 123-4567"
+                                            maxLength={14}
+                                            autoFocus
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Email */}
+                                {demographicsField === 'email' && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                                        <input
+                                            type="email"
+                                            value={demographicsForm.email}
+                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, email: e.target.value })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                            placeholder="patient@example.com"
+                                            autoFocus
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Address */}
+                                {demographicsField === 'address' && (
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
+                                            <input
+                                                type="text"
+                                                value={demographicsForm.address_line1}
+                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, address_line1: e.target.value })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                placeholder="123 Main St"
+                                                autoFocus
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                                                <input
+                                                    type="text"
+                                                    value={demographicsForm.city}
+                                                    onChange={(e) => setDemographicsForm({ ...demographicsForm, city: e.target.value })}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                    placeholder="City"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                                                <input
+                                                    type="text"
+                                                    value={demographicsForm.state}
+                                                    onChange={(e) => setDemographicsForm({ ...demographicsForm, state: e.target.value })}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                    placeholder="State"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
+                                            <input
+                                                type="text"
+                                                value={demographicsForm.zip}
+                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, zip: e.target.value })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                placeholder="12345"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Insurance */}
+                                {demographicsField === 'insurance' && (
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Insurance Provider</label>
+                                            <input
+                                                type="text"
+                                                value={demographicsForm.insurance_provider}
+                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, insurance_provider: e.target.value })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                placeholder="Insurance Company Name"
+                                                autoFocus
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Policy/Group Number</label>
+                                            <input
+                                                type="text"
+                                                value={demographicsForm.insurance_id}
+                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, insurance_id: e.target.value })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                placeholder="Policy or Group Number"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Pharmacy */}
+                                {demographicsField === 'pharmacy' && (
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Pharmacy Name</label>
+                                            <input
+                                                type="text"
+                                                value={demographicsForm.pharmacy_name}
+                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, pharmacy_name: e.target.value })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                placeholder="Pharmacy Name"
+                                                autoFocus
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Pharmacy Phone</label>
+                                            <input
+                                                type="tel"
+                                                value={demographicsForm.pharmacy_phone}
+                                                onChange={(e) => {
+                                                    const formatted = formatPhoneInput(e.target.value);
+                                                    setDemographicsForm({ ...demographicsForm, pharmacy_phone: formatted });
+                                                }}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                placeholder="(555) 123-4567"
+                                                maxLength={14}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Emergency Contact */}
+                                {demographicsField === 'emergency' && (
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
+                                            <input
+                                                type="text"
+                                                value={demographicsForm.emergency_contact_name}
+                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, emergency_contact_name: e.target.value })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                placeholder="Full Name"
+                                                autoFocus
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                                            <input
+                                                type="tel"
+                                                value={demographicsForm.emergency_contact_phone}
+                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, emergency_contact_phone: e.target.value })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                placeholder="(555) 123-4567"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Relationship</label>
+                                            <input
+                                                type="text"
+                                                value={demographicsForm.emergency_contact_relationship}
+                                                onChange={(e) => setDemographicsForm({ ...demographicsForm, emergency_contact_relationship: e.target.value })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                placeholder="e.g., Spouse, Parent, Friend"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="flex space-x-3 pt-2">
+                                    <button
+                                        onClick={handleSaveDemographics}
+                                        className="flex-1 px-4 py-2 text-white rounded-md flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
+                                        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
+                                    >
+                                        <Save className="w-4 h-4" />
+                                        <span>Save</span>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            // Clear the field
+                                            const clearedForm = { ...demographicsForm };
+                                            switch (demographicsField) {
+                                                case 'phone':
+                                                    clearedForm.phone = '';
+                                                    break;
+                                                case 'email':
+                                                    clearedForm.email = '';
+                                                    break;
+                                                case 'address':
+                                                    clearedForm.address_line1 = '';
+                                                    clearedForm.city = '';
+                                                    clearedForm.state = '';
+                                                    clearedForm.zip = '';
+                                                    break;
+                                                case 'insurance':
+                                                    clearedForm.insurance_provider = '';
+                                                    clearedForm.insurance_id = '';
+                                                    break;
+                                                case 'pharmacy':
+                                                    clearedForm.pharmacy_name = '';
+                                                    clearedForm.pharmacy_phone = '';
+                                                    break;
+                                                case 'emergency':
+                                                    clearedForm.emergency_contact_name = '';
+                                                    clearedForm.emergency_contact_phone = '';
+                                                    clearedForm.emergency_contact_relationship = '';
+                                                    break;
+                                            }
+                                            setDemographicsForm(clearedForm);
+                                        }}
+                                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                                    >
+                                        Clear
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setShowDemographicsModal(false);
+                                            setDemographicsField(null);
+                                        }}
+                                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* Unified Patient Chart Panel */}
+            <PatientChartPanel
+                isOpen={showPatientChart}
+                onClose={() => setShowPatientChart(false)}
+                patientId={id}
+                initialTab={patientChartTab}
+            />
+
+
+            {/* Visit Folders Modal */}
+            <VisitFoldersModal
+                isOpen={showVisitFoldersModal}
+                onClose={() => setShowVisitFoldersModal(false)}
+                visits={filteredNotes.map(note => ({
+                    id: note.id,
+                    type: note.type,
+                    date: note.date,
+                    time: note.time,
+                    dateTime: note.dateTime,
+                    visitDate: note.visitDate,
+                    createdAt: note.createdAt,
+                    provider: note.provider,
+                    summary: note.summary,
+                    assessment: note.assessment,
+                    plan: note.plan,
+                    chiefComplaint: note.chiefComplaint,
+                    fullNote: note.fullNote,
+                    signed: note.signed
+                }))}
+                onViewVisit={(visitId) => {
+                    setShowVisitFoldersModal(false);
+                    handleViewNote(visitId);
+                }}
+                onDeleteVisit={async (visitId) => {
+                    await handleDeleteNote(visitId);
+                    refreshPatientData();
+                    setShowVisitFoldersModal(false);
+                }}
+            />
+
+            {/* Visit Chart View Modal */}
+            {
+                selectedVisitForView && (
+                    <VisitChartView
+                        visitId={selectedVisitForView.visitId}
+                        patientId={selectedVisitForView.patientId}
+                        onClose={() => setSelectedVisitForView(null)}
+                    />
+                )
+            }
+
+
+            {/* Document Upload Modal */}
+            <Modal
+                isOpen={showDocumentUploadModal}
+                onClose={() => {
+                    setShowDocumentUploadModal(false);
+                    setDocumentUploadFile(null);
+                    setDocumentUploadType('other');
+                    if (documentUploadInputRef.current) {
+                        documentUploadInputRef.current.value = '';
+                    }
+                }}
+                title="Upload Document"
+            >
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Document Type</label>
+                        <select
+                            value={documentUploadType}
+                            onChange={(e) => setDocumentUploadType(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        >
+                            <option value="other">Other</option>
+                            <option value="imaging">Imaging</option>
+                            <option value="lab">Lab Result</option>
+                            <option value="consult">Consult Note</option>
+                            <option value="letter">Letter</option>
+                            <option value="form">Form</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Select File</label>
+                        <input
+                            ref={documentUploadInputRef}
+                            type="file"
+                            onChange={(e) => setDocumentUploadFile(e.target.files?.[0] || null)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">PDF, images, or documents (max 50MB)</p>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-4">
                         <button
                             onClick={() => {
-                                setShowDemographicsModal(false);
-                                setDemographicsField(null);
+                                setShowDocumentUploadModal(false);
+                                setDocumentUploadFile(null);
+                                setDocumentUploadType('other');
+                                if (documentUploadInputRef.current) {
+                                    documentUploadInputRef.current.value = '';
+                                }
                             }}
-                            className="p-1 hover:bg-gray-100 rounded text-gray-500"
+                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
                         >
-                            <X className="w-5 h-5" />
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleDocumentUpload}
+                            disabled={!documentUploadFile}
+                            className="px-4 py-2 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-md"
+                            style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                            onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
+                            onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
+                        >
+                            Upload
                         </button>
                     </div>
+                </div>
+            </Modal>
 
-                    <div className="space-y-4">
-                        {/* Phone */}
-                        {demographicsField === 'phone' && (
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                                <input
-                                    type="tel"
-                                    value={demographicsForm.phone}
-                                    onChange={(e) => {
-                                        const formatted = formatPhoneInput(e.target.value);
-                                        setDemographicsForm({ ...demographicsForm, phone: formatted });
-                                    }}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    placeholder="(555) 123-4567"
-                                    maxLength={14}
-                                    autoFocus
-                                />
-                            </div>
-                        )}
-
-                        {/* Email */}
-                        {demographicsField === 'email' && (
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                                <input
-                                    type="email"
-                                    value={demographicsForm.email}
-                                    onChange={(e) => setDemographicsForm({ ...demographicsForm, email: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    placeholder="patient@example.com"
-                                    autoFocus
-                                />
-                            </div>
-                        )}
-
-                        {/* Address */}
-                        {demographicsField === 'address' && (
-                            <div className="space-y-3">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
-                                    <input
-                                        type="text"
-                                        value={demographicsForm.address_line1}
-                                        onChange={(e) => setDemographicsForm({ ...demographicsForm, address_line1: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                        placeholder="123 Main St"
-                                        autoFocus
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                                        <input
-                                            type="text"
-                                            value={demographicsForm.city}
-                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, city: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                            placeholder="City"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                                        <input
-                                            type="text"
-                                            value={demographicsForm.state}
-                                            onChange={(e) => setDemographicsForm({ ...demographicsForm, state: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                            placeholder="State"
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
-                                    <input
-                                        type="text"
-                                        value={demographicsForm.zip}
-                                        onChange={(e) => setDemographicsForm({ ...demographicsForm, zip: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                        placeholder="12345"
-                                    />
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Insurance */}
-                        {demographicsField === 'insurance' && (
-                            <div className="space-y-3">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Insurance Provider</label>
-                                    <input
-                                        type="text"
-                                        value={demographicsForm.insurance_provider}
-                                        onChange={(e) => setDemographicsForm({ ...demographicsForm, insurance_provider: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                        placeholder="Insurance Company Name"
-                                        autoFocus
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Policy/Group Number</label>
-                                    <input
-                                        type="text"
-                                        value={demographicsForm.insurance_id}
-                                        onChange={(e) => setDemographicsForm({ ...demographicsForm, insurance_id: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                        placeholder="Policy or Group Number"
-                                    />
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Pharmacy */}
-                        {demographicsField === 'pharmacy' && (
-                            <div className="space-y-3">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Pharmacy Name</label>
-                                    <input
-                                        type="text"
-                                        value={demographicsForm.pharmacy_name}
-                                        onChange={(e) => setDemographicsForm({ ...demographicsForm, pharmacy_name: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                        placeholder="Pharmacy Name"
-                                        autoFocus
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Pharmacy Phone</label>
-                                    <input
-                                        type="tel"
-                                        value={demographicsForm.pharmacy_phone}
-                                        onChange={(e) => {
-                                            const formatted = formatPhoneInput(e.target.value);
-                                            setDemographicsForm({ ...demographicsForm, pharmacy_phone: formatted });
-                                        }}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                        placeholder="(555) 123-4567"
-                                        maxLength={14}
-                                    />
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Emergency Contact */}
-                        {demographicsField === 'emergency' && (
-                            <div className="space-y-3">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
-                                    <input
-                                        type="text"
-                                        value={demographicsForm.emergency_contact_name}
-                                        onChange={(e) => setDemographicsForm({ ...demographicsForm, emergency_contact_name: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                        placeholder="Full Name"
-                                        autoFocus
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                                    <input
-                                        type="tel"
-                                        value={demographicsForm.emergency_contact_phone}
-                                        onChange={(e) => setDemographicsForm({ ...demographicsForm, emergency_contact_phone: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                        placeholder="(555) 123-4567"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Relationship</label>
-                                    <input
-                                        type="text"
-                                        value={demographicsForm.emergency_contact_relationship}
-                                        onChange={(e) => setDemographicsForm({ ...demographicsForm, emergency_contact_relationship: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                        placeholder="e.g., Spouse, Parent, Friend"
-                                    />
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="flex space-x-3 pt-2">
-                            <button
-                                onClick={handleSaveDemographics}
-                                className="flex-1 px-4 py-2 text-white rounded-md flex items-center justify-center space-x-2 transition-all duration-200 hover:shadow-md"
-                                style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                            >
-                                <Save className="w-4 h-4" />
-                                <span>Save</span>
-                            </button>
-                            <button
-                                onClick={() => {
-                                    // Clear the field
-                                    const clearedForm = { ...demographicsForm };
-                                    switch (demographicsField) {
-                                        case 'phone':
-                                            clearedForm.phone = '';
-                                            break;
-                                        case 'email':
-                                            clearedForm.email = '';
-                                            break;
-                                        case 'address':
-                                            clearedForm.address_line1 = '';
-                                            clearedForm.city = '';
-                                            clearedForm.state = '';
-                                            clearedForm.zip = '';
-                                            break;
-                                        case 'insurance':
-                                            clearedForm.insurance_provider = '';
-                                            clearedForm.insurance_id = '';
-                                            break;
-                                        case 'pharmacy':
-                                            clearedForm.pharmacy_name = '';
-                                            clearedForm.pharmacy_phone = '';
-                                            break;
-                                        case 'emergency':
-                                            clearedForm.emergency_contact_name = '';
-                                            clearedForm.emergency_contact_phone = '';
-                                            clearedForm.emergency_contact_relationship = '';
-                                            break;
-                                    }
-                                    setDemographicsForm(clearedForm);
-                                }}
-                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                            >
-                                Clear
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setShowDemographicsModal(false);
-                                    setDemographicsField(null);
-                                }}
-                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                            >
-                                Cancel
-                            </button>
+            {/* Edit Patient Modal */}
+            <Modal
+                isOpen={showEditPatientModal}
+                onClose={() => setShowEditPatientModal(false)}
+                title="Edit Patient Information"
+            >
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                            <input
+                                type="text"
+                                value={editPatientForm.first_name}
+                                onChange={(e) => setEditPatientForm({ ...editPatientForm, first_name: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                placeholder="First Name"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                            <input
+                                type="text"
+                                value={editPatientForm.last_name}
+                                onChange={(e) => setEditPatientForm({ ...editPatientForm, last_name: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                placeholder="Last Name"
+                            />
                         </div>
                     </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                            <input
+                                type="date"
+                                value={editPatientForm.dob}
+                                onChange={(e) => setEditPatientForm({ ...editPatientForm, dob: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Sex</label>
+                            <select
+                                value={editPatientForm.sex}
+                                onChange={(e) => setEditPatientForm({ ...editPatientForm, sex: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            >
+                                <option value="">Select</option>
+                                <option value="M">Male</option>
+                                <option value="F">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">MRN</label>
+                        <input
+                            type="text"
+                            value={editPatientForm.mrn}
+                            onChange={(e) => setEditPatientForm({ ...editPatientForm, mrn: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            placeholder="Medical Record Number"
+                        />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-4">
+                        <button
+                            onClick={() => setShowEditPatientModal(false)}
+                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleEditPatient}
+                            className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md"
+                            style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
+                        >
+                            Save Changes
+                        </button>
+                    </div>
                 </div>
-            </div>
-        )
-    }
+            </Modal>
 
-    {/* Unified Patient Chart Panel */ }
-    <PatientChartPanel
-        isOpen={showPatientChart}
-        onClose={() => setShowPatientChart(false)}
-        patientId={id}
-        initialTab={patientChartTab}
-    />
-
-
-    {/* Visit Folders Modal */ }
-    <VisitFoldersModal
-        isOpen={showVisitFoldersModal}
-        onClose={() => setShowVisitFoldersModal(false)}
-        visits={filteredNotes.map(note => ({
-            id: note.id,
-            type: note.type,
-            date: note.date,
-            time: note.time,
-            dateTime: note.dateTime,
-            visitDate: note.visitDate,
-            createdAt: note.createdAt,
-            provider: note.provider,
-            summary: note.summary,
-            assessment: note.assessment,
-            plan: note.plan,
-            chiefComplaint: note.chiefComplaint,
-            fullNote: note.fullNote,
-            signed: note.signed
-        }))}
-        onViewVisit={(visitId) => {
-            setShowVisitFoldersModal(false);
-            handleViewNote(visitId);
-        }}
-        onDeleteVisit={async (visitId) => {
-            await handleDeleteNote(visitId);
-            refreshPatientData();
-            setShowVisitFoldersModal(false);
-        }}
-    />
-
-    {/* Visit Chart View Modal */ }
-    {
-        selectedVisitForView && (
-            <VisitChartView
-                visitId={selectedVisitForView.visitId}
-                patientId={selectedVisitForView.patientId}
-                onClose={() => setSelectedVisitForView(null)}
-            />
-        )
-    }
-
-
-    {/* Document Upload Modal */ }
-    <Modal
-        isOpen={showDocumentUploadModal}
-        onClose={() => {
-            setShowDocumentUploadModal(false);
-            setDocumentUploadFile(null);
-            setDocumentUploadType('other');
-            if (documentUploadInputRef.current) {
-                documentUploadInputRef.current.value = '';
+            {/* Enhanced E-Prescribe Modal */}
+            {
+                hasPrivilege('e_prescribe') && (
+                    <EPrescribeEnhanced
+                        isOpen={showEPrescribeEnhanced}
+                        onClose={() => setShowEPrescribeEnhanced(false)}
+                        onSuccess={() => {
+                            // Refresh patient data to show new prescription
+                            refreshPatientData();
+                            setShowEPrescribeEnhanced(false);
+                        }}
+                        patientId={id}
+                    />
+                )
             }
-        }}
-        title="Upload Document"
-    >
-        <div className="space-y-4">
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Document Type</label>
-                <select
-                    value={documentUploadType}
-                    onChange={(e) => setDocumentUploadType(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                    <option value="other">Other</option>
-                    <option value="imaging">Imaging</option>
-                    <option value="lab">Lab Result</option>
-                    <option value="consult">Consult Note</option>
-                    <option value="letter">Letter</option>
-                    <option value="form">Form</option>
-                </select>
-            </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Select File</label>
-                <input
-                    ref={documentUploadInputRef}
-                    type="file"
-                    onChange={(e) => setDocumentUploadFile(e.target.files?.[0] || null)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                />
-                <p className="text-xs text-gray-500 mt-1">PDF, images, or documents (max 50MB)</p>
-            </div>
-            <div className="flex justify-end gap-2 pt-4">
-                <button
-                    onClick={() => {
-                        setShowDocumentUploadModal(false);
-                        setDocumentUploadFile(null);
-                        setDocumentUploadType('other');
-                        if (documentUploadInputRef.current) {
-                            documentUploadInputRef.current.value = '';
-                        }
-                    }}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                >
-                    Cancel
-                </button>
-                <button
-                    onClick={handleDocumentUpload}
-                    disabled={!documentUploadFile}
-                    className="px-4 py-2 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-md"
-                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                    onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
-                    onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
-                >
-                    Upload
-                </button>
-            </div>
-        </div>
-    </Modal>
 
-    {/* Edit Patient Modal */ }
-    <Modal
-        isOpen={showEditPatientModal}
-        onClose={() => setShowEditPatientModal(false)}
-        title="Edit Patient Information"
-    >
-        <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                    <input
-                        type="text"
-                        value={editPatientForm.first_name}
-                        onChange={(e) => setEditPatientForm({ ...editPatientForm, first_name: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        placeholder="First Name"
-                    />
+            {/* Stress Test Upload Modal */}
+            <Modal
+                isOpen={showStressTestModal}
+                onClose={() => setShowStressTestModal(false)}
+                title="Log Cardiac Stress Test"
+            >
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Test Type</label>
+                            <select
+                                className="w-full px-3 py-2 border rounded-md font-medium"
+                                value={stressTestData.type}
+                                onChange={(e) => setStressTestData({ ...stressTestData, type: e.target.value })}
+                            >
+                                <option value="treadmill">Treadmill (Exercise)</option>
+                                <option value="nuclear">Nuclear</option>
+                                <option value="spect">SPECT</option>
+                                <option value="pet">PET</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Stressor</label>
+                            <select
+                                className="w-full px-3 py-2 border rounded-md font-medium"
+                                value={stressTestData.stressor}
+                                onChange={(e) => setStressTestData({ ...stressTestData, stressor: e.target.value })}
+                            >
+                                <option value="exercise">Exercise</option>
+                                <option value="regadenoson">Regadenoson (Lexiscan)</option>
+                                <option value="adenosine">Adenosine</option>
+                                <option value="dobutamine">Dobutamine</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Date of Test</label>
+                        <input
+                            type="date"
+                            className="w-full px-3 py-2 border rounded-md"
+                            value={stressTestData.date}
+                            onChange={(e) => setStressTestData({ ...stressTestData, date: e.target.value })}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Attach Final Report</label>
+                        <input
+                            type="file"
+                            className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-fuchsia-50 file:text-fuchsia-700 hover:file:bg-fuchsia-100"
+                            onChange={(e) => setStressTestFile(e.target.files?.[0] || null)}
+                            accept=".pdf,.jpg,.jpeg,.png"
+                        />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">METS</label>
+                            <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={stressTestData.mets} onChange={e => setStressTestData({ ...stressTestData, mets: e.target.value })} placeholder="e.g. 10.2" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Peak HR</label>
+                            <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={stressTestData.peak_hr} onChange={e => setStressTestData({ ...stressTestData, peak_hr: e.target.value })} placeholder="e.g. 165" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">BP Resp</label>
+                            <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={stressTestData.bp_response} onChange={e => setStressTestData({ ...stressTestData, bp_response: e.target.value })} placeholder="Normal/Hypertensive" />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Results Summary</label>
+                        <textarea
+                            className="w-full px-3 py-2 border rounded-md h-20"
+                            placeholder="e.g. Negative for ischemia, Normal EF 60%"
+                            value={stressTestData.notes}
+                            onChange={(e) => setStressTestData({ ...stressTestData, notes: e.target.value })}
+                        />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-4">
+                        <button onClick={() => setShowStressTestModal(false)} className="px-4 py-2 text-gray-600 font-bold">Cancel</button>
+                        <button
+                            onClick={handleStressTestUpload}
+                            disabled={!stressTestFile}
+                            className="px-6 py-2 bg-fuchsia-600 text-white rounded-md font-bold shadow-md hover:bg-fuchsia-700 disabled:bg-gray-300"
+                        >
+                            Save Result
+                        </button>
+                    </div>
                 </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                    <input
-                        type="text"
-                        value={editPatientForm.last_name}
-                        onChange={(e) => setEditPatientForm({ ...editPatientForm, last_name: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        placeholder="Last Name"
-                    />
-                </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
-                    <input
-                        type="date"
-                        value={editPatientForm.dob}
-                        onChange={(e) => setEditPatientForm({ ...editPatientForm, dob: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Sex</label>
-                    <select
-                        value={editPatientForm.sex}
-                        onChange={(e) => setEditPatientForm({ ...editPatientForm, sex: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    >
-                        <option value="">Select</option>
-                        <option value="M">Male</option>
-                        <option value="F">Female</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-            </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">MRN</label>
-                <input
-                    type="text"
-                    value={editPatientForm.mrn}
-                    onChange={(e) => setEditPatientForm({ ...editPatientForm, mrn: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="Medical Record Number"
-                />
-            </div>
-            <div className="flex justify-end gap-2 pt-4">
-                <button
-                    onClick={() => setShowEditPatientModal(false)}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                >
-                    Cancel
-                </button>
-                <button
-                    onClick={handleEditPatient}
-                    className="px-4 py-2 text-white rounded-md transition-all duration-200 hover:shadow-md"
-                    style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
-                >
-                    Save Changes
-                </button>
-            </div>
-        </div>
-    </Modal>
+            </Modal>
 
-    {/* Enhanced E-Prescribe Modal */ }
-    {
-        hasPrivilege('e_prescribe') && (
-            <EPrescribeEnhanced
-                isOpen={showEPrescribeEnhanced}
-                onClose={() => setShowEPrescribeEnhanced(false)}
-                onSuccess={() => {
-                    // Refresh patient data to show new prescription
-                    refreshPatientData();
-                    setShowEPrescribeEnhanced(false);
-                }}
+            {/* EKG Result Modal */}
+            <Modal
+                isOpen={showEKGModal}
+                onClose={() => setShowEKGModal(false)}
+                title="Log EKG Study"
+            >
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
+                            <input type="date" className="w-full px-3 py-2 border rounded-md" value={ekgData.date} onChange={e => setEKGData({ ...ekgData, date: e.target.value })} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Rhythm</label>
+                            <select className="w-full px-3 py-2 border rounded-md" value={ekgData.rhythm} onChange={e => setEKGData({ ...ekgData, rhythm: e.target.value })}>
+                                <option value="NSR">NSR</option>
+                                <option value="Sinus Brady">Sinus Brady</option>
+                                <option value="Sinus Tachy">Sinus Tachy</option>
+                                <option value="Afib">Atrial Fibrillation</option>
+                                <option value="Aflutter">Atrial Flutter</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase">Rate</label>
+                            <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={ekgData.rate} onChange={e => setEKGData({ ...ekgData, rate: e.target.value })} placeholder="72" />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase">PR</label>
+                            <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={ekgData.pr} onChange={e => setEKGData({ ...ekgData, pr: e.target.value })} placeholder="160" />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase">QRS</label>
+                            <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={ekgData.qrs} onChange={e => setEKGData({ ...ekgData, qrs: e.target.value })} placeholder="90" />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase">QTc</label>
+                            <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={ekgData.qtc} onChange={e => setEKGData({ ...ekgData, qtc: e.target.value })} placeholder="420" />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Attach Image/Scan</label>
+                        <input type="file" className="w-full text-sm" onChange={e => setEKGFile(e.target.files[0])} accept="image/*,.pdf" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Interpretation</label>
+                        <textarea className="w-full px-3 py-2 border rounded-md h-16" value={ekgData.interpretation} onChange={e => setEKGData({ ...ekgData, interpretation: e.target.value })} placeholder="e.g. Normal EKG, no ST changes" />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                        <button onClick={() => setShowEKGModal(false)} className="px-4 py-2 text-gray-600 font-bold">Cancel</button>
+                        <button onClick={handleEKGUpload} disabled={!ekgFile} className="px-6 py-2 bg-red-600 text-white rounded-md font-bold hover:bg-red-700 disabled:bg-gray-300">Save EKG</button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* ECHO Result Modal */}
+            <Modal
+                isOpen={showECHOModal}
+                onClose={() => setShowECHOModal(false)}
+                title="Log Echocardiogram"
+            >
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
+                            <input type="date" className="w-full px-3 py-2 border rounded-md" value={echoData.date} onChange={e => setECHOData({ ...echoData, date: e.target.value })} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">LVEF (%)</label>
+                            <input type="text" className="w-full px-3 py-2 border rounded-md" value={echoData.ef} onChange={e => setECHOData({ ...echoData, ef: e.target.value })} placeholder="e.g. 60-65" />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase">LA Size</label>
+                            <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={echoData.la_size} onChange={e => setECHOData({ ...echoData, la_size: e.target.value })} placeholder="Normal/Enlarged" />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase">LV Size</label>
+                            <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={echoData.lv_size} onChange={e => setECHOData({ ...echoData, lv_size: e.target.value })} placeholder="Normal/Dilated" />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase">RV Size</label>
+                            <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={echoData.rv_size} onChange={e => setECHOData({ ...echoData, rv_size: e.target.value })} placeholder="Normal" />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Valve Findings</label>
+                        <textarea className="w-full px-3 py-2 border rounded-md h-16" value={echoData.valve_findings} onChange={e => setECHOData({ ...echoData, valve_findings: e.target.value })} placeholder="e.g. Trace MR, No stenosis" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Attach Final Report</label>
+                        <input type="file" className="w-full text-sm" onChange={e => setECHOFile(e.target.files[0])} accept=".pdf,image/*" />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                        <button onClick={() => setShowECHOModal(false)} className="px-4 py-2 text-gray-600 font-bold">Cancel</button>
+                        <button onClick={handleECHOUpload} disabled={!echoFile} className="px-6 py-2 bg-indigo-600 text-white rounded-md font-bold hover:bg-indigo-700 disabled:bg-gray-300">Save ECHO</button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Cardiac Cath Upload Modal */}
+            <Modal
+                isOpen={showCardiacCathModal}
+                onClose={() => setShowCardiacCathModal(false)}
+                title="Log Cardiac Catheterization"
+            >
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Facility / Performing Center</label>
+                        <input
+                            type="text"
+                            className="w-full px-3 py-2 border rounded-md"
+                            placeholder="e.g. Memorial Hospital"
+                            value={cardiacCathData.facility}
+                            onChange={(e) => setCardiacCathData({ ...cardiacCathData, facility: e.target.value })}
+                        />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
+                            <input type="date" className="w-full px-3 py-2 border rounded-md" value={cardiacCathData.date} onChange={e => setCardiacCathData({ ...cardiacCathData, date: e.target.value })} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">LVEF (%)</label>
+                            <input type="text" className="w-full px-3 py-2 border rounded-md" value={cardiacCathData.ef} onChange={e => setCardiacCathData({ ...cardiacCathData, ef: e.target.value })} placeholder="e.g. 55" />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Coronary Findings</label>
+                        <textarea className="w-full px-3 py-2 border rounded-md h-20" value={cardiacCathData.findings} onChange={e => setCardiacCathData({ ...cardiacCathData, findings: e.target.value })} placeholder="e.g. LAD 80% (stented), LCx clean, RCA 40%" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Attach Final Report</label>
+                        <input type="file" className="w-full text-sm" onChange={e => setCardiacCathFile(e.target.files[0])} accept=".pdf,image/*" />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                        <button onClick={() => setShowCardiacCathModal(false)} className="px-4 py-2 text-gray-600 font-bold">Cancel</button>
+                        <button onClick={handleCardiacCathUpload} disabled={!cardiacCathFile} className="px-6 py-2 bg-slate-700 text-white rounded-md font-bold hover:bg-slate-800 disabled:bg-gray-300">Save Result</button>
+                    </div>
+                </div>
+            </Modal>
+            {/* Cardiology Review Center */}
+            <CardiologyViewer
+                isOpen={showCardiologyViewer}
+                onClose={() => setShowCardiologyViewer(false)}
+                type={cardiologyViewerType}
+                documents={documents}
+                patientName={patient ? `${patient.first_name} ${patient.last_name}` : 'Patient'}
+            />
+            {
+                showPrintOrdersModal && (
+                    <PrintOrdersModal
+                        patient={{ ...patient, id }}
+                        isOpen={showPrintOrdersModal}
+                        onClose={() => setShowPrintOrdersModal(false)}
+                    />
+                )
+            }
+            {
+                showChartReview && (
+                    <ChartReviewModal
+                        isOpen={showChartReview}
+                        onClose={() => setShowChartReview(false)}
+                        visits={recentNotes}
+                        isLoading={loadingNotes}
+                        patientData={{ ...patient, problems, medications, allergies }}
+                        onViewFullChart={() => {
+                            setShowChartReview(false);
+                            setPatientChartTab('history');
+                            setShowPatientChart(true);
+                        }}
+                        onOpenVisit={(visitId) => {
+                            navigate(`/patient/${id}/visit/${visitId}`);
+                            setShowChartReview(false);
+                        }}
+                    />
+                )
+            }
+            {/* Clinical Reminder Edit Modal */}
+            <Modal
+                isOpen={isEditingReminder}
+                onClose={() => setIsEditingReminder(false)}
+                title="Add Clinical Reminder"
+            >
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Reminder Note</label>
+                        <textarea
+                            value={reminderText}
+                            onChange={(e) => setReminderText(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent h-24"
+                            placeholder="e.g. Patient requires annual eye exam."
+                            autoFocus
+                        />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2">
+                        <button
+                            onClick={() => setIsEditingReminder(false)}
+                            className="px-4 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-md"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSaveReminder}
+                            disabled={!reminderText.trim() || actionLoading}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-md font-bold hover:bg-blue-700 disabled:opacity-50"
+                        >
+                            {actionLoading ? 'Saving...' : 'Save Reminder'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Plan of Care Edit Modal */}
+            <Modal
+                isOpen={isEditingPlan}
+                onClose={() => setIsEditingPlan(false)}
+                title="Update Plan of Care"
+            >
+                <div className="space-y-4">
+                    <p className="text-sm text-slate-500 mb-2">Updates will be saved to the most recent visit note.</p>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Current Plan</label>
+                        <textarea
+                            value={planOverride}
+                            onChange={(e) => setPlanOverride(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent h-32"
+                            placeholder="Update the forward-looking plan..."
+                            autoFocus
+                        />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2">
+                        <button
+                            onClick={() => setIsEditingPlan(false)}
+                            className="px-4 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-md"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSavePlan}
+                            disabled={!planOverride.trim() || actionLoading}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-md font-bold hover:bg-blue-700 disabled:opacity-50"
+                        >
+                            {actionLoading ? 'Saving...' : 'Update Plan'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Specialty Tracker Drawer */}
+            <SpecialtyTracker
+                isOpen={showSpecialtyTracker}
+                onClose={() => setShowSpecialtyTracker(false)}
                 patientId={id}
-            />
-        )
-    }
-
-    {/* Stress Test Upload Modal */ }
-    <Modal
-        isOpen={showStressTestModal}
-        onClose={() => setShowStressTestModal(false)}
-        title="Log Cardiac Stress Test"
-    >
-        <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Test Type</label>
-                    <select
-                        className="w-full px-3 py-2 border rounded-md font-medium"
-                        value={stressTestData.type}
-                        onChange={(e) => setStressTestData({ ...stressTestData, type: e.target.value })}
-                    >
-                        <option value="treadmill">Treadmill (Exercise)</option>
-                        <option value="nuclear">Nuclear</option>
-                        <option value="spect">SPECT</option>
-                        <option value="pet">PET</option>
-                    </select>
-                </div>
-                <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Stressor</label>
-                    <select
-                        className="w-full px-3 py-2 border rounded-md font-medium"
-                        value={stressTestData.stressor}
-                        onChange={(e) => setStressTestData({ ...stressTestData, stressor: e.target.value })}
-                    >
-                        <option value="exercise">Exercise</option>
-                        <option value="regadenoson">Regadenoson (Lexiscan)</option>
-                        <option value="adenosine">Adenosine</option>
-                        <option value="dobutamine">Dobutamine</option>
-                    </select>
-                </div>
-            </div>
-            <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Date of Test</label>
-                <input
-                    type="date"
-                    className="w-full px-3 py-2 border rounded-md"
-                    value={stressTestData.date}
-                    onChange={(e) => setStressTestData({ ...stressTestData, date: e.target.value })}
-                />
-            </div>
-            <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Attach Final Report</label>
-                <input
-                    type="file"
-                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-fuchsia-50 file:text-fuchsia-700 hover:file:bg-fuchsia-100"
-                    onChange={(e) => setStressTestFile(e.target.files?.[0] || null)}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                />
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-                <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">METS</label>
-                    <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={stressTestData.mets} onChange={e => setStressTestData({ ...stressTestData, mets: e.target.value })} placeholder="e.g. 10.2" />
-                </div>
-                <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Peak HR</label>
-                    <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={stressTestData.peak_hr} onChange={e => setStressTestData({ ...stressTestData, peak_hr: e.target.value })} placeholder="e.g. 165" />
-                </div>
-                <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">BP Resp</label>
-                    <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={stressTestData.bp_response} onChange={e => setStressTestData({ ...stressTestData, bp_response: e.target.value })} placeholder="Normal/Hypertensive" />
-                </div>
-            </div>
-            <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Results Summary</label>
-                <textarea
-                    className="w-full px-3 py-2 border rounded-md h-20"
-                    placeholder="e.g. Negative for ischemia, Normal EF 60%"
-                    value={stressTestData.notes}
-                    onChange={(e) => setStressTestData({ ...stressTestData, notes: e.target.value })}
-                />
-            </div>
-            <div className="flex justify-end gap-2 pt-4">
-                <button onClick={() => setShowStressTestModal(false)} className="px-4 py-2 text-gray-600 font-bold">Cancel</button>
-                <button
-                    onClick={handleStressTestUpload}
-                    disabled={!stressTestFile}
-                    className="px-6 py-2 bg-fuchsia-600 text-white rounded-md font-bold shadow-md hover:bg-fuchsia-700 disabled:bg-gray-300"
-                >
-                    Save Result
-                </button>
-            </div>
-        </div>
-    </Modal>
-
-    {/* EKG Result Modal */ }
-    <Modal
-        isOpen={showEKGModal}
-        onClose={() => setShowEKGModal(false)}
-        title="Log EKG Study"
-    >
-        <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
-                    <input type="date" className="w-full px-3 py-2 border rounded-md" value={ekgData.date} onChange={e => setEKGData({ ...ekgData, date: e.target.value })} />
-                </div>
-                <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Rhythm</label>
-                    <select className="w-full px-3 py-2 border rounded-md" value={ekgData.rhythm} onChange={e => setEKGData({ ...ekgData, rhythm: e.target.value })}>
-                        <option value="NSR">NSR</option>
-                        <option value="Sinus Brady">Sinus Brady</option>
-                        <option value="Sinus Tachy">Sinus Tachy</option>
-                        <option value="Afib">Atrial Fibrillation</option>
-                        <option value="Aflutter">Atrial Flutter</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-            </div>
-            <div className="grid grid-cols-4 gap-2">
-                <div>
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase">Rate</label>
-                    <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={ekgData.rate} onChange={e => setEKGData({ ...ekgData, rate: e.target.value })} placeholder="72" />
-                </div>
-                <div>
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase">PR</label>
-                    <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={ekgData.pr} onChange={e => setEKGData({ ...ekgData, pr: e.target.value })} placeholder="160" />
-                </div>
-                <div>
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase">QRS</label>
-                    <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={ekgData.qrs} onChange={e => setEKGData({ ...ekgData, qrs: e.target.value })} placeholder="90" />
-                </div>
-                <div>
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase">QTc</label>
-                    <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={ekgData.qtc} onChange={e => setEKGData({ ...ekgData, qtc: e.target.value })} placeholder="420" />
-                </div>
-            </div>
-            <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Attach Image/Scan</label>
-                <input type="file" className="w-full text-sm" onChange={e => setEKGFile(e.target.files[0])} accept="image/*,.pdf" />
-            </div>
-            <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Interpretation</label>
-                <textarea className="w-full px-3 py-2 border rounded-md h-16" value={ekgData.interpretation} onChange={e => setEKGData({ ...ekgData, interpretation: e.target.value })} placeholder="e.g. Normal EKG, no ST changes" />
-            </div>
-            <div className="flex justify-end gap-2">
-                <button onClick={() => setShowEKGModal(false)} className="px-4 py-2 text-gray-600 font-bold">Cancel</button>
-                <button onClick={handleEKGUpload} disabled={!ekgFile} className="px-6 py-2 bg-red-600 text-white rounded-md font-bold hover:bg-red-700 disabled:bg-gray-300">Save EKG</button>
-            </div>
-        </div>
-    </Modal>
-
-    {/* ECHO Result Modal */ }
-    <Modal
-        isOpen={showECHOModal}
-        onClose={() => setShowECHOModal(false)}
-        title="Log Echocardiogram"
-    >
-        <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
-                    <input type="date" className="w-full px-3 py-2 border rounded-md" value={echoData.date} onChange={e => setECHOData({ ...echoData, date: e.target.value })} />
-                </div>
-                <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">LVEF (%)</label>
-                    <input type="text" className="w-full px-3 py-2 border rounded-md" value={echoData.ef} onChange={e => setECHOData({ ...echoData, ef: e.target.value })} placeholder="e.g. 60-65" />
-                </div>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-                <div>
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase">LA Size</label>
-                    <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={echoData.la_size} onChange={e => setECHOData({ ...echoData, la_size: e.target.value })} placeholder="Normal/Enlarged" />
-                </div>
-                <div>
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase">LV Size</label>
-                    <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={echoData.lv_size} onChange={e => setECHOData({ ...echoData, lv_size: e.target.value })} placeholder="Normal/Dilated" />
-                </div>
-                <div>
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase">RV Size</label>
-                    <input type="text" className="w-full px-2 py-1.5 border rounded-md" value={echoData.rv_size} onChange={e => setECHOData({ ...echoData, rv_size: e.target.value })} placeholder="Normal" />
-                </div>
-            </div>
-            <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Valve Findings</label>
-                <textarea className="w-full px-3 py-2 border rounded-md h-16" value={echoData.valve_findings} onChange={e => setECHOData({ ...echoData, valve_findings: e.target.value })} placeholder="e.g. Trace MR, No stenosis" />
-            </div>
-            <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Attach Final Report</label>
-                <input type="file" className="w-full text-sm" onChange={e => setECHOFile(e.target.files[0])} accept=".pdf,image/*" />
-            </div>
-            <div className="flex justify-end gap-2">
-                <button onClick={() => setShowECHOModal(false)} className="px-4 py-2 text-gray-600 font-bold">Cancel</button>
-                <button onClick={handleECHOUpload} disabled={!echoFile} className="px-6 py-2 bg-indigo-600 text-white rounded-md font-bold hover:bg-indigo-700 disabled:bg-gray-300">Save ECHO</button>
-            </div>
-        </div>
-    </Modal>
-
-    {/* Cardiac Cath Upload Modal */ }
-    <Modal
-        isOpen={showCardiacCathModal}
-        onClose={() => setShowCardiacCathModal(false)}
-        title="Log Cardiac Catheterization"
-    >
-        <div className="space-y-4">
-            <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Facility / Performing Center</label>
-                <input
-                    type="text"
-                    className="w-full px-3 py-2 border rounded-md"
-                    placeholder="e.g. Memorial Hospital"
-                    value={cardiacCathData.facility}
-                    onChange={(e) => setCardiacCathData({ ...cardiacCathData, facility: e.target.value })}
-                />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
-                    <input type="date" className="w-full px-3 py-2 border rounded-md" value={cardiacCathData.date} onChange={e => setCardiacCathData({ ...cardiacCathData, date: e.target.value })} />
-                </div>
-                <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">LVEF (%)</label>
-                    <input type="text" className="w-full px-3 py-2 border rounded-md" value={cardiacCathData.ef} onChange={e => setCardiacCathData({ ...cardiacCathData, ef: e.target.value })} placeholder="e.g. 55" />
-                </div>
-            </div>
-            <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Coronary Findings</label>
-                <textarea className="w-full px-3 py-2 border rounded-md h-20" value={cardiacCathData.findings} onChange={e => setCardiacCathData({ ...cardiacCathData, findings: e.target.value })} placeholder="e.g. LAD 80% (stented), LCx clean, RCA 40%" />
-            </div>
-            <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Attach Final Report</label>
-                <input type="file" className="w-full text-sm" onChange={e => setCardiacCathFile(e.target.files[0])} accept=".pdf,image/*" />
-            </div>
-            <div className="flex justify-end gap-2">
-                <button onClick={() => setShowCardiacCathModal(false)} className="px-4 py-2 text-gray-600 font-bold">Cancel</button>
-                <button onClick={handleCardiacCathUpload} disabled={!cardiacCathFile} className="px-6 py-2 bg-slate-700 text-white rounded-md font-bold hover:bg-slate-800 disabled:bg-gray-300">Save Result</button>
-            </div>
-        </div>
-    </Modal>
-    {/* Cardiology Review Center */ }
-    <CardiologyViewer
-        isOpen={showCardiologyViewer}
-        onClose={() => setShowCardiologyViewer(false)}
-        type={cardiologyViewerType}
-        documents={documents}
-        patientName={patient ? `${patient.first_name} ${patient.last_name}` : 'Patient'}
-    />
-    {
-        showPrintOrdersModal && (
-            <PrintOrdersModal
-                patient={{ ...patient, id }}
-                isOpen={showPrintOrdersModal}
-                onClose={() => setShowPrintOrdersModal(false)}
-            />
-        )
-    }
-    {
-        showChartReview && (
-            <ChartReviewModal
-                isOpen={showChartReview}
-                onClose={() => setShowChartReview(false)}
-                visits={recentNotes}
-                isLoading={loadingNotes}
-                patientData={{ ...patient, problems, medications, allergies }}
-                onViewFullChart={() => {
-                    setShowChartReview(false);
-                    setPatientChartTab('history');
+                patientData={patient}
+                vitals={vitals}
+                labs={orders.filter(o => o.order_type === 'lab')}
+                medications={medications}
+                documents={documents}
+                problems={problems}
+                onOpenChart={(tab) => {
+                    setShowSpecialtyTracker(false);
+                    setPatientChartTab(tab || 'hub');
                     setShowPatientChart(true);
                 }}
-                onOpenVisit={(visitId) => {
-                    navigate(`/patient/${id}/visit/${visitId}`);
-                    setShowChartReview(false);
-                }}
             />
-        )
-    }
-    {/* Clinical Reminder Edit Modal */ }
-    <Modal
-        isOpen={isEditingReminder}
-        onClose={() => setIsEditingReminder(false)}
-        title="Add Clinical Reminder"
-    >
-        <div className="space-y-4">
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Reminder Note</label>
-                <textarea
-                    value={reminderText}
-                    onChange={(e) => setReminderText(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent h-24"
-                    placeholder="e.g. Patient requires annual eye exam."
-                    autoFocus
-                />
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-                <button
-                    onClick={() => setIsEditingReminder(false)}
-                    className="px-4 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-md"
-                >
-                    Cancel
-                </button>
-                <button
-                    onClick={handleSaveReminder}
-                    disabled={!reminderText.trim() || actionLoading}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md font-bold hover:bg-blue-700 disabled:opacity-50"
-                >
-                    {actionLoading ? 'Saving...' : 'Save Reminder'}
-                </button>
-            </div>
-        </div>
-    </Modal>
-
-    {/* Plan of Care Edit Modal */ }
-    <Modal
-        isOpen={isEditingPlan}
-        onClose={() => setIsEditingPlan(false)}
-        title="Update Plan of Care"
-    >
-        <div className="space-y-4">
-            <p className="text-sm text-slate-500 mb-2">Updates will be saved to the most recent visit note.</p>
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Current Plan</label>
-                <textarea
-                    value={planOverride}
-                    onChange={(e) => setPlanOverride(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent h-32"
-                    placeholder="Update the forward-looking plan..."
-                    autoFocus
-                />
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-                <button
-                    onClick={() => setIsEditingPlan(false)}
-                    className="px-4 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-md"
-                >
-                    Cancel
-                </button>
-                <button
-                    onClick={handleSavePlan}
-                    disabled={!planOverride.trim() || actionLoading}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md font-bold hover:bg-blue-700 disabled:opacity-50"
-                >
-                    {actionLoading ? 'Saving...' : 'Update Plan'}
-                </button>
-            </div>
-        </div>
-    </Modal>
-
-    {/* Specialty Tracker Drawer */ }
-    <SpecialtyTracker
-        isOpen={showSpecialtyTracker}
-        onClose={() => setShowSpecialtyTracker(false)}
-        patientId={id}
-        patientData={patient}
-        vitals={vitals}
-        labs={orders.filter(o => o.order_type === 'lab')}
-        medications={medications}
-        documents={documents}
-        problems={problems}
-        onOpenChart={(tab) => {
-            setShowSpecialtyTracker(false);
-            setPatientChartTab(tab || 'hub');
-            setShowPatientChart(true);
-        }}
-    />
         </div >
     );
 };
