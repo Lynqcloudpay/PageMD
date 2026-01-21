@@ -5,9 +5,9 @@ import {
     Database, CreditCard, Clock, CheckCircle2,
     XCircle, UserCircle, FileImage, Trash2, Plus, Activity, Printer,
     LayoutDashboard, ChevronRight, Search, FilePlus, ChevronDown, HeartPulse, ActivitySquare, Zap, Waves,
-    Edit2, RotateCcw, Calendar, AlertCircle, Users, Receipt
+    Edit2, RotateCcw, Calendar, AlertCircle, Users, Receipt, PieChart, ArrowRight
 } from 'lucide-react';
-import { visitsAPI, documentsAPI, ordersAPI, referralsAPI, patientsAPI, eprescribeAPI } from '../services/api';
+import { visitsAPI, documentsAPI, ordersAPI, referralsAPI, patientsAPI, eprescribeAPI, reportsAPI } from '../services/api';
 import { format } from 'date-fns';
 import DoseSpotPrescribe from './DoseSpotPrescribe';
 import VisitChartView from './VisitChartView';
@@ -320,6 +320,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
         { id: 'ekg', label: 'EKG', icon: ActivitySquare },
         { id: 'echo', label: 'ECHO', icon: HeartPulse },
         { id: 'referrals', label: 'Referrals', icon: ExternalLink },
+        { id: 'reports', label: 'Quality Reporting', icon: PieChart },
         { id: 'billing', label: 'Billing & Superbills', icon: Receipt }
     ];
 
@@ -1816,6 +1817,96 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                     </div>
                                                 ))
                                             )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* REPORTS / QUALITY MEASURES TAB */}
+                                {activeTab === 'reports' && (
+                                    <div className="space-y-6">
+                                        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                            <div className="flex items-center gap-3">
+                                                <div className="bg-indigo-100 p-2 rounded-lg"><PieChart className="w-5 h-5 text-indigo-600" /></div>
+                                                <div>
+                                                    <span className="text-sm font-bold text-gray-900">Clinical Quality Measures</span>
+                                                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">MIPS & Specialty Performance tracking</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {/* Cardiology Quality Measures */}
+                                            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:border-blue-200 transition-all">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">Cardiovascular Health</h4>
+                                                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">88% Compliant</span>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[11px] text-slate-500">Statin Therapy for ASCVD</span>
+                                                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                                                    </div>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[11px] text-slate-500">Antithrombotic Therapy (AFib)</span>
+                                                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                                                    </div>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[11px] text-slate-500">LVEF Assessment post-MI</span>
+                                                        <Clock className="w-3.5 h-3.5 text-amber-500" />
+                                                    </div>
+                                                </div>
+                                                <button className="w-full mt-4 py-2 text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors flex items-center justify-center gap-1.5 uppercase tracking-wider">
+                                                    Complete Performance Data <ArrowRight className="w-3 h-3" />
+                                                </button>
+                                            </div>
+
+                                            {/* General Prevention (MIPS) */}
+                                            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-200 transition-all">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">General Prevention</h4>
+                                                    <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">Needs Action</span>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[11px] text-slate-500">Flu Immunization</span>
+                                                        <XCircle className="w-3.5 h-3.5 text-rose-500" />
+                                                    </div>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[11px] text-slate-500">Pneumococcal Vaccine</span>
+                                                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                                                    </div>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[11px] text-slate-500">Tobacco Screening/Cessation</span>
+                                                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                                                    </div>
+                                                </div>
+                                                <button className="w-full mt-4 py-2 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors flex items-center justify-center gap-1.5 uppercase tracking-wider">
+                                                    View MIPS Portfolio <ArrowRight className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-slate-900 rounded-2xl p-6 text-white overflow-hidden relative group">
+                                            <div className="relative z-10">
+                                                <h4 className="text-sm font-bold mb-2">Automated Compliance Tracking</h4>
+                                                <p className="text-xs text-slate-400 leading-relaxed mb-4 max-w-[400px]">
+                                                    PageMD automatically calculates quality measures based on your clinical documentation.
+                                                    Ensure "Problem List" and "Orders" are up-to-date for accurate reporting.
+                                                </p>
+                                                <div className="flex gap-3">
+                                                    <div className="px-3 py-1.5 bg-white/10 rounded-lg border border-white/10">
+                                                        <div className="text-[8px] font-black uppercase text-slate-500 mb-0.5">MIPS Score</div>
+                                                        <div className="text-lg font-bold">92.4</div>
+                                                    </div>
+                                                    <div className="px-3 py-1.5 bg-white/10 rounded-lg border border-white/10">
+                                                        <div className="text-[8px] font-black uppercase text-slate-500 mb-0.5">CMS Category</div>
+                                                        <div className="text-lg font-bold">Elite</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="absolute top-0 right-0 p-8 opacity-10 scale-150 rotate-12 transition-transform group-hover:scale-175 group-hover:rotate-6 duration-700">
+                                                <PieChart size={120} />
+                                            </div>
                                         </div>
                                     </div>
                                 )}

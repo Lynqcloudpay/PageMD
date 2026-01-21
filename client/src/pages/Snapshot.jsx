@@ -4,7 +4,7 @@ import {
     AlertCircle, Activity, Pill, FileText, Clock, Eye, ChevronDown, ChevronUp, ChevronRight, Plus,
     Phone, Mail, MapPin, CreditCard, Building2, Users, Heart, Printer, Scissors,
     CheckCircle2, Edit, ArrowRight, ExternalLink, UserCircle, Camera, User, X, FileImage, Save, FlaskConical, Database, Trash2, Upload, Layout, RotateCcw, Waves,
-    Shield, ShieldAlert, ShieldPlus, AlertTriangle, ShieldCheck, Check
+    Shield, ShieldAlert, ShieldPlus, AlertTriangle, ShieldCheck, Check, Pin, Settings2, Calendar, Edit3, Trash
 } from 'lucide-react';
 import { visitsAPI, patientsAPI, ordersAPI, referralsAPI, documentsAPI, patientFlagsAPI, api } from '../services/api';
 import { format } from 'date-fns';
@@ -116,6 +116,12 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const [showNewVisitDropdown, setShowNewVisitDropdown] = useState(false);
     const [showPrintOrdersModal, setShowPrintOrdersModal] = useState(false);
     const [activeFlags, setActiveFlags] = useState([]);
+    const [healthMaintenance, setHealthMaintenance] = useState([]);
+    const [isEditingSticky, setIsEditingSticky] = useState(false);
+    const [stickyNoteText, setStickyNoteText] = useState('');
+    const [showHMEditModal, setShowHMEditModal] = useState(false);
+    const [selectedHMItem, setSelectedHMItem] = useState(null);
+    const [hmForm, setHmForm] = useState({ item_name: '', status: 'Pending', due_date: '', notes: '' });
 
     const fetchFlags = useCallback(async () => {
         if (!id) return;
@@ -131,6 +137,68 @@ const Snapshot = ({ showNotesOnly = false }) => {
     useEffect(() => {
         fetchFlags();
     }, [fetchFlags]);
+
+    const handleSaveSticky = async () => {
+        try {
+            setActionLoading(true);
+            await patientsAPI.update(id, { reminder_note: stickyNoteText });
+            setIsEditingSticky(false);
+            showSuccess('Sticky note updated');
+        } catch (err) {
+            showError('Failed to save sticky note');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleEditHM = (item) => {
+        if (item) {
+            setSelectedHMItem(item);
+            setHmForm({
+                item_name: item.item_name,
+                status: item.status,
+                due_date: item.due_date ? item.due_date.split('T')[0] : '',
+                notes: item.notes || ''
+            });
+        } else {
+            setSelectedHMItem(null);
+            setHmForm({ item_name: '', status: 'Pending', due_date: '', notes: '' });
+        }
+        setShowHMEditModal(true);
+    };
+
+    const handleSaveHM = async () => {
+        try {
+            setActionLoading(true);
+            if (selectedHMItem) {
+                await patientsAPI.updateHealthMaintenance(selectedHMItem.id, hmForm);
+                showSuccess('Monitoring item updated');
+            } else {
+                await patientsAPI.addHealthMaintenance(id, hmForm);
+                showSuccess('Monitoring item added');
+            }
+            setShowHMEditModal(false);
+            refreshPatientData();
+        } catch (err) {
+            showError('Failed to save monitor item');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleDeleteHM = async (itemId) => {
+        if (!confirm('Are you sure you want to remove this monitoring item?')) return;
+        try {
+            setActionLoading(true);
+            await patientsAPI.deleteHealthMaintenance(itemId);
+            showSuccess('Item removed');
+            refreshPatientData();
+        } catch (err) {
+            showError('Failed to remove item');
+        } finally {
+            setActionLoading(false);
+        }
+    };
 
     const handleSaveReminder = async () => {
         if (!reminderText.trim()) return;
@@ -438,7 +506,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
             // Fetch additional data in parallel
             try {
-                const [familyHistResponse, surgicalHistResponse, socialHistResponse, ordersResponse, referralsResponse, documentsResponse, todayDraftResponse, allVisitsResponse] = await Promise.all([
+                const [
+                    familyHistResponse, surgicalHistResponse, socialHistResponse,
+                    ordersResponse, referralsResponse, documentsResponse,
+                    todayDraftResponse, allVisitsResponse, hmResponse
+                ] = await Promise.all([
                     patientsAPI.getFamilyHistory(id).catch(() => ({ data: [] })),
                     patientsAPI.getSurgicalHistory(id).catch(() => ({ data: [] })),
                     patientsAPI.getSocialHistory(id).catch(() => ({ data: null })),
@@ -446,7 +518,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     referralsAPI.getByPatient(id).catch(() => ({ data: [] })),
                     documentsAPI.getByPatient(id).catch(() => ({ data: [] })),
                     visitsAPI.getTodayDraft(id).catch(() => ({ data: { note: null } })),
-                    visitsAPI.getByPatient(id).catch(() => ({ data: [] }))
+                    visitsAPI.getByPatient(id).catch(() => ({ data: [] })),
+                    patientsAPI.getHealthMaintenance(id).catch(() => ({ data: [] }))
                 ]);
 
                 setFamilyHistory(familyHistResponse?.data || []);
@@ -455,6 +528,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 setOrders(ordersResponse?.data || []);
                 setReferrals(referralsResponse?.data || []);
                 setDocuments(documentsResponse?.data || []);
+                setHealthMaintenance(hmResponse?.data || []);
+                if (snapshot.patient?.reminder_note !== undefined) {
+                    setStickyNoteText(snapshot.patient.reminder_note || '');
+                }
 
                 // Maximize vitals data from all visits
                 const allVisits = allVisitsResponse.data || [];
@@ -1477,7 +1554,40 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                                 {/* Left Column: Compact Reference Cards + Visit History */}
                                 <div className="lg:col-span-1 space-y-4">
-                                    {/* Visit History Section - Now in Sidebar */}
+                                    {/* Sticky Note / Quick Reminder */}
+                                    <div className="bg-yellow-50/50 rounded-lg border-2 border-dashed border-yellow-200 p-4 relative group/sticky hover:shadow-md transition-all">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <Pin className="w-3.5 h-3.5 text-yellow-600 -rotate-12" />
+                                                <h3 className="text-[11px] font-black text-yellow-800 uppercase tracking-widest">Sticky Note</h3>
+                                            </div>
+                                            {!isEditingSticky ? (
+                                                <button onClick={() => setIsEditingSticky(true)} className="opacity-0 group-hover/sticky:opacity-100 p-1 hover:bg-yellow-100 rounded transition-all">
+                                                    <Edit3 className="w-3 h-3 text-yellow-700" />
+                                                </button>
+                                            ) : (
+                                                <div className="flex items-center gap-2">
+                                                    <button onClick={handleSaveSticky} className="text-[8px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">SAVE</button>
+                                                    <button onClick={() => setIsEditingSticky(false)} className="text-[8px] font-bold text-slate-400">CANCEL</button>
+                                                </div>
+                                            )}
+                                        </div>
+                                        {isEditingSticky ? (
+                                            <textarea
+                                                className="w-full bg-white/50 border border-yellow-200 rounded p-2 text-[11px] font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-yellow-300 resize-none min-h-[80px]"
+                                                value={stickyNoteText}
+                                                onChange={(e) => setStickyNoteText(e.target.value)}
+                                                placeholder="Write a clinical reminder here..."
+                                                autoFocus
+                                            />
+                                        ) : (
+                                            <p className="text-[11px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap">
+                                                {stickyNoteText || "No active reminders for this patient. Click edit to add one."}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Visit History Section */}
                                     <div className="bg-white rounded-lg shadow-sm border border-slate-200">
                                         <div
                                             className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between bg-white cursor-pointer hover:bg-slate-50 transition-colors group/header"
@@ -1493,15 +1603,14 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </div>
                                             <ChevronRight className="w-3 h-3 text-slate-300 group-hover/header:text-slate-500 group-hover/header:translate-x-0.5 transition-all" />
                                         </div>
-                                        <div className="p-3 overflow-y-auto scrollbar-hide h-[280px]">
+                                        <div className="p-3 overflow-y-auto scrollbar-hide h-[240px]">
                                             {filteredNotes.length > 0 ? (
                                                 <div className="space-y-2">
-                                                    {filteredNotes.slice(0, 6).map(note => (
+                                                    {filteredNotes.slice(0, 5).map(note => (
                                                         <div
                                                             key={note.id}
                                                             className="px-2 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer transition-colors group relative pl-3"
                                                             onClick={(e) => {
-                                                                // Prevent navigation if clicking delete
                                                                 if (e.target.closest('button')) return;
                                                                 handleViewNote(note.id);
                                                             }}
@@ -1512,18 +1621,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                     <span className="text-[10px] font-bold text-slate-800">{note.type}</span>
                                                                     {!note.signed && <span className="text-[8px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-100 uppercase tracking-wider">Draft</span>}
                                                                 </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-[9px] text-slate-400 font-medium tabular-nums">{note.date}</span>
-                                                                    {!note.signed && (
-                                                                        <button
-                                                                            onClick={(e) => handleDeleteNote(note.id, e)}
-                                                                            className="p-1 text-rose-500 hover:text-rose-700 transition-colors ml-1"
-                                                                            title="Delete Draft"
-                                                                        >
-                                                                            <Trash2 className="w-3.5 h-3.5" />
-                                                                        </button>
-                                                                    )}
-                                                                </div>
+                                                                <span className="text-[9px] text-slate-400 font-medium tabular-nums">{note.date}</span>
                                                             </div>
                                                             <p className="text-[9px] text-slate-500 truncate mt-0.5">{note.chiefComplaint || "No complaint recorded"}</p>
                                                         </div>
@@ -1538,68 +1636,53 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         </div>
                                     </div>
 
-                                    {/* Health Maintenance Section - Filling the gap with clinical value */}
-                                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden group/hm hover:border-blue-200 transition-all duration-300">
-                                        <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
+                                    {/* Health Maintenance Section - Specialized */}
+                                    <div className="bg-slate-50/50 rounded-2xl shadow-sm border border-slate-200 overflow-hidden group/hm hover:border-blue-200 transition-all duration-300">
+                                        <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-white">
                                             <div className="flex items-center gap-2">
-                                                <div className="p-1.5 bg-blue-50 text-blue-500 rounded-lg group-hover/hm:scale-110 transition-transform">
+                                                <div className="p-1.5 bg-blue-50 text-blue-500 rounded-lg">
                                                     <ShieldCheck className="w-3.5 h-3.5" />
                                                 </div>
-                                                <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-widest">Health Maintenance</h3>
+                                                <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-widest">Cardiology Optimization</h3>
                                             </div>
-                                            <span className="text-[9px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">Live</span>
+                                            <button onClick={() => handleEditHM(null)} className="p-1 hover:bg-blue-50 rounded-full transition-colors">
+                                                <Plus className="w-3.5 h-3.5 text-blue-500" />
+                                            </button>
                                         </div>
                                         <div className="p-4 space-y-4">
-                                            {/* Screening Item: Influenza */}
-                                            <div className="flex items-center justify-between group/item">
-                                                <div className="flex flex-col">
-                                                    <span className="text-[10px] font-bold text-slate-700">Influenza Vaccine</span>
-                                                    <span className="text-[9px] text-slate-400 font-medium italic">Due Annually (Fall)</span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[8px] font-black text-rose-500 uppercase tracking-tighter bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100 animate-pulse">OVERDUE</span>
-                                                </div>
-                                            </div>
-
-                                            {/* Screening Item: PCV20 */}
-                                            <div className="flex items-center justify-between group/item decoration-slate-200">
-                                                <div className="flex flex-col">
-                                                    <span className="text-[10px] font-bold text-slate-700">Pneumococcal (PCV20)</span>
-                                                    <span className="text-[9px] text-slate-400 font-medium">Last: 11/22/2023</span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="p-1 bg-emerald-50 rounded-full border border-emerald-100 text-emerald-500">
-                                                        <Check className="w-2.5 h-2.5" />
+                                            {healthMaintenance.length > 0 ? (
+                                                healthMaintenance.map(item => (
+                                                    <div key={item.id} className="flex items-center justify-between group/item cursor-pointer" onClick={() => handleEditHM(item)}>
+                                                        <div className="flex flex-col min-w-0">
+                                                            <span className="text-[10px] font-bold text-slate-700 truncate">{item.item_name}</span>
+                                                            <span className="text-[9px] text-slate-400 font-medium">
+                                                                {item.status === 'Completed' ? `Last: ${new Date(item.last_performed).toLocaleDateString()}` : `Due: ${new Date(item.due_date).toLocaleDateString()}`}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded border ${item.status === 'Overdue' ? 'text-rose-500 bg-rose-50 border-rose-100 animate-pulse' :
+                                                                item.status === 'Completed' ? 'text-emerald-500 bg-emerald-50 border-emerald-100' :
+                                                                    'text-blue-500 bg-blue-50 border-blue-100'
+                                                                }`}>
+                                                                {item.status}
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Screening Item: Colonoscopy */}
-                                            <div className="flex items-center justify-between group/item">
-                                                <div className="flex flex-col">
-                                                    <span className="text-[10px] font-bold text-slate-700">Colonoscopy</span>
-                                                    <span className="text-[9px] text-slate-400 font-medium italic">Due: 05/2026</span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[8px] font-black text-amber-600 uppercase tracking-tighter bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">DUE SOON</span>
-                                                </div>
-                                            </div>
-
-                                            {/* Screening Item: AAA (Example Specialty) */}
-                                            {patient?.sex === 'M' && (
-                                                <div className="flex items-center justify-between group/item">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-[10px] font-bold text-slate-700">AAA Screening</span>
-                                                        <span className="text-[9px] text-slate-400 font-medium italic">USPSTF Grade B</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 text-slate-300">
-                                                        <Clock className="w-3 h-3" />
-                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="text-center py-4 bg-white/50 rounded-xl border border-dashed border-slate-200">
+                                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider italic">No specialty tracking set</p>
                                                 </div>
                                             )}
 
                                             <div className="pt-2">
-                                                <button className="w-full py-2 bg-slate-50 border border-slate-100 text-[10px] font-bold text-slate-500 hover:text-blue-600 hover:bg-white hover:border-blue-200 hover:shadow-sm transition-all rounded-xl flex items-center justify-center gap-2 group/btn">
+                                                <button
+                                                    onClick={() => {
+                                                        setPatientChartTab('reports');
+                                                        setShowPatientChart(true);
+                                                    }}
+                                                    className="w-full py-2 bg-white border border-slate-200 text-[10px] font-bold text-slate-500 hover:text-blue-600 hover:border-blue-200 hover:shadow-sm transition-all rounded-xl flex items-center justify-center gap-2 group/btn"
+                                                >
                                                     Clinical Quality Measures <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
                                                 </button>
                                             </div>
@@ -2888,6 +2971,98 @@ const PatientHeaderPhoto = ({ firstName, lastName }) => {
             <div className="absolute inset-0 bg-white/40 backdrop-blur-sm z-0"></div>
             <div className="w-full h-full absolute top-0 left-0 bg-gradient-to-tr from-white/0 to-white/40 opacity-50 z-10"></div>
             <User className="w-10 h-10 relative z-20 text-primary-300 opacity-80" strokeWidth={1.5} />
+            {/* Health Maintenance Edit Modal */}
+            {showHMEditModal && (
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95">
+                        <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                            <h3 className="font-black text-sm text-slate-800 uppercase tracking-widest">
+                                {selectedHMItem ? 'Update Tracking' : 'Add Optimization Item'}
+                            </h3>
+                            <button onClick={() => setShowHMEditModal(false)} className="text-slate-400 hover:text-slate-600">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5">Item Name</label>
+                                <input
+                                    type="text"
+                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={hmForm.item_name}
+                                    onChange={(e) => setHmForm({ ...hmForm, item_name: e.target.value })}
+                                    placeholder="e.g. Echo, Lipid Profile..."
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5">Status</label>
+                                    <select
+                                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
+                                        value={hmForm.status}
+                                        onChange={(e) => setHmForm({ ...hmForm, status: e.target.value })}
+                                    >
+                                        <option value="Pending">Pending</option>
+                                        <option value="Completed">Completed</option>
+                                        <option value="Due Soon">Due Soon</option>
+                                        <option value="Overdue">Overdue</option>
+                                        <option value="Scheduled">Scheduled</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5">Due Date</label>
+                                    <input
+                                        type="date"
+                                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
+                                        value={hmForm.due_date}
+                                        onChange={(e) => setHmForm({ ...hmForm, due_date: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            {hmForm.status === 'Completed' && (
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5">Last Performed</label>
+                                    <input
+                                        type="date"
+                                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
+                                        value={hmForm.last_performed || ''}
+                                        onChange={(e) => setHmForm({ ...hmForm, last_performed: e.target.value })}
+                                    />
+                                </div>
+                            )}
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5">Clinical Notes</label>
+                                <textarea
+                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none h-20 resize-none"
+                                    value={hmForm.notes}
+                                    onChange={(e) => setHmForm({ ...hmForm, notes: e.target.value })}
+                                    placeholder="Study findings or optimization goals..."
+                                />
+                            </div>
+                        </div>
+                        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                            {selectedHMItem && (
+                                <button
+                                    onClick={() => handleDeleteHM(selectedHMItem.id)}
+                                    className="text-rose-600 hover:text-rose-700 font-bold text-xs flex items-center gap-1.5"
+                                >
+                                    <Trash className="w-3.5 h-3.5" /> Remove
+                                </button>
+                            )}
+                            <div className="flex gap-3 ml-auto">
+                                <button onClick={() => setShowHMEditModal(false)} className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors">CANCEL</button>
+                                <button
+                                    onClick={handleSaveHM}
+                                    disabled={!hmForm.item_name || actionLoading}
+                                    className="px-6 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95 disabled:opacity-50"
+                                >
+                                    {actionLoading ? 'SAVING...' : 'SAVE CHANGES'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

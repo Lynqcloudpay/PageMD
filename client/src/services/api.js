@@ -125,6 +125,10 @@ export const patientsAPI = {
   }),
   uploadPhotoBase64: (patientId, photoData) => api.post(`/patients/${patientId}/photo/base64`, { photoData }),
   removePhoto: (id) => api.delete(`/patients/${id}/photo`),
+  getHealthMaintenance: (patientId) => api.get(`/patients/${patientId}/health-maintenance`),
+  addHealthMaintenance: (patientId, data) => api.post(`/patients/${patientId}/health-maintenance`, data),
+  updateHealthMaintenance: (itemId, data) => api.put(`/patients/health-maintenance/${itemId}`, data),
+  deleteHealthMaintenance: (itemId) => api.delete(`/patients/health-maintenance/${itemId}`),
 };
 
 // Visits

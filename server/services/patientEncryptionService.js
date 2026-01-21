@@ -30,7 +30,7 @@ const PHI_FIELDS = [
   'insurance_id', 'insurance_subscriber_name',
   // 'insurance_subscriber_dob' - Excluded: DATE column
   'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_address',
-  'pharmacy_address', 'pharmacy_phone'
+  'pharmacy_address', 'pharmacy_phone', 'reminder_note'
 ];
 
 // Fields that can remain in plaintext (for search/indexing)

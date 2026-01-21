@@ -902,7 +902,7 @@ router.put('/:id', requirePermission('patients:edit_demographics'), async (req, 
       'pharmacy_preferred',
       // Additional
       'allergies_known', 'photo_url', 'photo_document_id', 'notes', 'deceased', 'deceased_date',
-      'is_restricted', 'restriction_reason',
+      'is_restricted', 'restriction_reason', 'reminder_note',
     ];
 
     // Only collect fields that are actually being updated
@@ -1359,6 +1359,91 @@ router.delete('/surgical-history/:historyId', requirePermission('notes:edit'), a
   } catch (error) {
     console.error('Error deleting surgical history:', error);
     res.status(500).json({ error: 'Failed to delete surgical history' });
+  }
+});
+
+// Health Maintenance Routes
+// Get health maintenance for patient
+router.get('/:id/health-maintenance', requirePermission('patients:view_chart'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      'SELECT * FROM health_maintenance WHERE patient_id = $1 ORDER BY due_date ASC, created_at DESC',
+      [id]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching health maintenance:', error);
+    res.status(500).json({ error: 'Failed to fetch health maintenance' });
+  }
+});
+
+// Add health maintenance item
+router.post('/:id/health-maintenance', requirePermission('notes:edit'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { item_name, status, last_performed, due_date, notes, specialty_focus } = req.body;
+
+    const result = await pool.query(
+      `INSERT INTO health_maintenance (patient_id, item_name, status, last_performed, due_date, notes, specialty_focus)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [id, item_name, status, last_performed, due_date, notes, specialty_focus || 'Cardiology']
+    );
+
+    await logAudit(req.user.id, 'add_health_maintenance', 'health_maintenance', result.rows[0].id, {}, req.ip);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error adding health maintenance:', error);
+    res.status(500).json({ error: 'Failed to add health maintenance' });
+  }
+});
+
+// Update health maintenance item
+router.put('/health-maintenance/:itemId', requirePermission('notes:edit'), async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const { item_name, status, last_performed, due_date, notes, specialty_focus } = req.body;
+
+    const updates = [];
+    const values = [];
+    let paramIndex = 1;
+
+    if (item_name !== undefined) { updates.push(`item_name = $${paramIndex++}`); values.push(item_name); }
+    if (status !== undefined) { updates.push(`status = $${paramIndex++}`); values.push(status); }
+    if (last_performed !== undefined) { updates.push(`last_performed = $${paramIndex++}`); values.push(last_performed === '' ? null : last_performed); }
+    if (due_date !== undefined) { updates.push(`due_date = $${paramIndex++}`); values.push(due_date === '' ? null : due_date); }
+    if (notes !== undefined) { updates.push(`notes = $${paramIndex++}`); values.push(notes); }
+    if (specialty_focus !== undefined) { updates.push(`specialty_focus = $${paramIndex++}`); values.push(specialty_focus); }
+
+    if (updates.length === 0) return res.status(400).json({ error: 'No fields to update' });
+
+    values.push(itemId);
+    const result = await pool.query(
+      `UPDATE health_maintenance SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $${paramIndex} RETURNING *`,
+      values
+    );
+
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Item not found' });
+
+    await logAudit(req.user.id, 'update_health_maintenance', 'health_maintenance', itemId, {}, req.ip);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating health maintenance:', error);
+    res.status(500).json({ error: 'Failed to update health maintenance' });
+  }
+});
+
+// Delete health maintenance item
+router.delete('/health-maintenance/:itemId', requirePermission('notes:edit'), async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    await pool.query('DELETE FROM health_maintenance WHERE id = $1', [itemId]);
+    await logAudit(req.user.id, 'delete_health_maintenance', 'health_maintenance', itemId, {}, req.ip);
+    res.json({ message: 'Deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting health maintenance:', error);
+    res.status(500).json({ error: 'Failed to delete health maintenance' });
   }
 });
 
