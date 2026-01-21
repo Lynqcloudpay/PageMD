@@ -425,7 +425,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                 />
             )}
 
-            <div className="bg-white border border-gray-200 shadow-sm rounded-lg overflow-hidden">
+            <div className="bg-white border border-gray-200 shadow-sm rounded-lg">
                 {/* Flags Manager Panel */}
                 {isFlagsPanelOpen && (
                     <div className="fixed inset-0 z-[100] flex justify-end bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-200">
@@ -439,10 +439,12 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                     </div>
                 )}
                 {/* Top Bar: Identity & Actions */}
-                <div className="px-6 py-4 border-b border-blue-100 flex items-center justify-between bg-gradient-to-br from-blue-50/50 via-sky-50 to-indigo-50/50 text-slate-900 relative overflow-hidden shadow-sm">
-                    {/* Decorative Background Elements */}
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-100/20 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-100/20 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none" />
+                <div className="px-6 py-4 border-b border-blue-100 flex items-center justify-between bg-gradient-to-br from-blue-50/50 via-sky-50 to-indigo-50/50 text-slate-900 relative shadow-sm rounded-t-lg">
+                    {/* Decorative Background Elements - Clipped in own container */}
+                    <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-t-lg">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-100/20 rounded-full blur-3xl -mr-20 -mt-20" />
+                        <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-100/20 rounded-full blur-3xl -ml-10 -mb-10" />
+                    </div>
 
                     <div className="flex items-center gap-5 relative z-10">
                         {/* Photo */}
