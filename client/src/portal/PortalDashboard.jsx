@@ -19,7 +19,8 @@ import {
     Menu,
     X,
     Bell,
-    Video
+    Video,
+    CheckCircle2
 } from 'lucide-react';
 import PortalMessages from './PortalMessages';
 import PortalAppointments from './PortalAppointments';
@@ -297,28 +298,30 @@ const PortalDashboard = () => {
                                 </div>
 
                                 {/* Quick Glance Section - Only shows when there's something actionable */}
-                                {(quickGlance.nextAppointment || quickGlance.telehealthReady || quickGlance.unreadMessages > 0) && (
-                                    <div className="relative mt-8 pt-8 border-t border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
-                                            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-                                            Live Updates
-                                        </h3>
+                                {/* Quick Glance Section */}
+                                <div className="relative mt-8 pt-8 border-t border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+                                        <span className={`w-2 h-2 rounded-full ${quickGlance.telehealthReady || quickGlance.unreadMessages > 0 || quickGlance.nextAppointment ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></span>
+                                        Overview
+                                    </h3>
+
+                                    {(quickGlance.telehealthReady || quickGlance.unreadMessages > 0 || quickGlance.nextAppointment) ? (
                                         <div className="flex flex-col gap-3">
                                             {/* Telehealth Ready - Highest Priority */}
                                             {quickGlance.telehealthReady && (
                                                 <button
                                                     onClick={() => setActiveTab('telehealth')}
-                                                    className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 transition-all text-left group shadow-lg shadow-emerald-200"
+                                                    className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 transition-all text-left group shadow-lg shadow-emerald-200"
                                                 >
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-12 h-12 rounded-xl bg-white/20 text-white flex items-center justify-center">
-                                                            <Video className="w-6 h-6" />
+                                                    <div className="flex items-center gap-3.5">
+                                                        <div className="w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center">
+                                                            <Video className="w-5 h-5" />
                                                         </div>
                                                         <div className="flex-1">
-                                                            <p className="text-[10px] font-bold uppercase tracking-widest text-white/80">Telehealth Visit Ready</p>
-                                                            <p className="text-lg font-bold text-white">Join Your Virtual Visit Now</p>
+                                                            <p className="text-[9px] font-bold uppercase tracking-widest text-white/80">Telehealth Visit Ready</p>
+                                                            <p className="text-base font-bold text-white">Join Your Virtual Visit Now</p>
                                                         </div>
-                                                        <ChevronRight className="w-6 h-6 text-white/80" />
+                                                        <ChevronRight className="w-5 h-5 text-white/80" />
                                                     </div>
                                                 </button>
                                             )}
@@ -327,20 +330,20 @@ const PortalDashboard = () => {
                                             {quickGlance.unreadMessages > 0 && (
                                                 <button
                                                     onClick={() => setActiveTab('messages')}
-                                                    className="p-4 rounded-2xl bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 transition-all text-left group shadow-lg shadow-red-200"
+                                                    className="p-3.5 rounded-2xl bg-gradient-to-r from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600 transition-all text-left group shadow-lg shadow-blue-200/50"
                                                 >
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-12 h-12 rounded-xl bg-white/20 text-white flex items-center justify-center relative">
-                                                            <MessageSquare className="w-6 h-6" />
-                                                            <span className="absolute -top-1 -right-1 w-6 h-6 bg-white text-red-500 rounded-full text-xs font-bold flex items-center justify-center shadow-sm">
+                                                    <div className="flex items-center gap-3.5">
+                                                        <div className="w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center relative">
+                                                            <MessageSquare className="w-5 h-5" />
+                                                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-white text-blue-500 rounded-full text-[10px] font-bold flex items-center justify-center shadow-sm">
                                                                 {quickGlance.unreadMessages}
                                                             </span>
                                                         </div>
                                                         <div className="flex-1">
-                                                            <p className="text-[10px] font-bold uppercase tracking-widest text-white/80">New Messages</p>
-                                                            <p className="text-lg font-bold text-white">You have {quickGlance.unreadMessages} unread message{quickGlance.unreadMessages > 1 ? 's' : ''}</p>
+                                                            <p className="text-[9px] font-bold uppercase tracking-widest text-white/80">New Messages</p>
+                                                            <p className="text-base font-bold text-white">You have {quickGlance.unreadMessages} unread message{quickGlance.unreadMessages > 1 ? 's' : ''}</p>
                                                         </div>
-                                                        <ChevronRight className="w-6 h-6 text-white/80" />
+                                                        <ChevronRight className="w-5 h-5 text-white/80" />
                                                     </div>
                                                 </button>
                                             )}
@@ -349,26 +352,34 @@ const PortalDashboard = () => {
                                             {quickGlance.nextAppointment && (
                                                 <button
                                                     onClick={() => setActiveTab('appointments')}
-                                                    className="p-4 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 transition-all text-left group shadow-lg shadow-blue-200"
+                                                    className="p-3.5 rounded-2xl bg-gradient-to-r from-sky-400 to-cyan-500 hover:from-sky-500 hover:to-cyan-600 transition-all text-left group shadow-lg shadow-sky-200/50"
                                                 >
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-12 h-12 rounded-xl bg-white/20 text-white flex items-center justify-center">
-                                                            <Calendar className="w-6 h-6" />
+                                                    <div className="flex items-center gap-3.5">
+                                                        <div className="w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center">
+                                                            <Calendar className="w-5 h-5" />
                                                         </div>
                                                         <div className="flex-1">
-                                                            <p className="text-[10px] font-bold uppercase tracking-widest text-white/80">Upcoming Appointment</p>
+                                                            <p className="text-[9px] font-bold uppercase tracking-widest text-white/80">Upcoming Appointment</p>
                                                             <p className="text-lg font-bold text-white">
                                                                 {new Date(quickGlance.nextAppointment.appointment_date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                                                                 {quickGlance.nextAppointment.appointment_time && ` at ${quickGlance.nextAppointment.appointment_time}`}
                                                             </p>
                                                         </div>
-                                                        <ChevronRight className="w-6 h-6 text-white/80" />
+                                                        <ChevronRight className="w-5 h-5 text-white/80" />
                                                     </div>
                                                 </button>
                                             )}
                                         </div>
-                                    </div>
-                                )}
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center py-6 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
+                                                <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+                                            </div>
+                                            <p className="text-sm font-bold text-slate-700">You're all caught up!</p>
+                                            <p className="text-xs text-slate-400 mt-1">No new messages or upcoming visits.</p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Action Cards */}
