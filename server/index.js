@@ -269,6 +269,9 @@ app.use('/api/patient-flags', patientFlagsRoutes);
 // Support
 app.use('/api/support', require('./routes/support'));
 
+// Clinical Workspace (Telehealth EMR integration)
+app.use('/api', require('./routes/clinicalWorkspace'));
+
 // Telehealth (Daily.co video conferencing)
 app.use('/api/telehealth', require('./routes/telehealth'));
 

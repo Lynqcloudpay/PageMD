@@ -94,6 +94,7 @@ const Telehealth = () => {
   const [creatingRoom, setCreatingRoom] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('note'); // default to note during visit
+  const [activeEncounter, setActiveEncounter] = useState(null);
 
   // --- NEW: Chart Snapshot (best-effort) ---
   const [patientSnapshot, setPatientSnapshot] = useState(null);
@@ -127,9 +128,25 @@ const Telehealth = () => {
     try { return JSON.parse(v); } catch { return null; }
   };
 
-  const addOrder = (type, text) => {
+  const addOrder = async (type, text) => {
     const clean = (text || '').trim();
     if (!clean) return;
+
+    if (activeEncounter) {
+      try {
+        const res = await api.post("/clinical_orders", {
+          encounter_id: activeEncounter.id,
+          type,
+          text: clean
+        });
+        setPendedOrders(prev => [res.data, ...prev]);
+        return;
+      } catch (err) {
+        console.error('Error adding order to server:', err);
+      }
+    }
+
+    // Fallback/Local
     setPendedOrders(prev => [
       { id: `${Date.now()}_${Math.random().toString(16).slice(2)}`, type, text: clean, status: 'pended' },
       ...prev
@@ -206,10 +223,27 @@ const Telehealth = () => {
           updatedAt: new Date().toISOString(),
         })
       );
-    }, 600);
+      // Also try server save if encounter active
+      if (activeEncounter) handleSaveDraft();
+    }, 1000); // 1s debounce
 
     return () => clearTimeout(t);
-  }, [note, pendedOrders, avs, activeCall?.id]);
+  }, [note, pendedOrders, avs, activeCall?.id, activeEncounter]);
+
+  // Keep encounter alive (server heartbeat)
+  useEffect(() => {
+    if (!activeEncounter?.id) return;
+
+    const interval = setInterval(async () => {
+      try {
+        await api.patch(`/encounters/${activeEncounter.id}`, {
+          updated_at: new Date().toISOString()
+        });
+      } catch (e) { }
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [activeEncounter?.id]);
 
   // --- NEW: Chart Fetching ---
   const fetchPatientSnapshot = useCallback(async () => {
@@ -263,7 +297,17 @@ const Telehealth = () => {
   const handleStartCall = async (appt) => {
     setCreatingRoom(true);
     try {
-      // Create a Daily.co room via our backend
+      // 1. Create/Start Encounter in our backend
+      const patientId = appt.patientId || appt.patient_id || appt.pid;
+      const encounterRes = await api.post("/encounters", {
+        appointment_id: appt.id,
+        provider_id: currentUser.id,
+        patient_id: patientId,
+        start_time: new Date().toISOString()
+      });
+      setActiveEncounter(encounterRes.data);
+
+      // 2. Create a Daily.co room via our backend
       const response = await api.post('/telehealth/rooms', {
         appointmentId: appt.id,
         patientName: appt.patientName || appt.name || 'Patient',
@@ -276,9 +320,8 @@ const Telehealth = () => {
         setDuration(0);
       }
     } catch (err) {
-      console.error('Error creating room:', err);
-      // Show error to user
-      alert('Failed to create video room. Please try again.');
+      console.error('Error starting call/encounter:', err);
+      alert('Failed to start visit. Please try again.');
     } finally {
       setCreatingRoom(false);
     }
@@ -288,6 +331,7 @@ const Telehealth = () => {
     setActiveCall(null);
     setRoomUrl(null);
     setDuration(0);
+    setActiveEncounter(null);
     setNote({
       chiefComplaint: '',
       subjective: '',
@@ -304,20 +348,57 @@ const Telehealth = () => {
     });
   }, []);
 
-  const handleSaveDraft = () => {
-    if (!activeCall?.id) return;
-    // autosave already persists; this gives user confidence
-    alert('Draft saved.');
+  const handleSaveDraft = async () => {
+    if (!activeEncounter) return;
+    try {
+      // 1. Save Note
+      await api.post("/clinical_notes", {
+        encounter_id: activeEncounter.id,
+        note: note,
+        dx: note.dx.split(",").map(d => d.trim())
+      });
+
+      // 2. Save AVS
+      await api.post("/after_visit_summaries", {
+        encounter_id: activeEncounter.id,
+        instructions: avs.instructions,
+        follow_up: avs.followUp,
+        return_precautions: avs.returnPrecautions
+      });
+
+      console.log('Draft saved to EHR.');
+    } catch (err) {
+      console.error('Error saving draft:', err);
+    }
   };
 
   const handleFinalizeVisit = async () => {
-    if (!activeCall) return;
+    if (!activeEncounter) return;
 
-    // TODO (next step): POST note/orders/avs to your backend encounter endpoints.
-    // For now, mark orders signed and keep data in localStorage.
-    setPendedOrders(prev => prev.map(o => ({ ...o, status: o.status === 'pended' ? 'signed' : o.status })));
+    try {
+      // 1. Save everything
+      await handleSaveDraft();
 
-    alert('Visit finalized (wire to backend next).');
+      // 2. Sign Note
+      await api.patch(`/clinical_notes/${activeEncounter.id}/sign`);
+
+      // 3. Sign pended orders
+      for (let o of pendedOrders) {
+        if (o.status === 'pending' || o.status === 'pended') {
+          await api.patch(`/clinical_orders/${o.id}/sign`);
+        }
+      }
+      setPendedOrders(prev => prev.map(o => ({ ...o, status: 'signed' })));
+
+      // 4. Finalize Encounter
+      await api.patch(`/encounters/${activeEncounter.id}/finalize`);
+
+      alert('Visit finalized and pushed to record!');
+      handleEndCall();
+    } catch (err) {
+      console.error('Error finalizing visit:', err);
+      alert('Failed to finalize visit.');
+    }
   };
 
   const formatTime = (seconds) => {
@@ -587,10 +668,20 @@ const Telehealth = () => {
 
                   <button
                     className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold"
-                    onClick={() => {
-                      // later: POST to your backend + eRx/labs integrations
-                      setPendedOrders(prev => prev.map(o => ({ ...o, status: 'signed' })));
-                      alert('Orders marked as signed (wire to backend next).');
+                    onClick={async () => {
+                      if (!activeEncounter) return;
+                      try {
+                        for (let o of pendedOrders) {
+                          if (o.status === 'pending' || o.status === 'pended') {
+                            await api.patch(`/clinical_orders/${o.id}/sign`);
+                          }
+                        }
+                        setPendedOrders(prev => prev.map(o => ({ ...o, status: 'signed' })));
+                        alert('Orders marked as signed.');
+                      } catch (err) {
+                        console.error('Error signing orders:', err);
+                        alert('Failed to sign orders.');
+                      }
                     }}
                     disabled={pendedOrders.length === 0}
                   >
@@ -624,7 +715,24 @@ const Telehealth = () => {
 
                   <button
                     className="w-full py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl border border-white/5"
-                    onClick={() => alert('Next: send AVS to patient portal + attach to encounter.')}
+                    onClick={async () => {
+                      if (!activeEncounter) return;
+                      try {
+                        // 1. Save first
+                        const res = await api.post("/after_visit_summaries", {
+                          encounter_id: activeEncounter.id,
+                          instructions: avs.instructions,
+                          follow_up: avs.followUp,
+                          return_precautions: avs.returnPrecautions
+                        });
+                        // 2. Send
+                        await api.post(`/after_visit_summaries/${res.data.id}/send`);
+                        alert('AVS sent to patient portal.');
+                      } catch (err) {
+                        console.error('Error sending AVS:', err);
+                        alert('Failed to send AVS.');
+                      }
+                    }}
                   >
                     Send to Patient Portal
                   </button>
