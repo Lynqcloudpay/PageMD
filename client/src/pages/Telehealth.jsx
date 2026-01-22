@@ -110,9 +110,12 @@ const Telehealth = () => {
   const [activeCall, setActiveCall] = useState(null);
   const [roomUrl, setRoomUrl] = useState(null);
   const [creatingRoom, setCreatingRoom] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('note'); // default to note during visit
   const [activeEncounter, setActiveEncounter] = useState(null);
+  const [activeDropdown, setActiveDropdown] = useState(null);
+  const [viewingPatientId, setViewingPatientId] = useState(null);
 
   // --- NEW: Patient Chart Panel State ---
   const [showFullChart, setShowFullChart] = useState(false);
@@ -128,7 +131,6 @@ const Telehealth = () => {
     rosNotes: '',
     peNotes: '',
     results: '',
-    assessment: '',
     assessment: '',
     plan: '',
     planNarrative: '', // Free text plan
@@ -201,31 +203,32 @@ const Telehealth = () => {
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
   const providerName = `Dr. ${currentUser.lastName || 'Provider'}`;
 
-  // Fetch appointments on mount
-  useEffect(() => {
-    const fetchSchedule = async () => {
-      try {
-        const today = format(new Date(), 'yyyy-MM-dd');
-        const response = await appointmentsAPI.get({ date: today });
-        const telehealthAppts = (response.data || []).filter(appt => {
-          // Filter out completed/cancelled appointments
-          const status = (appt.status || '').toLowerCase();
-          if (['checked_out', 'completed', 'cancelled', 'no_show', 'no-show'].includes(status)) return false;
+  // Fetch appointments
+  const fetchSchedule = useCallback(async () => {
+    try {
+      const today = format(new Date(), 'yyyy-MM-dd');
+      const response = await appointmentsAPI.get({ date: today });
+      const telehealthAppts = (response.data || []).filter(appt => {
+        // Filter out completed/cancelled appointments
+        const status = (appt.status || '').toLowerCase();
+        if (['checked_out', 'completed', 'cancelled', 'no_show', 'no-show'].includes(status)) return false;
 
-          const type = (appt.type || appt.appointment_type || '').toLowerCase();
-          const visitMethod = (appt.visit_method || '').toLowerCase();
-          return type.includes('telehealth') || type.includes('video') || type.includes('virtual') || visitMethod === 'telehealth';
-        });
+        const type = (appt.type || appt.appointment_type || '').toLowerCase();
+        const visitMethod = (appt.visit_method || '').toLowerCase();
+        return type.includes('telehealth') || type.includes('video') || type.includes('virtual') || visitMethod === 'telehealth';
+      });
 
-        setAppointments(telehealthAppts);
-      } catch (err) {
-        console.error("Failed to load appointments", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSchedule();
+      setAppointments(telehealthAppts);
+    } catch (err) {
+      console.error("Failed to load appointments", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchSchedule();
+  }, [fetchSchedule]);
 
   // Call timer
   useEffect(() => {
@@ -368,24 +371,23 @@ const Telehealth = () => {
     if (activeCall) fetchPatientSnapshot();
   }, [activeCall, fetchPatientSnapshot]);
 
-  const handleStartCall = async (appt) => {
+  const handleStartCall = async (appt, options = { video: true }) => {
+    if (creatingRoom || isSubmitting) return;
     setCreatingRoom(true);
-    try {
-      // 1. Create/Start Encounter in our backend
-      const patientId = appt.patientId || appt.patient_id || appt.pid;
 
-      // Check if encounter already exists for this appointment
+    try {
+      // 1. Ensure encounter exists
       let encounter;
+      const patientId = appt.patient_id || appt.patientId || appt.pid;
+      const providerName = currentUser?.name || `${currentUser?.firstName || ''} ${currentUser?.lastName || ''}`.trim() || 'Provider';
+
       try {
         const existing = await api.get(`/encounters?appointment_id=${appt.id}`);
-        // If existing encounter connects to this appt, check if it's signed
         const found = existing.data && existing.data.length > 0 ? existing.data[0] : null;
 
         if (found && found.status !== 'signed') {
-          // Resume active encounter
           encounter = found;
         } else {
-          // Create NEW encounter if none exists OR if previous one is signed
           const encounterRes = await api.post("/encounters", {
             appointment_id: appt.id,
             provider_id: currentUser.id,
@@ -396,7 +398,6 @@ const Telehealth = () => {
         }
       } catch (e) {
         console.error("Encounter check failed:", e);
-        // Fallback to try create anyway
         const encounterRes = await api.post("/encounters", {
           appointment_id: appt.id,
           provider_id: currentUser.id,
@@ -415,17 +416,24 @@ const Telehealth = () => {
         console.error('Failed to update appointment status:', e);
       }
 
-      // 2. Create a Daily.co room via our backend
-      const response = await api.post('/telehealth/rooms', {
-        appointmentId: appt.id,
-        encounterId: encounter.id,
-        patientName: appt.patientName || appt.name || 'Patient',
-        providerName: providerName
-      });
+      if (options.video) {
+        // 2. Create a Daily.co room via our backend
+        const response = await api.post('/telehealth/rooms', {
+          appointmentId: appt.id,
+          encounterId: encounter.id,
+          patientName: appt.patientName || appt.name || 'Patient',
+          providerName: providerName
+        });
 
-      if (response.data.success) {
-        setRoomUrl(response.data.roomUrl);
-        setActiveCall({ ...appt, roomName: response.data.roomName }); // Store roomName for cleanup
+        if (response.data.success) {
+          setRoomUrl(response.data.roomUrl);
+          setActiveCall({ ...appt, roomName: response.data.roomName });
+          setDuration(0);
+        }
+      } else {
+        // Just opening workspace for documentation
+        setRoomUrl(null);
+        setActiveCall(appt);
         setDuration(0);
       }
     } catch (err) {
@@ -510,11 +518,9 @@ const Telehealth = () => {
   };
 
   const handleFinalizeVisit = async () => {
-    if (!activeEncounter) return;
+    if (!activeEncounter || isSubmitting) return;
     if (isLocked) {
-      if (window.confirm("Visit is already signed. Would you like to close the workspace?")) {
-        handleCloseWorkspace();
-      }
+      handleCloseWorkspace();
       return;
     }
 
@@ -522,8 +528,9 @@ const Telehealth = () => {
       return;
     }
 
+    setIsSubmitting(true);
     try {
-      // 1. Save everything
+      // 1. Save everything one last time
       await handleSaveDraft();
 
       // 2. Sign Note
@@ -540,22 +547,43 @@ const Telehealth = () => {
       // 4. Finalize Encounter
       await api.patch(`/encounters/${activeEncounter.id}/finalize`);
 
-      // 5. Check out appointment (removes from queue)
-      if (activeCall?.appointmentId || activeCall?.id) {
+      // 5. Update Appointment to 'checked_out' for schedule sync
+      if (activeCall?.id) {
         try {
-          await appointmentsAPI.update(activeCall.appointmentId || activeCall.id, { status: 'checked_out' });
-        } catch (e) { console.error('Failed to checkout appointment', e); }
+          const now = new Date();
+          await appointmentsAPI.update(activeCall.id, {
+            status: 'checked_out',
+            patient_status: 'checked_out',
+            checkout_time: now.toISOString(),
+            room_sub_status: null,
+            current_room: null
+          });
+        } catch (e) {
+          console.error('Failed to checkout appointment:', e);
+        }
       }
 
-      // Clear local draft
+      // Cleanup local draft
       localStorage.removeItem(storageKeyFor(activeCall.id));
 
-      alert('Visit finalized and pushed to record!');
-      alert('Visit finalized and pushed to record!');
+      console.log('Visit finalized and checked out.');
+
+      // Refresh the queue list to remove this item
+      fetchSchedule();
+
+      // 6. Close workspace automatically
       handleCloseWorkspace();
+
     } catch (err) {
       console.error('Error finalizing visit:', err);
-      alert('Failed to finalize visit. Please ensure all required fields are complete.');
+      const errorMsg = err.response?.data?.error || err.message || 'Unknown error';
+      if (errorMsg.includes('already signed')) {
+        handleCloseWorkspace();
+      } else {
+        alert('Failed to finalize visit: ' + errorMsg);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1083,9 +1111,12 @@ const Telehealth = () => {
 
         {/* --- MODALS --- */}
         <PatientChartPanel
-          patientId={activeEncounter?.patient_id || activeCall?.patientId}
+          patientId={viewingPatientId || activeEncounter?.patient_id || activeCall?.patientId}
           isOpen={showFullChart}
-          onClose={() => setShowFullChart(false)}
+          onClose={() => {
+            setShowFullChart(false);
+            setViewingPatientId(null);
+          }}
           initialTab={patientChartTab || 'overview'}
         />
 
@@ -1196,23 +1227,88 @@ const Telehealth = () => {
                     </p>
                   </div>
                 </div>
-                <Button
-                  onClick={() => handleStartCall(appt)}
-                  disabled={creatingRoom}
-                  className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg flex items-center gap-2"
-                >
-                  {creatingRoom ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Video size={20} />
-                  )}
-                  {creatingRoom
-                    ? 'Connecting...'
-                    : (appt.status === 'in_progress' || appt.status === 'arrived')
-                      ? 'Resume Visit'
-                      : 'Start Call'
-                  }
-                </Button>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <button
+                      onClick={() => setActiveDropdown(activeDropdown === appt.id ? null : appt.id)}
+                      className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all border border-slate-200 flex items-center gap-2 font-semibold"
+                    >
+                      Actions
+                      <ChevronDown size={18} className={`transition-transform duration-200 ${activeDropdown === appt.id ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {activeDropdown === appt.id && (
+                      <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                        <button
+                          onClick={() => {
+                            handleStartCall(appt, { video: true });
+                            setActiveDropdown(null);
+                          }}
+                          className="w-full px-4 py-3 text-left hover:bg-blue-50 text-slate-700 flex items-center gap-3 transition-colors border-b border-slate-50 group"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                            <Video size={16} />
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm">Join Video Call</p>
+                            <p className="text-[10px] text-slate-500 uppercase tracking-wider">With Patient</p>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            handleStartCall(appt, { video: false });
+                            setActiveDropdown(null);
+                          }}
+                          className="w-full px-4 py-3 text-left hover:bg-emerald-50 text-slate-700 flex items-center gap-3 transition-colors border-b border-slate-50 group"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                            <FileText size={16} />
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm">Resume Note</p>
+                            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Documentation Only</p>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setViewingPatientId(appt.patient_id || appt.patientId);
+                            setShowFullChart(true);
+                            setActiveDropdown(null);
+                          }}
+                          className="w-full px-4 py-3 text-left hover:bg-slate-50 text-slate-700 flex items-center gap-3 transition-colors group"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 group-hover:bg-slate-900 group-hover:text-white transition-colors">
+                            <User size={16} />
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm">View Chart</p>
+                            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Patient Record</p>
+                          </div>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <Button
+                    onClick={() => handleStartCall(appt)}
+                    disabled={creatingRoom}
+                    className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg flex items-center gap-2"
+                  >
+                    {creatingRoom ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Video size={18} />
+                    )}
+                    {creatingRoom
+                      ? 'Connecting...'
+                      : (appt.status === 'in_progress' || appt.status === 'arrived')
+                        ? 'Resume Visit'
+                        : 'Start Call'
+                    }
+                  </Button>
+                </div>
               </div>
             </Card>
           ))}
