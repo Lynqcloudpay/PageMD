@@ -549,10 +549,10 @@ const Schedule = () => {
 
         fetchAppointments();
 
-        // Auto-refresh every 10 seconds (silent refresh, no loading state)
+        // Auto-refresh every 2 seconds (silent refresh, no loading state)
         const interval = setInterval(() => {
             fetchAppointments(true);
-        }, 10000);
+        }, 2000);
 
         return () => clearInterval(interval);
     }, [currentDate, selectedProvider]);

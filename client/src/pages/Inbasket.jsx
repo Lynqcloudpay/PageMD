@@ -166,8 +166,8 @@ const Inbasket = () => {
 
     useEffect(() => {
         fetchData();
-        // Poll every 30s
-        const poll = setInterval(() => fetchData(true), 30000);
+        // Poll every 1s (Real-time live updates)
+        const poll = setInterval(() => fetchData(true), 1000);
         return () => clearInterval(poll);
     }, [fetchData]);
 

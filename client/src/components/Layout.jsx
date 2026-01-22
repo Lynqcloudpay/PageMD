@@ -127,7 +127,7 @@ const Layout = ({ children }) => {
         fetchPrivacyAlertsCount();
         fetchAppointmentRequestsCount();
 
-        // Refresh counts periodically (every 30 seconds)
+        // Refresh counts periodically (every 2 seconds)
         const interval = setInterval(() => {
 
             fetchPendingNotesCount();
@@ -136,7 +136,7 @@ const Layout = ({ children }) => {
             fetchPendingIntakeCount();
             fetchPrivacyAlertsCount();
             fetchAppointmentRequestsCount();
-        }, 30000);
+        }, 2000);
 
         return () => clearInterval(interval);
     }, []);

@@ -45,6 +45,9 @@ const Dashboard = () => {
             }
         };
         fetchStats();
+        // Poll stats every 2s
+        const interval = setInterval(fetchStats, 2000);
+        return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {
@@ -69,21 +72,29 @@ const Dashboard = () => {
             }
         };
 
-        const fetchInbox = async () => {
+        const fetchInbox = async (silent = false) => {
             if (!user) return;
             try {
-                setLoadingInbox(true);
+                if (!silent) setLoadingInbox(true);
                 const response = await inboxAPI.getAll({ status: 'new', assignedTo: 'me' });
                 setInboxItems(response.data || []);
             } catch (error) {
                 console.error('Error fetching inbox:', error);
             } finally {
-                setLoadingInbox(false);
+                if (!silent) setLoadingInbox(false);
             }
         };
 
         fetchTodayAppointments();
         fetchInbox();
+
+        // POLL every 2s
+        const interval = setInterval(() => {
+            fetchTodayAppointments();
+            fetchInbox(true); // Silent refresh
+        }, 2000);
+
+        return () => clearInterval(interval);
     }, [user, can, scope]);
 
     if (loading) {
