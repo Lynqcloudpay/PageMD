@@ -21,6 +21,11 @@ router.get('/threads', async (req, res) => {
             SELECT t.*, 
                 (SELECT body FROM portal_messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) as last_message_body,
                 (SELECT COUNT(*) FROM portal_messages WHERE thread_id = t.id AND read_at IS NULL AND sender_user_id IS NOT NULL) as unread_count,
+                (SELECT u2.first_name || ' ' || u2.last_name 
+                 FROM portal_messages m2 
+                 JOIN users u2 ON m2.sender_user_id = u2.id 
+                 WHERE m2.thread_id = t.id AND m2.sender_user_id IS NOT NULL 
+                 ORDER BY m2.created_at DESC LIMIT 1) as last_sender_name,
                 u.first_name as staff_first_name,
                 u.last_name as staff_last_name
             FROM portal_message_threads t

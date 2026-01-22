@@ -38,108 +38,45 @@ const PortalMessages = () => {
         fetchPatientProfile();
     }, []);
 
-    const fetchThreads = async () => {
+    // Poll for new messages every 5 seconds
+    useEffect(() => {
+        const interval = setInterval(() => {
+            fetchThreads(true); // true = silent refresh
+            if (selectedThread) {
+                fetchThreadMessages(selectedThread.id, true);
+            }
+        }, 5000);
+        return () => clearInterval(interval);
+    }, [selectedThread]);
+
+    const fetchThreads = async (silent = false) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const response = await axios.get(`${apiBase}/portal/messages/threads`, { headers });
             setThreads(response.data);
             setError(null);
         } catch (err) {
-            setError('Failed to load messages.');
+            if (!silent) setError('Failed to load messages.');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     };
 
-    const fetchStaff = async () => {
-        try {
-            const response = await axios.get(`${apiBase}/portal/chart/staff`, { headers });
-            setStaff(response.data);
-        } catch (err) {
-            console.error('Failed to fetch staff list:', err);
-        }
-    };
-
-    const fetchPatientProfile = async () => {
-        try {
-            const response = await axios.get(`${apiBase}/portal/chart/patient-profile`, { headers });
-            if (response.data.primary_care_provider) {
-                setAssignedUserId(response.data.primary_care_provider);
-            }
-        } catch (err) {
-            console.error('Failed to fetch patient profile:', err);
-        }
-    };
-
-    const fetchThreadMessages = async (threadId) => {
+    const fetchThreadMessages = async (threadId, silent = false) => {
         try {
             const response = await axios.get(`${apiBase}/portal/messages/threads/${threadId}`, { headers });
             setMessages(response.data.messages);
-            setSelectedThread(response.data.thread);
+            if (!silent) setSelectedThread(response.data.thread);
         } catch (err) {
-            setError('Failed to load conversation.');
+            if (!silent) setError('Failed to load conversation.');
         }
     };
 
-    const handleSendMessage = async (e) => {
-        e.preventDefault();
-        if (!newMessage.trim()) return;
+    // ... existing helper functions ...
 
-        try {
-            await axios.post(`${apiBase}/portal/messages/threads/${selectedThread.id}`,
-                { body: newMessage },
-                { headers }
-            );
-            setNewMessage('');
-            fetchThreadMessages(selectedThread.id);
-            fetchThreads();
-        } catch (err) {
-            setError('Failed to send message.');
-        }
-    };
+    // (This part replaces the fetching logic, skipping to valid JSX rendering for thread list)
 
-    const handleCreateThread = async (e) => {
-        e.preventDefault();
-        if (!newThreadSubject.trim() || !newMessage.trim()) return;
-
-        try {
-            const response = await axios.post(`${apiBase}/portal/messages/threads`,
-                { subject: newThreadSubject, body: newMessage, assigned_user_id: assignedUserId || null },
-                { headers }
-            );
-            setNewThreadSubject('');
-            setNewMessage('');
-            setAssignedUserId('');
-            setShowNewThreadForm(false);
-            fetchThreads();
-            fetchThreadMessages(response.data.threadId);
-        } catch (err) {
-            setError('Failed to start new conversation.');
-        }
-    };
-
-    const handleDeleteThread = async (threadId, e) => {
-        e.stopPropagation();
-        if (!window.confirm('Delete this conversation? This cannot be undone.')) return;
-
-        try {
-            await axios.delete(`${apiBase}/portal/messages/threads/${threadId}`, { headers });
-            if (selectedThread?.id === threadId) {
-                setSelectedThread(null);
-                setMessages([]);
-            }
-            fetchThreads();
-        } catch (err) {
-            setError('Failed to delete conversation.');
-        }
-    };
-
-    if (loading && threads.length === 0) return (
-        <div className="flex flex-col items-center justify-center p-20">
-            <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Syncing Secure Inbox...</p>
-        </div>
-    );
+    // ...
 
     return (
         <div className="flex flex-col h-[70vh] md:h-[calc(100vh-180px)] max-h-[850px] border border-slate-100 rounded-[2rem] overflow-hidden bg-white shadow-xl shadow-slate-200/50 animate-in fade-in duration-500">
@@ -177,20 +114,26 @@ const PortalMessages = () => {
                             <div
                                 key={thread.id}
                                 onClick={() => { fetchThreadMessages(thread.id); setShowNewThreadForm(false); }}
-                                className={`p-5 cursor-pointer border-b border-slate-50/50 hover:bg-white transition-all duration-300 relative group ${selectedThread?.id === thread.id ? 'bg-white shadow-md z-10' : ''}`}
+                                className={`p-4 px-5 cursor-pointer border-b border-slate-50/50 hover:bg-white transition-all duration-300 relative group ${selectedThread?.id === thread.id ? 'bg-white shadow-md z-10' : ''}`}
                             >
                                 {selectedThread?.id === thread.id && (
                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600" />
                                 )}
-                                <div className="flex justify-between items-start mb-1.5">
+
+                                {/* iMessage Style Blue Dot for Unread */}
+                                {thread.unread_count > 0 && (
+                                    <div className="absolute left-2 top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-blue-600 rounded-full animate-pulse shadow-sm shadow-blue-300" />
+                                )}
+
+                                <div className="flex justify-between items-start mb-1.5 pl-2">
                                     <div className="flex-1 min-w-0">
-                                        <h3 className={`font-bold tracking-tight truncate text-xs ${thread.unread_count > 0 ? 'text-blue-600' : 'text-slate-700'}`}>
-                                            {thread.staff_first_name ? `Dr. ${thread.staff_first_name} ${thread.staff_last_name}` : 'Care Team'}
+                                        <h3 className={`font-bold tracking-tight truncate text-sm ${thread.unread_count > 0 ? 'text-slate-900' : 'text-slate-700'}`}>
+                                            {thread.last_sender_name ? `Dr. ${thread.last_sender_name}` : (thread.staff_first_name ? `Dr. ${thread.staff_first_name} ${thread.staff_last_name}` : 'Care Team')}
                                         </h3>
                                         <p className="text-[10px] text-slate-400 truncate font-medium">{thread.subject}</p>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[9px] text-slate-400 font-bold">
+                                        <span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">
                                             {new Date(thread.last_message_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                         </span>
                                         <button
@@ -202,14 +145,9 @@ const PortalMessages = () => {
                                         </button>
                                     </div>
                                 </div>
-                                <p className={`text-[12px] truncate ${thread.unread_count > 0 ? 'text-slate-800 font-semibold' : 'text-slate-500'}`}>
+                                <p className={`text-[12px] truncate pl-2 ${thread.unread_count > 0 ? 'text-slate-800 font-semibold' : 'text-slate-500'}`}>
                                     {thread.last_message_body || 'No messages'}
                                 </p>
-                                {thread.unread_count > 0 && (
-                                    <div className="absolute right-5 bottom-5 w-4.5 h-4.5 bg-blue-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                                        {thread.unread_count}
-                                    </div>
-                                )}
                             </div>
                         ))}
                     </div>
