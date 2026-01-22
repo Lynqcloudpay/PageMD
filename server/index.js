@@ -269,6 +269,9 @@ app.use('/api/patient-flags', patientFlagsRoutes);
 // Support
 app.use('/api/support', require('./routes/support'));
 
+// Telehealth (Daily.co video conferencing)
+app.use('/api/telehealth', require('./routes/telehealth'));
+
 // Sales inquiries (public - no auth required)
 app.use('/api/sales', require('./routes/sales'));
 

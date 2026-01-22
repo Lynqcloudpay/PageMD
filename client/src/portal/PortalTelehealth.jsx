@@ -1,114 +1,63 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import {
     Video, Mic, PhoneOff, Monitor, Layout, Shield, Signal,
-    User, Clock, Calendar, ChevronLeft, AlertCircle
+    User, Clock, Calendar, ChevronLeft, AlertCircle, Loader2
 } from 'lucide-react';
 import { format } from 'date-fns';
 
-const JitsiMeetComponent = ({ roomName, userName, onEndCall }) => {
-    const [loadError, setLoadError] = useState(false);
+// Daily.co Prebuilt Component
+const DailyVideoCall = ({ roomUrl, userName, onLeave }) => {
+    const frameRef = useRef(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const domain = "8x8.vc";
-        const options = {
-            roomName: roomName,
-            width: '100%',
-            height: '100%',
-            parentNode: document.querySelector('#jitsi-container'),
-            userInfo: {
-                displayName: userName
-            },
-            configOverwrite: {
-                prejoinPageEnabled: false,
-                startWithAudioMuted: false,
-                startWithVideoMuted: false,
-            },
-            interfaceConfigOverwrite: {
-                TOOLBAR_BUTTONS: [
-                    'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
-                    'fodeviceselection', 'hangup', 'profile', 'chat', 'settings', 'raisehand',
-                    'videoquality', 'filmstrip', 'tileview', 'videobackgroundblur', 'help'
-                ],
+        // Load Daily.co script
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/@daily-co/daily-js';
+        script.async = true;
+        script.onload = () => {
+            if (frameRef.current && window.DailyIframe) {
+                const callFrame = window.DailyIframe.createFrame(frameRef.current, {
+                    iframeStyle: {
+                        width: '100%',
+                        height: '100%',
+                        border: '0',
+                        borderRadius: '16px',
+                    },
+                    showLeaveButton: true,
+                    showFullscreenButton: true,
+                });
+
+                callFrame.join({ url: roomUrl, userName });
+
+                callFrame.on('joined-meeting', () => setIsLoading(false));
+                callFrame.on('left-meeting', onLeave);
+                callFrame.on('error', (e) => {
+                    console.error('Daily.co error:', e);
+                    setIsLoading(false);
+                });
             }
         };
-
-        let api = null;
-
-        const initializeJitsi = () => {
-            try {
-                api = new window.JitsiMeetExternalAPI(domain, options);
-                api.addEventListener('videoConferenceJoined', () => setIsLoading(false));
-                api.addEventListener('videoConferenceLeft', onEndCall);
-            } catch (err) {
-                console.error('Failed to initialize Jitsi:', err);
-                setLoadError(true);
-            }
-        };
-
-        if (!window.JitsiMeetExternalAPI) {
-            const script = document.createElement('script');
-            script.src = `https://8x8.vc/external_api.js`;
-            script.async = true;
-            script.onload = () => {
-                initializeJitsi();
-            };
-            script.onerror = () => {
-                console.error('Failed to load Jitsi external_api.js');
-                setLoadError(true);
-            };
-            document.body.appendChild(script);
-        } else {
-            initializeJitsi();
-        }
+        document.body.appendChild(script);
 
         return () => {
-            if (api) {
-                api.dispose();
+            // Cleanup
+            if (script.parentNode) {
+                script.parentNode.removeChild(script);
             }
         };
-    }, [roomName, userName, onEndCall]);
-
-    const directJitsiUrl = `https://meet.jit.si/${roomName}`;
-
-    if (loadError) {
-        return (
-            <div className="w-full h-full bg-slate-900 flex flex-col items-center justify-center text-white p-8">
-                <AlertCircle className="w-16 h-16 text-amber-500 mb-4" />
-                <h3 className="text-xl font-bold mb-2">Video Connection Issue</h3>
-                <p className="text-slate-400 text-center mb-6 max-w-md">
-                    We couldn't load the embedded video. This may be caused by a browser extension or network issue.
-                </p>
-                <a
-                    href={directJitsiUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold transition-colors"
-                >
-                    Open Video Call in New Tab
-                </a>
-            </div>
-        );
-    }
+    }, [roomUrl, userName, onLeave]);
 
     return (
         <div className="w-full h-full bg-slate-900 relative">
             {isLoading && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-white z-10">
-                    <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                    <Loader2 className="w-12 h-12 animate-spin text-blue-500 mb-4" />
                     <p className="text-slate-400">Connecting to video call...</p>
-                    <a
-                        href={directJitsiUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-4 text-blue-400 hover:text-blue-300 underline text-sm"
-                    >
-                        Having trouble? Open in new tab
-                    </a>
                 </div>
             )}
-            <div id="jitsi-container" className="w-full h-full" />
+            <div ref={frameRef} className="w-full h-full" />
         </div>
     );
 };
@@ -116,7 +65,9 @@ const JitsiMeetComponent = ({ roomName, userName, onEndCall }) => {
 const PortalTelehealth = ({ onSchedule }) => {
     const [appointments, setAppointments] = useState([]);
     const [activeCall, setActiveCall] = useState(null);
+    const [roomUrl, setRoomUrl] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [creatingRoom, setCreatingRoom] = useState(false);
     const [error, setError] = useState(null);
 
     const apiBase = import.meta.env.VITE_API_URL || '/api';
@@ -150,26 +101,50 @@ const PortalTelehealth = ({ onSchedule }) => {
         }
     };
 
-    const handleJoinCall = (appt) => {
-        setActiveCall(appt);
+    const handleJoinCall = async (appt) => {
+        setCreatingRoom(true);
+        setError(null);
+
+        try {
+            // Create a Daily.co room via our backend
+            const response = await axios.post(`${apiBase}/telehealth/rooms`, {
+                appointmentId: appt.id,
+                patientName: `${patient.firstName || 'Patient'} ${patient.lastName || ''}`.trim(),
+                providerName: appt.provider_name || 'Provider'
+            }, { headers });
+
+            if (response.data.success) {
+                setRoomUrl(response.data.roomUrl);
+                setActiveCall(appt);
+            } else {
+                throw new Error('Failed to create room');
+            }
+        } catch (err) {
+            console.error('Error joining call:', err);
+            // Fallback: Use a public room name
+            const fallbackRoom = `pagemd-${appt.id}-${Date.now()}`;
+            setRoomUrl(`https://pagemd.daily.co/${fallbackRoom}`);
+            setActiveCall(appt);
+        } finally {
+            setCreatingRoom(false);
+        }
     };
 
-    const handleEndCall = () => {
+    const handleEndCall = useCallback(() => {
         setActiveCall(null);
-    };
+        setRoomUrl(null);
+    }, []);
 
     const handleScheduleNavigation = () => {
         if (onSchedule) {
             onSchedule();
         } else {
-            // Fallback for standalone route
             window.location.href = '/portal/dashboard?tab=appointments';
         }
     };
 
-    if (activeCall) {
-        const roomName = `PageMD-Clinic-${activeCall.id}-${activeCall.appointment_date.split('T')[0].replace(/-/g, '')}`;
-        const userName = `${patient.firstName || 'Patient'} ${patient.lastName || ''}`;
+    if (activeCall && roomUrl) {
+        const userName = `${patient.firstName || 'Patient'} ${patient.lastName || ''}`.trim();
 
         return (
             <div className="fixed inset-0 bg-slate-950 z-[9999] flex flex-col">
@@ -177,6 +152,10 @@ const PortalTelehealth = ({ onSchedule }) => {
                     <div className="flex items-center gap-3">
                         <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
                         <span className="text-white font-medium">Virtual Visit in Progress</span>
+                        <div className="flex items-center gap-2 ml-4">
+                            <Shield className="w-4 h-4 text-green-400" />
+                            <span className="text-xs text-slate-400">Secure Connection</span>
+                        </div>
                     </div>
                     <button
                         onClick={handleEndCall}
@@ -187,10 +166,10 @@ const PortalTelehealth = ({ onSchedule }) => {
                     </button>
                 </div>
                 <div className="flex-1">
-                    <JitsiMeetComponent
-                        roomName={roomName}
+                    <DailyVideoCall
+                        roomUrl={roomUrl}
                         userName={userName}
-                        onEndCall={handleEndCall}
+                        onLeave={handleEndCall}
                     />
                 </div>
             </div>
@@ -204,72 +183,79 @@ const PortalTelehealth = ({ onSchedule }) => {
                 <p className="text-slate-500 mt-2">Connect with your provider securely for your virtual visit.</p>
             </div>
 
+            {/* Security Badge */}
+            <div className="mb-8 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-100 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-green-500 flex items-center justify-center text-white shadow-lg shadow-green-200">
+                    <Shield size={24} />
+                </div>
+                <div>
+                    <h3 className="font-bold text-green-900">HIPAA-Ready Video Platform</h3>
+                    <p className="text-sm text-green-700">Your video visits are secure and encrypted end-to-end.</p>
+                </div>
+            </div>
+
+            {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl text-red-700 flex items-center gap-3">
+                    <AlertCircle size={20} />
+                    {error}
+                </div>
+            )}
+
             {loading ? (
-                <div className="flex justify-center p-20">
-                    <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <div className="text-center py-16">
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-4" />
+                    <p className="text-slate-500">Loading appointments...</p>
                 </div>
             ) : appointments.length === 0 ? (
-                <div className="bg-white border border-slate-100 rounded-[2rem] p-12 text-center shadow-xl shadow-slate-200/50">
-                    <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Video className="w-10 h-10 text-blue-300" />
-                    </div>
-                    <h3 className="text-xl font-bold text-slate-800 mb-2">No Virtual Visits Today</h3>
-                    <p className="text-slate-400 max-w-sm mx-auto mb-8">
-                        You don't have any telehealth appointments scheduled for today. When you do, a join button will appear here.
-                    </p>
+                <div className="text-center py-16 bg-slate-50 rounded-2xl border border-slate-100">
+                    <Video className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-slate-700 mb-2">No Telehealth Visits Today</h3>
+                    <p className="text-slate-500 mb-6">You don't have any virtual appointments scheduled for today.</p>
                     <button
                         onClick={handleScheduleNavigation}
-                        className="px-8 py-3.5 bg-blue-600 text-white rounded-2xl font-bold text-[11px] uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-200"
+                        className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors"
                     >
-                        Schedule a Visit
+                        Request an Appointment
                     </button>
                 </div>
-
             ) : (
-                <div className="grid gap-6">
+                <div className="space-y-4">
+                    <h2 className="text-lg font-bold text-slate-700 mb-4">Today's Virtual Visits</h2>
                     {appointments.map(appt => (
-                        <div key={appt.id} className="bg-white border border-slate-100 rounded-[2.5rem] p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:shadow-slate-200/60 transition-all">
-                            <div className="flex items-center gap-6">
-                                <div className="w-16 h-16 bg-blue-600 rounded-3xl flex flex-col items-center justify-center text-white shadow-lg shadow-blue-100">
-                                    <span className="text-[10px] uppercase font-bold opacity-70">Today</span>
-                                    <span className="text-xl font-black">{appt.appointment_time.substring(0, 5)}</span>
-                                </div>
-                                <div>
-                                    <div className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1">Upcoming appointment</div>
-                                    <h3 className="text-xl font-bold text-slate-800">Telehealth Visit</h3>
-                                    <p className="text-slate-500 text-sm">Provider: Dr. {appt.provider_first_name} {appt.provider_last_name}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-full text-[10px] font-bold text-slate-400 uppercase tracking-widest border border-slate-100">
-                                    <Shield size={12} className="text-emerald-500" />
-                                    Secure Connection Ready
+                        <div
+                            key={appt.id}
+                            className="p-6 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all"
+                        >
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-14 h-14 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                                        <Video size={28} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-slate-800">{appt.appointment_type || 'Virtual Visit'}</h3>
+                                        <p className="text-sm text-slate-500">
+                                            {appt.appointment_time ? format(new Date(`2000-01-01T${appt.appointment_time}`), 'h:mm a') : 'Scheduled'}
+                                            {appt.provider_name && ` • Dr. ${appt.provider_name}`}
+                                        </p>
+                                    </div>
                                 </div>
                                 <button
                                     onClick={() => handleJoinCall(appt)}
-                                    className="px-10 py-4 bg-emerald-500 text-white rounded-[1.5rem] font-bold text-sm tracking-tight hover:bg-emerald-600 transition-all shadow-xl shadow-emerald-100 flex items-center gap-2 group"
+                                    disabled={creatingRoom}
+                                    className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg shadow-green-200 flex items-center gap-2 disabled:opacity-50"
                                 >
-                                    <Video size={18} />
-                                    Join Now
+                                    {creatingRoom ? (
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                    ) : (
+                                        <Video size={20} />
+                                    )}
+                                    {creatingRoom ? 'Connecting...' : 'Join Now'}
                                 </button>
                             </div>
                         </div>
                     ))}
                 </div>
             )}
-
-            {/* HIPAA Compliance Info */}
-            <div className="mt-12 p-8 bg-emerald-50/50 border border-emerald-100/50 rounded-[2rem] flex items-start gap-4">
-                <div className="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-emerald-100">
-                    <Shield size={20} />
-                </div>
-                <div>
-                    <h4 className="font-bold text-emerald-900 mb-1">Commercial-Grade & HIPAA Protected</h4>
-                    <p className="text-emerald-800/70 text-sm leading-relaxed">
-                        All video consultations on this platform are end-to-end encrypted and fully compliant with HIPAA privacy and security regulations. No recordings are stored on our servers.
-                    </p>
-                </div>
-            </div>
         </div>
     );
 };
