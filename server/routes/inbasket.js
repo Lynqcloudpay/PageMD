@@ -702,6 +702,15 @@ router.post('/:id/notes', async (req, res) => {
           // New support
           threadId = item.reference_id;
         }
+
+        // Validate thread exists
+        if (threadId) {
+          const threadCheck = await client.query('SELECT id FROM portal_message_threads WHERE id = $1', [threadId]);
+          if (threadCheck.rows.length === 0) {
+            console.warn(`Thread ${threadId} not found for inbox item ${id}. Skipping portal sync.`);
+            threadId = null; // Prevent FK violation
+          }
+        }
       } else if (item.type === 'portal_appointment') {
         // Find or create an appointment thread for this patient
         const existingThread = await client.query(
