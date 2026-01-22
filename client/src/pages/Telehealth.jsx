@@ -13,8 +13,8 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import PatientChartPanel from '../components/PatientChartPanel';
 import Modal from '../components/ui/Modal';
-import DiagnosisPicker from '../components/DiagnosisPicker';
-import OrderPicker from '../components/OrderPicker';
+import { OrderModal } from '../components/ActionModals';
+import { icd10API } from '../services/api';
 
 // Daily.co Video Component
 const DailyVideoCall = ({ roomUrl, userName, onLeave }) => {
@@ -149,8 +149,13 @@ const Telehealth = () => {
   const [patientChartTab, setPatientChartTab] = useState('overview');
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showDiagnosisPicker, setShowDiagnosisPicker] = useState(false);
-  const [showOrderPicker, setShowOrderPicker] = useState(false);
-  const [orderPickerType, setOrderPickerType] = useState(null);
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [orderModalTab, setOrderModalTab] = useState('labs');
+
+  // ICD10 Search State
+  const [icd10Search, setIcd10Search] = useState('');
+  const [icd10Results, setIcd10Results] = useState([]);
+  const [showIcd10Search, setShowIcd10Search] = useState(false);
 
   const isLocked = activeEncounter?.status === 'signed';
 
@@ -240,7 +245,6 @@ const Telehealth = () => {
   }, [activeCall]);
 
   // --- NEW: Persistence Effects ---
-  // When a call starts, load drafts (notes + orders + avs)
   useEffect(() => {
     if (!activeCall?.id) return;
 
@@ -248,9 +252,41 @@ const Telehealth = () => {
     if (cached?.note) setNote(cached.note);
     if (cached?.pendedOrders) setPendedOrders(cached.pendedOrders);
     if (cached?.avs) setAvs(cached.avs);
+  }, [activeCall?.id]);
 
-    // Default tab
-    setActiveTab('note');
+  // ICD10 Search Effect
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (icd10Search.trim().length >= 2) {
+        try {
+          const res = await icd10API.search(icd10Search);
+          setIcd10Results(res.data || []);
+        } catch (err) {
+          console.error("ICD10 search failed", err);
+        }
+      } else {
+        setIcd10Results([]);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [icd10Search]);
+
+  const handleAddDiagnosis = (code) => {
+    const codeStr = `${code.code} - ${code.description}`;
+    const currentDx = note.dx.split(',').filter(Boolean).map(c => c.trim());
+    if (!currentDx.includes(codeStr)) {
+      setNote(n => ({ ...n, dx: [...currentDx, codeStr].join(', ') }));
+    }
+    setIcd10Search('');
+    setIcd10Results([]);
+    setShowIcd10Search(false);
+  };
+
+  // When call starts, ensure we're on the Note tab
+  useEffect(() => {
+    if (activeCall) {
+      setActiveTab('note');
+    }
   }, [activeCall?.id]);
 
   // Autosave drafts (debounced)
@@ -720,18 +756,55 @@ const Telehealth = () => {
                     </div>
 
                     <div>
-                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block mb-1.5 ml-1">Diagnoses</label>
-                      <DiagnosisPicker
-                        selectedCodes={note.dx.split(',').filter(Boolean).map(c => ({ code: c.trim() }))}
-                        onSelect={(code) => {
-                          const current = note.dx.split(',').filter(Boolean).map(c => c.trim());
-                          if (!current.includes(code.code)) {
-                            setNote(n => ({ ...n, dx: [...current, code.code].join(', ') }));
-                          }
-                          setShowDiagnosisPicker(false);
-                        }}
-                        onClose={() => setShowDiagnosisPicker(false)}
-                      />
+                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block mb-1.5 ml-1">Assessments (Diagnoses)</label>
+                      <div className="relative mb-2">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                        <input
+                          type="text"
+                          value={icd10Search}
+                          onChange={(e) => {
+                            setIcd10Search(e.target.value);
+                            setShowIcd10Search(true);
+                          }}
+                          placeholder="Search ICD-10..."
+                          className="w-full bg-gray-800/50 border border-white/10 rounded-xl pl-8 pr-3 py-2 text-white text-xs focus:ring-1 focus:ring-blue-500 outline-none"
+                        />
+                        {showIcd10Search && icd10Results.length > 0 && (
+                          <div className="absolute z-20 left-0 right-0 mt-1 bg-gray-900 border border-white/10 rounded-xl shadow-2xl max-h-60 overflow-y-auto">
+                            {icd10Results.map(res => (
+                              <button
+                                key={res.code}
+                                onClick={() => handleAddDiagnosis(res)}
+                                className="w-full text-left p-3 border-b border-white/5 hover:bg-white/5 transition-colors"
+                              >
+                                <p className="text-blue-400 text-xs font-bold leading-none mb-1">{res.code}</p>
+                                <p className="text-gray-300 text-[10px] leading-tight">{res.description}</p>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {note.dx ? (
+                        <div className="p-3 bg-gray-800/80 border border-white/5 rounded-xl space-y-2">
+                          {note.dx.split(',').filter(Boolean).map((d, i) => (
+                            <div key={i} className="flex items-start justify-between gap-2 group">
+                              <span className="text-xs text-gray-200 leading-tight">{d.trim()}</span>
+                              <button
+                                onClick={() => {
+                                  const current = note.dx.split(',').filter(Boolean).map(c => c.trim());
+                                  setNote(n => ({ ...n, dx: current.filter((_, idx) => idx !== i).join(', ') }));
+                                }}
+                                className="text-gray-500 hover:text-red-400 transition-colors"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-gray-500 italic ml-1 font-medium">No diagnoses added yet.</p>
+                      )}
                     </div>
                   </div>
 
@@ -755,98 +828,94 @@ const Telehealth = () => {
               )}
 
               {activeTab === 'orders' && (
-                <div className="space-y-3">
-                  <h3 className="text-white font-semibold text-sm uppercase tracking-wider">ORDERS</h3>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5 disabled:opacity-50"
-                      disabled={isLocked}
-                      onClick={() => {
-                        const text = prompt('Add Lab Order (e.g., CBC, CMP, A1c):');
-                        if (text) addOrder('lab', text);
-                      }}
-                    >
-                      + Lab
-                    </button>
-                    <button
-                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5 disabled:opacity-50"
-                      disabled={isLocked}
-                      onClick={() => {
-                        const text = prompt('Add Imaging Order (e.g., XR Chest, CT Abdomen):');
-                        if (text) addOrder('imaging', text);
-                      }}
-                    >
-                      + Imaging
-                    </button>
-                    <button
-                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5 disabled:opacity-50"
-                      disabled={isLocked}
-                      onClick={() => {
-                        const text = prompt('Add Medication (e.g., Amoxicillin 500mg BID x7d):');
-                        if (text) addOrder('med', text);
-                      }}
-                    >
-                      + Medication
-                    </button>
-                    <button
-                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5 disabled:opacity-50"
-                      disabled={isLocked}
-                      onClick={() => {
-                        const text = prompt('Add Referral (e.g., Cardiology):');
-                        if (text) addOrder('referral', text);
-                      }}
-                    >
-                      + Referral
-                    </button>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-white font-semibold text-sm uppercase tracking-wider">ORDERS</h3>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { setOrderModalTab('labs'); setShowOrderModal(true); }}
+                        className="bg-blue-600/20 text-blue-400 px-3 py-1.5 rounded-lg border border-blue-500/20 hover:bg-blue-600/30 transition-all text-[10px] font-bold uppercase tracking-wider"
+                      >
+                        + Lab/Img
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: 'labs', label: 'Labs/Img', icon: Activity, tab: 'labs' },
+                      { id: 'meds', label: 'Meds', icon: Pill, tab: 'medications' },
+                      { id: 'referrals', label: 'Referrals', icon: User, tab: 'referrals' },
+                      { id: 'procs', label: 'Procedures', icon: Settings, tab: 'procedures' },
+                    ].map(x => (
+                      <button
+                        key={x.id}
+                        className="p-3 bg-gray-800 hover:bg-gray-700 rounded-xl text-left border border-white/5 transition-all group"
+                        onClick={() => {
+                          setOrderModalTab(x.tab);
+                          setShowOrderModal(true);
+                        }}
+                      >
+                        <div className="bg-white/5 p-1.5 rounded-lg w-fit mb-2 group-hover:bg-white/10 transition-colors">
+                          <x.icon className="w-3.5 h-3.5 text-gray-400" />
+                        </div>
+                        <p className="text-white text-[10px] font-bold uppercase tracking-wider">{x.label}</p>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="space-y-2 mt-4">
+                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest ml-1">Pended Orders</p>
                     {pendedOrders.length === 0 ? (
-                      <div className="text-gray-500 text-sm p-3 bg-gray-800 rounded-xl border border-white/5">
-                        No orders yet. Add orders while you talk, then sign at close-out.
+                      <div className="p-4 bg-gray-800/50 border border-dashed border-white/10 rounded-xl text-center">
+                        <p className="text-[10px] text-gray-500 font-medium">No orders pended.</p>
                       </div>
                     ) : (
                       pendedOrders.map(o => (
-                        <div key={o.id} className="p-3 bg-gray-800 rounded-xl border border-white/5 flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-white text-sm font-semibold capitalize">{o.type}</p>
-                            <p className="text-gray-300 text-sm">{o.text}</p>
-                            <p className="text-gray-500 text-xs mt-1">Status: {o.status}</p>
+                        <div key={o.id} className="p-3 bg-gray-800 rounded-xl border border-white/5 flex items-start justify-between gap-3 group">
+                          <div className="flex-1">
+                            <p className="text-white text-xs font-bold capitalize">{o.type}</p>
+                            <p className="text-gray-400 text-[11px] leading-tight mt-0.5">{o.text}</p>
+                            <div className="mt-2 flex items-center gap-2">
+                              <span className={`w-1.5 h-1.5 rounded-full ${o.status === 'signed' ? 'bg-green-500' : 'bg-amber-500'}`} />
+                              <span className="text-[9px] text-gray-500 uppercase font-black tracking-tighter">{o.status}</span>
+                            </div>
                           </div>
                           <button
-                            className="text-xs text-red-400 hover:text-red-300 disabled:opacity-50"
+                            className="text-gray-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 p-1"
                             onClick={() => setPendedOrders(prev => prev.filter(x => x.id !== o.id))}
                             disabled={isLocked}
                           >
-                            Remove
+                            <X className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       ))
                     )}
                   </div>
 
-                  <button
-                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold disabled:opacity-50"
-                    onClick={async () => {
-                      if (!activeEncounter) return;
-                      try {
-                        for (let o of pendedOrders) {
-                          if (o.status === 'pending' || o.status === 'pended') {
-                            await api.patch(`/clinical_orders/${o.id}/sign`);
+                  {pendedOrders.length > 0 && (
+                    <button
+                      className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-900/20 text-sm disabled:opacity-50 mt-4"
+                      onClick={async () => {
+                        if (!activeEncounter) return;
+                        try {
+                          for (let o of pendedOrders) {
+                            if (o.status === 'pending' || o.status === 'pended') {
+                              await api.patch(`/clinical_orders/${o.id}/sign`);
+                            }
                           }
+                          setPendedOrders(prev => prev.map(o => ({ ...o, status: 'signed' })));
+                          alert('Orders signed and sent.');
+                        } catch (err) {
+                          console.error('Error signing orders:', err);
+                          alert('Failed to sign some orders.');
                         }
-                        setPendedOrders(prev => prev.map(o => ({ ...o, status: 'signed' })));
-                        alert('Orders marked as signed.');
-                      } catch (err) {
-                        console.error('Error signing orders:', err);
-                        alert('Failed to sign orders.');
-                      }
-                    }}
-                    disabled={pendedOrders.length === 0 || isLocked}
-                  >
-                    Sign Orders
-                  </button>
+                      }}
+                      disabled={isLocked || !pendedOrders.some(o => o.status !== 'signed')}
+                    >
+                      Sign {pendedOrders.filter(o => o.status !== 'signed').length} Orders
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -970,20 +1039,31 @@ const Telehealth = () => {
           </div>
         )}
 
-        {showOrderPicker && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <OrderPicker
-              type={orderPickerType}
-              visitId={activeEncounter?.id}
-              patientId={activeEncounter?.patient_id}
-              onSelect={(order) => {
-                addOrder(order.type.toLowerCase(), order.name);
-                setShowOrderPicker(false);
-              }}
-              onClose={() => setShowOrderPicker(false)}
-            />
-          </div>
-        )}
+        {/* --- ORDER MODAL (COMPREHENSIVE) --- */}
+        <OrderModal
+          isOpen={showOrderModal}
+          onClose={() => setShowOrderModal(false)}
+          initialTab={orderModalTab}
+          diagnoses={note.dx.split(',').filter(Boolean).map(d => d.trim())}
+          patientId={activeCall?.patientId}
+          visitId={activeEncounter?.id}
+          onSave={(updatedPlanStructured) => {
+            // Convert structured plan to pended orders if needed, or just sync
+            updatedPlanStructured.forEach(group => {
+              (group.orders || []).forEach(orderText => {
+                // Determine type from orderText
+                let type = 'other';
+                if (orderText.startsWith('Lab:')) type = 'lab';
+                else if (orderText.startsWith('Imaging:')) type = 'imaging';
+                else if (orderText.startsWith('Referral:')) type = 'referral';
+                else if (orderText.startsWith('Prescription:')) type = 'medication';
+
+                addOrder(type, orderText);
+              });
+            });
+            setShowOrderModal(false);
+          }}
+        />
       </div>
     );
   }
