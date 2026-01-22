@@ -1199,7 +1199,12 @@ const Telehealth = () => {
                   ) : (
                     <Video size={20} />
                   )}
-                  {creatingRoom ? 'Connecting...' : 'Start Call'}
+                  {creatingRoom
+                    ? 'Connecting...'
+                    : (appt.status === 'in_progress' || appt.status === 'arrived')
+                      ? 'Resume Visit'
+                      : 'Start Call'
+                  }
                 </Button>
               </div>
             </Card>
