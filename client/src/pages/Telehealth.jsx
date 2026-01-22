@@ -293,8 +293,8 @@ const Telehealth = () => {
           updatedAt: new Date().toISOString(),
         })
       );
-      // Also try server save if encounter active
-      if (activeEncounter) handleSaveDraft();
+      // Also try server save if encounter active and not signed
+      if (activeEncounter && activeEncounter.status !== 'signed') handleSaveDraft();
     }, 1000); // 1s debounce
 
     return () => clearTimeout(t);
