@@ -419,7 +419,7 @@ const Telehealth = () => {
     }
   };
 
-  const handleEndCall = useCallback(async () => {
+  const handleCloseWorkspace = useCallback(async () => {
     setActiveCall(null);
     setRoomUrl(null);
     setDuration(0);
@@ -432,6 +432,7 @@ const Telehealth = () => {
       results: '',
       assessment: '',
       plan: '',
+      planNarrative: '',
       dx: '',
       planStructured: [],
     });
@@ -441,6 +442,12 @@ const Telehealth = () => {
       followUp: '',
       returnPrecautions: '',
     });
+  }, []);
+
+  const handleEndCall = useCallback(() => {
+    setRoomUrl(null);
+    setCreatingRoom(false);
+    // Don't clear activeCall/Encounter/Note
   }, []);
 
   const handleSaveDraft = async () => {
@@ -488,8 +495,8 @@ const Telehealth = () => {
   const handleFinalizeVisit = async () => {
     if (!activeEncounter) return;
     if (isLocked) {
-      if (window.confirm("Visit is already signed. Would you like to end the call?")) {
-        handleEndCall();
+      if (window.confirm("Visit is already signed. Would you like to close the workspace?")) {
+        handleCloseWorkspace();
       }
       return;
     }
@@ -520,7 +527,8 @@ const Telehealth = () => {
       localStorage.removeItem(storageKeyFor(activeCall.id));
 
       alert('Visit finalized and pushed to record!');
-      handleEndCall();
+      alert('Visit finalized and pushed to record!');
+      handleCloseWorkspace();
     } catch (err) {
       console.error('Error finalizing visit:', err);
       alert('Failed to finalize visit. Please ensure all required fields are complete.');
@@ -534,10 +542,10 @@ const Telehealth = () => {
   };
 
   // --- ACTIVE CALL VIEW ---
-  if (activeCall && roomUrl) {
+  if (activeCall) {
     return (
       <div className="flex h-[calc(100vh-64px)] bg-slate-50 overflow-hidden relative">
-        {/* Main Video Stage */}
+        {/* Main Video Stage OR Placeholder */}
         <div className={`flex-1 flex flex-col relative transition-all duration-300`}>
 
           {/* Header Overlay */}
@@ -557,26 +565,54 @@ const Telehealth = () => {
             </div>
           </div>
 
-          {/* Daily.co Video */}
+          {/* Daily.co Video or Call Ended Placeholder */}
           <div className="flex-1 flex items-center justify-center p-4">
-            <div className="relative w-full h-full bg-slate-100 rounded-2xl overflow-hidden shadow-sm border border-slate-200">
-              <DailyVideoCall
-                roomUrl={roomUrl}
-                userName={providerName}
-                onLeave={handleEndCall}
-              />
-            </div>
+            {roomUrl ? (
+              <div className="relative w-full h-full bg-slate-100 rounded-2xl overflow-hidden shadow-sm border border-slate-200">
+                <DailyVideoCall
+                  roomUrl={roomUrl}
+                  userName={providerName}
+                  onLeave={handleEndCall}
+                />
+              </div>
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100/50 rounded-2xl border border-dashed border-slate-200 p-8 text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center">
+                  <PhoneOff className="w-8 h-8 text-slate-400" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-xl font-bold text-slate-700">Call Ended</h3>
+                  <p className="text-slate-500 max-w-sm mx-auto">The video connection has been terminated. You can simply continue documenting and finalize the visit when ready.</p>
+                </div>
+                <button
+                  onClick={handleCloseWorkspace}
+                  className="px-6 py-2 bg-white border border-slate-300 rounded-lg text-slate-600 font-semibold hover:bg-slate-50 transition-colors shadow-sm"
+                >
+                  Close Workspace
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Control Bar */}
           <div className="h-20 bg-white border-t border-slate-200 flex items-center justify-center gap-6 px-8 z-20 shadow-sm">
-            <button
-              onClick={handleEndCall}
-              className="p-4 rounded-full bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-900/20 transform hover:scale-105 transition-all duration-200 flex items-center gap-2 px-8"
-            >
-              <PhoneOff className="w-5 h-5" />
-              <span className="font-bold text-sm">End Call</span>
-            </button>
+            {roomUrl ? (
+              <button
+                onClick={handleEndCall}
+                className="p-4 rounded-full bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-900/20 transform hover:scale-105 transition-all duration-200 flex items-center gap-2 px-8"
+              >
+                <PhoneOff className="w-5 h-5" />
+                <span className="font-bold text-sm">End Call</span>
+              </button>
+            ) : (
+              <button
+                onClick={handleCloseWorkspace}
+                className="p-4 rounded-full bg-slate-800 text-white hover:bg-slate-700 shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center gap-2 px-8"
+              >
+                <X className="w-5 h-5" />
+                <span className="font-bold text-sm">Close Workspace</span>
+              </button>
+            )}
 
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
