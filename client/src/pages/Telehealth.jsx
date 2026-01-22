@@ -999,17 +999,17 @@ const Telehealth = () => {
             </div>
 
             {/* Sidebar Footer Actions */}
-            <div className="p-4 border-t border-white/10 space-y-2">
+            <div className="p-4 border-t border-slate-100 bg-slate-50/50 space-y-2">
               <button
                 onClick={handleSaveDraft}
-                className="w-full py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-semibold transition-colors border border-white/5 disabled:opacity-50"
+                className="w-full py-3 bg-white hover:bg-slate-50 text-slate-700 rounded-xl font-semibold transition-colors border border-slate-200 shadow-sm disabled:opacity-50"
                 disabled={isLocked}
               >
                 Save Draft
               </button>
               <button
                 onClick={handleFinalizeVisit}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors disabled:opacity-50"
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors shadow-lg shadow-blue-900/10 disabled:opacity-50"
                 disabled={isLocked}
               >
                 {isLocked ? 'Visit Signed' : 'Finalize Visit'}
