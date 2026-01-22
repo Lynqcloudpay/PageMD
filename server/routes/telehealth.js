@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { requireAuth } = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth');
 
 // Daily.co API configuration
 const DAILY_API_KEY = process.env.DAILY_API_KEY;
 const DAILY_API_URL = 'https://api.daily.co/v1';
 
 // Create a telehealth room
-router.post('/rooms', requireAuth, async (req, res) => {
+router.post('/rooms', authenticate, async (req, res) => {
     try {
         const { appointmentId, patientName, providerName } = req.body;
 
@@ -68,7 +68,7 @@ router.post('/rooms', requireAuth, async (req, res) => {
 });
 
 // Get room info
-router.get('/rooms/:roomName', requireAuth, async (req, res) => {
+router.get('/rooms/:roomName', authenticate, async (req, res) => {
     try {
         const { roomName } = req.params;
 
@@ -99,7 +99,7 @@ router.get('/rooms/:roomName', requireAuth, async (req, res) => {
 });
 
 // Delete a room (cleanup)
-router.delete('/rooms/:roomName', requireAuth, async (req, res) => {
+router.delete('/rooms/:roomName', authenticate, async (req, res) => {
     try {
         const { roomName } = req.params;
 

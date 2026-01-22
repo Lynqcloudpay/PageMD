@@ -32,7 +32,7 @@ const PortalDashboard = () => {
     const [activeTab, setActiveTab] = useState('overview'); // overview, messages, appointments, record
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [activeNotifications, setActiveNotifications] = useState([]);
-    const [stats, setStats] = useState({ messages: 0, appointments: 0 });
+    const [stats, setStats] = useState({ messages: 0, appointments: 0, telehealth: 0 });
     const navigate = useNavigate();
 
     const location = useLocation();
