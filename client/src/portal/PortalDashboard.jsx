@@ -141,12 +141,18 @@ const PortalDashboard = () => {
                 }
 
                 // Count telehealth appointments for today
-                const today = new Date().toISOString().split('T')[0];
+                const now = new Date();
                 const telehealthAppts = apptsRes.data.filter(appt => {
                     const type = (appt.appointment_type || '').toLowerCase();
                     const visitMethod = (appt.visit_method || '').toLowerCase();
-                    const date = (appt.appointment_date || '').split('T')[0];
-                    return (type.includes('telehealth') || type.includes('video') || type.includes('virtual') || visitMethod === 'telehealth') && date === today;
+
+                    // Use local date comparison to handle timezones correctly
+                    const apptDate = new Date(appt.appointment_date);
+                    const isToday = apptDate.getDate() === now.getDate() &&
+                        apptDate.getMonth() === now.getMonth() &&
+                        apptDate.getFullYear() === now.getFullYear();
+
+                    return (type.includes('telehealth') || type.includes('video') || type.includes('virtual') || visitMethod === 'telehealth') && isToday;
                 });
 
                 if (telehealthAppts.length > 0) {
