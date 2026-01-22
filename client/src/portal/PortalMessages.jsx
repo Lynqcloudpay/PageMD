@@ -72,11 +72,78 @@ const PortalMessages = () => {
         }
     };
 
-    // ... existing helper functions ...
+    const fetchStaff = async () => {
+        try {
+            const response = await axios.get(`${apiBase}/portal/chart/staff`, { headers });
+            setStaff(response.data);
+        } catch (err) {
+            console.error('Failed to fetch staff list:', err);
+        }
+    };
 
-    // (This part replaces the fetching logic, skipping to valid JSX rendering for thread list)
+    const fetchPatientProfile = async () => {
+        try {
+            const response = await axios.get(`${apiBase}/portal/chart/patient-profile`, { headers });
+            if (response.data.primary_care_provider) {
+                setAssignedUserId(response.data.primary_care_provider);
+            }
+        } catch (err) {
+            console.error('Failed to fetch patient profile:', err);
+        }
+    };
 
-    // ...
+    const handleSendMessage = async (e) => {
+        e.preventDefault();
+        if (!newMessage.trim()) return;
+
+        try {
+            await axios.post(`${apiBase}/portal/messages/threads/${selectedThread.id}`,
+                { body: newMessage },
+                { headers }
+            );
+            setNewMessage('');
+            fetchThreadMessages(selectedThread.id);
+            fetchThreads(true);
+        } catch (err) {
+            setError('Failed to send message.');
+        }
+    };
+
+    const handleCreateThread = async (e) => {
+        e.preventDefault();
+        if (!newThreadSubject.trim() || !newMessage.trim()) return;
+
+        try {
+            const response = await axios.post(`${apiBase}/portal/messages/threads`,
+                { subject: newThreadSubject, body: newMessage, assigned_user_id: assignedUserId || null },
+                { headers }
+            );
+            setNewThreadSubject('');
+            setNewMessage('');
+            setAssignedUserId('');
+            setShowNewThreadForm(false);
+            fetchThreads();
+            fetchThreadMessages(response.data.threadId);
+        } catch (err) {
+            setError('Failed to start new conversation.');
+        }
+    };
+
+    const handleDeleteThread = async (threadId, e) => {
+        e.stopPropagation();
+        if (!window.confirm('Delete this conversation? This cannot be undone.')) return;
+
+        try {
+            await axios.delete(`${apiBase}/portal/messages/threads/${threadId}`, { headers });
+            if (selectedThread?.id === threadId) {
+                setSelectedThread(null);
+                setMessages([]);
+            }
+            fetchThreads();
+        } catch (err) {
+            setError('Failed to delete conversation.');
+        }
+    };
 
     return (
         <div className="flex flex-col h-[70vh] md:h-[calc(100vh-180px)] max-h-[850px] border border-slate-100 rounded-[2rem] overflow-hidden bg-white shadow-xl shadow-slate-200/50 animate-in fade-in duration-500">
