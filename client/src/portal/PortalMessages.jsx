@@ -38,14 +38,14 @@ const PortalMessages = () => {
         fetchPatientProfile();
     }, []);
 
-    // Poll for new messages every 5 seconds
+    // Poll for new messages every 1 second (Real-time feel)
     useEffect(() => {
         const interval = setInterval(() => {
             fetchThreads(true); // true = silent refresh
             if (selectedThread) {
                 fetchThreadMessages(selectedThread.id, true);
             }
-        }, 5000);
+        }, 1000);
         return () => clearInterval(interval);
     }, [selectedThread]);
 

@@ -233,7 +233,7 @@ const PortalDashboard = () => {
         };
 
         fetchNotifications();
-        const interval = setInterval(fetchNotifications, 60000); // Poll every minute
+        const interval = setInterval(fetchNotifications, 2000); // Poll every 2 seconds for live updates
         return () => clearInterval(interval);
     }, []);
 
