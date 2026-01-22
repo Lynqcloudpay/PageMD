@@ -4,7 +4,7 @@ import {
   Monitor, MessageSquare, Users, Settings, Maximize2,
   Clock, User, Calendar, FileText, Camera, ChevronRight,
   Shield, Signal, Wifi, Battery, X, MoreVertical, Layout, Loader2,
-  ClipboardList, Activity, Pill, AlertCircle, RefreshCcw, Save, Search
+  ClipboardList, Activity, Pill, AlertCircle, RefreshCcw, Save, Search, FlaskConical, ChevronDown, Trash2, Plus
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { appointmentsAPI, patientsAPI, visitsAPI } from '../services/api';
@@ -45,7 +45,7 @@ const DailyVideoCall = ({ roomUrl, userName, onLeave }) => {
 
         callFrame.on('joined-meeting', () => {
           setIsLoading(false);
-          setConnectionStatus('Connected');
+          setConnectionStatus('In Visit');
         });
         callFrame.on('left-meeting', onLeave);
         callFrame.on('participant-joined', () => setParticipantCount(prev => prev + 1));
@@ -94,22 +94,23 @@ const DailyVideoCall = ({ roomUrl, userName, onLeave }) => {
       )}
 
       {/* Connection Status Overlay */}
-      <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-2 pointer-events-none">
-        <div className="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${connectionStatus === 'Connected' ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`} />
-          <span className="text-[10px] uppercase tracking-wider text-white font-medium">{connectionStatus}</span>
+      <div className="absolute top-6 left-6 z-20 flex flex-col gap-3 pointer-events-none">
+        <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-200 shadow-lg flex items-center gap-3">
+          <div className={`w-2.5 h-2.5 rounded-full ${connectionStatus === 'In Visit' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500 animate-pulse'}`} />
+          <span className="text-[11px] uppercase tracking-widest text-slate-700 font-bold">{connectionStatus}</span>
         </div>
-        {connectionStatus === 'Connected' && (
-          <div className="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 flex items-center gap-2">
-            <Users className="w-3 h-3 text-blue-400" />
-            <span className="text-[10px] uppercase tracking-wider text-white font-medium">
-              {participantCount > 1 ? 'Patient in Room' : 'Waiting for Patient...'}
+
+        {connectionStatus === 'In Visit' && (
+          <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-200 shadow-lg flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-500">
+            <Users className="w-3.5 h-3.5 text-blue-600" />
+            <span className="text-[11px] uppercase tracking-widest text-slate-700 font-bold">
+              {participantCount > 1 ? 'Patient Connected' : 'Waiting for Patient'}
             </span>
           </div>
         )}
       </div>
 
-      <div ref={frameRef} className="w-full h-full" />
+      <div ref={frameRef} className="w-full h-full bg-slate-50" />
     </div>
   );
 };
@@ -144,6 +145,7 @@ const Telehealth = () => {
     assessment: '',
     plan: '',
     dx: '',
+    planStructured: [],
   });
 
   const [patientChartTab, setPatientChartTab] = useState('overview');
@@ -443,6 +445,7 @@ const Telehealth = () => {
       assessment: '',
       plan: '',
       dx: '',
+      planStructured: [],
     });
     setPendedOrders([]);
     setAvs({
@@ -595,15 +598,15 @@ const Telehealth = () => {
 
         {/* Sidebar */}
         {isSidebarOpen && (
-          <div className="w-80 bg-gray-900 border-l border-white/5 flex flex-col">
+          <div className="w-96 bg-white border-l border-slate-200 flex flex-col shadow-xl">
             {/* Tabs */}
-            <div className="flex border-b border-white/10">
+            <div className="flex border-b border-slate-100 bg-slate-50/50">
               {WORKSPACE_TABS.map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`flex-1 py-4 text-xs font-semibold uppercase tracking-wider transition-all
-                    ${activeTab === tab ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-500 hover:text-gray-300'}`}
+                  className={`flex-1 py-4 text-[10px] font-bold uppercase tracking-[0.15em] transition-all
+                    ${activeTab === tab ? 'text-blue-600 border-b-2 border-blue-600 bg-white' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
                 >
                   {tab}
                 </button>
@@ -613,64 +616,66 @@ const Telehealth = () => {
             {/* Tab Content */}
             <div className="flex-1 overflow-y-auto p-4">
               {activeTab === 'chart' && (
-                <div className="space-y-3">
+                <div className="space-y-5 text-left">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-white font-semibold text-sm uppercase tracking-wider">CHART</h3>
+                    <h3 className="text-slate-900 font-bold text-xs uppercase tracking-widest">PATIENT CHART</h3>
                     <button
                       onClick={fetchPatientSnapshot}
-                      className="text-xs text-blue-400 hover:text-blue-300"
+                      className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors"
+                      title="Refresh Chart"
                     >
-                      <RefreshCcw className="w-3 h-3" />
+                      <RefreshCcw className={`w-4 h-4 ${chartLoading ? 'animate-spin' : ''}`} />
                     </button>
                   </div>
 
-                  <div className="p-3 bg-gray-800 rounded-xl border border-white/5">
-                    <p className="text-gray-500 text-xs uppercase mb-1">Active Patient</p>
-                    <p className="text-white font-medium">{activeCall.patientName || activeCall.name}</p>
-                    <div className="mt-2 text-xs">
-                      <div className="p-2 bg-gray-900/40 rounded-lg text-gray-200">
-                        {patientSnapshot?.dob ? `DOB: ${patientSnapshot.dob}` : 'Loading details...'}
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl shadow-sm">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Active Patient</p>
+                    <p className="text-slate-900 font-bold text-lg leading-tight">{activeCall.patientName || activeCall.name}</p>
+                    <div className="mt-3 flex items-center gap-2">
+                      <div className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[11px] font-medium text-slate-600 shadow-sm">
+                        {patientSnapshot?.dob ? `DOB: ${patientSnapshot.dob}` : 'Loading...'}
                       </div>
                     </div>
                   </div>
 
-                  {/* Comprehensive Chart Access */}
                   <button
                     onClick={() => {
                       setShowFullChart(true);
                       setPatientChartTab('overview');
                     }}
-                    className="w-full flex items-center justify-between p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg transition-all group"
+                    className="w-full group flex items-center justify-between p-4 bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl shadow-lg shadow-blue-900/10 hover:shadow-blue-900/20 transition-all hover:-translate-y-0.5"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="bg-white/20 p-2 rounded-lg group-hover:bg-white/30 transition-colors">
-                        <ClipboardList className="w-5 h-5" />
+                    <div className="flex items-center gap-4">
+                      <div className="bg-white/10 p-2.5 rounded-xl">
+                        <ClipboardList className="w-5 h-5 font-bold" />
                       </div>
                       <div className="text-left">
                         <p className="font-bold text-sm">Full Patient Chart</p>
-                        <p className="text-[10px] text-blue-100 opacity-80 uppercase tracking-wider">Review History & Labs</p>
+                        <p className="text-[10px] text-blue-100 opacity-80 uppercase tracking-widest">History & Labs</p>
                       </div>
                     </div>
-                    <ChevronRight className="w-5 h-5 opacity-50 group-hover:opacity-100 transition-all" />
+                    <ChevronRight className="w-5 h-5 opacity-70 group-hover:opacity-100 transition-all" />
                   </button>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-3">
                     {[
-                      { id: 'medications', label: 'Meds', icon: Pill },
-                      { id: 'problems', label: 'Problems', icon: Activity },
-                      { id: 'allergies', label: 'Allergies', icon: AlertCircle },
-                      { id: 'labs', label: 'Labs', icon: FlaskConical },
+                      { id: 'medications', label: 'Meds', icon: Pill, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                      { id: 'problems', label: 'Problems', icon: Activity, color: 'text-blue-600', bg: 'bg-blue-50' },
+                      { id: 'allergies', label: 'Allergies', icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
+                      { id: 'labs', label: 'Labs', icon: FlaskConical, color: 'text-purple-600', bg: 'bg-purple-50' },
                     ].map(x => (
                       <button
                         key={x.id}
-                        className="p-3 bg-gray-800 hover:bg-gray-700 rounded-xl text-left border border-white/5 transition-colors"
+                        className="p-4 bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md rounded-2xl text-left transition-all group"
                         onClick={() => {
                           setPatientChartTab(x.id);
                           setShowFullChart(true);
                         }}
                       >
-                        <p className="text-white text-[11px] font-bold uppercase tracking-wider">{x.label}</p>
-                        <p className="text-gray-500 text-[10px]">Open View</p>
+                        <div className={`${x.bg} p-2 rounded-xl w-fit mb-3 transition-colors`}>
+                          <x.icon className={`w-4 h-4 ${x.color}`} />
+                        </div>
+                        <p className="text-slate-900 text-[10px] font-bold uppercase tracking-wider">{x.label}</p>
                       </button>
                     ))}
                   </div>
@@ -678,87 +683,64 @@ const Telehealth = () => {
               )}
 
               {activeTab === 'note' && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-white font-semibold text-[10px] uppercase tracking-[0.2em]">Note Builder</h3>
-                    <div className="flex items-center gap-2">
-                      <button onClick={handleSaveDraft} className="text-blue-400 hover:text-blue-300 p-1 rounded-md bg-white/5 transition-colors">
-                        <Save className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                <div className="space-y-6 text-left">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-slate-900 font-bold text-xs uppercase tracking-widest">Encounter Note</h3>
+                    <button onClick={handleSaveDraft} className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors border border-blue-100">
+                      <Save className="w-4 h-4" />
+                    </button>
                   </div>
 
                   <div className="space-y-4">
                     <div>
-                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block mb-1.5 ml-1">Chief Complaint</label>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5 ml-1">Chief Complaint</label>
                       <input
                         value={note.chiefComplaint}
                         onChange={(e) => setNote(n => ({ ...n, chiefComplaint: e.target.value }))}
                         placeholder="Reason for visit..."
-                        className="w-full bg-gray-800/50 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:ring-1 focus:ring-blue-500 transition-all outline-none"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none shadow-sm"
                         readOnly={isLocked}
                       />
                     </div>
 
                     <div>
-                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block mb-1.5 ml-1">HPI</label>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5 ml-1">HPI</label>
                       <textarea
                         value={note.hpi}
                         onChange={(e) => setNote(n => ({ ...n, hpi: e.target.value }))}
                         placeholder="History of Present Illness..."
-                        className="w-full h-32 bg-gray-800/50 border border-white/10 rounded-xl p-3 text-white text-sm resize-none focus:ring-1 focus:ring-blue-500 transition-all outline-none"
+                        className="w-full h-40 bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-900 text-sm resize-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none leading-relaxed shadow-sm"
                         readOnly={isLocked}
                       />
                     </div>
 
-                    <div>
-                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block mb-1.5 ml-1">Review of Systems</label>
-                      <textarea
-                        value={note.rosNotes}
-                        onChange={(e) => setNote(n => ({ ...n, rosNotes: e.target.value }))}
-                        placeholder="ROS..."
-                        className="w-full h-24 bg-gray-800/50 border border-white/10 rounded-xl p-3 text-white text-sm resize-none focus:ring-1 focus:ring-blue-500 transition-all outline-none"
-                        readOnly={isLocked}
-                      />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5 ml-1">ROS</label>
+                        <textarea
+                          value={note.rosNotes}
+                          onChange={(e) => setNote(n => ({ ...n, rosNotes: e.target.value }))}
+                          placeholder="Review of Systems..."
+                          className="w-full h-24 bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 text-sm resize-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none shadow-sm"
+                          readOnly={isLocked}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5 ml-1">Exam</label>
+                        <textarea
+                          value={note.peNotes}
+                          onChange={(e) => setNote(n => ({ ...n, peNotes: e.target.value }))}
+                          placeholder="Objective findings..."
+                          className="w-full h-24 bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 text-sm resize-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none shadow-sm"
+                          readOnly={isLocked}
+                        />
+                      </div>
                     </div>
 
                     <div>
-                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block mb-1.5 ml-1">Physical Exam</label>
-                      <textarea
-                        value={note.peNotes}
-                        onChange={(e) => setNote(n => ({ ...n, peNotes: e.target.value }))}
-                        placeholder="Objective findings..."
-                        className="w-full h-24 bg-gray-800/50 border border-white/10 rounded-xl p-3 text-white text-sm resize-none focus:ring-1 focus:ring-blue-500 transition-all outline-none"
-                        readOnly={isLocked}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block mb-1.5 ml-1">Assessment</label>
-                      <textarea
-                        value={note.assessment}
-                        onChange={(e) => setNote(n => ({ ...n, assessment: e.target.value }))}
-                        placeholder="Assessment..."
-                        className="w-full h-20 bg-gray-800/50 border border-white/10 rounded-xl p-3 text-white text-sm resize-none focus:ring-1 focus:ring-blue-500 transition-all outline-none"
-                        readOnly={isLocked}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block mb-1.5 ml-1">Plan</label>
-                      <textarea
-                        value={note.plan}
-                        onChange={(e) => setNote(n => ({ ...n, plan: e.target.value }))}
-                        placeholder="Care plan..."
-                        className="w-full h-32 bg-gray-800/50 border border-white/10 rounded-xl p-3 text-white text-sm resize-none focus:ring-1 focus:ring-blue-500 transition-all outline-none"
-                        readOnly={isLocked}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block mb-1.5 ml-1">Assessments (Diagnoses)</label>
-                      <div className="relative mb-2">
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5 ml-1">Assessments (Diagnoses)</label>
+                      <div className="relative mb-3">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input
                           type="text"
                           value={icd10Search}
@@ -766,19 +748,19 @@ const Telehealth = () => {
                             setIcd10Search(e.target.value);
                             setShowIcd10Search(true);
                           }}
-                          placeholder="Search ICD-10..."
-                          className="w-full bg-gray-800/50 border border-white/10 rounded-xl pl-8 pr-3 py-2 text-white text-xs focus:ring-1 focus:ring-blue-500 outline-none"
+                          placeholder="Search diagnosis code..."
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none shadow-sm"
                         />
                         {showIcd10Search && icd10Results.length > 0 && (
-                          <div className="absolute z-20 left-0 right-0 mt-1 bg-gray-900 border border-white/10 rounded-xl shadow-2xl max-h-60 overflow-y-auto">
+                          <div className="absolute z-30 left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl max-h-64 overflow-y-auto py-1">
                             {icd10Results.map(res => (
                               <button
                                 key={res.code}
                                 onClick={() => handleAddDiagnosis(res)}
-                                className="w-full text-left p-3 border-b border-white/5 hover:bg-white/5 transition-colors"
+                                className="w-full text-left px-4 py-2.5 border-b border-slate-50 hover:bg-slate-50 transition-colors last:border-0"
                               >
-                                <p className="text-blue-400 text-xs font-bold leading-none mb-1">{res.code}</p>
-                                <p className="text-gray-300 text-[10px] leading-tight">{res.description}</p>
+                                <p className="text-blue-600 text-xs font-bold mb-0.5">{res.code}</p>
+                                <p className="text-slate-600 text-xs line-clamp-1">{res.description}</p>
                               </button>
                             ))}
                           </div>
@@ -786,116 +768,137 @@ const Telehealth = () => {
                       </div>
 
                       {note.dx ? (
-                        <div className="p-3 bg-gray-800/80 border border-white/5 rounded-xl space-y-2">
+                        <div className="bg-white border border-slate-200 rounded-xl divide-y divide-slate-100 shadow-sm overflow-hidden text-left">
                           {note.dx.split(',').filter(Boolean).map((d, i) => (
-                            <div key={i} className="flex items-start justify-between gap-2 group">
-                              <span className="text-xs text-gray-200 leading-tight">{d.trim()}</span>
+                            <div key={i} className="flex items-center justify-between p-3 group hover:bg-slate-50 transition-colors">
+                              <span className="text-sm text-slate-700 font-medium">{d.trim()}</span>
                               <button
                                 onClick={() => {
                                   const current = note.dx.split(',').filter(Boolean).map(c => c.trim());
                                   setNote(n => ({ ...n, dx: current.filter((_, idx) => idx !== i).join(', ') }));
                                 }}
-                                className="text-gray-500 hover:text-red-400 transition-colors"
+                                className="text-slate-300 hover:text-red-500 transition-colors"
                               >
-                                <X className="w-3 h-3" />
+                                <X className="w-4 h-4" />
                               </button>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-[10px] text-gray-500 italic ml-1 font-medium">No diagnoses added yet.</p>
+                        <div className="p-10 text-center border-2 border-dashed border-slate-100 rounded-xl">
+                          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">No diagnoses added</p>
+                        </div>
                       )}
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-white/5">
-                    <button
-                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5 disabled:opacity-50"
-                      onClick={() => setNote(n => ({ ...n, plan: (n.plan + (n.plan ? '\n' : '') + 'Return precautions reviewed.') }))}
-                      disabled={isLocked}
-                    >
-                      + Return precautions
-                    </button>
-                    <button
-                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5 disabled:opacity-50"
-                      onClick={() => setNote(n => ({ ...n, plan: (n.plan + (n.plan ? '\n' : '') + 'Follow up in 2–4 weeks or sooner PRN.') }))}
-                      disabled={isLocked}
-                    >
-                      + Follow-up
-                    </button>
+                    <div className="pt-6 border-t border-slate-100 text-left">
+                      <div className="flex items-center justify-between mb-4">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Clinical Plan</label>
+                        <button
+                          onClick={() => { setOrderModalTab('labs'); setShowOrderModal(true); }}
+                          className="text-[10px] bg-blue-600 text-white px-4 py-2 rounded-xl font-bold uppercase tracking-wider hover:bg-blue-700 transition-all shadow-md shadow-blue-500/10 active:scale-95"
+                        >
+                          <Plus className="w-3 h-3 inline-block mr-1.5 -mt-0.5" />
+                          Add Order
+                        </button>
+                      </div>
+
+                      {note.planStructured && note.planStructured.length > 0 ? (
+                        <div className="space-y-4">
+                          {note.planStructured.map((group, idx) => (
+                            <div key={idx} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left shadow-sm">
+                              <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-3 border-b border-blue-100 pb-2">{group.diagnosis}</p>
+                              <div className="space-y-2">
+                                {group.orders.map((order, oIdx) => (
+                                  <div key={oIdx} className="flex items-start gap-3 text-xs text-slate-700 leading-relaxed group">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0 group-hover:scale-125 transition-transform" />
+                                    {order}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-8 bg-slate-50 border border-dashed border-slate-200 rounded-2xl text-center">
+                          <p className="text-[11px] text-slate-400 font-medium italic">No clinical orders for this visit yet</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
 
               {activeTab === 'orders' && (
-                <div className="space-y-4">
+                <div className="space-y-5 text-left">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-white font-semibold text-sm uppercase tracking-wider">ORDERS</h3>
+                    <h3 className="text-slate-900 font-bold text-xs uppercase tracking-widest">Clinical Orders</h3>
                     <div className="flex gap-2">
                       <button
                         onClick={() => { setOrderModalTab('labs'); setShowOrderModal(true); }}
-                        className="bg-blue-600/20 text-blue-400 px-3 py-1.5 rounded-lg border border-blue-500/20 hover:bg-blue-600/30 transition-all text-[10px] font-bold uppercase tracking-wider"
+                        className="bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-all text-[10px] font-bold uppercase tracking-wider shadow-sm"
                       >
-                        + Lab/Img
+                        + NEW ORDER
                       </button>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-3">
                     {[
-                      { id: 'labs', label: 'Labs/Img', icon: Activity, tab: 'labs' },
-                      { id: 'meds', label: 'Meds', icon: Pill, tab: 'medications' },
-                      { id: 'referrals', label: 'Referrals', icon: User, tab: 'referrals' },
-                      { id: 'procs', label: 'Procedures', icon: Settings, tab: 'procedures' },
+                      { id: 'labs', label: 'Labs', icon: Activity, tab: 'labs', color: 'text-purple-600', bg: 'bg-purple-50' },
+                      { id: 'meds', label: 'Meds', icon: Pill, tab: 'medications', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                      { id: 'referrals', label: 'Referrals', icon: User, tab: 'referrals', color: 'text-blue-600', bg: 'bg-blue-50' },
+                      { id: 'procs', label: 'Procs', icon: Settings, tab: 'procedures', color: 'text-slate-600', bg: 'bg-slate-50' },
                     ].map(x => (
                       <button
                         key={x.id}
-                        className="p-3 bg-gray-800 hover:bg-gray-700 rounded-xl text-left border border-white/5 transition-all group"
+                        className="p-4 bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md rounded-2xl text-left transition-all group"
                         onClick={() => {
                           setOrderModalTab(x.tab);
                           setShowOrderModal(true);
                         }}
                       >
-                        <div className="bg-white/5 p-1.5 rounded-lg w-fit mb-2 group-hover:bg-white/10 transition-colors">
-                          <x.icon className="w-3.5 h-3.5 text-gray-400" />
+                        <div className={`${x.bg} p-2 rounded-xl w-fit mb-3 transition-colors`}>
+                          <x.icon className={`w-4 h-4 ${x.color}`} />
                         </div>
-                        <p className="text-white text-[10px] font-bold uppercase tracking-wider">{x.label}</p>
+                        <p className="text-slate-900 text-[10px] font-bold uppercase tracking-[1px]">{x.label}</p>
                       </button>
                     ))}
                   </div>
 
-                  <div className="space-y-2 mt-4">
-                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest ml-1">Pended Orders</p>
+                  <div className="space-y-3 mt-4">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[2px] ml-1">Pended Items</p>
                     {pendedOrders.length === 0 ? (
-                      <div className="p-4 bg-gray-800/50 border border-dashed border-white/10 rounded-xl text-center">
-                        <p className="text-[10px] text-gray-500 font-medium">No orders pended.</p>
+                      <div className="p-10 bg-slate-50 border border-dashed border-slate-200 rounded-2xl text-center">
+                        <p className="text-[11px] text-slate-400 font-medium">No orders pended yet.</p>
                       </div>
                     ) : (
-                      pendedOrders.map(o => (
-                        <div key={o.id} className="p-3 bg-gray-800 rounded-xl border border-white/5 flex items-start justify-between gap-3 group">
-                          <div className="flex-1">
-                            <p className="text-white text-xs font-bold capitalize">{o.type}</p>
-                            <p className="text-gray-400 text-[11px] leading-tight mt-0.5">{o.text}</p>
-                            <div className="mt-2 flex items-center gap-2">
-                              <span className={`w-1.5 h-1.5 rounded-full ${o.status === 'signed' ? 'bg-green-500' : 'bg-amber-500'}`} />
-                              <span className="text-[9px] text-gray-500 uppercase font-black tracking-tighter">{o.status}</span>
+                      <div className="space-y-2">
+                        {pendedOrders.map(o => (
+                          <div key={o.id} className="p-4 bg-white border border-slate-200 rounded-2xl flex items-start justify-between gap-3 group hover:border-slate-300 transition-all">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className={`w-2 h-2 rounded-full ${o.status === 'signed' ? 'bg-green-500' : 'bg-amber-500 animate-pulse'}`} />
+                                <p className="text-slate-900 text-xs font-bold capitalize">{o.type}</p>
+                              </div>
+                              <p className="text-slate-500 text-[11px] leading-relaxed">{o.text}</p>
                             </div>
+                            <button
+                              className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1"
+                              onClick={() => setPendedOrders(prev => prev.filter(x => x.id !== o.id))}
+                              disabled={isLocked}
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
                           </div>
-                          <button
-                            className="text-gray-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 p-1"
-                            onClick={() => setPendedOrders(prev => prev.filter(x => x.id !== o.id))}
-                            disabled={isLocked}
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))
+                        ))}
+                      </div>
                     )}
                   </div>
 
                   {pendedOrders.length > 0 && (
                     <button
-                      className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-900/20 text-sm disabled:opacity-50 mt-4"
+                      className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-blue-900/10 text-xs uppercase tracking-widest disabled:opacity-50 mt-6"
                       onClick={async () => {
                         if (!activeEncounter) return;
                         try {
@@ -1048,19 +1051,43 @@ const Telehealth = () => {
           patientId={activeCall?.patientId}
           visitId={activeEncounter?.id}
           onSave={(updatedPlanStructured) => {
-            // Convert structured plan to pended orders if needed, or just sync
+            // Update the note's structured plan
+            setNote(n => {
+              const newPlanStructured = updatedPlanStructured;
+
+              // Format plain text version for backend/display
+              const formattedPlan = newPlanStructured.map((item, index) => {
+                const diagnosisLine = `${index + 1}. ${item.diagnosis}`;
+                const ordersLines = item.orders.map(order => `  • ${order}`).join('\n');
+                return `${diagnosisLine}\n${ordersLines}`;
+              }).join('\n\n');
+
+              return {
+                ...n,
+                planStructured: newPlanStructured,
+                plan: formattedPlan
+              };
+            });
+
+            // Re-sync pended orders for the sidebar view
+            const newPendedItems = [];
             updatedPlanStructured.forEach(group => {
               (group.orders || []).forEach(orderText => {
-                // Determine type from orderText
                 let type = 'other';
                 if (orderText.startsWith('Lab:')) type = 'lab';
                 else if (orderText.startsWith('Imaging:')) type = 'imaging';
                 else if (orderText.startsWith('Referral:')) type = 'referral';
                 else if (orderText.startsWith('Prescription:')) type = 'medication';
 
-                addOrder(type, orderText);
+                newPendedItems.push({
+                  id: `${Date.now()}_${Math.random()}`,
+                  type,
+                  text: orderText,
+                  status: 'pended'
+                });
               });
             });
+            setPendedOrders(prev => [...newPendedItems]); // Overwrite with structured state
             setShowOrderModal(false);
           }}
         />
