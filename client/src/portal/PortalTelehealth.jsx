@@ -106,8 +106,8 @@ const PortalTelehealth = ({ onSchedule }) => {
         setError(null);
 
         try {
-            // Create a Daily.co room via our backend
-            const response = await axios.post(`${apiBase}/telehealth/rooms`, {
+            // Create a Daily.co room via our portal backend endpoint
+            const response = await axios.post(`${apiBase}/portal/telehealth/rooms`, {
                 appointmentId: appt.id,
                 patientName: `${patient.firstName || 'Patient'} ${patient.lastName || ''}`.trim(),
                 providerName: appt.provider_name || 'Provider'
@@ -115,7 +115,7 @@ const PortalTelehealth = ({ onSchedule }) => {
 
             if (response.data.success) {
                 setRoomUrl(response.data.roomUrl);
-                setActiveCall(appt);
+                setActiveCall({ ...appt, roomName: response.data.roomName }); // Store roomName for cleanup
             } else {
                 throw new Error('Failed to create room');
             }
@@ -130,10 +130,19 @@ const PortalTelehealth = ({ onSchedule }) => {
         }
     };
 
-    const handleEndCall = useCallback(() => {
+    const handleEndCall = useCallback(async () => {
+        // Delete the room from Daily.co to clean up
+        if (activeCall?.roomName) {
+            try {
+                await axios.delete(`${apiBase}/portal/telehealth/rooms/${activeCall.roomName}`, { headers });
+                console.log('Room deleted successfully');
+            } catch (err) {
+                console.warn('Failed to delete room (may have already expired):', err);
+            }
+        }
         setActiveCall(null);
         setRoomUrl(null);
-    }, []);
+    }, [activeCall, apiBase, headers]);
 
     const handleScheduleNavigation = () => {
         if (onSchedule) {

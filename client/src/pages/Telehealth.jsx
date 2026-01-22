@@ -146,7 +146,7 @@ const Telehealth = () => {
 
       if (response.data.success) {
         setRoomUrl(response.data.roomUrl);
-        setActiveCall(appt);
+        setActiveCall({ ...appt, roomName: response.data.roomName }); // Store roomName for cleanup
         setDuration(0);
       }
     } catch (err) {
@@ -158,12 +158,21 @@ const Telehealth = () => {
     }
   };
 
-  const handleEndCall = useCallback(() => {
+  const handleEndCall = useCallback(async () => {
+    // Delete the room from Daily.co to clean up
+    if (activeCall?.roomName) {
+      try {
+        await api.delete(`/telehealth/rooms/${activeCall.roomName}`);
+        console.log('Room deleted successfully');
+      } catch (err) {
+        console.warn('Failed to delete room (may have already expired):', err);
+      }
+    }
     setActiveCall(null);
     setRoomUrl(null);
     setDuration(0);
     setNoteDraft('');
-  }, []);
+  }, [activeCall]);
 
   const handleSaveNote = async () => {
     if (!noteDraft.trim() || !activeCall) return;

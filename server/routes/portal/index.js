@@ -3,6 +3,7 @@ const authRoutes = require('./auth');
 const chartRoutes = require('./chart');
 const messageRoutes = require('./messages');
 const appointmentRoutes = require('./appointments');
+const telehealthRoutes = require('./telehealth');
 
 const router = express.Router();
 
@@ -18,5 +19,6 @@ router.use('/auth', authRoutes);
 router.use('/chart', chartRoutes);
 router.use('/messages', messageRoutes);
 router.use('/appointments', appointmentRoutes);
+router.use('/telehealth', telehealthRoutes);
 
 module.exports = router;
