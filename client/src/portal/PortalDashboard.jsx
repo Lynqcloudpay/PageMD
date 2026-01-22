@@ -250,11 +250,12 @@ const PortalDashboard = () => {
             default:
                 return (
                     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                        {/* Notifications */}
+                        {/* Notifications - Hidden as we now use Quick Glance
                         <Notifications
                             notifications={activeNotifications}
                             onAction={(action) => setActiveTab(action)}
                         />
+                        */}
 
                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                             {/* Patient Info Card */}

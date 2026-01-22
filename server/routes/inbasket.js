@@ -674,17 +674,23 @@ router.post('/:id/notes', async (req, res) => {
 
     await client.query('BEGIN');
 
+    // Check if item exists first
+    const itemRes = await client.query('SELECT * FROM inbox_items WHERE id = $1', [id]);
+    const item = itemRes.rows[0];
+
+    if (!item) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
     const result = await client.query(`
       INSERT INTO inbox_notes(item_id, user_id, user_name, note, is_internal)
       VALUES($1, $2, $3, $4, $5)
       RETURNING *
-    `, [id, req.user.id, `${req.user.first_name} ${req.user.last_name}`, note, !isExternal]);
+    `, [id, req.user.id, `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || req.user.email, note, !isExternal]);
 
     // If external or a portal message reply, push to portal_messages
-    const itemRes = await client.query('SELECT * FROM inbox_items WHERE id = $1', [id]);
-    const item = itemRes.rows[0];
-
-    if (item && isExternal && (item.type === 'portal_message' || item.type === 'portal_appointment')) {
+    if (isExternal && (item.type === 'portal_message' || item.type === 'portal_appointment')) {
       let threadId = null;
 
       if (item.type === 'portal_message') {
