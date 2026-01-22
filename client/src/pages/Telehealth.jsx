@@ -3,13 +3,18 @@ import {
   Video, VideoOff, Mic, MicOff, Phone, PhoneOff,
   Monitor, MessageSquare, Users, Settings, Maximize2,
   Clock, User, Calendar, FileText, Camera, ChevronRight,
-  Shield, Signal, Wifi, Battery, X, MoreVertical, Layout, Loader2
+  Shield, Signal, Wifi, Battery, X, MoreVertical, Layout, Loader2,
+  ClipboardList, Activity, Pill, AlertCircle, RefreshCcw, Save
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { appointmentsAPI, patientsAPI } from '../services/api';
+import { appointmentsAPI, patientsAPI, visitsAPI } from '../services/api';
 import api from '../services/api';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
+import PatientChartPanel from '../components/PatientChartPanel';
+import Modal from '../components/ui/Modal';
+import DiagnosisPicker from '../components/DiagnosisPicker';
+import OrderPicker from '../components/OrderPicker';
 
 // Daily.co Video Component
 const DailyVideoCall = ({ roomUrl, userName, onLeave }) => {
@@ -122,19 +127,30 @@ const Telehealth = () => {
   const [activeTab, setActiveTab] = useState('note'); // default to note during visit
   const [activeEncounter, setActiveEncounter] = useState(null);
 
+  // --- NEW: Patient Chart Panel State ---
+  const [showFullChart, setShowFullChart] = useState(false);
+
   // --- NEW: Chart Snapshot (best-effort) ---
   const [patientSnapshot, setPatientSnapshot] = useState(null);
   const [chartLoading, setChartLoading] = useState(false);
 
-  // --- NEW: Structured note state ---
+  // --- NEW: Structured note state (Aligned with VisitNote.jsx) ---
   const [note, setNote] = useState({
     chiefComplaint: '',
-    subjective: '',
-    objective: '',
+    hpi: '',
+    rosNotes: '',
+    peNotes: '',
+    results: '',
     assessment: '',
     plan: '',
     dx: '',
   });
+
+  const [patientChartTab, setPatientChartTab] = useState('overview');
+  const [showNoteModal, setShowNoteModal] = useState(false);
+  const [showDiagnosisPicker, setShowDiagnosisPicker] = useState(false);
+  const [showOrderPicker, setShowOrderPicker] = useState(false);
+  const [orderPickerType, setOrderPickerType] = useState(null);
 
   const isLocked = activeEncounter?.status === 'signed';
 
@@ -384,8 +400,10 @@ const Telehealth = () => {
     setActiveEncounter(null);
     setNote({
       chiefComplaint: '',
-      subjective: '',
-      objective: '',
+      hpi: '',
+      rosNotes: '',
+      peNotes: '',
+      results: '',
       assessment: '',
       plan: '',
       dx: '',
@@ -401,11 +419,21 @@ const Telehealth = () => {
   const handleSaveDraft = async () => {
     if (!activeEncounter) return;
     try {
-      // 1. Save Note
-      await api.post("/clinical_notes", {
-        encounter_id: activeEncounter.id,
-        note: note,
-        dx: note.dx.split(",").map(d => d.trim())
+      // Aligned with VisitNote.jsx combined format
+      const combinedNote = [
+        note.chiefComplaint ? `Chief Complaint: ${note.chiefComplaint}` : '',
+        note.hpi ? `HPI: ${note.hpi}` : '',
+        note.rosNotes ? `Review of Systems: ${note.rosNotes}` : '',
+        note.peNotes ? `Physical Exam: ${note.peNotes}` : '',
+        note.results ? `Results: ${note.results}` : '',
+        note.assessment ? `Assessment: ${note.assessment}` : '',
+        note.plan ? `Plan: ${note.plan}` : ''
+      ].filter(Boolean).join('\n\n');
+
+      // 1. Save Note using visitsAPI format
+      await visitsAPI.update(activeEncounter.id, {
+        note_draft: combinedNote,
+        dx: note.dx.split(",").map(d => d.trim()).filter(Boolean)
       });
 
       // 2. Save AVS
@@ -556,41 +584,57 @@ const Telehealth = () => {
                       onClick={fetchPatientSnapshot}
                       className="text-xs text-blue-400 hover:text-blue-300"
                     >
-                      Refresh
+                      <RefreshCcw className="w-3 h-3" />
                     </button>
                   </div>
 
                   <div className="p-3 bg-gray-800 rounded-xl border border-white/5">
-                    <p className="text-gray-500 text-xs uppercase mb-1">Patient</p>
+                    <p className="text-gray-500 text-xs uppercase mb-1">Active Patient</p>
                     <p className="text-white font-medium">{activeCall.patientName || activeCall.name}</p>
-                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                      <div className="p-2 bg-gray-900/40 rounded-lg">
-                        <p className="text-gray-500">DOB</p>
-                        <p className="text-gray-200">{patientSnapshot?.dob || activeCall.dob || '—'}</p>
-                      </div>
-                      <div className="p-2 bg-gray-900/40 rounded-lg">
-                        <p className="text-gray-500">Phone</p>
-                        <p className="text-gray-200">{patientSnapshot?.phone || activeCall.phone || '—'}</p>
+                    <div className="mt-2 text-xs">
+                      <div className="p-2 bg-gray-900/40 rounded-lg text-gray-200">
+                        {patientSnapshot?.dob ? `DOB: ${patientSnapshot.dob}` : 'Loading details...'}
                       </div>
                     </div>
-                    {chartLoading && <p className="mt-2 text-xs text-gray-500">Loading chart…</p>}
-                    {patientSnapshot?._error && (
-                      <p className="mt-2 text-xs text-amber-400">
-                        Couldn’t load full chart snapshot (showing available appointment data).
-                      </p>
-                    )}
                   </div>
 
-                  {/* Quick chart nav placeholders (wire later) */}
+                  {/* Comprehensive Chart Access */}
+                  <button
+                    onClick={() => {
+                      setShowFullChart(true);
+                      setPatientChartTab('overview');
+                    }}
+                    className="w-full flex items-center justify-between p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg transition-all group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="bg-white/20 p-2 rounded-lg group-hover:bg-white/30 transition-colors">
+                        <ClipboardList className="w-5 h-5" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-bold text-sm">Full Patient Chart</p>
+                        <p className="text-[10px] text-blue-100 opacity-80 uppercase tracking-wider">Review History & Labs</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 opacity-50 group-hover:opacity-100 transition-all" />
+                  </button>
+
                   <div className="grid grid-cols-2 gap-2">
-                    {['Medications', 'Allergies', 'Problems', 'Labs', 'Imaging', 'Documents'].map(x => (
+                    {[
+                      { id: 'medications', label: 'Meds', icon: Pill },
+                      { id: 'problems', label: 'Problems', icon: Activity },
+                      { id: 'allergies', label: 'Allergies', icon: AlertCircle },
+                      { id: 'labs', label: 'Labs', icon: FlaskConical },
+                    ].map(x => (
                       <button
-                        key={x}
+                        key={x.id}
                         className="p-3 bg-gray-800 hover:bg-gray-700 rounded-xl text-left border border-white/5 transition-colors"
-                        onClick={() => alert(`${x} panel coming next (wire to your chart endpoints).`)}
+                        onClick={() => {
+                          setPatientChartTab(x.id);
+                          setShowFullChart(true);
+                        }}
                       >
-                        <p className="text-white text-sm font-semibold">{x}</p>
-                        <p className="text-gray-500 text-xs">Open</p>
+                        <p className="text-white text-[11px] font-bold uppercase tracking-wider">{x.label}</p>
+                        <p className="text-gray-500 text-[10px]">Open View</p>
                       </button>
                     ))}
                   </div>
@@ -599,57 +643,99 @@ const Telehealth = () => {
 
               {activeTab === 'note' && (
                 <div className="space-y-3">
-                  <h3 className="text-white font-semibold text-sm uppercase tracking-wider">NOTE BUILDER</h3>
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-white font-semibold text-[10px] uppercase tracking-[0.2em]">Note Builder</h3>
+                    <div className="flex items-center gap-2">
+                      <button onClick={handleSaveDraft} className="text-blue-400 hover:text-blue-300 p-1 rounded-md bg-white/5 transition-colors">
+                        <Save className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
 
-                  <input
-                    value={note.chiefComplaint}
-                    onChange={(e) => setNote(n => ({ ...n, chiefComplaint: e.target.value }))}
-                    placeholder="Chief Complaint"
-                    className="w-full bg-gray-800 border border-white/10 rounded-xl px-3 py-2 text-white text-sm"
-                    readOnly={isLocked}
-                  />
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block mb-1.5 ml-1">Chief Complaint</label>
+                      <input
+                        value={note.chiefComplaint}
+                        onChange={(e) => setNote(n => ({ ...n, chiefComplaint: e.target.value }))}
+                        placeholder="Reason for visit..."
+                        className="w-full bg-gray-800/50 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:ring-1 focus:ring-blue-500 transition-all outline-none"
+                        readOnly={isLocked}
+                      />
+                    </div>
 
-                  <textarea
-                    value={note.subjective}
-                    onChange={(e) => setNote(n => ({ ...n, subjective: e.target.value }))}
-                    placeholder="Subjective (HPI / ROS)"
-                    className="w-full h-28 bg-gray-800 border border-white/10 rounded-xl p-3 text-white text-sm resize-none"
-                    readOnly={isLocked}
-                  />
+                    <div>
+                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block mb-1.5 ml-1">HPI</label>
+                      <textarea
+                        value={note.hpi}
+                        onChange={(e) => setNote(n => ({ ...n, hpi: e.target.value }))}
+                        placeholder="History of Present Illness..."
+                        className="w-full h-32 bg-gray-800/50 border border-white/10 rounded-xl p-3 text-white text-sm resize-none focus:ring-1 focus:ring-blue-500 transition-all outline-none"
+                        readOnly={isLocked}
+                      />
+                    </div>
 
-                  <textarea
-                    value={note.objective}
-                    onChange={(e) => setNote(n => ({ ...n, objective: e.target.value }))}
-                    placeholder="Objective (Vitals / Exam)"
-                    className="w-full h-24 bg-gray-800 border border-white/10 rounded-xl p-3 text-white text-sm resize-none"
-                    readOnly={isLocked}
-                  />
+                    <div>
+                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block mb-1.5 ml-1">Review of Systems</label>
+                      <textarea
+                        value={note.rosNotes}
+                        onChange={(e) => setNote(n => ({ ...n, rosNotes: e.target.value }))}
+                        placeholder="ROS..."
+                        className="w-full h-24 bg-gray-800/50 border border-white/10 rounded-xl p-3 text-white text-sm resize-none focus:ring-1 focus:ring-blue-500 transition-all outline-none"
+                        readOnly={isLocked}
+                      />
+                    </div>
 
-                  <textarea
-                    value={note.assessment}
-                    onChange={(e) => setNote(n => ({ ...n, assessment: e.target.value }))}
-                    placeholder="Assessment"
-                    className="w-full h-20 bg-gray-800 border border-white/10 rounded-xl p-3 text-white text-sm resize-none"
-                    readOnly={isLocked}
-                  />
+                    <div>
+                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block mb-1.5 ml-1">Physical Exam</label>
+                      <textarea
+                        value={note.peNotes}
+                        onChange={(e) => setNote(n => ({ ...n, peNotes: e.target.value }))}
+                        placeholder="Objective findings..."
+                        className="w-full h-24 bg-gray-800/50 border border-white/10 rounded-xl p-3 text-white text-sm resize-none focus:ring-1 focus:ring-blue-500 transition-all outline-none"
+                        readOnly={isLocked}
+                      />
+                    </div>
 
-                  <textarea
-                    value={note.plan}
-                    onChange={(e) => setNote(n => ({ ...n, plan: e.target.value }))}
-                    placeholder="Plan"
-                    className="w-full h-28 bg-gray-800 border border-white/10 rounded-xl p-3 text-white text-sm resize-none"
-                    readOnly={isLocked}
-                  />
+                    <div>
+                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block mb-1.5 ml-1">Assessment</label>
+                      <textarea
+                        value={note.assessment}
+                        onChange={(e) => setNote(n => ({ ...n, assessment: e.target.value }))}
+                        placeholder="Assessment..."
+                        className="w-full h-20 bg-gray-800/50 border border-white/10 rounded-xl p-3 text-white text-sm resize-none focus:ring-1 focus:ring-blue-500 transition-all outline-none"
+                        readOnly={isLocked}
+                      />
+                    </div>
 
-                  <input
-                    value={note.dx}
-                    onChange={(e) => setNote(n => ({ ...n, dx: e.target.value }))}
-                    placeholder="Diagnoses (comma separated)"
-                    className="w-full bg-gray-800 border border-white/10 rounded-xl px-3 py-2 text-white text-sm"
-                    readOnly={isLocked}
-                  />
+                    <div>
+                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block mb-1.5 ml-1">Plan</label>
+                      <textarea
+                        value={note.plan}
+                        onChange={(e) => setNote(n => ({ ...n, plan: e.target.value }))}
+                        placeholder="Care plan..."
+                        className="w-full h-32 bg-gray-800/50 border border-white/10 rounded-xl p-3 text-white text-sm resize-none focus:ring-1 focus:ring-blue-500 transition-all outline-none"
+                        readOnly={isLocked}
+                      />
+                    </div>
 
-                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block mb-1.5 ml-1">Diagnoses</label>
+                      <DiagnosisPicker
+                        selectedCodes={note.dx.split(',').filter(Boolean).map(c => ({ code: c.trim() }))}
+                        onSelect={(code) => {
+                          const current = note.dx.split(',').filter(Boolean).map(c => c.trim());
+                          if (!current.includes(code.code)) {
+                            setNote(n => ({ ...n, dx: [...current, code.code].join(', ') }));
+                          }
+                          setShowDiagnosisPicker(false);
+                        }}
+                        onClose={() => setShowDiagnosisPicker(false)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-white/5">
                     <button
                       className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5 disabled:opacity-50"
                       onClick={() => setNote(n => ({ ...n, plan: (n.plan + (n.plan ? '\n' : '') + 'Return precautions reviewed.') }))}
@@ -857,6 +943,45 @@ const Telehealth = () => {
                 {isLocked ? 'Visit Signed' : 'Finalize Visit'}
               </button>
             </div>
+          </div>
+        )}
+
+        {/* --- MODALS --- */}
+        <PatientChartPanel
+          patientId={activeEncounter?.patient_id || activeCall?.patientId}
+          isOpen={showFullChart}
+          onClose={() => setShowFullChart(false)}
+          initialTab={patientChartTab || 'overview'}
+        />
+
+        {showDiagnosisPicker && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <DiagnosisPicker
+              onSelect={(code) => {
+                const current = note.dx.split(',').filter(Boolean).map(c => c.trim());
+                if (!current.includes(code.code)) {
+                  setNote(n => ({ ...n, dx: [...current, code.code].join(', ') }));
+                }
+                setShowDiagnosisPicker(false);
+              }}
+              onClose={() => setShowDiagnosisPicker(false)}
+              existingDiagnoses={note.dx.split(',')}
+            />
+          </div>
+        )}
+
+        {showOrderPicker && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <OrderPicker
+              type={orderPickerType}
+              visitId={activeEncounter?.id}
+              patientId={activeEncounter?.patient_id}
+              onSelect={(order) => {
+                addOrder(order.type.toLowerCase(), order.name);
+                setShowOrderPicker(false);
+              }}
+              onClose={() => setShowOrderPicker(false)}
+            />
           </div>
         )}
       </div>
