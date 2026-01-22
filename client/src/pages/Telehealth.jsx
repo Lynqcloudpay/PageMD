@@ -306,7 +306,7 @@ const Telehealth = () => {
 
   // Keep encounter alive (server heartbeat)
   useEffect(() => {
-    if (!activeEncounter?.id) return;
+    if (!activeEncounter?.id || activeEncounter.status === 'signed') return;
 
     const interval = setInterval(async () => {
       try {
