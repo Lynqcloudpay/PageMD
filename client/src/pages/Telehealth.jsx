@@ -408,6 +408,13 @@ const Telehealth = () => {
 
       setActiveEncounter(encounter);
 
+      // Update appointment status to 'in_progress' for queue visibility
+      try {
+        await appointmentsAPI.update(appt.id, { status: 'in_progress' });
+      } catch (e) {
+        console.error('Failed to update appointment status:', e);
+      }
+
       // 2. Create a Daily.co room via our backend
       const response = await api.post('/telehealth/rooms', {
         appointmentId: appt.id,
