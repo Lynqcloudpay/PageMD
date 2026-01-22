@@ -94,23 +94,9 @@ const DailyVideoCall = ({ roomUrl, userName, onLeave }) => {
       )}
 
       {/* Connection Status Overlay */}
-      <div className="absolute top-6 left-6 z-20 flex flex-col gap-3 pointer-events-none">
-        <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-200 shadow-lg flex items-center gap-3">
-          <div className={`w-2.5 h-2.5 rounded-full ${connectionStatus === 'In Visit' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500 animate-pulse'}`} />
-          <span className="text-[11px] uppercase tracking-widest text-slate-700 font-bold">{connectionStatus}</span>
-        </div>
 
-        {connectionStatus === 'In Visit' && (
-          <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-200 shadow-lg flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-500">
-            <Users className="w-3.5 h-3.5 text-blue-600" />
-            <span className="text-[11px] uppercase tracking-widest text-slate-700 font-bold">
-              {participantCount > 1 ? 'Patient Connected' : 'Waiting for Patient'}
-            </span>
-          </div>
-        )}
-      </div>
 
-      <div ref={frameRef} className="w-full h-full bg-slate-50" />
+      <div ref={frameRef} className="w-full h-full bg-slate-100 rounded-2xl" />
     </div>
   );
 };
@@ -547,7 +533,7 @@ const Telehealth = () => {
   // --- ACTIVE CALL VIEW ---
   if (activeCall && roomUrl) {
     return (
-      <div className="flex h-[calc(100vh-64px)] bg-gray-950 overflow-hidden relative">
+      <div className="flex h-[calc(100vh-64px)] bg-slate-50 overflow-hidden relative">
         {/* Main Video Stage */}
         <div className={`flex-1 flex flex-col relative transition-all duration-300`}>
 
@@ -564,20 +550,13 @@ const Telehealth = () => {
             </div>
 
             <div className="flex items-center gap-2 pointer-events-auto">
-              <div className="bg-gray-900/80 backdrop-blur-md px-3 py-1.5 rounded-md border border-white/10 text-xs text-gray-400 flex items-center gap-2">
-                <Shield className="w-3 h-3 text-green-400" />
-                End-to-End Encrypted
-              </div>
-              <div className="bg-gray-900/80 backdrop-blur-md px-3 py-1.5 rounded-md border border-white/10 text-xs text-gray-400 flex items-center gap-2">
-                <Signal className="w-3 h-3 text-green-400" />
-                Daily.co Secure
-              </div>
+              {/* Badges removed for cleaner UI */}
             </div>
           </div>
 
           {/* Daily.co Video */}
           <div className="flex-1 flex items-center justify-center p-4">
-            <div className="relative w-full h-full bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-white/5">
+            <div className="relative w-full h-full bg-slate-100 rounded-2xl overflow-hidden shadow-sm border border-slate-200">
               <DailyVideoCall
                 roomUrl={roomUrl}
                 userName={providerName}
@@ -587,10 +566,10 @@ const Telehealth = () => {
           </div>
 
           {/* Control Bar */}
-          <div className="h-20 bg-white/90 backdrop-blur-md border-t border-slate-200 flex items-center justify-center gap-6 px-8 z-20 shadow-sm">
+          <div className="h-20 bg-white border-t border-slate-200 flex items-center justify-center gap-6 px-8 z-20 shadow-sm">
             <button
               onClick={handleEndCall}
-              className="p-4 rounded-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 shadow-sm hover:shadow-md transform hover:scale-105 transition-all duration-200 flex items-center gap-2 px-8"
+              className="p-4 rounded-full bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-900/20 transform hover:scale-105 transition-all duration-200 flex items-center gap-2 px-8"
             >
               <PhoneOff className="w-5 h-5" />
               <span className="font-bold text-sm">End Call</span>
@@ -999,21 +978,21 @@ const Telehealth = () => {
 
               {activeTab === 'info' && (
                 <div className="space-y-4 text-sm">
-                  <div className="p-3 bg-gray-800 rounded-xl">
-                    <p className="text-gray-500 text-xs uppercase mb-1">Patient</p>
-                    <p className="text-white font-medium">{activeCall.patientName || activeCall.name}</p>
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-sm">
+                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Patient</p>
+                    <p className="text-slate-900 font-bold text-base">{activeCall.patientName || activeCall.name}</p>
                   </div>
-                  <div className="p-3 bg-gray-800 rounded-xl">
-                    <p className="text-gray-500 text-xs uppercase mb-1">Appointment Type</p>
-                    <p className="text-white font-medium">{activeCall.type || activeCall.appointment_type || 'Telehealth Visit'}</p>
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-sm">
+                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Appointment Type</p>
+                    <p className="text-slate-900 font-bold text-base">{activeCall.type || activeCall.appointment_type || 'Telehealth Visit'}</p>
                   </div>
-                  <div className="p-3 bg-gray-800 rounded-xl">
-                    <p className="text-gray-500 text-xs uppercase mb-1">Duration</p>
-                    <p className="text-white font-medium">{formatTime(duration)}</p>
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-sm">
+                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Duration</p>
+                    <p className="text-slate-900 font-bold text-base">{formatTime(duration)}</p>
                   </div>
 
-                  <div className="p-3 bg-gray-900/40 rounded-xl border border-white/5">
-                    <p className="text-gray-500 text-xs">
+                  <div className="p-3 bg-blue-50 text-blue-800 rounded-xl border border-blue-100">
+                    <p className="text-xs font-medium">
                       Tip: Most systems require documenting modality (video/phone) in the note.
                     </p>
                   </div>
@@ -1026,14 +1005,12 @@ const Telehealth = () => {
               <button
                 onClick={handleSaveDraft}
                 className="w-full py-3 bg-white hover:bg-slate-50 text-slate-700 rounded-xl font-semibold transition-colors border border-slate-200 shadow-sm disabled:opacity-50"
-                disabled={isLocked}
               >
                 Save Draft
               </button>
               <button
                 onClick={handleFinalizeVisit}
                 className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors shadow-lg shadow-blue-900/10 disabled:opacity-50"
-                disabled={isLocked}
               >
                 {isLocked ? 'Visit Signed' : 'Finalize Visit'}
               </button>
