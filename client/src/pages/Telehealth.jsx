@@ -411,6 +411,7 @@ const Telehealth = () => {
       // 2. Create a Daily.co room via our backend
       const response = await api.post('/telehealth/rooms', {
         appointmentId: appt.id,
+        encounterId: encounter.id,
         patientName: appt.patientName || appt.name || 'Patient',
         providerName: providerName
       });

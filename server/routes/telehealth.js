@@ -10,15 +10,18 @@ const DAILY_API_URL = 'https://api.daily.co/v1';
 // Create a telehealth room
 router.post('/rooms', authenticate, async (req, res) => {
     try {
-        const { appointmentId, patientName, providerName } = req.body;
+        const { appointmentId, patientName, providerName, encounterId } = req.body;
 
         if (!DAILY_API_KEY) {
             console.error('[Telehealth] DAILY_API_KEY missing');
             return res.status(500).json({ error: 'Daily.co API key not configured' });
         }
 
-        // Create a unique room name based on appointment (deterministic)
-        const roomName = `pagemd-appt-${appointmentId}`;
+        // Create a unique room name based on encounter (preferred) or appointment
+        // Using encounter ID ensures unique rooms for repeat visits
+        const roomName = encounterId
+            ? `pagemd-enc-${encounterId}`
+            : `pagemd-appt-${appointmentId}`;
 
         // Room expires after 2 hours
         const expiryTime = Math.floor(Date.now() / 1000) + 7200;
