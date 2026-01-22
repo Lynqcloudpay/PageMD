@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 // Daily.co Prebuilt Component
 const DailyVideoCall = ({ roomUrl, userName, onLeave }) => {
     const frameRef = useRef(null);
+    const callFrameRef = useRef(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -29,6 +30,7 @@ const DailyVideoCall = ({ roomUrl, userName, onLeave }) => {
                     showFullscreenButton: true,
                 });
 
+                callFrameRef.current = callFrame;
                 callFrame.join({ url: roomUrl, userName });
 
                 callFrame.on('joined-meeting', () => setIsLoading(false));
@@ -42,7 +44,11 @@ const DailyVideoCall = ({ roomUrl, userName, onLeave }) => {
         document.body.appendChild(script);
 
         return () => {
-            // Cleanup
+            // Cleanup: Destroy call frame if it exists
+            if (callFrameRef.current) {
+                callFrameRef.current.destroy();
+                callFrameRef.current = null;
+            }
             if (script.parentNode) {
                 script.parentNode.removeChild(script);
             }
@@ -131,18 +137,9 @@ const PortalTelehealth = ({ onSchedule }) => {
     };
 
     const handleEndCall = useCallback(async () => {
-        // Delete the room from Daily.co to clean up
-        if (activeCall?.roomName) {
-            try {
-                await axios.delete(`${apiBase}/portal/telehealth/rooms/${activeCall.roomName}`, { headers });
-                console.log('Room deleted successfully');
-            } catch (err) {
-                console.warn('Failed to delete room (may have already expired):', err);
-            }
-        }
         setActiveCall(null);
         setRoomUrl(null);
-    }, [activeCall, apiBase, headers]);
+    }, []);
 
     const handleScheduleNavigation = () => {
         if (onSchedule) {

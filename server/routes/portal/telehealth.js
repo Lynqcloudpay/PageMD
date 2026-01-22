@@ -19,49 +19,83 @@ router.post('/rooms', authenticatePortal, async (req, res) => {
             return res.status(500).json({ error: 'Daily.co API key not configured' });
         }
 
-        // Create a unique room name based on appointment
-        const roomName = `pagemd-${appointmentId}-${Date.now()}`;
+        // Create a unique room name based on appointment (deterministic)
+        const roomName = `pagemd-appt-${appointmentId}`;
 
-        // Room expires after 1 hour
-        const expiryTime = Math.floor(Date.now() / 1000) + 3600;
+        // Room expires after 2 hours
+        const expiryTime = Math.floor(Date.now() / 1000) + 7200;
 
-        const response = await fetch(`${DAILY_API_URL}/rooms`, {
+        // 1. Ensure room exists
+        let roomResponse = await fetch(`${DAILY_API_URL}/rooms/${roomName}`, {
+            headers: { 'Authorization': `Bearer ${DAILY_API_KEY}` }
+        });
+
+        if (!roomResponse.ok) {
+            // Create room if not exists
+            roomResponse = await fetch(`${DAILY_API_URL}/rooms`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${DAILY_API_KEY}`
+                },
+                body: JSON.stringify({
+                    name: roomName,
+                    privacy: 'private',
+                    properties: {
+                        exp: expiryTime,
+                        enable_chat: true,
+                        enable_screenshare: true,
+                        enable_recording: false,
+                        enable_prejoin_ui: false,
+                        enable_knocking: false,
+                        enable_network_ui: true,
+                        max_participants: 10
+                    }
+                })
+            });
+
+            if (!roomResponse.ok) {
+                const error = await roomResponse.json();
+                console.error('Daily.co Room Creation error:', error);
+                // If it failed because it exists (race condition), that's fine, we'll proceed to token
+                if (roomResponse.status !== 400 || !error.info?.includes('already exists')) {
+                    return res.status(500).json({ error: 'Failed to create video room' });
+                }
+            }
+        }
+
+        const room = await roomResponse.json();
+
+        // 2. Generate meeting token for the patient (Non-Owner)
+        const tokenResponse = await fetch(`${DAILY_API_URL}/meeting-tokens`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${DAILY_API_KEY}`
             },
             body: JSON.stringify({
-                name: roomName,
-                privacy: 'public', // Anyone with link can join
                 properties: {
-                    exp: expiryTime,
-                    enable_chat: true,
-                    enable_screenshare: true,
-                    enable_recording: false,
-                    start_video_off: false,
-                    start_audio_off: false,
-                    owner_only_broadcast: false,
-                    enable_prejoin_ui: false,
-                    enable_knocking: false,
-                    enable_network_ui: true,
-                    max_participants: 10
+                    room_name: roomName,
+                    user_name: patientName || 'Patient',
+                    is_owner: false, // Patient is not owner
+                    expiry: expiryTime
                 }
             })
         });
 
-        if (!response.ok) {
-            const error = await response.json();
-            console.error('Daily.co API error:', error);
-            return res.status(500).json({ error: 'Failed to create video room', details: error.error || error.info });
+        if (!tokenResponse.ok) {
+            const error = await tokenResponse.json();
+            console.error('Daily.co Token error:', error);
+            return res.status(500).json({ error: 'Failed to generate access token' });
         }
 
-        const room = await response.json();
+        const tokenData = await tokenResponse.json();
 
         res.json({
             success: true,
-            roomUrl: room.url,
-            roomName: room.name,
+            roomUrl: `${room.url}?t=${tokenData.token}`,
+            token: tokenData.token,
+            roomName: roomName,
             expiresAt: new Date(expiryTime * 1000).toISOString()
         });
 

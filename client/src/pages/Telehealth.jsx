@@ -159,20 +159,11 @@ const Telehealth = () => {
   };
 
   const handleEndCall = useCallback(async () => {
-    // Delete the room from Daily.co to clean up
-    if (activeCall?.roomName) {
-      try {
-        await api.delete(`/telehealth/rooms/${activeCall.roomName}`);
-        console.log('Room deleted successfully');
-      } catch (err) {
-        console.warn('Failed to delete room (may have already expired):', err);
-      }
-    }
     setActiveCall(null);
     setRoomUrl(null);
     setDuration(0);
     setNoteDraft('');
-  }, [activeCall]);
+  }, []);
 
   const handleSaveNote = async () => {
     if (!noteDraft.trim() || !activeCall) return;
