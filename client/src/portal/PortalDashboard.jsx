@@ -502,21 +502,23 @@ const PortalDashboard = () => {
                             label="Messages"
                             active={activeTab === 'messages'}
                             onClick={() => setActiveTab('messages')}
-                            badge={stats.messages}
+                            badge={stats.messages > 0 ? stats.messages : null}
+                            badgeColor="babyBlue"
                         />
                         <NavItem
                             icon={<Calendar className="w-4.5 h-4.5" />}
                             label="Appointments"
                             active={activeTab === 'appointments'}
                             onClick={() => setActiveTab('appointments')}
-                            badge={stats.appointments}
+                            badge={stats.appointments > 0 ? stats.appointments : null}
+                            badgeColor="azure"
                         />
                         <NavItem
                             icon={<Video className="w-4.5 h-4.5" />}
                             label="Telehealth"
                             active={activeTab === 'telehealth'}
                             onClick={() => setActiveTab('telehealth')}
-                            badge={stats.telehealth}
+                            badge={stats.telehealth > 0 ? stats.telehealth : null}
                             badgeColor="emerald"
                         />
                     </nav>
@@ -572,21 +574,23 @@ const PortalDashboard = () => {
                             label="Messages"
                             active={activeTab === 'messages'}
                             onClick={() => { setActiveTab('messages'); setIsMobileMenuOpen(false); }}
-                            badge={stats.messages}
+                            badge={stats.messages > 0 ? stats.messages : null}
+                            badgeColor="babyBlue"
                         />
                         <NavItem
                             icon={<Calendar size={18} />}
                             label="Appointments"
                             active={activeTab === 'appointments'}
                             onClick={() => { setActiveTab('appointments'); setIsMobileMenuOpen(false); }}
-                            badge={stats.appointments}
+                            badge={stats.appointments > 0 ? stats.appointments : null}
+                            badgeColor="azure"
                         />
                         <NavItem
                             icon={<Video size={18} />}
                             label="Telehealth"
                             active={activeTab === 'telehealth'}
                             onClick={() => { setActiveTab('telehealth'); setIsMobileMenuOpen(false); }}
-                            badge={stats.telehealth}
+                            badge={stats.telehealth > 0 ? stats.telehealth : null}
                             badgeColor="emerald"
                         />
                     </nav>
@@ -608,6 +612,8 @@ const NavItem = ({ icon, label, active, onClick, badge, badgeColor = 'red' }) =>
         red: 'bg-red-500 text-white',
         emerald: 'bg-emerald-500 text-white',
         blue: 'bg-blue-500 text-white',
+        babyBlue: 'bg-blue-400 text-white',
+        azure: 'bg-sky-500 text-white',
         amber: 'bg-amber-500 text-white'
     };
 
