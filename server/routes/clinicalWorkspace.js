@@ -39,10 +39,17 @@ router.post('/encounters', requireRole('clinician', 'admin'), async (req, res) =
         const result = await pool.query(
             `INSERT INTO visits (
                 appointment_id, provider_id, patient_id, visit_date, 
-                encounter_date, status, note_type, created_at, updated_at
-            ) VALUES ($1, $2, $3, $4, $5, 'draft', 'telehealth', NOW(), NOW())
+                encounter_date, status, note_type, clinic_id, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, 'draft', 'telehealth', $6, NOW(), NOW())
             RETURNING *`,
-            [appointment_id, provider_id || req.user.id, patient_id, start_time, (start_time || new Date().toISOString()).split('T')[0]]
+            [
+                appointment_id,
+                provider_id || req.user.id,
+                patient_id,
+                start_time,
+                (start_time || new Date().toISOString()).split('T')[0],
+                req.user.clinic_id
+            ]
         );
 
         await logAudit(req.user.id, 'encounter.started', 'visit', result.rows[0].id, { appointment_id }, req.ip);

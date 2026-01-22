@@ -15,11 +15,17 @@ async function migrate() {
             await client.query('BEGIN');
             await client.query(`SET search_path TO ${schema}, public`);
 
-            console.log(`[${schema}] Adding structured_note and dx columns to visits table...`);
+            console.log(`[${schema}] Hardening visits table (appointment_id, structured_note, dx)...`);
             await client.query(`
                 ALTER TABLE visits 
+                ADD COLUMN IF NOT EXISTS appointment_id UUID,
                 ADD COLUMN IF NOT EXISTS structured_note JSONB,
                 ADD COLUMN IF NOT EXISTS dx TEXT[];
+            `);
+
+            // Add index for performance
+            await client.query(`
+                CREATE INDEX IF NOT EXISTS idx_visits_appointment_id ON visits(appointment_id);
             `);
 
             console.log(`[${schema}] Creating after_visit_summaries table...`);
