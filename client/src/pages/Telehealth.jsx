@@ -374,9 +374,14 @@ const Telehealth = () => {
       let encounter;
       try {
         const existing = await api.get(`/encounters?appointment_id=${appt.id}`);
-        if (existing.data && existing.data.length > 0) {
-          encounter = existing.data[0];
+        // If existing encounter connects to this appt, check if it's signed
+        const found = existing.data && existing.data.length > 0 ? existing.data[0] : null;
+
+        if (found && found.status !== 'signed') {
+          // Resume active encounter
+          encounter = found;
         } else {
+          // Create NEW encounter if none exists OR if previous one is signed
           const encounterRes = await api.post("/encounters", {
             appointment_id: appt.id,
             provider_id: currentUser.id,
