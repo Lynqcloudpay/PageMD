@@ -208,6 +208,10 @@ const Telehealth = () => {
         const today = format(new Date(), 'yyyy-MM-dd');
         const response = await appointmentsAPI.get({ date: today });
         const telehealthAppts = (response.data || []).filter(appt => {
+          // Filter out completed/cancelled appointments
+          const status = (appt.status || '').toLowerCase();
+          if (['checked_out', 'completed', 'cancelled', 'no_show', 'no-show'].includes(status)) return false;
+
           const type = (appt.type || appt.appointment_type || '').toLowerCase();
           const visitMethod = (appt.visit_method || '').toLowerCase();
           return type.includes('telehealth') || type.includes('video') || type.includes('virtual') || visitMethod === 'telehealth';
@@ -527,6 +531,13 @@ const Telehealth = () => {
 
       // 4. Finalize Encounter
       await api.patch(`/encounters/${activeEncounter.id}/finalize`);
+
+      // 5. Check out appointment (removes from queue)
+      if (activeCall?.appointmentId || activeCall?.id) {
+        try {
+          await appointmentsAPI.update(activeCall.appointmentId || activeCall.id, { status: 'checked_out' });
+        } catch (e) { console.error('Failed to checkout appointment', e); }
+      }
 
       // Clear local draft
       localStorage.removeItem(storageKeyFor(activeCall.id));
