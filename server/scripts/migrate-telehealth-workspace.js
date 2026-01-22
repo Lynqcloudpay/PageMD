@@ -1,40 +1,51 @@
 const pool = require('../db');
 
 async function migrate() {
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
+    // 1. Get all active schemas
+    const schemasRes = await pool.controlPool.query(
+        "SELECT schema_name FROM clinics WHERE status = 'active'"
+    );
+    const schemas = schemasRes.rows.map(r => r.schema_name);
+    console.log(`Found ${schemas.length} active schemas to migrate:`, schemas);
 
-        console.log('Adding structured_note and dx columns to visits table...');
-        await client.query(`
-            ALTER TABLE visits 
-            ADD COLUMN IF NOT EXISTS structured_note JSONB,
-            ADD COLUMN IF NOT EXISTS dx TEXT[];
-        `);
+    for (const schema of schemas) {
+        console.log(`\n--- Migrating Schema: ${schema} ---`);
+        const client = await pool.controlPool.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query(`SET search_path TO ${schema}, public`);
 
-        console.log('Creating after_visit_summaries table...');
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS after_visit_summaries (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                encounter_id UUID NOT NULL REFERENCES visits(id) ON DELETE CASCADE UNIQUE,
-                instructions TEXT,
-                follow_up TEXT,
-                return_precautions TEXT,
-                sent_at TIMESTAMP,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
+            console.log(`[${schema}] Adding structured_note and dx columns to visits table...`);
+            await client.query(`
+                ALTER TABLE visits 
+                ADD COLUMN IF NOT EXISTS structured_note JSONB,
+                ADD COLUMN IF NOT EXISTS dx TEXT[];
+            `);
 
-        await client.query('COMMIT');
-        console.log('✅ Telehealth Workspace migration completed');
-    } catch (error) {
-        await client.query('ROLLBACK');
-        console.error('❌ Migration failed:', error);
-        process.exit(1);
-    } finally {
-        client.release();
+            console.log(`[${schema}] Creating after_visit_summaries table...`);
+            await client.query(`
+                CREATE TABLE IF NOT EXISTS after_visit_summaries (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    encounter_id UUID NOT NULL REFERENCES visits(id) ON DELETE CASCADE UNIQUE,
+                    instructions TEXT,
+                    follow_up TEXT,
+                    return_precautions TEXT,
+                    sent_at TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            `);
+
+            await client.query('COMMIT');
+            console.log(`✅ [${schema}] Migration successful`);
+        } catch (error) {
+            await client.query('ROLLBACK');
+            console.error(`❌ [${schema}] Migration failed:`, error.message);
+        } finally {
+            client.release();
+        }
     }
+    console.log('\nAll migrations completed.');
 }
 
 if (require.main === module) {
