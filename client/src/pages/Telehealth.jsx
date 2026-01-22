@@ -38,11 +38,17 @@ const DailyVideoCall = ({ roomUrl, userName, onLeave }) => {
         callFrameRef.current = callFrame;
         callFrame.join({ url: roomUrl, userName });
 
-        callFrame.on('joined-meeting', () => setIsLoading(false));
+        callFrame.on('joined-meeting', () => {
+          setIsLoading(false);
+          setConnectionStatus('Connected');
+        });
         callFrame.on('left-meeting', onLeave);
+        callFrame.on('participant-joined', () => setParticipantCount(prev => prev + 1));
+        callFrame.on('participant-left', () => setParticipantCount(prev => prev - 1));
         callFrame.on('error', (e) => {
           console.error('Daily.co error:', e);
           setIsLoading(false);
+          setConnectionStatus('Error');
         });
       }
     };
@@ -57,6 +63,9 @@ const DailyVideoCall = ({ roomUrl, userName, onLeave }) => {
       }
     };
   }, [roomUrl, userName, onLeave]);
+
+  const [connectionStatus, setConnectionStatus] = useState('Disconnected');
+  const [participantCount, setParticipantCount] = useState(1); // Provider themselves
 
   const toggleAudio = () => {
     if (callFrameRef.current) {
@@ -75,9 +84,26 @@ const DailyVideoCall = ({ roomUrl, userName, onLeave }) => {
       {isLoading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center text-white z-10">
           <Loader2 className="w-12 h-12 animate-spin text-blue-500 mb-4" />
-          <p className="text-gray-400">Connecting to video call...</p>
+          <p className="text-gray-400">Connecting to secure video call...</p>
         </div>
       )}
+
+      {/* Connection Status Overlay */}
+      <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-2 pointer-events-none">
+        <div className="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${connectionStatus === 'Connected' ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`} />
+          <span className="text-[10px] uppercase tracking-wider text-white font-medium">{connectionStatus}</span>
+        </div>
+        {connectionStatus === 'Connected' && (
+          <div className="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 flex items-center gap-2">
+            <Users className="w-3 h-3 text-blue-400" />
+            <span className="text-[10px] uppercase tracking-wider text-white font-medium">
+              {participantCount > 1 ? 'Patient in Room' : 'Waiting for Patient...'}
+            </span>
+          </div>
+        )}
+      </div>
+
       <div ref={frameRef} className="w-full h-full" />
     </div>
   );
@@ -109,6 +135,8 @@ const Telehealth = () => {
     plan: '',
     dx: '',
   });
+
+  const isLocked = activeEncounter?.status === 'signed';
 
   // --- NEW: Orders state (pended UX) ---
   const [pendedOrders, setPendedOrders] = useState([]);
@@ -299,13 +327,35 @@ const Telehealth = () => {
     try {
       // 1. Create/Start Encounter in our backend
       const patientId = appt.patientId || appt.patient_id || appt.pid;
-      const encounterRes = await api.post("/encounters", {
-        appointment_id: appt.id,
-        provider_id: currentUser.id,
-        patient_id: patientId,
-        start_time: new Date().toISOString()
-      });
-      setActiveEncounter(encounterRes.data);
+
+      // Check if encounter already exists for this appointment
+      let encounter;
+      try {
+        const existing = await api.get(`/encounters?appointment_id=${appt.id}`);
+        if (existing.data && existing.data.length > 0) {
+          encounter = existing.data[0];
+        } else {
+          const encounterRes = await api.post("/encounters", {
+            appointment_id: appt.id,
+            provider_id: currentUser.id,
+            patient_id: patientId,
+            start_time: new Date().toISOString()
+          });
+          encounter = encounterRes.data;
+        }
+      } catch (e) {
+        console.error("Encounter check failed:", e);
+        // Fallback to try create anyway
+        const encounterRes = await api.post("/encounters", {
+          appointment_id: appt.id,
+          provider_id: currentUser.id,
+          patient_id: patientId,
+          start_time: new Date().toISOString()
+        });
+        encounter = encounterRes.data;
+      }
+
+      setActiveEncounter(encounter);
 
       // 2. Create a Daily.co room via our backend
       const response = await api.post('/telehealth/rooms', {
@@ -321,7 +371,7 @@ const Telehealth = () => {
       }
     } catch (err) {
       console.error('Error starting call/encounter:', err);
-      alert('Failed to start visit. Please try again.');
+      alert('Failed to start visit. Please check your connection and try again.');
     } finally {
       setCreatingRoom(false);
     }
@@ -374,6 +424,14 @@ const Telehealth = () => {
 
   const handleFinalizeVisit = async () => {
     if (!activeEncounter) return;
+    if (isLocked) {
+      alert("Encounter is already finalized.");
+      return;
+    }
+
+    if (!window.confirm("Are you sure you want to finalize and sign this visit? This will lock the encounter for edits.")) {
+      return;
+    }
 
     try {
       // 1. Save everything
@@ -393,11 +451,14 @@ const Telehealth = () => {
       // 4. Finalize Encounter
       await api.patch(`/encounters/${activeEncounter.id}/finalize`);
 
+      // Clear local draft
+      localStorage.removeItem(storageKeyFor(activeCall.id));
+
       alert('Visit finalized and pushed to record!');
       handleEndCall();
     } catch (err) {
       console.error('Error finalizing visit:', err);
-      alert('Failed to finalize visit.');
+      alert('Failed to finalize visit. Please ensure all required fields are complete.');
     }
   };
 
@@ -545,6 +606,7 @@ const Telehealth = () => {
                     onChange={(e) => setNote(n => ({ ...n, chiefComplaint: e.target.value }))}
                     placeholder="Chief Complaint"
                     className="w-full bg-gray-800 border border-white/10 rounded-xl px-3 py-2 text-white text-sm"
+                    readOnly={isLocked}
                   />
 
                   <textarea
@@ -552,6 +614,7 @@ const Telehealth = () => {
                     onChange={(e) => setNote(n => ({ ...n, subjective: e.target.value }))}
                     placeholder="Subjective (HPI / ROS)"
                     className="w-full h-28 bg-gray-800 border border-white/10 rounded-xl p-3 text-white text-sm resize-none"
+                    readOnly={isLocked}
                   />
 
                   <textarea
@@ -559,6 +622,7 @@ const Telehealth = () => {
                     onChange={(e) => setNote(n => ({ ...n, objective: e.target.value }))}
                     placeholder="Objective (Vitals / Exam)"
                     className="w-full h-24 bg-gray-800 border border-white/10 rounded-xl p-3 text-white text-sm resize-none"
+                    readOnly={isLocked}
                   />
 
                   <textarea
@@ -566,6 +630,7 @@ const Telehealth = () => {
                     onChange={(e) => setNote(n => ({ ...n, assessment: e.target.value }))}
                     placeholder="Assessment"
                     className="w-full h-20 bg-gray-800 border border-white/10 rounded-xl p-3 text-white text-sm resize-none"
+                    readOnly={isLocked}
                   />
 
                   <textarea
@@ -573,6 +638,7 @@ const Telehealth = () => {
                     onChange={(e) => setNote(n => ({ ...n, plan: e.target.value }))}
                     placeholder="Plan"
                     className="w-full h-28 bg-gray-800 border border-white/10 rounded-xl p-3 text-white text-sm resize-none"
+                    readOnly={isLocked}
                   />
 
                   <input
@@ -580,18 +646,21 @@ const Telehealth = () => {
                     onChange={(e) => setNote(n => ({ ...n, dx: e.target.value }))}
                     placeholder="Diagnoses (comma separated)"
                     className="w-full bg-gray-800 border border-white/10 rounded-xl px-3 py-2 text-white text-sm"
+                    readOnly={isLocked}
                   />
 
                   <div className="grid grid-cols-2 gap-2">
                     <button
-                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5"
+                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5 disabled:opacity-50"
                       onClick={() => setNote(n => ({ ...n, plan: (n.plan + (n.plan ? '\n' : '') + 'Return precautions reviewed.') }))}
+                      disabled={isLocked}
                     >
                       + Return precautions
                     </button>
                     <button
-                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5"
+                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5 disabled:opacity-50"
                       onClick={() => setNote(n => ({ ...n, plan: (n.plan + (n.plan ? '\n' : '') + 'Follow up in 2–4 weeks or sooner PRN.') }))}
+                      disabled={isLocked}
                     >
                       + Follow-up
                     </button>
@@ -605,7 +674,8 @@ const Telehealth = () => {
 
                   <div className="grid grid-cols-2 gap-2">
                     <button
-                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5"
+                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5 disabled:opacity-50"
+                      disabled={isLocked}
                       onClick={() => {
                         const text = prompt('Add Lab Order (e.g., CBC, CMP, A1c):');
                         if (text) addOrder('lab', text);
@@ -614,7 +684,8 @@ const Telehealth = () => {
                       + Lab
                     </button>
                     <button
-                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5"
+                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5 disabled:opacity-50"
+                      disabled={isLocked}
                       onClick={() => {
                         const text = prompt('Add Imaging Order (e.g., XR Chest, CT Abdomen):');
                         if (text) addOrder('imaging', text);
@@ -623,7 +694,8 @@ const Telehealth = () => {
                       + Imaging
                     </button>
                     <button
-                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5"
+                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5 disabled:opacity-50"
+                      disabled={isLocked}
                       onClick={() => {
                         const text = prompt('Add Medication (e.g., Amoxicillin 500mg BID x7d):');
                         if (text) addOrder('med', text);
@@ -632,7 +704,8 @@ const Telehealth = () => {
                       + Medication
                     </button>
                     <button
-                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5"
+                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5 disabled:opacity-50"
+                      disabled={isLocked}
                       onClick={() => {
                         const text = prompt('Add Referral (e.g., Cardiology):');
                         if (text) addOrder('referral', text);
@@ -656,8 +729,9 @@ const Telehealth = () => {
                             <p className="text-gray-500 text-xs mt-1">Status: {o.status}</p>
                           </div>
                           <button
-                            className="text-xs text-red-400 hover:text-red-300"
+                            className="text-xs text-red-400 hover:text-red-300 disabled:opacity-50"
                             onClick={() => setPendedOrders(prev => prev.filter(x => x.id !== o.id))}
+                            disabled={isLocked}
                           >
                             Remove
                           </button>
@@ -667,7 +741,7 @@ const Telehealth = () => {
                   </div>
 
                   <button
-                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold"
+                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold disabled:opacity-50"
                     onClick={async () => {
                       if (!activeEncounter) return;
                       try {
@@ -683,7 +757,7 @@ const Telehealth = () => {
                         alert('Failed to sign orders.');
                       }
                     }}
-                    disabled={pendedOrders.length === 0}
+                    disabled={pendedOrders.length === 0 || isLocked}
                   >
                     Sign Orders
                   </button>
@@ -699,18 +773,21 @@ const Telehealth = () => {
                     onChange={(e) => setAvs(a => ({ ...a, instructions: e.target.value }))}
                     placeholder="Patient instructions"
                     className="w-full h-28 bg-gray-800 border border-white/10 rounded-xl p-3 text-white text-sm resize-none"
+                    readOnly={isLocked}
                   />
                   <textarea
                     value={avs.followUp}
                     onChange={(e) => setAvs(a => ({ ...a, followUp: e.target.value }))}
                     placeholder="Follow-up plan"
                     className="w-full h-20 bg-gray-800 border border-white/10 rounded-xl p-3 text-white text-sm resize-none"
+                    readOnly={isLocked}
                   />
                   <textarea
                     value={avs.returnPrecautions}
                     onChange={(e) => setAvs(a => ({ ...a, returnPrecautions: e.target.value }))}
                     placeholder="Return precautions"
                     className="w-full h-20 bg-gray-800 border border-white/10 rounded-xl p-3 text-white text-sm resize-none"
+                    readOnly={isLocked}
                   />
 
                   <button
@@ -767,15 +844,17 @@ const Telehealth = () => {
             <div className="p-4 border-t border-white/10 space-y-2">
               <button
                 onClick={handleSaveDraft}
-                className="w-full py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-semibold transition-colors border border-white/5"
+                className="w-full py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-semibold transition-colors border border-white/5 disabled:opacity-50"
+                disabled={isLocked}
               >
                 Save Draft
               </button>
               <button
                 onClick={handleFinalizeVisit}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors"
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors disabled:opacity-50"
+                disabled={isLocked}
               >
-                Finalize Visit
+                {isLocked ? 'Visit Signed' : 'Finalize Visit'}
               </button>
             </div>
           </div>
