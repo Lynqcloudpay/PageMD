@@ -4,7 +4,7 @@ import {
   Monitor, MessageSquare, Users, Settings, Maximize2,
   Clock, User, Calendar, FileText, Camera, ChevronRight,
   Shield, Signal, Wifi, Battery, X, MoreVertical, Layout, Loader2,
-  ClipboardList, Activity, Pill, AlertCircle, RefreshCcw, Save
+  ClipboardList, Activity, Pill, AlertCircle, RefreshCcw, Save, Search
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { appointmentsAPI, patientsAPI, visitsAPI } from '../services/api';
