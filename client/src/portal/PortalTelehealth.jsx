@@ -11,7 +11,7 @@ const JitsiMeetComponent = ({ roomName, userName, onEndCall }) => {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const domain = "meet.jit.si";
+        const domain = "8x8.vc";
         const options = {
             roomName: roomName,
             width: '100%',
@@ -49,7 +49,7 @@ const JitsiMeetComponent = ({ roomName, userName, onEndCall }) => {
 
         if (!window.JitsiMeetExternalAPI) {
             const script = document.createElement('script');
-            script.src = `https://${domain}/external_api.js`;
+            script.src = `https://8x8.vc/external_api.js`;
             script.async = true;
             script.onload = () => {
                 initializeJitsi();
