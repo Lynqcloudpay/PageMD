@@ -83,10 +83,11 @@ const PortalDashboard = () => {
                 const apiBase = import.meta.env.VITE_API_URL || '/api';
                 const headers = { Authorization: `Bearer ${token}` };
 
-                // Fetch data
-                const [msgsRes, reqsRes] = await Promise.all([
+                // Fetch data - include appointments for telehealth count
+                const [msgsRes, reqsRes, apptsRes] = await Promise.all([
                     axios.get(`${apiBase}/portal/messages/threads`, { headers }).catch(() => ({ data: [] })),
-                    axios.get(`${apiBase}/portal/appointments/requests`, { headers }).catch(() => ({ data: [] }))
+                    axios.get(`${apiBase}/portal/appointments/requests`, { headers }).catch(() => ({ data: [] })),
+                    axios.get(`${apiBase}/portal/appointments`, { headers }).catch(() => ({ data: [] }))
                 ]);
 
                 const newNotifs = [];
@@ -103,7 +104,7 @@ const PortalDashboard = () => {
                     });
                 }
 
-                // NEW: Specifically check for appointment suggestions
+                // Check for appointment suggestions
                 const hasSuggestions = msgsRes.data.some(t => t.last_message_body?.includes('[SUGGEST_SLOT:'));
                 if (hasSuggestions) {
                     newNotifs.push({
@@ -133,10 +134,38 @@ const PortalDashboard = () => {
                     });
                 }
 
+                // Count telehealth appointments for today
+                const today = new Date().toISOString().split('T')[0];
+                const telehealthAppts = apptsRes.data.filter(appt => {
+                    const type = (appt.appointment_type || '').toLowerCase();
+                    const visitMethod = (appt.visit_method || '').toLowerCase();
+                    const date = (appt.appointment_date || '').split('T')[0];
+                    return (type.includes('telehealth') || type.includes('video') || type.includes('virtual') || visitMethod === 'telehealth') && date === today;
+                });
+
+                if (telehealthAppts.length > 0) {
+                    newNotifs.push({
+                        id: 'telehealth-ready',
+                        type: 'action',
+                        message: `You have ${telehealthAppts.length} virtual visit${telehealthAppts.length > 1 ? 's' : ''} today`,
+                        action: 'telehealth',
+                        priority: 'high'
+                    });
+                }
+
+                // Count upcoming appointments (next 7 days)
+                const nextWeek = new Date();
+                nextWeek.setDate(nextWeek.getDate() + 7);
+                const upcomingAppts = apptsRes.data.filter(appt => {
+                    const apptDate = new Date(appt.appointment_date);
+                    return apptDate >= new Date() && apptDate <= nextWeek;
+                });
+
                 setActiveNotifications(newNotifs);
                 setStats({
                     messages: unreadCount,
-                    appointments: reqsRes.data.filter(r => r.status === 'pending').length
+                    appointments: upcomingAppts.length,
+                    telehealth: telehealthAppts.length
                 });
 
             } catch (err) {
@@ -354,6 +383,8 @@ const PortalDashboard = () => {
                             label="Telehealth"
                             active={activeTab === 'telehealth'}
                             onClick={() => setActiveTab('telehealth')}
+                            badge={stats.telehealth}
+                            badgeColor="emerald"
                         />
                     </nav>
                 </div>
@@ -422,6 +453,8 @@ const PortalDashboard = () => {
                             label="Telehealth"
                             active={activeTab === 'telehealth'}
                             onClick={() => { setActiveTab('telehealth'); setIsMobileMenuOpen(false); }}
+                            badge={stats.telehealth}
+                            badgeColor="emerald"
                         />
                     </nav>
                 </div>
@@ -437,25 +470,35 @@ const PortalDashboard = () => {
     );
 };
 
-const NavItem = ({ icon, label, active, onClick, badge }) => (
-    <button
-        onClick={onClick}
-        className={`w-full flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 ${active
-            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-            : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-    >
-        <div className="flex items-center gap-3.5">
-            <span className={`transition-transform duration-500 ${active ? 'scale-110' : 'group-hover:scale-110'}`}>{icon}</span>
-            <span className="font-bold text-[11px] uppercase tracking-widest leading-none">{label}</span>
-        </div>
-        {badge > 0 && (
-            <span className={`min-w-[1.5rem] h-6 flex items-center justify-center px-1.5 rounded-full text-[10px] font-black transition-all duration-300 shadow-sm ${active ? 'bg-white text-blue-600' : 'bg-red-500 text-white animate-pulse pulse-red'}`}>
-                {badge}
-            </span>
-        )}
-    </button>
-);
+const NavItem = ({ icon, label, active, onClick, badge, badgeColor = 'red' }) => {
+    const badgeColorClasses = {
+        red: 'bg-red-500 text-white',
+        emerald: 'bg-emerald-500 text-white',
+        blue: 'bg-blue-500 text-white',
+        amber: 'bg-amber-500 text-white'
+    };
+
+    return (
+        <button
+            onClick={onClick}
+            className={`w-full flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 ${active
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+        >
+            <div className="flex items-center gap-3.5">
+                <span className={`transition-transform duration-500 ${active ? 'scale-110' : 'group-hover:scale-110'}`}>{icon}</span>
+                <span className="font-bold text-[11px] uppercase tracking-widest leading-none">{label}</span>
+            </div>
+            {badge > 0 && (
+                <span className={`min-w-[1.5rem] h-6 flex items-center justify-center px-1.5 rounded-full text-[10px] font-black transition-all duration-300 shadow-sm ${active ? 'bg-white text-blue-600' : `${badgeColorClasses[badgeColor]} animate-pulse`
+                    }`}>
+                    {badge}
+                </span>
+            )}
+        </button>
+    );
+};
 
 const QuickCard = ({ title, icon, status, count, onClick }) => (
     <div
