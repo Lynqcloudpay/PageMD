@@ -26,8 +26,6 @@ if [ -d "client" ] && [ -f "client/package.json" ]; then
     if [ $? -eq 0 ]; then
       echo "🗜️  Packaging local build..."
       tar -czf dist.tar.gz -C dist .
-      echo "📤 Uploading pre-built artifacts..."
-      scp -i "$KEY_PATH" dist.tar.gz "$USER@$HOST:$DIR/client/dist.tar.gz"
       LOCAL_BUILD_SUCCESS=true
     else
       echo "❌ ERROR: Local build failed."
@@ -51,8 +49,19 @@ ssh -i "$KEY_PATH" "$USER@$HOST" << EOF
   git reset --hard HEAD 2>/dev/null || true
   git fetch origin
   git reset --hard origin/main
-  
-  cd deploy
+EOF
+
+# 2. UPLOAD ARTIFACTS (AFTER git reset to ensure they aren't deleted)
+if [ "$LOCAL_BUILD_SUCCESS" = true ]; then
+  echo "📤 Uploading pre-built artifacts..."
+  scp -i "$KEY_PATH" client/dist.tar.gz "$USER@$HOST:$DIR/client/dist.tar.gz"
+fi
+
+echo "🌐 Resuming deployment on server..."
+
+ssh -i "$KEY_PATH" "$USER@$HOST" << EOF
+  set -e
+  cd "$DIR/deploy"
   
   echo "⚙️  Checking environment variables..."
   cp -f .env.prod .env || true

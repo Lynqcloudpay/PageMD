@@ -7,6 +7,9 @@ import {
 import { format } from 'date-fns';
 
 const JitsiMeetComponent = ({ roomName, userName, onEndCall }) => {
+    const [loadError, setLoadError] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+
     useEffect(() => {
         const domain = "meet.jit.si";
         const options = {
@@ -33,18 +36,31 @@ const JitsiMeetComponent = ({ roomName, userName, onEndCall }) => {
 
         let api = null;
 
+        const initializeJitsi = () => {
+            try {
+                api = new window.JitsiMeetExternalAPI(domain, options);
+                api.addEventListener('videoConferenceJoined', () => setIsLoading(false));
+                api.addEventListener('videoConferenceLeft', onEndCall);
+            } catch (err) {
+                console.error('Failed to initialize Jitsi:', err);
+                setLoadError(true);
+            }
+        };
+
         if (!window.JitsiMeetExternalAPI) {
             const script = document.createElement('script');
             script.src = `https://${domain}/external_api.js`;
             script.async = true;
             script.onload = () => {
-                api = new window.JitsiMeetExternalAPI(domain, options);
-                api.addEventListener('videoConferenceLeft', onEndCall);
+                initializeJitsi();
+            };
+            script.onerror = () => {
+                console.error('Failed to load Jitsi external_api.js');
+                setLoadError(true);
             };
             document.body.appendChild(script);
         } else {
-            api = new window.JitsiMeetExternalAPI(domain, options);
-            api.addEventListener('videoConferenceLeft', onEndCall);
+            initializeJitsi();
         }
 
         return () => {
@@ -54,7 +70,47 @@ const JitsiMeetComponent = ({ roomName, userName, onEndCall }) => {
         };
     }, [roomName, userName, onEndCall]);
 
-    return <div id="jitsi-container" className="w-full h-full bg-slate-900" />;
+    const directJitsiUrl = `https://meet.jit.si/${roomName}`;
+
+    if (loadError) {
+        return (
+            <div className="w-full h-full bg-slate-900 flex flex-col items-center justify-center text-white p-8">
+                <AlertCircle className="w-16 h-16 text-amber-500 mb-4" />
+                <h3 className="text-xl font-bold mb-2">Video Connection Issue</h3>
+                <p className="text-slate-400 text-center mb-6 max-w-md">
+                    We couldn't load the embedded video. This may be caused by a browser extension or network issue.
+                </p>
+                <a
+                    href={directJitsiUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold transition-colors"
+                >
+                    Open Video Call in New Tab
+                </a>
+            </div>
+        );
+    }
+
+    return (
+        <div className="w-full h-full bg-slate-900 relative">
+            {isLoading && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white z-10">
+                    <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                    <p className="text-slate-400">Connecting to video call...</p>
+                    <a
+                        href={directJitsiUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-4 text-blue-400 hover:text-blue-300 underline text-sm"
+                    >
+                        Having trouble? Open in new tab
+                    </a>
+                </div>
+            )}
+            <div id="jitsi-container" className="w-full h-full" />
+        </div>
+    );
 };
 
 const PortalTelehealth = ({ onSchedule }) => {

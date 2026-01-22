@@ -13,9 +13,17 @@ import Button from '../components/ui/Button';
 // Jitsi Meet Hook
 const useJitsiMeet = (active, roomName, userName, containerId) => {
   const [jitsiAPI, setJitsiAPI] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
-    if (!active || !roomName || !containerId) return;
+    if (!active || !roomName || !containerId) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setLoadError(false);
 
     const domain = "meet.jit.si";
     const options = {
@@ -43,19 +51,34 @@ const useJitsiMeet = (active, roomName, userName, containerId) => {
       }
     };
 
+    const initializeJitsi = () => {
+      try {
+        const api = new window.JitsiMeetExternalAPI(domain, options);
+        api.addEventListener('videoConferenceJoined', () => setIsLoading(false));
+        setJitsiAPI(api);
+      } catch (err) {
+        console.error('Failed to initialize Jitsi:', err);
+        setLoadError(true);
+        setIsLoading(false);
+      }
+    };
+
     // Dynamically load Jitsi script if not present
     if (!window.JitsiMeetExternalAPI) {
       const script = document.createElement('script');
       script.src = `https://${domain}/external_api.js`;
       script.async = true;
       script.onload = () => {
-        const api = new window.JitsiMeetExternalAPI(domain, options);
-        setJitsiAPI(api);
+        initializeJitsi();
+      };
+      script.onerror = () => {
+        console.error('Failed to load Jitsi external_api.js');
+        setLoadError(true);
+        setIsLoading(false);
       };
       document.body.appendChild(script);
     } else {
-      const api = new window.JitsiMeetExternalAPI(domain, options);
-      setJitsiAPI(api);
+      initializeJitsi();
     }
 
     return () => {
@@ -65,7 +88,7 @@ const useJitsiMeet = (active, roomName, userName, containerId) => {
     };
   }, [active, roomName, containerId]);
 
-  return jitsiAPI;
+  return { jitsiAPI, isLoading, loadError, directUrl: `https://meet.jit.si/${roomName}` };
 };
 
 const Telehealth = () => {
@@ -86,7 +109,7 @@ const Telehealth = () => {
 
   const roomName = activeCall ? `PageMD-Clinic-${activeCall.id || 'Session'}-${activeCall.appointment_date || format(new Date(), 'yyyyMMdd')}` : null;
 
-  const jitsiAPI = useJitsiMeet(!!activeCall, roomName, providerName, 'jitsi-container');
+  const { jitsiAPI, isLoading: jitsiLoading, loadError: jitsiError, directUrl } = useJitsiMeet(!!activeCall, roomName, providerName, 'jitsi-container');
 
   // Fetch appointments on mount
   useEffect(() => {
@@ -198,7 +221,41 @@ const Telehealth = () => {
           {/* Jitsi Video Center */}
           <div className="flex-1 flex items-center justify-center p-4">
             <div className="relative w-full h-full bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-white/5">
-              <div id="jitsi-container" className="w-full h-full" />
+              {jitsiError ? (
+                <div className="w-full h-full flex flex-col items-center justify-center text-white p-8">
+                  <Shield className="w-16 h-16 text-amber-500 mb-4" />
+                  <h3 className="text-xl font-bold mb-2">Video Connection Issue</h3>
+                  <p className="text-gray-400 text-center mb-6 max-w-md">
+                    We couldn't load the embedded video. This may be caused by a browser extension or network issue.
+                  </p>
+                  <a
+                    href={directUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold transition-colors"
+                  >
+                    Open Video Call in New Tab
+                  </a>
+                </div>
+              ) : (
+                <>
+                  {jitsiLoading && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-white z-10">
+                      <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                      <p className="text-gray-400">Connecting to video call...</p>
+                      <a
+                        href={directUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-4 text-blue-400 hover:text-blue-300 underline text-sm"
+                      >
+                        Having trouble? Open in new tab
+                      </a>
+                    </div>
+                  )}
+                  <div id="jitsi-container" className="w-full h-full" />
+                </>
+              )}
             </div>
           </div>
 
