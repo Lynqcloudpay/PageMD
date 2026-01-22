@@ -84,13 +84,57 @@ const DailyVideoCall = ({ roomUrl, userName, onLeave }) => {
 };
 
 const Telehealth = () => {
+  // --- NEW: Workspace Tabs ---
+  const WORKSPACE_TABS = ['chart', 'note', 'orders', 'avs', 'info'];
+
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCall, setActiveCall] = useState(null);
   const [roomUrl, setRoomUrl] = useState(null);
   const [creatingRoom, setCreatingRoom] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState('notes');
+  const [activeTab, setActiveTab] = useState('note'); // default to note during visit
+
+  // --- NEW: Chart Snapshot (best-effort) ---
+  const [patientSnapshot, setPatientSnapshot] = useState(null);
+  const [chartLoading, setChartLoading] = useState(false);
+
+  // --- NEW: Structured note state ---
+  const [note, setNote] = useState({
+    chiefComplaint: '',
+    subjective: '',
+    objective: '',
+    assessment: '',
+    plan: '',
+    dx: '',
+  });
+
+  // --- NEW: Orders state (pended UX) ---
+  const [pendedOrders, setPendedOrders] = useState([]);
+  // { id, type: 'lab'|'imaging'|'med'|'referral', text, status:'pended'|'signed' }
+
+  // --- NEW: AVS state ---
+  const [avs, setAvs] = useState({
+    instructions: '',
+    followUp: '',
+    returnPrecautions: '',
+  });
+
+  // Helpers
+  const storageKeyFor = (apptId) => `telehealth_draft_${apptId}`;
+
+  const safeJsonParse = (v) => {
+    try { return JSON.parse(v); } catch { return null; }
+  };
+
+  const addOrder = (type, text) => {
+    const clean = (text || '').trim();
+    if (!clean) return;
+    setPendedOrders(prev => [
+      { id: `${Date.now()}_${Math.random().toString(16).slice(2)}`, type, text: clean, status: 'pended' },
+      ...prev
+    ]);
+  };
 
   // Call State
   const [duration, setDuration] = useState(0);
@@ -134,6 +178,88 @@ const Telehealth = () => {
     return () => clearInterval(interval);
   }, [activeCall]);
 
+  // --- NEW: Persistence Effects ---
+  // When a call starts, load drafts (notes + orders + avs)
+  useEffect(() => {
+    if (!activeCall?.id) return;
+
+    const cached = safeJsonParse(localStorage.getItem(storageKeyFor(activeCall.id)));
+    if (cached?.note) setNote(cached.note);
+    if (cached?.pendedOrders) setPendedOrders(cached.pendedOrders);
+    if (cached?.avs) setAvs(cached.avs);
+
+    // Default tab
+    setActiveTab('note');
+  }, [activeCall?.id]);
+
+  // Autosave drafts (debounced)
+  useEffect(() => {
+    if (!activeCall?.id) return;
+
+    const t = setTimeout(() => {
+      localStorage.setItem(
+        storageKeyFor(activeCall.id),
+        JSON.stringify({
+          note,
+          pendedOrders,
+          avs,
+          updatedAt: new Date().toISOString(),
+        })
+      );
+    }, 600);
+
+    return () => clearTimeout(t);
+  }, [note, pendedOrders, avs, activeCall?.id]);
+
+  // --- NEW: Chart Fetching ---
+  const fetchPatientSnapshot = useCallback(async () => {
+    if (!activeCall) return;
+    const patientId = activeCall.patientId || activeCall.patient_id || activeCall.pid;
+
+    setChartLoading(true);
+    setPatientSnapshot(null);
+
+    try {
+      // Try a few common patterns; fail silently to keep UX smooth.
+      let res = null;
+
+      // Pattern A: patientsAPI.getById(id)
+      if (patientsAPI?.getById && patientId) {
+        res = await patientsAPI.getById(patientId);
+        setPatientSnapshot(res?.data || res);
+        return;
+      }
+
+      // Pattern B: /patients/:id
+      if (patientId) {
+        res = await api.get(`/patients/${patientId}`);
+        setPatientSnapshot(res?.data || null);
+        return;
+      }
+
+      // Pattern C: if appt already has basics, show those
+      setPatientSnapshot({
+        name: activeCall.patientName || activeCall.name,
+        dob: activeCall.dob,
+        phone: activeCall.phone,
+      });
+    } catch (e) {
+      // graceful fallback
+      setPatientSnapshot({
+        name: activeCall.patientName || activeCall.name,
+        dob: activeCall.dob,
+        phone: activeCall.phone,
+        _error: true,
+      });
+    } finally {
+      setChartLoading(false);
+    }
+  }, [activeCall]);
+
+  useEffect(() => {
+    if (activeCall) fetchPatientSnapshot();
+  }, [activeCall, fetchPatientSnapshot]);
+
   const handleStartCall = async (appt) => {
     setCreatingRoom(true);
     try {
@@ -162,14 +288,36 @@ const Telehealth = () => {
     setActiveCall(null);
     setRoomUrl(null);
     setDuration(0);
-    setNoteDraft('');
+    setNote({
+      chiefComplaint: '',
+      subjective: '',
+      objective: '',
+      assessment: '',
+      plan: '',
+      dx: '',
+    });
+    setPendedOrders([]);
+    setAvs({
+      instructions: '',
+      followUp: '',
+      returnPrecautions: '',
+    });
   }, []);
 
-  const handleSaveNote = async () => {
-    if (!noteDraft.trim() || !activeCall) return;
-    // TODO: Save session notes to the visit record
-    console.log('Saving session notes:', noteDraft);
-    alert('Session notes saved!');
+  const handleSaveDraft = () => {
+    if (!activeCall?.id) return;
+    // autosave already persists; this gives user confidence
+    alert('Draft saved.');
+  };
+
+  const handleFinalizeVisit = async () => {
+    if (!activeCall) return;
+
+    // TODO (next step): POST note/orders/avs to your backend encounter endpoints.
+    // For now, mark orders signed and keep data in localStorage.
+    setPendedOrders(prev => prev.map(o => ({ ...o, status: o.status === 'pended' ? 'signed' : o.status })));
+
+    alert('Visit finalized (wire to backend next).');
   };
 
   const formatTime = (seconds) => {
@@ -244,35 +392,242 @@ const Telehealth = () => {
           <div className="w-80 bg-gray-900 border-l border-white/5 flex flex-col">
             {/* Tabs */}
             <div className="flex border-b border-white/10">
-              {['notes', 'chat', 'info'].map(tab => (
+              {WORKSPACE_TABS.map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`flex-1 py-4 text-sm font-medium capitalize transition-all ${activeTab === tab ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-500 hover:text-gray-300'}`}
+                  className={`flex-1 py-4 text-xs font-semibold uppercase tracking-wider transition-all
+                    ${activeTab === tab ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-500 hover:text-gray-300'}`}
                 >
-                  {tab === 'notes' ? 'Notes' : tab === 'chat' ? 'Chat' : 'Info'}
+                  {tab}
                 </button>
               ))}
             </div>
 
             {/* Tab Content */}
             <div className="flex-1 overflow-y-auto p-4">
-              {activeTab === 'notes' && (
-                <div className="space-y-4">
-                  <h3 className="text-white font-semibold text-sm uppercase tracking-wider">SESSION NOTES</h3>
-                  <textarea
-                    value={noteDraft}
-                    onChange={(e) => setNoteDraft(e.target.value)}
-                    placeholder="Type clinical notes here..."
-                    className="w-full h-64 bg-gray-800 border border-white/10 rounded-xl p-4 text-white placeholder-gray-500 text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+              {activeTab === 'chart' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-white font-semibold text-sm uppercase tracking-wider">CHART</h3>
+                    <button
+                      onClick={fetchPatientSnapshot}
+                      className="text-xs text-blue-400 hover:text-blue-300"
+                    >
+                      Refresh
+                    </button>
+                  </div>
+
+                  <div className="p-3 bg-gray-800 rounded-xl border border-white/5">
+                    <p className="text-gray-500 text-xs uppercase mb-1">Patient</p>
+                    <p className="text-white font-medium">{activeCall.patientName || activeCall.name}</p>
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                      <div className="p-2 bg-gray-900/40 rounded-lg">
+                        <p className="text-gray-500">DOB</p>
+                        <p className="text-gray-200">{patientSnapshot?.dob || activeCall.dob || '—'}</p>
+                      </div>
+                      <div className="p-2 bg-gray-900/40 rounded-lg">
+                        <p className="text-gray-500">Phone</p>
+                        <p className="text-gray-200">{patientSnapshot?.phone || activeCall.phone || '—'}</p>
+                      </div>
+                    </div>
+                    {chartLoading && <p className="mt-2 text-xs text-gray-500">Loading chart…</p>}
+                    {patientSnapshot?._error && (
+                      <p className="mt-2 text-xs text-amber-400">
+                        Couldn’t load full chart snapshot (showing available appointment data).
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Quick chart nav placeholders (wire later) */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {['Medications', 'Allergies', 'Problems', 'Labs', 'Imaging', 'Documents'].map(x => (
+                      <button
+                        key={x}
+                        className="p-3 bg-gray-800 hover:bg-gray-700 rounded-xl text-left border border-white/5 transition-colors"
+                        onClick={() => alert(`${x} panel coming next (wire to your chart endpoints).`)}
+                      >
+                        <p className="text-white text-sm font-semibold">{x}</p>
+                        <p className="text-gray-500 text-xs">Open</p>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {activeTab === 'chat' && (
-                <div className="text-gray-500 text-center py-8">
-                  <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Chat is available within the video call</p>
+              {activeTab === 'note' && (
+                <div className="space-y-3">
+                  <h3 className="text-white font-semibold text-sm uppercase tracking-wider">NOTE BUILDER</h3>
+
+                  <input
+                    value={note.chiefComplaint}
+                    onChange={(e) => setNote(n => ({ ...n, chiefComplaint: e.target.value }))}
+                    placeholder="Chief Complaint"
+                    className="w-full bg-gray-800 border border-white/10 rounded-xl px-3 py-2 text-white text-sm"
+                  />
+
+                  <textarea
+                    value={note.subjective}
+                    onChange={(e) => setNote(n => ({ ...n, subjective: e.target.value }))}
+                    placeholder="Subjective (HPI / ROS)"
+                    className="w-full h-28 bg-gray-800 border border-white/10 rounded-xl p-3 text-white text-sm resize-none"
+                  />
+
+                  <textarea
+                    value={note.objective}
+                    onChange={(e) => setNote(n => ({ ...n, objective: e.target.value }))}
+                    placeholder="Objective (Vitals / Exam)"
+                    className="w-full h-24 bg-gray-800 border border-white/10 rounded-xl p-3 text-white text-sm resize-none"
+                  />
+
+                  <textarea
+                    value={note.assessment}
+                    onChange={(e) => setNote(n => ({ ...n, assessment: e.target.value }))}
+                    placeholder="Assessment"
+                    className="w-full h-20 bg-gray-800 border border-white/10 rounded-xl p-3 text-white text-sm resize-none"
+                  />
+
+                  <textarea
+                    value={note.plan}
+                    onChange={(e) => setNote(n => ({ ...n, plan: e.target.value }))}
+                    placeholder="Plan"
+                    className="w-full h-28 bg-gray-800 border border-white/10 rounded-xl p-3 text-white text-sm resize-none"
+                  />
+
+                  <input
+                    value={note.dx}
+                    onChange={(e) => setNote(n => ({ ...n, dx: e.target.value }))}
+                    placeholder="Diagnoses (comma separated)"
+                    className="w-full bg-gray-800 border border-white/10 rounded-xl px-3 py-2 text-white text-sm"
+                  />
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5"
+                      onClick={() => setNote(n => ({ ...n, plan: (n.plan + (n.plan ? '\n' : '') + 'Return precautions reviewed.') }))}
+                    >
+                      + Return precautions
+                    </button>
+                    <button
+                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5"
+                      onClick={() => setNote(n => ({ ...n, plan: (n.plan + (n.plan ? '\n' : '') + 'Follow up in 2–4 weeks or sooner PRN.') }))}
+                    >
+                      + Follow-up
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'orders' && (
+                <div className="space-y-3">
+                  <h3 className="text-white font-semibold text-sm uppercase tracking-wider">ORDERS</h3>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5"
+                      onClick={() => {
+                        const text = prompt('Add Lab Order (e.g., CBC, CMP, A1c):');
+                        if (text) addOrder('lab', text);
+                      }}
+                    >
+                      + Lab
+                    </button>
+                    <button
+                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5"
+                      onClick={() => {
+                        const text = prompt('Add Imaging Order (e.g., XR Chest, CT Abdomen):');
+                        if (text) addOrder('imaging', text);
+                      }}
+                    >
+                      + Imaging
+                    </button>
+                    <button
+                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5"
+                      onClick={() => {
+                        const text = prompt('Add Medication (e.g., Amoxicillin 500mg BID x7d):');
+                        if (text) addOrder('med', text);
+                      }}
+                    >
+                      + Medication
+                    </button>
+                    <button
+                      className="py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm border border-white/5"
+                      onClick={() => {
+                        const text = prompt('Add Referral (e.g., Cardiology):');
+                        if (text) addOrder('referral', text);
+                      }}
+                    >
+                      + Referral
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {pendedOrders.length === 0 ? (
+                      <div className="text-gray-500 text-sm p-3 bg-gray-800 rounded-xl border border-white/5">
+                        No orders yet. Add orders while you talk, then sign at close-out.
+                      </div>
+                    ) : (
+                      pendedOrders.map(o => (
+                        <div key={o.id} className="p-3 bg-gray-800 rounded-xl border border-white/5 flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-white text-sm font-semibold capitalize">{o.type}</p>
+                            <p className="text-gray-300 text-sm">{o.text}</p>
+                            <p className="text-gray-500 text-xs mt-1">Status: {o.status}</p>
+                          </div>
+                          <button
+                            className="text-xs text-red-400 hover:text-red-300"
+                            onClick={() => setPendedOrders(prev => prev.filter(x => x.id !== o.id))}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <button
+                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold"
+                    onClick={() => {
+                      // later: POST to your backend + eRx/labs integrations
+                      setPendedOrders(prev => prev.map(o => ({ ...o, status: 'signed' })));
+                      alert('Orders marked as signed (wire to backend next).');
+                    }}
+                    disabled={pendedOrders.length === 0}
+                  >
+                    Sign Orders
+                  </button>
+                </div>
+              )}
+
+              {activeTab === 'avs' && (
+                <div className="space-y-3">
+                  <h3 className="text-white font-semibold text-sm uppercase tracking-wider">AFTER VISIT SUMMARY</h3>
+
+                  <textarea
+                    value={avs.instructions}
+                    onChange={(e) => setAvs(a => ({ ...a, instructions: e.target.value }))}
+                    placeholder="Patient instructions"
+                    className="w-full h-28 bg-gray-800 border border-white/10 rounded-xl p-3 text-white text-sm resize-none"
+                  />
+                  <textarea
+                    value={avs.followUp}
+                    onChange={(e) => setAvs(a => ({ ...a, followUp: e.target.value }))}
+                    placeholder="Follow-up plan"
+                    className="w-full h-20 bg-gray-800 border border-white/10 rounded-xl p-3 text-white text-sm resize-none"
+                  />
+                  <textarea
+                    value={avs.returnPrecautions}
+                    onChange={(e) => setAvs(a => ({ ...a, returnPrecautions: e.target.value }))}
+                    placeholder="Return precautions"
+                    className="w-full h-20 bg-gray-800 border border-white/10 rounded-xl p-3 text-white text-sm resize-none"
+                  />
+
+                  <button
+                    className="w-full py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl border border-white/5"
+                    onClick={() => alert('Next: send AVS to patient portal + attach to encounter.')}
+                  >
+                    Send to Patient Portal
+                  </button>
                 </div>
               )}
 
@@ -290,21 +645,31 @@ const Telehealth = () => {
                     <p className="text-gray-500 text-xs uppercase mb-1">Duration</p>
                     <p className="text-white font-medium">{formatTime(duration)}</p>
                   </div>
+
+                  <div className="p-3 bg-gray-900/40 rounded-xl border border-white/5">
+                    <p className="text-gray-500 text-xs">
+                      Tip: Most systems require documenting modality (video/phone) in the note.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Save Button */}
-            {activeTab === 'notes' && (
-              <div className="p-4 border-t border-white/10">
-                <button
-                  onClick={handleSaveNote}
-                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors"
-                >
-                  Save to EHR
-                </button>
-              </div>
-            )}
+            {/* Sidebar Footer Actions */}
+            <div className="p-4 border-t border-white/10 space-y-2">
+              <button
+                onClick={handleSaveDraft}
+                className="w-full py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-semibold transition-colors border border-white/5"
+              >
+                Save Draft
+              </button>
+              <button
+                onClick={handleFinalizeVisit}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors"
+              >
+                Finalize Visit
+              </button>
+            </div>
           </div>
         )}
       </div>

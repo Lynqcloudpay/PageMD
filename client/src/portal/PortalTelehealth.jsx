@@ -76,6 +76,24 @@ const PortalTelehealth = ({ onSchedule }) => {
     const [creatingRoom, setCreatingRoom] = useState(false);
     const [error, setError] = useState(null);
 
+    // --- NEW: Prep & Consent State ---
+    const [prepAppt, setPrepAppt] = useState(null);
+    const [prepConsent, setPrepConsent] = useState(false);
+    const [prepReady, setPrepReady] = useState({
+        camera: false,
+        mic: false,
+        privacy: false,
+        wifi: false,
+    });
+
+    const openPrep = (appt) => {
+        setPrepAppt(appt);
+        setPrepConsent(false);
+        setPrepReady({ camera: false, mic: false, privacy: false, wifi: false });
+    };
+
+    const canJoin = prepConsent && Object.values(prepReady).every(Boolean);
+
     const apiBase = import.meta.env.VITE_API_URL || '/api';
     const token = localStorage.getItem('portalToken');
     const headers = { Authorization: `Bearer ${token}` };
@@ -246,7 +264,7 @@ const PortalTelehealth = ({ onSchedule }) => {
                                     </div>
                                 </div>
                                 <button
-                                    onClick={() => handleJoinCall(appt)}
+                                    onClick={() => openPrep(appt)}
                                     disabled={creatingRoom}
                                     className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg shadow-green-200 flex items-center gap-2 disabled:opacity-50"
                                 >
@@ -260,6 +278,83 @@ const PortalTelehealth = ({ onSchedule }) => {
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* PREP MODAL */}
+            {prepAppt && (
+                <div className="fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm transition-all duration-300">
+                    <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-8 border-b border-slate-100 bg-slate-50/50">
+                            <h3 className="text-2xl font-bold text-slate-800 tracking-tight">Prepare for your visit</h3>
+                            <p className="text-slate-500 text-sm mt-2">
+                                Please complete this quick checklist for a smooth video experience.
+                            </p>
+                        </div>
+
+                        <div className="p-8 space-y-4">
+                            {[
+                                ['camera', 'Allow camera access', 'Check your device settings'],
+                                ['mic', 'Allow microphone access', 'Ensure your mic is working'],
+                                ['privacy', 'I’m in a private place', 'Quiet environment for HIPAA privacy'],
+                                ['wifi', 'I have a stable connection', 'Strong Wi-Fi or LTE signal'],
+                            ].map(([k, label, sub]) => (
+                                <label key={k} className="group flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-md transition-all cursor-pointer">
+                                    <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${prepReady[k] ? 'bg-blue-600 border-blue-600' : 'border-slate-300 group-hover:border-blue-400'}`}>
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only"
+                                            checked={prepReady[k]}
+                                            onChange={(e) => setPrepReady(r => ({ ...r, [k]: e.target.checked }))}
+                                        />
+                                        {prepReady[k] && <Video size={14} className="text-white" />}
+                                    </div>
+                                    <div className="flex-1">
+                                        <span className="text-slate-700 font-bold block">{label}</span>
+                                        <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">{sub}</span>
+                                    </div>
+                                </label>
+                            ))}
+
+                            <label className="flex items-start gap-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-100 hover:shadow-md transition-all cursor-pointer">
+                                <div className={`w-6 h-6 rounded-lg border-2 mt-0.5 flex items-center justify-center transition-all ${prepConsent ? 'bg-emerald-500 border-emerald-500' : 'border-emerald-300'}`}>
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only"
+                                        checked={prepConsent}
+                                        onChange={(e) => setPrepConsent(e.target.checked)}
+                                    />
+                                    {prepConsent && <Shield size={14} className="text-white" />}
+                                </div>
+                                <span className="text-emerald-900 text-sm leading-relaxed">
+                                    I consent to a secure telehealth visit and understand that my personal health information will be protected.
+                                </span>
+                            </label>
+
+                            <div className="flex gap-4 pt-4">
+                                <button
+                                    onClick={() => setPrepAppt(null)}
+                                    className="flex-1 py-4 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    disabled={!canJoin || creatingRoom}
+                                    onClick={() => {
+                                        setPrepAppt(null); // Close modal
+                                        handleJoinCall(prepAppt);
+                                    }}
+                                    className="flex-1 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold hover:shadow-lg hover:shadow-blue-200 transition-all disabled:opacity-50 disabled:shadow-none"
+                                >
+                                    {creatingRoom ? 'Connecting…' : 'Join Visit Now'}
+                                </button>
+                            </div>
+
+                            <p className="text-center text-[11px] text-slate-400 font-medium">
+                                Technical support: If video fails, your provider may contact you via phone.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
