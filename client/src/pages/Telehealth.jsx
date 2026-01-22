@@ -455,6 +455,7 @@ const Telehealth = () => {
 
       // Aligned with VisitNote.jsx combined format
       const combinedNote = [
+        "**Modality: Telehealth Video Visit**",
         note.chiefComplaint ? `Chief Complaint: ${note.chiefComplaint}` : '',
         note.hpi ? `HPI: ${note.hpi}` : '',
         note.rosNotes ? `Review of Systems: ${note.rosNotes}` : '',
@@ -487,7 +488,9 @@ const Telehealth = () => {
   const handleFinalizeVisit = async () => {
     if (!activeEncounter) return;
     if (isLocked) {
-      alert("Encounter is already finalized.");
+      if (window.confirm("Visit is already signed. Would you like to end the call?")) {
+        handleEndCall();
+      }
       return;
     }
 
