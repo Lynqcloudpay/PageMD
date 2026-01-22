@@ -74,7 +74,7 @@ router.post('/rooms', authenticate, async (req, res) => {
                     room_name: roomName,
                     user_name: providerName || 'Provider',
                     is_owner: true, // Provider is owner
-                    expiry: expiryTime
+                    exp: expiryTime
                 }
             }, {
                 headers: {

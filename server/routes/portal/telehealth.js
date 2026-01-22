@@ -78,7 +78,7 @@ router.post('/rooms', authenticatePortal, async (req, res) => {
                     room_name: roomName,
                     user_name: patientName || 'Patient',
                     is_owner: false, // Patient is not owner
-                    expiry: expiryTime
+                    exp: expiryTime
                 }
             }, {
                 headers: {
