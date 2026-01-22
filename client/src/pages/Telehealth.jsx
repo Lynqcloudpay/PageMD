@@ -117,7 +117,7 @@ const DailyVideoCall = ({ roomUrl, userName, onLeave }) => {
 
 const Telehealth = () => {
   // --- NEW: Workspace Tabs ---
-  const WORKSPACE_TABS = ['chart', 'note', 'orders', 'avs', 'info'];
+  const WORKSPACE_TABS = ['chart', 'note', 'info'];
 
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -143,7 +143,9 @@ const Telehealth = () => {
     peNotes: '',
     results: '',
     assessment: '',
+    assessment: '',
     plan: '',
+    planNarrative: '', // Free text plan
     dx: '',
     planStructured: [],
   });
@@ -458,6 +460,13 @@ const Telehealth = () => {
   const handleSaveDraft = async () => {
     if (!activeEncounter) return;
     try {
+      // Build Plan Section (Narrative + Structured)
+      const structuredText = (note.planStructured || []).map(group => {
+        const lines = (group.orders || []).map(o => `  • ${o}`).join('\n');
+        return `${group.diagnosis}\n${lines}`;
+      }).join('\n\n');
+      const fullPlan = [note.planNarrative, structuredText].filter(Boolean).join('\n\n---\n\n');
+
       // Aligned with VisitNote.jsx combined format
       const combinedNote = [
         note.chiefComplaint ? `Chief Complaint: ${note.chiefComplaint}` : '',
@@ -466,7 +475,7 @@ const Telehealth = () => {
         note.peNotes ? `Physical Exam: ${note.peNotes}` : '',
         note.results ? `Results: ${note.results}` : '',
         note.assessment ? `Assessment: ${note.assessment}` : '',
-        note.plan ? `Plan: ${note.plan}` : ''
+        fullPlan ? `Plan: ${fullPlan}` : ''
       ].filter(Boolean).join('\n\n');
 
       // 1. Save Note using visitsAPI format
@@ -578,20 +587,23 @@ const Telehealth = () => {
           </div>
 
           {/* Control Bar */}
-          <div className="h-20 bg-gray-900 border-t border-white/5 flex items-center justify-center gap-6 px-8 z-20">
+          <div className="h-20 bg-white/90 backdrop-blur-md border-t border-slate-200 flex items-center justify-center gap-6 px-8 z-20 shadow-sm">
             <button
               onClick={handleEndCall}
-              className="p-4 rounded-full bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-900/20 transform hover:scale-105 transition-all duration-200 flex items-center gap-2 px-8"
+              className="p-4 rounded-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 shadow-sm hover:shadow-md transform hover:scale-105 transition-all duration-200 flex items-center gap-2 px-8"
             >
-              <PhoneOff className="w-6 h-6" />
-              <span className="font-semibold">End Call</span>
+              <PhoneOff className="w-5 h-5" />
+              <span className="font-bold text-sm">End Call</span>
             </button>
 
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className={`p-4 rounded-full transition-all duration-200 ${isSidebarOpen ? 'bg-blue-600/20 text-blue-500' : 'bg-gray-800 text-white hover:bg-gray-700'}`}
+              className={`p-4 rounded-full transition-all duration-200 border shadow-sm ${isSidebarOpen
+                ? 'bg-blue-50 text-blue-600 border-blue-200'
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                }`}
             >
-              <Layout className="w-6 h-6" />
+              <Layout className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -825,6 +837,17 @@ const Telehealth = () => {
                         </div>
                       )}
                     </div>
+
+                    {/* Narrative Plan */}
+                    <div className="mt-6 space-y-2">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Plan of Care (Narrative)</label>
+                      <textarea
+                        value={note.planNarrative || ''}
+                        onChange={(e) => setNote(prev => ({ ...prev, planNarrative: e.target.value }))}
+                        placeholder="Free text details, patient instructions, rationale..."
+                        className="w-full h-32 p-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none resize-none shadow-sm placeholder:text-slate-300"
+                      />
+                    </div>
                   </div>
                 </div>
               )}
@@ -1055,17 +1078,9 @@ const Telehealth = () => {
             setNote(n => {
               const newPlanStructured = updatedPlanStructured;
 
-              // Format plain text version for backend/display
-              const formattedPlan = newPlanStructured.map((item, index) => {
-                const diagnosisLine = `${index + 1}. ${item.diagnosis}`;
-                const ordersLines = item.orders.map(order => `  • ${order}`).join('\n');
-                return `${diagnosisLine}\n${ordersLines}`;
-              }).join('\n\n');
-
               return {
                 ...n,
-                planStructured: newPlanStructured,
-                plan: formattedPlan
+                planStructured: newPlanStructured
               };
             });
 
