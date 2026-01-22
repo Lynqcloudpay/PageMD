@@ -146,14 +146,43 @@ const PortalDashboard = () => {
                     const type = (appt.appointment_type || '').toLowerCase();
                     const visitMethod = (appt.visit_method || '').toLowerCase();
 
-                    // Use local date comparison to handle timezones correctly
-                    const apptDate = new Date(appt.appointment_date);
-                    const isToday = apptDate.getDate() === now.getDate() &&
-                        apptDate.getMonth() === now.getMonth() &&
-                        apptDate.getFullYear() === now.getFullYear();
+                    // Parse appointment date string properly
+                    // Handle both "2024-01-21" and "2024-01-21T14:30:00.000Z"
+                    const dateStr = appt.appointment_date;
+                    let apptYear, apptMonth, apptDate;
 
-                    return (type.includes('telehealth') || type.includes('video') || type.includes('virtual') || visitMethod === 'telehealth') && isToday;
+                    if (dateStr.includes('T')) {
+                        const d = new Date(dateStr);
+                        apptYear = d.getFullYear(); // Use local time
+                        apptMonth = d.getMonth();
+                        apptDate = d.getDate();
+                    } else {
+                        // If it's just YYYY-MM-DD, parse manually to avoid UTC conversion issues
+                        const [y, m, d] = dateStr.split('-').map(Number);
+                        apptYear = y;
+                        apptMonth = m - 1; // 0-indexed
+                        apptDate = d;
+                    }
+
+                    const isToday = apptDate === now.getDate() &&
+                        apptMonth === now.getMonth() &&
+                        apptYear === now.getFullYear();
+
+                    // Debug log
+                    // console.log('Checking appointment for telehealth:', { id: appt.id, type, visitMethod, date: appt.appointment_date });
+
+                    const isTelehealth =
+                        type.includes('telehealth') ||
+                        type.includes('video') ||
+                        type.includes('virtual') ||
+                        visitMethod === 'telehealth' ||
+                        visitMethod === 'video' ||
+                        visitMethod === 'virtual';
+
+                    return isTelehealth && isToday;
                 });
+
+                // console.log('Found telehealth appts today:', telehealthAppts);
 
                 if (telehealthAppts.length > 0) {
                     newNotifs.push({
