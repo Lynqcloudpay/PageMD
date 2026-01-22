@@ -84,6 +84,8 @@ services:
       SMTP_USER: ${SMTP_USER}
       SMTP_PASS: ${SMTP_PASS}
       SMTP_SECURE: ${SMTP_SECURE:-false}
+      # Telehealth (Daily.co)
+      DAILY_API_KEY: ${DAILY_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy
