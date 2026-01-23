@@ -14,7 +14,7 @@ import VisitChartView from './VisitChartView';
 import PrintOrdersModal from './PrintOrdersModal';
 import { ProblemInput, MedicationInput, AllergyInput, FamilyHistoryInput, SurgicalHistoryInput } from './PAMFOSInputs';
 
-const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview' }) => {
+const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview', side = 'right', backdrop = true }) => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState(initialTab);
     const [loading, setLoading] = useState(false);
@@ -536,10 +536,12 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex justify-end">
-            <div className="absolute inset-0 bg-gray-900/30 backdrop-blur-sm transition-opacity" onClick={onClose} />
+        <div className={`fixed inset-0 z-[100] flex ${side === 'left' ? 'justify-start' : 'justify-end'} ${backdrop ? '' : 'pointer-events-none'}`}>
+            {backdrop && (
+                <div className="absolute inset-0 bg-gray-900/30 backdrop-blur-sm transition-opacity" onClick={onClose} />
+            )}
 
-            <div className="relative w-full max-w-[900px] bg-white h-full shadow-2xl flex flex-col md:flex-row overflow-hidden animate-slide-in-right transform duration-300">
+            <div className={`relative w-full max-w-[900px] bg-white h-full shadow-2xl flex flex-col md:flex-row overflow-hidden transform duration-300 ${backdrop ? '' : 'pointer-events-auto shadow-xl border-r border-gray-200'} ${side === 'left' ? 'animate-in slide-in-from-left' : 'animate-slide-in-right'}`}>
 
                 {/* Sidebar Navigation */}
                 <div className="w-full md:w-64 bg-gray-50/80 border-b md:border-b-0 md:border-r border-gray-200 flex flex-col backdrop-blur-xl">

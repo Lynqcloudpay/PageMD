@@ -777,8 +777,13 @@ const Telehealth = () => {
                 <div className="space-y-6 text-left">
                   <div className="flex items-center justify-between">
                     <h3 className="text-slate-900 font-bold text-xs uppercase tracking-widest">Encounter Note</h3>
-                    <button onClick={handleSaveDraft} className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors border border-blue-100">
-                      <Save className="w-4 h-4" />
+                    <button
+                      onClick={() => setShowFullChart(true)}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200"
+                      title="View Patient Chart"
+                    >
+                      <ClipboardList className="w-4 h-4" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest">View Chart</span>
                     </button>
                   </div>
 
@@ -1127,6 +1132,8 @@ const Telehealth = () => {
             setViewingPatientId(null);
           }}
           initialTab={patientChartTab || 'overview'}
+          side="left"
+          backdrop={false}
         />
 
         {showDiagnosisPicker && (
