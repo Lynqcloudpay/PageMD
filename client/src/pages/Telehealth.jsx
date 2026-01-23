@@ -513,8 +513,20 @@ const Telehealth = () => {
       });
 
       console.log('Draft saved to EHR.');
+      // Visual feedback for user
+      const button = document.activeElement;
+      if (button && button.tagName === 'BUTTON' && button.textContent === 'Save Draft') {
+        const originalText = button.textContent;
+        button.textContent = 'Saved!';
+        button.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
+        }, 2000);
+      }
     } catch (err) {
       console.error('Error saving draft:', err);
+      alert('Failed to save draft. Please try again.');
     }
   };
 
