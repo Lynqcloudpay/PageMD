@@ -114,7 +114,10 @@ const PortalTelehealth = ({ onSchedule }) => {
                 const type = (appt.appointment_type || '').toLowerCase();
                 const visitMethod = (appt.visit_method || '').toLowerCase();
                 const date = (appt.appointment_date || '').split('T')[0];
-                return (type.includes('telehealth') || type.includes('video') || type.includes('virtual') || visitMethod === 'telehealth') && date === today;
+                return (type.includes('telehealth') || type.includes('video') || type.includes('virtual') || visitMethod === 'telehealth') &&
+                    date === today &&
+                    appt.status !== 'completed' &&
+                    appt.patient_status !== 'checked_out';
             });
 
             setAppointments(telehealthAppts);
@@ -145,10 +148,7 @@ const PortalTelehealth = ({ onSchedule }) => {
             }
         } catch (err) {
             console.error('Error joining call:', err);
-            // Fallback: Use a public room name
-            const fallbackRoom = `pagemd-${appt.id}-${Date.now()}`;
-            setRoomUrl(`https://pagemd.daily.co/${fallbackRoom}`);
-            setActiveCall(appt);
+            setError('Failed to join the secure video room. This may happen if the provider hasn\'t started the session yet.');
         } finally {
             setCreatingRoom(false);
         }

@@ -191,6 +191,25 @@ router.patch('/clinical_notes/:id/sign', requireRole('clinician', 'admin'), asyn
 });
 
 // --- 2.3 Orders Endpoints ---
+// Sign All Orders for Encounter
+router.patch('/encounters/:id/sign-orders', requireRole('clinician', 'admin'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(
+            `UPDATE orders 
+             SET status = 'sent', completed_at = NOW(), updated_at = NOW() 
+             WHERE visit_id = $1 AND status = 'pending'
+             RETURNING id`,
+            [id]
+        );
+
+        await logAudit(req.user.id, 'orders.signed_all', 'visit', id, { count: result.rowCount }, req.ip);
+        res.json({ signed_count: result.rowCount, signed_ids: result.rows.map(r => r.id) });
+    } catch (error) {
+        console.error('Error signing all orders:', error);
+        res.status(500).json({ error: 'Failed to sign encounter orders' });
+    }
+});
 
 // Create Order
 router.post('/clinical_orders', requireRole('clinician', 'admin'), async (req, res) => {

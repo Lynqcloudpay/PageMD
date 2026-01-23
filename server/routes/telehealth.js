@@ -17,11 +17,9 @@ router.post('/rooms', authenticate, async (req, res) => {
             return res.status(500).json({ error: 'Daily.co API key not configured' });
         }
 
-        // Create a unique room name based on encounter (preferred) or appointment
-        // Using encounter ID ensures unique rooms for repeat visits
-        const roomName = encounterId
-            ? `pagemd-enc-${encounterId}`
-            : `pagemd-appt-${appointmentId}`;
+        // Create a unique room name based on appointment (deterministic)
+        // This ensures both provider and patient land in the same room
+        const roomName = `pagemd-appt-${appointmentId}`;
 
         // Room expires after 2 hours
         const expiryTime = Math.floor(Date.now() / 1000) + 7200;

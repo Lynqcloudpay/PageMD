@@ -134,7 +134,6 @@ router.get('/:id', requirePermission('schedule:view'), async (req, res) => {
       `SELECT a.*,
              p.first_name as patient_first_name,
              p.last_name as patient_last_name,
-             p.last_name as patient_last_name,
              p.encryption_metadata,
              p.encryption_metadata as patient_encryption_metadata,
              p.id as patient_id,

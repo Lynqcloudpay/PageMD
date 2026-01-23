@@ -109,7 +109,7 @@ const Telehealth = () => {
   const [loading, setLoading] = useState(true);
   const [activeCall, setActiveCall] = useState(null);
   const [roomUrl, setRoomUrl] = useState(null);
-  const [creatingRoom, setCreatingRoom] = useState(false);
+  const [creatingRoom, setCreatingRoom] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('note'); // default to note during visit
@@ -288,7 +288,7 @@ const Telehealth = () => {
 
   // Autosave drafts (debounced)
   useEffect(() => {
-    if (!activeCall?.id) return;
+    if (!activeCall?.id || isSubmitting) return;
 
     const t = setTimeout(() => {
       localStorage.setItem(
@@ -305,7 +305,7 @@ const Telehealth = () => {
     }, 1000); // 1s debounce
 
     return () => clearTimeout(t);
-  }, [note, pendedOrders, avs, activeCall?.id, activeEncounter]);
+  }, [note, pendedOrders, avs, activeCall?.id, activeEncounter, isSubmitting]);
 
   // Keep encounter alive (server heartbeat)
   useEffect(() => {
@@ -373,7 +373,7 @@ const Telehealth = () => {
 
   const handleStartCall = async (appt, options = { video: true }) => {
     if (creatingRoom || isSubmitting) return;
-    setCreatingRoom(true);
+    setCreatingRoom(appt.id);
 
     try {
       // 1. Ensure encounter exists
@@ -409,9 +409,10 @@ const Telehealth = () => {
 
       setActiveEncounter(encounter);
 
-      // Update appointment status to 'in_progress' for queue visibility
+      // Update appointment status to 'in-progress' for queue visibility
+      // NOTE: Using 'in-progress' with hyphen to match DB constraint
       try {
-        await appointmentsAPI.update(appt.id, { status: 'in_progress' });
+        await appointmentsAPI.update(appt.id, { status: 'in-progress' });
       } catch (e) {
         console.error('Failed to update appointment status:', e);
       }
@@ -440,7 +441,7 @@ const Telehealth = () => {
       console.error('Error starting call/encounter:', err);
       alert('Failed to start visit. Please check your connection and try again.');
     } finally {
-      setCreatingRoom(false);
+      setCreatingRoom(null);
     }
   };
 
@@ -487,7 +488,7 @@ const Telehealth = () => {
 
       // Aligned with VisitNote.jsx combined format
       const combinedNote = [
-        "**Modality: Telehealth Video Visit**",
+        "MODALITY: Telehealth Video Visit",
         note.chiefComplaint ? `Chief Complaint: ${note.chiefComplaint}` : '',
         note.hpi ? `HPI: ${note.hpi}` : '',
         note.rosNotes ? `Review of Systems: ${note.rosNotes}` : '',
@@ -533,35 +534,37 @@ const Telehealth = () => {
       // 1. Save everything one last time
       await handleSaveDraft();
 
-      // 2. Sign Note
+      // 2. Sign All Orders for this encounter (prior to locking note)
+      await api.patch(`/encounters/${activeEncounter.id}/sign-orders`);
+
+      // 3. Sign/Lock Note
       await api.patch(`/clinical_notes/${activeEncounter.id}/sign`);
 
-      // 3. Sign pended orders
-      for (let o of pendedOrders) {
-        if (o.status === 'pending' || o.status === 'pended') {
-          await api.patch(`/clinical_orders/${o.id}/sign`);
-        }
-      }
+      console.log('Visit finalized and signed.');
       setPendedOrders(prev => prev.map(o => ({ ...o, status: 'signed' })));
 
       // 4. Finalize Encounter
       await api.patch(`/encounters/${activeEncounter.id}/finalize`);
 
-      // 5. Update Appointment to 'checked_out' for schedule sync
+      // 5. Update Appointment to 'completed' and 'checked_out' (Out) for schedule sync
       if (activeCall?.id) {
         try {
           const now = new Date();
           await appointmentsAPI.update(activeCall.id, {
-            status: 'checked_out',
+            status: 'completed',
             patient_status: 'checked_out',
             checkout_time: now.toISOString(),
             room_sub_status: null,
             current_room: null
           });
         } catch (e) {
-          console.error('Failed to checkout appointment:', e);
+          console.error('Failed to update final appointment status:', e);
         }
       }
+
+      // 6. Cleanup & Auto-close Workspace
+      handleCloseWorkspace();
+      fetchAppointments(); // Refresh queue to hide completed visit
 
       // Cleanup local draft
       localStorage.removeItem(storageKeyFor(activeCall.id));
@@ -1213,105 +1216,107 @@ const Telehealth = () => {
         </Card>
       ) : (
         <div className="grid gap-4">
-          {appointments.map(appt => (
-            <Card key={appt.id} className="p-6 hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-                    <Video size={28} />
+          {appointments
+            .filter(appt => appt.patient_status !== 'checked_out' && appt.status !== 'completed')
+            .map(appt => (
+              <Card key={appt.id} className="p-6 hover:shadow-lg transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                      <Video size={28} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-800">{appt.patientName || appt.name}</h3>
+                      <p className="text-sm text-slate-500">
+                        {appt.time || appt.appointment_time} • {appt.type || appt.appointment_type || 'Telehealth Visit'}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-slate-800">{appt.patientName || appt.name}</h3>
-                    <p className="text-sm text-slate-500">
-                      {appt.time || appt.appointment_time} • {appt.type || appt.appointment_type || 'Telehealth Visit'}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <button
-                      onClick={() => setActiveDropdown(activeDropdown === appt.id ? null : appt.id)}
-                      className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all border border-slate-200 flex items-center gap-2 font-semibold"
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <button
+                        onClick={() => setActiveDropdown(activeDropdown === appt.id ? null : appt.id)}
+                        className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all border border-slate-200 flex items-center gap-2 font-semibold"
+                      >
+                        Actions
+                        <ChevronDown size={18} className={`transition-transform duration-200 ${activeDropdown === appt.id ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {activeDropdown === appt.id && (
+                        <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                          <button
+                            onClick={() => {
+                              handleStartCall(appt, { video: true });
+                              setActiveDropdown(null);
+                            }}
+                            className="w-full px-4 py-3 text-left hover:bg-blue-50 text-slate-700 flex items-center gap-3 transition-colors border-b border-slate-50 group"
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                              <Video size={16} />
+                            </div>
+                            <div>
+                              <p className="font-bold text-sm">Join Video Call</p>
+                              <p className="text-[10px] text-slate-500 uppercase tracking-wider">With Patient</p>
+                            </div>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              handleStartCall(appt, { video: false });
+                              setActiveDropdown(null);
+                            }}
+                            className="w-full px-4 py-3 text-left hover:bg-emerald-50 text-slate-700 flex items-center gap-3 transition-colors border-b border-slate-50 group"
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                              <FileText size={16} />
+                            </div>
+                            <div>
+                              <p className="font-bold text-sm">Resume Note</p>
+                              <p className="text-[10px] text-slate-500 uppercase tracking-wider">Documentation Only</p>
+                            </div>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setViewingPatientId(appt.patient_id || appt.patientId);
+                              setShowFullChart(true);
+                              setActiveDropdown(null);
+                            }}
+                            className="w-full px-4 py-3 text-left hover:bg-slate-50 text-slate-700 flex items-center gap-3 transition-colors group"
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 group-hover:bg-slate-900 group-hover:text-white transition-colors">
+                              <User size={16} />
+                            </div>
+                            <div>
+                              <p className="font-bold text-sm">View Chart</p>
+                              <p className="text-[10px] text-slate-500 uppercase tracking-wider">Patient Record</p>
+                            </div>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <Button
+                      onClick={() => handleStartCall(appt)}
+                      disabled={creatingRoom !== null}
+                      className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg flex items-center gap-2"
                     >
-                      Actions
-                      <ChevronDown size={18} className={`transition-transform duration-200 ${activeDropdown === appt.id ? 'rotate-180' : ''}`} />
-                    </button>
-
-                    {activeDropdown === appt.id && (
-                      <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                        <button
-                          onClick={() => {
-                            handleStartCall(appt, { video: true });
-                            setActiveDropdown(null);
-                          }}
-                          className="w-full px-4 py-3 text-left hover:bg-blue-50 text-slate-700 flex items-center gap-3 transition-colors border-b border-slate-50 group"
-                        >
-                          <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                            <Video size={16} />
-                          </div>
-                          <div>
-                            <p className="font-bold text-sm">Join Video Call</p>
-                            <p className="text-[10px] text-slate-500 uppercase tracking-wider">With Patient</p>
-                          </div>
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            handleStartCall(appt, { video: false });
-                            setActiveDropdown(null);
-                          }}
-                          className="w-full px-4 py-3 text-left hover:bg-emerald-50 text-slate-700 flex items-center gap-3 transition-colors border-b border-slate-50 group"
-                        >
-                          <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                            <FileText size={16} />
-                          </div>
-                          <div>
-                            <p className="font-bold text-sm">Resume Note</p>
-                            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Documentation Only</p>
-                          </div>
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            setViewingPatientId(appt.patient_id || appt.patientId);
-                            setShowFullChart(true);
-                            setActiveDropdown(null);
-                          }}
-                          className="w-full px-4 py-3 text-left hover:bg-slate-50 text-slate-700 flex items-center gap-3 transition-colors group"
-                        >
-                          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 group-hover:bg-slate-900 group-hover:text-white transition-colors">
-                            <User size={16} />
-                          </div>
-                          <div>
-                            <p className="font-bold text-sm">View Chart</p>
-                            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Patient Record</p>
-                          </div>
-                        </button>
-                      </div>
-                    )}
+                      {creatingRoom === appt.id ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <Video size={18} />
+                      )}
+                      {creatingRoom === appt.id
+                        ? 'Connecting...'
+                        : (appt.status === 'in_progress' || appt.status === 'arrived')
+                          ? 'Resume Visit'
+                          : 'Start Call'
+                      }
+                    </Button>
                   </div>
-
-                  <Button
-                    onClick={() => handleStartCall(appt)}
-                    disabled={creatingRoom}
-                    className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg flex items-center gap-2"
-                  >
-                    {creatingRoom ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Video size={18} />
-                    )}
-                    {creatingRoom
-                      ? 'Connecting...'
-                      : (appt.status === 'in_progress' || appt.status === 'arrived')
-                        ? 'Resume Visit'
-                        : 'Start Call'
-                    }
-                  </Button>
                 </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            ))}
         </div>
       )}
     </div>
