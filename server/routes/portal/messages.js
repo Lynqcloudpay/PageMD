@@ -107,12 +107,41 @@ router.post('/threads', [
 
         await client.query('BEGIN');
 
-        // 1. Create thread
-        const threadResult = await client.query(
-            'INSERT INTO portal_message_threads (patient_id, subject, assigned_user_id) VALUES ($1, $2, $3) RETURNING id',
-            [patientId, subject, assigned_user_id]
-        );
-        const threadId = threadResult.rows[0].id;
+        let threadId;
+
+        // 1. Check for existing thread with this provider (or general if null)
+        let existingQuery = 'SELECT id FROM portal_message_threads WHERE patient_id = $1 AND assigned_user_id ';
+        const queryParams = [patientId];
+
+        if (assigned_user_id) {
+            existingQuery += '= $2';
+            queryParams.push(assigned_user_id);
+        } else {
+            existingQuery += 'IS NULL';
+        }
+
+        // Limit to 1, order by recent to match iMessage behavior (reopening latest convo)
+        existingQuery += ' ORDER BY last_message_at DESC LIMIT 1';
+
+        const existingRes = await client.query(existingQuery, queryParams);
+
+        if (existingRes.rows.length > 0) {
+            // Reuse existing thread
+            threadId = existingRes.rows[0].id;
+
+            // Re-open thread and update timestamp
+            await client.query(
+                'UPDATE portal_message_threads SET last_message_at = CURRENT_TIMESTAMP, status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+                ['open', threadId]
+            );
+        } else {
+            // Create new thread
+            const threadResult = await client.query(
+                'INSERT INTO portal_message_threads (patient_id, subject, assigned_user_id) VALUES ($1, $2, $3) RETURNING id',
+                [patientId, subject, assigned_user_id]
+            );
+            threadId = threadResult.rows[0].id;
+        }
 
         // 2. Create message
         await client.query(

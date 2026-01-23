@@ -144,12 +144,14 @@ const PortalAppointments = ({ onMessageShortcut }) => {
 
     const scheduled = appointments.filter(a => {
         const apptDate = getDateStr(a.appointment_date);
-        return apptDate >= todayStr && !isCancelled(a);
+        const isCompleted = a.status === 'completed' || a.status === 'checked_out';
+        return apptDate >= todayStr && !isCancelled(a) && !isCompleted;
     }).sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date));
 
     const past = appointments.filter(a => {
         const apptDate = getDateStr(a.appointment_date);
-        return apptDate < todayStr && !isCancelled(a);
+        const isCompleted = a.status === 'completed' || a.status === 'checked_out';
+        return (apptDate < todayStr || isCompleted) && !isCancelled(a);
     }).sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date));
 
     const cancelledAppts = appointments.filter(a => isCancelled(a));
@@ -293,6 +295,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                 <tr className="bg-slate-50/50">
                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Date & Time</th>
                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Clinician</th>
+                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Type</th>
                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Status</th>
                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100"></th>
                                 </tr>
@@ -306,6 +309,21 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                         </td>
                                         <td className="px-6 py-5">
                                             <div className="text-sm font-bold text-slate-700">Dr. {appt.provider_last_name}</div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center gap-1.5">
+                                                {appt.visit_method === 'telehealth' || (appt.appointment_type || '').toLowerCase().includes('telehealth') ? (
+                                                    <>
+                                                        <Video size={12} className="text-emerald-500" />
+                                                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tight">Telehealth</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <MapPin size={12} className="text-blue-500" />
+                                                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tight">In-Person</span>
+                                                    </>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-5">
                                             {(() => {
@@ -378,6 +396,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                 <tr className="bg-slate-50/30">
                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-300 border-b border-slate-50">Date & Time</th>
                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-300 border-b border-slate-50">Clinician</th>
+                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-300 border-b border-slate-50">Type</th>
                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-300 border-b border-slate-50">Status</th>
                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-300 border-b border-slate-50"></th>
                                 </tr>
@@ -390,6 +409,11 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                             <div className="text-[10px] font-bold text-slate-300">{appt.appointment_time.slice(0, 5)}</div>
                                         </td>
                                         <td className="px-6 py-4 font-bold text-slate-400 text-sm">Dr. {appt.provider_last_name}</td>
+                                        <td className="px-6 py-4">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                                {appt.visit_method === 'telehealth' || (appt.appointment_type || '').toLowerCase().includes('telehealth') ? 'Telehealth' : 'In-Person'}
+                                            </span>
+                                        </td>
                                         <td className="px-6 py-4">
                                             <span className="px-2 py-0.5 bg-slate-100 text-slate-400 rounded text-[8px] font-black uppercase tracking-widest">
                                                 Seen

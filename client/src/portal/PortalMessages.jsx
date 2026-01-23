@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import {
     MessageSquare,
@@ -31,6 +31,16 @@ const PortalMessages = () => {
     const apiBase = import.meta.env.VITE_API_URL || '/api';
     const token = localStorage.getItem('portalToken');
     const headers = { Authorization: `Bearer ${token}` };
+
+    const messagesEndRef = useRef(null);
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages, selectedThread]);
 
     useEffect(() => {
         fetchThreads();
@@ -363,6 +373,7 @@ const PortalMessages = () => {
                                         )}
                                     </div>
                                 ))}
+                                <div ref={messagesEndRef} />
                             </div>
 
                             <div className="p-4 md:p-5 bg-white border-t border-slate-50">
