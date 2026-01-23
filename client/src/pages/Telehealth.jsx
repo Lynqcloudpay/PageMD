@@ -562,18 +562,12 @@ const Telehealth = () => {
 
       // 6. Cleanup & Auto-close Workspace
       handleCloseWorkspace();
-      fetchAppointments(); // Refresh queue to hide completed visit
+      fetchSchedule(); // Refresh queue to hide completed visit
 
       // Cleanup local draft
       localStorage.removeItem(storageKeyFor(activeCall.id));
 
       console.log('Visit finalized and checked out.');
-
-      // Refresh the queue list to remove this item
-      fetchSchedule();
-
-      // 6. Close workspace automatically
-      handleCloseWorkspace();
 
     } catch (err) {
       console.error('Error finalizing visit:', err);

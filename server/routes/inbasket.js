@@ -133,10 +133,7 @@ async function syncInboxItems(tenantId, schema) {
     WHERE order_type = 'lab' 
       AND (status = 'completed' OR result_value IS NOT NULL)
       AND (reviewed IS NULL OR reviewed = false)
-      AND NOT EXISTS (
-        SELECT 1 FROM inbox_items i2 
-        WHERE i2.reference_id = orders.id AND i2.reference_table = 'orders'
-      )
+    ON CONFLICT (reference_id, reference_table) WHERE status != 'completed' DO NOTHING
   `, [tenantId]);
 
     // 2. Sync Imaging Orders
@@ -157,10 +154,7 @@ async function syncInboxItems(tenantId, schema) {
     WHERE order_type = 'imaging'
       AND (status = 'completed' OR result_value IS NOT NULL)
       AND (reviewed IS NULL OR reviewed = false)
-      AND NOT EXISTS (
-        SELECT 1 FROM inbox_items i2 
-        WHERE i2.reference_id = orders.id AND i2.reference_table = 'orders'
-      )
+    ON CONFLICT (reference_id, reference_table) WHERE status != 'completed' DO NOTHING
   `, [tenantId]);
 
     // 3. Sync Documents (Only if they have a clinical doc_type or are tagged as 'clinical')
@@ -181,10 +175,7 @@ async function syncInboxItems(tenantId, schema) {
     FROM documents
     WHERE (reviewed IS NULL OR reviewed = false)
       AND (doc_type IS NOT NULL AND doc_type NOT IN ('other', 'administrative', 'background_upload'))
-      AND NOT EXISTS (
-        SELECT 1 FROM inbox_items i2 
-        WHERE i2.reference_id = documents.id AND i2.reference_table = 'documents'
-      )
+    ON CONFLICT (reference_id, reference_table) WHERE status != 'completed' DO NOTHING
   `, [tenantId]);
 
     // 4. Sync Referrals
@@ -203,10 +194,7 @@ async function syncInboxItems(tenantId, schema) {
       created_by, created_at, created_at
     FROM referrals
     WHERE (status IS NULL OR status = 'pending' OR status = 'new')
-      AND NOT EXISTS (
-        SELECT 1 FROM inbox_items i2 
-        WHERE i2.reference_id = referrals.id AND i2.reference_table = 'referrals'
-      )
+    ON CONFLICT (reference_id, reference_table) WHERE status != 'completed' DO NOTHING
   `, [tenantId]);
 
     // 5. Sync Unsigned Notes (Co-signing)
@@ -225,10 +213,7 @@ async function syncInboxItems(tenantId, schema) {
       provider_id, created_at, created_at
     FROM visits
     WHERE status = 'draft' AND note_signed_at IS NULL
-      AND NOT EXISTS (
-        SELECT 1 FROM inbox_items i2 
-        WHERE i2.reference_id = visits.id AND i2.reference_table = 'visits'
-      )
+    ON CONFLICT (reference_id, reference_table) WHERE status != 'completed' DO NOTHING
   `, [tenantId]);
 
     // 6. Sync Old Messages/Tasks
@@ -260,6 +245,7 @@ async function syncInboxItems(tenantId, schema) {
         SELECT 1 FROM inbox_items i2 
         WHERE i2.reference_id = messages.id AND i2.reference_table = 'messages'
     )
+    ON CONFLICT (reference_id, reference_table) WHERE status != 'completed' DO NOTHING
   `, [tenantId]);
 
     // NEW: Cleanup administrative clutter that might have leaked in or was already there
@@ -388,10 +374,7 @@ async function syncInboxItems(tenantId, schema) {
     FROM portal_appointment_requests ar
     JOIN patients p ON ar.patient_id = p.id
     WHERE ar.status = 'pending'
-      AND NOT EXISTS(
-        SELECT 1 FROM inbox_items i2 
-        WHERE i2.reference_id = ar.id AND i2.reference_table = 'portal_appointment_requests'
-      )
+    ON CONFLICT (reference_id, reference_table) WHERE status != 'completed' DO NOTHING
     `, [tenantId]);
 
   } finally {
