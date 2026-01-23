@@ -694,7 +694,9 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                     </div>
                                     <div className="text-right flex flex-col items-end gap-2">
                                         <div className="bg-blue-50/50 text-blue-700 px-3 py-1 rounded-md border border-blue-100/50 flex flex-col items-end">
-                                            <span className="text-[10px] font-bold uppercase tracking-wider">Clinical Record</span>
+                                            <span className="text-[10px] font-bold uppercase tracking-wider">
+                                                {visit?.note_type === 'telehealth' ? 'Telehealth Visit' : 'Clinical Record'}
+                                            </span>
                                             {isSigned && (
                                                 <span className="text-[9px] font-medium text-blue-500">
                                                     {snapshot ? `Snapshot: ${format(new Date(visit.note_signed_at), 'MM/dd/yy')}` : '⚠️ Live Data (Snapshot Missing)'}
@@ -743,11 +745,16 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                 </div>
 
                                 {/* META HEADER (CHIEF COMPLAINT) */}
-                                <div className="avoid-cut mb-4 pt-2 pb-2 border-b border-blue-50 flex gap-4 items-center px-2">
+                                <div className="avoid-cut mb-4 pt-2 pb-2 border-b border-blue-50 flex justify-between items-center px-2">
                                     <div className="flex gap-2 items-center shrink-0">
                                         <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Reason for Visit:</span>
                                         <div className="text-[12px] font-bold text-slate-700 uppercase tracking-wide">{noteData.chiefComplaint || visit?.reason || 'Routine follow-up'}</div>
                                     </div>
+                                    {visit?.note_type === 'telehealth' && (
+                                        <div className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-blue-100 flex items-center gap-1.5">
+                                            <Globe className="w-3 h-3" /> Telehealth Video Visit
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* ADDENDUM NOTICE BANNER */}

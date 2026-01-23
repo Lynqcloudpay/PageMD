@@ -477,7 +477,7 @@ const Telehealth = () => {
   }, []);
 
   const handleSaveDraft = async () => {
-    if (!activeEncounter) return;
+    if (!activeEncounter || isLocked) return;
     try {
       // Build Plan Section (Narrative + Structured)
       const structuredText = (note.planStructured || []).map(group => {
@@ -537,14 +537,12 @@ const Telehealth = () => {
       // 2. Sign All Orders for this encounter (prior to locking note)
       await api.patch(`/encounters/${activeEncounter.id}/sign-orders`);
 
-      // 3. Sign/Lock Note
+      // 3. Sign/Lock Note (This now captures clinical snapshot server-side)
       await api.patch(`/clinical_notes/${activeEncounter.id}/sign`);
 
       console.log('Visit finalized and signed.');
+      setActiveEncounter(prev => ({ ...prev, status: 'signed' })); // Update local state to block autosave
       setPendedOrders(prev => prev.map(o => ({ ...o, status: 'signed' })));
-
-      // 4. Finalize Encounter
-      await api.patch(`/encounters/${activeEncounter.id}/finalize`);
 
       // 5. Update Appointment to 'completed' and 'checked_out' (Out) for schedule sync
       if (activeCall?.id) {

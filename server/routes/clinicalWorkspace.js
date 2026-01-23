@@ -108,8 +108,10 @@ router.patch('/encounters/:id/finalize', requireRole('clinician', 'admin'), asyn
 
         const visit = await pool.query('SELECT status FROM visits WHERE id = $1', [id]);
         if (visit.rows.length === 0) return res.status(404).json({ error: 'Encounter not found' });
+
+        // Idempotency: If already signed, just return success
         if (visit.rows[0].status === 'signed') {
-            return res.status(400).json({ error: 'Encounter is already finalized' });
+            return res.json({ status: 'finalized', encounter: visit.rows[0], already_finalized: true });
         }
 
         const result = await pool.query(
@@ -173,19 +175,78 @@ router.get('/clinical_notes', async (req, res) => {
 router.patch('/clinical_notes/:id/sign', requireRole('clinician', 'admin'), async (req, res) => {
     try {
         const { id } = req.params;
-        const visit = await pool.query('SELECT status FROM visits WHERE id = $1', [id]);
+        const { note_draft } = req.body; // Optional: update note content at same time
+
+        const visit = await pool.query('SELECT status, patient_id FROM visits WHERE id = $1', [id]);
         if (visit.rows.length === 0) return res.status(404).json({ error: 'Encounter not found' });
-        if (visit.rows[0].status === 'signed') return res.status(400).json({ error: 'Note already signed' });
+
+        // Idempotency
+        if (visit.rows[0].status === 'signed') {
+            return res.json({ success: true, already_signed: true });
+        }
+
+        // ============================================================
+        // CAPTURE CLINICAL SNAPSHOT (Parity with visits.js /:id/sign)
+        // ============================================================
+        const patientId = visit.rows[0].patient_id;
+        const patientEncryptionService = require('../services/patientEncryptionService');
+
+        const [
+            patientRes,
+            allergiesRes,
+            medicationsRes,
+            problemsRes,
+            familyHistoryRes,
+            socialHistoryRes,
+            visitDocumentsRes
+        ] = await Promise.all([
+            pool.query('SELECT * FROM patients WHERE id = $1', [patientId]),
+            pool.query('SELECT * FROM allergies WHERE patient_id = $1 AND active = true', [patientId]),
+            pool.query('SELECT * FROM medications WHERE patient_id = $1 AND active = true', [patientId]),
+            pool.query('SELECT * FROM problems WHERE patient_id = $1 AND status = $2', [patientId, 'active']),
+            pool.query('SELECT * FROM family_history WHERE patient_id = $1', [patientId]),
+            pool.query('SELECT * FROM social_history WHERE patient_id = $1 LIMIT 1', [patientId]),
+            pool.query('SELECT id, filename, doc_type, tags FROM documents WHERE visit_id = $1', [id])
+        ]);
+
+        let patientData = patientRes.rows[0] || {};
+        try { patientData = await patientEncryptionService.decryptPatientPHI(patientData); } catch (e) { }
+
+        const snapshot = {
+            captured_at: new Date().toISOString(),
+            captured_by: req.user.id,
+            demographics: {
+                first_name: patientData.first_name,
+                last_name: patientData.last_name,
+                dob: patientData.dob,
+                sex: patientData.sex,
+                mrn: patientData.mrn,
+                insurance_provider: patientData.insurance_provider
+            },
+            allergies: allergiesRes.rows.map(a => ({ allergen: a.allergen, reaction: a.reaction, severity: a.severity })),
+            medications: medicationsRes.rows.map(m => ({ medication_name: m.medication_name, dosage: m.dosage, frequency: m.frequency })),
+            problems: problemsRes.rows.map(p => ({ problem_name: p.problem_name, icd_code: p.icd_code })),
+            family_history: familyHistoryRes.rows.map(f => ({ condition: f.condition, relationship: f.relationship })),
+            social_history: socialHistoryRes.rows[0] || null,
+            documents: visitDocumentsRes.rows
+        };
 
         const result = await pool.query(
             `UPDATE visits 
-             SET status = 'signed', note_signed_at = NOW(), note_signed_by = $1, updated_at = NOW()
-             WHERE id = $2 RETURNING *`,
-            [req.user.id, id]
+             SET status = 'signed', 
+                 note_signed_at = NOW(), 
+                 note_signed_by = $1, 
+                 clinical_snapshot = $2,
+                 ${note_draft ? 'note_draft = $3,' : ''}
+                 updated_at = NOW()
+             WHERE id = ${note_draft ? '$4' : '$3'} RETURNING *`,
+            note_draft ? [req.user.id, JSON.stringify(snapshot), note_draft, id] : [req.user.id, JSON.stringify(snapshot), id]
         );
-        await logAudit(req.user.id, 'note.signed', 'visit', id, {}, req.ip);
+
+        await logAudit(req.user.id, 'note.signed', 'visit', id, { snapshot: true }, req.ip);
         res.json({ signed_at: result.rows[0]?.note_signed_at });
     } catch (error) {
+        console.error('Error signing record:', error);
         res.status(500).json({ error: 'Failed to sign note' });
     }
 });
