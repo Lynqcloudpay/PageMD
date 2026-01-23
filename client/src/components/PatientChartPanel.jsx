@@ -536,7 +536,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex justify-end">
+        <div className="fixed inset-0 z-[100] flex justify-end">
             <div className="absolute inset-0 bg-gray-900/30 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
             <div className="relative w-full max-w-[900px] bg-white h-full shadow-2xl flex flex-col md:flex-row overflow-hidden animate-slide-in-right transform duration-300">

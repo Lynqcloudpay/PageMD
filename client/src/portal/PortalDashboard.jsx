@@ -180,7 +180,12 @@ const PortalDashboard = () => {
                         visitMethod === 'video' ||
                         visitMethod === 'virtual';
 
-                    return isTelehealth && isToday;
+                    const isActive = appt.status !== 'completed' &&
+                        appt.status !== 'cancelled' &&
+                        appt.status !== 'checked_out' &&
+                        appt.patient_status !== 'checked_out';
+
+                    return isTelehealth && isToday && isActive;
                 });
 
                 // console.log('Found telehealth appts today:', telehealthAppts);
