@@ -80,10 +80,13 @@ https://pagemdemr.com {
 }
 
 # ================================================================
-# Admin Portal Redirection
+# Local Health Check
 # ================================================================
-
-# Redirect admin.pagemdemr.com to main site path (or invalid if not needed)
-http://admin.pagemdemr.com, https://admin.pagemdemr.com {
-    redir https://pagemdemr.com/platform-admin/login permanent
+http://localhost {
+    handle /health {
+        respond 200
+    }
+    handle {
+        respond "Caddy is running" 200
+    }
 }

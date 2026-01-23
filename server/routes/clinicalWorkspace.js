@@ -241,13 +241,37 @@ router.patch('/clinical_notes/:id/sign', requireRole('clinician', 'admin'), asyn
                  updated_at = NOW()
              WHERE id = ${note_draft ? '$4' : '$3'} RETURNING *`,
             note_draft ? [req.user.id, JSON.stringify(snapshot), note_draft, id] : [req.user.id, JSON.stringify(snapshot), id]
-        );
+        ).catch(async (dbError) => {
+            // Handle UUID format issues or other DB errors with retry/fallback logic similar to visits.js
+            if (dbError.code === '22P02') {
+                return pool.query(
+                    `UPDATE visits 
+                     SET status = 'signed', 
+                         note_signed_at = NOW(), 
+                         note_signed_by = $1, 
+                         clinical_snapshot = $2,
+                         ${note_draft ? 'note_draft = $3,' : ''}
+                         updated_at = NOW()
+                     WHERE id::text = ${note_draft ? '$4' : '$3'} RETURNING *`,
+                    note_draft ? [req.user.id, JSON.stringify(snapshot), note_draft, id] : [req.user.id, JSON.stringify(snapshot), id]
+                );
+            }
+            throw dbError;
+        });
 
         await logAudit(req.user.id, 'note.signed', 'visit', id, { snapshot: true }, req.ip);
-        res.json({ signed_at: result.rows[0]?.note_signed_at });
+        res.json({
+            success: true,
+            signed_at: result.rows[0]?.note_signed_at,
+            visit_id: result.rows[0]?.id
+        });
     } catch (error) {
         console.error('Error signing record:', error);
-        res.status(500).json({ error: 'Failed to sign note' });
+        res.status(500).json({
+            error: 'Failed to sign note',
+            details: error.message,
+            code: error.code
+        });
     }
 });
 
