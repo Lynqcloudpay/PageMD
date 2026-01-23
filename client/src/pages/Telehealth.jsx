@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Video, VideoOff, Mic, MicOff, Phone, PhoneOff,
   Monitor, MessageSquare, Users, Settings, Maximize2,
@@ -102,6 +103,7 @@ const DailyVideoCall = ({ roomUrl, userName, onLeave }) => {
 };
 
 const Telehealth = () => {
+  const navigate = useNavigate();
   // --- NEW: Workspace Tabs ---
   const WORKSPACE_TABS = ['chart', 'note', 'info'];
 
@@ -1230,7 +1232,12 @@ const Telehealth = () => {
                       <Video size={28} />
                     </div>
                     <div>
-                      <h3 className="font-bold text-slate-800">{appt.patientName || appt.name}</h3>
+                      <h3
+                        onClick={() => navigate(`/patient/${appt.patient_id || appt.patientId}/snapshot`)}
+                        className="font-bold text-slate-800 hover:text-blue-600 cursor-pointer transition-colors"
+                      >
+                        {appt.patientName || appt.name}
+                      </h3>
                       <p className="text-sm text-slate-500">
                         {appt.time || appt.appointment_time} • {appt.type || appt.appointment_type || 'Telehealth Visit'}
                       </p>
@@ -1280,22 +1287,7 @@ const Telehealth = () => {
                             </div>
                           </button>
 
-                          <button
-                            onClick={() => {
-                              setViewingPatientId(appt.patient_id || appt.patientId);
-                              setShowFullChart(true);
-                              setActiveDropdown(null);
-                            }}
-                            className="w-full px-4 py-3 text-left hover:bg-slate-50 text-slate-700 flex items-center gap-3 transition-colors group"
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 group-hover:bg-slate-900 group-hover:text-white transition-colors">
-                              <User size={16} />
-                            </div>
-                            <div>
-                              <p className="font-bold text-sm">View Chart</p>
-                              <p className="text-[10px] text-slate-500 uppercase tracking-wider">Patient Record</p>
-                            </div>
-                          </button>
+
                         </div>
                       )}
                     </div>
