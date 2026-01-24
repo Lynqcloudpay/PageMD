@@ -26,6 +26,7 @@ import PortalMessages from './PortalMessages';
 import PortalAppointments from './PortalAppointments';
 import PortalHealthRecord from './PortalHealthRecord';
 import PortalTelehealth from './PortalTelehealth';
+import { initPushNotifications, unregisterPushNotifications } from './pushNotifications';
 
 const PortalDashboard = () => {
     const [patient, setPatient] = useState(null);
@@ -80,6 +81,11 @@ const PortalDashboard = () => {
 
         fetchDashboard();
     }, [navigate]);
+
+    // Initialize push notifications
+    useEffect(() => {
+        initPushNotifications();
+    }, []);
 
     useEffect(() => {
         const fetchNotifications = async () => {
@@ -673,7 +679,7 @@ const PortalDashboard = () => {
     );
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] flex selection:bg-blue-100">
+        <div className="h-screen bg-[#F8FAFC] flex selection:bg-blue-100 overflow-hidden fixed inset-0">
             {/* Desktop Sidebar */}
             <aside className="w-[260px] hidden lg:flex flex-col fixed inset-y-0 left-0 bg-white border-r border-slate-100 z-50">
                 <PremiumStyles />
@@ -804,7 +810,8 @@ const PortalDashboard = () => {
                         {/* Divider and Logout */}
                         <div className="border-t border-slate-100 mt-6 pt-6">
                             <button
-                                onClick={() => {
+                                onClick={async () => {
+                                    await unregisterPushNotifications();
                                     localStorage.removeItem('portalToken');
                                     navigate('/portal/login');
                                 }}
@@ -819,15 +826,24 @@ const PortalDashboard = () => {
             )}
 
             {/* Main Content Area */}
-            <div className={`flex-1 lg:ml-[260px] overflow-x-hidden min-h-screen`}>
+            <div className={`flex-1 lg:ml-[260px] overflow-x-hidden`}>
                 {/* Mobile main content - uses header defined above */}
-                <main className="max-w-7xl mx-auto px-5 md:p-10 lg:pt-12" style={{ paddingTop: 'calc(70px + env(safe-area-inset-top, 0px))' }}>
-                    <div className="lg:hidden">
+                <main
+                    className="lg:hidden overflow-y-auto overscroll-contain"
+                    style={{
+                        paddingTop: 'calc(70px + env(safe-area-inset-top, 0px))',
+                        paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))',
+                        height: '100vh',
+                        WebkitOverflowScrolling: 'touch'
+                    }}
+                >
+                    <div className="px-5 py-4">
                         {renderMobileDashboard()}
                     </div>
-                    <div className="hidden lg:block">
-                        {content}
-                    </div>
+                </main>
+                {/* Desktop content */}
+                <main className="hidden lg:block max-w-7xl mx-auto p-10 pt-12">
+                    {content}
                 </main>
             </div>
 

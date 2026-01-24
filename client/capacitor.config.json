@@ -1,5 +1,9 @@
 {
   "appId": "com.pagemd.portal",
-  "appName": "PageMD Patient Portal",
-  "webDir": "dist"
+  "appName": "PageMD-Portal",
+  "webDir": "dist",
+  "ios": {
+    "contentInset": "automatic",
+    "allowsLinkPreview": true
+  }
 }
