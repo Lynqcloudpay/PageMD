@@ -44,7 +44,10 @@ const allowedOrigins = [
   'https://www.pagemdemr.com',
   'https://admin.pagemdemr.com',
   'http://localhost:5173',
-  'http://localhost:3000'
+  'http://localhost:3000',
+  // Capacitor iOS/Android native app origins
+  'capacitor://localhost',
+  'ionic://localhost'
 ].filter(Boolean);
 
 app.use(cors({
