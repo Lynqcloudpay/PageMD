@@ -286,7 +286,7 @@ const PortalDashboard = () => {
                                         <div className="flex items-center gap-2 text-slate-400 font-bold uppercase tracking-widest text-[9px]">
                                             <Calendar className="w-3 h-3" /> DOB
                                         </div>
-                                        <div className="text-lg font-bold text-slate-700">{patient?.dob}</div>
+                                        <div className="text-lg font-bold text-slate-700">{patient?.dob || 'N/A'}</div>
                                     </div>
                                     <div className="space-y-1">
                                         <div className="flex items-center gap-2 text-slate-400 font-bold uppercase tracking-widest text-[9px]">
@@ -397,7 +397,7 @@ const PortalDashboard = () => {
                                     <div className="relative h-full flex flex-col justify-between">
                                         <div>
                                             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mb-4 backdrop-blur-md">
-                                                <Calendar className="w-5 h-5 text-white" />
+                                                <Calendar className="w-5 h-5" />
                                             </div>
                                             <h3 className="text-xl font-bold text-white tracking-tight leading-tight">Request an<br />Appointment</h3>
                                         </div>
@@ -414,11 +414,11 @@ const PortalDashboard = () => {
                                     <div className="relative h-full flex flex-col justify-between">
                                         <div>
                                             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mb-4 backdrop-blur-md">
-                                                <Video className="w-5 h-5 text-white" />
+                                                <Video className="w-5 h-5" />
                                             </div>
                                             <h3 className="text-xl font-bold text-white tracking-tight leading-tight">Join Telehealth<br />Visit</h3>
                                         </div>
-                                        <div className="flex items-center gap-2 text-white/60 font-bold text-xs uppercase tracking-widest transition-colors">
+                                        <div className="flex items-center gap-2 text-white/60 font-bold text-xs uppercase tracking-widest">
                                             Start session <ChevronRight className="w-4 h-4" />
                                         </div>
                                     </div>
@@ -477,7 +477,160 @@ const PortalDashboard = () => {
                     </div>
                 );
         }
-    }, [activeTab, patient, activeNotifications, stats]);
+    }, [activeTab, patient, quickGlance, stats]);
+
+    // Mobile View Implementation (Pulse Design)
+    const renderMobileDashboard = () => {
+        if (activeTab !== 'overview') return content;
+
+        return (
+            <div className="pb-24 space-y-6">
+                {/* Mobile Profile Card */}
+                <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100">
+                    <div className="flex items-center gap-4 mb-6">
+                        <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-blue-600">
+                            <User className="w-7 h-7" />
+                        </div>
+                        <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-xl font-bold text-slate-800">{patient?.first_name} {patient?.last_name}</h2>
+                                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-600 rounded-md text-[9px] font-black uppercase tracking-wider">Active</span>
+                            </div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Portal MRN: {patient?.id?.slice(0, 8).toUpperCase()}</p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-50">
+                        <div className="text-center">
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">DOB</p>
+                            <p className="text-[13px] font-bold text-slate-700">{patient?.dob || 'N/A'}</p>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Sex</p>
+                            <p className="text-[13px] font-bold text-slate-700">{patient?.sex || 'M'}</p>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Contact</p>
+                            <p className="text-[13px] font-bold text-slate-700">{patient?.phone ? 'Verified' : 'N/A'}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Next Appointment Card */}
+                {quickGlance.nextAppointment ? (
+                    <button
+                        onClick={() => setActiveTab('appointments')}
+                        className="w-full bg-gradient-to-r from-cyan-400 to-teal-500 rounded-[2rem] p-6 text-white text-left shadow-lg shadow-cyan-200/50 flex items-center gap-4 group"
+                    >
+                        <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                            <Calendar className="w-6 h-6" />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-white/80 mb-1">Upcoming Appointment</p>
+                            <p className="text-lg font-bold">
+                                {new Date(quickGlance.nextAppointment.appointment_date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} at {quickGlance.nextAppointment.appointment_time || '09:00:00'}
+                            </p>
+                        </div>
+                        <ChevronRight className="w-6 h-6 text-white/60 group-hover:translate-x-1 transition-transform" />
+                    </button>
+                ) : (
+                    <div className="bg-slate-50 border border-dashed border-slate-200 rounded-[2rem] p-6 text-center text-slate-400">
+                        <p className="text-sm font-bold">No upcoming appointments</p>
+                    </div>
+                )}
+
+                {/* Quick Actions Row */}
+                <div className="grid grid-cols-3 gap-4">
+                    <button
+                        onClick={() => setActiveTab('appointments')}
+                        className="bg-blue-600 rounded-[2rem] p-4 text-white text-center flex flex-col items-center justify-center gap-2 shadow-lg shadow-blue-200/50"
+                    >
+                        <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                            <Calendar className="w-5 h-5" />
+                        </div>
+                        <span className="text-[9px] font-black uppercase tracking-wider leading-tight">Request<br />Appointment</span>
+                        <div className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px] pb-0.5">+</div>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('telehealth')}
+                        className="bg-emerald-500 rounded-[2rem] p-4 text-white text-center flex flex-col items-center justify-center gap-2 shadow-lg shadow-emerald-200/50"
+                    >
+                        <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                            <Video className="w-5 h-5" />
+                        </div>
+                        <span className="text-[9px] font-black uppercase tracking-wider leading-tight">Join<br />Telehealth</span>
+                        <div className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">▶</div>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('messages')}
+                        className="bg-white border border-slate-100 rounded-[2rem] p-4 text-slate-800 text-center flex flex-col items-center justify-center gap-2 shadow-sm"
+                    >
+                        <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center relative">
+                            <MessageSquare className="w-5 h-5" />
+                            {stats.messages > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full" />}
+                        </div>
+                        <span className="text-[9px] font-black text-slate-800 uppercase tracking-wider leading-tight text-center">Secure<br />Messaging</span>
+                        <div className="w-4 h-4 text-slate-300">➤</div>
+                    </button>
+                </div>
+
+                {/* Health Records Horizontal Scroll */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Health Records</h3>
+                        <div className="flex gap-1">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                        </div>
+                    </div>
+                    <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide -mx-6 px-6">
+                        <MobileHealthCard
+                            title="Medications"
+                            status="Active"
+                            desc="Current"
+                            icon={<Pill className="w-5 h-5" />}
+                            color="blue"
+                            onClick={() => setActiveTab('record')}
+                        />
+                        <MobileHealthCard
+                            title="Allergies"
+                            status="Verified"
+                            desc="On file"
+                            icon={<AlertCircle className="w-5 h-5" />}
+                            color="cyan"
+                            onClick={() => setActiveTab('record')}
+                        />
+                        <MobileHealthCard
+                            title="Visits"
+                            status="Clinical"
+                            desc="Full History"
+                            icon={<ClipboardList className="w-5 h-5" />}
+                            color="slate"
+                            onClick={() => setActiveTab('record')}
+                        />
+                    </div>
+                </div>
+
+                {/* Support Banner */}
+                <div className="bg-blue-50 border border-blue-100 rounded-[1.5rem] p-5 flex gap-4">
+                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-blue-600">
+                        <Phone className="w-5 h-5" />
+                    </div>
+                    <p className="text-[10px] font-bold text-slate-500 leading-relaxed uppercase tracking-widest">Questions about your care? Contact your clinic representative.</p>
+                </div>
+
+                {/* Bottom Navigation */}
+                <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 flex justify-around p-3 pb-8 z-50">
+                    <BottomNavItem icon={<LayoutDashboard />} label="Overview" active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} />
+                    <BottomNavItem icon={<FileText />} label="Records" active={activeTab === 'record'} onClick={() => setActiveTab('record')} />
+                    <BottomNavItem icon={<MessageSquare />} label="Messages" active={activeTab === 'messages'} count={stats.messages} onClick={() => setActiveTab('messages')} />
+                    <BottomNavItem icon={<LogOut />} label="Sign Out" onClick={() => {
+                        localStorage.removeItem('portalToken');
+                        navigate('/portal/login');
+                    }} />
+                </div>
+            </div>
+        );
+    };
 
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -614,9 +767,27 @@ const PortalDashboard = () => {
             )}
 
             {/* Main Content Area */}
-            <div className="flex-1 lg:ml-[260px] overflow-x-hidden min-h-screen">
+            <div className={`flex-1 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-[260px]'} overflow-x-hidden min-h-screen`}>
+                <header className="lg:hidden fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-xl z-[60] px-6 h-16 border-b border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-sm">
+                            <ClipboardList className="w-5 h-5" />
+                        </div>
+                        <h1 className="text-lg font-bold text-slate-800 tracking-tighter">PageMD <span className="text-slate-400 font-normal uppercase text-sm tracking-widest">Portal</span></h1>
+                    </div>
+                    <button className="relative p-2 text-slate-400">
+                        <Bell className="w-6 h-6" />
+                        <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+                    </button>
+                </header>
+
                 <main className="max-w-7xl mx-auto p-6 md:p-10 pt-24 lg:pt-12">
-                    {content}
+                    <div className="lg:hidden">
+                        {renderMobileDashboard()}
+                    </div>
+                    <div className="hidden lg:block">
+                        {content}
+                    </div>
                 </main>
             </div>
         </div>
@@ -671,6 +842,43 @@ const QuickCard = ({ title, icon, status, count, onClick }) => (
         </div>
     </div>
 );
+
+const BottomNavItem = ({ icon, label, active, onClick, count }) => (
+    <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-blue-600' : 'text-slate-400'}`}>
+        <div className="relative">
+            {React.cloneElement(icon, { size: 24, strokeWidth: active ? 2.5 : 2 })}
+            {count > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white text-[9px] font-black rounded-full flex items-center justify-center border border-white">
+                    {count}
+                </span>
+            )}
+        </div>
+        <span className="text-[10px] font-bold uppercase tracking-wider">{label}</span>
+    </button>
+);
+
+const MobileHealthCard = ({ title, status, desc, icon, color, onClick }) => {
+    const colorClasses = {
+        blue: 'bg-blue-50 text-blue-600',
+        emerald: 'bg-emerald-50 text-emerald-600',
+        cyan: 'bg-cyan-50 text-cyan-600',
+        slate: 'bg-slate-50 text-slate-600'
+    };
+
+    return (
+        <div
+            onClick={onClick}
+            className="flex-shrink-0 w-44 bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm active:scale-95 transition-all"
+        >
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 ${colorClasses[color] || colorClasses.blue}`}>
+                {icon}
+            </div>
+            <h4 className="text-[15px] font-bold text-slate-800 mb-1">{title}</h4>
+            <p className={`text-[10px] font-black uppercase tracking-widest mb-0.5 ${color === 'blue' ? 'text-blue-600' : 'text-slate-400'}`}>{status}</p>
+            <p className="text-[10px] text-slate-400 font-bold">{desc}</p>
+        </div>
+    );
+};
 
 const Notifications = ({ notifications, onAction }) => {
     if (notifications.length === 0) return null;
@@ -803,6 +1011,15 @@ const PremiumStyles = () => (
         }
         .notification-card.type-action::before {
             opacity: 1;
+        }
+
+        /* Hide scrollbar for mobile health cards */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
     `}</style>
 );
