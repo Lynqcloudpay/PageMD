@@ -170,14 +170,14 @@ const Layout = ({ children }) => {
         { path: '/appointment-requests', icon: CalendarPlus, label: 'Appt Requests', badge: appointmentRequestsCount > 0 ? appointmentRequestsCount : null, badgeColor: 'amber' },
         // Patients - requires patients:view_list permission
         ...(canViewPatients ? [
-            { path: '/patients', icon: Users, label: 'Patients', badge: null },
-            { path: '/digital-intake', icon: FileText, label: 'Digital Intake', badge: pendingIntakeCount > 0 ? pendingIntakeCount : null }
+            { path: '/patients', icon: Users, label: 'Patients', badge: null }
         ] : []),
+        { path: '/pending-notes', icon: Clock, label: 'Pending Notes', badge: pendingNotesCount > 0 ? pendingNotesCount : null }
     ].filter(Boolean);
 
     const workflowSection = [
         { path: '/tasks', icon: Inbox, label: 'In Basket', badge: inboxCount > 0 ? inboxCount : null },
-        { path: '/pending-notes', icon: Clock, label: 'Pending Notes', badge: pendingNotesCount > 0 ? pendingNotesCount : null },
+        { path: '/digital-intake', icon: FileText, label: 'Digital Intake', badge: pendingIntakeCount > 0 ? pendingIntakeCount : null },
         // Billing - requires billing:view permission
         ...(canViewBilling ? [
             { path: '/billing', icon: DollarSign, label: 'Billing', badge: null }
@@ -185,8 +185,6 @@ const Layout = ({ children }) => {
         { path: '/telehealth', icon: Video, label: 'Telehealth', badge: null },
         // Admin items - requires users:manage or reports:view
         ...(canManageUsers ? [
-            { path: '/users', icon: Shield, label: 'User Management', badge: null },
-            { path: '/compliance', icon: ShieldCheck, label: 'Compliance', badge: privacyAlertsCount > 0 ? privacyAlertsCount : null },
             { path: '/admin-settings', icon: Settings, label: 'Settings', badge: null }
         ] : []),
     ].filter(Boolean);
@@ -327,21 +325,6 @@ const Layout = ({ children }) => {
                     </button>
                 </div>
 
-                {/* Quick Search - Futuristic Design */}
-                {!sidebarCollapsed && (
-                    <div className="px-4 py-3 border-b-2 border-strong-azure/20 bg-white">
-                        <button
-                            onClick={() => setShowSearch(true)}
-                            className="w-full flex items-center gap-2.5 px-3.5 py-2 bg-white border-2 border-strong-azure/30 rounded-lg hover:border-strong-azure hover:bg-strong-azure/5 hover:shadow-md transition-all duration-200 group"
-                        >
-                            <Search className="w-4 h-4 text-strong-azure/70 group-hover:text-strong-azure transition-colors" />
-                            <span className="text-[13px] text-deep-gray/70 flex-1 text-left group-hover:text-strong-azure font-medium">Search patients...</span>
-                            <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold text-strong-azure bg-strong-azure/10 border border-strong-azure/30 rounded">
-                                <Command className="w-3 h-3 mr-0.5" />K
-                            </kbd>
-                        </button>
-                    </div>
-                )}
 
                 {/* Navigation - Futuristic Compact Design */}
                 <nav className="flex-1 overflow-hidden px-3 py-3 flex flex-col">

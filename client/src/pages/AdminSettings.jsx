@@ -17,7 +17,7 @@ import {
   Settings, Building2, Users, Shield, Stethoscope, Mail,
   ToggleLeft, ToggleRight, Save, Loader2, AlertCircle, CheckCircle2,
   DollarSign, Database, Activity, Lock, Globe, Clock, Bell,
-  Eye, EyeOff, Server, Zap, Upload
+  Eye, EyeOff, Server, Zap, Upload, ShieldCheck
 } from 'lucide-react';
 import { settingsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -154,6 +154,7 @@ const AdminSettings = () => {
   const tabs = [
     { id: 'practice', label: 'Practice', icon: Building2 },
     { id: 'users', label: 'Users', icon: Users },
+    { id: 'compliance', label: 'Compliance', icon: ShieldCheck },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'clinical', label: 'Clinical', icon: Stethoscope },
     { id: 'flags', label: 'Patient Flags', icon: Shield },
@@ -204,6 +205,10 @@ const AdminSettings = () => {
               onClick={() => {
                 if (tab.id === 'users') {
                   navigate('/users');
+                  return;
+                }
+                if (tab.id === 'compliance') {
+                  navigate('/compliance');
                   return;
                 }
                 setActiveTab(tab.id);
