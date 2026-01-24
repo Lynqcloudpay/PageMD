@@ -172,24 +172,29 @@ const PortalTelehealth = ({ onSchedule }) => {
 
         return (
             <div className="fixed inset-0 bg-slate-950 z-[9999] flex flex-col">
-                <div className="h-16 bg-slate-900 border-b border-white/5 flex items-center justify-between px-6">
-                    <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-                        <span className="text-white font-medium">Virtual Visit in Progress</span>
-                        <div className="flex items-center gap-2 ml-4">
-                            <Shield className="w-4 h-4 text-green-400" />
-                            <span className="text-xs text-slate-400">Secure Connection</span>
+                {/* Header with safe area padding */}
+                <div
+                    className="bg-slate-900 border-b border-white/5 flex items-center justify-between px-4"
+                    style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)', minHeight: '70px' }}
+                >
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0"></div>
+                        <span className="text-white font-bold text-sm">Virtual Visit</span>
+                        <div className="flex items-center gap-1.5 ml-2">
+                            <Shield className="w-3.5 h-3.5 text-green-400" />
+                            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Secure</span>
                         </div>
                     </div>
                     <button
                         onClick={handleEndCall}
-                        className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-bold text-sm"
+                        className="flex items-center gap-1.5 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors font-bold text-xs"
                     >
-                        <PhoneOff size={18} />
-                        Leave Visit
+                        <PhoneOff size={16} />
+                        <span className="hidden sm:inline">Leave</span>
                     </button>
                 </div>
-                <div className="flex-1">
+                {/* Video container with bottom safe area */}
+                <div className="flex-1" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
                     <DailyVideoCall
                         roomUrl={roomUrl}
                         userName={userName}
@@ -201,20 +206,20 @@ const PortalTelehealth = ({ onSchedule }) => {
     }
 
     return (
-        <div className="p-8 max-w-5xl mx-auto animate-in fade-in duration-500">
-            <div className="mb-10">
-                <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Telehealth Center</h1>
-                <p className="text-slate-500 mt-2">Connect with your provider securely for your virtual visit.</p>
+        <div className="pb-28 animate-in fade-in duration-500">
+            <div className="mb-6">
+                <h1 className="text-xl font-bold text-slate-800 tracking-tight">Telehealth Center</h1>
+                <p className="text-slate-500 text-sm mt-1">Connect securely with your provider.</p>
             </div>
 
             {/* Security Badge */}
-            <div className="mb-8 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-100 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-green-500 flex items-center justify-center text-white shadow-lg shadow-green-200">
-                    <Shield size={24} />
+            <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-100 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-green-500 flex items-center justify-center text-white shadow-lg shadow-green-200 shrink-0">
+                    <Shield size={20} />
                 </div>
                 <div>
-                    <h3 className="font-bold text-green-900">HIPAA-Ready Video Platform</h3>
-                    <p className="text-sm text-green-700">Your video visits are secure and encrypted end-to-end.</p>
+                    <h3 className="font-bold text-green-900 text-sm">HIPAA-Ready Video</h3>
+                    <p className="text-xs text-green-700">Secure and encrypted end-to-end.</p>
                 </div>
             </div>
 
@@ -226,56 +231,54 @@ const PortalTelehealth = ({ onSchedule }) => {
             )}
 
             {loading ? (
-                <div className="text-center py-16">
+                <div className="text-center py-12">
                     <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-4" />
-                    <p className="text-slate-500">Loading appointments...</p>
+                    <p className="text-slate-500 text-sm">Loading appointments...</p>
                 </div>
             ) : appointments.length === 0 ? (
-                <div className="text-center py-16 bg-slate-50 rounded-2xl border border-slate-100">
-                    <Video className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                    <h3 className="text-xl font-bold text-slate-700 mb-2">No Telehealth Visits Today</h3>
-                    <p className="text-slate-500 mb-6">You don't have any virtual appointments scheduled for today.</p>
+                <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-100">
+                    <Video className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                    <h3 className="text-lg font-bold text-slate-700 mb-1">No Telehealth Visits Today</h3>
+                    <p className="text-slate-500 text-sm mb-4">No virtual appointments for today.</p>
                     <button
                         onClick={handleScheduleNavigation}
-                        className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors"
+                        className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors"
                     >
-                        Request an Appointment
+                        Request Appointment
                     </button>
                 </div>
             ) : (
-                <div className="space-y-4">
-                    <h2 className="text-lg font-bold text-slate-700 mb-4">Today's Virtual Visits</h2>
+                <div className="space-y-3">
+                    <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">Today's Virtual Visits</h2>
                     {appointments.map(appt => (
                         <div
                             key={appt.id}
-                            className="p-6 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all"
+                            className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm"
                         >
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-14 h-14 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-                                        <Video size={28} />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-bold text-slate-800">{appt.appointment_type || 'Virtual Visit'}</h3>
-                                        <p className="text-sm text-slate-500">
-                                            {appt.appointment_time ? format(new Date(`2000-01-01T${appt.appointment_time}`), 'h:mm a') : 'Scheduled'}
-                                            {appt.provider_name && ` • Dr. ${appt.provider_name}`}
-                                        </p>
-                                    </div>
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+                                    <Video size={22} />
                                 </div>
-                                <button
-                                    onClick={() => openPrep(appt)}
-                                    disabled={creatingRoom}
-                                    className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg shadow-green-200 flex items-center gap-2 disabled:opacity-50"
-                                >
-                                    {creatingRoom ? (
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                    ) : (
-                                        <Video size={20} />
-                                    )}
-                                    {creatingRoom ? 'Connecting...' : 'Join Now'}
-                                </button>
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="font-bold text-slate-800 text-sm truncate">{appt.appointment_type || 'Virtual Visit'}</h3>
+                                    <p className="text-xs text-slate-500">
+                                        {appt.appointment_time ? format(new Date(`2000-01-01T${appt.appointment_time}`), 'h:mm a') : 'Scheduled'}
+                                        {appt.provider_name && ` • Dr. ${appt.provider_name}`}
+                                    </p>
+                                </div>
                             </div>
+                            <button
+                                onClick={() => openPrep(appt)}
+                                disabled={creatingRoom}
+                                className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold text-sm hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg shadow-green-200 flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                {creatingRoom ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : (
+                                    <Video size={18} />
+                                )}
+                                {creatingRoom ? 'Connecting...' : 'Join Visit Now'}
+                            </button>
                         </div>
                     ))}
                 </div>

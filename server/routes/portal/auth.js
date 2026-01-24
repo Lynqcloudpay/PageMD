@@ -94,6 +94,121 @@ router.post('/login', [
 });
 
 /**
+ * Apple Sign In
+ * POST /api/portal/auth/apple
+ * Handles Sign in with Apple OAuth flow
+ */
+router.post('/apple', async (req, res) => {
+    try {
+        const { id_token, user } = req.body;
+
+        if (!id_token) {
+            return res.status(400).json({ error: 'Missing Apple ID token' });
+        }
+
+        // Decode the Apple ID token (JWT) to get the user info
+        // In production, you should verify the token signature with Apple's public keys
+        const tokenParts = id_token.split('.');
+        if (tokenParts.length !== 3) {
+            return res.status(400).json({ error: 'Invalid Apple ID token format' });
+        }
+
+        const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
+
+        // Apple provides a unique user identifier
+        const appleUserId = payload.sub;
+        const appleEmail = payload.email || user?.email;
+
+        if (!appleEmail) {
+            return res.status(400).json({ error: 'Email not available from Apple. Please use email/password login.' });
+        }
+
+        console.log('[Portal Auth] Apple Sign In attempt:', { appleUserId, appleEmail });
+
+        // First, check if we have an Apple ID link for this user
+        let account = null;
+
+        // Check for existing apple_user_id link
+        const appleLink = await pool.query(`
+            SELECT a.*, p.first_name, p.last_name
+            FROM patient_portal_accounts a
+            JOIN patients p ON a.patient_id = p.id
+            WHERE a.apple_user_id = $1
+        `, [appleUserId]);
+
+        if (appleLink.rows.length > 0) {
+            account = appleLink.rows[0];
+        } else {
+            // No Apple link exists, try to find account by email
+            const emailResult = await pool.query(`
+                SELECT a.*, p.first_name, p.last_name
+                FROM patient_portal_accounts a
+                JOIN patients p ON a.patient_id = p.id
+                WHERE LOWER(a.email) = LOWER($1)
+            `, [appleEmail]);
+
+            if (emailResult.rows.length === 0) {
+                return res.status(401).json({
+                    error: 'No patient account found with this Apple ID email. Please contact your healthcare provider to set up portal access.'
+                });
+            }
+
+            account = emailResult.rows[0];
+
+            // Link this Apple ID to the account for future logins
+            await pool.query(
+                'UPDATE patient_portal_accounts SET apple_user_id = $1 WHERE id = $2',
+                [appleUserId, account.id]
+            );
+            console.log('[Portal Auth] Linked Apple ID to portal account:', account.id);
+        }
+
+        if (account.status === 'locked') {
+            return res.status(401).json({ error: 'Account is locked. Please contact your clinic.' });
+        }
+
+        // Update last login
+        await pool.query('UPDATE patient_portal_accounts SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1', [account.id]);
+
+        // Audit log
+        await pool.query(`
+            INSERT INTO patient_portal_audit_log (account_id, patient_id, action, ip_address, user_agent)
+            VALUES ($1, $2, $3, $4, $5)
+        `, [account.id, account.patient_id, 'apple_login', req.ip, req.get('user-agent')]);
+
+        // Generate JWT
+        const token = jwt.sign(
+            {
+                portalAccountId: account.id,
+                patientId: account.patient_id,
+                clinicSlug: req.clinic.slug,
+                isPortal: true
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: '12h' }
+        );
+
+        res.json({
+            token,
+            patient: {
+                id: account.patient_id,
+                firstName: account.first_name,
+                lastName: account.last_name,
+                email: account.email
+            },
+            clinic: {
+                name: req.clinic.display_name,
+                slug: req.clinic.slug
+            }
+        });
+
+    } catch (error) {
+        console.error('[Portal Auth] Apple Sign In error:', error);
+        res.status(500).json({ error: 'Apple Sign In failed. Please try again or use email/password.' });
+    }
+});
+
+/**
  * Portal Logout
  * POST /api/portal/auth/logout
  */

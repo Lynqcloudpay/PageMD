@@ -47,5 +47,10 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<!-- Camera and microphone permissions for telehealth video calls -->
+	<key>NSCameraUsageDescription</key>
+	<string>PageMD Patient Portal needs camera access for telehealth video visits with your healthcare provider.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>PageMD Patient Portal needs microphone access for telehealth video visits with your healthcare provider.</string>
 </dict>
 </plist>

@@ -78,21 +78,21 @@ const PortalHealthRecord = () => {
     }
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-700">
+        <div className="space-y-5 animate-in fade-in duration-700">
             {/* Header */}
             <div className="flex justify-between items-center">
                 <h1 className="text-xl font-bold text-slate-800">Health Record</h1>
                 <button
                     onClick={fetchAllData}
-                    className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
+                    className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
                     title="Refresh"
                 >
-                    <RefreshCw className="w-4 h-4" />
+                    <RefreshCw className="w-5 h-5" />
                 </button>
             </div>
 
-            {/* Section Tabs */}
-            <div className="flex flex-wrap gap-2">
+            {/* Section Tabs - Horizontal scrollable on mobile */}
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
                 {sections.map(section => {
                     const Icon = section.icon;
                     const isActive = activeSection === section.id;
@@ -100,16 +100,16 @@ const PortalHealthRecord = () => {
                         <button
                             key={section.id}
                             onClick={() => setActiveSection(section.id)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${isActive
-                                    ? `bg-${section.color}-600 text-white shadow-lg shadow-${section.color}-100`
-                                    : 'bg-white text-slate-600 border border-slate-100 hover:border-slate-300'
+                            className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${isActive
+                                ? 'text-white shadow-lg'
+                                : 'bg-white text-slate-600 border border-slate-100 hover:border-slate-300 active:scale-95'
                                 }`}
-                            style={isActive ? { backgroundColor: getColorHex(section.color), color: 'white' } : {}}
+                            style={isActive ? { backgroundColor: getColorHex(section.color), boxShadow: `0 4px 14px ${getColorHex(section.color)}40` } : {}}
                         >
                             <Icon className="w-4 h-4" />
-                            {section.label}
+                            <span>{section.label}</span>
                             {section.count > 0 && (
-                                <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? 'bg-white/20' : 'bg-slate-100'}`}>
+                                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${isActive ? 'bg-white/25' : 'bg-slate-100'}`}>
                                     {section.count}
                                 </span>
                             )}

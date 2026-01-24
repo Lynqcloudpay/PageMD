@@ -481,10 +481,17 @@ const PortalDashboard = () => {
 
     // Mobile View Implementation (Pulse Design)
     const renderMobileDashboard = () => {
-        if (activeTab !== 'overview') return content;
+        // For non-overview tabs, wrap content with bottom padding for sticky nav
+        if (activeTab !== 'overview') {
+            return (
+                <div className="pb-28 space-y-6">
+                    {content}
+                </div>
+            );
+        }
 
         return (
-            <div className="pb-24 space-y-6">
+            <div className="pb-28 space-y-6">
                 {/* Mobile Profile Card */}
                 <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100">
                     <div className="flex items-center gap-4 mb-6">
@@ -515,11 +522,31 @@ const PortalDashboard = () => {
                     </div>
                 </div>
 
+                {/* Telehealth Ready Card - Shows when there's a scheduled telehealth visit */}
+                {quickGlance.telehealthReady && (
+                    <button
+                        onClick={() => setActiveTab('telehealth')}
+                        className="w-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-[2rem] p-6 text-white text-left shadow-lg shadow-emerald-200/50 flex items-center gap-4 group animate-pulse-soft"
+                    >
+                        <div className="w-12 h-12 bg-white/25 rounded-2xl flex items-center justify-center">
+                            <Video className="w-6 h-6" />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-white/80 mb-1">Telehealth Ready</p>
+                            <p className="text-lg font-bold">Join Your Virtual Visit Now</p>
+                            <p className="text-xs text-white/70 mt-1">Tap to enter waiting room</p>
+                        </div>
+                        <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                            <span className="text-lg">▶</span>
+                        </div>
+                    </button>
+                )}
+
                 {/* Next Appointment Card */}
                 {quickGlance.nextAppointment ? (
                     <button
                         onClick={() => setActiveTab('appointments')}
-                        className="w-full bg-gradient-to-r from-cyan-400 to-teal-500 rounded-[2rem] p-6 text-white text-left shadow-lg shadow-cyan-200/50 flex items-center gap-4 group"
+                        className="w-full bg-gradient-to-r from-cyan-400 to-blue-500 rounded-[2rem] p-6 text-white text-left shadow-lg shadow-cyan-200/50 flex items-center gap-4 group"
                     >
                         <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
                             <Calendar className="w-6 h-6" />
@@ -527,49 +554,64 @@ const PortalDashboard = () => {
                         <div className="flex-1">
                             <p className="text-[10px] font-bold uppercase tracking-widest text-white/80 mb-1">Upcoming Appointment</p>
                             <p className="text-lg font-bold">
-                                {new Date(quickGlance.nextAppointment.appointment_date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} at {quickGlance.nextAppointment.appointment_time || '09:00:00'}
+                                {new Date(quickGlance.nextAppointment.appointment_date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                            </p>
+                            <p className="text-sm text-white/80">
+                                {quickGlance.nextAppointment.appointment_time ?
+                                    new Date('2000-01-01T' + quickGlance.nextAppointment.appointment_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+                                    : 'Time TBD'
+                                }
+                                {quickGlance.nextAppointment.visit_method === 'telehealth' && ' • Virtual Visit'}
                             </p>
                         </div>
                         <ChevronRight className="w-6 h-6 text-white/60 group-hover:translate-x-1 transition-transform" />
                     </button>
                 ) : (
                     <div className="bg-slate-50 border border-dashed border-slate-200 rounded-[2rem] p-6 text-center text-slate-400">
+                        <Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
                         <p className="text-sm font-bold">No upcoming appointments</p>
+                        <p className="text-xs mt-1">Tap below to schedule</p>
                     </div>
                 )}
 
                 {/* Quick Actions Row */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-3 gap-3">
                     <button
                         onClick={() => setActiveTab('appointments')}
-                        className="bg-blue-600 rounded-[2rem] p-4 text-white text-center flex flex-col items-center justify-center gap-2 shadow-lg shadow-blue-200/50"
+                        className="bg-blue-600 rounded-[1.5rem] p-4 text-white text-center flex flex-col items-center justify-center gap-2 shadow-lg shadow-blue-200/50 active:scale-95 transition-transform"
                     >
                         <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                             <Calendar className="w-5 h-5" />
                         </div>
-                        <span className="text-[9px] font-black uppercase tracking-wider leading-tight">Request<br />Appointment</span>
-                        <div className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px] pb-0.5">+</div>
+                        <span className="text-[9px] font-black uppercase tracking-wider leading-tight">Schedule<br />Visit</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('telehealth')}
-                        className="bg-emerald-500 rounded-[2rem] p-4 text-white text-center flex flex-col items-center justify-center gap-2 shadow-lg shadow-emerald-200/50"
+                        className={`rounded-[1.5rem] p-4 text-white text-center flex flex-col items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform relative ${stats.telehealth > 0 ? 'bg-emerald-500 shadow-emerald-200/50 animate-pulse' : 'bg-emerald-500 shadow-emerald-200/50'}`}
                     >
+                        {stats.telehealth > 0 && (
+                            <span className="absolute top-2 right-2 w-5 h-5 bg-red-500 rounded-full text-[10px] font-black flex items-center justify-center border-2 border-white">
+                                {stats.telehealth}
+                            </span>
+                        )}
                         <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                             <Video className="w-5 h-5" />
                         </div>
                         <span className="text-[9px] font-black uppercase tracking-wider leading-tight">Join<br />Telehealth</span>
-                        <div className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">▶</div>
                     </button>
                     <button
                         onClick={() => setActiveTab('messages')}
-                        className="bg-white border border-slate-100 rounded-[2rem] p-4 text-slate-800 text-center flex flex-col items-center justify-center gap-2 shadow-sm"
+                        className="bg-white border border-slate-100 rounded-[1.5rem] p-4 text-slate-800 text-center flex flex-col items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform relative"
                     >
-                        <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center relative">
+                        {stats.messages > 0 && (
+                            <span className="absolute top-2 right-2 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] font-black flex items-center justify-center border-2 border-white animate-bounce">
+                                {stats.messages}
+                            </span>
+                        )}
+                        <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
                             <MessageSquare className="w-5 h-5" />
-                            {stats.messages > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full" />}
                         </div>
-                        <span className="text-[9px] font-black text-slate-800 uppercase tracking-wider leading-tight text-center">Secure<br />Messaging</span>
-                        <div className="w-4 h-4 text-slate-300">➤</div>
+                        <span className="text-[9px] font-black text-slate-800 uppercase tracking-wider leading-tight text-center">Secure<br />Messages</span>
                     </button>
                 </div>
 
@@ -616,17 +658,6 @@ const PortalDashboard = () => {
                         <Phone className="w-5 h-5" />
                     </div>
                     <p className="text-[10px] font-bold text-slate-500 leading-relaxed uppercase tracking-widest">Questions about your care? Contact your clinic representative.</p>
-                </div>
-
-                {/* Bottom Navigation */}
-                <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 flex justify-around p-3 pb-8 z-50">
-                    <BottomNavItem icon={<LayoutDashboard />} label="Overview" active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} />
-                    <BottomNavItem icon={<FileText />} label="Records" active={activeTab === 'record'} onClick={() => setActiveTab('record')} />
-                    <BottomNavItem icon={<MessageSquare />} label="Messages" active={activeTab === 'messages'} count={stats.messages} onClick={() => setActiveTab('messages')} />
-                    <BottomNavItem icon={<LogOut />} label="Sign Out" onClick={() => {
-                        localStorage.removeItem('portalToken');
-                        navigate('/portal/login');
-                    }} />
                 </div>
             </div>
         );
@@ -714,17 +745,24 @@ const PortalDashboard = () => {
                 </div>
             </aside>
 
-            {/* Mobile Nav */}
-            <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-xl border-b border-slate-100 px-6 z-[60] flex justify-between items-center">
-                <img src="/logo.png" alt="PageMD Logo" className="h-7 object-contain" />
-                <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-800">
-                    {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            {/* Mobile Nav Header - with iOS safe area padding */}
+            <div className="lg:hidden fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-b border-slate-100 px-6 z-[60] flex justify-between items-center" style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)', height: 'calc(60px + env(safe-area-inset-top, 0px))' }}>
+                <button
+                    onClick={() => { setActiveTab('overview'); setIsMobileMenuOpen(false); }}
+                    className="flex items-center gap-2 active:scale-95 transition-transform"
+                >
+                    <img src="/logo.png" alt="PageMD Logo" className="h-7 object-contain" />
+                    <span className="text-slate-300 text-sm">|</span>
+                    <span className="font-bold text-slate-500 text-xs uppercase tracking-widest">Portal</span>
+                </button>
+                <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-800 hover:bg-slate-100 rounded-xl transition-colors">
+                    {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
                 </button>
             </div>
 
             {/* Mobile Menu Overlay */}
             {isMobileMenuOpen && (
-                <div className="lg:hidden fixed inset-0 bg-white z-[55] pt-20 animate-in slide-in-from-top duration-300">
+                <div className="lg:hidden fixed inset-0 bg-white z-[55] animate-in slide-in-from-top duration-300" style={{ paddingTop: 'calc(70px + env(safe-area-inset-top, 0px))' }}>
                     <nav className="px-6 space-y-2 pt-4">
                         <NavItem
                             icon={<LayoutDashboard size={18} />}
@@ -762,26 +800,28 @@ const PortalDashboard = () => {
                             badge={stats.telehealth > 0 ? stats.telehealth : null}
                             badgeColor="emerald"
                         />
+
+                        {/* Divider and Logout */}
+                        <div className="border-t border-slate-100 mt-6 pt-6">
+                            <button
+                                onClick={() => {
+                                    localStorage.removeItem('portalToken');
+                                    navigate('/portal/login');
+                                }}
+                                className="w-full flex items-center gap-3 p-3.5 text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                            >
+                                <LogOut size={18} />
+                                <span className="font-bold text-[11px] uppercase tracking-widest">Sign Out</span>
+                            </button>
+                        </div>
                     </nav>
                 </div>
             )}
 
             {/* Main Content Area */}
             <div className={`flex-1 lg:ml-[260px] overflow-x-hidden min-h-screen`}>
-                <header className="lg:hidden fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-xl z-[60] px-6 h-16 border-b border-slate-100 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-sm">
-                            <ClipboardList className="w-5 h-5" />
-                        </div>
-                        <h1 className="text-lg font-bold text-slate-800 tracking-tighter">PageMD <span className="text-slate-400 font-normal uppercase text-sm tracking-widest">Portal</span></h1>
-                    </div>
-                    <button className="relative p-2 text-slate-400">
-                        <Bell className="w-6 h-6" />
-                        <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-                    </button>
-                </header>
-
-                <main className="max-w-7xl mx-auto p-6 md:p-10 pt-24 lg:pt-12">
+                {/* Mobile main content - uses header defined above */}
+                <main className="max-w-7xl mx-auto px-5 md:p-10 lg:pt-12" style={{ paddingTop: 'calc(70px + env(safe-area-inset-top, 0px))' }}>
                     <div className="lg:hidden">
                         {renderMobileDashboard()}
                     </div>
@@ -789,6 +829,15 @@ const PortalDashboard = () => {
                         {content}
                     </div>
                 </main>
+            </div>
+
+            {/* Sticky Bottom Navigation for Mobile - Always visible */}
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-100 flex justify-around items-center z-50" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)', paddingTop: '10px' }}>
+                <BottomNavItem icon={<LayoutDashboard />} label="Home" active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} />
+                <BottomNavItem icon={<FileText />} label="Records" active={activeTab === 'record'} onClick={() => setActiveTab('record')} />
+                <BottomNavItem icon={<MessageSquare />} label="Messages" active={activeTab === 'messages'} count={stats.messages} onClick={() => setActiveTab('messages')} />
+                <BottomNavItem icon={<Video />} label="Telehealth" active={activeTab === 'telehealth'} count={stats.telehealth} onClick={() => setActiveTab('telehealth')} />
+                <BottomNavItem icon={<Calendar />} label="Visits" active={activeTab === 'appointments'} count={stats.appointments > 0 ? stats.appointments : null} onClick={() => setActiveTab('appointments')} />
             </div>
         </div>
     );
@@ -844,16 +893,16 @@ const QuickCard = ({ title, icon, status, count, onClick }) => (
 );
 
 const BottomNavItem = ({ icon, label, active, onClick, count }) => (
-    <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-blue-600' : 'text-slate-400'}`}>
+    <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-all active:scale-90 ${active ? 'text-blue-600' : 'text-slate-400'}`}>
         <div className="relative">
-            {React.cloneElement(icon, { size: 24, strokeWidth: active ? 2.5 : 2 })}
+            {React.cloneElement(icon, { size: 22, strokeWidth: active ? 2.5 : 2 })}
             {count > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white text-[9px] font-black rounded-full flex items-center justify-center border border-white">
-                    {count}
+                <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white animate-pulse shadow-lg shadow-red-200">
+                    {count > 9 ? '9+' : count}
                 </span>
             )}
         </div>
-        <span className="text-[10px] font-bold uppercase tracking-wider">{label}</span>
+        <span className={`text-[9px] font-bold uppercase tracking-wider ${active ? 'text-blue-600' : 'text-slate-400'}`}>{label}</span>
     </button>
 );
 
