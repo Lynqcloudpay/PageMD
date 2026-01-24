@@ -767,7 +767,7 @@ const PortalDashboard = () => {
             )}
 
             {/* Main Content Area */}
-            <div className={`flex-1 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-[260px]'} overflow-x-hidden min-h-screen`}>
+            <div className={`flex-1 lg:ml-[260px] overflow-x-hidden min-h-screen`}>
                 <header className="lg:hidden fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-xl z-[60] px-6 h-16 border-b border-slate-100 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-sm">
