@@ -156,7 +156,7 @@ const PortalMessages = () => {
     };
 
     return (
-        <div className="flex flex-col h-[70vh] md:h-[calc(100vh-180px)] max-h-[850px] border border-slate-100 rounded-[2rem] overflow-hidden bg-white shadow-xl shadow-slate-200/50 animate-in fade-in duration-500">
+        <div className="flex flex-col h-[500px] md:h-[calc(100vh-180px)] lg:h-[750px] border border-slate-100 rounded-[2rem] overflow-hidden bg-white shadow-xl shadow-slate-200/50 animate-in fade-in duration-500">
             <div className="flex flex-1 overflow-hidden">
                 {/* Threads Sidebar */}
                 <div className={`w-full md:w-80 lg:w-96 border-r border-slate-50 flex flex-col bg-slate-50/20 ${selectedThread || showNewThreadForm ? 'hidden md:flex' : 'flex'}`}>

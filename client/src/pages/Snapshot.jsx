@@ -719,12 +719,28 @@ const Snapshot = ({ showNotesOnly = false }) => {
                         const timeStr = timeSource.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                         const dateTimeStr = `${dateStr} ${timeStr}`;
 
+                        const rawType = (visit.visit_type || "").toLowerCase();
+                        const rawMethod = (visit.visit_method || "").toLowerCase();
+                        const cc = (chiefComplaint || "").toLowerCase();
+
+                        let displayType = "Office Visit";
+
+                        if (rawType.includes('tele') || rawMethod.includes('tele') || rawType.includes('virtual') || rawMethod.includes('virtual')) {
+                            displayType = "Telehealth";
+                        } else if (rawType.includes('new') || cc.includes('new patient') || cc.includes('initial') || rawType.includes('consult')) {
+                            displayType = "New Patient";
+                        } else if (rawType.includes('follow') || cc.includes('follow up') || cc.includes('follow-up') || cc.includes('f/u') || rawType.includes('routine')) {
+                            displayType = "Follow Up";
+                        } else if (visit.visit_type) {
+                            displayType = visit.visit_type;
+                        }
+
                         return {
                             id: visit.id,
                             date: dateStr,
                             time: timeStr,
                             dateTime: dateTimeStr,
-                            type: visit.visit_type || "Office Visit",
+                            type: displayType,
                             provider: (() => {
                                 const signedByName = visit.signed_by_first_name && visit.signed_by_last_name
                                     ? `${visit.signed_by_first_name} ${visit.signed_by_last_name}`
@@ -1333,19 +1349,30 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     </div>
                                                 </div>
                                                 {!isExpanded && (
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleViewNote(note.id, e);
-                                                        }}
-                                                        className={`ml-4 text-xs font-medium flex items-center space-x-1 flex-shrink-0 px-3 py-1.5 rounded-md ${note.signed
-                                                            ? 'bg-paper-100 text-paper-700 hover:bg-paper-200 hover:text-paper-900'
-                                                            : 'bg-orange-100 text-orange-700 hover:bg-orange-200 hover:text-orange-900 font-semibold'
-                                                            }`}
-                                                    >
-                                                        <Eye className="w-3 h-3" />
-                                                        <span>{note.signed ? 'View Chart' : 'Edit'}</span>
-                                                    </button>
+                                                    <div className="flex items-center gap-2 ml-4">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleViewNote(note.id, e);
+                                                            }}
+                                                            className={`text-xs font-medium flex items-center space-x-1 flex-shrink-0 px-3 py-1.5 rounded-md ${note.signed
+                                                                ? 'bg-paper-100 text-paper-700 hover:bg-paper-200 hover:text-paper-900'
+                                                                : 'bg-orange-100 text-orange-700 hover:bg-orange-200 hover:text-orange-900 font-semibold'
+                                                                }`}
+                                                        >
+                                                            <Eye className="w-3 h-3" />
+                                                            <span>{note.signed ? 'View Chart' : 'Edit'}</span>
+                                                        </button>
+                                                        {!note.signed && (
+                                                            <button
+                                                                onClick={(e) => handleDeleteNote(note.id, e)}
+                                                                className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-all"
+                                                                title="Delete draft"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
@@ -1669,7 +1696,18 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                     <span className="text-[10px] font-bold text-slate-800">{note.type}</span>
                                                                     {!note.signed && <span className="text-[8px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-100 uppercase tracking-wider">Draft</span>}
                                                                 </div>
-                                                                <span className="text-[9px] text-slate-400 font-medium tabular-nums">{note.date}</span>
+                                                                <div className="flex items-center gap-2">
+                                                                    {!note.signed && (
+                                                                        <button
+                                                                            onClick={(e) => handleDeleteNote(note.id, e)}
+                                                                            className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-red-500 transition-all rounded"
+                                                                            title="Delete draft"
+                                                                        >
+                                                                            <Trash2 className="w-3 h-3" />
+                                                                        </button>
+                                                                    )}
+                                                                    <span className="text-[9px] text-slate-400 font-medium tabular-nums">{note.date}</span>
+                                                                </div>
                                                             </div>
                                                             <p className="text-[9px] text-slate-500 truncate mt-0.5">{note.chiefComplaint || "No complaint recorded"}</p>
                                                         </div>

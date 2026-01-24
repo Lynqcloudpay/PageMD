@@ -92,7 +92,10 @@ const PortalHealthRecord = () => {
             </div>
 
             {/* Section Tabs - Horizontal scrollable on mobile */}
-            <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+            <div
+                className="flex gap-3 overflow-x-auto pb-4 pt-1 mb-2 -mx-5 px-5 scrollbar-hide touch-pan-x"
+                style={{ WebkitOverflowScrolling: 'touch' }}
+            >
                 {sections.map(section => {
                     const Icon = section.icon;
                     const isActive = activeSection === section.id;

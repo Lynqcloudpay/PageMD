@@ -168,39 +168,47 @@ const PortalTelehealth = ({ onSchedule }) => {
     };
 
     if (activeCall && roomUrl) {
-        const userName = `${patient.firstName || 'Patient'} ${patient.lastName || ''}`.trim();
+        const userName = `${patient.firstName || 'Patient'} ${patient.lastName || 'User'}`.trim();
 
         return (
-            <div className="fixed inset-0 bg-slate-950 z-[9999] flex flex-col">
+            <div className="fixed inset-0 bg-slate-950 z-[99999] flex flex-col items-stretch overflow-hidden">
                 {/* Header with safe area padding */}
                 <div
-                    className="bg-slate-900 border-b border-white/5 flex items-center justify-between px-4"
-                    style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)', minHeight: '70px' }}
+                    className="bg-slate-900 border-b border-white/5 flex items-center justify-between px-6 shrink-0"
+                    style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)', height: 'calc(65px + env(safe-area-inset-top, 0px))' }}
                 >
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0"></div>
-                        <span className="text-white font-bold text-sm">Virtual Visit</span>
-                        <div className="flex items-center gap-1.5 ml-2">
-                            <Shield className="w-3.5 h-3.5 text-green-400" />
-                            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Secure</span>
+                    <div className="flex items-center gap-3">
+                        <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shrink-0 shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div>
+                        <div className="flex flex-col">
+                            <span className="text-white font-bold text-sm tracking-tight">Active Visit</span>
+                            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-widest flex items-center gap-1.5">
+                                <Shield className="w-3 h-3 text-emerald-400" /> Secure • HIPAA Ready
+                            </span>
                         </div>
                     </div>
+
                     <button
                         onClick={handleEndCall}
-                        className="flex items-center gap-1.5 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors font-bold text-xs"
+                        className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded-xl transition-all font-bold text-xs shadow-lg shadow-red-500/20"
                     >
                         <PhoneOff size={16} />
-                        <span className="hidden sm:inline">Leave</span>
+                        <span>Leave Session</span>
                     </button>
                 </div>
-                {/* Video container with bottom safe area */}
-                <div className="flex-1" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-                    <DailyVideoCall
-                        roomUrl={roomUrl}
-                        userName={userName}
-                        onLeave={handleEndCall}
-                    />
+
+                {/* Video container - with extra top padding for Daily.co UI icons */}
+                <div className="flex-1 bg-black relative">
+                    <div className="absolute inset-0 pt-2 px-1">
+                        <DailyVideoCall
+                            roomUrl={roomUrl}
+                            userName={userName}
+                            onLeave={handleEndCall}
+                        />
+                    </div>
                 </div>
+
+                {/* Mobile Bottom Spacer for iOS Home Indicator */}
+                <div className="h-[env(safe-area-inset-bottom)] bg-black shrink-0" />
             </div>
         );
     }
@@ -287,15 +295,15 @@ const PortalTelehealth = ({ onSchedule }) => {
             {/* PREP MODAL */}
             {prepAppt && (
                 <div className="fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm transition-all duration-300">
-                    <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="p-8 border-b border-slate-100 bg-slate-50/50">
+                    <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-8 border-b border-slate-100 bg-slate-50/50 shrink-0">
                             <h3 className="text-2xl font-bold text-slate-800 tracking-tight">Prepare for your visit</h3>
                             <p className="text-slate-500 text-sm mt-2">
                                 Please complete this quick checklist for a smooth video experience.
                             </p>
                         </div>
 
-                        <div className="p-8 space-y-4">
+                        <div className="p-6 md:p-8 space-y-4 overflow-y-auto scrollbar-hide">
                             {[
                                 ['camera', 'Allow camera access', 'Check your device settings'],
                                 ['mic', 'Allow microphone access', 'Ensure your mic is working'],
@@ -334,7 +342,7 @@ const PortalTelehealth = ({ onSchedule }) => {
                                 </span>
                             </label>
 
-                            <div className="flex gap-4 pt-4">
+                            <div className="flex gap-4 pt-4 sticky bottom-0 bg-white pb-2 mt-2">
                                 <button
                                     onClick={() => setPrepAppt(null)}
                                     className="flex-1 py-4 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-colors"

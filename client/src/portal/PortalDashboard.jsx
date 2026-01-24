@@ -484,14 +484,14 @@ const PortalDashboard = () => {
         // For non-overview tabs, wrap content with bottom padding for sticky nav
         if (activeTab !== 'overview') {
             return (
-                <div className="pb-28 space-y-6">
+                <div className="space-y-6">
                     {content}
                 </div>
             );
         }
 
         return (
-            <div className="pb-28 space-y-6">
+            <div className="space-y-6">
                 {/* Mobile Profile Card */}
                 <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100">
                     <div className="flex items-center gap-4 mb-6">
@@ -616,7 +616,7 @@ const PortalDashboard = () => {
                 </div>
 
                 {/* Health Records Horizontal Scroll */}
-                <div className="space-y-4">
+                <div className="space-y-4 overflow-hidden">
                     <div className="flex items-center justify-between">
                         <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Health Records</h3>
                         <div className="flex gap-1">
@@ -624,7 +624,11 @@ const PortalDashboard = () => {
                             <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
                         </div>
                     </div>
-                    <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide -mx-6 px-6">
+                    {/* Horizontal scrollable health cards */}
+                    <div
+                        className="flex gap-4 overflow-x-auto pb-4 -mx-5 px-5 scrollbar-hide touch-pan-x"
+                        style={{ WebkitOverflowScrolling: 'touch' }}
+                    >
                         <MobileHealthCard
                             title="Medications"
                             status="Active"
@@ -673,7 +677,7 @@ const PortalDashboard = () => {
     );
 
     return (
-        <div className="h-screen bg-[#F8FAFC] flex selection:bg-blue-100 overflow-hidden fixed inset-0">
+        <div className="h-screen w-full bg-[#F8FAFC] flex selection:bg-blue-100 overflow-hidden fixed inset-0">
             {/* Desktop Sidebar */}
             <aside className="w-[260px] hidden lg:flex flex-col fixed inset-y-0 left-0 bg-white border-r border-slate-100 z-50">
                 <PremiumStyles />
@@ -819,14 +823,13 @@ const PortalDashboard = () => {
             )}
 
             {/* Main Content Area */}
-            <div className={`flex-1 lg:ml-[260px] overflow-x-hidden`}>
+            <div className="flex-1 w-full lg:w-auto lg:ml-[260px] flex flex-col min-h-0 bg-[#F8FAFC] min-w-0 relative">
                 {/* Mobile main content - uses header defined above */}
                 <main
-                    className="lg:hidden overflow-y-auto overscroll-contain"
+                    className="lg:hidden flex-1 overflow-y-auto"
                     style={{
-                        paddingTop: 'calc(70px + env(safe-area-inset-top, 0px))',
-                        paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))',
-                        height: '100vh',
+                        paddingTop: 'calc(60px + env(safe-area-inset-top, 0px))',
+                        paddingBottom: 'calc(90px + env(safe-area-inset-bottom, 0px))',
                         WebkitOverflowScrolling: 'touch'
                     }}
                 >
@@ -835,13 +838,13 @@ const PortalDashboard = () => {
                     </div>
                 </main>
                 {/* Desktop content */}
-                <main className="hidden lg:block max-w-7xl mx-auto p-10 pt-12">
+                <main className="hidden lg:block flex-1 overflow-y-auto max-w-7xl mx-auto p-10 pt-12 custom-scrollbar">
                     {content}
                 </main>
             </div>
 
             {/* Sticky Bottom Navigation for Mobile - Always visible */}
-            <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-100 flex justify-around items-center z-50" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)', paddingTop: '10px' }}>
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-100 flex justify-around items-center z-50" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)', paddingTop: '10px' }}>
                 <BottomNavItem icon={<LayoutDashboard />} label="Home" active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} />
                 <BottomNavItem icon={<FileText />} label="Records" active={activeTab === 'record'} onClick={() => setActiveTab('record')} />
                 <BottomNavItem icon={<MessageSquare />} label="Messages" active={activeTab === 'messages'} count={stats.messages} onClick={() => setActiveTab('messages')} />
