@@ -20,6 +20,5 @@ router.use('/chart', chartRoutes);
 router.use('/messages', messageRoutes);
 router.use('/appointments', appointmentRoutes);
 router.use('/telehealth', telehealthRoutes);
-router.use('/push', require('./push'));
 
 module.exports = router;

@@ -26,7 +26,6 @@ import PortalMessages from './PortalMessages';
 import PortalAppointments from './PortalAppointments';
 import PortalHealthRecord from './PortalHealthRecord';
 import PortalTelehealth from './PortalTelehealth';
-import { initPushNotifications, unregisterPushNotifications } from './pushNotifications';
 
 const PortalDashboard = () => {
     const [patient, setPatient] = useState(null);
@@ -81,11 +80,6 @@ const PortalDashboard = () => {
 
         fetchDashboard();
     }, [navigate]);
-
-    // Initialize push notifications
-    useEffect(() => {
-        initPushNotifications();
-    }, []);
 
     useEffect(() => {
         const fetchNotifications = async () => {
@@ -810,8 +804,7 @@ const PortalDashboard = () => {
                         {/* Divider and Logout */}
                         <div className="border-t border-slate-100 mt-6 pt-6">
                             <button
-                                onClick={async () => {
-                                    await unregisterPushNotifications();
+                                onClick={() => {
                                     localStorage.removeItem('portalToken');
                                     navigate('/portal/login');
                                 }}

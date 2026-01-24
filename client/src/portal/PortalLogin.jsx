@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 
@@ -9,6 +9,25 @@ const PortalLogin = () => {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
     const apiBase = 'https://pagemdemr.com/api'; // Hardcode for now to resolve iOS issues
+
+    // Aggressive Scroll Locking
+    useEffect(() => {
+        // Lock body and html
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
+        document.body.style.height = '100%';
+        document.documentElement.style.overflow = 'hidden';
+
+        return () => {
+            // Cleanup
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.width = '';
+            document.body.style.height = '';
+            document.documentElement.style.overflow = '';
+        };
+    }, []);
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -27,6 +46,7 @@ const PortalLogin = () => {
 
             navigate('/portal/dashboard');
         } catch (err) {
+            console.error('Login error:', err);
             setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
         } finally {
             setLoading(false);
@@ -34,16 +54,20 @@ const PortalLogin = () => {
     };
 
     return (
-        <div className="h-screen overflow-hidden fixed inset-0 flex items-center justify-center p-4">
-            {/* Background Image with Overlay */}
-            <div
-                className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-1000 scale-105"
-                style={{ backgroundImage: 'url("/portal-bg.png")' }}
-            />
+        <div
+            className="fixed inset-0 w-full h-full bg-white flex items-center justify-center p-4"
+            style={{
+                backgroundImage: 'url("/portal-bg.png")',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                overscrollBehavior: 'none',
+                touchAction: 'none'
+            }}
+        >
             <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-blue-900/40 backdrop-blur-[2px]" />
 
             {/* Login Card */}
-            <div className="relative w-full max-w-[420px] animate-scale-in">
+            <div className="relative w-full max-w-[420px] animate-scale-in z-10">
                 <div className="bg-white/95 backdrop-blur-xl rounded-[2.5rem] shadow-2xl p-8 md:p-12 border border-white/40">
                     <div className="text-center mb-10">
                         <div className="mb-8">
@@ -54,18 +78,15 @@ const PortalLogin = () => {
                     </div>
 
                     {error && (
-                        <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl mb-6 flex items-center gap-3 animate-shake">
-                            <div className="w-2 h-2 bg-red-500 rounded-full" />
-                            <span className="text-sm font-semibold">{error}</span>
+                        <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl mb-6 flex flex-col gap-1 animate-shake break-words">
+                            <div className="flex items-center gap-3">
+                                <div className="w-2 h-2 bg-red-500 rounded-full shrink-0" />
+                                <span className="text-sm font-semibold">Login Failed</span>
+                            </div>
+                            <span className="text-xs text-red-500 font-mono mt-1 pl-5">{error}</span>
                         </div>
                     )}
 
-                    {/* 
-                        Important: autocomplete attributes enable iOS Password AutoFill
-                        - username: tells iOS this is the username/email field
-                        - current-password: tells iOS this is the password field
-                        iOS will automatically offer Face ID/Touch ID to fill saved credentials
-                    */}
                     <form onSubmit={handleLogin} className="space-y-6">
                         <div className="space-y-2">
                             <label htmlFor="email" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
@@ -123,17 +144,10 @@ const PortalLogin = () => {
                             )}
                         </button>
                     </form>
-
-                    <div className="mt-10 pt-8 border-t border-slate-100 text-center">
-                        <p className="text-xs text-slate-500 font-medium">
-                            Don't have access? <br />
-                            <span className="text-slate-400">Please contact your healthcare provider for an invitation.</span>
-                        </p>
-                    </div>
                 </div>
 
                 {/* Footer Security Note */}
-                <div className="mt-8 flex items-center justify-center gap-6 text-[10px] font-bold text-white/50 uppercase tracking-widest">
+                <div className="mt-8 flex flex-col items-center justify-center gap-2 text-[10px] font-bold text-white/50 uppercase tracking-widest">
                     <div className="flex items-center gap-2">
                         <div className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
                         HIPAA COMPLIANT
