@@ -63,7 +63,7 @@ const PortalDashboard = () => {
                     return;
                 }
 
-                const apiBase = import.meta.env.VITE_API_URL || '/api';
+                const apiBase = 'https://pagemdemr.com/api';
                 const response = await axios.get(`${apiBase}/portal/chart/me`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });

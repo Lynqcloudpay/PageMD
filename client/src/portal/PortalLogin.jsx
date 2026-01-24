@@ -8,7 +8,7 @@ const PortalLogin = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
-    const apiBase = import.meta.env.VITE_API_URL || '/api';
+    const apiBase = 'https://pagemdemr.com/api'; // Hardcode for now to resolve iOS issues
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -34,7 +34,7 @@ const PortalLogin = () => {
     };
 
     return (
-        <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden">
+        <div className="h-screen overflow-hidden fixed inset-0 flex items-center justify-center p-4">
             {/* Background Image with Overlay */}
             <div
                 className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-1000 scale-105"
