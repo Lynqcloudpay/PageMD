@@ -20,6 +20,24 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 
+// Helper to parse dates/times as local-computer time to avoid UTC shifting
+const parseLocalSafe = (dateVal, timeStr) => {
+    if (!dateVal) return new Date();
+    const dateStr = typeof dateVal === 'string' ? dateVal : dateVal.toISOString();
+    const datePart = dateStr.substring(0, 10);
+    const [y, m, d] = datePart.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    if (timeStr) {
+        const timeParts = timeStr.split(':');
+        const h = parseInt(timeParts[0]) || 0;
+        const min = parseInt(timeParts[1]) || 0;
+        date.setHours(h, min, 0, 0);
+    } else {
+        date.setHours(0, 0, 0, 0);
+    }
+    return date;
+};
+
 const PortalAppointments = ({ onMessageShortcut }) => {
     const [staff, setStaff] = useState([]);
     const [availability, setAvailability] = useState([]);
@@ -138,20 +156,6 @@ const PortalAppointments = ({ onMessageShortcut }) => {
 
     const isCancelled = (a) => a.status === 'cancelled' || a.patient_status === 'cancelled' || a.patient_status === 'no_show';
 
-    // Helper to parse dates/times as local-computer time to avoid UTC shifting
-    const parseLocalSafe = (dateVal, timeStr) => {
-        if (!dateVal) return new Date();
-        const dateStr = typeof dateVal === 'string' ? dateVal : dateVal.toISOString();
-        const datePart = dateStr.substring(0, 10);
-        const [y, m, d] = datePart.split('-').map(Number);
-        const date = new Date(y, m - 1, d);
-        if (timeStr) {
-            const [h, min] = timeStr.split(':').map(Number);
-            date.setHours(h, min, 0, 0);
-        }
-        return date;
-    };
-
     const getLocalDateMillis = (dateVal, timeStr) => {
         return parseLocalSafe(dateVal, timeStr).getTime();
     };
@@ -196,7 +200,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                         <div className="space-y-3">
                             <div className="flex items-center gap-2">
                                 <span className="px-2 py-0.5 bg-white/20 rounded-md text-[8px] font-black uppercase tracking-widest">Upcoming</span>
-                                <span className="text-xs font-bold text-blue-100">{format(new Date(nextAppt.appointment_date), 'EEEE, MMMM do')}</span>
+                                <span className="text-xs font-bold text-blue-100">{format(parseLocalSafe(nextAppt.appointment_date), 'EEEE, MMMM do')}</span>
                             </div>
                             <h1 className="text-2xl font-black tracking-tight leading-none">
                                 {nextAppt.appointment_time.slice(0, 5)} with Dr. {nextAppt.provider_last_name}
@@ -210,7 +214,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                 </button>
                                 <button
                                     onClick={() => {
-                                        setFormData({ ...formData, reason: `Reschedule request for current visit on ${nextAppt.appointment_date}` });
+                                        setFormData({ ...formData, reason: `Reschedule request for current visit on ${format(parseLocalSafe(nextAppt.appointment_date), 'yyyy-MM-dd')}` });
                                         setShowRequestForm(true);
                                     }}
                                     className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl font-black text-[9px] uppercase tracking-widest transition-colors border border-white/20"
@@ -220,8 +224,8 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                             </div>
                         </div>
                         <div className="hidden sm:flex flex-col items-center justify-center p-4 bg-white/5 rounded-2xl border border-white/10 w-24">
-                            <span className="text-2xl font-black leading-none">{format(new Date(nextAppt.appointment_date), 'dd')}</span>
-                            <span className="text-[9px] font-bold uppercase tracking-widest opacity-60">{format(new Date(nextAppt.appointment_date), 'MMM')}</span>
+                            <span className="text-2xl font-black leading-none">{format(parseLocalSafe(nextAppt.appointment_date), 'dd')}</span>
+                            <span className="text-[9px] font-bold uppercase tracking-widest opacity-60">{format(parseLocalSafe(nextAppt.appointment_date), 'MMM')}</span>
                         </div>
                     </div>
                 </div>
@@ -281,12 +285,12 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                                 className="flex items-center gap-3 p-3 bg-white hover:bg-red-600 hover:text-white rounded-xl border border-red-100 hover:border-red-600 transition-all group"
                                             >
                                                 <div className="w-10 h-10 bg-red-100 group-hover:bg-white/20 rounded-lg flex flex-col items-center justify-center shrink-0">
-                                                    <span className="text-sm font-black text-red-700 group-hover:text-white leading-none">{format(d, 'd')}</span>
-                                                    <span className="text-[7px] font-bold text-red-500 group-hover:text-white/80 uppercase">{format(d, 'MMM')}</span>
+                                                    <span className="text-sm font-black text-red-700 group-hover:text-white leading-none">{format(parseLocalSafe(slot.date, slot.time), 'd')}</span>
+                                                    <span className="text-[7px] font-bold text-red-500 group-hover:text-white/80 uppercase">{format(parseLocalSafe(slot.date, slot.time), 'MMM')}</span>
                                                 </div>
                                                 <div className="text-left flex-1">
-                                                    <div className="font-bold text-sm text-red-900 group-hover:text-white">{format(d, 'EEEE')}</div>
-                                                    <div className="text-[10px] font-medium text-red-600 group-hover:text-white/80">{format(d, 'h:mm a')}</div>
+                                                    <div className="font-bold text-sm text-red-900 group-hover:text-white">{format(parseLocalSafe(slot.date, slot.time), 'EEEE')}</div>
+                                                    <div className="text-[10px] font-medium text-red-600 group-hover:text-white/80">{format(parseLocalSafe(slot.date, slot.time), 'h:mm a')}</div>
                                                 </div>
                                                 <CheckCircle2 className="w-5 h-5 text-red-400 group-hover:text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                                             </button>
@@ -473,11 +477,11 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                     <div key={appt.id} className="p-4 rounded-2xl border border-transparent bg-slate-50/50 opacity-60 flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-xl bg-slate-200 text-slate-400 flex flex-col items-center justify-center shrink-0">
-                                                <span className="text-sm font-black leading-none">{format(new Date(appt.appointment_date), 'dd')}</span>
-                                                <span className="text-[8px] font-bold uppercase">{format(new Date(appt.appointment_date), 'MMM')}</span>
+                                                <span className="text-sm font-black leading-none">{format(parseLocalSafe(appt.appointment_date), 'dd')}</span>
+                                                <span className="text-[8px] font-bold uppercase">{format(parseLocalSafe(appt.appointment_date), 'MMM')}</span>
                                             </div>
                                             <div>
-                                                <h4 className="text-xs font-bold text-slate-400 italic">Sch {format(new Date(appt.appointment_date), 'MMM do')}</h4>
+                                                <h4 className="text-xs font-bold text-slate-400 italic">Sch {format(parseLocalSafe(appt.appointment_date), 'MMM do')}</h4>
                                                 <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">{isNoShow ? 'No Show' : 'Cancelled'}</p>
                                             </div>
                                         </div>
@@ -614,11 +618,11 @@ const CompactCard = ({ req, type, onCancel, onEdit }) => {
             }`}>
             <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center shrink-0 ${isPending ? 'bg-amber-50 text-amber-600' : 'bg-slate-200 text-slate-400'}`}>
-                    <span className="text-sm font-black leading-none">{format(new Date(req.preferred_date), 'dd')}</span>
-                    <span className="text-[8px] font-bold uppercase">{format(new Date(req.preferred_date), 'MMM')}</span>
+                    <span className="text-sm font-black leading-none">{format(parseLocalSafe(req.preferred_date), 'dd')}</span>
+                    <span className="text-[8px] font-bold uppercase">{format(parseLocalSafe(req.preferred_date), 'MMM')}</span>
                 </div>
                 <div>
-                    <h4 className="text-xs font-bold text-slate-800">{format(new Date(req.preferred_date), 'MMMM do')}</h4>
+                    <h4 className="text-xs font-bold text-slate-800">{format(parseLocalSafe(req.preferred_date), 'MMMM do')}</h4>
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{req.preferred_time_range}</p>
                 </div>
             </div>
