@@ -208,7 +208,7 @@ const InbasketRedesign = () => {
         const poll = setInterval(() => {
             fetchData(true);
             if (activeSection === 'tasks') fetchTasks();
-        }, 5000);
+        }, 30000); // 30 seconds to prevent flickering
         return () => clearInterval(poll);
     }, [fetchData, fetchTasks, activeSection]);
 
@@ -362,8 +362,8 @@ const InbasketRedesign = () => {
                         <button
                             onClick={() => setAssignedFilter('me')}
                             className={`flex-1 py-1.5 px-2 rounded-md text-xs font-medium transition-all ${assignedFilter === 'me'
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : 'text-gray-500 hover:bg-gray-50'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'text-gray-500 hover:bg-gray-50'
                                 }`}
                         >
                             My Items
@@ -371,8 +371,8 @@ const InbasketRedesign = () => {
                         <button
                             onClick={() => setAssignedFilter('all')}
                             className={`flex-1 py-1.5 px-2 rounded-md text-xs font-medium transition-all ${assignedFilter === 'all'
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : 'text-gray-500 hover:bg-gray-50'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'text-gray-500 hover:bg-gray-50'
                                 }`}
                         >
                             All Items
@@ -382,8 +382,8 @@ const InbasketRedesign = () => {
                         <button
                             onClick={() => setFilterStatus('pending')}
                             className={`flex-1 py-1.5 px-2 rounded-md text-xs font-medium transition-all ${filterStatus === 'pending'
-                                    ? 'bg-amber-100 text-amber-700'
-                                    : 'text-gray-500 hover:bg-gray-50'
+                                ? 'bg-amber-100 text-amber-700'
+                                : 'text-gray-500 hover:bg-gray-50'
                                 }`}
                         >
                             Pending
@@ -391,8 +391,8 @@ const InbasketRedesign = () => {
                         <button
                             onClick={() => setFilterStatus('reviewed')}
                             className={`flex-1 py-1.5 px-2 rounded-md text-xs font-medium transition-all ${filterStatus === 'reviewed'
-                                    ? 'bg-green-100 text-green-700'
-                                    : 'text-gray-500 hover:bg-gray-50'
+                                ? 'bg-green-100 text-green-700'
+                                : 'text-gray-500 hover:bg-gray-50'
                                 }`}
                         >
                             Reviewed
@@ -412,17 +412,17 @@ const InbasketRedesign = () => {
                                 key={section.id}
                                 onClick={() => setActiveSection(section.id)}
                                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-all ${isActive
-                                        ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 shadow-sm'
-                                        : 'hover:bg-gray-50'
+                                    ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 shadow-sm'
+                                    : 'hover:bg-gray-50'
                                     }`}
                             >
                                 <div className={`p-2 rounded-lg ${isActive
-                                        ? `bg-${section.color}-100`
-                                        : 'bg-gray-100'
+                                    ? `bg-${section.color}-100`
+                                    : 'bg-gray-100'
                                     }`}>
                                     <Icon className={`w-4 h-4 ${isActive
-                                            ? `text-${section.color}-600`
-                                            : 'text-gray-500'
+                                        ? `text-${section.color}-600`
+                                        : 'text-gray-500'
                                         }`} />
                                 </div>
                                 <div className="flex-1 text-left">
@@ -434,8 +434,8 @@ const InbasketRedesign = () => {
                                 </div>
                                 {count > 0 && (
                                     <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${isActive
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-gray-200 text-gray-600'
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-gray-200 text-gray-600'
                                         }`}>
                                         {count}
                                     </span>
@@ -511,8 +511,8 @@ const InbasketRedesign = () => {
                                         className="mt-1 p-1 rounded-full border-2 border-gray-300 hover:border-green-500 hover:bg-green-50 transition-all"
                                     >
                                         <Check className={`w-4 h-4 ${task.status === 'completed'
-                                                ? 'text-green-500'
-                                                : 'text-transparent'
+                                            ? 'text-green-500'
+                                            : 'text-transparent'
                                             }`} />
                                     </button>
                                     <div className="flex-1 min-w-0">
@@ -555,20 +555,20 @@ const InbasketRedesign = () => {
                                     key={item.id}
                                     onClick={() => setSelectedItem(item)}
                                     className={`p-4 cursor-pointer hover:bg-gray-50 transition-all ${selectedItem?.id === item.id
-                                            ? 'bg-blue-50 border-l-4 border-l-blue-500'
-                                            : 'border-l-4 border-l-transparent'
+                                        ? 'bg-blue-50 border-l-4 border-l-blue-500'
+                                        : 'border-l-4 border-l-transparent'
                                         }`}
                                 >
                                     <div className="flex items-start gap-3">
                                         <div className={`mt-0.5 w-2 h-2 rounded-full ${item.status === 'new'
-                                                ? 'bg-blue-500'
-                                                : 'bg-gray-300'
+                                            ? 'bg-blue-500'
+                                            : 'bg-gray-300'
                                             }`} />
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between">
                                                 <h3 className={`text-sm truncate pr-2 ${item.status === 'new'
-                                                        ? 'font-bold text-gray-900'
-                                                        : 'font-medium text-gray-700'
+                                                    ? 'font-bold text-gray-900'
+                                                    : 'font-medium text-gray-700'
                                                     }`}>
                                                     {item.subject || 'No Subject'}
                                                 </h3>
@@ -638,27 +638,55 @@ const InbasketRedesign = () => {
                                     </p>
                                 </div>
 
-                                {/* Message Thread */}
+                                {/* Message Thread - iMessage Style */}
                                 {details?.notes?.length > 0 && (
                                     <div className="border-t pt-4">
-                                        <h4 className="text-xs font-bold text-gray-500 uppercase mb-3">Conversation</h4>
-                                        <div className="space-y-3">
-                                            {details.notes.map((note, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    className={`p-3 rounded-lg ${note.sender_type === 'staff'
-                                                            ? 'bg-blue-50 ml-8'
-                                                            : 'bg-gray-100 mr-8'
-                                                        }`}
-                                                >
-                                                    <p className="text-sm">{note.note}</p>
-                                                    <p className="text-[10px] text-gray-400 mt-1">
-                                                        {note.first_name} {note.last_name} • {format(new Date(note.created_at), 'MMM d, h:mm a')}
-                                                    </p>
-                                                </div>
-                                            ))}
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Conversation History</h4>
+                                            <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-bold">Secure</span>
                                         </div>
-                                        <div ref={chatEndRef} />
+                                        <div className="space-y-4">
+                                            {details.notes.map((note, idx) => {
+                                                const isStaff = note.sender_type === 'staff' || note.sender_type === 'provider';
+                                                const isPatient = note.sender_type === 'patient' || !note.sender_type;
+
+                                                return (
+                                                    <div key={idx} className={`flex gap-3 ${isStaff ? 'flex-row-reverse' : ''}`}>
+                                                        {/* Avatar */}
+                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0 shadow-sm border ${isStaff
+                                                                ? 'bg-blue-600 border-blue-700 text-white'
+                                                                : 'bg-white border-gray-200 text-gray-500'
+                                                            }`}>
+                                                            {note.first_name ? note.first_name[0] : 'P'}
+                                                        </div>
+
+                                                        {/* Bubble */}
+                                                        <div className={`flex flex-col ${isStaff ? 'items-end' : 'items-start'} max-w-[80%]`}>
+                                                            <div className={`flex items-baseline gap-2 mb-1 ${isStaff ? 'flex-row-reverse' : ''}`}>
+                                                                <span className={`text-[11px] font-bold ${isStaff ? 'text-blue-700' : 'text-gray-900'}`}>
+                                                                    {note.first_name || 'Patient'}
+                                                                </span>
+                                                                <span className="text-[9px] text-gray-400">
+                                                                    {format(new Date(note.created_at), 'h:mm a')}
+                                                                </span>
+                                                            </div>
+                                                            <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm ${isStaff
+                                                                    ? 'bg-blue-600 text-white rounded-tr-none'
+                                                                    : 'bg-gray-100 text-gray-800 rounded-tl-none border border-gray-200'
+                                                                }`}>
+                                                                {note.note}
+                                                            </div>
+                                                            {isStaff && (
+                                                                <div className="mt-1 flex items-center gap-1 text-[9px] text-gray-400">
+                                                                    <CheckCircle className="w-2.5 h-2.5 text-blue-500" /> Delivered
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                        <div ref={chatEndRef} className="h-2" />
                                     </div>
                                 )}
                             </div>
@@ -772,8 +800,8 @@ const InbasketRedesign = () => {
                                                 }));
                                             }}
                                             className={`px-2 py-1 rounded-full text-xs font-medium border transition-all ${reviewData.metricTags.includes(metric.id)
-                                                    ? 'bg-blue-600 text-white border-blue-600'
-                                                    : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+                                                ? 'bg-blue-600 text-white border-blue-600'
+                                                : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
                                                 }`}
                                         >
                                             {metric.label}
@@ -922,8 +950,8 @@ const InbasketRedesign = () => {
                                             }));
                                         }}
                                         className={`p-3 rounded-lg border text-left transition-all ${reviewData.metricTags.includes(metric.id)
-                                                ? 'bg-blue-50 border-blue-300'
-                                                : 'border-gray-200 hover:border-blue-200'
+                                            ? 'bg-blue-50 border-blue-300'
+                                            : 'border-gray-200 hover:border-blue-200'
                                             }`}
                                     >
                                         <p className="font-medium text-sm">{metric.label}</p>
