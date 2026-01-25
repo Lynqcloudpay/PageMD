@@ -133,25 +133,28 @@ const PortalAppointments = ({ onMessageShortcut }) => {
     );
 
     const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const todayMillis = new Date(todayStr).getTime();
 
     const isCancelled = (a) => a.status === 'cancelled' || a.patient_status === 'cancelled' || a.patient_status === 'no_show';
 
-    const getDateStr = (dateVal) => {
-        if (!dateVal) return '';
-        if (typeof dateVal === 'string') return dateVal.substring(0, 10);
-        return format(new Date(dateVal), 'yyyy-MM-dd');
+    const getLocalDateMillis = (dateVal) => {
+        if (!dateVal) return 0;
+        // Use new Date(dateVal) to parse ISO string into local time, then reset to start of day
+        const d = new Date(dateVal);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime();
     };
 
     const scheduled = appointments.filter(a => {
-        const apptDate = getDateStr(a.appointment_date);
+        const apptDateMillis = getLocalDateMillis(a.appointment_date);
         const isCompleted = a.status === 'completed' || a.status === 'checked_out';
-        return apptDate >= todayStr && !isCancelled(a) && !isCompleted;
+        return apptDateMillis >= todayMillis && !isCancelled(a) && !isCompleted;
     }).sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date));
 
     const past = appointments.filter(a => {
-        const apptDate = getDateStr(a.appointment_date);
+        const apptDateMillis = getLocalDateMillis(a.appointment_date);
         const isCompleted = a.status === 'completed' || a.status === 'checked_out';
-        return (apptDate < todayStr || isCompleted) && !isCancelled(a);
+        return (apptDateMillis < todayMillis || isCompleted) && !isCancelled(a);
     }).sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date));
 
     const cancelledAppts = appointments.filter(a => isCancelled(a));

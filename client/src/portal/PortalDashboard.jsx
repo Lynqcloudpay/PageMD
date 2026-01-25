@@ -148,26 +148,10 @@ const PortalDashboard = () => {
                     const visitMethod = (appt.visit_method || '').toLowerCase();
 
                     // Parse appointment date string properly
-                    // Handle both "2024-01-21" and "2024-01-21T14:30:00.000Z"
-                    const dateStr = appt.appointment_date;
-                    let apptYear, apptMonth, apptDate;
-
-                    if (dateStr.includes('T')) {
-                        const d = new Date(dateStr);
-                        apptYear = d.getFullYear(); // Use local time
-                        apptMonth = d.getMonth();
-                        apptDate = d.getDate();
-                    } else {
-                        // If it's just YYYY-MM-DD, parse manually to avoid UTC conversion issues
-                        const [y, m, d] = dateStr.split('-').map(Number);
-                        apptYear = y;
-                        apptMonth = m - 1; // 0-indexed
-                        apptDate = d;
-                    }
-
-                    const isToday = apptDate === now.getDate() &&
-                        apptMonth === now.getMonth() &&
-                        apptYear === now.getFullYear();
+                    const d = new Date(appt.appointment_date);
+                    const isToday = d.getDate() === now.getDate() &&
+                        d.getMonth() === now.getMonth() &&
+                        d.getFullYear() === now.getFullYear();
 
                     // Debug log
                     // console.log('Checking appointment for telehealth:', { id: appt.id, type, visitMethod, date: appt.appointment_date });
@@ -201,11 +185,18 @@ const PortalDashboard = () => {
                 }
 
                 // Count upcoming appointments (next 7 days)
+                const startOfToday = new Date();
+                startOfToday.setHours(0, 0, 0, 0);
+
                 const nextWeek = new Date();
                 nextWeek.setDate(nextWeek.getDate() + 7);
+                nextWeek.setHours(23, 59, 59, 999);
+
                 const upcomingAppts = apptsRes.data.filter(appt => {
                     const apptDate = new Date(appt.appointment_date);
-                    return apptDate >= new Date() && apptDate <= nextWeek;
+                    // Clear time for date-only comparison or keep for precise check? 
+                    // Usually upcoming should include things later today.
+                    return apptDate >= startOfToday && apptDate <= nextWeek && appt.status !== 'completed' && appt.status !== 'checked_out';
                 }).sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date));
 
                 // Find the next upcoming appointment

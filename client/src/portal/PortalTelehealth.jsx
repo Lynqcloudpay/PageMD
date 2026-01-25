@@ -110,12 +110,18 @@ const PortalTelehealth = ({ onSchedule }) => {
             const today = format(new Date(), 'yyyy-MM-dd');
             const response = await axios.get(`${apiBase}/portal/appointments`, { headers });
 
+            const now = new Date();
             const telehealthAppts = response.data.filter(appt => {
                 const type = (appt.appointment_type || '').toLowerCase();
                 const visitMethod = (appt.visit_method || '').toLowerCase();
-                const date = (appt.appointment_date || '').split('T')[0];
+
+                const d = new Date(appt.appointment_date);
+                const isToday = d.getDate() === now.getDate() &&
+                    d.getMonth() === now.getMonth() &&
+                    d.getFullYear() === now.getFullYear();
+
                 return (type.includes('telehealth') || type.includes('video') || type.includes('virtual') || visitMethod === 'telehealth') &&
-                    date === today &&
+                    isToday &&
                     appt.status !== 'completed' &&
                     appt.patient_status !== 'checked_out';
             });
