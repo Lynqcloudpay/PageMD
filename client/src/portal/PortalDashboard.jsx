@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { format, isSameDay } from 'date-fns';
 import {
     LayoutDashboard,
     MessageSquare,
@@ -49,8 +50,12 @@ const PortalDashboard = () => {
         const [y, m, d] = datePart.split('-').map(Number);
         const date = new Date(y, m - 1, d);
         if (timeStr) {
-            const [h, min] = timeStr.split(':').map(Number);
+            const timeParts = timeStr.split(':');
+            const h = parseInt(timeParts[0]) || 0;
+            const min = parseInt(timeParts[1]) || 0;
             date.setHours(h, min, 0, 0);
+        } else {
+            date.setHours(0, 0, 0, 0);
         }
         return date;
     };
@@ -369,8 +374,8 @@ const PortalDashboard = () => {
                                                         <div className="flex-1">
                                                             <p className="text-[9px] font-bold uppercase tracking-widest text-white/80">Upcoming Appointment</p>
                                                             <p className="text-lg font-bold text-white">
-                                                                {new Date(quickGlance.nextAppointment.appointment_date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-                                                                {quickGlance.nextAppointment.appointment_time && ` at ${quickGlance.nextAppointment.appointment_time}`}
+                                                                {format(parseLocalSafe(quickGlance.nextAppointment.appointment_date), 'eeee, MMM do')}
+                                                                {quickGlance.nextAppointment.appointment_time && ` at ${format(parseLocalSafe(quickGlance.nextAppointment.appointment_date, quickGlance.nextAppointment.appointment_time), 'h:mm a')}`}
                                                             </p>
                                                         </div>
                                                         <ChevronRight className="w-5 h-5 text-white/80" />
@@ -557,11 +562,11 @@ const PortalDashboard = () => {
                         <div className="flex-1">
                             <p className="text-[10px] font-bold uppercase tracking-widest text-white/80 mb-1">Upcoming Appointment</p>
                             <p className="text-lg font-bold">
-                                {parseLocalSafe(quickGlance.nextAppointment.appointment_date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                                {format(parseLocalSafe(quickGlance.nextAppointment.appointment_date), 'eeee, MMMM do')}
                             </p>
                             <p className="text-sm text-white/80">
                                 {quickGlance.nextAppointment.appointment_time ?
-                                    new Date('2000-01-01T' + quickGlance.nextAppointment.appointment_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+                                    format(parseLocalSafe(quickGlance.nextAppointment.appointment_date, quickGlance.nextAppointment.appointment_time), 'h:mm a')
                                     : 'Time TBD'
                                 }
                                 {quickGlance.nextAppointment.visit_method === 'telehealth' && ' • Virtual Visit'}
