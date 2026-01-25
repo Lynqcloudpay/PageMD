@@ -896,10 +896,10 @@ router.post('/:id/deny-appointment', async (req, res) => {
         const clinicName = req.clinic?.display_name || 'Your Healthcare Provider';
         const formattedDate = preferredDate ? new Date(preferredDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'your requested date';
 
-        await emailService.sendEmail({
-          to: patientEmail,
-          subject: `Appointment Request Update - ${clinicName}`,
-          html: `
+        await emailService._send(
+          patientEmail,
+          `Appointment Request Update - ${clinicName}`,
+          `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #1e40af;">Appointment Request Update</h2>
               <p>Dear ${patientName},</p>
@@ -909,7 +909,7 @@ router.post('/:id/deny-appointment', async (req, res) => {
               <p style="margin-top: 30px;">Thank you for your understanding,<br><strong>${clinicName}</strong></p>
             </div>
           `
-        });
+        );
         console.log(`[Inbasket] Denial notification sent to ${patientEmail}`);
       } catch (emailErr) {
         console.warn('[Inbasket] Failed to send denial email:', emailErr.message);

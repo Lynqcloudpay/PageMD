@@ -114,7 +114,8 @@ router.delete('/requests/:id', requirePortalPermission('can_request_appointments
         }
 
         const currentStatus = checkStatus.rows[0].status;
-        const nextStatus = currentStatus === 'pending_patient' ? 'declined_by_patient' : 'cancelled';
+        // Use 'cancelled' for all cancellations - it's a valid status in the check constraint
+        const nextStatus = 'cancelled';
 
         const result = await pool.query(
             "UPDATE portal_appointment_requests SET status = $1 WHERE id = $2 AND portal_account_id = $3 RETURNING *",
