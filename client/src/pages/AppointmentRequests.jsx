@@ -447,6 +447,37 @@ const AppointmentRequests = () => {
                                                 Modify Suggestions
                                             </button>
                                         </div>
+                                    ) : selectedRequest.status === 'declined_by_patient' ? (
+                                        <div className="bg-rose-50 border border-rose-200 rounded-xl p-5">
+                                            <div className="flex items-center gap-3 mb-4">
+                                                <div className="p-2 bg-rose-500 rounded-lg shadow-md">
+                                                    <AlertCircle className="w-5 h-5 text-white animate-bounce" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-bold text-rose-900 uppercase tracking-tight">Patient Declined Suggestions</p>
+                                                    <p className="text-xs text-rose-700 font-medium leading-relaxed">
+                                                        The patient reviewed the suggested slots and none of them worked.
+                                                        Immediate follow-up is recommended to prevent loss of follow-up.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <button
+                                                    onClick={() => setShowApproveModal(true)}
+                                                    className="flex items-center justify-center gap-2 px-4 py-2 bg-rose-600 text-white text-[11px] font-bold rounded-lg hover:bg-rose-700 transition-colors shadow-sm"
+                                                >
+                                                    <CalendarPlus className="w-3.5 h-3.5" />
+                                                    Resuggest Times
+                                                </button>
+                                                <button
+                                                    onClick={() => openPatientChart(selectedRequest)}
+                                                    className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-rose-200 text-rose-600 text-[11px] font-bold rounded-lg hover:bg-rose-50 transition-colors shadow-sm"
+                                                >
+                                                    <Send className="w-3.5 h-3.5" />
+                                                    Message or Call
+                                                </button>
+                                            </div>
+                                        </div>
                                     ) : selectedRequest.status === 'new' && (
                                         <div className="flex flex-col sm:flex-row gap-3">
                                             <button

@@ -103,14 +103,23 @@ router.delete('/requests/:id', requirePortalPermission('can_request_appointments
         const { id } = req.params;
         const portalAccountId = req.portalAccount.id;
 
-        const result = await pool.query(
-            "UPDATE portal_appointment_requests SET status = $1 WHERE id = $2 AND portal_account_id = $3 AND (status = 'pending' OR status = 'pending_patient') RETURNING *",
-            ['cancelled', id, portalAccountId]
+        // Check current status to decide next status
+        const checkStatus = await pool.query(
+            "SELECT status FROM portal_appointment_requests WHERE id = $1 AND portal_account_id = $2",
+            [id, portalAccountId]
         );
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Request not found or cannot be cancelled' });
+        if (checkStatus.rows.length === 0) {
+            return res.status(404).json({ error: 'Request not found' });
         }
+
+        const currentStatus = checkStatus.rows[0].status;
+        const nextStatus = currentStatus === 'pending_patient' ? 'declined_by_patient' : 'cancelled';
+
+        const result = await pool.query(
+            "UPDATE portal_appointment_requests SET status = $1 WHERE id = $2 AND portal_account_id = $3 RETURNING *",
+            [nextStatus, id, portalAccountId]
+        );
 
         res.json({ success: true });
     } catch (error) {

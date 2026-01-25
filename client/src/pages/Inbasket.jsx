@@ -784,20 +784,27 @@ const Inbasket = () => {
                                     </div>
                                 )}
                                 {details?.type === 'portal_appointment' && (
-                                    <div className="bg-amber-50 border border-amber-100 rounded-lg p-4">
+                                    <div className={`rounded-xl p-4 border ${details.status === 'declined_by_patient' ? 'bg-rose-50 border-rose-200' : 'bg-amber-50 border-amber-100'}`}>
                                         <div className="flex items-center gap-3 mb-3">
-                                            <Calendar className="w-8 h-8 text-amber-500" />
+                                            <Calendar className={`w-8 h-8 ${details.status === 'declined_by_patient' ? 'text-rose-500' : 'text-amber-500'}`} />
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium text-amber-900">Appointment Request</p>
-                                                <p className="text-xs text-amber-600">Patient prefers {details.body?.split('\n')[0] || 'date/time in notes'}</p>
+                                                <p className={`text-sm font-bold ${details.status === 'declined_by_patient' ? 'text-rose-900' : 'text-amber-900'}`}>
+                                                    {details.status === 'declined_by_patient' ? 'Patient Declined Suggestions' : 'Appointment Request'}
+                                                </p>
+                                                <p className={`text-xs ${details.status === 'declined_by_patient' ? 'text-rose-700' : 'text-amber-600'}`}>
+                                                    {details.status === 'declined_by_patient'
+                                                        ? 'Please call or message patient to reschedule manually.'
+                                                        : `Patient prefers ${details.body?.split('\n')[0] || 'date/time in notes'}`}
+                                                </p>
                                             </div>
                                         </div>
                                         <div className="flex gap-2 mt-3">
                                             <button
                                                 onClick={() => setShowApproveModal(true)}
-                                                className="flex-1 px-3 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 flex items-center justify-center gap-1"
+                                                className={`flex-1 px-3 py-2 text-white text-xs font-bold rounded-lg transition-all shadow-sm flex items-center justify-center gap-1 ${details.status === 'declined_by_patient' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
                                             >
-                                                <CheckCircleIcon className="w-4 h-4" /> Approve & Schedule
+                                                <CheckCircleIcon className="w-4 h-4" />
+                                                {details.status === 'declined_by_patient' ? 'Resuggest Slots' : 'Approve & Schedule'}
                                             </button>
                                             <button
                                                 onClick={async () => {
@@ -813,9 +820,9 @@ const Inbasket = () => {
                                                         showError('Failed to deny request');
                                                     }
                                                 }}
-                                                className="px-3 py-2 bg-red-100 text-red-600 text-xs font-bold rounded-lg hover:bg-red-200"
+                                                className={`px-3 py-2 text-xs font-bold rounded-lg transition-all ${details.status === 'declined_by_patient' ? 'bg-white border border-rose-200 text-rose-600 hover:bg-rose-50' : 'bg-red-100 text-red-600 hover:bg-red-200'}`}
                                             >
-                                                Deny
+                                                Deny Request
                                             </button>
                                         </div>
                                     </div>

@@ -42,6 +42,21 @@ const PortalDashboard = () => {
         recentUpdate: null
     });
 
+    const [dismissedNotifications, setDismissedNotifications] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem('portalDismissedNotifications') || '[]');
+        } catch (e) {
+            return [];
+        }
+    });
+
+    const handleDismiss = (e, notifId) => {
+        e.stopPropagation();
+        const updated = [...dismissedNotifications, notifId];
+        setDismissedNotifications(updated);
+        localStorage.setItem('portalDismissedNotifications', JSON.stringify(updated));
+    };
+
     // Helper to parse dates/times as local-computer time to avoid UTC shifting
     const parseLocalSafe = (dateVal, timeStr) => {
         if (!dateVal) return new Date();
@@ -196,16 +211,6 @@ const PortalDashboard = () => {
 
                 // console.log('Found telehealth appts today:', telehealthAppts);
 
-                if (telehealthAppts.length > 0) {
-                    newNotifs.push({
-                        id: 'telehealth-ready',
-                        type: 'action',
-                        message: `You have ${telehealthAppts.length} virtual visit${telehealthAppts.length > 1 ? 's' : ''} today`,
-                        action: 'telehealth',
-                        priority: 'high'
-                    });
-                }
-
                 // Count upcoming appointments (next 7 days)
                 const startOfToday = new Date();
                 startOfToday.setHours(0, 0, 0, 0);
@@ -228,7 +233,10 @@ const PortalDashboard = () => {
                 // Find most recent appointment update
                 const recentUpdate = recentUpdates.length > 0 ? recentUpdates[0] : null;
 
-                setActiveNotifications(newNotifs);
+                // Filter out dismissed notifications
+                const filteredNotifs = newNotifs.filter(n => !dismissedNotifications.includes(n.id));
+
+                setActiveNotifications(filteredNotifs);
                 setStats({
                     messages: unreadCount,
                     appointments: upcomingAppts.length,
@@ -325,30 +333,38 @@ const PortalDashboard = () => {
                                     {activeNotifications.length > 0 && (
                                         <div className="mb-4 space-y-2">
                                             {activeNotifications.map(notif => (
-                                                <button
-                                                    key={notif.id}
-                                                    onClick={() => setActiveTab(notif.action || 'overview')}
-                                                    className={`w-full p-3 rounded-2xl border transition-all flex items-center gap-3 text-left ${notif.priority === 'urgent'
-                                                        ? 'bg-red-50 border-red-100 text-red-900 shadow-sm'
-                                                        : notif.type === 'action'
-                                                            ? 'bg-blue-50 border-blue-100 text-blue-900 shadow-sm'
-                                                            : 'bg-slate-50 border-slate-100 text-slate-700'
-                                                        }`}
-                                                >
-                                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${notif.priority === 'urgent' ? 'bg-red-500 text-white' :
-                                                        notif.type === 'action' ? 'bg-blue-500 text-white' : 'bg-slate-200 text-slate-500'
-                                                        }`}>
-                                                        {notif.action === 'appointments' ? <Calendar className="w-4 h-4" /> :
-                                                            notif.action === 'messages' ? <MessageSquare className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <p className="text-[10px] font-black uppercase tracking-widest opacity-60">
-                                                            {notif.priority === 'urgent' ? 'Important Notice' : 'Notification'}
-                                                        </p>
-                                                        <p className="text-sm font-bold leading-tight">{notif.message}</p>
-                                                    </div>
-                                                    <ChevronRight className="w-4 h-4 opacity-30" />
-                                                </button>
+                                                <div key={notif.id} className="relative group/notif">
+                                                    <button
+                                                        onClick={() => setActiveTab(notif.action || 'overview')}
+                                                        className={`w-full p-3.5 rounded-2xl border transition-all flex items-center gap-3.5 text-left ${notif.priority === 'urgent'
+                                                            ? 'bg-red-50 border-red-100 text-red-900 shadow-sm'
+                                                            : notif.type === 'action'
+                                                                ? 'bg-blue-50 border-blue-100 text-blue-900 shadow-sm'
+                                                                : 'bg-slate-50 border-slate-100 text-slate-700'
+                                                            }`}
+                                                    >
+                                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${notif.priority === 'urgent' ? 'bg-red-500 text-white' :
+                                                            notif.type === 'action' ? 'bg-blue-500 text-white' : 'bg-slate-200 text-slate-500'
+                                                            }`}>
+                                                            {notif.action === 'appointments' ? <Calendar className="w-5 h-5" /> :
+                                                                notif.action === 'messages' ? <MessageSquare className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <p className="text-[9px] font-black uppercase tracking-widest opacity-60">
+                                                                {notif.priority === 'urgent' ? 'Important Notice' : 'Notification'}
+                                                            </p>
+                                                            <p className="text-base font-bold leading-tight">{notif.message}</p>
+                                                        </div>
+                                                        <ChevronRight className="w-5 h-5 opacity-30 group-hover/notif:translate-x-1 transition-transform" />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => handleDismiss(e, notif.id)}
+                                                        className="absolute -top-1 -right-1 w-6 h-6 bg-white border border-slate-100 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 shadow-sm opacity-0 group-hover/notif:opacity-100 transition-opacity z-10"
+                                                        title="Dismiss"
+                                                    >
+                                                        <X size={12} />
+                                                    </button>
+                                                </div>
                                             ))}
                                         </div>
                                     )}
@@ -573,14 +589,14 @@ const PortalDashboard = () => {
                                 key={notif.id}
                                 onClick={() => setActiveTab(notif.action || 'overview')}
                                 className={`w-full p-4 rounded-[2rem] border transition-all flex items-center gap-3 text-left ${notif.priority === 'urgent'
-                                        ? 'bg-red-50 border-red-100 text-red-900'
-                                        : notif.type === 'action'
-                                            ? 'bg-blue-50 border-blue-100 text-blue-900'
-                                            : 'bg-white border-slate-100 text-slate-700'
+                                    ? 'bg-red-50 border-red-100 text-red-900'
+                                    : notif.type === 'action'
+                                        ? 'bg-blue-50 border-blue-100 text-blue-900'
+                                        : 'bg-white border-slate-100 text-slate-700'
                                     }`}
                             >
                                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${notif.priority === 'urgent' ? 'bg-red-500 text-white' :
-                                        notif.type === 'action' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'
+                                    notif.type === 'action' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'
                                     }`}>
                                     {notif.action === 'appointments' ? <Calendar className="w-5 h-5" /> :
                                         notif.action === 'messages' ? <MessageSquare className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
