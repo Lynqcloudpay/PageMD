@@ -40,7 +40,7 @@ const Inbasket = () => {
 
     // Filter State
     const [selectedCategory, setSelectedCategory] = useState('all');
-    const [filterStatus, setFilterStatus] = useState('new'); // 'new', 'completed', 'all'
+    const [filterStatus, setFilterStatus] = useState('active'); // 'active', 'completed', 'all'
     const [assignedFilter, setAssignedFilter] = useState('all'); // 'all', 'me'
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -256,17 +256,31 @@ const Inbasket = () => {
     const chatEndRef = useRef(null);
     const historyRef = useRef(null);
 
-    const scrollToChatBottom = () => {
-        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const scrollToChatBottom = (behavior = "smooth") => {
+        chatEndRef.current?.scrollIntoView({ behavior });
     };
 
     const scrollToHistory = () => {
         historyRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
+    // Mark as read when opened
+    useEffect(() => {
+        if (selectedItem && selectedItem.status === 'new') {
+            inboxAPI.update(selectedItem.id, { status: 'read' });
+            // Optimistically update local state
+            setItems(prev => prev.map(item =>
+                item.id === selectedItem.id ? { ...item, status: 'read' } : item
+            ));
+        }
+    }, [selectedItem]);
+
     useEffect(() => {
         if (details?.notes) {
-            scrollToChatBottom();
+            // Use instant scroll for first load of a conversation, smooth for new messages
+            const behavior = details.notes.length > 0 && details.id === selectedItem?.id ? "smooth" : "auto";
+            // Wait a tiny bit for render
+            setTimeout(() => scrollToChatBottom(behavior), 50);
         }
     }, [details]);
 
@@ -474,7 +488,7 @@ const Inbasket = () => {
                         className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${selectedCategory === 'all' ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
                     >
                         <span className="flex items-center gap-2"><Inbox className="w-4 h-4" /> All Categories</span>
-                        <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-xs">{filteredItems.length}</span>
+                        <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-xs">{items.filter(i => i.status === 'new').length}</span>
                     </button>
 
                     {TASK_CATEGORIES.map(cat => {
@@ -492,9 +506,9 @@ const Inbasket = () => {
                                         {cat.label}
                                     </span>
                                     <div className="flex items-center gap-2">
-                                        {items.filter(i => cat.types.includes(i.type)).length > 0 && (
+                                        {items.filter(i => cat.types.includes(i.type) && i.status === 'new').length > 0 && (
                                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all duration-500 ${isSelected ? 'bg-white text-blue-600 shadow-sm' : 'bg-blue-600 text-white shadow-md shadow-blue-100'}`}>
-                                                {items.filter(i => cat.types.includes(i.type)).length}
+                                                {items.filter(i => cat.types.includes(i.type) && i.status === 'new').length}
                                             </span>
                                         )}
                                     </div>
@@ -528,7 +542,7 @@ const Inbasket = () => {
                 <div className="p-4 border-t border-gray-100">
                     <h3 className="text-xs font-bold text-gray-400 uppercase mb-2">View Filters</h3>
                     <div className="space-y-1">
-                        <button onClick={() => setFilterStatus('new')} className={`w-full text-left px-2 py-1 text-sm rounded ${filterStatus === 'new' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-50 transition-colors'}`}>Current Items</button>
+                        <button onClick={() => setFilterStatus('active')} className={`w-full text-left px-2 py-1 text-sm rounded ${filterStatus === 'active' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-50 transition-colors'}`}>Current Items</button>
                         <button onClick={() => setFilterStatus('completed')} className={`w-full text-left px-2 py-1 text-sm rounded ${filterStatus === 'completed' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-50 transition-colors'}`}>Completed</button>
                     </div>
 

@@ -166,7 +166,9 @@ const InbasketRedesign = () => {
 
         try {
             const params = {
-                status: filterStatus === 'pending' ? 'new' : filterStatus,
+                status: filterStatus === 'pending' ? 'active' :
+                    filterStatus === 'reviewed' ? 'completed' :
+                        filterStatus,
                 assignedTo: assignedFilter,
             };
 
@@ -238,7 +240,27 @@ const InbasketRedesign = () => {
         };
 
         loadDetails();
+
+        // Mark as read when selected
+        if (selectedItem && selectedItem.status === 'new') {
+            inboxAPI.update(selectedItem.id, { status: 'read' });
+            // Optimistically update local state
+            setItems(prev => prev.map(item =>
+                item.id === selectedItem.id ? { ...item, status: 'read' } : item
+            ));
+        }
     }, [selectedItem?.id]);
+
+    useEffect(() => {
+        if (details?.notes) {
+            // Use instant scroll for first load of a conversation, smooth for new messages
+            const behavior = details.notes.length > 0 && details.id === selectedItem?.id ? "smooth" : "auto";
+            // Wait a tiny bit for render
+            setTimeout(() => {
+                chatEndRef.current?.scrollIntoView({ behavior });
+            }, 100);
+        }
+    }, [details]);
 
     // Filter items by active section
     const filteredItems = items.filter(item => {
@@ -291,7 +313,8 @@ const InbasketRedesign = () => {
     const getSectionCount = (sectionId) => {
         const section = INBOX_SECTIONS.find(s => s.id === sectionId);
         if (sectionId === 'tasks') return taskStats.my_open || 0;
-        return items.filter(i => section?.types.includes(i.type)).length;
+        // Only count 'new' items for the badges
+        return items.filter(i => section?.types.includes(i.type) && i.status === 'new').length;
     };
 
     // Actions

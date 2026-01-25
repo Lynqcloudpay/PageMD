@@ -838,7 +838,7 @@ const PortalDashboard = () => {
                     </div>
                 </main>
                 {/* Desktop content */}
-                <main className="hidden lg:block flex-1 overflow-y-auto max-w-7xl mx-auto p-10 pt-12 custom-scrollbar">
+                <main className="hidden lg:block flex-1 overflow-y-auto p-10 pt-12 custom-scrollbar">
                     {content}
                 </main>
             </div>
