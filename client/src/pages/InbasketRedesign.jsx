@@ -57,14 +57,6 @@ const INBOX_SECTIONS = [
         types: ['referral']
     },
     {
-        id: 'appointments',
-        label: 'Appt Requests',
-        icon: Calendar,
-        color: 'amber',
-        description: 'Portal appointment requests',
-        types: ['portal_appointment']
-    },
-    {
         id: 'refills',
         label: 'Rx Requests',
         icon: Pill,
@@ -449,7 +441,7 @@ const InbasketRedesign = () => {
                 <div className="p-3 border-t border-gray-100 bg-gray-50">
                     <div className="grid grid-cols-2 gap-2 text-center">
                         <div className="bg-white rounded-lg p-2 border border-gray-200">
-                            <p className="text-lg font-bold text-blue-600">{stats.all_count || 0}</p>
+                            <p className="text-lg font-bold text-blue-600">{items.length}</p>
                             <p className="text-[10px] text-gray-500 uppercase">Total</p>
                         </div>
                         <div className="bg-white rounded-lg p-2 border border-gray-200">
@@ -654,8 +646,8 @@ const InbasketRedesign = () => {
                                                     <div key={idx} className={`flex gap-3 ${isStaff ? 'flex-row-reverse' : ''}`}>
                                                         {/* Avatar */}
                                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0 shadow-sm border ${isStaff
-                                                                ? 'bg-blue-600 border-blue-700 text-white'
-                                                                : 'bg-white border-gray-200 text-gray-500'
+                                                            ? 'bg-blue-600 border-blue-700 text-white'
+                                                            : 'bg-white border-gray-200 text-gray-500'
                                                             }`}>
                                                             {note.first_name ? note.first_name[0] : 'P'}
                                                         </div>
@@ -671,8 +663,8 @@ const InbasketRedesign = () => {
                                                                 </span>
                                                             </div>
                                                             <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm ${isStaff
-                                                                    ? 'bg-blue-600 text-white rounded-tr-none'
-                                                                    : 'bg-gray-100 text-gray-800 rounded-tl-none border border-gray-200'
+                                                                ? 'bg-blue-600 text-white rounded-tr-none'
+                                                                : 'bg-gray-100 text-gray-800 rounded-tl-none border border-gray-200'
                                                                 }`}>
                                                                 {note.note}
                                                             </div>
@@ -715,15 +707,49 @@ const InbasketRedesign = () => {
                             </div>
                         )}
 
-                        {/* Action Buttons */}
-                        <div className="grid grid-cols-2 gap-2">
-                            <button
-                                onClick={() => setShowReviewModal(true)}
-                                className="flex items-center justify-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700"
-                            >
-                                <Check className="w-4 h-4" />
-                                Review & Sign
-                            </button>
+                        {/* Action Buttons - Context aware by type */}
+                        <div className="flex flex-wrap gap-2">
+                            {/* Results/Documents/Labs get Review & Sign + Track Metric */}
+                            {['lab', 'imaging', 'document'].includes(selectedItem.type) && (
+                                <>
+                                    <button
+                                        onClick={() => setShowReviewModal(true)}
+                                        className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700"
+                                    >
+                                        <Check className="w-4 h-4" />
+                                        Review & Sign
+                                    </button>
+                                    <button
+                                        onClick={() => setShowMetricModal(true)}
+                                        className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-50"
+                                    >
+                                        <Tag className="w-4 h-4" />
+                                        Track Metric
+                                    </button>
+                                </>
+                            )}
+
+                            {/* Messages just get Mark Done */}
+                            {['portal_message', 'message'].includes(selectedItem.type) && (
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            await inboxAPI.update(selectedItem.id, { status: 'completed' });
+                                            showSuccess('Marked as done');
+                                            setSelectedItem(null);
+                                            fetchData(true);
+                                        } catch (e) {
+                                            showError('Failed to complete');
+                                        }
+                                    }}
+                                    className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700"
+                                >
+                                    <Check className="w-4 h-4" />
+                                    Mark Done
+                                </button>
+                            )}
+
+                            {/* All types can create tasks and view chart */}
                             <button
                                 onClick={() => {
                                     setNewTask(prev => ({
@@ -733,21 +759,14 @@ const InbasketRedesign = () => {
                                     }));
                                     setShowTaskModal(true);
                                 }}
-                                className="flex items-center justify-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-50"
+                                className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-50"
                             >
                                 <ListTodo className="w-4 h-4" />
                                 Create Task
                             </button>
                             <button
-                                onClick={() => setShowMetricModal(true)}
-                                className="flex items-center justify-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-50"
-                            >
-                                <Tag className="w-4 h-4" />
-                                Track Metric
-                            </button>
-                            <button
                                 onClick={() => openPatientChart(selectedItem)}
-                                className="flex items-center justify-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-50"
+                                className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-50"
                             >
                                 <FolderOpen className="w-4 h-4" />
                                 View Chart
