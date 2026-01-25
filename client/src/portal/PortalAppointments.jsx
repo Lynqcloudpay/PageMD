@@ -138,23 +138,22 @@ const PortalAppointments = ({ onMessageShortcut }) => {
 
     const isCancelled = (a) => a.status === 'cancelled' || a.patient_status === 'cancelled' || a.patient_status === 'no_show';
 
-    const getLocalDateMillis = (dateVal, timeStr) => {
-        if (!dateVal) return 0;
-        let d;
-        if (typeof dateVal === 'string') {
-            const datePart = dateVal.substring(0, 10);
-            const [y, m, day] = datePart.split('-').map(Number);
-            d = new Date(y, m - 1, day);
-        } else {
-            d = new Date(dateVal);
-        }
+    // Helper to parse dates/times as local-computer time to avoid UTC shifting
+    const parseLocalSafe = (dateVal, timeStr) => {
+        if (!dateVal) return new Date();
+        const dateStr = typeof dateVal === 'string' ? dateVal : dateVal.toISOString();
+        const datePart = dateStr.substring(0, 10);
+        const [y, m, d] = datePart.split('-').map(Number);
+        const date = new Date(y, m - 1, d);
         if (timeStr) {
             const [h, min] = timeStr.split(':').map(Number);
-            d.setHours(h, min, 0, 0);
-        } else {
-            d.setHours(0, 0, 0, 0);
+            date.setHours(h, min, 0, 0);
         }
-        return d.getTime();
+        return date;
+    };
+
+    const getLocalDateMillis = (dateVal, timeStr) => {
+        return parseLocalSafe(dateVal, timeStr).getTime();
     };
 
     const scheduled = appointments.filter(a => {
@@ -319,7 +318,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                 {scheduled.map(appt => (
                                     <tr key={appt.id} className="hover:bg-slate-50/30 transition-colors group">
                                         <td className="px-6 py-5">
-                                            <div className="font-bold text-slate-800 text-sm">{format(new Date(appt.appointment_date), 'MMM d, yyyy')}</div>
+                                            <div className="font-bold text-slate-800 text-sm">{format(parseLocalSafe(appt.appointment_date), 'MMM d, yyyy')}</div>
                                             <div className="text-[10px] font-bold text-slate-400 uppercase">{appt.appointment_time.slice(0, 5)}</div>
                                         </td>
                                         <td className="px-6 py-5">
@@ -420,7 +419,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                 {past.map(appt => (
                                     <tr key={appt.id} className="hover:bg-slate-50/30 transition-colors">
                                         <td className="px-6 py-4">
-                                            <div className="font-bold text-slate-400 text-sm">{format(new Date(appt.appointment_date), 'MMM d, yyyy')}</div>
+                                            <div className="font-bold text-slate-400 text-sm">{format(parseLocalSafe(appt.appointment_date), 'MMM d, yyyy')}</div>
                                             <div className="text-[10px] font-bold text-slate-300">{appt.appointment_time.slice(0, 5)}</div>
                                         </td>
                                         <td className="px-6 py-4 font-bold text-slate-400 text-sm">Dr. {appt.provider_last_name}</td>
