@@ -10,6 +10,7 @@ import {
 import { format } from 'date-fns';
 import { appointmentsAPI, patientsAPI, visitsAPI } from '../services/api';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import PatientChartPanel from '../components/PatientChartPanel';
@@ -104,6 +105,8 @@ const DailyVideoCall = ({ roomUrl, userName, onLeave }) => {
 
 const Telehealth = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
   // --- NEW: Workspace Tabs ---
   const WORKSPACE_TABS = ['chart', 'note', 'info'];
 
@@ -116,6 +119,27 @@ const Telehealth = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('note'); // default to note during visit
   const [activeEncounter, setActiveEncounter] = useState(null);
+
+  // If telehealth is disabled, block whole page
+  if (user?.enabledFeatures?.telehealth === false) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center bg-white">
+        <div className="p-4 bg-orange-50 rounded-full mb-6 text-orange-500">
+          <Zap className="w-12 h-12" />
+        </div>
+        <h1 className="text-2xl font-black text-slate-800 mb-2">Telehealth Disabled</h1>
+        <p className="text-slate-500 max-w-md">
+          This feature is currently disabled for your clinic. Please contact your platform administrator to enable video conferencing.
+        </p>
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="mt-8 px-6 py-2 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all shadow-lg"
+        >
+          Back to Dashboard
+        </button>
+      </div>
+    );
+  }
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [viewingPatientId, setViewingPatientId] = useState(null);
 

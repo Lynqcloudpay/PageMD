@@ -151,14 +151,14 @@ const resolveTenant = async (req, res, next) => {
         if (lookupSchema) {
             // We already found the schema by email
             const result = await pool.controlPool.query(
-                'SELECT id, slug, schema_name, display_name, logo_url, address_line1, address_line2, city, state, zip, phone, status, is_read_only, billing_locked, prescribing_locked FROM clinics WHERE schema_name = $1 AND status = \'active\'',
+                'SELECT id, slug, schema_name, display_name, logo_url, address_line1, address_line2, city, state, zip, phone, status, is_read_only, billing_locked, prescribing_locked, enabled_features FROM clinics WHERE schema_name = $1 AND status = \'active\'',
                 [lookupSchema]
             );
             tenantInfo = result.rows[0];
         } else {
             // Find by slug
             const result = await pool.controlPool.query(
-                'SELECT id, slug, schema_name, display_name, logo_url, address_line1, address_line2, city, state, zip, phone, status, is_read_only, billing_locked, prescribing_locked FROM clinics WHERE slug = $1',
+                'SELECT id, slug, schema_name, display_name, logo_url, address_line1, address_line2, city, state, zip, phone, status, is_read_only, billing_locked, prescribing_locked, enabled_features FROM clinics WHERE slug = $1',
                 [slug]
             );
             tenantInfo = result.rows[0];
@@ -205,7 +205,8 @@ const resolveTenant = async (req, res, next) => {
             phone: tenantInfo.phone,
             is_read_only: tenantInfo.is_read_only,
             billing_locked: tenantInfo.billing_locked,
-            prescribing_locked: tenantInfo.prescribing_locked
+            prescribing_locked: tenantInfo.prescribing_locked,
+            enabled_features: tenantInfo.enabled_features || {}
         };
 
         // 5. Run Request within Context using the safer .run() method

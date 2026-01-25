@@ -16,9 +16,11 @@ const rateLimit = require('express-rate-limit');
 const getEPrescribeService = require('../services/eprescribe/EPrescribeService');
 const pool = require('../db');
 const { safeLogger } = require('../middleware/phiRedaction');
+const featureGuard = require('../middleware/featureGuard');
 
 const router = express.Router();
 router.use(authenticate);
+router.use(featureGuard('eprescribe'));
 
 // Middleware to check for prescribing lock
 const checkPrescribeLock = (req, res, next) => {

@@ -268,7 +268,8 @@ router.get('/me', authenticate, async (req, res) => {
       is_admin: user.is_admin || req.user.is_admin || false, // Include both formats
       // Clinic info for tenant-specific features
       clinicSlug: req.clinic?.slug || null,
-      clinicName: req.clinic?.name || null
+      clinicName: req.clinic?.name || null,
+      enabledFeatures: req.clinic?.enabled_features || {}
     });
   } catch (error) {
     console.error('Error fetching current user:', error);

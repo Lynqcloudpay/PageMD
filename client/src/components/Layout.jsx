@@ -182,7 +182,9 @@ const Layout = ({ children }) => {
         ...(canViewBilling ? [
             { path: '/billing', icon: DollarSign, label: 'Billing', badge: null }
         ] : []),
-        { path: '/telehealth', icon: Video, label: 'Telehealth', badge: null },
+        ...(user?.enabledFeatures?.telehealth === true ? [
+            { path: '/telehealth', icon: Video, label: 'Telehealth', badge: null }
+        ] : []),
         // Admin items - requires users:manage or reports:view
         ...(canManageUsers ? [
             { path: '/admin-settings', icon: Settings, label: 'Settings', badge: null }

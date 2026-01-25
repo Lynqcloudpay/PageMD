@@ -7,35 +7,35 @@ const pool = require('../db');
 const featureGuard = (featureName) => {
     return async (req, res, next) => {
         try {
-            // Get clinic ID from authenticated user context
-            const clinicId = req.user?.clinic_id;
+            // Get clinic context (attached by resolveTenant)
+            const clinicId = req.clinic?.id || req.user?.clinic_id;
 
             if (!clinicId) {
-                // If no clinic ID, check if this is an admin request with a clinic context
-                // Fallback for some management routes if needed, but usually we want user context
                 return res.status(403).json({ error: 'Clinic context required for this feature' });
             }
 
-            // Query control database for clinic features
-            const result = await pool.controlPool.query(
-                'SELECT enabled_features, display_name FROM clinics WHERE id = $1',
-                [clinicId]
-            );
+            // Check if we already have features in req.clinic (cached by resolveTenant)
+            let features = req.clinic?.enabled_features;
 
-            if (result.rows.length === 0) {
-                return res.status(404).json({ error: 'Clinic not found in platform registry' });
+            if (!features) {
+                // Query control database for clinic features if not in request context
+                const result = await pool.controlPool.query(
+                    'SELECT enabled_features FROM clinics WHERE id = $1',
+                    [clinicId]
+                );
+
+                if (result.rows.length === 0) {
+                    return res.status(404).json({ error: 'Clinic not found in platform registry' });
+                }
+                features = result.rows[0].enabled_features || {};
             }
 
-            const clinic = result.rows[0];
-            const features = clinic.enabled_features || {};
-
-            // Check if feature is explicitly enabled
+            // Check if feature is explicitly enabled (strict whitelist)
             if (features[featureName] !== true) {
-                console.warn(`[FEATURE-GUARD] Access denied to ${featureName} for clinic: ${clinic.display_name} (${clinicId})`);
+                console.warn(`[FEATURE-GUARD] Access denied to ${featureName} for clinic: ${clinicId}`);
                 return res.status(403).json({
                     error: `The '${featureName}' feature is not enabled for your clinic.`,
                     feature: featureName,
-                    clinic: clinic.display_name,
                     contact_admin: true
                 });
             }

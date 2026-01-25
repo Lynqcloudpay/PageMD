@@ -636,9 +636,9 @@ const ClinicFeatureManager = ({ clinicId, currentFeatures, apiCall, onUpdate }) 
                     <button
                         onClick={() => toggleFeature(f.key)}
                         disabled={updating}
-                        className={`w-11 h-5.5 rounded-full p-1 transition-all ${currentFeatures?.[f.key] ? 'bg-emerald-500 shadow-sm shadow-emerald-500/30' : 'bg-slate-300'}`}
+                        className={`w-11 h-5.5 rounded-full p-1 transition-all duration-300 ease-in-out ${currentFeatures?.[f.key] ? 'bg-emerald-500 shadow-sm shadow-emerald-500/30' : 'bg-slate-300'}`}
                     >
-                        <div className={`w-3.5 h-3.5 bg-white rounded-full transition-all ${currentFeatures?.[f.key] ? 'translate-x-5.5' : 'translate-x-0'}`}></div>
+                        <div className={`w-3.5 h-3.5 bg-white rounded-full shadow-sm transition-all duration-300 ease-in-out ${currentFeatures?.[f.key] ? 'translate-x-5.5' : 'translate-x-0'}`}></div>
                     </button>
                 </div>
             ))}
@@ -1029,9 +1029,9 @@ const PlatformAdminClinicDetails = () => {
                                         <button
                                             onClick={() => handleControlChange({ is_read_only: !clinic.is_read_only })}
                                             disabled={controlsUpdating}
-                                            className={`w-12 h-6 rounded-full p-1 transition-all ${clinic.is_read_only ? 'bg-red-500' : 'bg-slate-300'}`}
+                                            className={`w-12 h-6 rounded-full p-1 transition-all duration-300 ease-in-out ${clinic.is_read_only ? 'bg-red-500 shadow-inner' : 'bg-slate-300'}`}
                                         >
-                                            <div className={`w-4 h-4 bg-white rounded-full transition-all ${clinic.is_read_only ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                                            <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-300 ease-in-out ${clinic.is_read_only ? 'translate-x-6' : 'translate-x-0'}`}></div>
                                         </button>
                                     </div>
 
@@ -1040,9 +1040,9 @@ const PlatformAdminClinicDetails = () => {
                                         <button
                                             onClick={() => handleControlChange({ billing_locked: !clinic.billing_locked })}
                                             disabled={controlsUpdating}
-                                            className={`w-12 h-6 rounded-full p-1 transition-all ${clinic.billing_locked ? 'bg-amber-500' : 'bg-slate-300'}`}
+                                            className={`w-12 h-6 rounded-full p-1 transition-all duration-300 ease-in-out ${clinic.billing_locked ? 'bg-amber-500 shadow-inner' : 'bg-slate-300'}`}
                                         >
-                                            <div className={`w-4 h-4 bg-white rounded-full transition-all ${clinic.billing_locked ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                                            <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-300 ease-in-out ${clinic.billing_locked ? 'translate-x-6' : 'translate-x-0'}`}></div>
                                         </button>
                                     </div>
 
@@ -1051,9 +1051,9 @@ const PlatformAdminClinicDetails = () => {
                                         <button
                                             onClick={() => handleControlChange({ prescribing_locked: !clinic.prescribing_locked })}
                                             disabled={controlsUpdating}
-                                            className={`w-12 h-6 rounded-full p-1 transition-all ${clinic.prescribing_locked ? 'bg-purple-500' : 'bg-slate-300'}`}
+                                            className={`w-12 h-6 rounded-full p-1 transition-all duration-300 ease-in-out ${clinic.prescribing_locked ? 'bg-purple-500 shadow-inner' : 'bg-slate-300'}`}
                                         >
-                                            <div className={`w-4 h-4 bg-white rounded-full transition-all ${clinic.prescribing_locked ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                                            <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-300 ease-in-out ${clinic.prescribing_locked ? 'translate-x-6' : 'translate-x-0'}`}></div>
                                         </button>
                                     </div>
                                     <p className="text-[10px] text-slate-400 italic">Changes take effect immediately for all users.</p>
