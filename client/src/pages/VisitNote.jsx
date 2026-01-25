@@ -325,6 +325,8 @@ const VisitNote = () => {
         followUp: '' // Follow Up section
     });
 
+    const [visitType, setVisitType] = useState('Office Visit');
+
     // Vitals
     const [vitals, setVitals] = useState({
         systolic: '',
@@ -673,7 +675,7 @@ const VisitNote = () => {
         if (urlVisitId === 'new' && id) {
             console.log('Creating new visit for patient:', id);
             setLoading(true);
-            visitsAPI.openToday(id, 'office_visit')
+            visitsAPI.openToday(id, visitType === 'Office Visit' ? 'office_visit' : visitType.toLowerCase().replace(' ', '_'))
                 .then(response => {
                     // New API returns { note: {...} }
                     const visit = response.data?.note || response.data;
@@ -715,6 +717,7 @@ const VisitNote = () => {
                     const visit = response.data;
                     setVisitData(visit);
                     setCurrentVisitId(visit.id);
+                    setVisitType(visit.visit_type || 'Office Visit');
                     setIsSigned(visit.locked || !!visit.note_signed_by || !!visit.note_signed_at);
                     if (visit.vitals) {
                         const v = typeof visit.vitals === 'string' ? JSON.parse(visit.vitals) : visit.vitals;
@@ -870,7 +873,7 @@ const VisitNote = () => {
             // Create visit if it doesn't exist
             if (!visitId || visitId === 'new') {
                 try {
-                    const response = await visitsAPI.openToday(id, 'office_visit');
+                    const response = await visitsAPI.openToday(id, visitType === 'Office Visit' ? 'office_visit' : visitType.toLowerCase().replace(' ', '_'));
                     // New API returns { note: {...} }
                     const visit = response.data?.note || response.data;
                     if (!visit || !visit.id) {
@@ -905,7 +908,7 @@ const VisitNote = () => {
                 };
 
                 // Save even if note is empty
-                await visitsAPI.update(visitId, { noteDraft: noteDraft || '', vitals: vitalsToSave });
+                await visitsAPI.update(visitId, { noteDraft: noteDraft || '', vitals: vitalsToSave, visit_type: visitType });
 
                 const reloadResponse = await visitsAPI.get(visitId);
                 setVisitData(reloadResponse.data);
@@ -934,7 +937,7 @@ const VisitNote = () => {
         } finally {
             isAutoSavingRef.current = false;
         }
-    }, [id, currentVisitId, urlVisitId, isSigned, isSaving, noteData, vitals, combineNoteSections, parseNoteText, parsePlanText, showToast]);
+    }, [id, currentVisitId, urlVisitId, isSigned, isSaving, noteData, vitals, visitType, combineNoteSections, parseNoteText, parsePlanText, showToast]);
 
     const handleCreateSuperbill = async () => {
         if (!currentVisitId || currentVisitId === 'new') {
@@ -993,7 +996,7 @@ const VisitNote = () => {
                 clearTimeout(autoSaveTimeoutRef.current);
             }
         };
-    }, [noteData, vitals, scheduleAutoSave, isSigned, loading]);
+    }, [noteData, vitals, visitType, scheduleAutoSave, isSigned, loading]);
 
     const handleDelete = async () => {
         if (isSigned) {
@@ -1035,7 +1038,7 @@ const VisitNote = () => {
                     return;
                 }
                 try {
-                    const response = await visitsAPI.openToday(id, 'office_visit');
+                    const response = await visitsAPI.openToday(id, visitType === 'Office Visit' ? 'office_visit' : visitType.toLowerCase().replace(' ', '_'));
                     visitId = response.data.id;
                     setCurrentVisitId(visitId);
                     window.history.replaceState({}, '', `/patient/${id}/visit/${visitId}`);
@@ -2059,7 +2062,23 @@ const VisitNote = () => {
                 <div className="bg-white border border-gray-200 rounded-lg shadow-sm mb-4 p-4">
                     <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-200">
                         <div>
-                            <h1 className="text-base font-semibold text-neutral-900 mb-1">Office Visit Note</h1>
+                            <div className="flex items-center gap-1.5 mb-1">
+                                <select
+                                    value={visitType}
+                                    onChange={(e) => setVisitType(e.target.value)}
+                                    disabled={isSigned}
+                                    className="text-base font-semibold text-neutral-900 bg-transparent border-none rounded-md focus:ring-2 focus:ring-primary-500 cursor-pointer hover:bg-neutral-50 px-1 -ml-1 transition-all"
+                                >
+                                    <option value="Follow-up">Follow-up</option>
+                                    <option value="New Patient">New Patient</option>
+                                    <option value="Sick Visit">Sick Visit</option>
+                                    <option value="Physical">Physical</option>
+                                    <option value="Telehealth Visit">Telehealth Visit</option>
+                                    <option value="Consultation">Consultation</option>
+                                    <option value="Office Visit">Office Visit</option>
+                                </select>
+                                <span className="text-base font-semibold text-neutral-900">Note</span>
+                            </div>
                             <p className="text-xs text-neutral-600">{visitDate} • {providerName}</p>
                         </div>
                         <div className="flex items-center space-x-1.5">

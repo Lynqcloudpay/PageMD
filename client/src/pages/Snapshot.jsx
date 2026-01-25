@@ -725,13 +725,21 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
                         let displayType = "Office Visit";
 
-                        if (rawType.includes('tele') || rawMethod.includes('tele') || rawType.includes('virtual') || rawMethod.includes('virtual')) {
+                        // Priority based detection
+                        if (rawType.includes('tele') || rawMethod.includes('tele') || rawType.includes('virtual') || rawMethod.includes('virtual') || cc.includes('telehealth')) {
                             displayType = "Telehealth";
-                        } else if (rawType.includes('new') || cc.includes('new patient') || cc.includes('initial') || rawType.includes('consult')) {
+                        } else if (rawType.includes('consult') || cc.includes('consult')) {
+                            displayType = "Consultation";
+                        } else if (rawType.includes('physical') || cc.includes('physical') || rawType.includes('annual')) {
+                            displayType = "Physical";
+                        } else if (rawType.includes('new') || cc.includes('new patient') || cc.includes('initial')) {
                             displayType = "New Patient";
+                        } else if (rawType.includes('sick') || cc.includes('sick visit') || cc.includes('urgent')) {
+                            displayType = "Sick Visit";
                         } else if (rawType.includes('follow') || cc.includes('follow up') || cc.includes('follow-up') || cc.includes('f/u') || rawType.includes('routine')) {
                             displayType = "Follow Up";
-                        } else if (visit.visit_type) {
+                        } else if (visit.visit_type && visit.visit_type.length > 2) {
+                            // Normalize the case of existing visit_type if it doesn't match our specific keywords
                             displayType = visit.visit_type;
                         }
 
