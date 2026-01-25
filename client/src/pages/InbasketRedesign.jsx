@@ -142,6 +142,20 @@ const InbasketRedesign = () => {
     // Reply State
     const [replyText, setReplyText] = useState('');
 
+    // Compose State (for new messages)
+    const [showNewChat, setShowNewChat] = useState(false);
+    const [composeData, setComposeData] = useState({
+        type: 'portal_message',
+        subject: '',
+        body: ''
+    });
+    const [searchFields, setSearchFields] = useState({ name: '', dob: '', phone: '', mrn: '' });
+    const [patientResults, setPatientResults] = useState([]);
+    const [isSearchingPatients, setIsSearchingPatients] = useState(false);
+    const [selectedPatient, setSelectedPatient] = useState(null);
+    const [selectedStaff, setSelectedStaff] = useState(null);
+    const [newChatMessage, setNewChatMessage] = useState('');
+
     // Refs
     const chatEndRef = useRef(null);
 
@@ -242,6 +256,36 @@ const InbasketRedesign = () => {
         }
         return true;
     });
+
+    // Patient search trigger for compose
+    const triggerPatientSearch = async () => {
+        const hasFilters = Object.values(searchFields).some(v => v.trim() !== '');
+        if (!hasFilters) {
+            setPatientResults([]);
+            return;
+        }
+        setIsSearchingPatients(true);
+        try {
+            const cleanFields = {};
+            if (searchFields.name?.trim()) cleanFields.name = searchFields.name.trim();
+            if (searchFields.dob?.trim()) cleanFields.dob = searchFields.dob.trim();
+            if (searchFields.phone?.trim()) cleanFields.phone = searchFields.phone.trim();
+            if (searchFields.mrn?.trim()) cleanFields.mrn = searchFields.mrn.trim();
+            const res = await patientsAPI.search(cleanFields);
+            setPatientResults(res.data || []);
+        } catch (e) {
+            console.error('Patient search error:', e);
+        } finally {
+            setIsSearchingPatients(false);
+        }
+    };
+
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            triggerPatientSearch();
+        }, 400);
+        return () => clearTimeout(timeoutId);
+    }, [searchFields]);
 
     // Get section counts
     const getSectionCount = (sectionId) => {
@@ -466,6 +510,25 @@ const InbasketRedesign = () => {
                             className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
+
+                    {/* New Message Button - show only in Messages section */}
+                    {activeSection === 'messages' && (
+                        <button
+                            onClick={() => {
+                                setShowNewChat(!showNewChat);
+                                setSelectedItem(null);
+                                setSelectedPatient(null);
+                                setSelectedStaff(null);
+                                setSearchFields({ name: '', dob: '', phone: '', mrn: '' });
+                                setPatientResults([]);
+                                setNewChatMessage('');
+                            }}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold ${showNewChat ? 'bg-gray-200 text-gray-700' : 'bg-purple-600 text-white hover:bg-purple-700'}`}
+                        >
+                            {showNewChat ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                            {showNewChat ? 'Cancel' : 'New Message'}
+                        </button>
+                    )}
 
                     <button
                         onClick={() => setShowTaskModal(true)}
@@ -773,6 +836,207 @@ const InbasketRedesign = () => {
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* New Message Compose Pane */}
+            {showNewChat && !selectedItem && (
+                <div className="w-[420px] bg-white border-l border-gray-200 flex flex-col shadow-xl z-20">
+                    {/* Header */}
+                    <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-white">
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="text-lg font-bold text-gray-900">
+                                {composeData.type === 'portal_message' ? 'New Patient Message' : 'New Staff Message'}
+                            </h3>
+                            <button onClick={() => setShowNewChat(false)} className="text-gray-400 hover:text-gray-600">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Type Toggle */}
+                        <div className="flex gap-2 mb-3">
+                            <button
+                                onClick={() => { setComposeData(prev => ({ ...prev, type: 'portal_message' })); setSelectedPatient(null); setSelectedStaff(null); }}
+                                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition ${composeData.type === 'portal_message' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                            >
+                                <Mail className="w-4 h-4 inline mr-1" /> Patient (Portal)
+                            </button>
+                            <button
+                                onClick={() => { setComposeData(prev => ({ ...prev, type: 'message' })); setSelectedPatient(null); setSelectedStaff(null); }}
+                                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition ${composeData.type === 'message' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                            >
+                                <User className="w-4 h-4 inline mr-1" /> Staff (Internal)
+                            </button>
+                        </div>
+
+                        {/* Search / Selection */}
+                        {composeData.type === 'portal_message' ? (
+                            !selectedPatient ? (
+                                <div className="space-y-2">
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search patient by name, MRN, or DOB..."
+                                            autoFocus
+                                            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                            value={searchFields.name}
+                                            onChange={e => setSearchFields({ ...searchFields, name: e.target.value })}
+                                        />
+                                    </div>
+                                    {isSearchingPatients && (
+                                        <div className="flex items-center gap-2 text-xs text-gray-400 py-2">
+                                            <RefreshCw className="w-3 h-3 animate-spin" /> Searching...
+                                        </div>
+                                    )}
+                                    {patientResults.length > 0 && (
+                                        <div className="border border-gray-100 rounded-xl overflow-hidden max-h-48 overflow-y-auto bg-white shadow-lg">
+                                            {patientResults.map(p => (
+                                                <button
+                                                    key={p.id}
+                                                    onClick={() => setSelectedPatient(p)}
+                                                    className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-gray-50 last:border-0 flex items-center gap-3 transition-colors"
+                                                >
+                                                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
+                                                        {getPatientDisplayName(p)[0]}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-semibold text-gray-900 truncate">{getPatientDisplayName(p)}</p>
+                                                        <p className="text-xs text-gray-500">MRN: {p.mrn || 'N/A'} • DOB: {p.dob ? format(new Date(p.dob), 'MM/dd/yyyy') : 'N/A'}</p>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                                    <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                                        {getPatientDisplayName(selectedPatient)[0]}
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-bold text-gray-900">{getPatientDisplayName(selectedPatient)}</p>
+                                        <p className="text-xs text-blue-600">Patient Portal</p>
+                                    </div>
+                                    <button onClick={() => setSelectedPatient(null)} className="p-1.5 hover:bg-blue-100 rounded-full text-blue-600">
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            )
+                        ) : (
+                            !selectedStaff ? (
+                                <div className="space-y-2">
+                                    <p className="text-xs text-gray-500 font-medium">Select recipient:</p>
+                                    <div className="max-h-48 overflow-y-auto space-y-1">
+                                        {users.filter(u => u.id !== user.id).map(u => (
+                                            <button
+                                                key={u.id}
+                                                onClick={() => setSelectedStaff(u)}
+                                                className="w-full text-left px-3 py-2.5 hover:bg-purple-50 rounded-lg flex items-center gap-3 transition-colors border border-transparent hover:border-purple-200"
+                                            >
+                                                <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-xs">
+                                                    {u.first_name?.[0]}{u.last_name?.[0]}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-medium text-gray-900">{u.first_name} {u.last_name}</p>
+                                                    <p className="text-xs text-gray-500 capitalize">{u.role || 'Staff'}</p>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-xl border border-purple-100">
+                                    <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+                                        {selectedStaff.first_name?.[0]}{selectedStaff.last_name?.[0]}
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-bold text-gray-900">{selectedStaff.first_name} {selectedStaff.last_name}</p>
+                                        <p className="text-xs text-purple-600 capitalize">{selectedStaff.role || 'Staff'}</p>
+                                    </div>
+                                    <button onClick={() => setSelectedStaff(null)} className="p-1.5 hover:bg-purple-100 rounded-full text-purple-600">
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            )
+                        )}
+                    </div>
+
+                    {/* Empty State */}
+                    <div className="flex-1 flex items-center justify-center bg-gray-50/50">
+                        {(composeData.type === 'portal_message' && !selectedPatient) || (composeData.type !== 'portal_message' && !selectedStaff) ? (
+                            <div className="text-center text-gray-400">
+                                <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                                <p className="text-sm">Select a {composeData.type === 'portal_message' ? 'patient' : 'staff member'} to start</p>
+                            </div>
+                        ) : (
+                            <div className="text-center text-gray-400">
+                                <Send className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                                <p className="text-sm">Type your message below</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Message Input */}
+                    {((composeData.type === 'portal_message' && selectedPatient) || (composeData.type !== 'portal_message' && selectedStaff)) && (
+                        <div className="p-4 border-t border-gray-200 bg-white">
+                            <div className="mb-3">
+                                <input
+                                    type="text"
+                                    placeholder="Subject (optional)"
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={composeData.subject}
+                                    onChange={e => setComposeData({ ...composeData, subject: e.target.value })}
+                                />
+                            </div>
+                            <div className="flex gap-2">
+                                <textarea
+                                    placeholder="Type your message..."
+                                    className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-blue-500 outline-none"
+                                    rows={3}
+                                    value={newChatMessage}
+                                    onChange={e => setNewChatMessage(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex justify-end mt-3">
+                                <button
+                                    disabled={!newChatMessage.trim()}
+                                    onClick={async () => {
+                                        if (!newChatMessage.trim()) return;
+                                        try {
+                                            if (composeData.type === 'portal_message') {
+                                                await inboxAPI.sendPatientMessage({
+                                                    patientId: selectedPatient.id,
+                                                    subject: composeData.subject || 'Message',
+                                                    body: newChatMessage
+                                                });
+                                            } else {
+                                                await inboxAPI.create({
+                                                    type: 'message',
+                                                    subject: composeData.subject || 'Message',
+                                                    body: newChatMessage,
+                                                    assignedUserId: selectedStaff.id,
+                                                    priority: 'normal'
+                                                });
+                                            }
+                                            showSuccess('Message sent!');
+                                            setShowNewChat(false);
+                                            setNewChatMessage('');
+                                            setSelectedPatient(null);
+                                            setSelectedStaff(null);
+                                            setComposeData({ type: 'portal_message', subject: '', body: '' });
+                                            fetchData(true);
+                                        } catch (err) {
+                                            showError('Failed to send message');
+                                        }
+                                    }}
+                                    className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
+                                >
+                                    <Send className="w-4 h-4" /> Send
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
