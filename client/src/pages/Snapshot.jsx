@@ -726,7 +726,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                         let displayType = "Office Visit";
 
                         // Priority based detection
-                        if (rawType.includes('tele') || rawMethod.includes('tele') || rawType.includes('virtual') || rawMethod.includes('virtual') || cc.includes('telehealth')) {
+                        if (rawType.includes('tele') || rawMethod.includes('tele') || rawType.includes('virtual') || rawMethod.includes('virtual') || cc.includes('telehealth') || noteText.toLowerCase().includes('telehealth') || noteText.toLowerCase().includes('virtual visit')) {
                             displayType = "Telehealth";
                         } else if (rawType.includes('consult') || cc.includes('consult')) {
                             displayType = "Consultation";

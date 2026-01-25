@@ -394,7 +394,9 @@ const Telehealth = () => {
             appointment_id: appt.id,
             provider_id: currentUser.id,
             patient_id: patientId,
-            start_time: new Date().toISOString()
+            start_time: new Date().toISOString(),
+            visit_type: 'Telehealth Visit',
+            visit_method: 'telehealth'
           });
           encounter = encounterRes.data;
         }
@@ -404,7 +406,9 @@ const Telehealth = () => {
           appointment_id: appt.id,
           provider_id: currentUser.id,
           patient_id: patientId,
-          start_time: new Date().toISOString()
+          start_time: new Date().toISOString(),
+          visit_type: 'Telehealth Visit',
+          visit_method: 'telehealth'
         });
         encounter = encounterRes.data;
       }
@@ -503,6 +507,8 @@ const Telehealth = () => {
       // 1. Save Note using visitsAPI format
       await visitsAPI.update(activeEncounter.id, {
         note_draft: combinedNote,
+        visit_type: 'Telehealth Visit',
+        visit_method: 'telehealth',
         dx: note.dx.split(",").map(d => d.trim()).filter(Boolean)
       });
 
