@@ -263,6 +263,21 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                             Your requested date wasn't available. Please select one of these options:
                                         </p>
                                     </div>
+                                    <button
+                                        onClick={async () => {
+                                            if (!window.confirm('None of these work for you? We will cancel this request.')) return;
+                                            try {
+                                                await axios.delete(`${apiBase}/portal/appointments/requests/${req.id}`, { headers });
+                                                fetchData();
+                                            } catch (err) {
+                                                console.error('Failed to cancel request:', err);
+                                                setError('Failed to cancel request. Please try again.');
+                                            }
+                                        }}
+                                        className="px-3 py-1.5 bg-red-100/50 hover:bg-red-200 text-red-700 text-[9px] font-black uppercase tracking-widest rounded-lg transition-colors border border-red-200/50"
+                                    >
+                                        None of these work
+                                    </button>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     {slots.map((slot, idx) => {

@@ -104,8 +104,8 @@ router.delete('/requests/:id', requirePortalPermission('can_request_appointments
         const portalAccountId = req.portalAccount.id;
 
         const result = await pool.query(
-            'UPDATE portal_appointment_requests SET status = $1 WHERE id = $2 AND portal_account_id = $3 AND status = $4 RETURNING *',
-            ['cancelled', id, portalAccountId, 'pending']
+            "UPDATE portal_appointment_requests SET status = $1 WHERE id = $2 AND portal_account_id = $3 AND (status = 'pending' OR status = 'pending_patient') RETURNING *",
+            ['cancelled', id, portalAccountId]
         );
 
         if (result.rows.length === 0) {

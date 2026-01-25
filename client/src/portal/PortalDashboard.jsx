@@ -317,9 +317,41 @@ const PortalDashboard = () => {
                                 {/* Quick Glance Section */}
                                 <div className="relative mt-8 pt-8 border-t border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                     <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
-                                        <span className={`w-2 h-2 rounded-full ${quickGlance.telehealthReady || quickGlance.unreadMessages > 0 || quickGlance.nextAppointment ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></span>
+                                        <span className={`w-2 h-2 rounded-full ${activeNotifications.length > 0 || quickGlance.telehealthReady || quickGlance.unreadMessages > 0 || quickGlance.nextAppointment ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></span>
                                         Overview
                                     </h3>
+
+                                    {/* Notifications/Alerts Section */}
+                                    {activeNotifications.length > 0 && (
+                                        <div className="mb-4 space-y-2">
+                                            {activeNotifications.map(notif => (
+                                                <button
+                                                    key={notif.id}
+                                                    onClick={() => setActiveTab(notif.action || 'overview')}
+                                                    className={`w-full p-3 rounded-2xl border transition-all flex items-center gap-3 text-left ${notif.priority === 'urgent'
+                                                        ? 'bg-red-50 border-red-100 text-red-900 shadow-sm'
+                                                        : notif.type === 'action'
+                                                            ? 'bg-blue-50 border-blue-100 text-blue-900 shadow-sm'
+                                                            : 'bg-slate-50 border-slate-100 text-slate-700'
+                                                        }`}
+                                                >
+                                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${notif.priority === 'urgent' ? 'bg-red-500 text-white' :
+                                                        notif.type === 'action' ? 'bg-blue-500 text-white' : 'bg-slate-200 text-slate-500'
+                                                        }`}>
+                                                        {notif.action === 'appointments' ? <Calendar className="w-4 h-4" /> :
+                                                            notif.action === 'messages' ? <MessageSquare className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <p className="text-[10px] font-black uppercase tracking-widest opacity-60">
+                                                            {notif.priority === 'urgent' ? 'Important Notice' : 'Notification'}
+                                                        </p>
+                                                        <p className="text-sm font-bold leading-tight">{notif.message}</p>
+                                                    </div>
+                                                    <ChevronRight className="w-4 h-4 opacity-30" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
 
                                     {(quickGlance.telehealthReady || quickGlance.unreadMessages > 0 || quickGlance.nextAppointment) ? (
                                         <div className="flex flex-col gap-3">
@@ -533,57 +565,93 @@ const PortalDashboard = () => {
                     </div>
                 </div>
 
-                {/* Telehealth Ready Card - Shows when there's a scheduled telehealth visit */}
-                {quickGlance.telehealthReady && (
-                    <button
-                        onClick={() => setActiveTab('telehealth')}
-                        className="w-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-[2rem] p-6 text-white text-left shadow-lg shadow-emerald-200/50 flex items-center gap-4 group animate-pulse-soft"
-                    >
-                        <div className="w-12 h-12 bg-white/25 rounded-2xl flex items-center justify-center">
-                            <Video className="w-6 h-6" />
-                        </div>
-                        <div className="flex-1">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-white/80 mb-1">Telehealth Ready</p>
-                            <p className="text-lg font-bold">Join Your Virtual Visit Now</p>
-                            <p className="text-xs text-white/70 mt-1">Tap to enter waiting room</p>
-                        </div>
-                        <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                            <span className="text-lg">▶</span>
-                        </div>
-                    </button>
-                )}
-
-                {/* Next Appointment Card */}
-                {quickGlance.nextAppointment ? (
-                    <button
-                        onClick={() => setActiveTab('appointments')}
-                        className="w-full bg-gradient-to-r from-cyan-400 to-blue-500 rounded-[2rem] p-6 text-white text-left shadow-lg shadow-cyan-200/50 flex items-center gap-4 group"
-                    >
-                        <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-                            <Calendar className="w-6 h-6" />
-                        </div>
-                        <div className="flex-1">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-white/80 mb-1">Upcoming Appointment</p>
-                            <p className="text-lg font-bold">
-                                {format(parseLocalSafe(quickGlance.nextAppointment.appointment_date), 'eeee, MMMM do')}
-                            </p>
-                            <p className="text-sm text-white/80">
-                                {quickGlance.nextAppointment.appointment_time ?
-                                    format(parseLocalSafe(quickGlance.nextAppointment.appointment_date, quickGlance.nextAppointment.appointment_time), 'h:mm a')
-                                    : 'Time TBD'
-                                }
-                                {quickGlance.nextAppointment.visit_method === 'telehealth' && ' • Virtual Visit'}
-                            </p>
-                        </div>
-                        <ChevronRight className="w-6 h-6 text-white/60 group-hover:translate-x-1 transition-transform" />
-                    </button>
-                ) : (
-                    <div className="bg-slate-50 border border-dashed border-slate-200 rounded-[2rem] p-6 text-center text-slate-400">
-                        <Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm font-bold">No upcoming appointments</p>
-                        <p className="text-xs mt-1">Tap below to schedule</p>
+                {/* Mobile Alerts Section */}
+                {activeNotifications.length > 0 && (
+                    <div className="space-y-2">
+                        {activeNotifications.map(notif => (
+                            <button
+                                key={notif.id}
+                                onClick={() => setActiveTab(notif.action || 'overview')}
+                                className={`w-full p-4 rounded-[2rem] border transition-all flex items-center gap-3 text-left ${notif.priority === 'urgent'
+                                        ? 'bg-red-50 border-red-100 text-red-900'
+                                        : notif.type === 'action'
+                                            ? 'bg-blue-50 border-blue-100 text-blue-900'
+                                            : 'bg-white border-slate-100 text-slate-700'
+                                    }`}
+                            >
+                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${notif.priority === 'urgent' ? 'bg-red-500 text-white' :
+                                        notif.type === 'action' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'
+                                    }`}>
+                                    {notif.action === 'appointments' ? <Calendar className="w-5 h-5" /> :
+                                        notif.action === 'messages' ? <MessageSquare className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-[9px] font-black uppercase tracking-widest opacity-60">
+                                        {notif.priority === 'urgent' ? 'Important Notice' : 'Update'}
+                                    </p>
+                                    <p className="text-[15px] font-black leading-tight">{notif.message}</p>
+                                </div>
+                                <ChevronRight className="w-5 h-5 opacity-20" />
+                            </button>
+                        ))}
                     </div>
                 )}
+
+                {/* Telehealth Ready Card - Shows when there's a scheduled telehealth visit */}
+                {
+                    quickGlance.telehealthReady && (
+                        <button
+                            onClick={() => setActiveTab('telehealth')}
+                            className="w-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-[2rem] p-6 text-white text-left shadow-lg shadow-emerald-200/50 flex items-center gap-4 group animate-pulse-soft"
+                        >
+                            <div className="w-12 h-12 bg-white/25 rounded-2xl flex items-center justify-center">
+                                <Video className="w-6 h-6" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-white/80 mb-1">Telehealth Ready</p>
+                                <p className="text-lg font-bold">Join Your Virtual Visit Now</p>
+                                <p className="text-xs text-white/70 mt-1">Tap to enter waiting room</p>
+                            </div>
+                            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                                <span className="text-lg">▶</span>
+                            </div>
+                        </button>
+                    )
+                }
+
+                {/* Next Appointment Card */}
+                {
+                    quickGlance.nextAppointment ? (
+                        <button
+                            onClick={() => setActiveTab('appointments')}
+                            className="w-full bg-gradient-to-r from-cyan-400 to-blue-500 rounded-[2rem] p-6 text-white text-left shadow-lg shadow-cyan-200/50 flex items-center gap-4 group"
+                        >
+                            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                                <Calendar className="w-6 h-6" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-white/80 mb-1">Upcoming Appointment</p>
+                                <p className="text-lg font-bold">
+                                    {format(parseLocalSafe(quickGlance.nextAppointment.appointment_date), 'eeee, MMMM do')}
+                                </p>
+                                <p className="text-sm text-white/80">
+                                    {quickGlance.nextAppointment.appointment_time ?
+                                        format(parseLocalSafe(quickGlance.nextAppointment.appointment_date, quickGlance.nextAppointment.appointment_time), 'h:mm a')
+                                        : 'Time TBD'
+                                    }
+                                    {quickGlance.nextAppointment.visit_method === 'telehealth' && ' • Virtual Visit'}
+                                </p>
+                            </div>
+                            <ChevronRight className="w-6 h-6 text-white/60 group-hover:translate-x-1 transition-transform" />
+                        </button>
+                    ) : (
+                        <div className="bg-slate-50 border border-dashed border-slate-200 rounded-[2rem] p-6 text-center text-slate-400">
+                            <Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                            <p className="text-sm font-bold">No upcoming appointments</p>
+                            <p className="text-xs mt-1">Tap below to schedule</p>
+                        </div>
+                    )
+                }
 
                 {/* Quick Actions Row */}
                 <div className="grid grid-cols-3 gap-3">
@@ -674,7 +742,7 @@ const PortalDashboard = () => {
                     </div>
                     <p className="text-[10px] font-bold text-slate-500 leading-relaxed uppercase tracking-widest">Questions about your care? Contact your clinic representative.</p>
                 </div>
-            </div>
+            </div >
         );
     };
 
