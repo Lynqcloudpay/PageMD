@@ -134,7 +134,28 @@ router.post('/receive', upload.single('fax'), async (req, res) => {
             return res.status(200).json({ success: true, message: 'No file to process' });
         }
 
-        const tenantId = req.tenantId || 'default';
+        // TENANT-SAFE: Look up tenant by the receiving fax number
+        let tenantId = 'default';
+        try {
+            // Normalize the to_number for lookup
+            let normalizedTo = toNumber.replace(/\D/g, '');
+            if (normalizedTo.length === 10) normalizedTo = '+1' + normalizedTo;
+            else if (normalizedTo.length === 11 && normalizedTo.startsWith('1')) normalizedTo = '+' + normalizedTo;
+            else if (!normalizedTo.startsWith('+')) normalizedTo = '+' + normalizedTo;
+
+            const tenantLookup = await pool.query(
+                'SELECT tenant_id FROM clinic_fax_numbers WHERE phone_number = $1 AND active = true',
+                [normalizedTo]
+            );
+            if (tenantLookup.rows.length > 0) {
+                tenantId = tenantLookup.rows[0].tenant_id;
+                console.log('[EFAX] Routed to tenant:', tenantId);
+            } else {
+                console.warn('[EFAX] No tenant found for fax number:', toNumber, '- using default');
+            }
+        } catch (lookupErr) {
+            console.error('[EFAX] Tenant lookup error:', lookupErr.message);
+        }
 
         // Create document entry
         const docResult = await pool.query(`

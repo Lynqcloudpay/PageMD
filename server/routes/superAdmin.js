@@ -56,11 +56,13 @@ router.get('/clinics', verifySuperAdmin, async (req, res) => {
         cs.current_period_end,
         sp.name as plan_name,
         sp.price_monthly,
-        COUNT(DISTINCT st.id) FILTER (WHERE st.status IN ('open', 'in_progress')) as open_tickets
+        COUNT(DISTINCT st.id) FILTER (WHERE st.status IN ('open', 'in_progress')) as open_tickets,
+        csc.onboarding_complete
       FROM clinics c
       LEFT JOIN clinic_subscriptions cs ON c.id = cs.clinic_id
       LEFT JOIN subscription_plans sp ON cs.plan_id = sp.id
       LEFT JOIN support_tickets st ON c.id = st.clinic_id
+      LEFT JOIN clinic_setup_checklist csc ON c.slug = csc.tenant_id
     `;
 
         const conditions = [];
@@ -90,7 +92,7 @@ router.get('/clinics', verifySuperAdmin, async (req, res) => {
             query += ' WHERE ' + conditions.join(' AND ');
         }
 
-        query += ' GROUP BY c.id, cs.id, sp.id ORDER BY c.created_at DESC';
+        query += ' GROUP BY c.id, cs.id, sp.id, csc.onboarding_complete ORDER BY c.created_at DESC';
 
         const { rows } = await pool.controlPool.query(query, params);
         res.json(rows);

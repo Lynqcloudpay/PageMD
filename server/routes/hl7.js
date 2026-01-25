@@ -48,6 +48,21 @@ router.post('/receive', async (req, res) => {
 
     console.log('[HL7] Processing message from:', labInfo.name, 'Type:', parsed.messageType?.messageType);
 
+    // TENANT-SAFE: Look up tenant by facility ID
+    let tenantId = 'default';
+    try {
+      const tenantLookup = await pool.query(
+        'SELECT tenant_id FROM clinic_lab_interfaces WHERE facility_id = $1 AND status = $2',
+        [sendingFacility, 'active']
+      );
+      if (tenantLookup.rows.length > 0) {
+        tenantId = tenantLookup.rows[0].tenant_id;
+        console.log('[HL7] Routed to tenant:', tenantId);
+      }
+    } catch (e) {
+      console.error('[HL7] Tenant lookup error:', e.message);
+    }
+
     // Process lab results (ORU^R01)
     if (parsed.messageType?.messageType === 'ORU^R01') {
       const patientMRN = parsed.patient?.patientId;
@@ -57,6 +72,9 @@ router.post('/receive', async (req, res) => {
         // Still send ACK but log warning
       } else {
         // Find patient by MRN
+        // If we found a tenantId, we should search within that tenant's schema if possible
+        // But since the current query is global (it doesn't set search_path), 
+        // we'll rely on the patient being in the database and then use tenantId for the inbox item.
         const patient = await pool.query(
           'SELECT id FROM patients WHERE mrn = $1',
           [patientMRN]
@@ -101,12 +119,13 @@ router.post('/receive', async (req, res) => {
                 subject, body, reference_id, reference_table,
                 created_at, updated_at
               ) VALUES (
-                gen_random_uuid(), 'default', $1, 'lab', $2, 'new',
-                $3, $4, $5, 'orders',
+                gen_random_uuid(), $1, $2, 'lab', $3, 'new',
+                $4, $5, $6, 'orders',
                 CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
               )
               ON CONFLICT (reference_id, reference_table) WHERE status != 'completed' DO NOTHING`,
               [
+                tenantId,
                 patientId,
                 isAbnormal ? 'stat' : 'normal',
                 `${isAbnormal ? '⚠️ ' : ''}${result.observationId || 'Lab Result'} from ${labInfo.name}`,
@@ -115,7 +134,7 @@ router.post('/receive', async (req, res) => {
               ]
             );
 
-            console.log('[HL7] Created order and inbox item:', { orderId, patientId, test: result.observationId });
+            console.log('[HL7] Created order and inbox item:', { orderId, patientId, test: result.observationId, tenantId });
           }
         } else {
           console.warn('[HL7] Patient not found for MRN:', patientMRN);

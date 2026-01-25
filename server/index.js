@@ -267,6 +267,10 @@ const followupsRoutes = require('./routes/followups');
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/followups', followupsRoutes);
 
+// Clinic Setup & Onboarding
+const clinicSetupRoutes = require('./routes/clinic-setup');
+app.use('/api/clinic-setup', clinicSetupRoutes);
+
 // Patient Portal
 const portalRoutes = require('./routes/portal');
 app.use('/api/portal', portalRoutes);

@@ -186,9 +186,22 @@ const PlatformAdminClinics = () => {
                                             <Users className="w-4 h-4" />
                                             Status
                                         </span>
-                                        <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${getStatusColor(clinic.status)}`}>
-                                            {clinic.status}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            {clinic.onboarding_complete ? (
+                                                <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase tracking-tighter">
+                                                    <CheckCircle className="w-2.5 h-2.5" />
+                                                    Setup Done
+                                                </span>
+                                            ) : (
+                                                <span className="flex items-center gap-1 text-[10px] font-bold text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100 uppercase tracking-tighter">
+                                                    <Clock className="w-2.5 h-2.5" />
+                                                    Onboarding
+                                                </span>
+                                            )}
+                                            <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${getStatusColor(clinic.status)}`}>
+                                                {clinic.status}
+                                            </span>
+                                        </div>
                                     </div>
                                     {clinic.specialty && (
                                         <div className="flex items-center justify-between">

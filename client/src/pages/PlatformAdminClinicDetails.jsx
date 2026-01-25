@@ -281,6 +281,318 @@ const DriftManager = ({ clinicId, apiCall }) => {
 };
 
 
+const ClinicOnboardingManager = ({ tenantId, apiCall }) => {
+    const [setupData, setSetupData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState(false);
+    const [showFaxModal, setShowFaxModal] = useState(false);
+    const [showLabModal, setShowLabModal] = useState(false);
+    const [newFax, setNewFax] = useState({ phoneNumber: '', label: '' });
+    const [newLab, setNewLab] = useState({ labName: '', facilityId: '', accountNumber: '', status: 'pending' });
+
+    useEffect(() => {
+        loadSetupData();
+    }, [tenantId]);
+
+    const loadSetupData = async () => {
+        try {
+            const data = await apiCall('GET', `/clinic-setup/${tenantId}`);
+            setSetupData(data);
+        } catch (err) {
+            console.error('Failed to load setup data:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleToggleChecklist = async (field, value) => {
+        try {
+            await apiCall('PUT', `/clinic-setup/${tenantId}`, { [field]: value });
+            loadSetupData();
+        } catch (err) {
+            alert('Failed to update setup step');
+        }
+    };
+
+    const handleAddFax = async () => {
+        if (!newFax.phoneNumber) return;
+        setActionLoading(true);
+        try {
+            await apiCall('POST', `/clinic-setup/${tenantId}/fax`, newFax);
+            setShowFaxModal(false);
+            setNewFax({ phoneNumber: '', label: '' });
+            loadSetupData();
+        } catch (err) {
+            alert(err.response?.data?.error || 'Failed to add fax number');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleAddLab = async () => {
+        if (!newLab.labName) return;
+        setActionLoading(true);
+        try {
+            await apiCall('POST', `/clinic-setup/${tenantId}/lab`, newLab);
+            setShowLabModal(false);
+            setNewLab({ labName: '', facilityId: '', accountNumber: '', status: 'pending' });
+            loadSetupData();
+        } catch (err) {
+            alert('Failed to add lab interface');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleDeleteFax = async (faxId) => {
+        if (!confirm('Are you sure you want to remove this fax number?')) return;
+        try {
+            await apiCall('DELETE', `/clinic-setup/${tenantId}/fax/${faxId}`);
+            loadSetupData();
+        } catch (err) {
+            alert('Failed to delete fax number');
+        }
+    };
+
+    if (loading) return <div className="text-slate-400 text-sm animate-pulse p-4">Loading onboarding status...</div>;
+    if (!setupData) return null;
+
+    const { checklist, faxNumbers, labInterfaces, completionPercent } = setupData;
+
+    const steps = [
+        { key: 'basic_info_complete', label: 'Basic Clinic Info', icon: Building2 },
+        { key: 'users_created', label: 'Admin User Created', icon: Shield },
+        { key: 'fax_configured', label: 'eFax Number Configured', icon: Activity },
+        { key: 'quest_configured', label: 'Quest Lab Interface', icon: Database },
+        { key: 'labcorp_configured', label: 'LabCorp Interface', icon: Database },
+        { key: 'patient_portal_enabled', label: 'Patient Portal Enabled', icon: Key },
+        { key: 'billing_configured', label: 'Billing System Linked', icon: CreditCard },
+    ];
+
+    return (
+        <div className="space-y-6">
+            {/* Completion Progress */}
+            <div className="relative pt-1">
+                <div className="flex mb-2 items-center justify-between">
+                    <div>
+                        <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-indigo-600 bg-indigo-200">
+                            Onboarding Progress
+                        </span>
+                    </div>
+                    <div className="text-right">
+                        <span className="text-xs font-semibold inline-block text-indigo-600">
+                            {completionPercent}%
+                        </span>
+                    </div>
+                </div>
+                <div className="overflow-hidden h-2 mb-4 text-xs flex rounded-full bg-indigo-100">
+                    <div style={{ width: `${completionPercent}%` }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-indigo-500 transition-all duration-500"></div>
+                </div>
+            </div>
+
+            {/* Checklist Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {steps.map((step) => {
+                    const isComplete = checklist[step.key];
+                    const Icon = step.icon;
+                    return (
+                        <div key={step.key} className={`p-4 rounded-2xl border transition-all flex items-center justify-between ${isComplete ? 'bg-emerald-50 border-emerald-100' : 'bg-white border-slate-100 hover:border-slate-200'}`}>
+                            <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isComplete ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>
+                                    <Icon className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h4 className={`text-sm font-bold ${isComplete ? 'text-emerald-800' : 'text-slate-600'}`}>{step.label}</h4>
+                                    <p className="text-[10px] text-slate-400">{isComplete ? `Completed ${new Date(checklist[step.key.replace('_complete', '_date').replace('_configured', '_date').replace('_enabled', '_date')]).toLocaleDateString()}` : 'Pending setup'}</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => handleToggleChecklist(step.key, !isComplete)}
+                                className={`p-2 rounded-lg transition-all ${isComplete ? 'text-emerald-500 hover:bg-emerald-100' : 'text-slate-300 hover:bg-slate-100'}`}
+                            >
+                                <CheckCircle className={`w-6 h-6 ${isComplete ? 'fill-emerald-500 text-white' : ''}`} />
+                            </button>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Integration Details Sections */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+                {/* Fax Numbers */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                            <Activity className="w-4 h-4 text-indigo-500" />
+                            Registered Fax Numbers
+                        </h3>
+                        <button onClick={() => setShowFaxModal(true)} className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-2 py-1 rounded-md transition-colors">
+                            + Add Number
+                        </button>
+                    </div>
+                    {faxNumbers.length === 0 ? (
+                        <div className="text-center py-6 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
+                            No fax numbers assigned yet.
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            {faxNumbers.map(fax => (
+                                <div key={fax.id} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl hover:shadow-sm transition-all">
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-indigo-500 bg-indigo-50 p-2 rounded-lg">
+                                            <Activity className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-slate-700">{fax.phone_number}</p>
+                                            <p className="text-[10px] text-slate-400 font-medium uppercase">{fax.label || 'Direct Inward Dialing'}</p>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => handleDeleteFax(fax.id)} className="text-slate-300 hover:text-red-500 p-2 transition-colors">
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Lab Interfaces */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                            <Database className="w-4 h-4 text-blue-500" />
+                            Lab Integrations (HL7)
+                        </h3>
+                        <button onClick={() => setShowLabModal(true)} className="text-[10px] font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-2 py-1 rounded-md transition-colors">
+                            + Add Link
+                        </button>
+                    </div>
+                    {labInterfaces.length === 0 ? (
+                        <div className="text-center py-6 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
+                            No lab interfaces configured.
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            {labInterfaces.map(lab => (
+                                <div key={lab.id} className="p-3 bg-white border border-slate-100 rounded-xl hover:shadow-sm transition-all">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className={`w-2 h-2 rounded-full ${lab.status === 'active' ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
+                                            <span className="text-xs font-bold text-slate-800">{lab.lab_name}</span>
+                                        </div>
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${lab.status === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-500'}`}>
+                                            {lab.status}
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 text-[10px]">
+                                        <div className="text-slate-500">Facility ID: <span className="font-mono text-slate-800">{lab.facility_id || 'N/A'}</span></div>
+                                        <div className="text-slate-500 text-right">Acct: <span className="font-mono text-slate-800">{lab.account_number || 'N/A'}</span></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Modals - Simplified for MVP */}
+            {showFaxModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl border border-white">
+                        <h3 className="text-xl font-black text-slate-800 mb-6">Assign Fax Number</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Phone Number</label>
+                                <input
+                                    type="text"
+                                    placeholder="+1 555 000 0000"
+                                    value={newFax.phoneNumber}
+                                    onChange={(e) => setNewFax({ ...newFax, phoneNumber: e.target.value })}
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 transition-all"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Internal Label</label>
+                                <input
+                                    type="text"
+                                    placeholder="Main Intake"
+                                    value={newFax.label}
+                                    onChange={(e) => setNewFax({ ...newFax, label: e.target.value })}
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 transition-all"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex gap-3 mt-8">
+                            <button onClick={() => setShowFaxModal(false)} className="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-all">Cancel</button>
+                            <button
+                                disabled={actionLoading}
+                                onClick={handleAddFax}
+                                className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 transition-all disabled:opacity-50"
+                            >
+                                {actionLoading ? 'Saving...' : 'Assign Number'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showLabModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl border border-white">
+                        <h3 className="text-xl font-black text-slate-800 mb-6">Link Lab Interface</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Lab Provider</label>
+                                <select
+                                    value={newLab.labName}
+                                    onChange={(e) => setNewLab({ ...newLab, labName: e.target.value })}
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-500 transition-all"
+                                >
+                                    <option value="">Select Lab...</option>
+                                    <option value="Quest Diagnostics">Quest Diagnostics</option>
+                                    <option value="LabCorp">LabCorp</option>
+                                    <option value="Other">Other Hospital/Lab</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Facility Identifier (MSH-4)</label>
+                                <input
+                                    type="text"
+                                    placeholder="QUEST_FL_123"
+                                    value={newLab.facilityId}
+                                    onChange={(e) => setNewLab({ ...newLab, facilityId: e.target.value })}
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm outline-mono outline-none focus:border-blue-500 transition-all"
+                                />
+                                <p className="text-[9px] text-slate-400 mt-1 pl-1">ID used in HL7 messages to route to this tenant</p>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Lab Account #</label>
+                                <input
+                                    type="text"
+                                    placeholder="ACCT-8822"
+                                    value={newLab.accountNumber}
+                                    onChange={(e) => setNewLab({ ...newLab, accountNumber: e.target.value })}
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-500 transition-all"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex gap-3 mt-8">
+                            <button onClick={() => setShowLabModal(false)} className="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-all">Cancel</button>
+                            <button
+                                disabled={actionLoading}
+                                onClick={handleAddLab}
+                                className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all disabled:opacity-50"
+                            >
+                                {actionLoading ? 'Saving...' : 'Link Interface'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const PlatformAuditTrail = ({ clinicId, apiCall }) => {
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -538,6 +850,22 @@ const PlatformAdminClinicDetails = () => {
                                 <span className="text-xs font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-lg">Critical Events</span>
                             </div>
                             <PlatformAuditTrail clinicId={id} apiCall={apiCall} />
+                        </div>
+
+                        {/* Onboarding & Integration Setup (New Section) */}
+                        <div id="setup" className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl p-8 shadow-lg shadow-slate-200/40 relative overflow-hidden group scroll-mt-8">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-indigo-500/10 transition-colors"></div>
+                            <div className="flex items-center justify-between mb-8">
+                                <div>
+                                    <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3 mb-1">
+                                        <Zap className="w-7 h-7 text-indigo-500" />
+                                        Clinic Onboarding & Integrations
+                                    </h2>
+                                    <p className="text-slate-500 text-sm font-medium">Tenant-safe technical setup for clinical operations</p>
+                                </div>
+                                <span className="text-xs font-bold text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">Setup Wizard</span>
+                            </div>
+                            <ClinicOnboardingManager tenantId={clinic.slug} apiCall={apiCall} />
                         </div>
 
                         {/* Metrics & Activity */}
