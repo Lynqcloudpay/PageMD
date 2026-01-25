@@ -201,10 +201,15 @@ const PortalDashboard = () => {
                         visitMethod === 'video' ||
                         visitMethod === 'virtual';
 
+                    // CRITICAL: Check ALL cancellation states
+                    const isCancelled = appt.status === 'cancelled' ||
+                        appt.patient_status === 'cancelled' ||
+                        appt.patient_status === 'no_show';
+
                     const isActive = appt.status !== 'completed' &&
-                        appt.status !== 'cancelled' &&
                         appt.status !== 'checked_out' &&
-                        appt.patient_status !== 'checked_out';
+                        appt.patient_status !== 'checked_out' &&
+                        !isCancelled;
 
                     return isTelehealth && isToday && isActive;
                 });
@@ -221,7 +226,16 @@ const PortalDashboard = () => {
 
                 const upcomingAppts = apptsRes.data.filter(appt => {
                     const apptDateObj = parseLocalSafe(appt.appointment_date, appt.appointment_time);
-                    return apptDateObj >= startOfToday && appt.status !== 'completed' && appt.status !== 'checked_out';
+
+                    // CRITICAL: Check ALL cancellation states
+                    const isCancelled = appt.status === 'cancelled' ||
+                        appt.patient_status === 'cancelled' ||
+                        appt.patient_status === 'no_show';
+
+                    return apptDateObj >= startOfToday &&
+                        appt.status !== 'completed' &&
+                        appt.status !== 'checked_out' &&
+                        !isCancelled;
                 }).sort((a, b) => parseLocalSafe(a.appointment_date, a.appointment_time) - parseLocalSafe(b.appointment_date, b.appointment_time));
 
                 // Find the next upcoming appointment

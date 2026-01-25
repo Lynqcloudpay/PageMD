@@ -123,10 +123,22 @@ const PortalTelehealth = ({ onSchedule }) => {
                     apptDateObj.getMonth() === now.getMonth() &&
                     apptDateObj.getFullYear() === now.getFullYear();
 
-                return (type.includes('telehealth') || type.includes('video') || type.includes('virtual') || visitMethod === 'telehealth') &&
+                const isTelehealth = type.includes('telehealth') ||
+                    type.includes('video') ||
+                    type.includes('virtual') ||
+                    visitMethod === 'telehealth';
+
+                // CRITICAL: Check ALL cancellation states - must match everywhere
+                const isCancelled = appt.status === 'cancelled' ||
+                    appt.patient_status === 'cancelled' ||
+                    appt.patient_status === 'no_show';
+
+                return isTelehealth &&
                     isToday &&
                     appt.status !== 'completed' &&
-                    appt.patient_status !== 'checked_out';
+                    appt.status !== 'checked_out' &&
+                    appt.patient_status !== 'checked_out' &&
+                    !isCancelled;
             });
 
             setAppointments(telehealthAppts);
