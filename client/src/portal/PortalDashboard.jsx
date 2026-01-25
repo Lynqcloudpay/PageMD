@@ -157,13 +157,13 @@ const PortalDashboard = () => {
                     });
                 }
 
-                // Check appointment updates
+                // Check appointment updates (denied/confirmed)
                 const threeDaysAgo = new Date();
                 threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
                 const recentUpdates = reqsRes.data.filter(r =>
-                    (r.status === 'confirmed' || r.status === 'denied') &&
-                    new Date(r.updated_at || r.created_at) > threeDaysAgo
+                    (r.status === 'confirmed' || r.status === 'denied' || r.status === 'approved') &&
+                    new Date(r.processed_at || r.created_at) > threeDaysAgo
                 );
 
                 if (recentUpdates.length > 0) {
