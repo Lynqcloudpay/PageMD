@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Building2, Search, Plus, XCircle, Database, Shield, ChevronRight, Users, MapPin, Mail, Phone } from 'lucide-react';
+import { ArrowLeft, Building2, Search, Plus, XCircle, Database, Shield, ChevronRight, Users, MapPin, Mail, Phone, CheckCircle, Clock, Activity, Zap } from 'lucide-react';
 import { usePlatformAdmin } from '../context/PlatformAdminContext';
 
 const PlatformAdminClinics = () => {
