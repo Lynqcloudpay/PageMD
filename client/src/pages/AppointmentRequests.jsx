@@ -139,7 +139,8 @@ const AppointmentRequests = () => {
         providerId: '',
         appointmentDate: '',
         appointmentTime: '',
-        duration: 30
+        duration: 30,
+        visitMethod: 'office'
     });
     const [suggestedSlots, setSuggestedSlots] = useState([]);
     const [submitting, setSubmitting] = useState(false);
@@ -202,7 +203,8 @@ const AppointmentRequests = () => {
                 providerId: providerId,
                 appointmentDate: date,
                 appointmentTime: time,
-                duration: 30
+                duration: 30,
+                visitMethod: selectedRequest.visit_method || 'office'
             });
         }
     }, [showApproveModal, selectedRequest]);
@@ -564,103 +566,123 @@ const AppointmentRequests = () => {
                                             className="w-full border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-medium"
                                         />
                                     </div>
-                                </div>
 
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Duration</label>
-                                    <div className="flex gap-2">
-                                        {[15, 30, 45, 60].map(mins => (
-                                            <button
-                                                key={mins}
-                                                onClick={() => setApprovalData({ ...approvalData, duration: mins })}
-                                                className={`flex-1 py-2 text-sm font-bold rounded-lg border transition-all ${approvalData.duration === mins ? 'bg-emerald-600 border-emerald-600 text-white shadow-md' : 'bg-white border-gray-200 text-gray-600 hover:border-emerald-200'}`}
-                                            >
-                                                {mins}m
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="p-5 bg-amber-50 rounded-2xl border border-amber-100 flex gap-3">
-                                    <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                                     <div>
-                                        <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest mb-1">Patient Request</p>
-                                        <p className="text-sm text-amber-900 font-medium leading-relaxed italic line-clamp-3">"{selectedRequest.body}"</p>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Duration</label>
+                                        <div className="flex gap-2">
+                                            {[15, 30, 45, 60].map(mins => (
+                                                <button
+                                                    key={mins}
+                                                    onClick={() => setApprovalData({ ...approvalData, duration: mins })}
+                                                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg border transition-all ${approvalData.duration === mins ? 'bg-emerald-100 border-emerald-300 text-emerald-700' : 'bg-white border-gray-200 text-gray-500 hover:border-emerald-200'}`}
+                                                >
+                                                    {mins}m
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Visit Method</label>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setApprovalData({ ...approvalData, visitMethod: 'office' })}
+                                                className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-xl border transition-all ${approvalData.visitMethod === 'office' ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-white border-gray-200 text-gray-600 hover:border-blue-200'}`}
+                                            >
+                                                <User size={16} /> Office
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setApprovalData({ ...approvalData, visitMethod: 'telehealth' })}
+                                                className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-xl border transition-all ${approvalData.visitMethod === 'telehealth' ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-200' : 'bg-white border-gray-200 text-gray-600 hover:border-emerald-200'}`}
+                                            >
+                                                <Video size={16} /> Virtual
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-5 bg-amber-50 rounded-2xl border border-amber-100 flex gap-3">
+                                        <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest mb-1">Patient Request</p>
+                                            <p className="text-sm text-amber-900 font-medium leading-relaxed italic line-clamp-3">"{selectedRequest.body}"</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Right Column: Schedule Browser */}
+                                <div className="w-full md:w-[400px] bg-slate-50 border-t md:border-t-0 md:border-l border-slate-200 p-6 flex flex-col overflow-hidden">
+                                    {approvalData.providerId ? (
+                                        <div className="h-full flex flex-col">
+                                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Live Provider Schedule</h4>
+                                            <div className="flex-1 overflow-hidden">
+                                                <DaySchedulePreview
+                                                    date={approvalData.appointmentDate}
+                                                    providerId={approvalData.providerId}
+                                                    selectedTime={approvalData.appointmentTime}
+                                                    duration={approvalData.duration}
+                                                    onDateChange={(newDate) => setApprovalData(prev => ({ ...prev, appointmentDate: newDate }))}
+                                                    suggestedSlots={suggestedSlots}
+                                                    onSlotClick={(slot) => {
+                                                        setSuggestedSlots(prev => {
+                                                            const exists = prev.find(s => s.date === slot.date && s.time === slot.time);
+                                                            if (exists) return prev.filter(s => s !== exists);
+                                                            return [...prev, slot];
+                                                        });
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center h-full text-center space-y-4 px-8 text-slate-400">
+                                            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm">
+                                                <User className="w-8 h-8 opacity-20" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-500">No Provider Selected</p>
+                                                <p className="text-xs">Choose a provider to check their availability on this date</p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
-                            {/* Right Column: Schedule Browser */}
-                            <div className="w-full md:w-[400px] bg-slate-50 border-t md:border-t-0 md:border-l border-slate-200 p-6 flex flex-col overflow-hidden">
-                                {approvalData.providerId ? (
-                                    <div className="h-full flex flex-col">
-                                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Live Provider Schedule</h4>
-                                        <div className="flex-1 overflow-hidden">
-                                            <DaySchedulePreview
-                                                date={approvalData.appointmentDate}
-                                                providerId={approvalData.providerId}
-                                                selectedTime={approvalData.appointmentTime}
-                                                duration={approvalData.duration}
-                                                onDateChange={(newDate) => setApprovalData(prev => ({ ...prev, appointmentDate: newDate }))}
-                                                suggestedSlots={suggestedSlots}
-                                                onSlotClick={(slot) => {
-                                                    setSuggestedSlots(prev => {
-                                                        const exists = prev.find(s => s.date === slot.date && s.time === slot.time);
-                                                        if (exists) return prev.filter(s => s !== exists);
-                                                        return [...prev, slot];
-                                                    });
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center h-full text-center space-y-4 px-8 text-slate-400">
-                                        <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm">
-                                            <User className="w-8 h-8 opacity-20" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-slate-500">No Provider Selected</p>
-                                            <p className="text-xs">Choose a provider to check their availability on this date</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                            {/* Modal Footer */}
+                            <div className="p-6 border-t border-gray-100 bg-gray-50 flex flex-col sm:flex-row justify-between items-center gap-4 shrink-0">
+                                <div className="flex-1 w-full sm:w-auto">
+                                    {suggestedSlots.length > 0 ? (
+                                        <button
+                                            onClick={handleSuggestSlots}
+                                            disabled={submitting}
+                                            className="w-full sm:w-auto px-6 py-3 bg-amber-500 text-white rounded-xl text-sm font-bold hover:bg-amber-600 shadow-lg shadow-amber-100 flex items-center justify-center gap-2 transition-all"
+                                        >
+                                            <Send className="w-4 h-4" />
+                                            Suggest {suggestedSlots.length} Alternative{suggestedSlots.length > 1 ? 's' : ''}
+                                        </button>
+                                    ) : (
+                                        <p className="text-xs text-slate-400 font-medium italic">
+                                            Select available slots in the calendar to suggest alternatives if the requested time is booked.
+                                        </p>
+                                    )}
+                                </div>
 
-                        {/* Modal Footer */}
-                        <div className="p-6 border-t border-gray-100 bg-gray-50 flex flex-col sm:flex-row justify-between items-center gap-4 shrink-0">
-                            <div className="flex-1 w-full sm:w-auto">
-                                {suggestedSlots.length > 0 ? (
+                                <div className="flex gap-3 w-full sm:w-auto">
                                     <button
-                                        onClick={handleSuggestSlots}
-                                        disabled={submitting}
-                                        className="w-full sm:w-auto px-6 py-3 bg-amber-500 text-white rounded-xl text-sm font-bold hover:bg-amber-600 shadow-lg shadow-amber-100 flex items-center justify-center gap-2 transition-all"
+                                        onClick={() => setShowApproveModal(false)}
+                                        className="flex-1 sm:flex-none px-6 py-3 border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-white transition-all shadow-sm"
                                     >
-                                        <Send className="w-4 h-4" />
-                                        Suggest {suggestedSlots.length} Alternative{suggestedSlots.length > 1 ? 's' : ''}
+                                        Cancel
                                     </button>
-                                ) : (
-                                    <p className="text-xs text-slate-400 font-medium italic">
-                                        Select available slots in the calendar to suggest alternatives if the requested time is booked.
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="flex gap-3 w-full sm:w-auto">
-                                <button
-                                    onClick={() => setShowApproveModal(false)}
-                                    className="flex-1 sm:flex-none px-6 py-3 border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-white transition-all shadow-sm"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleApprove}
-                                    disabled={submitting || !approvalData.providerId || !approvalData.appointmentDate || !approvalData.appointmentTime}
-                                    className="flex-1 sm:flex-none px-8 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5"
-                                >
-                                    {submitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
-                                    Finalize & Schedule
-                                </button>
+                                    <button
+                                        onClick={handleApprove}
+                                        disabled={submitting || !approvalData.providerId || !approvalData.appointmentDate || !approvalData.appointmentTime}
+                                        className="flex-1 sm:flex-none px-8 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5"
+                                    >
+                                        {submitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+                                        Finalize & Schedule
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

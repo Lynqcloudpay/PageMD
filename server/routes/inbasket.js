@@ -43,7 +43,8 @@ async function ensureSchema(client) {
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 completed_at TIMESTAMP WITH TIME ZONE,
-                completed_by UUID REFERENCES users(id)
+                completed_by UUID REFERENCES users(id),
+                visit_method VARCHAR(20) DEFAULT 'office'
             )
         `);
 
@@ -81,6 +82,9 @@ async function ensureSchema(client) {
                 IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'portal_appointment_requests') THEN
                     ALTER TABLE portal_appointment_requests ADD COLUMN IF NOT EXISTS provider_id UUID REFERENCES users(id);
                     ALTER TABLE portal_appointment_requests ADD COLUMN IF NOT EXISTS visit_method VARCHAR(20) DEFAULT 'office';
+                END IF;
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'inbox_items') THEN
+                    ALTER TABLE inbox_items ADD COLUMN IF NOT EXISTS visit_method VARCHAR(20) DEFAULT 'office';
                 END IF;
                 IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'appointments') THEN
                     ALTER TABLE appointments ADD COLUMN IF NOT EXISTS visit_method VARCHAR(20) DEFAULT 'office';
@@ -363,18 +367,19 @@ async function syncInboxItems(tenantId, schema) {
     INSERT INTO inbox_items(
       id, tenant_id, patient_id, type, priority, status,
       subject, body, reference_id, reference_table,
-      assigned_user_id, created_at, updated_at
+      assigned_user_id, created_at, updated_at, visit_method
     )
     SELECT
       gen_random_uuid(), $1, p.id, 'portal_appointment', 'normal', 'new',
       'Portal Appt Req: ' || appointment_type,
       'Preferred Date: ' || preferred_date || ' (' || preferred_time_range || ')\nReason: ' || COALESCE(reason, 'N/A'),
       ar.id, 'portal_appointment_requests',
-      COALESCE(ar.provider_id, p.primary_care_provider), ar.created_at, ar.created_at
+      COALESCE(ar.provider_id, p.primary_care_provider), ar.created_at, ar.created_at, ar.visit_method
     FROM portal_appointment_requests ar
     JOIN patients p ON ar.patient_id = p.id
     WHERE ar.status = 'pending'
-    ON CONFLICT (reference_id, reference_table) WHERE status != 'completed' DO NOTHING
+    ON CONFLICT (reference_id, reference_table) WHERE status != 'completed' 
+    DO UPDATE SET visit_method = EXCLUDED.visit_method, updated_at = CURRENT_TIMESTAMP
     `, [tenantId]);
 
   } finally {
@@ -759,7 +764,7 @@ router.post('/:id/approve-appointment', async (req, res) => {
   const client = await pool.connect();
   try {
     const { id } = req.params;
-    const { providerId, appointmentDate, appointmentTime, duration = 30 } = req.body;
+    const { providerId, appointmentDate, appointmentTime, duration = 30, visitMethod } = req.body;
 
     if (!providerId || !appointmentDate || !appointmentTime) {
       return res.status(400).json({ error: 'Provider, date, and time are required' });
@@ -792,7 +797,7 @@ router.post('/:id/approve-appointment', async (req, res) => {
     await client.query(`
       INSERT INTO appointments (patient_id, provider_id, appointment_date, appointment_time, duration, appointment_type, status, created_by, notes, visit_method)
       VALUES ($1, $2, $3, $4, $5, $6, 'scheduled', $7, $8, $9)
-    `, [request.patient_id, providerId, appointmentDate, appointmentTime, duration, request.appointment_type || 'Follow-up', req.user.id, 'Scheduled from portal request: ' + (request.reason || ''), request.visit_method || 'office']);
+    `, [request.patient_id, providerId, appointmentDate, appointmentTime, duration, (visitMethod === 'telehealth' ? 'Telehealth Visit' : (request.appointment_type || 'Follow-up')), req.user.id, 'Scheduled from portal request: ' + (request.reason || ''), visitMethod || request.visit_method || 'office']);
 
     // 4. Update the portal_appointment_request as approved
     await client.query(`
