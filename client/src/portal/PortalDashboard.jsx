@@ -319,7 +319,7 @@ const PortalDashboard = () => {
         fetchNotifications();
         const interval = setInterval(fetchNotifications, 2000); // Poll every 2 seconds for live updates
         return () => clearInterval(interval);
-    }, []);
+    }, [dismissedNotifications, dismissedDeniedRequests]);
 
     const content = useMemo(() => {
         switch (activeTab) {
