@@ -5,54 +5,167 @@ const { HL7Parser, HL7Generator } = require('../middleware/hl7');
 
 const router = express.Router();
 
-// Receive HL7 message (lab results, etc.)
+// Known lab facility identifiers
+const LAB_FACILITIES = {
+  'QUEST': { name: 'Quest Diagnostics', priority: 'normal' },
+  'LABCORP': { name: 'LabCorp', priority: 'normal' },
+  'QD': { name: 'Quest Diagnostics', priority: 'normal' },
+  'LC': { name: 'LabCorp', priority: 'normal' }
+};
+
+/**
+ * POST /api/hl7/receive
+ * Receive HL7 message (lab results from Quest, LabCorp, etc.)
+ * Creates order and inbox item for immediate visibility
+ */
 router.post('/receive', async (req, res) => {
+  const startTime = Date.now();
+
   try {
-    const message = req.body.message || req.body;
-    
+    // Handle both raw text and JSON-wrapped messages
+    let message = req.body;
+    if (typeof message === 'object' && message.message) {
+      message = message.message;
+    }
     if (typeof message !== 'string') {
+      // Try to get raw body
+      message = req.rawBody || JSON.stringify(req.body);
+    }
+
+    if (typeof message !== 'string' || !message.includes('MSH|')) {
+      console.warn('[HL7] Invalid message format received');
       return res.status(400).json({ error: 'Invalid HL7 message format' });
     }
+
+    console.log('[HL7] Received message, length:', message.length);
 
     const parser = new HL7Parser(message);
     const parsed = parser.parse();
 
-    // Process lab results
+    // Identify sending facility
+    const sendingFacility = parsed.messageType?.sendingFacility || 'UNKNOWN';
+    const labInfo = LAB_FACILITIES[sendingFacility.toUpperCase()] || { name: sendingFacility, priority: 'normal' };
+
+    console.log('[HL7] Processing message from:', labInfo.name, 'Type:', parsed.messageType?.messageType);
+
+    // Process lab results (ORU^R01)
     if (parsed.messageType?.messageType === 'ORU^R01') {
-      for (const result of parsed.results) {
-        // Find patient by MRN or create order
+      const patientMRN = parsed.patient?.patientId;
+
+      if (!patientMRN) {
+        console.warn('[HL7] No patient MRN in message');
+        // Still send ACK but log warning
+      } else {
+        // Find patient by MRN
         const patient = await pool.query(
           'SELECT id FROM patients WHERE mrn = $1',
-          [parsed.patient.patientId]
+          [patientMRN]
         );
 
         if (patient.rows.length > 0) {
-          // Store lab result
-          await pool.query(
-            `INSERT INTO orders (patient_id, order_type, test_name, result_value, result_units, 
-             reference_range, status, completed_at, external_id)
-             VALUES ($1, 'Lab', $2, $3, $4, $5, 'completed', CURRENT_TIMESTAMP, $6)`,
-            [
-              patient.rows[0].id,
-              result.observationId,
-              result.observationValue,
-              result.units,
-              result.referenceRange,
-              parsed.messageType.messageControlId
-            ]
-          );
+          const patientId = patient.rows[0].id;
+
+          for (const result of parsed.results || []) {
+            // Store lab result in orders table
+            const orderResult = await pool.query(
+              `INSERT INTO orders (
+                patient_id, order_type, test_name, result_value, result_units, 
+                reference_range, status, completed_at, external_id, 
+                order_payload
+              )
+              VALUES ($1, 'lab', $2, $3, $4, $5, 'completed', CURRENT_TIMESTAMP, $6, $7)
+              RETURNING id`,
+              [
+                patientId,
+                result.observationId || result.testName || 'Lab Result',
+                result.observationValue,
+                result.units,
+                result.referenceRange,
+                parsed.messageType.messageControlId,
+                JSON.stringify({
+                  source: labInfo.name,
+                  test_name: result.observationId,
+                  abnormal_flag: result.abnormalFlag,
+                  observation_date: result.observationDate
+                })
+              ]
+            );
+
+            const orderId = orderResult.rows[0].id;
+
+            // Create inbox item for immediate visibility
+            const isAbnormal = result.abnormalFlag && result.abnormalFlag !== 'N';
+            await pool.query(
+              `INSERT INTO inbox_items (
+                id, tenant_id, patient_id, type, priority, status,
+                subject, body, reference_id, reference_table,
+                created_at, updated_at
+              ) VALUES (
+                gen_random_uuid(), 'default', $1, 'lab', $2, 'new',
+                $3, $4, $5, 'orders',
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              )
+              ON CONFLICT (reference_id, reference_table) WHERE status != 'completed' DO NOTHING`,
+              [
+                patientId,
+                isAbnormal ? 'stat' : 'normal',
+                `${isAbnormal ? '⚠️ ' : ''}${result.observationId || 'Lab Result'} from ${labInfo.name}`,
+                `Result: ${result.observationValue} ${result.units || ''} (Ref: ${result.referenceRange || 'N/A'})`,
+                orderId
+              ]
+            );
+
+            console.log('[HL7] Created order and inbox item:', { orderId, patientId, test: result.observationId });
+          }
+        } else {
+          console.warn('[HL7] Patient not found for MRN:', patientMRN);
+          // Could create unmatched lab queue here
         }
       }
     }
 
-    // Send ACK
-    const ack = `MSH|^~\\&|EMR|CLINIC|LAB|FACILITY|${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}||ACK|ACK001|P|2.5\rMSA|AA|${parsed.messageType?.messageControlId || 'MSG001'}\r`;
-    
+    // Send HL7 ACK
+    const ack = `MSH|^~\\&|EMR|CLINIC|${sendingFacility}|LAB|${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}||ACK|ACK${Date.now()}|P|2.5\rMSA|AA|${parsed.messageType?.messageControlId || 'MSG001'}\r`;
+
+    console.log('[HL7] Processed in', Date.now() - startTime, 'ms');
+
     res.set('Content-Type', 'text/plain');
     res.send(ack);
   } catch (error) {
-    console.error('Error processing HL7 message:', error);
-    res.status(500).json({ error: 'Failed to process HL7 message' });
+    console.error('[HL7] Error processing message:', error);
+
+    // Send NACK for errors
+    const nack = `MSH|^~\\&|EMR|CLINIC|LAB|FACILITY|${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}||ACK|ACK${Date.now()}|P|2.5\rMSA|AE|ERROR|${error.message}\r`;
+    res.set('Content-Type', 'text/plain');
+    res.status(500).send(nack);
+  }
+});
+
+/**
+ * GET /api/hl7/status
+ * Check HL7 interface status
+ */
+router.get('/status', authenticate, async (req, res) => {
+  try {
+    // Count recent labs received via HL7
+    const stats = await pool.query(`
+      SELECT 
+        COUNT(*) FILTER (WHERE created_at > CURRENT_TIMESTAMP - INTERVAL '24 hours') as last_24h,
+        COUNT(*) FILTER (WHERE created_at > CURRENT_TIMESTAMP - INTERVAL '7 days') as last_7d,
+        MAX(created_at) as last_received
+      FROM orders 
+      WHERE external_id IS NOT NULL
+    `);
+
+    res.json({
+      endpoint: '/api/hl7/receive',
+      supportedMessages: ['ORU^R01'],
+      knownFacilities: Object.keys(LAB_FACILITIES),
+      stats: stats.rows[0] || {}
+    });
+  } catch (error) {
+    console.error('[HL7] Error getting status:', error);
+    res.status(500).json({ error: 'Failed to get HL7 status' });
   }
 });
 
@@ -60,7 +173,7 @@ router.post('/receive', async (req, res) => {
 router.post('/send', authenticate, requireRole('clinician'), async (req, res) => {
   try {
     const { orderId } = req.body;
-    
+
     const order = await pool.query(
       `SELECT o.*, p.mrn, p.first_name, p.last_name, p.dob, p.sex
        FROM orders o

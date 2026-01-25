@@ -255,6 +255,10 @@ app.use('/api/inbox', inboxRoutes.router);
 const tasksRoutes = require('./routes/tasks');
 app.use('/api/tasks', tasksRoutes);
 
+// eFax Integration (Phaxio)
+const efaxRoutes = require('./routes/efax');
+app.use('/api/efax', efaxRoutes);
+
 // Appointments
 const appointmentRoutes = require('./routes/appointments');
 
