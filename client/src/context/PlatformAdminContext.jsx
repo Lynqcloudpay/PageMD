@@ -89,15 +89,22 @@ export const PlatformAdminProvider = ({ children }) => {
     };
 
     const apiCall = async (method, endpoint, data = null) => {
+        // Use token from state or localStorage as fallback
+        const activeToken = token || localStorage.getItem('platform_admin_token');
+
+        if (!activeToken) {
+            console.error('Platform admin API call attempted without token');
+            logout();
+            throw new Error('Authentication required');
+        }
+
         // Determine the base URL based on the endpoint
-        // platform-auth endpoints are at /api/platform-auth
-        // super admin endpoints are at /api/super
         const baseURL = endpoint.startsWith('/platform-auth') ? '/api' : '/api/super';
 
         const config = {
             method,
             url: `${baseURL}${endpoint}`,
-            headers: { 'X-Platform-Token': token }
+            headers: { 'X-Platform-Token': activeToken }
         };
 
         if (data) {
@@ -108,8 +115,9 @@ export const PlatformAdminProvider = ({ children }) => {
             const response = await axios(config);
             return response.data;
         } catch (error) {
-            console.error('Platform admin API call failed:', error);
+            console.error(`Platform admin API call failed [${method} ${endpoint}]:`, error);
             if (error.response?.status === 401 || error.response?.status === 403) {
+                // Only logout if it's a genuine auth failure, not a 404 or something else
                 logout();
             }
             throw error;

@@ -11,7 +11,11 @@ const router = express.Router();
 const verifySuperAdmin = async (req, res, next) => {
     const token = req.headers['x-platform-token'];
 
+    console.log(`[SuperAdminAuth] Verifying token for ${req.method} ${req.originalUrl}`);
+    console.log(`[SuperAdminAuth] Token received: ${token ? 'PRESENT' : 'MISSING'}`);
+
     if (!token) {
+        console.warn('[SuperAdminAuth] 401: No X-Platform-Token header');
         return res.status(401).json({ error: 'Authentication required' });
     }
 
@@ -25,14 +29,16 @@ const verifySuperAdmin = async (req, res, next) => {
         );
 
         if (result.rows.length === 0) {
+            console.warn(`[SuperAdminAuth] 401: Invalid or expired token: ${token.substring(0, 8)}...`);
             return res.status(401).json({ error: 'Invalid or expired session' });
         }
 
         // Attach admin info to request
         req.platformAdmin = result.rows[0];
+        console.log(`[SuperAdminAuth] 200: Authenticated as ${req.platformAdmin.email}`);
         next();
     } catch (error) {
-        console.error('Auth verification error:', error);
+        console.error('[SuperAdminAuth] 500: Auth verification error:', error);
         res.status(500).json({ error: 'Authentication failed' });
     }
 };
@@ -1167,6 +1173,151 @@ router.get('/support-stats', verifySuperAdmin, async (req, res) => {
     } catch (error) {
         console.error('Error fetching support stats:', error);
         res.status(500).json({ error: 'Failed to fetch support stats' });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// CLINIC SETUP & ONBOARDING (Platform Admin Access)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/super/clinic-setup/:tenantId
+ */
+router.get('/clinic-setup/:tenantId', verifySuperAdmin, async (req, res) => {
+    try {
+        const { tenantId } = req.params;
+
+        let checklist = await pool.controlPool.query(
+            'SELECT * FROM clinic_setup_checklist WHERE tenant_id = $1',
+            [tenantId]
+        );
+
+        if (checklist.rows.length === 0) {
+            await pool.controlPool.query(
+                'INSERT INTO clinic_setup_checklist (tenant_id) VALUES ($1)',
+                [tenantId]
+            );
+            checklist = await pool.controlPool.query(
+                'SELECT * FROM clinic_setup_checklist WHERE tenant_id = $1',
+                [tenantId]
+            );
+        }
+
+        const faxNumbers = await pool.controlPool.query(
+            'SELECT * FROM clinic_fax_numbers WHERE tenant_id = $1 ORDER BY created_at',
+            [tenantId]
+        );
+
+        const labInterfaces = await pool.controlPool.query(
+            'SELECT * FROM clinic_lab_interfaces WHERE tenant_id = $1 ORDER BY lab_name',
+            [tenantId]
+        );
+
+        const cl = checklist.rows[0];
+        const items = [
+            cl.basic_info_complete,
+            cl.users_created,
+            cl.fax_configured,
+            cl.quest_configured || cl.labcorp_configured,
+            cl.patient_portal_enabled,
+            cl.billing_configured
+        ];
+        const completedCount = items.filter(Boolean).length;
+        const completionPercent = Math.round((completedCount / items.length) * 100);
+
+        res.json({
+            checklist: checklist.rows[0],
+            faxNumbers: faxNumbers.rows,
+            labInterfaces: labInterfaces.rows,
+            completionPercent,
+            isComplete: completionPercent === 100
+        });
+    } catch (error) {
+        console.error('[SUPER-ADMIN] Error getting setup:', error);
+        res.status(500).json({ error: 'Failed to get clinic setup' });
+    }
+});
+
+/**
+ * PUT /api/super/clinic-setup/:tenantId
+ */
+router.put('/clinic-setup/:tenantId', verifySuperAdmin, async (req, res) => {
+    try {
+        const { tenantId } = req.params;
+        const updates = req.body;
+        const allowedFields = [
+            'basic_info_complete', 'users_created', 'fax_configured',
+            'quest_configured', 'labcorp_configured', 'patient_portal_enabled',
+            'billing_configured', 'eprescribe_configured', 'onboarding_complete'
+        ];
+
+        const setClauses = [];
+        const values = [];
+        let paramIndex = 1;
+
+        for (const [key, value] of Object.entries(updates)) {
+            if (allowedFields.includes(key)) {
+                setClauses.push(`${key} = $${paramIndex}`);
+                values.push(value);
+                paramIndex++;
+                if (value === true) {
+                    setClauses.push(`${key.replace('_complete', '_date').replace('_configured', '_date').replace('_enabled', '_date')} = CURRENT_TIMESTAMP`);
+                }
+            }
+        }
+
+        if (setClauses.length === 0) return res.status(400).json({ error: 'No valid fields' });
+
+        setClauses.push('updated_at = CURRENT_TIMESTAMP');
+        values.push(tenantId);
+
+        const result = await pool.controlPool.query(
+            `UPDATE clinic_setup_checklist SET ${setClauses.join(', ')} WHERE tenant_id = $${paramIndex} RETURNING *`,
+            values
+        );
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('[SUPER-ADMIN] Error updating checklist:', error);
+        res.status(500).json({ error: 'Failed to update checklist' });
+    }
+});
+
+/**
+ * POST /api/super/clinic-setup/:tenantId/fax
+ */
+router.post('/clinic-setup/:tenantId/fax', verifySuperAdmin, async (req, res) => {
+    try {
+        const { tenantId } = req.params;
+        const { phoneNumber, provider = 'telnyx', label } = req.body;
+        let normalized = phoneNumber.replace(/\D/g, '');
+        if (normalized.length === 10) normalized = '1' + normalized;
+        if (!normalized.startsWith('+')) normalized = '+' + normalized;
+
+        const result = await pool.controlPool.query(
+            'INSERT INTO clinic_fax_numbers (tenant_id, phone_number, provider, label) VALUES ($1, $2, $3, $4) RETURNING *',
+            [tenantId, normalized, provider, label]
+        );
+
+        await pool.controlPool.query(
+            'UPDATE clinic_setup_checklist SET fax_configured = true, fax_date = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $1',
+            [tenantId]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to add fax' });
+    }
+});
+
+/**
+ * DELETE /api/super/clinic-setup/:tenantId/fax/:faxId
+ */
+router.delete('/clinic-setup/:tenantId/fax/:faxId', verifySuperAdmin, async (req, res) => {
+    try {
+        const { tenantId, faxId } = req.params;
+        await pool.controlPool.query('DELETE FROM clinic_fax_numbers WHERE id = $1 AND tenant_id = $2', [faxId, tenantId]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed' });
     }
 });
 
