@@ -203,7 +203,7 @@ export const inboxAPI = {
   update: (id, data) => api.put(`/inbox/${id}`, data),
   addNote: (id, note, isExternal = false) => api.post(`/inbox/${id}/notes`, { note, isExternal }),
   approveAppointment: (id, data) => api.post(`/inbox/${id}/approve-appointment`, data),
-  denyAppointment: (id) => api.post(`/inbox/${id}/deny-appointment`),
+  denyAppointment: (id, reason) => api.post(`/inbox/${id}/deny-appointment`, { reason }),
   suggestSlots: (id, data) => api.post(`/inbox/${id}/suggest-slots`, data),
   sendPatientMessage: (data) => api.post('/inbox/patient-message', data),
 

@@ -801,8 +801,10 @@ const Inbasket = () => {
                                             </button>
                                             <button
                                                 onClick={async () => {
+                                                    const reason = window.prompt('Please enter a reason for denial (sent to patient):');
+                                                    if (reason === null) return;
                                                     try {
-                                                        await inboxAPI.denyAppointment(selectedItem.id);
+                                                        await inboxAPI.denyAppointment(selectedItem.id, reason);
                                                         showSuccess('Appointment request denied');
                                                         fetchData(true);
                                                         setSelectedItem(null);

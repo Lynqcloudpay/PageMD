@@ -262,9 +262,10 @@ const AppointmentRequests = () => {
     };
 
     const handleDeny = async () => {
-        if (!window.confirm('Are you sure you want to deny this appointment request?')) return;
+        const reason = window.prompt('Please enter a reason for denial (sent to patient):');
+        if (reason === null) return;
         try {
-            await inboxAPI.denyAppointment(selectedRequest.id);
+            await inboxAPI.denyAppointment(selectedRequest.id, reason);
             showSuccess('Appointment request denied');
             setSelectedRequest(null);
             fetchData(true);

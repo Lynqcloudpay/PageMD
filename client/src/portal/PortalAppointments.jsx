@@ -641,7 +641,14 @@ const CompactCard = ({ req, type, onCancel, onEdit }) => {
                 </div>
             )}
             {!isPending && (
-                <span className="text-[8px] font-black uppercase text-slate-400">{req.status === 'denied' ? 'Denied' : 'Cancelled'}</span>
+                <div className="text-right">
+                    <span className="text-[8px] font-black uppercase text-slate-400 block">{req.status === 'denied' ? 'Denied' : 'Cancelled'}</span>
+                    {req.status === 'denied' && req.denial_reason && (
+                        <span className="text-[9px] text-red-400 font-medium italic block max-w-[120px] truncate" title={req.denial_reason}>
+                            "{req.denial_reason}"
+                        </span>
+                    )}
+                </div>
             )}
         </div>
     );

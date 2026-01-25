@@ -152,10 +152,13 @@ const PortalDashboard = () => {
                 );
 
                 if (recentUpdates.length > 0) {
+                    const hasDenial = recentUpdates.some(r => r.status === 'denied');
                     newNotifs.push({
                         id: 'appt-updates',
-                        type: 'info',
-                        message: `${recentUpdates.length} appointment update${recentUpdates.length > 1 ? 's' : ''}`,
+                        type: hasDenial ? 'action' : 'info',
+                        message: hasDenial
+                            ? `Appointment request declined. Tap to see why.`
+                            : `${recentUpdates.length} appointment update${recentUpdates.length > 1 ? 's' : ''}`,
                         action: 'appointments'
                     });
                 }

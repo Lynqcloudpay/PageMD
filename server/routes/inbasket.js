@@ -82,6 +82,16 @@ async function ensureSchema(client) {
                 IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'portal_appointment_requests') THEN
                     ALTER TABLE portal_appointment_requests ADD COLUMN IF NOT EXISTS provider_id UUID REFERENCES users(id);
                     ALTER TABLE portal_appointment_requests ADD COLUMN IF NOT EXISTS visit_method VARCHAR(20) DEFAULT 'office';
+                    ALTER TABLE portal_appointment_requests ADD COLUMN IF NOT EXISTS processed_by UUID REFERENCES users(id);
+                    ALTER TABLE portal_appointment_requests ADD COLUMN IF NOT EXISTS processed_at TIMESTAMP WITH TIME ZONE;
+                    ALTER TABLE portal_appointment_requests ADD COLUMN IF NOT EXISTS denial_reason TEXT;
+                    
+                    -- Update status constraint to allow our app statuses
+                    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'portal_appointment_requests_status_check') THEN
+                        ALTER TABLE portal_appointment_requests DROP CONSTRAINT portal_appointment_requests_status_check;
+                    END IF;
+                    ALTER TABLE portal_appointment_requests ADD CONSTRAINT portal_appointment_requests_status_check 
+                        CHECK (status IN ('pending', 'approved', 'denied', 'cancelled', 'pending_patient', 'confirmed', 'declined'));
                 END IF;
                 IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'inbox_items') THEN
                     ALTER TABLE inbox_items ADD COLUMN IF NOT EXISTS visit_method VARCHAR(20) DEFAULT 'office';
@@ -829,6 +839,7 @@ router.post('/:id/deny-appointment', async (req, res) => {
   const client = await pool.connect();
   try {
     const { id } = req.params;
+    const { reason } = req.body;
 
     await client.query('BEGIN');
 
@@ -845,9 +856,9 @@ router.post('/:id/deny-appointment', async (req, res) => {
     if (item.reference_table === 'portal_appointment_requests') {
       await client.query(`
         UPDATE portal_appointment_requests 
-        SET status = 'denied', processed_by = $1, processed_at = CURRENT_TIMESTAMP 
+        SET status = 'denied', processed_by = $1, processed_at = CURRENT_TIMESTAMP, denial_reason = $3
         WHERE id = $2
-      `, [req.user.id, item.reference_id]);
+      `, [req.user.id, item.reference_id, reason || null]);
     }
 
     // Mark the inbox item as completed
