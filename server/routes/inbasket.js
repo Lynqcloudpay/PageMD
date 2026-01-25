@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../db');
 const { authenticate, requireRole, logAudit } = require('../middleware/auth');
 const { enrichWithPatientNames, getPatientDisplayName } = require('../services/patientNameUtils');
+const emailService = require('../services/emailService');
 
 const router = express.Router();
 router.use(authenticate);
@@ -853,7 +854,26 @@ router.post('/:id/deny-appointment', async (req, res) => {
     const item = itemRes.rows[0];
 
     // Update the portal_appointment_request as denied
+    let patientEmail = null;
+    let patientName = null;
+    let preferredDate = null;
+
     if (item.reference_table === 'portal_appointment_requests') {
+      // Get patient info for notification
+      const requestInfo = await client.query(`
+        SELECT r.preferred_date, p.first_name, p.last_name, ppa.email
+        FROM portal_appointment_requests r
+        JOIN patients p ON r.patient_id = p.id
+        JOIN patient_portal_accounts ppa ON r.portal_account_id = ppa.id
+        WHERE r.id = $1
+      `, [item.reference_id]);
+
+      if (requestInfo.rows.length > 0) {
+        patientEmail = requestInfo.rows[0].email;
+        patientName = `${requestInfo.rows[0].first_name} ${requestInfo.rows[0].last_name}`;
+        preferredDate = requestInfo.rows[0].preferred_date;
+      }
+
       await client.query(`
         UPDATE portal_appointment_requests 
         SET status = 'denied', processed_by = $1, processed_at = CURRENT_TIMESTAMP, denial_reason = $3
@@ -869,6 +889,32 @@ router.post('/:id/deny-appointment', async (req, res) => {
     `, [req.user.id, id]);
 
     await client.query('COMMIT');
+
+    // Send email notification to patient (after commit so we don't block on email)
+    if (patientEmail) {
+      try {
+        const clinicName = req.clinic?.display_name || 'Your Healthcare Provider';
+        const formattedDate = preferredDate ? new Date(preferredDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'your requested date';
+
+        await emailService.sendEmail({
+          to: patientEmail,
+          subject: `Appointment Request Update - ${clinicName}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #1e40af;">Appointment Request Update</h2>
+              <p>Dear ${patientName},</p>
+              <p>We regret to inform you that your appointment request for <strong>${formattedDate}</strong> could not be accommodated at this time.</p>
+              ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ''}
+              <p>Please log in to your patient portal to request an alternative appointment time, or contact our office directly.</p>
+              <p style="margin-top: 30px;">Thank you for your understanding,<br><strong>${clinicName}</strong></p>
+            </div>
+          `
+        });
+        console.log(`[Inbasket] Denial notification sent to ${patientEmail}`);
+      } catch (emailErr) {
+        console.warn('[Inbasket] Failed to send denial email:', emailErr.message);
+      }
+    }
     res.json({ success: true, message: 'Appointment request denied' });
   } catch (error) {
     await client.query('ROLLBACK');

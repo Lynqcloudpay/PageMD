@@ -59,6 +59,11 @@ const PortalAppointments = ({ onMessageShortcut }) => {
         visitMethod: 'office' // office, telehealth
     });
 
+    // Cancellation Modal State
+    const [cancellingAppt, setCancellingAppt] = useState(null);
+    const [cancelReason, setCancelReason] = useState('');
+    const [isCancelling, setIsCancelling] = useState(false);
+
     const apiBase = import.meta.env.VITE_API_URL || '/api';
     const token = localStorage.getItem('portalToken');
     const headers = { Authorization: `Bearer ${token}` };
@@ -143,15 +148,22 @@ const PortalAppointments = ({ onMessageShortcut }) => {
         }
     };
 
-    const handleCancelAppointment = async (apptId) => {
-        const reason = window.prompt('Please tell us why you need to cancel this appointment:');
-        if (reason === null) return; // User clicked cancel on prompt
+    const handleCancelAppointment = async () => {
+        if (!cancellingAppt || isCancelling) return;
 
         try {
-            await axios.post(`${apiBase}/portal/appointments/${apptId}/cancel`, { reason: reason || 'Cancelled via Patient Portal' }, { headers });
+            setIsCancelling(true);
+            await axios.post(`${apiBase}/portal/appointments/${cancellingAppt.id}/cancel`, {
+                reason: cancelReason || 'Cancelled via Patient Portal'
+            }, { headers });
+
+            setCancellingAppt(null);
+            setCancelReason('');
             fetchData();
         } catch (err) {
             setError('Failed to cancel appointment.');
+        } finally {
+            setIsCancelling(false);
         }
     };
 
@@ -234,7 +246,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                     Reschedule
                                 </button>
                                 <button
-                                    onClick={() => handleCancelAppointment(nextAppt.id)}
+                                    onClick={() => setCancellingAppt(nextAppt)}
                                     className="px-4 py-2 bg-red-500/20 hover:bg-red-500/40 text-red-100 rounded-xl font-black text-[9px] uppercase tracking-widest transition-colors border border-red-500/20"
                                 >
                                     Cancel Visit
@@ -260,84 +272,80 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                         Schedule Now
                     </button>
                 </div>
-            )
-            }
+            )}
 
             {/* ACTION REQUIRED: Suggested Slots from Clinic */}
-            {
-                withSuggestions.length > 0 && (
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-2 ml-1">
-                            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-red-700">Action Required</h3>
-                        </div>
-                        {withSuggestions.map(req => {
-                            let slots = [];
-                            try { slots = typeof req.suggested_slots === 'string' ? JSON.parse(req.suggested_slots) : req.suggested_slots; } catch (e) { }
-                            return (
-                                <div key={req.id} className="bg-gradient-to-br from-red-50 to-rose-50 border border-red-100 rounded-2xl p-5 shadow-sm">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div>
-                                            <h4 className="font-bold text-red-900 text-sm">Choose Your Appointment Time</h4>
-                                            <p className="text-[10px] text-red-600 font-medium mt-0.5">
-                                                Your requested date wasn't available. Please select one of these options:
-                                            </p>
-                                        </div>
-                                        <button
-                                            onClick={async () => {
-                                                if (!window.confirm('None of these work for you? We will cancel this request.')) return;
-                                                try {
-                                                    await axios.delete(`${apiBase}/portal/appointments/requests/${req.id}`, { headers });
-                                                    fetchData();
-                                                } catch (err) {
-                                                    console.error('Failed to cancel request:', err);
-                                                    setError('Failed to cancel request. Please try again.');
-                                                }
-                                            }}
-                                            className="px-3 py-1.5 bg-red-100/50 hover:bg-red-200 text-red-700 text-[9px] font-black uppercase tracking-widest rounded-lg transition-colors border border-red-200/50"
-                                        >
-                                            None of these work
-                                        </button>
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                        {slots.map((slot, idx) => {
-                                            const d = new Date(`${slot.date}T${slot.time}`);
-                                            return (
-                                                <button
-                                                    key={idx}
-                                                    onClick={async () => {
-                                                        try {
-                                                            await axios.post(`${apiBase}/portal/appointments/requests/${req.id}/accept-slot`, {
-                                                                date: slot.date,
-                                                                time: slot.time
-                                                            }, { headers });
-                                                            fetchData();
-                                                        } catch (err) {
-                                                            console.error('Failed to accept slot:', err);
-                                                            setError('Failed to accept slot. Please try again.');
-                                                        }
-                                                    }}
-                                                    className="flex items-center gap-3 p-3 bg-white hover:bg-red-600 hover:text-white rounded-xl border border-red-100 hover:border-red-600 transition-all group"
-                                                >
-                                                    <div className="w-10 h-10 bg-red-100 group-hover:bg-white/20 rounded-lg flex flex-col items-center justify-center shrink-0">
-                                                        <span className="text-sm font-black text-red-700 group-hover:text-white leading-none">{format(parseLocalSafe(slot.date, slot.time), 'd')}</span>
-                                                        <span className="text-[7px] font-bold text-red-500 group-hover:text-white/80 uppercase">{format(parseLocalSafe(slot.date, slot.time), 'MMM')}</span>
-                                                    </div>
-                                                    <div className="text-left flex-1">
-                                                        <div className="font-bold text-sm text-red-900 group-hover:text-white">{format(parseLocalSafe(slot.date, slot.time), 'EEEE')}</div>
-                                                        <div className="text-[10px] font-medium text-red-600 group-hover:text-white/80">{format(parseLocalSafe(slot.date, slot.time), 'h:mm a')}</div>
-                                                    </div>
-                                                    <CheckCircle2 className="w-5 h-5 text-red-400 group-hover:text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            );
-                        })}
+            {withSuggestions.length > 0 && (
+                <div className="space-y-3">
+                    <div className="flex items-center gap-2 ml-1">
+                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-red-700">Action Required</h3>
                     </div>
-                )
-            }
+                    {withSuggestions.map(req => {
+                        let slots = [];
+                        try { slots = typeof req.suggested_slots === 'string' ? JSON.parse(req.suggested_slots) : req.suggested_slots; } catch (e) { }
+                        return (
+                            <div key={req.id} className="bg-gradient-to-br from-red-50 to-rose-50 border border-red-100 rounded-2xl p-5 shadow-sm">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div>
+                                        <h4 className="font-bold text-red-900 text-sm">Choose Your Appointment Time</h4>
+                                        <p className="text-[10px] text-red-600 font-medium mt-0.5">
+                                            Your requested date wasn't available. Please select one of these options:
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={async () => {
+                                            if (!window.confirm('None of these work for you? We will cancel this request.')) return;
+                                            try {
+                                                await axios.delete(`${apiBase}/portal/appointments/requests/${req.id}`, { headers });
+                                                fetchData();
+                                            } catch (err) {
+                                                console.error('Failed to cancel request:', err);
+                                                setError('Failed to cancel request. Please try again.');
+                                            }
+                                        }}
+                                        className="px-3 py-1.5 bg-red-100/50 hover:bg-red-200 text-red-700 text-[9px] font-black uppercase tracking-widest rounded-lg transition-colors border border-red-200/50"
+                                    >
+                                        None of these work
+                                    </button>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {slots.map((slot, idx) => {
+                                        return (
+                                            <button
+                                                key={idx}
+                                                onClick={async () => {
+                                                    try {
+                                                        await axios.post(`${apiBase}/portal/appointments/requests/${req.id}/accept-slot`, {
+                                                            date: slot.date,
+                                                            time: slot.time
+                                                        }, { headers });
+                                                        fetchData();
+                                                    } catch (err) {
+                                                        console.error('Failed to accept slot:', err);
+                                                        setError('Failed to accept slot. Please try again.');
+                                                    }
+                                                }}
+                                                className="flex items-center gap-3 p-3 bg-white hover:bg-red-600 hover:text-white rounded-xl border border-red-100 hover:border-red-600 transition-all group"
+                                            >
+                                                <div className="w-10 h-10 bg-red-100 group-hover:bg-white/20 rounded-lg flex flex-col items-center justify-center shrink-0">
+                                                    <span className="text-sm font-black text-red-700 group-hover:text-white leading-none">{format(parseLocalSafe(slot.date, slot.time), 'd')}</span>
+                                                    <span className="text-[7px] font-bold text-red-500 group-hover:text-white/80 uppercase">{format(parseLocalSafe(slot.date, slot.time), 'MMM')}</span>
+                                                </div>
+                                                <div className="text-left flex-1">
+                                                    <div className="font-bold text-sm text-red-900 group-hover:text-white">{format(parseLocalSafe(slot.date, slot.time), 'EEEE')}</div>
+                                                    <div className="text-[10px] font-medium text-red-600 group-hover:text-white/80">{format(parseLocalSafe(slot.date, slot.time), 'h:mm a')}</div>
+                                                </div>
+                                                <CheckCircle2 className="w-5 h-5 text-red-400 group-hover:text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
 
             <div className="grid grid-cols-1 gap-12">
                 {/* 1. SCHEDULED - TABLE VIEW */}
@@ -395,7 +403,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                         <td className="px-6 py-5 text-right">
                                             <div className="flex items-center justify-end gap-2">
                                                 <button
-                                                    onClick={() => handleCancelAppointment(appt.id)}
+                                                    onClick={() => setCancellingAppt(appt)}
                                                     className="p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
                                                     title="Cancel Appointment"
                                                 >
@@ -409,7 +417,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                     </tr>
                                 ))}
                                 {scheduled.length === 0 && (
-                                    <tr><td colSpan="4" className="px-6 py-12 text-center text-xs text-slate-300 font-bold uppercase tracking-[0.2em] italic">No upcoming visits found</td></tr>
+                                    <tr><td colSpan="5" className="px-6 py-12 text-center text-xs text-slate-300 font-bold uppercase tracking-[0.2em] italic">No upcoming visits found</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -486,7 +494,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                     </tr>
                                 ))}
                                 {past.length === 0 && (
-                                    <tr><td colSpan="4" className="px-6 py-12 text-center text-xs text-slate-200 font-bold uppercase tracking-[0.2em] italic">No visit history found</td></tr>
+                                    <tr><td colSpan="5" className="px-6 py-12 text-center text-xs text-slate-200 font-bold uppercase tracking-[0.2em] italic">No visit history found</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -541,112 +549,190 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                 )}
             </div>
 
-
             {/* REQUEST FORM MODAL */}
-            {
-                showRequestForm && (
-                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4" onClick={() => setShowRequestForm(false)}>
-                        <div className="bg-white rounded-[2rem] shadow-2xl max-w-lg w-full p-8 animate-in zoom-in duration-300 relative max-h-[90vh] overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}>
-                            <button onClick={() => setShowRequestForm(false)} className="absolute top-6 right-6 w-8 h-8 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-800 transition-all"><X size={16} /></button>
+            {showRequestForm && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4" onClick={() => setShowRequestForm(false)}>
+                    <div className="bg-white rounded-[2rem] shadow-2xl max-w-lg w-full p-8 animate-in zoom-in duration-300 relative max-h-[90vh] overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setShowRequestForm(false)} className="absolute top-6 right-6 w-8 h-8 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-800 transition-all"><X size={16} /></button>
 
-                            <div className="mb-8">
-                                <h2 className="text-xl font-black tracking-tight text-slate-800">Request a Visit</h2>
-                                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Select your preferred date and clinician</p>
+                        <div className="mb-8">
+                            <h2 className="text-xl font-black tracking-tight text-slate-800">Request a Visit</h2>
+                            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Our team will review and confirm</p>
+                        </div>
+
+                        <form onSubmit={handleRequestSubmit} className="space-y-5">
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Clinician</label>
+                                <select required value={formData.providerId} onChange={(e) => setFormData({ ...formData, providerId: e.target.value })} className="portal-input">
+                                    <option value="">Any available</option>
+                                    {staff.map(s => <option key={s.id} value={s.id}>{s.role === 'clinician' || s.role === 'physician' ? 'Dr.' : ''} {s.last_name}, {s.first_name}</option>)}
+                                </select>
                             </div>
 
-                            <form onSubmit={handleRequestSubmit} className="space-y-5">
+                            <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Clinician</label>
-                                    <select required value={formData.providerId} onChange={(e) => setFormData({ ...formData, providerId: e.target.value })} className="portal-input">
-                                        <option value="">Any available</option>
-                                        {staff.map(s => <option key={s.id} value={s.id}>{s.role === 'clinician' || s.role === 'physician' ? 'Dr.' : ''} {s.last_name}, {s.first_name}</option>)}
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Visit Style</label>
+                                    <div className="flex bg-slate-50 p-1 rounded-2xl border border-slate-100">
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, visitMethod: 'office' })}
+                                            className={`flex-1 flex flex-col items-center py-2.5 rounded-xl transition-all ${formData.visitMethod === 'office' ? 'bg-white shadow-md shadow-slate-200/50 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+                                        >
+                                            <MapPin size={14} className="mb-1" />
+                                            <span className="text-[9px] font-black uppercase tracking-widest">Office</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, visitMethod: 'telehealth' })}
+                                            className={`flex-1 flex flex-col items-center py-2.5 rounded-xl transition-all ${formData.visitMethod === 'telehealth' ? 'bg-white shadow-md shadow-slate-200/50 text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}
+                                        >
+                                            <Video size={14} className="mb-1" />
+                                            <span className="text-[9px] font-black uppercase tracking-widest">Virtual</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Urgency</label>
+                                    <select value={formData.appointmentType} onChange={(e) => setFormData({ ...formData, appointmentType: e.target.value })} className="portal-input">
+                                        <option value="Routine Follow-up">Routine Follow-up</option>
+                                        <option value="New Concern">New Concern</option>
+                                        <option value="Urgent Care">Urgent Care</option>
+                                        <option value="Lab Review">Lab Review</option>
                                     </select>
                                 </div>
+                            </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Visit Type</label>
-                                        <div className="flex bg-slate-50 p-1 rounded-2xl border border-slate-100">
-                                            <button
-                                                type="button"
-                                                onClick={() => setFormData({ ...formData, visitMethod: 'office' })}
-                                                className={`flex-1 flex flex-col items-center py-2.5 rounded-xl transition-all ${formData.visitMethod === 'office' ? 'bg-white shadow-md shadow-slate-200/50 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
-                                            >
-                                                <MapPin size={14} className="mb-1" />
-                                                <span className="text-[9px] font-black uppercase tracking-widest">Office</span>
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setFormData({ ...formData, visitMethod: 'telehealth' })}
-                                                className={`flex-1 flex flex-col items-center py-2.5 rounded-xl transition-all ${formData.visitMethod === 'telehealth' ? 'bg-white shadow-md shadow-slate-200/50 text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}
-                                            >
-                                                <Video size={14} className="mb-1" />
-                                                <span className="text-[9px] font-black uppercase tracking-widest">Virtual</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Urgency</label>
-                                        <select value={formData.appointmentType} onChange={(e) => setFormData({ ...formData, appointmentType: e.target.value })} className="portal-input">
-                                            <option value="Routine Follow-up">Routine Follow-up</option>
-                                            <option value="New Concern">New Concern</option>
-                                            <option value="Urgent Care">Urgent Care</option>
-                                            <option value="Lab Review">Lab Review</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Date</label>
-                                        <input type="date" required value={formData.preferredDate} onChange={(e) => setFormData({ ...formData, preferredDate: e.target.value })} min={new Date().toISOString().split('T')[0]} className="portal-input" />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Preferred Time</label>
-                                        <select value={formData.preferredTimeRange} onChange={(e) => setFormData({ ...formData, preferredTimeRange: e.target.value })} className="portal-input">
-                                            <option value="morning">Morning (8am-12pm)</option>
-                                            <option value="afternoon">Afternoon (12pm-5pm)</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                {formData.providerId && formData.preferredDate && (
-                                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
-                                        <div className="flex justify-between items-center">
-                                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest underline decoration-blue-500 decoration-2">Specific Slots</label>
-                                            {loadingAvailability && <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />}
-                                        </div>
-                                        <div className="flex flex-wrap gap-1.5 justify-center">
-                                            {availability.map(slot => (
-                                                <button
-                                                    key={slot.time} type="button" disabled={!slot.available}
-                                                    onClick={() => setFormData(prev => ({ ...prev, exactTime: prev.exactTime === slot.time ? '' : slot.time }))}
-                                                    className={`py-1.5 px-3 rounded-lg text-[10px] font-black transition-all border ${!slot.available ? 'bg-slate-100/50 text-slate-300 border-transparent' :
-                                                        formData.exactTime === slot.time ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-200' :
-                                                            'bg-white text-slate-600 border-slate-200 hover:border-blue-400'
-                                                        }`}
-                                                >
-                                                    {slot.time}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
+                            <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Reason</label>
-                                    <textarea required value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })} className="portal-input h-20" placeholder="Brief visit reason..." />
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Date</label>
+                                    <input type="date" required value={formData.preferredDate} onChange={(e) => setFormData({ ...formData, preferredDate: e.target.value })} min={new Date().toISOString().split('T')[0]} className="portal-input" />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Preferred Time</label>
+                                    <select value={formData.preferredTimeRange} onChange={(e) => setFormData({ ...formData, preferredTimeRange: e.target.value })} className="portal-input">
+                                        <option value="morning">Morning (8am-12pm)</option>
+                                        <option value="afternoon">Afternoon (12pm-5pm)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {formData.providerId && formData.preferredDate && (
+                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest underline decoration-blue-500 decoration-2">Specific Slots</label>
+                                        {loadingAvailability && <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />}
+                                    </div>
+                                    <div className="flex flex-wrap gap-1.5 justify-center">
+                                        {availability.map(slot => (
+                                            <button
+                                                key={slot.time} type="button" disabled={!slot.available}
+                                                onClick={() => setFormData(prev => ({ ...prev, exactTime: prev.exactTime === slot.time ? '' : slot.time }))}
+                                                className={`py-1.5 px-3 rounded-lg text-[10px] font-black transition-all border ${!slot.available ? 'bg-slate-100/50 text-slate-300 border-transparent' :
+                                                    formData.exactTime === slot.time ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-200' :
+                                                        'bg-white text-slate-600 border-slate-200 hover:border-blue-400'
+                                                    }`}
+                                            >
+                                                {slot.time}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Reason</label>
+                                <textarea required value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })} className="portal-input h-20" placeholder="Brief visit reason..." />
+                            </div>
+
+                            <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-[1.2rem] font-black uppercase tracking-widest text-[10px] hover:bg-blue-700 transition-all shadow-xl shadow-blue-100">
+                                Send Request
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* CANCELLATION MODAL - Premium UI */}
+            {cancellingAppt && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[110] flex items-center justify-center p-4 animate-in fade-in duration-300">
+                    <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-10 duration-500">
+                        <div className="bg-gradient-to-br from-rose-500 to-red-600 p-8 text-white relative">
+                            <button
+                                onClick={() => { setCancellingAppt(null); setCancelReason(''); }}
+                                disabled={isCancelling}
+                                className="absolute top-6 right-6 p-2 hover:bg-white/20 rounded-full transition-colors disabled:opacity-0"
+                            >
+                                <X size={20} />
+                            </button>
+                            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
+                                <XCircle size={28} className="text-white" />
+                            </div>
+                            <h2 className="text-2xl font-black tracking-tight leading-tight">Cancel Appointment?</h2>
+                            <p className="text-rose-100 text-[10px] font-black uppercase tracking-widest mt-2 opacity-80">
+                                {format(parseLocalSafe(cancellingAppt.appointment_date), 'EEEE, MMMM do')} @ {cancellingAppt.appointment_time.slice(0, 5)}
+                            </p>
+                        </div>
+
+                        <div className="p-8 space-y-6">
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Reason for Cancellation</label>
+                                <div className="grid grid-cols-1 gap-2">
+                                    {[
+                                        "Scheduling Conflict",
+                                        "Feeling Better",
+                                        "Transportation Issues",
+                                        "Insurance Change",
+                                        "Other"
+                                    ].map(r => (
+                                        <button
+                                            key={r}
+                                            type="button"
+                                            onClick={() => setCancelReason(r)}
+                                            className={`w-full text-left px-4 py-3 rounded-2xl text-xs font-bold transition-all border ${cancelReason === r
+                                                ? 'bg-rose-50 border-rose-200 text-rose-600 ring-2 ring-rose-100'
+                                                : 'bg-slate-50 border-transparent text-slate-600 hover:bg-slate-100'
+                                                }`}
+                                        >
+                                            {r}
+                                        </button>
+                                    ))}
                                 </div>
 
-                                <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-[1.2rem] font-black uppercase tracking-widest text-[10px] hover:bg-blue-700 transition-all shadow-xl shadow-blue-100">
-                                    Send Request
+                                {cancelReason === 'Other' && (
+                                    <textarea
+                                        autoFocus
+                                        placeholder="Please let us know how we can help..."
+                                        className="portal-input h-24 mt-2"
+                                        onChange={(e) => setCancelReason(e.target.value)}
+                                    />
+                                )}
+                            </div>
+
+                            <div className="flex flex-col gap-3 pt-2">
+                                <button
+                                    onClick={handleCancelAppointment}
+                                    disabled={!cancelReason || isCancelling}
+                                    className="w-full bg-rose-600 text-white py-4 rounded-[1.2rem] font-black uppercase tracking-widest text-[10px] hover:bg-rose-700 transition-all shadow-xl shadow-rose-100 disabled:opacity-50 disabled:shadow-none"
+                                >
+                                    {isCancelling ? 'Processing...' : 'Confirm Cancellation'}
                                 </button>
-                            </form>
+                                <button
+                                    onClick={() => { setCancellingAppt(null); setCancelReason(''); }}
+                                    disabled={isCancelling}
+                                    className="w-full text-slate-400 py-3 font-black uppercase tracking-widest text-[9px] hover:text-slate-600 transition-colors"
+                                >
+                                    Keep Appointment
+                                </button>
+                            </div>
+
+                            <p className="text-[9px] text-center text-slate-400 font-medium px-4">
+                                Note: Cancellations within 24 hours may be subject to clinic-specific policies.
+                            </p>
                         </div>
                     </div>
-                )
-            }
-        </div >
+                </div>
+            )}
+        </div>
     );
 };
 
@@ -661,8 +747,7 @@ const SectionLabel = ({ icon, title, count }) => (
 const CompactCard = ({ req, type, onCancel, onEdit }) => {
     const isPending = type === 'pending';
     return (
-        <div className={`p-4 rounded-2xl border transition-all flex items-center justify-between ${isPending ? 'bg-white border-slate-100 shadow-sm' : 'bg-slate-50 border-transparent opacity-60'
-            }`}>
+        <div className={`p-4 rounded-2xl border transition-all flex items-center justify-between ${isPending ? 'bg-white border-slate-100 shadow-sm' : 'bg-slate-50 border-transparent opacity-60'}`}>
             <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center shrink-0 ${isPending ? 'bg-amber-50 text-amber-600' : 'bg-slate-200 text-slate-400'}`}>
                     <span className="text-sm font-black leading-none">{format(parseLocalSafe(req.preferred_date), 'dd')}</span>

@@ -296,20 +296,33 @@ router.post('/:id/cancel', async (req, res) => {
         }
 
         const now = new Date().toISOString();
-        const userName = req.portalAccount.name || 'Patient (Portal)';
+
+        // Get patient name for the audit trail
+        const patientInfo = await pool.query(
+            'SELECT first_name, last_name FROM patients WHERE id = $1',
+            [patientId]
+        );
+        const patientName = patientInfo.rows.length > 0
+            ? `${patientInfo.rows[0].first_name} ${patientInfo.rows[0].last_name}`
+            : 'Patient';
+
+        // Build clear cancellation message indicating portal origin
+        const patientReason = reason ? reason : 'No reason provided';
+        const fullCancellationReason = `[CANCELLED BY PATIENT VIA PORTAL] ${patientReason}`;
 
         // Update status and history
         const statusHistory = checkAppt.rows[0].status_history || [];
         const newHistory = [...statusHistory, {
             status: 'cancelled',
             timestamp: now,
-            changed_by: userName,
-            cancellation_reason: reason || 'Cancelled via Patient Portal'
+            changed_by: `${patientName} (Patient Portal)`,
+            source: 'patient_portal',
+            cancellation_reason: patientReason
         }];
 
         await pool.query(
-            "UPDATE appointments SET patient_status = 'cancelled', cancellation_reason = $1, status_history = $2, checkout_time = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4",
-            [reason || 'Cancelled via Patient Portal', JSON.stringify(newHistory), now, id]
+            "UPDATE appointments SET status = 'cancelled', patient_status = 'cancelled', cancellation_reason = $1, status_history = $2, checkout_time = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4",
+            [fullCancellationReason, JSON.stringify(newHistory), now, id]
         );
 
         res.json({ success: true, message: 'Appointment cancelled successfully' });

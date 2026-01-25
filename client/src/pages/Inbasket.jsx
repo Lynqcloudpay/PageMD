@@ -691,18 +691,35 @@ const Inbasket = () => {
                                 </span>
                                 <span className="text-xs text-gray-500 capitalize">{selectedItem.type.replace('_', ' ')}</span>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => handleAction('complete')}
+                                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-100 hover:scale-105 active:scale-95"
+                                    title="Mark as Complete (Archive)"
+                                >
+                                    <CheckCircleIcon className="w-4 h-4" /> Finish
+                                </button>
+                                <div className="h-8 w-px bg-gray-200 mx-1" />
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         handleDelete();
                                     }}
-                                    className="text-gray-300 hover:text-red-500 transition-colors p-1"
+                                    className="text-gray-300 hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-full"
                                     title="Delete from Inbox"
                                 >
-                                    <Trash2 className="w-4 h-4" />
+                                    <Trash2 className="w-5 h-5" />
                                 </button>
-                                <button onClick={() => setSelectedItem(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedItem(null);
+                                    }}
+                                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all"
+                                    title="Close Preview"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
                             </div>
                         </div>
                         <h2 className="text-lg font-bold text-gray-900 leading-tight mb-1">{selectedItem.subject}</h2>
