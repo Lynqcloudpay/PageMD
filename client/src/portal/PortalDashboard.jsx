@@ -130,14 +130,14 @@ const PortalDashboard = () => {
                     });
                 }
 
-                // Check for appointment suggestions
-                const hasSuggestions = msgsRes.data.some(t => t.last_message_body?.includes('[SUGGEST_SLOT:'));
-                if (hasSuggestions) {
+                // Check for appointment suggestions (clinic alternative slots)
+                const actionRequiredAppts = reqsRes.data.filter(r => r.status === 'pending_patient' && r.suggested_slots);
+                if (actionRequiredAppts.length > 0) {
                     newNotifs.push({
-                        id: 'appt-slots',
+                        id: 'appt-action-required',
                         type: 'action',
-                        message: `Action Required: Review suggested appointment slots`,
-                        action: 'messages',
+                        message: `Action Required: Choose an alternative time for your visit`,
+                        action: 'appointments',
                         priority: 'urgent'
                     });
                 }
