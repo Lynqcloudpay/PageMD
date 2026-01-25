@@ -161,20 +161,32 @@ const PortalDashboard = () => {
                 const threeDaysAgo = new Date();
                 threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
+                // Find ALL denied requests (regardless of date for debugging)
+                const allDeniedRequests = reqsRes.data.filter(r => r.status === 'denied');
+                console.log('[Portal Notifications] All denied requests:', allDeniedRequests.length, allDeniedRequests);
+
                 const recentUpdates = reqsRes.data.filter(r =>
                     (r.status === 'confirmed' || r.status === 'denied' || r.status === 'approved') &&
                     new Date(r.processed_at || r.created_at) > threeDaysAgo
                 );
 
+                console.log('[Portal Notifications] Recent updates (within 3 days):', recentUpdates.length, recentUpdates);
+
                 if (recentUpdates.length > 0) {
-                    const hasDenial = recentUpdates.some(r => r.status === 'denied');
+                    const deniedCount = recentUpdates.filter(r => r.status === 'denied').length;
+                    const hasDenial = deniedCount > 0;
+
+                    // Use a unique ID based on count and timestamp so it can't be accidentally dismissed
+                    const notifId = `appt-updates-${hasDenial ? 'denied' : 'updated'}-${recentUpdates.length}`;
+
                     newNotifs.push({
-                        id: 'appt-updates',
+                        id: notifId,
                         type: hasDenial ? 'action' : 'info',
                         message: hasDenial
-                            ? `Appointment request declined. Tap to see why.`
+                            ? `⚠️ ${deniedCount} appointment request${deniedCount > 1 ? 's' : ''} declined. Tap to see why.`
                             : `${recentUpdates.length} appointment update${recentUpdates.length > 1 ? 's' : ''}`,
-                        action: 'appointments'
+                        action: 'appointments',
+                        priority: hasDenial ? 'urgent' : 'normal'
                     });
                 }
 
