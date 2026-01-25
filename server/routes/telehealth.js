@@ -1,7 +1,11 @@
 const axios = require('axios');
 const express = require('express');
-const router = express.Router();
 const { authenticate } = require('../middleware/auth');
+const featureGuard = require('../middleware/featureGuard');
+
+const router = express.Router();
+router.use(authenticate);
+router.use(featureGuard('telehealth'));
 
 // Daily.co API configuration
 const DAILY_API_KEY = process.env.DAILY_API_KEY;

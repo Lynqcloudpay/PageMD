@@ -593,6 +593,60 @@ const ClinicOnboardingManager = ({ tenantId, apiCall }) => {
     );
 };
 
+const ClinicFeatureManager = ({ clinicId, currentFeatures, apiCall, onUpdate }) => {
+    const [updating, setUpdating] = useState(false);
+
+    const toggleFeature = async (featureKey) => {
+        setUpdating(true);
+        try {
+            const updated = { [featureKey]: !currentFeatures[featureKey] };
+            await apiCall('PATCH', `/clinics/${clinicId}/features`, { features: updated });
+            onUpdate();
+        } catch (err) {
+            alert('Failed to update feature');
+        } finally {
+            setUpdating(false);
+        }
+    };
+
+    const features = [
+        { key: 'efax', label: 'eFax Integration', icon: Activity, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+        { key: 'labs', label: 'Lab Integration (HL7)', icon: Database, color: 'text-blue-500', bg: 'bg-blue-50' },
+        { key: 'telehealth', label: 'Telehealth (Video)', icon: Zap, color: 'text-orange-500', bg: 'bg-orange-50' },
+        { key: 'eprescribe', label: 'e-Prescribing', icon: Shield, color: 'text-purple-500', bg: 'bg-purple-50' },
+    ];
+
+    return (
+        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
+            <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                    <Zap className="w-3.5 h-3.5" />
+                    Feature Management
+                </h3>
+                {updating && <div className="w-3 h-3 border-2 border-indigo-200 border-t-indigo-500 rounded-full animate-spin"></div>}
+            </div>
+            {features.map((f) => (
+                <div key={f.key} className="flex items-center justify-between group">
+                    <div className="flex items-center gap-2">
+                        <div className={`p-1.5 rounded-lg ${f.bg} ${f.color} group-hover:scale-110 transition-transform`}>
+                            <f.icon className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="text-xs font-bold text-slate-700">{f.label}</span>
+                    </div>
+                    <button
+                        onClick={() => toggleFeature(f.key)}
+                        disabled={updating}
+                        className={`w-11 h-5.5 rounded-full p-1 transition-all ${currentFeatures?.[f.key] ? 'bg-emerald-500 shadow-sm shadow-emerald-500/30' : 'bg-slate-300'}`}
+                    >
+                        <div className={`w-3.5 h-3.5 bg-white rounded-full transition-all ${currentFeatures?.[f.key] ? 'translate-x-5.5' : 'translate-x-0'}`}></div>
+                    </button>
+                </div>
+            ))}
+            <p className="text-[10px] text-slate-400 italic mt-2 leading-tight">These toggles control access to specific clinical integrations regardless of subscription tier.</p>
+        </div>
+    );
+};
+
 const PlatformAuditTrail = ({ clinicId, apiCall }) => {
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -777,7 +831,14 @@ const PlatformAdminClinicDetails = () => {
                         <div className="space-y-3">
                             <div>
                                 <h1 className="text-3xl font-black text-slate-800 tracking-tight leading-none mb-1">{clinic.display_name}</h1>
-                                <p className="text-slate-500 font-medium">Platform Clinic Entity</p>
+                                <p className="text-slate-500 font-medium flex items-center gap-2">
+                                    Platform Clinic Entity
+                                    {clinic.plan_name && (
+                                        <span className="bg-indigo-500 text-white text-[10px] px-2 py-0.5 rounded-full uppercase font-black tracking-widest">
+                                            {clinic.plan_name} Plan
+                                        </span>
+                                    )}
+                                </p>
                             </div>
 
                             <div className="flex flex-wrap items-center gap-4 text-sm">
@@ -997,6 +1058,13 @@ const PlatformAdminClinicDetails = () => {
                                     </div>
                                     <p className="text-[10px] text-slate-400 italic">Changes take effect immediately for all users.</p>
                                 </div>
+
+                                <ClinicFeatureManager
+                                    clinicId={id}
+                                    currentFeatures={clinic.enabled_features}
+                                    apiCall={apiCall}
+                                    onUpdate={loadClinic}
+                                />
 
                                 <div className="p-4 bg-indigo-50/30 rounded-2xl border border-indigo-100/50 space-y-4">
                                     <h3 className="text-xs font-black text-indigo-400 uppercase tracking-wider mb-2 flex items-center gap-2">

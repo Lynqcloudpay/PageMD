@@ -58,6 +58,18 @@ router.post('/receive', async (req, res) => {
       if (tenantLookup.rows.length > 0) {
         tenantId = tenantLookup.rows[0].tenant_id;
         console.log('[HL7] Routed to tenant:', tenantId);
+
+        // Phase 3: Check if Lab feature is enabled for this clinic
+        if (tenantId !== 'default') {
+          const featureCheck = await pool.controlPool.query(
+            'SELECT enabled_features FROM clinics WHERE slug = $1',
+            [tenantId]
+          );
+          if (!featureCheck.rows[0]?.enabled_features?.labs) {
+            console.warn(`[HL7] Webhook rejected: labs feature disabled for tenant ${tenantId}`);
+            return res.status(403).json({ error: 'Lab integration is disabled for this clinic' });
+          }
+        }
       }
     } catch (e) {
       console.error('[HL7] Tenant lookup error:', e.message);

@@ -50,20 +50,18 @@ router.get('/clinics', verifySuperAdmin, async (req, res) => {
         const { status, search } = req.query;
 
         let query = `
-      SELECT 
-        c.*,
-        cs.status as subscription_status,
-        cs.current_period_end,
-        sp.name as plan_name,
-        sp.price_monthly,
-        COUNT(DISTINCT st.id) FILTER (WHERE st.status IN ('open', 'in_progress')) as open_tickets,
-        csc.onboarding_complete
-      FROM clinics c
-      LEFT JOIN clinic_subscriptions cs ON c.id = cs.clinic_id
-      LEFT JOIN subscription_plans sp ON cs.plan_id = sp.id
-      LEFT JOIN support_tickets st ON c.id = st.clinic_id
-      LEFT JOIN clinic_setup_checklist csc ON c.slug = csc.tenant_id
-    `;
+            SELECT 
+                c.*,
+                NULL as subscription_status,
+                NULL as current_period_end,
+                'Active' as plan_name,
+                0 as price_monthly,
+                COUNT(DISTINCT st.id) FILTER (WHERE st.status IN ('open', 'in_progress')) as open_tickets,
+                COALESCE(csc.onboarding_complete, false) as onboarding_complete
+            FROM clinics c
+            LEFT JOIN platform_support_tickets st ON c.id = st.clinic_id
+            LEFT JOIN clinic_setup_checklist csc ON c.slug = csc.tenant_id
+        `;
 
         const conditions = [];
         const params = [];
@@ -92,7 +90,7 @@ router.get('/clinics', verifySuperAdmin, async (req, res) => {
             query += ' WHERE ' + conditions.join(' AND ');
         }
 
-        query += ' GROUP BY c.id, cs.id, sp.id, csc.onboarding_complete ORDER BY c.created_at DESC';
+        query += ' GROUP BY c.id, csc.onboarding_complete ORDER BY c.created_at DESC';
 
         const { rows } = await pool.controlPool.query(query, params);
         res.json(rows);
@@ -111,46 +109,34 @@ router.get('/clinics/:id', verifySuperAdmin, async (req, res) => {
         const { id } = req.params;
 
         const clinic = await pool.controlPool.query(`
-      SELECT 
+        SELECT
         c.*,
-        cs.status as subscription_status,
-        cs.billing_cycle,
-        cs.current_period_start,
-        cs.current_period_end,
-        cs.trial_end_date,
-        sp.name as plan_name,
-        sp.price_monthly,
-        sp.price_yearly
+            NULL as subscription_status,
+            NULL as billing_cycle,
+            NULL as current_period_start,
+            NULL as current_period_end,
+            NULL as trial_end_date,
+            'Active' as plan_name,
+            0 as price_monthly,
+            0 as price_yearly
       FROM clinics c
-      LEFT JOIN clinic_subscriptions cs ON c.id = cs.clinic_id
-      LEFT JOIN subscription_plans sp ON cs.plan_id = sp.id
       WHERE c.id = $1
-    `, [id]);
+            `, [id]);
 
         if (clinic.rows.length === 0) {
             return res.status(404).json({ error: 'Clinic not found' });
         }
 
-        // Get recent usage metrics
-        const usage = await pool.controlPool.query(`
-      SELECT * FROM clinic_usage_metrics
-      WHERE clinic_id = $1
-      ORDER BY metric_date DESC
-      LIMIT 30
-    `, [id]);
+        // Stubbed recent usage metrics
+        const usage = [];
 
-        // Get payment history
-        const payments = await pool.controlPool.query(`
-      SELECT * FROM payment_history
-      WHERE clinic_id = $1
-      ORDER BY created_at DESC
-      LIMIT 10
-    `, [id]);
+        // Stubbed payment history
+        const payments = [];
 
         res.json({
             clinic: clinic.rows[0],
-            usage: usage.rows,
-            recent_payments: payments.rows
+            usage: usage,
+            recent_payments: payments
         });
     } catch (error) {
         console.error('Error fetching clinic details:', error);
@@ -166,27 +152,27 @@ router.get('/clinics/:id', verifySuperAdmin, async (req, res) => {
 router.get('/clinics/:id/users', verifySuperAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        console.log(`[SuperAdmin] Request for clinic users. ID: ${id}`);
+        console.log(`[SuperAdmin] Request for clinic users.ID: ${id} `);
 
         // 1. Get clinic schema
         const clinicRes = await pool.controlPool.query('SELECT schema_name FROM clinics WHERE id = $1', [id]);
         if (clinicRes.rows.length === 0) {
-            console.warn(`[SuperAdmin] Clinic not found during user list request: ${id}`);
+            console.warn(`[SuperAdmin] Clinic not found during user list request: ${id} `);
             return res.status(404).json({ error: 'Clinic not found' });
         }
 
         const { schema_name } = clinicRes.rows[0];
-        console.log(`[SuperAdmin] Found schema: ${schema_name} for clinic: ${id}`);
+        console.log(`[SuperAdmin] Found schema: ${schema_name} for clinic: ${id} `);
 
         // 2. Query users from that schema
         const usersRes = await pool.controlPool.query(`
-            SELECT 
-                u.id, u.email, u.first_name, u.last_name, u.status, u.role, u.is_admin, u.last_login, u.created_at,
-                r.name as role_display_name
+        SELECT
+        u.id, u.email, u.first_name, u.last_name, u.status, u.role, u.is_admin, u.last_login, u.created_at,
+            r.name as role_display_name
             FROM ${schema_name}.users u
             LEFT JOIN ${schema_name}.roles r ON u.role_id = r.id
             ORDER BY u.created_at DESC
-        `);
+            `);
 
         console.log(`[SuperAdmin] Successfully retrieved ${usersRes.rows.length} users for ${schema_name}`);
         res.json(usersRes.rows);
@@ -216,7 +202,7 @@ router.patch('/clinics/:id/status', verifySuperAdmin, async (req, res) => {
 
         // Log the action
         // Log the action (Phase 3: Secure Audit)
-        await AuditService.log(null, `clinic_${status}`, id, { reason });
+        await AuditService.log(null, `clinic_${status} `, id, { reason });
 
         res.json({ message: `Clinic ${status} successfully`, status });
     } catch (error) {
@@ -271,7 +257,7 @@ router.patch('/clinics/:id/controls', verifySuperAdmin, async (req, res) => {
         for (const [key, type] of Object.entries(allowedKeys)) {
             if (req.body[key] !== undefined) {
                 pCount++;
-                updates.push(`${key} = $${pCount}`);
+                updates.push(`${key} = $${pCount} `);
 
                 // Special handling for date fields: empty string means NULL
                 if (key === 'go_live_date' && req.body[key] === '') {
@@ -290,7 +276,7 @@ router.patch('/clinics/:id/controls', verifySuperAdmin, async (req, res) => {
             return res.status(400).json({ error: 'No valid update fields provided' });
         }
 
-        const query = `UPDATE clinics SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $1 RETURNING *`;
+        const query = `UPDATE clinics SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $1 RETURNING * `;
         const result = await pool.controlPool.query(query, params);
         const afterData = result.rows[0];
 
@@ -313,6 +299,45 @@ router.patch('/clinics/:id/controls', verifySuperAdmin, async (req, res) => {
     } catch (error) {
         console.error('Error updating clinic controls:', error);
         res.status(500).json({ error: 'Failed to update clinic controls' });
+    }
+});
+
+/**
+ * PATCH /api/super/clinics/:id/features
+ * Update granular EMR feature toggles
+ */
+router.patch('/clinics/:id/features', verifySuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { features } = req.body;
+
+        if (!features || typeof features !== 'object') {
+            return res.status(400).json({ error: 'Invalid features object provided' });
+        }
+
+        // Fetch current features for audit
+        const currentRes = await pool.controlPool.query('SELECT enabled_features FROM clinics WHERE id = $1', [id]);
+        if (currentRes.rows.length === 0) return res.status(404).json({ error: 'Clinic not found' });
+
+        const currentFeatures = currentRes.rows[0].enabled_features || {};
+        const updatedFeatures = { ...currentFeatures, ...features };
+
+        const result = await pool.controlPool.query(
+            'UPDATE clinics SET enabled_features = $1, updated_at = NOW() WHERE id = $2 RETURNING enabled_features',
+            [JSON.stringify(updatedFeatures), id]
+        );
+
+        // Audit the change
+        await AuditService.log(null, 'clinic_features_updated', id, {
+            adminEmail: req.platformAdmin.email,
+            changes: features,
+            previousFeatures: currentFeatures
+        });
+
+        res.json({ success: true, enabled_features: result.rows[0].enabled_features });
+    } catch (error) {
+        console.error('Error updating clinic features:', error);
+        res.status(500).json({ error: 'Failed to update clinic features' });
     }
 });
 
@@ -368,9 +393,9 @@ router.post('/clinics/onboard', verifySuperAdmin, async (req, res) => {
 
         if (trialPlan.rows.length > 0) {
             await pool.controlPool.query(`
-        INSERT INTO clinic_subscriptions (clinic_id, plan_id, status, trial_end_date, current_period_start, current_period_end)
-        VALUES ($1, $2, 'trial', NOW() + INTERVAL '30 days', NOW(), NOW() + INTERVAL '30 days')
-      `, [clinicId, trialPlan.rows[0].id]);
+        INSERT INTO clinic_subscriptions(clinic_id, plan_id, status, trial_end_date, current_period_start, current_period_end)
+        VALUES($1, $2, 'trial', NOW() + INTERVAL '30 days', NOW(), NOW() + INTERVAL '30 days')
+            `, [clinicId, trialPlan.rows[0].id]);
         }
 
         res.status(201).json({
@@ -396,17 +421,17 @@ router.get('/subscriptions', verifySuperAdmin, async (req, res) => {
         const { status } = req.query;
 
         let query = `
-      SELECT 
+        SELECT
         cs.*,
-        c.display_name as clinic_name,
-        c.slug,
-        sp.name as plan_name,
-        sp.price_monthly,
-        sp.price_yearly
+            c.display_name as clinic_name,
+            c.slug,
+            sp.name as plan_name,
+            sp.price_monthly,
+            sp.price_yearly
       FROM clinic_subscriptions cs
       JOIN clinics c ON cs.clinic_id = c.id
       JOIN subscription_plans sp ON cs.plan_id = sp.id
-    `;
+            `;
 
         const params = [];
         if (status) {
@@ -433,10 +458,10 @@ router.post('/payments', verifySuperAdmin, async (req, res) => {
         const { clinic_id, amount, payment_method, transaction_id, description } = req.body;
 
         const result = await pool.controlPool.query(`
-      INSERT INTO payment_history (clinic_id, amount, payment_method, transaction_id, description, status, paid_at)
-      VALUES ($1, $2, $3, $4, $5, 'completed', NOW())
-      RETURNING *
-    `, [clinic_id, amount, payment_method, transaction_id, description]);
+      INSERT INTO payment_history(clinic_id, amount, payment_method, transaction_id, description, status, paid_at)
+        VALUES($1, $2, $3, $4, $5, 'completed', NOW())
+        RETURNING *
+            `, [clinic_id, amount, payment_method, transaction_id, description]);
 
         res.status(201).json(result.rows[0]);
     } catch (error) {
@@ -456,26 +481,26 @@ router.get('/revenue', verifySuperAdmin, async (req, res) => {
         const interval = period === 'year' ? '12 months' : '30 days';
 
         const revenue = await pool.controlPool.query(`
-      SELECT 
+        SELECT
         DATE_TRUNC('day', paid_at) as date,
-        SUM(amount) as total,
-        COUNT(*) as transaction_count
+            SUM(amount) as total,
+            COUNT(*) as transaction_count
       FROM payment_history
       WHERE paid_at >= NOW() - INTERVAL '${interval}'
         AND status = 'completed'
       GROUP BY DATE_TRUNC('day', paid_at)
       ORDER BY date DESC
-    `);
+            `);
 
         const summary = await pool.controlPool.query(`
-      SELECT 
+        SELECT
         COUNT(DISTINCT clinic_id) as paying_clinics,
-        SUM(amount) as total_revenue,
-        AVG(amount) as avg_transaction
+            SUM(amount) as total_revenue,
+            AVG(amount) as avg_transaction
       FROM payment_history
       WHERE paid_at >= NOW() - INTERVAL '${interval}'
         AND status = 'completed'
-    `);
+            `);
 
         res.json({
             period,
@@ -501,29 +526,29 @@ router.get('/tickets', verifySuperAdmin, async (req, res) => {
         const { status, priority, clinic_id } = req.query;
 
         let query = `
-      SELECT 
+        SELECT
         st.*,
-        c.display_name as clinic_name,
-        c.slug as clinic_slug
-      FROM support_tickets st
+            c.display_name as clinic_name,
+            c.slug as clinic_slug
+      FROM platform_support_tickets st
       JOIN clinics c ON st.clinic_id = c.id
-    `;
+            `;
 
         const conditions = [];
         const params = [];
 
         if (status) {
-            conditions.push(`st.status = $${params.length + 1}`);
+            conditions.push(`st.status = $${params.length + 1} `);
             params.push(status);
         }
 
         if (priority) {
-            conditions.push(`st.priority = $${params.length + 1}`);
+            conditions.push(`st.priority = $${params.length + 1} `);
             params.push(priority);
         }
 
         if (clinic_id) {
-            conditions.push(`st.clinic_id = $${params.length + 1}`);
+            conditions.push(`st.clinic_id = $${params.length + 1} `);
             params.push(clinic_id);
         }
 
@@ -556,7 +581,7 @@ router.patch('/tickets/:id', verifySuperAdmin, async (req, res) => {
 
         if (status) {
             paramCount++;
-            updates.push(`status = $${paramCount}`);
+            updates.push(`status = $${paramCount} `);
             params.push(status);
 
             if (status === 'resolved' || status === 'closed') {
@@ -567,13 +592,13 @@ router.patch('/tickets/:id', verifySuperAdmin, async (req, res) => {
 
         if (assigned_to) {
             paramCount++;
-            updates.push(`assigned_to = $${paramCount}`);
+            updates.push(`assigned_to = $${paramCount} `);
             params.push(assigned_to);
         }
 
         if (priority) {
             paramCount++;
-            updates.push(`priority = $${paramCount}`);
+            updates.push(`priority = $${paramCount} `);
             params.push(priority);
         }
 
@@ -581,7 +606,7 @@ router.patch('/tickets/:id', verifySuperAdmin, async (req, res) => {
             return res.status(400).json({ error: 'No updates provided' });
         }
 
-        const query = `UPDATE support_tickets SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $1 RETURNING *`;
+        const query = `UPDATE platform_support_tickets SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $1 RETURNING * `;
         const result = await pool.controlPool.query(query, params);
 
         res.json(result.rows[0]);
@@ -624,7 +649,7 @@ router.post('/clinics/:id/users/:userId/reset-password', verifySuperAdmin, async
         // 3. Update in tenant schema
         await pool.controlPool.query(`
             UPDATE ${schema_name}.users SET password_hash = $1, updated_at = NOW() WHERE id = $2
-        `, [hash, userId]);
+            `, [hash, userId]);
 
         // 4. Log the action
         // 4. Log the action
@@ -651,9 +676,9 @@ router.patch('/clinics/:id/users/:userId/status', verifySuperAdmin, async (req, 
 
         await pool.controlPool.query(`
             UPDATE ${schema_name}.users SET status = $1, updated_at = NOW() WHERE id = $2
-        `, [status, userId]);
+            `, [status, userId]);
 
-        res.json({ message: `User status updated to ${status}` });
+        res.json({ message: `User status updated to ${status} ` });
     } catch (error) {
         console.error('Error updating user status:', error);
         res.status(500).json({ error: 'Failed to update user status' });
@@ -670,43 +695,24 @@ router.patch('/clinics/:id/users/:userId/status', verifySuperAdmin, async (req, 
  */
 router.get('/dashboard', verifySuperAdmin, async (req, res) => {
     try {
-        // Total clinics by status
+        // clinics stats
         const clinicsStats = await pool.controlPool.query(`
-      SELECT 
-        status,
-        COUNT(*) as count
-      FROM clinics
-      GROUP BY status
-    `);
+        SELECT status, COUNT(*) as count FROM clinics GROUP BY status
+            `);
 
-        // Active subscriptions
-        const subscriptionStats = await pool.controlPool.query(`
-      SELECT 
-        status,
-        COUNT(*) as count
-      FROM clinic_subscriptions
-      GROUP BY status
-    `);
+        // Active subscriptions (stub)
+        const subscriptionStats = { rows: [] };
 
-        // Revenue this month
-        const revenue = await pool.controlPool.query(`
-      SELECT 
-        SUM(amount) as total,
-        COUNT(*) as transactions
-      FROM payment_history
-      WHERE paid_at >= DATE_TRUNC('month', NOW())
-        AND status = 'completed'
-    `);
+        // Revenue this month (stub)
+        const revenue = { rows: [{ total: 0, transactions: 0 }] };
 
         // Open support tickets
         const tickets = await pool.controlPool.query(`
-      SELECT 
-        status,
-        COUNT(*) as count
-      FROM platform_support_tickets
-      WHERE status IN ('open', 'in_progress')
-      GROUP BY status
-    `);
+        SELECT status, COUNT(*) as count 
+        FROM platform_support_tickets 
+        WHERE status IN ('open', 'in_progress')
+        GROUP BY status
+            `);
 
         // Recent activity
         const recentClinics = await pool.controlPool.query(`
@@ -714,7 +720,7 @@ router.get('/dashboard', verifySuperAdmin, async (req, res) => {
       FROM clinics
       ORDER BY created_at DESC
       LIMIT 5
-    `);
+            `);
 
         res.json({
             clinics: clinicsStats.rows,
@@ -755,10 +761,10 @@ router.post('/clinics/:id/impersonate', verifySuperAdmin, async (req, res) => {
 
         // 3. Create impersonation record
         await pool.controlPool.query(`
-            INSERT INTO platform_impersonation_tokens 
+            INSERT INTO platform_impersonation_tokens
             (admin_id, target_clinic_id, target_user_id, token, reason, expires_at)
-            VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '15 minutes')
-        `, [req.platformAdmin.id, id, userId, token, reason]);
+        VALUES($1, $2, $3, $4, $5, NOW() + INTERVAL '15 minutes')
+            `, [req.platformAdmin.id, id, userId, token, reason]);
 
         // 4. Log the "Break Glass" event
         // 4. Log the "Break Glass" event
@@ -787,13 +793,13 @@ router.post('/clinics/:id/impersonate', verifySuperAdmin, async (req, res) => {
 router.get('/governance/roles', verifySuperAdmin, async (req, res) => {
     try {
         const templates = await pool.controlPool.query(`
-            SELECT t.*, 
-                   COALESCE(json_agg(tp.privilege_name) FILTER (WHERE tp.privilege_name IS NOT NULL), '[]') as privilege_set
+            SELECT t.*,
+            COALESCE(json_agg(tp.privilege_name) FILTER(WHERE tp.privilege_name IS NOT NULL), '[]') as privilege_set
             FROM platform_role_templates t
             LEFT JOIN platform_role_template_privileges tp ON t.id = tp.template_id
             GROUP BY t.id
             ORDER BY t.role_key
-        `);
+            `);
         res.json(templates.rows);
     } catch (error) {
         console.error('Error fetching role templates:', error);
@@ -813,19 +819,19 @@ router.post('/governance/roles', verifySuperAdmin, async (req, res) => {
 
         // 1. Create Template
         const templateRes = await client.query(`
-            INSERT INTO platform_role_templates (role_key, display_name, description, version)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO platform_role_templates(role_key, display_name, description, version)
+        VALUES($1, $2, $3, $4)
             RETURNING id
-        `, [role_key, display_name, description, version || '1.0']);
+            `, [role_key, display_name, description, version || '1.0']);
         const templateId = templateRes.rows[0].id;
 
         // 2. Add Privileges
         if (privileges && privileges.length > 0) {
             for (const priv of privileges) {
                 await client.query(`
-                    INSERT INTO platform_role_template_privileges (template_id, privilege_name)
-                    VALUES ($1, $2)
-                `, [templateId, priv]);
+                    INSERT INTO platform_role_template_privileges(template_id, privilege_name)
+        VALUES($1, $2)
+            `, [templateId, priv]);
             }
         }
 
@@ -860,7 +866,7 @@ router.put('/governance/roles/:id', verifySuperAdmin, async (req, res) => {
             UPDATE platform_role_templates
             SET role_key = $1, display_name = $2, description = $3, version = $4, updated_at = NOW()
             WHERE id = $5
-        `, [role_key, display_name, description, version, id]);
+            `, [role_key, display_name, description, version, id]);
 
         // 2. Update Privileges (Delete all + Re-insert is simplest/ safest for full sync)
         await client.query('DELETE FROM platform_role_template_privileges WHERE template_id = $1', [id]);
@@ -868,8 +874,8 @@ router.put('/governance/roles/:id', verifySuperAdmin, async (req, res) => {
         if (privileges && privileges.length > 0) {
             for (const priv of privileges) {
                 await client.query(`
-                    INSERT INTO platform_role_template_privileges (template_id, privilege_name)
-                    VALUES ($1, $2)
+                    INSERT INTO platform_role_template_privileges(template_id, privilege_name)
+        VALUES($1, $2)
                 `, [id, priv]);
             }
         }
@@ -985,7 +991,7 @@ router.get('/audit-logs', verifySuperAdmin, async (req, res) => {
             LEFT JOIN clinics c ON pal.target_clinic_id = c.id
             ORDER BY pal.created_at DESC
             LIMIT $1 OFFSET $2
-        `, [parseInt(limit), parseInt(offset)]);
+            `, [parseInt(limit), parseInt(offset)]);
         res.json(result.rows);
     } catch (error) {
         console.error('Error fetching platform audit logs:', error);
@@ -1002,11 +1008,11 @@ router.get('/clinics/:id/audit-logs', verifySuperAdmin, async (req, res) => {
         const { id } = req.params;
         const { limit = 50 } = req.query;
         const result = await pool.controlPool.query(`
-            SELECT * FROM platform_audit_logs
+        SELECT * FROM platform_audit_logs
             WHERE target_clinic_id = $1
             ORDER BY created_at DESC
             LIMIT $2
-        `, [id, parseInt(limit)]);
+            `, [id, parseInt(limit)]);
         res.json(result.rows);
     } catch (error) {
         console.error('Error fetching clinic audit logs:', error);
@@ -1030,18 +1036,18 @@ router.get('/support-tickets', verifySuperAdmin, async (req, res) => {
             SELECT st.*, c.display_name as clinic_name, c.slug as clinic_slug
             FROM platform_support_tickets st
             LEFT JOIN clinics c ON st.clinic_id = c.id
-        `;
+            `;
         const params = [];
         const conditions = [];
 
         if (status !== 'all') {
             params.push(status);
-            conditions.push(`st.status = $${params.length}`);
+            conditions.push(`st.status = $${params.length} `);
         }
 
         if (priority) {
             params.push(priority);
-            conditions.push(`st.priority = $${params.length}`);
+            conditions.push(`st.priority = $${params.length} `);
         }
 
         if (conditions.length > 0) {
@@ -1050,9 +1056,9 @@ router.get('/support-tickets', verifySuperAdmin, async (req, res) => {
 
         query += ' ORDER BY st.created_at DESC';
         params.push(parseInt(limit));
-        query += ` LIMIT $${params.length}`;
+        query += ` LIMIT $${params.length} `;
         params.push(parseInt(offset));
-        query += ` OFFSET $${params.length}`;
+        query += ` OFFSET $${params.length} `;
 
         const result = await pool.controlPool.query(query, params);
 
@@ -1087,7 +1093,7 @@ router.get('/support-tickets/:id', verifySuperAdmin, async (req, res) => {
             FROM platform_support_tickets st
             LEFT JOIN clinics c ON st.clinic_id = c.id
             WHERE st.id = $1
-        `, [id]);
+            `, [id]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Ticket not found' });
@@ -1112,10 +1118,10 @@ router.patch('/support-tickets/:id', verifySuperAdmin, async (req, res) => {
         const result = await pool.controlPool.query(`
             UPDATE platform_support_tickets
             SET status = COALESCE($1, status),
-                updated_at = NOW()
+            updated_at = NOW()
             WHERE id = $2
-            RETURNING *
-        `, [status, id]);
+        RETURNING *
+            `, [status, id]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Ticket not found' });
@@ -1147,15 +1153,15 @@ router.patch('/support-tickets/:id', verifySuperAdmin, async (req, res) => {
 router.get('/support-stats', verifySuperAdmin, async (req, res) => {
     try {
         const result = await pool.controlPool.query(`
-            SELECT 
-                COUNT(*) FILTER (WHERE status = 'open') as open_count,
-                COUNT(*) FILTER (WHERE status = 'in_progress') as in_progress_count,
-                COUNT(*) FILTER (WHERE status = 'resolved') as resolved_count,
-                COUNT(*) FILTER (WHERE priority = 'critical' AND status = 'open') as critical_open,
-                COUNT(*) FILTER (WHERE priority = 'high' AND status = 'open') as high_open,
-                COUNT(*) as total
+        SELECT
+        COUNT(*) FILTER(WHERE status = 'open') as open_count,
+            COUNT(*) FILTER(WHERE status = 'in_progress') as in_progress_count,
+                COUNT(*) FILTER(WHERE status = 'resolved') as resolved_count,
+                    COUNT(*) FILTER(WHERE priority = 'critical' AND status = 'open') as critical_open,
+                        COUNT(*) FILTER(WHERE priority = 'high' AND status = 'open') as high_open,
+                            COUNT(*) as total
             FROM platform_support_tickets
-        `);
+            `);
 
         res.json(result.rows[0]);
     } catch (error) {

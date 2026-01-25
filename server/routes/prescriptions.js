@@ -11,6 +11,7 @@
 const express = require('express');
 const pool = require('../db');
 const { authenticate, requireRole, logAudit } = require('../middleware/auth');
+const featureGuard = require('../middleware/featureGuard');
 const rxnormService = require('../services/rxnorm');
 const pharmacyService = require('../services/pharmacy');
 const validationService = require('../services/validation');
@@ -18,6 +19,7 @@ const getEPrescribeService = require('../services/eprescribe/EPrescribeService')
 
 const router = express.Router();
 router.use(authenticate);
+router.use(featureGuard('eprescribe'));
 
 /**
  * POST /api/prescriptions/create

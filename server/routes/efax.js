@@ -15,6 +15,7 @@ const https = require('https');
 const http = require('http');
 const pool = require('../db');
 const { authenticate } = require('../middleware/auth');
+const featureGuard = require('../middleware/featureGuard');
 
 const router = express.Router();
 
@@ -150,6 +151,17 @@ router.post('/receive', upload.single('fax'), async (req, res) => {
             if (tenantLookup.rows.length > 0) {
                 tenantId = tenantLookup.rows[0].tenant_id;
                 console.log('[EFAX] Routed to tenant:', tenantId);
+
+                // Phase 3: Check if eFax feature is enabled for this clinic
+                const featureCheck = await pool.controlPool.query(
+                    'SELECT enabled_features FROM clinics WHERE slug = $1',
+                    [tenantId]
+                );
+
+                if (!featureCheck.rows[0]?.enabled_features?.efax) {
+                    console.warn(`[EFAX] Webhook rejected: efax feature disabled for tenant ${tenantId}`);
+                    return res.status(403).json({ error: 'eFax integration is disabled for this clinic' });
+                }
             } else {
                 console.warn('[EFAX] No tenant found for fax number:', toNumber, '- using default');
             }
@@ -213,7 +225,10 @@ router.post('/receive', upload.single('fax'), async (req, res) => {
 /**
  * GET /api/efax/status
  */
-router.get('/status', authenticate, async (req, res) => {
+/**
+ * GET /api/efax/status
+ */
+router.get('/status', authenticate, featureGuard('efax'), async (req, res) => {
     try {
         const provider = process.env.TELNYX_API_KEY ? 'Telnyx' :
             process.env.PHAXIO_API_KEY ? 'Phaxio' : 'Not configured';
@@ -239,7 +254,10 @@ router.get('/status', authenticate, async (req, res) => {
 /**
  * GET /api/efax/unassigned
  */
-router.get('/unassigned', authenticate, async (req, res) => {
+/**
+ * GET /api/efax/unassigned
+ */
+router.get('/unassigned', authenticate, featureGuard('efax'), async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT d.*, i.id as inbox_item_id, i.status as inbox_status
@@ -257,7 +275,10 @@ router.get('/unassigned', authenticate, async (req, res) => {
 /**
  * PUT /api/efax/:documentId/assign
  */
-router.put('/:documentId/assign', authenticate, async (req, res) => {
+/**
+ * PUT /api/efax/:documentId/assign
+ */
+router.put('/:documentId/assign', authenticate, featureGuard('efax'), async (req, res) => {
     try {
         const { documentId } = req.params;
         const { patientId, docType } = req.body;

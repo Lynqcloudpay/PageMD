@@ -65,7 +65,7 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Admin-Portal', 'X-Clinic-Slug'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Admin-Portal', 'X-Clinic-Slug', 'X-Platform-Token'],
   exposedHeaders: ['Content-Range', 'X-Content-Range']
 }));
 

@@ -203,6 +203,20 @@ const PlatformAdminClinics = () => {
                                             </span>
                                         </div>
                                     </div>
+
+                                    {/* Feature Badges */}
+                                    <div className="flex items-center gap-2 py-1">
+                                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest mr-1">Features</span>
+                                        <div className="flex items-center gap-2">
+                                            {clinic.enabled_features?.efax && <Activity className="w-3.5 h-3.5 text-indigo-400" title="eFax Enabled" />}
+                                            {clinic.enabled_features?.labs && <Database className="w-3.5 h-3.5 text-blue-400" title="Labs Enabled" />}
+                                            {clinic.enabled_features?.telehealth && <Zap className="w-3.5 h-3.5 text-orange-400" title="Telehealth Enabled" />}
+                                            {clinic.enabled_features?.eprescribe && <Shield className="w-3.5 h-3.5 text-purple-400" title="ePrescribe Enabled" />}
+                                            {!clinic.enabled_features || Object.values(clinic.enabled_features).every(v => !v) && (
+                                                <span className="text-[10px] text-slate-300 italic">None enabled</span>
+                                            )}
+                                        </div>
+                                    </div>
                                     {clinic.specialty && (
                                         <div className="flex items-center justify-between">
                                             <span className="text-slate-500">Specialty</span>

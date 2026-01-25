@@ -1,9 +1,11 @@
 const express = require('express');
 const pool = require('../db');
 const { authenticate, logAudit, requireRole } = require('../middleware/auth');
+const featureGuard = require('../middleware/featureGuard');
 
 const router = express.Router();
 router.use(authenticate);
+router.use(featureGuard('labs'));
 
 // Get labs for patient
 router.get('/patient/:patientId', async (req, res) => {
