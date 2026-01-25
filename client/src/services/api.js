@@ -213,6 +213,17 @@ export const inboxAPI = {
   delete: (id) => api.delete(`/inbox/${id}`),
 };
 
+// Clinical Tasks
+export const tasksAPI = {
+  getAll: (params) => api.get('/tasks', { params }),
+  getStats: () => api.get('/tasks/stats'),
+  get: (id) => api.get(`/tasks/${id}`),
+  create: (data) => api.post('/tasks', data),
+  update: (id, data) => api.put(`/tasks/${id}`, data),
+  complete: (id, notes) => api.put(`/tasks/${id}/complete`, { notes }),
+  delete: (id) => api.delete(`/tasks/${id}`),
+};
+
 // Appointments
 export const appointmentsAPI = {
   get: (params) => api.get('/appointments', { params }),

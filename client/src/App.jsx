@@ -28,7 +28,7 @@ const ContactPage = React.lazy(() => import('./pages/ContactPage'));
 const AboutPage = React.lazy(() => import('./pages/AboutPage'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const PendingNotes = React.lazy(() => import('./pages/PendingNotes'));
-const Inbasket = React.lazy(() => import('./pages/Inbasket'));
+const Inbasket = React.lazy(() => import('./pages/InbasketRedesign'));
 const Analytics = React.lazy(() => import('./pages/Analytics'));
 const Messages = React.lazy(() => import('./pages/Messages'));
 const Telehealth = React.lazy(() => import('./pages/Telehealth'));

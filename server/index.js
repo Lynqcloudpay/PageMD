@@ -251,6 +251,10 @@ app.use('/api/compliance', require('./routes/compliance'));
 const inboxRoutes = require('./routes/inbasket');
 app.use('/api/inbox', inboxRoutes.router);
 
+// Clinical Tasks
+const tasksRoutes = require('./routes/tasks');
+app.use('/api/tasks', tasksRoutes);
+
 // Appointments
 const appointmentRoutes = require('./routes/appointments');
 
