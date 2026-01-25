@@ -115,10 +115,13 @@ const PortalTelehealth = ({ onSchedule }) => {
                 const type = (appt.appointment_type || '').toLowerCase();
                 const visitMethod = (appt.visit_method || '').toLowerCase();
 
-                const d = new Date(appt.appointment_date);
-                const isToday = d.getDate() === now.getDate() &&
-                    d.getMonth() === now.getMonth() &&
-                    d.getFullYear() === now.getFullYear();
+                const datePart = (appt.appointment_date || '').substring(0, 10);
+                const [y, m, day_part] = datePart.split('-').map(Number);
+                const apptDateObj = new Date(y, m - 1, day_part);
+
+                const isToday = apptDateObj.getDate() === now.getDate() &&
+                    apptDateObj.getMonth() === now.getMonth() &&
+                    apptDateObj.getFullYear() === now.getFullYear();
 
                 return (type.includes('telehealth') || type.includes('video') || type.includes('virtual') || visitMethod === 'telehealth') &&
                     isToday &&

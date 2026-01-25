@@ -139,8 +139,15 @@ const PortalAppointments = ({ onMessageShortcut }) => {
 
     const getLocalDateMillis = (dateVal) => {
         if (!dateVal) return 0;
-        // Use new Date(dateVal) to parse ISO string into local time, then reset to start of day
-        const d = new Date(dateVal);
+        let d;
+        if (typeof dateVal === 'string') {
+            // Literal parse of YYYY-MM-DD to avoid UTC timezone shifting
+            const datePart = dateVal.substring(0, 10);
+            const [y, m, day] = datePart.split('-').map(Number);
+            d = new Date(y, m - 1, day);
+        } else {
+            d = new Date(dateVal);
+        }
         d.setHours(0, 0, 0, 0);
         return d.getTime();
     };

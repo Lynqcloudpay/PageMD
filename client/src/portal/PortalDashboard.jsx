@@ -147,11 +147,13 @@ const PortalDashboard = () => {
                     const type = (appt.appointment_type || '').toLowerCase();
                     const visitMethod = (appt.visit_method || '').toLowerCase();
 
-                    // Parse appointment date string properly
-                    const d = new Date(appt.appointment_date);
-                    const isToday = d.getDate() === now.getDate() &&
-                        d.getMonth() === now.getMonth() &&
-                        d.getFullYear() === now.getFullYear();
+                    // Parse appointment date string properly (literal parse to avoid UTC shift)
+                    const datePart = (appt.appointment_date || '').substring(0, 10);
+                    const [y, m, d_part] = datePart.split('-').map(Number);
+                    const apptDateObj = new Date(y, m - 1, d_part);
+                    const isToday = apptDateObj.getDate() === now.getDate() &&
+                        apptDateObj.getMonth() === now.getMonth() &&
+                        apptDateObj.getFullYear() === now.getFullYear();
 
                     // Debug log
                     // console.log('Checking appointment for telehealth:', { id: appt.id, type, visitMethod, date: appt.appointment_date });
@@ -193,10 +195,12 @@ const PortalDashboard = () => {
                 nextWeek.setHours(23, 59, 59, 999);
 
                 const upcomingAppts = apptsRes.data.filter(appt => {
-                    const apptDate = new Date(appt.appointment_date);
-                    // Clear time for date-only comparison or keep for precise check? 
-                    // Usually upcoming should include things later today.
-                    return apptDate >= startOfToday && apptDate <= nextWeek && appt.status !== 'completed' && appt.status !== 'checked_out';
+                    const datePart = (appt.appointment_date || '').substring(0, 10);
+                    const [y, m, d_part] = datePart.split('-').map(Number);
+                    const apptDateObj = new Date(y, m - 1, d_part);
+                    apptDateObj.setHours(0, 0, 0, 0);
+
+                    return apptDateObj >= startOfToday && apptDateObj <= nextWeek && appt.status !== 'completed' && appt.status !== 'checked_out';
                 }).sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date));
 
                 // Find the next upcoming appointment
