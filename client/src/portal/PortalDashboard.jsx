@@ -34,6 +34,8 @@ const PortalDashboard = () => {
     const [activeTab, setActiveTab] = useState('overview'); // overview, messages, appointments, record
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [activeNotifications, setActiveNotifications] = useState([]);
+    const [expandedNotification, setExpandedNotification] = useState(null);
+    const [deniedRequests, setDeniedRequests] = useState([]);
     const [stats, setStats] = useState({ messages: 0, appointments: 0, telehealth: 0 });
     const [quickGlance, setQuickGlance] = useState({
         nextAppointment: null,
@@ -50,11 +52,26 @@ const PortalDashboard = () => {
         }
     });
 
+    const [dismissedDeniedRequests, setDismissedDeniedRequests] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem('portalDismissedDeniedRequests') || '[]');
+        } catch (e) {
+            return [];
+        }
+    });
+
     const handleDismiss = (e, notifId) => {
         e.stopPropagation();
         const updated = [...dismissedNotifications, notifId];
         setDismissedNotifications(updated);
         localStorage.setItem('portalDismissedNotifications', JSON.stringify(updated));
+    };
+
+    const handleDismissDeniedRequest = (e, reqId) => {
+        e.stopPropagation();
+        const updated = [...dismissedDeniedRequests, reqId];
+        setDismissedDeniedRequests(updated);
+        localStorage.setItem('portalDismissedDeniedRequests', JSON.stringify(updated));
     };
 
     // Helper to parse dates/times as local-computer time to avoid UTC shifting
@@ -173,21 +190,38 @@ const PortalDashboard = () => {
                 console.log('[Portal Notifications] Recent updates (within 3 days):', recentUpdates.length, recentUpdates);
 
                 if (recentUpdates.length > 0) {
-                    const deniedCount = recentUpdates.filter(r => r.status === 'denied').length;
+                    // Filter out dismissed denied requests
+                    const deniedItems = recentUpdates.filter(r =>
+                        r.status === 'denied' && !dismissedDeniedRequests.includes(r.id)
+                    );
+                    const deniedCount = deniedItems.length;
                     const hasDenial = deniedCount > 0;
 
-                    // Use a unique ID based on count and timestamp so it can't be accidentally dismissed
-                    const notifId = `appt-updates-${hasDenial ? 'denied' : 'updated'}-${recentUpdates.length}`;
+                    // Store denied requests for expandable view
+                    if (hasDenial) {
+                        setDeniedRequests(deniedItems);
+                    }
 
-                    newNotifs.push({
-                        id: notifId,
-                        type: hasDenial ? 'action' : 'info',
-                        message: hasDenial
-                            ? `⚠️ ${deniedCount} appointment request${deniedCount > 1 ? 's' : ''} declined. Tap to see why.`
-                            : `${recentUpdates.length} appointment update${recentUpdates.length > 1 ? 's' : ''}`,
-                        action: 'appointments',
-                        priority: hasDenial ? 'urgent' : 'normal'
-                    });
+                    // Only show denial notification if there are undismissed denied requests
+                    // OR if it's a generic update notification
+                    const isGenericUpdate = !hasDenial && recentUpdates.length > 0;
+
+                    if (hasDenial || isGenericUpdate) {
+                        // Use a unique ID based on count and timestamp so it can't be accidentally dismissed
+                        const notifId = `appt-updates-${hasDenial ? 'denied' : 'updated'}-${recentUpdates.length}`;
+
+                        newNotifs.push({
+                            id: notifId,
+                            type: hasDenial ? 'action' : 'info',
+                            message: hasDenial
+                                ? `⚠️ ${deniedCount} appointment request${deniedCount > 1 ? 's' : ''} declined. Tap to see why.`
+                                : `${recentUpdates.length} appointment update${recentUpdates.length > 1 ? 's' : ''}`,
+                            action: 'appointments',
+                            priority: hasDenial ? 'urgent' : 'normal',
+                            expandable: hasDenial && deniedCount > 0,
+                            deniedData: deniedItems
+                        });
+                    }
                 }
 
                 // Count telehealth appointments for today
@@ -361,7 +395,13 @@ const PortalDashboard = () => {
                                             {activeNotifications.map(notif => (
                                                 <div key={notif.id} className="relative group/notif">
                                                     <button
-                                                        onClick={() => setActiveTab(notif.action || 'overview')}
+                                                        onClick={() => {
+                                                            if (notif.expandable) {
+                                                                setExpandedNotification(expandedNotification === notif.id ? null : notif.id);
+                                                            } else {
+                                                                setActiveTab(notif.action || 'overview');
+                                                            }
+                                                        }}
                                                         className={`w-full p-3.5 rounded-2xl border transition-all flex items-center gap-3.5 text-left ${notif.priority === 'urgent'
                                                             ? 'bg-red-50 border-red-100 text-red-900 shadow-sm'
                                                             : notif.type === 'action'
@@ -381,8 +421,71 @@ const PortalDashboard = () => {
                                                             </p>
                                                             <p className="text-base font-bold leading-tight">{notif.message}</p>
                                                         </div>
-                                                        <ChevronRight className="w-5 h-5 opacity-30 group-hover/notif:translate-x-1 transition-transform" />
+                                                        <ChevronRight className={`w-5 h-5 opacity-30 transition-transform ${expandedNotification === notif.id ? 'rotate-90' : 'group-hover/notif:translate-x-1'}`} />
                                                     </button>
+
+                                                    {/* Expandable Denied Requests List */}
+                                                    {/* Expandable Denied Requests List */}
+                                                    {notif.expandable && expandedNotification === notif.id && notif.deniedData && (
+                                                        <div className="mt-2 ml-4 space-y-2 animate-in slide-in-from-top-2 duration-200">
+                                                            {notif.deniedData.map((req, idx) => (
+                                                                <div
+                                                                    key={req.id || idx}
+                                                                    className="p-3 bg-white border border-red-100 rounded-xl transition-colors group/item"
+                                                                >
+                                                                    <div className="flex items-start justify-between gap-3">
+                                                                        <div
+                                                                            className="flex-1 cursor-pointer"
+                                                                            onClick={() => setActiveTab('appointments')}
+                                                                        >
+                                                                            <div className="flex items-center justify-between mb-1">
+                                                                                <p className="text-sm font-semibold text-slate-800">
+                                                                                    {req.preferred_date ? format(new Date(req.preferred_date), 'MMM d, yyyy') : 'Date not set'}
+                                                                                    {req.preferred_time_range && ` - ${req.preferred_time_range}`}
+                                                                                </p>
+                                                                                <span className="px-2 py-1 text-xs font-bold bg-red-100 text-red-600 rounded-lg">DENIED</span>
+                                                                            </div>
+                                                                            <p className="text-xs text-slate-500 mb-2">
+                                                                                {req.appointment_type || 'Appointment Request'}
+                                                                            </p>
+
+                                                                            {req.denial_reason && (
+                                                                                <div className="p-2 bg-red-50 rounded-lg border border-red-100">
+                                                                                    <p className="text-xs font-medium text-red-800">
+                                                                                        <span className="font-bold">Reason:</span> {req.denial_reason}
+                                                                                    </p>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+
+                                                                        <button
+                                                                            onClick={(e) => handleDismissDeniedRequest(e, req.id)}
+                                                                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                                            title="Dismiss this denial"
+                                                                        >
+                                                                            <X size={14} />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+
+                                                            <div className="flex gap-2 mt-3 pt-2 border-t border-slate-100">
+                                                                <button
+                                                                    onClick={(e) => handleDismiss(e, notif.id)}
+                                                                    className="flex-1 p-2 text-sm text-slate-500 font-medium hover:bg-slate-100 rounded-lg transition-colors text-center"
+                                                                >
+                                                                    Dismiss All
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setActiveTab('appointments')}
+                                                                    className="flex-1 p-2 text-sm text-blue-600 font-medium hover:bg-blue-50 rounded-lg transition-colors text-center"
+                                                                >
+                                                                    View Appointments →
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
                                                     <button
                                                         onClick={(e) => handleDismiss(e, notif.id)}
                                                         className="absolute -top-1 -right-1 w-6 h-6 bg-white border border-slate-100 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 shadow-sm opacity-0 group-hover/notif:opacity-100 transition-opacity z-10"
