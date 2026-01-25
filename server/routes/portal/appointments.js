@@ -275,4 +275,48 @@ router.delete('/requests/:id/clear', requirePortalPermission('can_request_appoin
     }
 });
 
+/**
+ * Cancel a scheduled appointment
+ * POST /api/portal/appointments/:id/cancel
+ */
+router.post('/:id/cancel', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reason } = req.body;
+        const patientId = req.portalAccount.patient_id;
+
+        // Verify appointment belongs to patient
+        const checkAppt = await pool.query(
+            "SELECT * FROM appointments WHERE id = $1 AND patient_id = $2 AND patient_status != 'cancelled' AND patient_status != 'no_show'",
+            [id, patientId]
+        );
+
+        if (checkAppt.rows.length === 0) {
+            return res.status(404).json({ error: 'Appointment not found or already cancelled' });
+        }
+
+        const now = new Date().toISOString();
+        const userName = req.portalAccount.name || 'Patient (Portal)';
+
+        // Update status and history
+        const statusHistory = checkAppt.rows[0].status_history || [];
+        const newHistory = [...statusHistory, {
+            status: 'cancelled',
+            timestamp: now,
+            changed_by: userName,
+            cancellation_reason: reason || 'Cancelled via Patient Portal'
+        }];
+
+        await pool.query(
+            "UPDATE appointments SET patient_status = 'cancelled', cancellation_reason = $1, status_history = $2, checkout_time = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4",
+            [reason || 'Cancelled via Patient Portal', JSON.stringify(newHistory), now, id]
+        );
+
+        res.json({ success: true, message: 'Appointment cancelled successfully' });
+    } catch (error) {
+        console.error('[Portal Appointments] Error cancelling appointment:', error);
+        res.status(500).json({ error: 'Failed to cancel appointment' });
+    }
+});
+
 module.exports = router;

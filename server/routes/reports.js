@@ -109,12 +109,19 @@ router.get('/dashboard', requirePermission('reports:view'), async (req, res) => 
         stats.unreadLabs = parseInt(inboxStats.rows[0]?.labs_count || 0);
         stats.unreadMessages = parseInt(inboxStats.rows[0]?.msgs_count || 0);
         stats.pendingNotes = parseInt(inboxStats.rows[0]?.notes_count || 0);
+
+        // Cancellation Follow-ups (Pending)
+        const followupStats = await pool.query(
+          "SELECT COUNT(*) as count FROM cancellation_followups WHERE status = 'pending'"
+        );
+        stats.cancellationFollowups = parseInt(followupStats.rows[0]?.count || 0);
       } catch (inboxError) {
         console.warn('Error fetching inbox stats for dashboard:', inboxError);
         stats.pendingOrders = 0;
         stats.unreadMessages = 0;
         stats.unreadLabs = 0;
         stats.pendingNotes = 0;
+        stats.cancellationFollowups = 0;
       }
     } else {
       stats.pendingOrders = 0;

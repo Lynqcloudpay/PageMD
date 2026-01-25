@@ -168,6 +168,13 @@ const Dashboard = () => {
                         </div>
                         <FileText className="w-5 h-5 text-red-500 opacity-80" />
                     </div>
+                    <div className="bg-white p-3 rounded-lg border border-gray-200 flex items-center justify-between shadow-sm hover:border-amber-300 transition-colors cursor-pointer" onClick={() => navigate('/cancellations')}>
+                        <div>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Cancellations</p>
+                            <p className="text-xl font-bold text-gray-900">{stats?.cancellationFollowups || 0}</p>
+                        </div>
+                        <XCircle className="w-5 h-5 text-amber-500 opacity-80" />
+                    </div>
                     <div className="bg-white p-3 rounded-lg border border-gray-200 flex items-center justify-between shadow-sm hover:border-gray-300 transition-colors cursor-pointer" onClick={() => navigate('/patients')}>
                         <div>
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Patients</p>
