@@ -116,8 +116,8 @@ const PortalTelehealth = ({ onSchedule }) => {
                 const visitMethod = (appt.visit_method || '').toLowerCase();
 
                 const datePart = (appt.appointment_date || '').substring(0, 10);
-                const [y, m, day_part] = datePart.split('-').map(Number);
-                const apptDateObj = new Date(y, m - 1, day_part);
+                const [y, m, day_p] = datePart.split('-').map(Number);
+                const apptDateObj = new Date(y, m - 1, day_p);
 
                 const isToday = apptDateObj.getDate() === now.getDate() &&
                     apptDateObj.getMonth() === now.getMonth() &&

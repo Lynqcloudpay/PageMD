@@ -40,6 +40,20 @@ const PortalDashboard = () => {
         unreadMessages: 0,
         recentUpdate: null
     });
+
+    // Helper to parse dates/times as local-computer time to avoid UTC shifting
+    const parseLocalSafe = (dateVal, timeStr) => {
+        if (!dateVal) return new Date();
+        const dateStr = typeof dateVal === 'string' ? dateVal : dateVal.toISOString();
+        const datePart = dateStr.substring(0, 10);
+        const [y, m, d] = datePart.split('-').map(Number);
+        const date = new Date(y, m - 1, d);
+        if (timeStr) {
+            const [h, min] = timeStr.split(':').map(Number);
+            date.setHours(h, min, 0, 0);
+        }
+        return date;
+    };
     const navigate = useNavigate();
 
     const location = useLocation();
@@ -147,10 +161,8 @@ const PortalDashboard = () => {
                     const type = (appt.appointment_type || '').toLowerCase();
                     const visitMethod = (appt.visit_method || '').toLowerCase();
 
-                    // Parse appointment date string properly (literal parse to avoid UTC shift)
-                    const datePart = (appt.appointment_date || '').substring(0, 10);
-                    const [y, m, d_part] = datePart.split('-').map(Number);
-                    const apptDateObj = new Date(y, m - 1, d_part);
+                    // Parse appointment date string properly (literal local parse to avoid UTC shift)
+                    const apptDateObj = parseLocalSafe(appt.appointment_date);
                     const isToday = apptDateObj.getDate() === now.getDate() &&
                         apptDateObj.getMonth() === now.getMonth() &&
                         apptDateObj.getFullYear() === now.getFullYear();
@@ -195,13 +207,9 @@ const PortalDashboard = () => {
                 nextWeek.setHours(23, 59, 59, 999);
 
                 const upcomingAppts = apptsRes.data.filter(appt => {
-                    const datePart = (appt.appointment_date || '').substring(0, 10);
-                    const [y, m, d_part] = datePart.split('-').map(Number);
-                    const apptDateObj = new Date(y, m - 1, d_part);
-                    apptDateObj.setHours(0, 0, 0, 0);
-
-                    return apptDateObj >= startOfToday && apptDateObj <= nextWeek && appt.status !== 'completed' && appt.status !== 'checked_out';
-                }).sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date));
+                    const apptDateObj = parseLocalSafe(appt.appointment_date, appt.appointment_time);
+                    return apptDateObj >= startOfToday && appt.status !== 'completed' && appt.status !== 'checked_out';
+                }).sort((a, b) => parseLocalSafe(a.appointment_date, a.appointment_time) - parseLocalSafe(b.appointment_date, b.appointment_time));
 
                 // Find the next upcoming appointment
                 const nextAppt = upcomingAppts.length > 0 ? upcomingAppts[0] : null;
@@ -549,7 +557,7 @@ const PortalDashboard = () => {
                         <div className="flex-1">
                             <p className="text-[10px] font-bold uppercase tracking-widest text-white/80 mb-1">Upcoming Appointment</p>
                             <p className="text-lg font-bold">
-                                {new Date(quickGlance.nextAppointment.appointment_date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                                {parseLocalSafe(quickGlance.nextAppointment.appointment_date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                             </p>
                             <p className="text-sm text-white/80">
                                 {quickGlance.nextAppointment.appointment_time ?
