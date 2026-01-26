@@ -628,7 +628,7 @@ const PortalDashboard = () => {
                     </div>
                 );
         }
-    }, [activeTab, patient, quickGlance, stats]);
+    }, [activeTab, patient, quickGlance, stats, activeNotifications, expandedNotification, dismissedNotifications, dismissedDeniedRequests]);
 
     // Mobile View Implementation (Pulse Design)
     const renderMobileDashboard = () => {
