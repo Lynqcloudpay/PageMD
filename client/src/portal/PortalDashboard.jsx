@@ -37,6 +37,7 @@ const PortalDashboard = () => {
     const [expandedNotification, setExpandedNotification] = useState(null);
     const [deniedRequests, setDeniedRequests] = useState([]);
     const [stats, setStats] = useState({ messages: 0, appointments: 0, telehealth: 0 });
+    const [apiData, setApiData] = useState({ messages: [], requests: [], appointments: [] });
     const [quickGlance, setQuickGlance] = useState({
         nextAppointment: null,
         telehealthReady: null,
@@ -132,6 +133,7 @@ const PortalDashboard = () => {
         fetchDashboard();
     }, [navigate]);
 
+    // Poll for fresh data
     useEffect(() => {
         const fetchNotifications = async () => {
             try {
@@ -141,174 +143,18 @@ const PortalDashboard = () => {
                 const apiBase = import.meta.env.VITE_API_URL || '/api';
                 const headers = { Authorization: `Bearer ${token}` };
 
-                // Fetch data - include appointments for telehealth count
+                // Fetch data
                 const [msgsRes, reqsRes, apptsRes] = await Promise.all([
                     axios.get(`${apiBase}/portal/messages/threads`, { headers }).catch(() => ({ data: [] })),
                     axios.get(`${apiBase}/portal/appointments/requests`, { headers }).catch(() => ({ data: [] })),
                     axios.get(`${apiBase}/portal/appointments`, { headers }).catch(() => ({ data: [] }))
                 ]);
 
-                const newNotifs = [];
-
-                // Check messages
-                const unreadCount = msgsRes.data.reduce((acc, t) => acc + (parseInt(t.unread_count) || 0), 0);
-                if (unreadCount > 0) {
-                    newNotifs.push({
-                        id: 'unread-msgs',
-                        type: 'action', // Prominent styling
-                        message: `You have ${unreadCount} new message${unreadCount > 1 ? 's' : ''}`,
-                        action: 'messages',
-                        priority: 'high'
-                    });
-                }
-
-                // Check for appointment suggestions (clinic alternative slots)
-                const actionRequiredAppts = reqsRes.data.filter(r => r.status === 'pending_patient' && r.suggested_slots);
-                if (actionRequiredAppts.length > 0) {
-                    newNotifs.push({
-                        id: 'appt-action-required',
-                        type: 'action',
-                        message: `Action Required: Choose an alternative time for your visit`,
-                        action: 'appointments',
-                        priority: 'urgent'
-                    });
-                }
-
-                // Check appointment updates (denied/confirmed)
-                const threeDaysAgo = new Date();
-                threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-
-                // Find ALL denied requests (regardless of date for debugging)
-                const allDeniedRequests = reqsRes.data.filter(r => r.status === 'denied');
-                console.log('[Portal Notifications] All denied requests:', allDeniedRequests.length, allDeniedRequests);
-
-                const recentUpdates = reqsRes.data.filter(r =>
-                    (r.status === 'confirmed' || r.status === 'denied' || r.status === 'approved') &&
-                    new Date(r.processed_at || r.created_at) > threeDaysAgo
-                );
-
-                console.log('[Portal Notifications] Recent updates (within 3 days):', recentUpdates.length, recentUpdates);
-
-                if (recentUpdates.length > 0) {
-                    // Filter out dismissed denied requests
-                    const deniedItems = recentUpdates.filter(r =>
-                        r.status === 'denied' && !dismissedDeniedRequests.includes(r.id)
-                    );
-                    const deniedCount = deniedItems.length;
-                    const hasDenial = deniedCount > 0;
-
-                    // Store denied requests for expandable view
-                    if (hasDenial) {
-                        setDeniedRequests(deniedItems);
-                    }
-
-                    // Only show denial notification if there are undismissed denied requests
-                    // OR if it's a generic update notification
-                    const isGenericUpdate = !hasDenial && recentUpdates.length > 0;
-
-                    if (hasDenial || isGenericUpdate) {
-                        // Use a unique ID based on count and timestamp so it can't be accidentally dismissed
-                        const notifId = `appt-updates-${hasDenial ? 'denied' : 'updated'}-${recentUpdates.length}`;
-
-                        newNotifs.push({
-                            id: notifId,
-                            type: hasDenial ? 'action' : 'info',
-                            message: hasDenial
-                                ? `⚠️ ${deniedCount} appointment request${deniedCount > 1 ? 's' : ''} declined. Tap to see why.`
-                                : `${recentUpdates.length} appointment update${recentUpdates.length > 1 ? 's' : ''}`,
-                            action: 'appointments',
-                            priority: hasDenial ? 'urgent' : 'normal',
-                            expandable: hasDenial && deniedCount > 0,
-                            deniedData: deniedItems
-                        });
-                    }
-                }
-
-                // Count telehealth appointments for today
-                const now = new Date();
-                const telehealthAppts = apptsRes.data.filter(appt => {
-                    const type = (appt.appointment_type || '').toLowerCase();
-                    const visitMethod = (appt.visit_method || '').toLowerCase();
-
-                    // Parse appointment date string properly (literal local parse to avoid UTC shift)
-                    const apptDateObj = parseLocalSafe(appt.appointment_date);
-                    const isToday = apptDateObj.getDate() === now.getDate() &&
-                        apptDateObj.getMonth() === now.getMonth() &&
-                        apptDateObj.getFullYear() === now.getFullYear();
-
-                    // Debug log
-                    // console.log('Checking appointment for telehealth:', { id: appt.id, type, visitMethod, date: appt.appointment_date });
-
-                    const isTelehealth =
-                        type.includes('telehealth') ||
-                        type.includes('video') ||
-                        type.includes('virtual') ||
-                        visitMethod === 'telehealth' ||
-                        visitMethod === 'video' ||
-                        visitMethod === 'virtual';
-
-                    // CRITICAL: Check ALL cancellation states
-                    const isCancelled = appt.status === 'cancelled' ||
-                        appt.patient_status === 'cancelled' ||
-                        appt.patient_status === 'no_show';
-
-                    const isActive = appt.status !== 'completed' &&
-                        appt.status !== 'checked_out' &&
-                        appt.patient_status !== 'checked_out' &&
-                        !isCancelled;
-
-                    return isTelehealth && isToday && isActive;
-                });
-
-                // console.log('Found telehealth appts today:', telehealthAppts);
-
-                // Count upcoming appointments (next 7 days)
-                const startOfToday = new Date();
-                startOfToday.setHours(0, 0, 0, 0);
-
-                const nextWeek = new Date();
-                nextWeek.setDate(nextWeek.getDate() + 7);
-                nextWeek.setHours(23, 59, 59, 999);
-
-                const upcomingAppts = apptsRes.data.filter(appt => {
-                    const apptDateObj = parseLocalSafe(appt.appointment_date, appt.appointment_time);
-
-                    // CRITICAL: Check ALL cancellation states
-                    const isCancelled = appt.status === 'cancelled' ||
-                        appt.patient_status === 'cancelled' ||
-                        appt.patient_status === 'no_show';
-
-                    return apptDateObj >= startOfToday &&
-                        appt.status !== 'completed' &&
-                        appt.status !== 'checked_out' &&
-                        !isCancelled;
-                }).sort((a, b) => parseLocalSafe(a.appointment_date, a.appointment_time) - parseLocalSafe(b.appointment_date, b.appointment_time));
-
-                // Find the next upcoming appointment
-                const nextAppt = upcomingAppts.length > 0 ? upcomingAppts[0] : null;
-
-                // Find today's telehealth appointment (ready to join)
-                const telehealthReady = telehealthAppts.length > 0 ? telehealthAppts[0] : null;
-
-                // Find most recent appointment update
-                const recentUpdate = recentUpdates.length > 0 ? recentUpdates[0] : null;
-
-                // Filter out dismissed notifications
-                const filteredNotifs = newNotifs.filter(n => !dismissedNotifications.includes(n.id));
-
-                setActiveNotifications(filteredNotifs);
-                setStats({
-                    messages: unreadCount,
-                    appointments: upcomingAppts.length,
-                    telehealth: telehealthAppts.length
-                });
-
-                // Set quick glance data
-                setQuickGlance({
-                    nextAppointment: nextAppt,
-                    telehealthReady: telehealthReady,
-                    unreadMessages: unreadCount,
-                    recentUpdate: recentUpdate
+                // Store RAW data only
+                setApiData({
+                    messages: msgsRes.data || [],
+                    requests: reqsRes.data || [],
+                    appointments: apptsRes.data || []
                 });
 
             } catch (err) {
@@ -317,9 +163,126 @@ const PortalDashboard = () => {
         };
 
         fetchNotifications();
-        const interval = setInterval(fetchNotifications, 2000); // Poll every 2 seconds for live updates
+        const interval = setInterval(fetchNotifications, 5000); // Poll every 5 seconds (reduced freq since we have instant local updates)
         return () => clearInterval(interval);
-    }, [dismissedNotifications, dismissedDeniedRequests]);
+    }, []);
+
+    // Process notifications separately (synchronous & instant)
+    useEffect(() => {
+        const { messages, requests, appointments } = apiData;
+        const newNotifs = [];
+
+        // Check messages
+        const unreadCount = messages.reduce((acc, t) => acc + (parseInt(t.unread_count) || 0), 0);
+        if (unreadCount > 0) {
+            newNotifs.push({
+                id: 'unread-msgs',
+                type: 'action',
+                message: `You have ${unreadCount} new message${unreadCount > 1 ? 's' : ''}`,
+                action: 'messages',
+                priority: 'high'
+            });
+        }
+
+        // Check for appointment suggestions
+        const actionRequiredAppts = requests.filter(r => r.status === 'pending_patient' && r.suggested_slots);
+        if (actionRequiredAppts.length > 0) {
+            newNotifs.push({
+                id: 'appt-action-required',
+                type: 'action',
+                message: `Action Required: Choose an alternative time for your visit`,
+                action: 'appointments',
+                priority: 'urgent'
+            });
+        }
+
+        // Check appointment updates
+        const threeDaysAgo = new Date();
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
+        const recentUpdates = requests.filter(r =>
+            (r.status === 'confirmed' || r.status === 'denied' || r.status === 'approved') &&
+            new Date(r.processed_at || r.created_at) > threeDaysAgo
+        );
+
+        if (recentUpdates.length > 0) {
+            // Filter out dismissed denied requests
+            const deniedItems = recentUpdates.filter(r =>
+                r.status === 'denied' && !dismissedDeniedRequests.includes(r.id)
+            );
+            const deniedCount = deniedItems.length;
+            const hasDenial = deniedCount > 0;
+
+            if (hasDenial) {
+                setDeniedRequests(deniedItems);
+            }
+
+            const isGenericUpdate = !hasDenial && recentUpdates.length > 0;
+
+            if (hasDenial || isGenericUpdate) {
+                const notifId = `appt-updates-${hasDenial ? 'denied' : 'updated'}-${recentUpdates.length}`;
+
+                newNotifs.push({
+                    id: notifId,
+                    type: hasDenial ? 'action' : 'info',
+                    message: hasDenial
+                        ? `⚠️ ${deniedCount} appointment request${deniedCount > 1 ? 's' : ''} declined. Tap to see why.`
+                        : `${recentUpdates.length} appointment update${recentUpdates.length > 1 ? 's' : ''}`,
+                    action: 'appointments',
+                    priority: hasDenial ? 'urgent' : 'normal',
+                    expandable: hasDenial && deniedCount > 0,
+                    deniedData: deniedItems
+                });
+            }
+        }
+
+        // Process Telehealth & Stats
+        const now = new Date();
+        const telehealthAppts = appointments.filter(appt => {
+            const type = (appt.appointment_type || '').toLowerCase();
+            const visitMethod = (appt.visit_method || '').toLowerCase();
+            const apptDateObj = parseLocalSafe(appt.appointment_date);
+            const isToday = apptDateObj.getDate() === now.getDate() &&
+                apptDateObj.getMonth() === now.getMonth() &&
+                apptDateObj.getFullYear() === now.getFullYear();
+
+            const isTelehealth = type.includes('telehealth') || type.includes('video') || type.includes('virtual') || visitMethod === 'telehealth';
+            const isCancelled = appt.status === 'cancelled' || appt.patient_status === 'cancelled' || appt.patient_status === 'no_show';
+            const isActive = appt.status !== 'completed' && appt.status !== 'checked_out' && !isCancelled;
+
+            return isTelehealth && isToday && isActive;
+        });
+
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+
+        const upcomingAppts = appointments.filter(appt => {
+            const apptDateObj = parseLocalSafe(appt.appointment_date, appt.appointment_time);
+            const isCancelled = appt.status === 'cancelled' || appt.patient_status === 'cancelled' || appt.patient_status === 'no_show';
+            return apptDateObj >= startOfToday && appt.status !== 'completed' && appt.status !== 'checked_out' && !isCancelled;
+        }).sort((a, b) => parseLocalSafe(a.appointment_date, a.appointment_time) - parseLocalSafe(b.appointment_date, b.appointment_time));
+
+        const nextAppt = upcomingAppts.length > 0 ? upcomingAppts[0] : null;
+        const telehealthReady = telehealthAppts.length > 0 ? telehealthAppts[0] : null;
+        const recentUpdate = recentUpdates.length > 0 ? recentUpdates[0] : null;
+
+        // Filter out blanket dismissed notifications
+        const filteredNotifs = newNotifs.filter(n => !dismissedNotifications.includes(n.id));
+
+        setActiveNotifications(filteredNotifs);
+        setStats({
+            messages: unreadCount,
+            appointments: upcomingAppts.length,
+            telehealth: telehealthAppts.length
+        });
+        setQuickGlance({
+            nextAppointment: nextAppt,
+            telehealthReady: telehealthReady,
+            unreadMessages: unreadCount,
+            recentUpdate: recentUpdate
+        });
+
+    }, [apiData, dismissedNotifications, dismissedDeniedRequests]);
 
     const content = useMemo(() => {
         switch (activeTab) {
