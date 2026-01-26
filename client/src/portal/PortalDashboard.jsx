@@ -217,20 +217,18 @@ const PortalDashboard = () => {
                 setDeniedRequests(deniedItems);
             }
 
-            const isGenericUpdate = !hasDenial && recentUpdates.length > 0;
+            const isGenericUpdate = false; // Disable generic info notifications as requested
 
-            if (hasDenial || isGenericUpdate) {
-                const notifId = `appt-updates-${hasDenial ? 'denied' : 'updated'}-${recentUpdates.length}`;
+            if (hasDenial) {
+                const notifId = `appt-updates-denied-${recentUpdates.length}`;
 
                 newNotifs.push({
                     id: notifId,
-                    type: hasDenial ? 'action' : 'info',
-                    message: hasDenial
-                        ? `⚠️ ${deniedCount} appointment request${deniedCount > 1 ? 's' : ''} declined. Tap to see why.`
-                        : `${recentUpdates.length} appointment update${recentUpdates.length > 1 ? 's' : ''}`,
+                    type: 'action',
+                    message: `⚠️ ${deniedCount} appointment request${deniedCount > 1 ? 's' : ''} declined. Tap to see why.`,
                     action: 'appointments',
-                    priority: hasDenial ? 'urgent' : 'normal',
-                    expandable: hasDenial && deniedCount > 0,
+                    priority: 'urgent',
+                    expandable: true,
                     deniedData: deniedItems
                 });
             }

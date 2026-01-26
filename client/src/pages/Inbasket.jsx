@@ -17,6 +17,7 @@ const TASK_CATEGORIES = [
     { id: 'results', label: 'Results', icon: FlaskConical, color: 'blue', types: ['lab', 'imaging'] },
     { id: 'messages', label: 'Messages', icon: MessageSquare, color: 'purple', types: ['message'] },
     { id: 'portal_messages', label: 'Portal Messages', icon: User, color: 'blue', types: ['portal_message'] },
+    { id: 'portal_refusals', label: 'Appt Refusals', icon: AlertTriangle, color: 'red', types: ['portal_appointment_declined'] },
     { id: 'portal_appointments', label: 'Appt Requests', icon: Calendar, color: 'amber', types: ['portal_appointment'] },
     { id: 'documents', label: 'Documents', icon: FileText, color: 'orange', types: ['document', 'new_patient_registration'] },
     { id: 'referrals', label: 'Referrals', icon: Send, color: 'indigo', types: ['referral'] },
@@ -224,6 +225,12 @@ const Inbasket = () => {
     const filteredItems = items.filter(item => {
         // 1. Category Filter
         if (selectedCategory !== 'all') {
+            if (selectedCategory === 'portal_refusals') {
+                return item.type === 'portal_appointment' && item.subject?.includes('DECLINED');
+            }
+            if (selectedCategory === 'portal_appointments') {
+                return item.type === 'portal_appointment' && !item.subject?.includes('DECLINED');
+            }
             const cat = TASK_CATEGORIES.find(c => c.id === selectedCategory);
             if (!cat?.types.includes(item.type)) return false;
         }
@@ -506,11 +513,24 @@ const Inbasket = () => {
                                         {cat.label}
                                     </span>
                                     <div className="flex items-center gap-2">
-                                        {items.filter(i => cat.types.includes(i.type) && i.status === 'new').length > 0 && (
-                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all duration-500 ${isSelected ? 'bg-white text-blue-600 shadow-sm' : 'bg-blue-600 text-white shadow-md shadow-blue-100'}`}>
-                                                {items.filter(i => cat.types.includes(i.type) && i.status === 'new').length}
-                                            </span>
-                                        )}
+                                        {(() => {
+                                            let count = 0;
+                                            if (cat.id === 'portal_refusals') {
+                                                count = items.filter(i => i.type === 'portal_appointment' && i.subject?.includes('DECLINED') && (filterStatus === 'all' || i.status === filterStatus || (filterStatus === 'active' && i.status !== 'completed' && i.status !== 'archived'))).length;
+                                            } else if (cat.id === 'portal_appointments') {
+                                                count = items.filter(i => i.type === 'portal_appointment' && !i.subject?.includes('DECLINED') && (filterStatus === 'all' || i.status === filterStatus || (filterStatus === 'active' && i.status !== 'completed' && i.status !== 'archived'))).length;
+                                            } else {
+                                                count = items.filter(i => cat.types.includes(i.type) && (filterStatus === 'all' || i.status === filterStatus || (filterStatus === 'active' && i.status !== 'completed' && i.status !== 'archived'))).length;
+                                            }
+
+                                            if (count === 0) return null;
+
+                                            return (
+                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all duration-500 ${isSelected ? 'bg-white text-blue-600 shadow-sm' : 'bg-blue-600 text-white shadow-md shadow-blue-100'}`}>
+                                                    {count}
+                                                </span>
+                                            );
+                                        })()}
                                     </div>
                                 </button>
                                 {canCompose && (

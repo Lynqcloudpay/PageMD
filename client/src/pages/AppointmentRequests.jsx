@@ -211,6 +211,15 @@ const AppointmentRequests = () => {
 
     // Filter requests
     const filteredRequests = requests.filter(req => {
+        const isDeclined = req.subject?.includes('DECLINED') || req.status === 'declined';
+
+        // Category filtering
+        if (filterStatus === 'new' && isDeclined) return false;
+        if (filterStatus === 'declined' && !isDeclined) return false;
+        if (filterStatus === 'all' && req.status !== 'completed' && req.status !== 'archived') {
+            // In 'all' view, we usually show history, but let's keep it consistent
+        }
+
         if (searchQuery) {
             const q = searchQuery.toLowerCase();
             const patientName = getPatientDisplayName(req).toLowerCase();
@@ -220,6 +229,21 @@ const AppointmentRequests = () => {
     });
 
     // Actions
+    const handleCloseRequest = async () => {
+        if (!window.confirm('Mark this request as handled and close it?')) return;
+        setSubmitting(true);
+        try {
+            await inboxAPI.update(selectedRequest.id, { status: 'completed' });
+            showSuccess('Request marked as handled');
+            setSelectedRequest(null);
+            fetchData(true);
+        } catch (e) {
+            console.error('Failed to close request:', e);
+            showError('Failed to close request');
+        } finally {
+            setSubmitting(false);
+        }
+    };
     const handleApprove = async () => {
         if (!approvalData.providerId || !approvalData.appointmentDate || !approvalData.appointmentTime) {
             showError('Provider, date, and time are required');
@@ -314,13 +338,19 @@ const AppointmentRequests = () => {
                                 onClick={() => setFilterStatus('new')}
                                 className={`flex-1 py-1 px-3 text-xs font-bold rounded-md transition-all ${filterStatus === 'new' ? 'bg-white text-amber-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                             >
-                                New ({requests.filter(r => r.status === 'new').length})
+                                New ({requests.filter(r => r.status === 'new' && !r.subject?.includes('DECLINED')).length})
+                            </button>
+                            <button
+                                onClick={() => setFilterStatus('declined')}
+                                className={`flex-1 py-1 px-3 text-xs font-bold rounded-md transition-all ${filterStatus === 'declined' ? 'bg-white text-rose-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                Refusals ({requests.filter(r => r.subject?.includes('DECLINED')).length})
                             </button>
                             <button
                                 onClick={() => setFilterStatus('all')}
-                                className={`flex-1 py-1 px-3 text-xs font-bold rounded-md transition-all ${filterStatus === 'all' ? 'bg-white text-amber-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`flex-1 py-1 px-3 text-xs font-bold rounded-md transition-all ${filterStatus === 'all' ? 'bg-white text-gray-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                             >
-                                All History
+                                History
                             </button>
                         </div>
                     </div>
@@ -463,20 +493,28 @@ const AppointmentRequests = () => {
                                                     </p>
                                                 </div>
                                             </div>
-                                            <div className="grid grid-cols-2 gap-3">
+                                            <div className="flex flex-col gap-3">
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <button
+                                                        onClick={() => setShowApproveModal(true)}
+                                                        className="flex items-center justify-center gap-2 px-4 py-2 bg-rose-600 text-white text-[11px] font-bold rounded-xl hover:bg-rose-700 transition-colors shadow-sm h-11"
+                                                    >
+                                                        <CalendarPlus className="w-3.5 h-3.5" />
+                                                        Resuggest Times
+                                                    </button>
+                                                    <button
+                                                        onClick={() => openPatientChart(selectedRequest)}
+                                                        className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-rose-200 text-rose-600 text-[11px] font-bold rounded-xl hover:bg-rose-50 transition-colors shadow-sm h-11"
+                                                    >
+                                                        <Phone className="w-3.5 h-3.5" />
+                                                        Call Patient
+                                                    </button>
+                                                </div>
                                                 <button
-                                                    onClick={() => setShowApproveModal(true)}
-                                                    className="flex items-center justify-center gap-2 px-4 py-2 bg-rose-600 text-white text-[11px] font-bold rounded-lg hover:bg-rose-700 transition-colors shadow-sm"
+                                                    onClick={handleCloseRequest}
+                                                    className="w-full py-2.5 bg-gray-100 text-gray-500 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-200 transition-colors border border-gray-200"
                                                 >
-                                                    <CalendarPlus className="w-3.5 h-3.5" />
-                                                    Resuggest Times
-                                                </button>
-                                                <button
-                                                    onClick={() => openPatientChart(selectedRequest)}
-                                                    className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-rose-200 text-rose-600 text-[11px] font-bold rounded-lg hover:bg-rose-50 transition-colors shadow-sm"
-                                                >
-                                                    <Phone className="w-3.5 h-3.5" />
-                                                    Call Patient
+                                                    Close Request - No Action Needed
                                                 </button>
                                             </div>
                                         </div>
