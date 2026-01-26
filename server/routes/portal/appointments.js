@@ -114,13 +114,21 @@ router.delete('/requests/:id', requirePortalPermission('can_request_appointments
         }
 
         const currentStatus = checkStatus.rows[0].status;
-        // Use 'cancelled' for all cancellations - it's a valid status in the check constraint
-        const nextStatus = 'cancelled';
+        // If they had suggestions and declined them all, mark as 'declined'
+        // so staff can follow up. Otherwise just mark as 'cancelled'.
+        const nextStatus = currentStatus === 'pending_patient' ? 'declined' : 'cancelled';
 
         const result = await pool.query(
-            "UPDATE portal_appointment_requests SET status = $1 WHERE id = $2 AND portal_account_id = $3 RETURNING *",
+            "UPDATE portal_appointment_requests SET status = $1, processed_at = CURRENT_TIMESTAMP WHERE id = $2 AND portal_account_id = $3 RETURNING *",
             [nextStatus, id, portalAccountId]
         );
+
+        // Trigger inbasket sync so staff sees it immediately
+        try {
+            await syncInboxItems(req.clinic?.id, req.clinic?.schema_name);
+        } catch (syncError) {
+            console.error('[Portal Appointments] Sync error (non-blocking):', syncError);
+        }
 
         res.json({ success: true });
     } catch (error) {

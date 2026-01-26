@@ -343,13 +343,15 @@ const AppointmentRequests = () => {
                                     className={`p-4 cursor-pointer transition-all hover:bg-amber-50/30 ${selectedRequest?.id === req.id ? 'bg-amber-50/50 border-l-4 border-amber-500 shadow-sm' : 'border-l-4 border-transparent'}`}
                                 >
                                     <div className="flex justify-between items-start mb-1">
-                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${req.status === 'new' ? 'bg-amber-100 text-amber-700' :
-                                            req.status === 'pending_patient' ? 'bg-blue-100 text-blue-700' :
-                                                'bg-gray-100 text-gray-500'
+                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${req.status === 'new' && !req.subject?.includes('DECLINED') ? 'bg-amber-100 text-amber-700' :
+                                            (req.status === 'pending_patient' || req.subject?.includes('PENDING RESPONSE')) ? 'bg-blue-100 text-blue-700' :
+                                                req.subject?.includes('DECLINED') ? 'bg-rose-100 text-rose-700' :
+                                                    'bg-gray-100 text-gray-500'
                                             }`}>
-                                            {req.status === 'new' ? 'NEW' :
-                                                req.status === 'pending_patient' ? 'PENDING RESPONSE' :
-                                                    'COMPLETED'}
+                                            {req.subject?.includes('DECLINED') ? 'DECLINED SUGGESTIONS' :
+                                                req.status === 'new' ? 'NEW' :
+                                                    (req.status === 'pending_patient' || req.subject?.includes('PENDING RESPONSE')) ? 'PENDING RESPONSE' :
+                                                        'COMPLETED'}
                                         </span>
                                         <span className="text-[10px] text-gray-400 font-medium">
                                             {format(new Date(req.created_at || req.createdAt), 'MMM d, h:mm a')}
@@ -429,7 +431,7 @@ const AppointmentRequests = () => {
                                         </div>
                                     </div>
 
-                                    {selectedRequest.status === 'pending_patient' ? (
+                                    {selectedRequest.status === 'pending_patient' || selectedRequest.subject?.includes('PENDING RESPONSE') ? (
                                         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between">
                                             <div className="flex items-center gap-3">
                                                 <div className="p-2 bg-blue-500 rounded-lg shadow-md">
@@ -447,7 +449,7 @@ const AppointmentRequests = () => {
                                                 Modify Suggestions
                                             </button>
                                         </div>
-                                    ) : selectedRequest.status === 'declined_by_patient' ? (
+                                    ) : (selectedRequest.status === 'declined' || selectedRequest.subject?.includes('DECLINED')) ? (
                                         <div className="bg-rose-50 border border-rose-200 rounded-xl p-5">
                                             <div className="flex items-center gap-3 mb-4">
                                                 <div className="p-2 bg-rose-500 rounded-lg shadow-md">
@@ -473,12 +475,12 @@ const AppointmentRequests = () => {
                                                     onClick={() => openPatientChart(selectedRequest)}
                                                     className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-rose-200 text-rose-600 text-[11px] font-bold rounded-lg hover:bg-rose-50 transition-colors shadow-sm"
                                                 >
-                                                    <Send className="w-3.5 h-3.5" />
-                                                    Message or Call
+                                                    <Phone className="w-3.5 h-3.5" />
+                                                    Call Patient
                                                 </button>
                                             </div>
                                         </div>
-                                    ) : selectedRequest.status === 'new' && (
+                                    ) : (selectedRequest.status === 'new' || selectedRequest.status === 'pending') && (
                                         <div className="flex flex-col sm:flex-row gap-3">
                                             <button
                                                 onClick={() => setShowApproveModal(true)}

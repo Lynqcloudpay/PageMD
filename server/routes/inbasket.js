@@ -381,16 +381,23 @@ async function syncInboxItems(tenantId, schema) {
       assigned_user_id, created_at, updated_at, visit_method
     )
     SELECT
-      gen_random_uuid(), $1, p.id, 'portal_appointment', 'normal', 'new',
-      'Portal Appt Req: ' || appointment_type,
+      gen_random_uuid(), $1, p.id, 'portal_appointment', 
+      CASE WHEN ar.status = 'declined' THEN 'high' ELSE 'normal' END, 
+      'new',
+      CASE WHEN ar.status = 'declined' THEN 'DECLINED SUGGESTIONS: ' || appointment_type ELSE 'Portal Appt Req: ' || appointment_type END,
       'Preferred Date: ' || preferred_date || ' (' || preferred_time_range || ')\nReason: ' || COALESCE(reason, 'N/A'),
       ar.id, 'portal_appointment_requests',
       COALESCE(ar.provider_id, p.primary_care_provider), ar.created_at, ar.created_at, ar.visit_method
     FROM portal_appointment_requests ar
     JOIN patients p ON ar.patient_id = p.id
-    WHERE ar.status = 'pending'
+    WHERE ar.status IN ('pending', 'declined')
     ON CONFLICT (reference_id, reference_table) WHERE status != 'completed' 
-    DO UPDATE SET visit_method = EXCLUDED.visit_method, updated_at = CURRENT_TIMESTAMP
+    DO UPDATE SET 
+        priority = EXCLUDED.priority,
+        subject = EXCLUDED.subject,
+        visit_method = EXCLUDED.visit_method, 
+        updated_at = CURRENT_TIMESTAMP,
+        status = 'new' -- Re-open if it was archived/read but now declined
     `, [tenantId]);
 
   } finally {
