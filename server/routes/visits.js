@@ -679,6 +679,7 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
                note_signed_by = $3,
                clinical_snapshot = $5,
                content_hash = $6,
+               content_integrity_verified = TRUE,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $2 
            RETURNING *`,
@@ -693,6 +694,7 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
                note_signed_by = $3,
                clinical_snapshot = $4,
                content_hash = $5,
+               content_integrity_verified = TRUE,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $2 
            RETURNING *`,
@@ -710,10 +712,12 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
                  note_signed_at = CURRENT_TIMESTAMP,
                  note_signed_by = $3,
                  clinical_snapshot = $5,
+                 content_hash = $6,
+                 content_integrity_verified = TRUE,
                  updated_at = CURRENT_TIMESTAMP
              WHERE id::text = $2 OR CAST(id AS TEXT) = $2
              RETURNING *`,
-            [noteDraftToSave, id, req.user.id, vitalsValue, JSON.stringify(clinicalSnapshot)]
+            [noteDraftToSave, id, req.user.id, vitalsValue, JSON.stringify(clinicalSnapshot), contentHash]
           );
         } else {
           result = await pool.query(
@@ -723,10 +727,12 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
                  note_signed_at = CURRENT_TIMESTAMP,
                  note_signed_by = $3,
                  clinical_snapshot = $4,
+                 content_hash = $5,
+                 content_integrity_verified = TRUE,
                  updated_at = CURRENT_TIMESTAMP
              WHERE id::text = $2 OR CAST(id AS TEXT) = $2
              RETURNING *`,
-            [noteDraftToSave, id, req.user.id, JSON.stringify(clinicalSnapshot)]
+            [noteDraftToSave, id, req.user.id, JSON.stringify(clinicalSnapshot), contentHash]
           );
         }
       } else {

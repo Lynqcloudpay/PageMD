@@ -3762,30 +3762,33 @@ const VisitNote = () => {
                         </div>
                     </div>
                 )}
-
-                <RetractionModal
-                    isOpen={showRetractModal}
-                    onClose={() => setShowRetractModal(false)}
-                    data={retractData}
-                    setData={setRetractData}
-                    onConfirm={async () => {
-                        try {
-                            setIsSaving(true);
-                            await visitsAPI.retract(currentVisitId, retractData);
-                            showToast('Note retracted successfully', 'success');
-                            setShowRetractModal(false);
-                            setIsRetracted(true);
-                            setRefreshTrigger(prev => prev + 1);
-                        } catch (e) {
-                            console.error('Retraction failed:', e);
-                            showToast(e.response?.data?.error || 'Failed to retract note', 'error');
-                        } finally {
-                            setIsSaving(false);
-                        }
-                    }}
-                />
             </div>
-            );
+
+            <RetractionModal
+                isOpen={showRetractModal}
+                onClose={() => setShowRetractModal(false)}
+                data={retractData}
+                setData={setRetractData}
+                onConfirm={async () => {
+                    try {
+                        setIsSaving(true);
+                        await visitsAPI.retract(currentVisitId, retractData);
+                        showToast('Note retracted successfully', 'success');
+                        setShowRetractModal(false);
+                        setIsRetracted(true);
+                        setRefreshTrigger(prev => prev + 1);
+                    } catch (e) {
+                        console.error('Retraction failed:', e);
+                        showToast(e.response?.data?.error || 'Failed to retract note', 'error');
+                    } finally {
+                        setIsSaving(false);
+                    }
+                }}
+            />
+        </div>
+        </div >
+        </div >
+    );
 };
 
-            export default VisitNote;
+export default VisitNote;

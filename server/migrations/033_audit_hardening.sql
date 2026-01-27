@@ -1,4 +1,4 @@
--- Migration: Hardening Audit & Clinical Signs (v3)
+-- Migration: Hardening Audit & Clinical Signs (v4 - production safe)
 -- Description: Tenant-scoped indexes, durable retractions, and append-only triggers.
 
 -- 0) Extensions
@@ -17,41 +17,36 @@ CREATE INDEX IF NOT EXISTS idx_audit_events_tenant_actor_occurred
 CREATE INDEX IF NOT EXISTS idx_audit_events_tenant_action_occurred
   ON audit_events (tenant_id, action, occurred_at DESC);
 
--- Critical for "Note History / Audit Trail" lookups
 CREATE INDEX IF NOT EXISTS idx_audit_events_tenant_entity_occurred
   ON audit_events (tenant_id, entity_type, entity_id, occurred_at DESC);
 
 -- 2) Content Integrity for Clinical Notes (visits)
 DO $$
 BEGIN
-  -- Add hash column with schema check
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
-    WHERE table_name='visits' AND column_name='content_hash'
-    AND table_schema = current_schema()
+    WHERE table_schema = current_schema()
+      AND table_name='visits'
+      AND column_name='content_hash'
   ) THEN
     ALTER TABLE visits ADD COLUMN content_hash TEXT NULL;
   END IF;
 
-  -- Add integrity flag (NULL = not checked)
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
-    WHERE table_name='visits' AND column_name='content_integrity_verified'
-    AND table_schema = current_schema()
+    WHERE table_schema = current_schema()
+      AND table_name='visits'
+      AND column_name='content_integrity_verified'
   ) THEN
     ALTER TABLE visits ADD COLUMN content_integrity_verified BOOLEAN NULL;
   ELSE
-    -- Re-baseline existing column
-    ALTER TABLE visits ALTER COLUMN content_integrity_verified SET DEFAULT NULL;
-    -- Also update any existing TRUE defaults to NULL to be safe
+    -- Ensure no default that implies "verified" without checking
     ALTER TABLE visits ALTER COLUMN content_integrity_verified DROP DEFAULT;
   END IF;
 END $$;
 
--- 3) note_retractions: durable, non-cascading, tenant-aware
-DROP TABLE IF EXISTS note_retractions;
-
-CREATE TABLE note_retractions (
+-- 3) note_retractions: durable, non-cascading, tenant-aware (NO DROPS)
+CREATE TABLE IF NOT EXISTS note_retractions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL,
   note_id uuid NOT NULL REFERENCES visits(id),
@@ -68,7 +63,11 @@ CREATE INDEX IF NOT EXISTS idx_note_retractions_tenant_note_id
 CREATE INDEX IF NOT EXISTS idx_note_retractions_tenant_retracted_at
   ON note_retractions(tenant_id, retracted_at DESC);
 
--- 4) Audit log immutability
+-- avoid duplicate retractions for same note
+CREATE UNIQUE INDEX IF NOT EXISTS uq_note_retractions_tenant_note
+  ON note_retractions(tenant_id, note_id);
+
+-- 4) Audit log immutability: prevent UPDATE/DELETE
 CREATE OR REPLACE FUNCTION prevent_audit_mutation()
 RETURNS trigger AS $$
 BEGIN
