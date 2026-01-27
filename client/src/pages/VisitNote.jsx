@@ -1456,10 +1456,16 @@ const VisitNote = () => {
             setEditingDiagnosisIndex(null);
         } else {
             // Add new diagnosis
+            const newDx = `${code.code} - ${code.description}`;
             const newAssessment = noteData.assessment
-                ? `${noteData.assessment}\n${code.code} - ${code.description}`
-                : `${code.code} - ${code.description}`;
-            setNoteData(prev => ({ ...prev, assessment: newAssessment }));
+                ? `${noteData.assessment}\n${newDx}`
+                : newDx;
+
+            setNoteData(prev => ({
+                ...prev,
+                assessment: newAssessment,
+                planStructured: [...(prev.planStructured || []), { diagnosis: newDx, orders: [] }]
+            }));
         }
 
         setShowIcd10Search(false);
@@ -3634,12 +3640,6 @@ const VisitNote = () => {
                         </div>
                     )
                 }
-                <PatientChartPanel
-                    patientId={id}
-                    isOpen={showPatientChart}
-                    onClose={() => setShowPatientChart(false)}
-                    initialTab={patientChartTab}
-                />
                 {showPrintOrdersModal && (
                     <PrintOrdersModal
                         patient={{ ...patientData, id }}
@@ -3786,8 +3786,6 @@ const VisitNote = () => {
                 }}
             />
         </div>
-        </div >
-        </div >
     );
 };
 
