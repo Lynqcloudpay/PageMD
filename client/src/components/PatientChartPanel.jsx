@@ -7,7 +7,7 @@ import {
     LayoutDashboard, ChevronRight, Search, FilePlus, ChevronDown, HeartPulse, ActivitySquare, Zap, Waves,
     Edit2, RotateCcw, Calendar, AlertCircle, Users, Receipt, PieChart, ArrowRight
 } from 'lucide-react';
-import { visitsAPI, documentsAPI, ordersAPI, referralsAPI, patientsAPI, eprescribeAPI, reportsAPI } from '../services/api';
+import { visitsAPI, documentsAPI, ordersAPI, referralsAPI, patientsAPI, eprescribeAPI, reportsAPI, auditAPI } from '../services/api';
 import { format } from 'date-fns';
 import DoseSpotPrescribe from './DoseSpotPrescribe';
 import VisitChartView from './VisitChartView';
@@ -31,6 +31,8 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
     const [documents, setDocuments] = useState([]);
     const [expandedNotes, setExpandedNotes] = useState({});
     const [selectedVisitForView, setSelectedVisitForView] = useState(null);
+    const [auditActivity, setAuditActivity] = useState([]);
+    const [loadingAudit, setLoadingAudit] = useState(false);
 
     // Patient Hub State
     const [patient, setPatient] = useState(null);
@@ -150,6 +152,24 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
         window.addEventListener('patient-data-updated', handleDataUpdate);
         return () => window.removeEventListener('patient-data-updated', handleDataUpdate);
     }, [isOpen, patientId]);
+
+    const fetchAuditActivity = async () => {
+        setLoadingAudit(true);
+        try {
+            const res = await auditAPI.getPatientActivity(patientId);
+            setAuditActivity(res.data || []);
+        } catch (e) {
+            console.warn('Failed to fetch audit activity', e);
+        } finally {
+            setLoadingAudit(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'audit' && patientId) {
+            fetchAuditActivity();
+        }
+    }, [activeTab, patientId]);
 
     const fetchAllData = async () => {
         setLoading(true);
@@ -321,7 +341,8 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
         { id: 'echo', label: 'ECHO', icon: HeartPulse },
         { id: 'referrals', label: 'Referrals', icon: ExternalLink },
         { id: 'reports', label: 'Quality Reporting', icon: PieChart },
-        { id: 'billing', label: 'Billing & Superbills', icon: Receipt }
+        { id: 'billing', label: 'Billing & Superbills', icon: Receipt },
+        { id: 'audit', label: 'Chart Activity', icon: Shield }
     ];
 
     const getStatusBadge = (status) => {
@@ -617,6 +638,58 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                             </div>
                         ) : (
                             <div className="animate-fade-in-up">
+                                {/* AUDIT TAB */}
+                                {activeTab === 'audit' && (
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                            <div className="flex items-center gap-3">
+                                                <div className="bg-blue-100 p-2 rounded-lg"><Shield className="w-5 h-5 text-blue-600" /></div>
+                                                <div>
+                                                    <span className="text-sm font-bold text-gray-900">Chart Activity Audit</span>
+                                                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Security & Access Tracking</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {loadingAudit ? (
+                                            <div className="flex flex-col items-center justify-center p-20 text-slate-400">
+                                                <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+                                                <p className="font-bold">Fetching activity log...</p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {auditActivity.map((event) => (
+                                                    <div key={event.id} className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+                                                        <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0">
+                                                            <User size={14} className="text-slate-400" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 mb-0.5">
+                                                                <span className="font-bold text-slate-900 text-xs">
+                                                                    {event.actor_name}
+                                                                </span>
+                                                                <span className="px-1.5 py-0.5 bg-slate-100 text-[8px] font-black text-slate-400 uppercase rounded">
+                                                                    {event.actor_role}
+                                                                </span>
+                                                                <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase ml-auto">
+                                                                    {event.action}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center gap-3 text-[10px] text-gray-400 font-medium">
+                                                                <span className="flex items-center gap-1"><Clock size={10} /> {format(new Date(event.occurred_at), 'MMM d, h:mm a')}</span>
+                                                                {event.ip_address && <span className="flex items-center gap-1"><Activity size={10} /> {event.ip_address}</span>}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {auditActivity.length === 0 && (
+                                                    <div className="text-center py-12 text-slate-400 italic">No activity recorded for this chart.</div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
                                 {/* PROBLEMS TAB */}
                                 {activeTab === 'problems' && (
                                     <div className="space-y-6">

@@ -52,7 +52,12 @@ router.post('/register', [
       { expiresIn: '24h' }
     );
 
-    await logAudit(user.id, 'user_registered', 'user', user.id, {}, req.ip);
+    req.logAuditEvent({
+      action: 'USER_REGISTERED',
+      entityType: 'User',
+      entityId: user.id,
+      details: { email: user.email, role }
+    });
 
     res.status(201).json({ user, token });
   } catch (error) {
@@ -157,6 +162,16 @@ router.post('/login', [
 
     if (result.rows.length === 0) {
       console.log('[Auth] User not found');
+
+      // Commercial-Grade Audit Logging
+      if (req.logAuditEvent) {
+        req.logAuditEvent({
+          action: 'LOGIN_FAIL',
+          entityType: 'User',
+          details: { email, reason: 'USER_NOT_FOUND' }
+        });
+      }
+
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
@@ -188,6 +203,17 @@ router.post('/login', [
 
     if (!valid) {
       console.error('Login failed: Password mismatch for', email);
+
+      // Commercial-Grade Audit Logging
+      if (req.logAuditEvent) {
+        req.logAuditEvent({
+          action: 'LOGIN_FAIL',
+          entityType: 'User',
+          entityId: user.id,
+          details: { email, reason: 'INVALID_PASSWORD' }
+        });
+      }
+
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
@@ -208,6 +234,22 @@ router.post('/login', [
       await logAudit(user.id, 'user_login', 'user', user.id, {}, req.ip);
     } catch (auditError) {
       console.warn('Audit log failed (non-critical):', auditError.message);
+    }
+
+    // Commercial-Grade Audit Logging
+    if (req.auditContext) {
+      req.auditContext.userId = user.id;
+      req.auditContext.role = user.role_name;
+      req.auditContext.tenantId = req.clinic?.id;
+    }
+
+    if (req.logAuditEvent) {
+      req.logAuditEvent({
+        action: 'LOGIN_SUCCESS',
+        entityType: 'User',
+        entityId: user.id,
+        details: { email: user.email }
+      });
     }
 
     // Get is_admin flag directly from the user query result
@@ -330,10 +372,15 @@ router.get('/impersonate', async (req, res) => {
     );
 
     // 4. Log the access in tenant audit log
-    await logAudit(user.id, 'admin_impersonation_login', 'user', user.id, {
-      impersonator: tokenRes.rows[0].admin_id,
-      reason: tokenRes.rows[0].reason
-    }, req.ip);
+    req.logAuditEvent({
+      action: 'ADMIN_IMPERSONATION_LOGIN',
+      entityType: 'User',
+      entityId: user.id,
+      details: {
+        impersonator: tokenRes.rows[0].admin_id,
+        reason: tokenRes.rows[0].reason
+      }
+    });
 
     // 5. Delete the one-time token
     await pool.controlPool.query('DELETE FROM platform_impersonation_tokens WHERE id = $1', [tokenRes.rows[0].id]);

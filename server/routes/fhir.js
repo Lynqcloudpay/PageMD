@@ -10,13 +10,13 @@ router.get('/Patient/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query('SELECT * FROM patients WHERE id = $1', [id]);
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Patient not found' });
     }
 
     const patient = result.rows[0];
-    
+
     // Convert to FHIR R4 Patient resource
     const fhirPatient = {
       resourceType: 'Patient',
@@ -65,7 +65,12 @@ router.get('/Patient/:id', async (req, res) => {
       ] : []
     };
 
-    await logAudit(req.user.id, 'fhir_patient_read', 'patient', id, {}, req.ip);
+    req.logAuditEvent({
+      action: 'FHIR_PATIENT_READ',
+      entityType: 'Patient',
+      entityId: id,
+      patientId: id
+    });
     res.json(fhirPatient);
   } catch (error) {
     console.error('FHIR Patient error:', error);
@@ -77,7 +82,7 @@ router.get('/Patient/:id', async (req, res) => {
 router.get('/Observation', async (req, res) => {
   try {
     const { patient, code } = req.query;
-    
+
     let query = `
       SELECT o.*, v.visit_date, v.vitals
       FROM orders o
@@ -85,21 +90,21 @@ router.get('/Observation', async (req, res) => {
       WHERE o.order_type = 'lab' AND o.patient_id = $1
     `;
     const params = [patient];
-    
+
     if (code) {
       query += ` AND o.order_payload->>'loinc' = $2`;
       params.push(code);
     }
-    
+
     query += ` ORDER BY o.created_at DESC LIMIT 100`;
-    
+
     const result = await pool.query(query, params);
-    
+
     const observations = result.rows.map(order => {
-      const payload = typeof order.order_payload === 'string' 
-        ? JSON.parse(order.order_payload) 
+      const payload = typeof order.order_payload === 'string'
+        ? JSON.parse(order.order_payload)
         : order.order_payload;
-      
+
       return {
         resourceType: 'Observation',
         id: order.id,
@@ -148,7 +153,13 @@ router.get('/Observation', async (req, res) => {
       };
     });
 
-    await logAudit(req.user.id, 'fhir_observation_search', 'observation', null, { patient, code }, req.ip);
+    req.logAuditEvent({
+      action: 'FHIR_OBSERVATION_SEARCH',
+      entityType: 'Patient',
+      entityId: patient,
+      patientId: patient,
+      details: { code }
+    });
     res.json({
       resourceType: 'Bundle',
       type: 'searchset',
@@ -165,7 +176,7 @@ router.get('/Observation', async (req, res) => {
 router.get('/DiagnosticReport', async (req, res) => {
   try {
     const { patient } = req.query;
-    
+
     const result = await pool.query(
       `SELECT d.*, v.visit_date
        FROM documents d
@@ -217,7 +228,12 @@ router.get('/DiagnosticReport', async (req, res) => {
       ]
     }));
 
-    await logAudit(req.user.id, 'fhir_diagnosticreport_search', 'diagnosticreport', null, { patient }, req.ip);
+    req.logAuditEvent({
+      action: 'FHIR_DIAGNOSTICREPORT_SEARCH',
+      entityType: 'Patient',
+      entityId: patient,
+      patientId: patient
+    });
     res.json({
       resourceType: 'Bundle',
       type: 'searchset',

@@ -104,6 +104,8 @@ app.use(sanitizeInput);
 
 // PHI Redaction middleware (must come before routes)
 const { redactRequestForLogging, validateURLParams } = require('./middleware/phiRedaction');
+const auditMiddleware = require('./middleware/audit');
+app.use(auditMiddleware);
 app.use(redactRequestForLogging);
 app.use(validateURLParams);
 
@@ -196,6 +198,8 @@ app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/pharmacies', pharmacyRoutes);
 app.use('/api/eprescribe', eprescribeRoutes);
 app.use('/api/medications', medicationRoutes);
+const auditRoutes = require('./routes/audit');
+app.use('/api/audit', auditRoutes);
 
 // Billing endpoints
 const billingRoutes = require('./routes/billing');

@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const router = express.Router();
 const pool = require('../db');
 const { authenticate, requireRole, logAudit } = require('../middleware/auth');
@@ -114,7 +115,7 @@ router.get('/pending', requirePermission('notes:view'), async (req, res) => {
       INNER JOIN patients p ON v.patient_id = p.id
       LEFT JOIN users signed_by_user ON v.note_signed_by = signed_by_user.id
       WHERE v.note_signed_at IS NULL 
-        AND v.status = 'draft'
+        AND (v.status = 'draft' OR v.status IS NULL)
     `;
     const params = [];
     let paramIndex = 1;
@@ -175,7 +176,7 @@ router.get('/today-draft/:patientId', requirePermission('notes:view'), async (re
     let query = `
       SELECT * FROM visits 
       WHERE patient_id = $1 
-      AND status = 'draft'
+      AND (status = 'draft' OR status IS NULL)
       AND encounter_date = $2
       AND note_signed_at IS NULL
     `;
@@ -293,11 +294,13 @@ router.post('/open-today/:patientId', requirePermission('notes:create'), async (
     await client.query('COMMIT');
 
     // Log audit
-    try {
-      await logAudit(req.user.id, 'create_visit', 'visit', insertResult.rows[0].id, req.body, req.ip);
-    } catch (auditError) {
-      console.error('Failed to log audit (non-fatal):', auditError.message);
-    }
+    req.logAuditEvent({
+      action: 'NOTE_CREATED',
+      entityType: 'Note',
+      entityId: insertResult.rows[0].id,
+      patientId,
+      details: { noteType }
+    });
 
     res.status(201).json({ note: insertResult.rows[0] });
   } catch (error) {
@@ -311,7 +314,7 @@ router.post('/open-today/:patientId', requirePermission('notes:create'), async (
         const retryResult = await pool.query(
           `SELECT * FROM visits 
            WHERE patient_id = $1 
-           AND status = 'draft'
+           AND (status = 'draft' OR status IS NULL)
            AND encounter_date = $2
            AND provider_id = $3
            AND note_type = $4
@@ -395,7 +398,7 @@ router.post('/find-or-create', requirePermission('notes:create'), async (req, re
       const existingResult = await client.query(
         `SELECT * FROM visits 
          WHERE patient_id = $1 
-         AND status = 'draft'
+         AND (status = 'draft' OR status IS NULL)
          AND encounter_date = $2
          AND note_type = $3
          AND note_signed_at IS NULL
@@ -436,11 +439,13 @@ router.post('/find-or-create', requirePermission('notes:create'), async (req, re
     await client.query('COMMIT');
 
     // Try to log audit, but don't fail if it doesn't work
-    try {
-      await logAudit(req.user.id, 'create_visit', 'visit', insertResult.rows[0].id, req.body, req.ip);
-    } catch (auditError) {
-      console.error('Failed to log audit (non-fatal):', auditError.message);
-    }
+    req.logAuditEvent({
+      action: 'NOTE_CREATED',
+      entityType: 'Note',
+      entityId: insertResult.rows[0].id,
+      patientId,
+      details: { noteType, legacy: true }
+    });
 
     res.status(201).json(insertResult.rows[0]);
   } catch (error) {
@@ -464,7 +469,7 @@ router.post('/find-or-create', requirePermission('notes:create'), async (req, re
         const retryResult = await pool.query(
           `SELECT * FROM visits 
            WHERE patient_id = $1 
-           AND status = 'draft'
+           AND (status = 'draft' OR status IS NULL)
            AND encounter_date = $2
            AND note_type = $3
            AND note_signed_at IS NULL
@@ -654,6 +659,13 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
       }))
     };
 
+    // ============================================================
+    // INTEGRITY HASH: Create a digital fingerprint of the signed content
+    // ============================================================
+    const snapshotJson = JSON.stringify(clinicalSnapshot);
+    const hashPayload = `${id}|${patientId}|${noteDraftToSave}|${vitalsValue || ''}|${snapshotJson}|${req.user.id}`;
+    const contentHash = crypto.createHash('sha256').update(hashPayload).digest('hex');
+
     let result;
     try {
       // If vitals are provided, include them in the update
@@ -666,10 +678,11 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
                note_signed_at = CURRENT_TIMESTAMP,
                note_signed_by = $3,
                clinical_snapshot = $5,
+               content_hash = $6,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $2 
            RETURNING *`,
-          [noteDraftToSave, id, req.user.id, vitalsValue, JSON.stringify(clinicalSnapshot)]
+          [noteDraftToSave, id, req.user.id, vitalsValue, snapshotJson, contentHash]
         );
       } else {
         result = await pool.query(
@@ -679,10 +692,11 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
                note_signed_at = CURRENT_TIMESTAMP,
                note_signed_by = $3,
                clinical_snapshot = $4,
+               content_hash = $5,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $2 
            RETURNING *`,
-          [noteDraftToSave, id, req.user.id, JSON.stringify(clinicalSnapshot)]
+          [noteDraftToSave, id, req.user.id, snapshotJson, contentHash]
         );
       }
     } catch (dbError) {
@@ -720,13 +734,24 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
       }
     }
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Visit not found' });
+    const visit = result.rows[0];
+
+    // Commercial-Grade Audit Logging
+    if (req.logAuditEvent) {
+      req.logAuditEvent({
+        action: 'NOTE_SIGNED',
+        entityType: 'Note',
+        entityId: id,
+        patientId: visit.patient_id,
+        encounterId: id,
+        details: {
+          note_type: visit.visit_type,
+          signed_at: visit.note_signed_at
+        }
+      });
     }
 
-    await logAudit(req.user.id, 'sign_visit', 'visit', id, { snapshot_captured: true }, req.ip);
-
-    res.json(result.rows[0]);
+    res.json(visit);
   } catch (error) {
     safeLogger.error('Error signing visit', {
       message: error.message,
@@ -736,6 +761,126 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
     res.status(500).json({ error: 'Failed to sign visit', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
+  }
+});
+
+/**
+ * Commercial-Grade Note Retraction (Entered-in-Error)
+ * Signed notes cannot be truly deleted. They are retracted/voided.
+ */
+router.post('/:id/retract', requirePermission('notes:edit'), async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+    const { reason_code, reason_text } = req.body;
+
+    if (!reason_code || !reason_text) {
+      return res.status(400).json({ error: 'Reason code and explanation text are required for retraction' });
+    }
+
+    await client.query('BEGIN');
+
+    // 1. Get the visit and verify it can be retracted
+    const visitRes = await client.query('SELECT status, note_signed_at, patient_id FROM visits WHERE id = $1', [id]);
+    if (visitRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Visit not found' });
+    }
+
+    const visit = visitRes.rows[0];
+
+    // Safety check: Only signed notes should use the retraction workflow
+    // Unsigned notes can be hard-deleted or cancelled normally
+    if (visit.status !== 'signed' && !visit.note_signed_at) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Note must be signed before it can be retracted. For drafts, use the delete action.' });
+    }
+
+    if (visit.status === 'retracted') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Note is already retracted' });
+    }
+
+    // 2. Perform Retraction
+    // Status changes to RETRACTED, but content is preserved (note_draft and clinical_snapshot)
+    await client.query(
+      `UPDATE visits 
+       SET status = 'retracted', 
+           updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $1`,
+      [id]
+    );
+
+    // 3. Create Retraction Record
+    await client.query(
+      `INSERT INTO note_retractions (
+         note_id, retracted_by_user_id, reason_code, reason_text
+       ) VALUES ($1, $2, $3, $4)`,
+      [id, req.user.id, reason_code, reason_text]
+    );
+
+    // 4. Write Audit Event (Old System)
+    await logAudit(
+      req.user.id,
+      'note_retracted',
+      'visit',
+      id,
+      {
+        reason_code,
+        reason_text,
+        action: 'ENTERED_IN_ERROR'
+      },
+      req.ip
+    );
+
+    // 5. Write Commercial-Grade Audit Event
+    if (req.logAuditEvent) {
+      req.logAuditEvent({
+        action: 'NOTE_RETRACTED',
+        entityType: 'Note',
+        entityId: id,
+        patientId: visit.patient_id,
+        encounterId: id,
+        details: {
+          reason_code,
+          reason_text,
+          action: 'ENTERED_IN_ERROR'
+        }
+      });
+    }
+
+    await client.query('COMMIT');
+    res.json({ success: true, message: 'Note has been retracted and marked Entered-in-Error' });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Retraction error:', error);
+    res.status(500).json({ error: 'Failed to retract note', details: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+// Get retraction details
+router.get('/:id/retraction', requirePermission('notes:view'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      `SELECT nr.*, u.first_name || ' ' || u.last_name as retracted_by_name
+       FROM note_retractions nr
+       JOIN users u ON nr.retracted_by_user_id = u.id
+       WHERE nr.note_id = $1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Retraction details not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching retraction details:', error);
+    res.status(500).json({ error: 'Failed to fetch retraction details' });
   }
 });
 
@@ -756,7 +901,12 @@ router.post('/:id/summary', requirePermission('notes:create'), async (req, res) 
     // For now, we'll create a structured summary from the note
     const summary = generateSummary(noteText, visit);
 
-    await logAudit(req.user.id, 'generate_summary', 'visit', id, {}, req.ip);
+    req.logAuditEvent({
+      action: 'SUMMARY_GENERATED',
+      entityType: 'Note',
+      entityId: id,
+      patientId: visit.patient_id
+    });
 
     res.json({ summary });
   } catch (error) {
@@ -891,11 +1041,37 @@ router.get('/:id', requirePermission('notes:view'), async (req, res) => {
       }
     }
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Visit not found' });
+    const visit = result.rows[0];
+
+    // Log audit
+    req.logAuditEvent({
+      action: 'NOTE_VIEWED',
+      entityType: 'Note',
+      entityId: id,
+      patientId: visit.patient_id
+    });
+
+    // Integrity Verification for Signed Notes
+    if (visit.note_signed_at && visit.content_hash) {
+      const snapshot = typeof visit.clinical_snapshot === 'string' ? visit.clinical_snapshot : JSON.stringify(visit.clinical_snapshot);
+      const hashPayload = `${visit.id}|${visit.patient_id}|${visit.note_draft || ''}|${visit.vitals || ''}|${snapshot}|${visit.note_signed_by}`;
+      const computedHash = crypto.createHash('sha256').update(hashPayload).digest('hex');
+
+      visit.content_integrity_verified = (computedHash === visit.content_hash);
+
+      if (!visit.content_integrity_verified) {
+        console.warn(`[SECURITY] Integrity check failed for note ${id}. Content may have been tampered with.`);
+        req.logAuditEvent({
+          action: 'INTEGRITY_CHECK_FAILED',
+          entityType: 'Note',
+          entityId: id,
+          patientId: visit.patient_id,
+          details: { expected: visit.content_hash, computed: computedHash }
+        });
+      }
     }
 
-    res.json(result.rows[0]);
+    res.json(visit);
   } catch (error) {
     console.error('Error fetching visit:', error);
     console.error('Error details:', error.message, error.stack);
@@ -914,7 +1090,14 @@ router.post('/', requirePermission('notes:create'), async (req, res) => {
       [patient_id, visit_date || new Date(), visit_type || 'Office Visit', provider_id || req.user.id, req.user?.clinic_id]
     );
 
-    await logAudit(req.user.id, 'create_visit', 'visit', result.rows[0].id, req.body, req.ip);
+    const visit = result.rows[0];
+    req.logAuditEvent({
+      action: 'NOTE_CREATED',
+      entityType: 'Note',
+      entityId: visit.id,
+      patientId: visit.patient_id,
+      details: { visit_type: visit.visit_type }
+    });
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -928,6 +1111,21 @@ router.put('/:id', requirePermission('notes:edit'), async (req, res) => {
   try {
     const { id } = req.params;
     const { visit_date, visit_type, vitals, note_draft, note_signed_at, provider_id } = req.body;
+
+    // IMMUTABILITY CHECK: Prevent editing signed or retracted notes
+    const checkRes = await pool.query('SELECT status, note_signed_at FROM visits WHERE id = $1', [id]);
+    if (checkRes.rows.length > 0) {
+      const v = checkRes.rows[0];
+      if ((v.status === 'signed' || v.note_signed_at) && !req.user.is_admin) {
+        return res.status(403).json({
+          error: 'Signed notes cannot be edited. Please use the addendum or retraction workflow.',
+          code: 'NOTE_LOCKED'
+        });
+      }
+      if (v.status === 'retracted') {
+        return res.status(403).json({ error: 'Retracted notes are immutable.' });
+      }
+    }
 
     const updates = [];
     const values = [];
@@ -998,11 +1196,12 @@ router.put('/:id', requirePermission('notes:edit'), async (req, res) => {
     }
 
     // Try to log audit, but don't fail if it doesn't work
-    try {
-      await logAudit(req.user.id, 'update_visit', 'visit', id, req.body, req.ip);
-    } catch (auditError) {
-      console.error('Failed to log audit (non-fatal):', auditError.message);
-    }
+    req.logAuditEvent({
+      action: 'NOTE_UPDATED_DRAFT',
+      entityType: 'Note',
+      entityId: id,
+      patientId: result.rows[0].patient_id
+    });
 
     res.json(result.rows[0]);
   } catch (error) {
@@ -1061,7 +1260,13 @@ router.post('/:id/addendum', requirePermission('notes:edit'), async (req, res) =
       [JSON.stringify(existingAddendums), id]
     );
 
-    await logAudit(req.user.id, 'add_addendum', 'visit', id, { addendumCount: existingAddendums.length }, req.ip);
+    req.logAuditEvent({
+      action: 'ADDENDUM_ADDED',
+      entityType: 'Note',
+      entityId: id,
+      patientId: visit.patient_id,
+      details: { addendumCount: existingAddendums.length }
+    });
 
     res.json(result.rows[0]);
   } catch (error) {
@@ -1076,6 +1281,19 @@ router.delete('/:id', requirePermission('notes:edit'), async (req, res) => {
   const client = await pool.connect();
   try {
     const { id } = req.params;
+
+    // IMMUTABILITY CHECK: Prevent deleting signed notes
+    const checkRes = await client.query('SELECT status, note_signed_at FROM visits WHERE id = $1', [id]);
+    if (checkRes.rows.length > 0) {
+      const v = checkRes.rows[0];
+      if (v.status === 'signed' || v.status === 'retracted' || v.note_signed_at) {
+        client.release();
+        return res.status(403).json({
+          error: 'Signed or retracted clinical notes cannot be hard-deleted from the system for compliance reasons. Use the retraction workflow instead.',
+          code: 'NOTE_DELETE_FORBIDDEN'
+        });
+      }
+    }
 
     await client.query('BEGIN');
 
@@ -1092,7 +1310,12 @@ router.delete('/:id', requirePermission('notes:edit'), async (req, res) => {
 
     await client.query('COMMIT');
 
-    await logAudit(req.user.id, 'delete_visit', 'visit', id, {}, req.ip);
+    req.logAuditEvent({
+      action: 'NOTE_DELETED',
+      entityType: 'Note',
+      entityId: id,
+      patientId: result.rows[0].patient_id
+    });
 
     res.json({ message: 'Visit deleted successfully' });
   } catch (error) {

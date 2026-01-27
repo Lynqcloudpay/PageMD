@@ -149,6 +149,8 @@ export const visitsAPI = {
     api.post(`/visits/open-today/${patientId}`, { noteType, providerId }),
   findOrCreate: (patientId, visitType, forceNew = false) => api.post('/visits/find-or-create', { patientId, visitType, forceNew }),
   generateSummary: (id) => api.post(`/visits/${id}/summary`),
+  retract: (id, data) => api.post(`/visits/${id}/retract`, data),
+  getRetraction: (id) => api.get(`/visits/${id}/retraction`),
 };
 
 // Orders
@@ -596,6 +598,14 @@ export const complianceAPI = {
   resolveAlert: (id, resolutionNote) => api.patch(`/compliance/alerts/${id}/resolve`, { resolutionNote }),
   getStats: () => api.get('/compliance/stats'),
   getReports: (type, params) => api.get(`/compliance/reports/${type}`, { params }),
+};
+
+// Global Audit API
+export const auditAPI = {
+  getAdminLogs: (params) => api.get('/audit/admin', { params }),
+  getPatientActivity: (patientId, params) => api.get(`/audit/patient/${patientId}`, { params }),
+  getNoteHistory: (noteId) => api.get(`/audit/note/${noteId}`),
+  exportAdminLogs: (params) => api.get('/audit/admin/export', { params, responseType: 'blob' }),
 };
 
 // Patient Flags

@@ -127,6 +127,21 @@ async function logChartAccess(req, patientId, accessType = 'CHART_OPEN') {
         if (accessType === 'CHART_OPEN') {
             await checkHighVolumeAccess(clinicId, userId);
         }
+
+        // Commercial-Grade Audit System Integration
+        if (req.logAuditEvent) {
+            req.logAuditEvent({
+                action: accessType === 'CHART_OPEN' ? 'PATIENT_VIEWED' : accessType,
+                entityType: 'Patient',
+                entityId: patientId,
+                patientId: patientId,
+                details: {
+                    isRestricted,
+                    breakGlassUsed: hasBTG,
+                    accessType
+                }
+            });
+        }
     } catch (error) {
         console.error('[PrivacyService] Error logging access:', error);
     }

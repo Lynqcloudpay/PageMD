@@ -4,7 +4,7 @@ import {
     CheckCircle, Clock, User, Link as LinkIcon, ChevronRight,
     ShieldAlert, Calendar, Activity, Lock, Eye, X
 } from 'lucide-react';
-import { complianceAPI, usersAPI, patientsAPI } from '../services/api';
+import { complianceAPI, usersAPI, patientsAPI, auditAPI } from '../services/api';
 import { format } from 'date-fns';
 
 const Compliance = () => {
@@ -78,7 +78,21 @@ const Compliance = () => {
         if (activeTab === 'logs') fetchLogs();
         if (activeTab === 'alerts') fetchAlerts();
         if (activeTab === 'reports' && reportView === 'restricted') fetchRestrictedPatients();
+        if (activeTab === 'global_audit') fetchGlobalAudit();
     }, [activeTab, filters, reportView]);
+
+    const fetchGlobalAudit = async () => {
+        setLoading(true);
+        try {
+            const res = await auditAPI.getAdminLogs(filters);
+            setData(res.data?.events || []);
+        } catch (err) {
+            console.error('Failed to fetch global audit log:', err);
+            setData([]);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const fetchInitialData = async () => {
         try {
@@ -265,11 +279,31 @@ const Compliance = () => {
         }
     };
 
-    const exportCSV = () => {
-        downloadCSV(data, `audit_log_${format(new Date(), 'yyyyMMdd')}`);
+    const exportCSV = async () => {
+        if (activeTab === 'global_audit') {
+            setLoading(true);
+            try {
+                const response = await auditAPI.exportAdminLogs(filters);
+                const url = window.URL.createObjectURL(new Blob([response.data]));
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', `commercial_audit_${format(new Date(), 'yyyyMMdd_HHmm')}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+            } catch (err) {
+                console.error('Export failed:', err);
+                alert('Export failed. Please check permissions.');
+            } finally {
+                setLoading(false);
+            }
+        } else {
+            downloadCSV(data, `audit_log_${format(new Date(), 'yyyyMMdd')}`);
+        }
     };
 
     const tabs = [
+        { id: 'global_audit', label: 'Commercial Audit Log', icon: Shield },
         { id: 'logs', label: 'Access Audit Logs', icon: FileText },
         { id: 'alerts', label: 'Privacy Alerts', icon: AlertTriangle, badge: stats.activeAlerts > 0 ? stats.activeAlerts : null },
         { id: 'reports', label: 'Compliance Reports', icon: ShieldCheck }
@@ -476,6 +510,66 @@ const Compliance = () => {
                         <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
                             <div className="w-10 h-10 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin"></div>
                             <p className="font-bold">Loading compliance data...</p>
+                        </div>
+                    ) : activeTab === 'global_audit' ? (
+                        <div className="space-y-3">
+                            {data.map((event) => (
+                                <div key={event.id} className="group hover:bg-slate-50 border border-slate-100 rounded-xl p-3 transition-all flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0 group-hover:bg-white transition-colors">
+                                        <Activity className="w-4 h-4 text-blue-500" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                            <span className="font-black text-slate-900 truncate text-sm">
+                                                {event.actor_name || 'System'}
+                                            </span>
+                                            <span className="px-2 py-0.5 bg-slate-100 text-[8px] font-black text-slate-400 uppercase rounded tracking-wider">
+                                                {event.actor_role || 'API'}
+                                            </span>
+                                            <span className="text-slate-300 font-light mx-1">•</span>
+                                            <span className="text-[11px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase tracking-tighter">
+                                                {event.action}
+                                            </span>
+                                            <span className="text-[10px] font-bold text-slate-400">
+                                                on {event.entity_type}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-4 text-[11px] text-slate-500 font-medium">
+                                            {event.patient_id && (
+                                                <span className="flex items-center gap-1.5 min-w-[180px]">
+                                                    <User size={10} className="text-slate-300" />
+                                                    Chart: <span className="text-slate-700 font-bold">{event.patient_name}</span>
+                                                    <span className="text-[9px] text-slate-400 font-black ml-1 uppercase">(MRN: {event.patient_mrn})</span>
+                                                </span>
+                                            )}
+                                            <span className="flex items-center gap-1.5">
+                                                <Clock size={10} className="text-slate-300" />
+                                                {format(new Date(event.occurred_at), 'MMM d, h:mm:ss a')}
+                                            </span>
+                                            <span className="flex items-center gap-1.5 ml-auto">
+                                                <Activity size={10} className="text-slate-300" />
+                                                {event.ip_address}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-1">
+                                        <div className="text-[8px] font-black text-slate-300 uppercase truncate max-w-[100px]" title={event.request_id}>
+                                            REQ: {event.request_id ? event.request_id.substring(0, 8) : 'N/A'}
+                                        </div>
+                                        {Object.keys(event.details || {}).length > 0 && (
+                                            <button
+                                                className="px-2 py-0.5 bg-slate-50 border border-slate-100 rounded text-[9px] font-bold text-slate-500 hover:bg-slate-100"
+                                                onClick={() => alert(JSON.stringify(event.details, null, 2))}
+                                            >
+                                                Metadata
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                            {!data.length && (
+                                <div className="p-12 text-center text-slate-400 font-bold italic">No commercial audit logs found.</div>
+                            )}
                         </div>
                     ) : activeTab === 'logs' ? (
                         <div className="space-y-3">

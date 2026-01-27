@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, FileText, Printer, X, AlertCircle, CheckCircle2, User, Phone, Mail, MapPin, Building2, Stethoscope, CreditCard, Users, FilePlus, Receipt, DollarSign, Globe, Clock, Heart, Thermometer, Wind, Pill, Lock, ClipboardList, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { visitsAPI, patientsAPI, billingAPI, codesAPI, settingsAPI, documentsAPI } from '../services/api';
+import { visitsAPI, patientsAPI, billingAPI, codesAPI, settingsAPI, documentsAPI, auditAPI } from '../services/api';
 import { format } from 'date-fns';
 import PatientChartPanel from './PatientChartPanel';
 
@@ -38,13 +38,33 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
         website: "",
         logo: null
     });
+    const [showAuditModal, setShowAuditModal] = useState(false);
+    const [noteHistory, setNoteHistory] = useState([]);
+    const [loadingHistory, setLoadingHistory] = useState(false);
 
     useEffect(() => {
         if (activeVisitId && patientId) {
             fetchData();
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeVisitId, patientId]);
+
+    const fetchNoteHistory = async () => {
+        setLoadingHistory(true);
+        try {
+            const res = await auditAPI.getNoteHistory(activeVisitId);
+            setNoteHistory(res.data || []);
+        } catch (e) {
+            console.warn('Failed to fetch note history', e);
+        } finally {
+            setLoadingHistory(false);
+        }
+    };
+
+    useEffect(() => {
+        if (showAuditModal && activeVisitId) {
+            fetchNoteHistory();
+        }
+    }, [showAuditModal, activeVisitId]);
 
     const decodeHtmlEntities = (text) => {
         if (typeof text !== 'string') return String(text || '');
@@ -661,6 +681,12 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                         <FilePlus className="w-3 h-3" /> Addendum
                                     </button>
                                 )}
+                                <button
+                                    onClick={() => setShowAuditModal(true)}
+                                    className="px-3 py-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full border border-indigo-200 transition-all flex items-center gap-1"
+                                >
+                                    <Shield className="w-3 h-3" /> History
+                                </button>
                                 <button onClick={handlePrint} className="px-3 py-1 text-[10px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-full border border-slate-200 transition-all flex items-center gap-1">
                                     <Printer className="w-3 h-3" /> Print
                                 </button>
@@ -978,6 +1004,85 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                         <div className="flex justify-end gap-3 mt-8">
                             <button onClick={() => setShowAddendumModal(false)} className="px-6 py-2 text-[11px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Discard</button>
                             <button onClick={handleAddAddendum} className="px-8 py-3 bg-slate-900 text-white rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-slate-900/20 hover:scale-105 active:scale-95 transition-all">Authenticate Addendum</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showAuditModal && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[110] p-4" onClick={() => setShowAuditModal(false)}>
+                    <div className="bg-[#f8fafc] rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200" onClick={e => e.stopPropagation()}>
+                        <div className="bg-white p-8 border-b border-slate-200 flex justify-between items-center">
+                            <div>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
+                                        <Shield className="text-white w-5 h-5" />
+                                    </div>
+                                    <h3 className="text-xl font-black text-slate-900 tracking-tight">Note History Audit</h3>
+                                </div>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 ml-1">Lifecycle Activity & Signatures</p>
+                            </div>
+                            <button onClick={() => setShowAuditModal(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all"><X className="w-6 h-6 text-slate-300" /></button>
+                        </div>
+
+                        <div className="p-8 max-h-[60vh] overflow-y-auto custom-scrollbar space-y-4 bg-slate-50/30">
+                            {loadingHistory ? (
+                                <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                                    <div className="w-8 h-8 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+                                    <p className="font-bold">Retrieving history...</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {noteHistory.map((event, i) => (
+                                        <div key={event.id} className="relative flex gap-6">
+                                            {/* Vertical Line */}
+                                            {i < noteHistory.length - 1 && (
+                                                <div className="absolute left-[19px] top-10 bottom-[-16px] w-0.5 bg-slate-200" />
+                                            )}
+
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 z-10 border-4 border-[#f8fafc] ${event.action.includes('SIGNED') ? 'bg-emerald-500 shadow-lg shadow-emerald-200' :
+                                                    event.action.includes('RETRACTED') ? 'bg-rose-500 shadow-lg shadow-rose-200' :
+                                                        'bg-white border-slate-200 text-slate-400 shadow-sm'
+                                                }`}>
+                                                {event.action.includes('SIGNED') ? <CheckCircle2 className="w-5 h-5 text-white" /> :
+                                                    event.action.includes('RETRACTED') ? <AlertCircle className="w-5 h-5 text-white" /> :
+                                                        <Clock className="w-4 h-4" />}
+                                            </div>
+
+                                            <div className="flex-1 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div>
+                                                        <div className="text-[11px] font-black text-indigo-600 uppercase tracking-widest">{event.action.replace(/_/g, ' ')}</div>
+                                                        <div className="text-sm font-black text-slate-900 mt-0.5">{event.actor_name || 'System'}</div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className="text-[10px] font-bold text-slate-400 uppercase">{format(new Date(event.occurred_at), 'MM/dd/yy')}</div>
+                                                        <div className="text-[11px] font-black text-slate-800 tabular-nums">{format(new Date(event.occurred_at), 'h:mm a')}</div>
+                                                    </div>
+                                                </div>
+
+                                                {Object.keys(event.details || {}).length > 0 && (
+                                                    <div className="mt-3 p-3 bg-slate-50/50 rounded-lg border border-slate-100 italic text-[12px] text-slate-500 leading-relaxed font-medium">
+                                                        {event.details.reason && <span>Reason: {event.details.reason} </span>}
+                                                        {event.details.method && <span>via {event.details.method} </span>}
+                                                        {event.details.status && <span>({event.details.status})</span>}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {noteHistory.length === 0 && (
+                                        <div className="text-center py-20 text-slate-300 font-bold uppercase tracking-widest text-[10px] italic">Historical migration data pending</div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-8 bg-white border-t border-slate-100 flex justify-between items-center">
+                            <div className="text-[9px] font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
+                                <Lock className="w-3 h-3" /> Immutable Audit Trail
+                            </div>
+                            <button onClick={() => setShowAuditModal(false)} className="px-8 py-3 bg-slate-900 text-white rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-slate-900/10 active:scale-95 transition-all">Close History</button>
                         </div>
                     </div>
                 </div>

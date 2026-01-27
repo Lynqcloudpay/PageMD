@@ -402,9 +402,13 @@ router.post('/', requirePermission('orders:create'), async (req, res) => {
     );
 
     // Non-blocking audit
-    try {
-      await logAudit(req.user.id, 'create_order', 'order', order.id, { orderType, diagnosisCount: problemIds.size }, req.ip);
-    } catch { }
+    req.logAuditEvent({
+      action: 'ORDER_CREATED',
+      entityType: 'Order',
+      entityId: order.id,
+      patientId,
+      details: { orderType, diagnosisCount: problemIds.size }
+    });
 
     return res.status(201).json({
       ...order,
@@ -541,7 +545,12 @@ router.put('/:id', requirePermission('orders:create'), async (req, res) => {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    await logAudit(req.user.id, 'update_order', 'order', id, { status, reviewed }, req.ip);
+    req.logAuditEvent({
+      action: 'ORDER_UPDATED',
+      entityType: 'Order',
+      entityId: id,
+      details: { status, reviewed }
+    });
 
     res.json(result.rows[0]);
   } catch (error) {
@@ -613,7 +622,12 @@ router.delete('/:id', requirePermission('orders:create'), async (req, res) => {
     await client.query('DELETE FROM orders WHERE id = $1 RETURNING *', [id]);
 
     await client.query('COMMIT');
-    await logAudit(req.user.id, 'delete_order', 'order', id, { visitId: order.visit_id }, req.ip);
+    req.logAuditEvent({
+      action: 'ORDER_DELETED',
+      entityType: 'Order',
+      entityId: id,
+      details: { visitId: order.visit_id }
+    });
 
     res.json({ message: 'Order deleted successfully' });
   } catch (error) {

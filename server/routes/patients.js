@@ -256,9 +256,11 @@ router.get('/', async (req, res) => {
     const decryptedPatients = await patientEncryptionService.decryptPatientsPHI(result.rows);
 
     // Audit log
-    try {
-      await logAudit(req.user.id, 'patient.search', 'patient', null, { filters: req.query }, req.ip);
-    } catch (e) { }
+    req.logAuditEvent({
+      action: 'PATIENT_SEARCH',
+      entityType: 'Patient',
+      details: { filters: req.query }
+    });
 
     res.json(decryptedPatients);
   } catch (error) {
@@ -473,7 +475,13 @@ router.post('/:id/portal-invite', requirePermission('patients:edit_demographics'
     `, [email, req.clinic.id, req.clinic.schema_name]);
 
     // 5. Audit
-    await logAudit(req.user.id, 'patient_portal_invited', 'patient', id, { email }, req.ip);
+    req.logAuditEvent({
+      action: 'PATIENT_PORTAL_INVITED',
+      entityType: 'Patient',
+      entityId: id,
+      patientId: id,
+      details: { email }
+    });
 
     // 6. Send invitation email and return link
     const portalUrl = process.env.PORTAL_URL || 'https://pagemdemr.com/portal';
@@ -538,7 +546,13 @@ router.post('/:id/portal/reset-password', requirePermission('patients:edit_demog
     await pool.query('UPDATE patient_portal_accounts SET password_hash = $1, updated_at = NOW() WHERE patient_id = $2', [passwordHash, id]);
 
     // 5. Audit
-    await logAudit(req.user.id, 'patient_portal_password_reset_admin', 'patient', id, { email }, req.ip);
+    req.logAuditEvent({
+      action: 'PATIENT_PORTAL_PASSWORD_RESET_ADMIN',
+      entityType: 'Patient',
+      entityId: id,
+      patientId: id,
+      details: { email }
+    });
 
     res.json({
       success: true,
@@ -876,6 +890,19 @@ router.post('/', requirePermission('patients:edit_demographics'), async (req, re
       req.sessionId
     );
 
+    // Commercial-Grade Audit Logging
+    if (req.logAuditEvent) {
+      req.logAuditEvent({
+        action: 'PATIENT_CREATED',
+        entityType: 'Patient',
+        entityId: result.rows[0].id,
+        patientId: result.rows[0].id,
+        details: {
+          mrn: finalMRN
+        }
+      });
+    }
+
     res.status(201).json(decryptedPatient);
   } catch (error) {
     console.error('Error creating patient:', error);
@@ -1015,6 +1042,19 @@ router.put('/:id', requirePermission('patients:edit_demographics'), async (req, 
       } catch (auditError) {
         console.warn('Failed to log audit for patient update:', auditError);
       }
+    }
+
+    // Commercial-Grade Audit Logging
+    if (req.logAuditEvent) {
+      req.logAuditEvent({
+        action: 'PATIENT_DEMOGRAPHICS_UPDATED',
+        entityType: 'Patient',
+        entityId: id,
+        patientId: id,
+        details: {
+          updated_fields: Object.keys(updates)
+        }
+      });
     }
 
     res.json(decryptedPatient);

@@ -479,6 +479,21 @@ router.post('/session/:id/approve', authenticate, async (req, res) => {
                 language: data.language
             });
 
+            // Log Export Event
+            if (req.logAuditEvent) {
+                req.logAuditEvent({
+                    action: 'EXPORT_CREATED',
+                    entityType: 'IntakePacket',
+                    entityId: id,
+                    patientId: targetPatientId,
+                    details: {
+                        file: 'Intake Legal Packet.pdf',
+                        signer: data.signature,
+                        forms_count: forms.length
+                    }
+                });
+            }
+
             const filename = `intake_legal_${id}_${Date.now()}.pdf`;
             const uploadDir = process.env.UPLOAD_DIR || './uploads';
             if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });

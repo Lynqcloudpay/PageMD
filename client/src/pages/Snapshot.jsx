@@ -774,6 +774,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             fullNote: noteText,
                             vitals: visit.vitals, // For ChartReviewModal
                             visit_type: visit.visit_type, // For ChartReviewModal
+                            status: visit.status,
+                            retracted: visit.status === 'retracted',
                         };
                     });
 
@@ -1702,7 +1704,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             <div className="flex items-center justify-between">
                                                                 <div className="flex items-center gap-2">
                                                                     <span className="text-[10px] font-bold text-slate-800">{note.type}</span>
-                                                                    {!note.signed && <span className="text-[8px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-100 uppercase tracking-wider">Draft</span>}
+                                                                    {note.retracted ? (
+                                                                        <span className="text-[8px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full border border-red-100 uppercase tracking-wider">Retracted</span>
+                                                                    ) : !note.signed && (
+                                                                        <span className="text-[8px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-100 uppercase tracking-wider">Draft</span>
+                                                                    )}
                                                                 </div>
                                                                 <div className="flex items-center gap-2">
                                                                     {!note.signed && (

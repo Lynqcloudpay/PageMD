@@ -101,6 +101,13 @@ const authenticate = async (req, res, next) => {
       req.user.role = 'User';
     }
 
+    // Populate Audit Context
+    if (req.auditContext) {
+      req.auditContext.userId = req.user.id;
+      req.auditContext.role = req.user.role_name || req.user.role;
+      req.auditContext.tenantId = req.user.clinic_id;
+    }
+
     next();
   } catch (error) {
     console.error('[AUTH] Authentication error:', error.message);

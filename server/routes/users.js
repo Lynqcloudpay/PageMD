@@ -200,10 +200,12 @@ router.post('/', requireAdmin, [
       isAdmin: isAdminFinal === true || isAdminFinal === 'true'
     });
 
-    await logAudit(req.user.id, 'user_created', 'user', user.id, {
-      email: user.email,
-      roleId
-    }, req.ip);
+    req.logAuditEvent({
+      action: 'USER_CREATED',
+      entityType: 'User',
+      entityId: user.id,
+      details: { email: user.email, roleId: roleIdFinal }
+    });
 
     res.status(201).json(user);
   } catch (error) {
@@ -268,7 +270,21 @@ router.put('/:id', [
 
     const user = await userService.updateUser(id, updates);
 
-    await logAudit(req.user.id, 'user_updated', 'user', id, updates, req.ip);
+    req.logAuditEvent({
+      action: 'USER_UPDATED',
+      entityType: 'User',
+      entityId: id,
+      details: updates
+    });
+
+    if (updates.roleId) {
+      req.logAuditEvent({
+        action: 'ROLE_CHANGED',
+        entityType: 'User',
+        entityId: id,
+        details: { newRoleId: updates.roleId }
+      });
+    }
 
     res.json(user);
   } catch (error) {
@@ -313,7 +329,11 @@ router.put('/:id/password', [
 
     await userService.updatePassword(id, password);
 
-    await logAudit(req.user.id, 'password_changed', 'user', id, {}, req.ip);
+    req.logAuditEvent({
+      action: 'PASSWORD_CHANGED',
+      entityType: 'User',
+      entityId: id
+    });
 
     res.json({ message: 'Password updated successfully' });
   } catch (error) {
@@ -345,7 +365,12 @@ router.put('/:id/status', requireAdmin, [
 
     const user = await userService.updateUser(id, { status });
 
-    await logAudit(req.user.id, 'user_status_changed', 'user', id, { status }, req.ip);
+    req.logAuditEvent({
+      action: 'USER_STATUS_CHANGED',
+      entityType: 'User',
+      entityId: id,
+      details: { status }
+    });
 
     res.json(user);
   } catch (error) {
@@ -403,7 +428,11 @@ router.delete('/:id', requireAdmin, async (req, res) => {
 
     await userService.deleteUser(id);
 
-    await logAudit(req.user.id, 'user_deleted', 'user', id, {}, req.ip);
+    req.logAuditEvent({
+      action: 'USER_DELETED',
+      entityType: 'User',
+      entityId: id
+    });
 
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
