@@ -781,7 +781,7 @@ router.post('/:id/retract', requirePermission('notes:edit'), async (req, res) =>
     await client.query('BEGIN');
 
     // 1. Get the visit and verify it can be retracted
-    const visitRes = await client.query('SELECT status, note_signed_at, patient_id FROM visits WHERE id = $1', [id]);
+    const visitRes = await client.query('SELECT status, note_signed_at, patient_id, clinic_id FROM visits WHERE id = $1', [id]);
     if (visitRes.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Visit not found' });
@@ -811,12 +811,12 @@ router.post('/:id/retract', requirePermission('notes:edit'), async (req, res) =>
       [id]
     );
 
-    // 3. Create Retraction Record
+    // 3. Create Retraction Record (Tenant Aware)
     await client.query(
       `INSERT INTO note_retractions (
-         note_id, retracted_by_user_id, reason_code, reason_text
-       ) VALUES ($1, $2, $3, $4)`,
-      [id, req.user.id, reason_code, reason_text]
+         note_id, tenant_id, retracted_by_user_id, reason_code, reason_text
+       ) VALUES ($1, $2, $3, $4, $5)`,
+      [id, visit.clinic_id, req.user.id, reason_code, reason_text]
     );
 
     // 4. Write Audit Event (Old System)
