@@ -144,6 +144,8 @@ router.get('/patient/:patientId', authenticate, async (req, res) => {
 router.get('/note/:noteId', authenticate, async (req, res) => {
     try {
         const { noteId } = req.params;
+        const isCompliance = ['Compliance', 'HIM', 'SuperAdmin', 'admin'].includes(req.user.role_name) || req.user.is_admin;
+
 
         const result = await pool.query(`
             SELECT 

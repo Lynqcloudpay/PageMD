@@ -1179,6 +1179,8 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                                 {Object.keys(event.details || {}).length > 0 && (
                                                     <div className="mt-3 p-3 bg-slate-50/50 rounded-lg border border-slate-100 italic text-[12px] text-slate-500 leading-relaxed font-medium">
                                                         {event.details.reason && <span>Reason: {event.details.reason} </span>}
+                                                        {event.details.reason_code && <span>Reason: {event.details.reason_code} </span>}
+                                                        {event.details.reason_text && <span className="block mt-1 text-slate-600">"{event.details.reason_text}"</span>}
                                                         {event.details.method && <span>via {event.details.method} </span>}
                                                         {event.details.status && <span>({event.details.status})</span>}
                                                     </div>
