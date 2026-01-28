@@ -739,6 +739,27 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                             <div className="max-w-4xl mx-auto bg-white shadow-sm border border-slate-200 min-h-full p-10 space-y-6 print-document-sheet print:border-0 print:shadow-none print:max-w-none">
 
                                 {/* 1. REFINED CLINIC HEADER (Azure Theme) */}
+                                {visit.status === 'retracted' && (
+                                    <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center overflow-hidden">
+                                        <div className="opacity-[0.15] transform -rotate-45 text-rose-500 font-black text-[150px] whitespace-nowrap select-none border-8 border-rose-500 p-10 rounded-3xl">
+                                            RETRACTED
+                                        </div>
+                                    </div>
+                                )}
+                                {visit.status === 'retracted' && (
+                                    <div className="avoid-cut mb-8 p-4 bg-rose-100 border-l-8 border-rose-600 rounded-r-lg shadow-sm">
+                                        <div className="flex items-start gap-3">
+                                            <AlertCircle className="w-6 h-6 text-rose-700 mt-0.5 shrink-0" />
+                                            <div>
+                                                <h3 className="text-[16px] font-black text-rose-900 uppercase tracking-tight">Entered in Error</h3>
+                                                <p className="text-[12px] font-bold text-rose-800 mt-1">
+                                                    This clinical record has been retracted and voided. The content below is retained for legal auditing purposes only and should not be used for clinical decision making.
+                                                </p>
+                                                {/* If we had retraction details, we would show them here */}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="flex justify-between items-center pb-6 border-b border-blue-100 avoid-cut">
                                     <div className="flex items-center gap-6">
                                         <div className="w-40 h-24 flex items-center justify-center shrink-0 bg-white rounded-lg border border-blue-50 p-1">
