@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, FileText, Printer, X, AlertCircle, CheckCircle2, User, Phone, Mail, MapPin, Building2, Stethoscope, CreditCard, Users, FilePlus, Receipt, DollarSign, Globe, Clock, Heart, Thermometer, Wind, Pill, Lock, ClipboardList, ChevronDown } from 'lucide-react';
+import { Activity, FileText, Printer, X, AlertCircle, CheckCircle2, User, Phone, Mail, MapPin, Building2, Stethoscope, CreditCard, Users, FilePlus, Receipt, DollarSign, Globe, Clock, Heart, Thermometer, Wind, Pill, Lock, ClipboardList, ChevronDown, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { visitsAPI, patientsAPI, billingAPI, codesAPI, settingsAPI, documentsAPI, auditAPI } from '../services/api';
 import { format } from 'date-fns';
@@ -1041,8 +1041,8 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                             )}
 
                                             <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 z-10 border-4 border-[#f8fafc] ${event.action.includes('SIGNED') ? 'bg-emerald-500 shadow-lg shadow-emerald-200' :
-                                                    event.action.includes('RETRACTED') ? 'bg-rose-500 shadow-lg shadow-rose-200' :
-                                                        'bg-white border-slate-200 text-slate-400 shadow-sm'
+                                                event.action.includes('RETRACTED') ? 'bg-rose-500 shadow-lg shadow-rose-200' :
+                                                    'bg-white border-slate-200 text-slate-400 shadow-sm'
                                                 }`}>
                                                 {event.action.includes('SIGNED') ? <CheckCircle2 className="w-5 h-5 text-white" /> :
                                                     event.action.includes('RETRACTED') ? <AlertCircle className="w-5 h-5 text-white" /> :

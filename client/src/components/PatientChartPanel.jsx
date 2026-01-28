@@ -5,7 +5,7 @@ import {
     Database, CreditCard, Clock, CheckCircle2,
     XCircle, UserCircle, FileImage, Trash2, Plus, Activity, Printer,
     LayoutDashboard, ChevronRight, Search, FilePlus, ChevronDown, HeartPulse, ActivitySquare, Zap, Waves,
-    Edit2, RotateCcw, Calendar, AlertCircle, Users, Receipt, PieChart, ArrowRight
+    Edit2, RotateCcw, Calendar, AlertCircle, Users, Receipt, PieChart, ArrowRight, Shield
 } from 'lucide-react';
 import { visitsAPI, documentsAPI, ordersAPI, referralsAPI, patientsAPI, eprescribeAPI, reportsAPI, auditAPI } from '../services/api';
 import { format } from 'date-fns';
