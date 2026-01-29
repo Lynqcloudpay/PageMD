@@ -808,14 +808,23 @@ router.post('/:id/retract', requirePermission('notes:edit'), async (req, res) =>
     }
 
     // 2. Perform Retraction
-    // Status changes to RETRACTED, but content is preserved (note_draft and clinical_snapshot)
+    // Status changes to RETRACTED. We also CLEAR the vitals JSON column to remove it from "live" data.
+    // We preserve note_draft and clinical_snapshot for audit purposes.
     await client.query(
       `UPDATE visits 
        SET status = 'retracted', 
+           vitals = NULL,
            updated_at = CURRENT_TIMESTAMP 
        WHERE id = $1`,
       [id]
     );
+
+    // 2.1 Remove derived clinical data (Vitals) to prevent pollution of analytics
+    // We delete from the vitals table where this visit is the source (checking both visit_id and encounter_id)
+    await client.query('DELETE FROM vitals WHERE visit_id = $1 OR encounter_id = $1', [id]);
+
+    // 2.2 Remove link to documents? (Optional, but documents might be relevant to keep for audit)
+    // For now, we only strictly remove structured data that affects graphs/trends.
 
     // 3. Create Retraction Record (Tenant Aware)
     await client.query(
