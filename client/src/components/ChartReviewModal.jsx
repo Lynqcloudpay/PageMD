@@ -9,7 +9,7 @@ import {
     LineChart, Line, CartesianGrid
 } from 'recharts';
 import PatientHeaderPhoto from './PatientHeaderPhoto';
-import { ordersAPI, documentsAPI, patientsAPI } from '../services/api';
+import { ordersAPI, documentsAPI, patientsAPI, labsAPI } from '../services/api';
 
 const decodeHtmlEntities = (text) => {
     if (typeof text !== 'string') return String(text || '');
@@ -53,15 +53,20 @@ const ChartReviewModal = ({
         return { first, last, full: `${first} ${last}`.trim() || 'Unknown Patient' };
     };
 
+    const getChiefComplaint = (visit) => {
+        const noteText = typeof visit.note_draft === 'string' ? visit.note_draft : (visit.fullNote || '');
+        const decoded = decodeHtmlEntities(noteText);
+        const ccMatch = String(decoded).match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History):|$)/is);
+        return ccMatch ? ccMatch[1].trim() : null;
+    };
+
     // Filter keywords helper
     const getFilterKeywords = (type) => {
         switch (type) {
             case 'Labs': return ['lab', 'blood', 'urine', 'panel', 'culture', 'bmp', 'cmp', 'cbc'];
-            case 'Imaging': return ['x-ray', 'ct', 'mri', 'ultrasound', 'scan', 'radiology', 'imaging'];
+            case 'Imaging': return ['x-ray', 'ct', 'mri', 'ultrasound', 'scan', 'radiology', 'imaging', 'cath', 'angiogram', 'pci', 'coronary', 'stress', 'exercise', 'nuclear', 'treadmill'];
             case 'Echo': return ['echo', 'tte', 'tee', 'echocardiogram'];
             case 'EKG': return ['ekg', 'ecg', 'electrocardiogram'];
-            case 'Cath': return ['cath', 'angiogram', 'pci', 'coronary'];
-            case 'Stress': return ['stress', 'exercise', 'nuclear', 'treadmill'];
             default: return [];
         }
     };
@@ -78,10 +83,11 @@ const ChartReviewModal = ({
         setRecordsLoading(true);
         setRecordsError(null);
         try {
-            const [ordersRes, docsRes, fullPatientRes] = await Promise.allSettled([
+            const [ordersRes, docsRes, fullPatientRes, labsRes] = await Promise.allSettled([
                 ordersAPI.getByPatient(patientId),
                 documentsAPI.getByPatient(patientId),
-                patientsAPI.get(patientId)
+                patientsAPI.get(patientId),
+                labsAPI.getByPatient(patientId)
             ]);
 
             let combinedItems = [];
@@ -89,7 +95,6 @@ const ChartReviewModal = ({
             // 1. Mother Chart Data
             if (fullPatientRes.status === 'fulfilled' && fullPatientRes.value.data) {
                 const pData = fullPatientRes.value.data;
-                // Helper to map robustly
                 const mapRecord = (list, type, defaultLabel) => {
                     if (!Array.isArray(list)) return [];
                     return list.map((item, idx) => ({
@@ -110,23 +115,35 @@ const ChartReviewModal = ({
                     ...mapRecord(pData.imaging, 'Imaging', 'Imaging Result'),
                     ...mapRecord(pData.echos, 'Echo', 'Echo Report'),
                     ...mapRecord(pData.ekgs || pData.ekg, 'EKG', 'EKG Report'),
-                    ...mapRecord(pData.cardiac_caths || pData.caths, 'Cath', 'Cath Report'),
-                    ...mapRecord(pData.stress_tests, 'Stress', 'Stress Test')
+                    ...mapRecord(pData.cardiac_caths || pData.caths, 'Imaging', 'Cath Report'),
+                    ...mapRecord(pData.stress_tests, 'Imaging', 'Stress Test')
                 ];
             }
 
-            // 2. Orders
+            // 2. Labs from Dedicated API
+            if (labsRes.status === 'fulfilled' && labsRes.value.data) {
+                const labs = labsRes.value.data.map(l => ({
+                    id: `lab-${l.id}`,
+                    category: 'Labs',
+                    type: 'lab',
+                    title: l.order_payload?.test_name || l.order_payload?.name || 'Lab Result',
+                    description: l.status || 'Received',
+                    date: l.created_at || l.order_date,
+                    status: l.status,
+                    source: l
+                }));
+                combinedItems = [...combinedItems, ...labs];
+            }
+
+            // 3. Orders
             if (ordersRes.status === 'fulfilled' && ordersRes.value.data) {
                 const orders = ordersRes.value.data.map(o => {
-                    // Try to guess category
                     let category = 'Other';
                     const text = (o.name + ' ' + o.description + ' ' + o.type).toLowerCase();
-                    if (getFilterKeywords('Labs').some(k => text.includes(k))) category = 'Labs';
-                    else if (getFilterKeywords('Imaging').some(k => text.includes(k))) category = 'Imaging';
+                    if (getFilterKeywords('Labs').some(k => text.includes(k)) || o.order_type === 'lab') category = 'Labs';
+                    else if (getFilterKeywords('Imaging').some(k => text.includes(k)) || o.order_type === 'imaging') category = 'Imaging';
                     else if (getFilterKeywords('Echo').some(k => text.includes(k))) category = 'Echo';
                     else if (getFilterKeywords('EKG').some(k => text.includes(k))) category = 'EKG';
-                    else if (getFilterKeywords('Cath').some(k => text.includes(k))) category = 'Cath';
-                    else if (getFilterKeywords('Stress').some(k => text.includes(k))) category = 'Stress';
 
                     return {
                         id: `ord-${o.id}`,
@@ -142,7 +159,7 @@ const ChartReviewModal = ({
                 combinedItems = [...combinedItems, ...orders];
             }
 
-            // 3. Documents
+            // 4. Documents
             if (docsRes.status === 'fulfilled' && docsRes.value.data) {
                 const docs = docsRes.value.data.map(d => {
                     let category = 'Docs';
@@ -151,12 +168,10 @@ const ChartReviewModal = ({
                     const comment = d.comment || '';
                     const text = (d.filename + ' ' + comment + ' ' + docType + ' ' + tags.join(' ')).toLowerCase();
 
-                    if (getFilterKeywords('Labs').some(k => text.includes(k))) category = 'Labs';
+                    if (getFilterKeywords('Labs').some(k => text.includes(k)) || docType === 'lab') category = 'Labs';
                     else if (getFilterKeywords('Echo').some(k => text.includes(k)) || docType === 'echo') category = 'Echo';
                     else if (getFilterKeywords('EKG').some(k => text.includes(k)) || docType === 'ekg') category = 'EKG';
-                    else if (getFilterKeywords('Cath').some(k => text.includes(k)) || docType === 'cardiac_cath') category = 'Cath';
-                    else if (getFilterKeywords('Stress').some(k => text.includes(k)) || docType === 'stress') category = 'Stress';
-                    else if (getFilterKeywords('Imaging').some(k => text.includes(k))) category = 'Imaging';
+                    else if (getFilterKeywords('Imaging').some(k => text.includes(k)) || docType === 'imaging' || docType === 'cardiac_cath' || docType === 'stress' || docType === 'stress_test') category = 'Imaging';
 
                     const interpretationTag = tags.find(t => t.startsWith('interpretation:'));
                     const interpretation = interpretationTag ? interpretationTag.replace('interpretation:', '') : null;
@@ -175,9 +190,17 @@ const ChartReviewModal = ({
                 combinedItems = [...combinedItems, ...docs];
             }
 
-            // Sort
-            combinedItems.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-            setRecords(combinedItems);
+            // Deduplicate
+            const seenIds = new Set();
+            const deduplicatedItems = combinedItems.filter(item => {
+                const uid = item.source?.id ? `${item.type}-${item.source.id}` : item.id;
+                if (seenIds.has(uid)) return false;
+                seenIds.add(uid);
+                return true;
+            });
+
+            deduplicatedItems.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+            setRecords(deduplicatedItems);
 
         } catch (err) {
             console.error('Error loading chart records:', err);
@@ -577,6 +600,11 @@ const ChartReviewModal = ({
                                     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
                                         {visit.visit_type?.replace('_', ' ') || 'Office Visit'}
                                     </div>
+                                    {getChiefComplaint(visit) && (
+                                        <div className="text-[10px] font-medium text-slate-500 mt-1 line-clamp-2 italic">
+                                            "{getChiefComplaint(visit)}"
+                                        </div>
+                                    )}
                                 </button>
                             );
                         })}
@@ -978,8 +1006,6 @@ const ChartReviewModal = ({
                         {type === 'Imaging' && <FileImage className="w-8 h-8 text-slate-300" />}
                         {type === 'Echo' && <Heart className="w-8 h-8 text-slate-300" />}
                         {type === 'EKG' && <Waves className="w-8 h-8 text-slate-300" />}
-                        {type === 'Cath' && <Stethoscope className="w-8 h-8 text-slate-300" />}
-                        {type === 'Stress' && <Activity className="w-8 h-8 text-slate-300" />}
                         {type === 'Docs' && <FileText className="w-8 h-8 text-slate-300" />}
                     </div>
                     <h3 className="text-lg font-bold text-slate-900 mb-1">No {type} Found</h3>
@@ -1061,7 +1087,7 @@ const ChartReviewModal = ({
 
                         {/* Tab Navigation - Compact to fit all */}
                         <div className="flex gap-0.5 p-1 bg-slate-100 rounded-lg">
-                            {['Summary', 'Notes', 'Vitals', 'Labs', 'Imaging', 'Echo', 'EKG', 'Stress', 'Cath', 'Docs'].map((tab) => {
+                            {['Summary', 'Notes', 'Vitals', 'Labs', 'Imaging', 'Echo', 'EKG', 'Docs'].map((tab) => {
                                 const isActive = (activeTab || 'Summary') === tab;
                                 return (
                                     <button
