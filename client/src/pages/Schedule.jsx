@@ -858,14 +858,25 @@ const Schedule = () => {
                                         <ChevronLeft className="w-5 h-5 text-slate-600" />
                                     </button>
                                     <div className="relative group">
-                                        <div className="w-[280px] px-4 py-2 font-semibold text-slate-900 group-hover:bg-white rounded-lg transition-all text-center cursor-pointer select-none flex items-center justify-center gap-2">
+                                        <div className="w-[350px] px-4 py-2 font-semibold text-slate-900 group-hover:bg-white rounded-lg transition-all text-center cursor-pointer select-none flex items-center justify-center gap-2 whitespace-nowrap">
                                             {format(currentDate, 'EEEE, MMMM d, yyyy')}
                                             <ChevronDown className="w-4 h-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                                         </div>
                                         <input
                                             type="date"
-                                            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                                            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-20"
+                                            style={{ display: 'block' }}
                                             value={format(currentDate, 'yyyy-MM-dd')}
+                                            onClick={(e) => {
+                                                // Explicitly try to open the picker on click for better browser support
+                                                try {
+                                                    if (e.target.showPicker) {
+                                                        e.target.showPicker();
+                                                    }
+                                                } catch (err) {
+                                                    // Fallback or ignore if not supported
+                                                }
+                                            }}
                                             onChange={(e) => {
                                                 if (e.target.value) {
                                                     const [y, m, d] = e.target.value.split('-').map(Number);
