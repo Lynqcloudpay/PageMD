@@ -530,6 +530,31 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                 
                 .no-print { display: none !important; }
                 body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+                /* Retracted Watermark for Print - Fixed Position on Every Page */
+                .print-watermark-fixed {
+                    position: fixed !important;
+                    top: 50% !important;
+                    left: 50% !important;
+                    transform: translate(-50%, -50%) rotate(-45deg) !important;
+                    z-index: 9999 !important;
+                    pointer-events: none !important;
+                    opacity: 0.15 !important;
+                    width: 100% !important;
+                    text-align: center !important;
+                    display: flex !important;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .print-watermark-text {
+                    font-size: 120px !important;
+                    font-weight: 900 !important;
+                    color: #f43f5e !important; /* Rose-500 */
+                    border: 8px solid #f43f5e !important;
+                    padding: 40px !important;
+                    border-radius: 20px !important;
+                    text-transform: uppercase !important;
+                }
             }
             .section-label {
                 font-size: 11px;
@@ -740,11 +765,20 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
 
                                 {/* 1. REFINED CLINIC HEADER (Azure Theme) */}
                                 {visit.status === 'retracted' && (
-                                    <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center overflow-hidden">
-                                        <div className="opacity-[0.15] transform -rotate-45 text-rose-500 font-black text-[150px] whitespace-nowrap select-none border-8 border-rose-500 p-10 rounded-3xl">
-                                            RETRACTED
+                                    <>
+                                        {/* Screen Watermark (Absolute to container) */}
+                                        <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center overflow-hidden no-print">
+                                            <div className="opacity-[0.15] transform -rotate-45 text-rose-500 font-black text-[150px] whitespace-nowrap select-none border-8 border-rose-500 p-10 rounded-3xl">
+                                                RETRACTED
+                                            </div>
                                         </div>
-                                    </div>
+                                        {/* Print Watermark (Fixed to page) */}
+                                        <div className="print-watermark-fixed hidden print:flex">
+                                            <div className="print-watermark-text">
+                                                RETRACTED
+                                            </div>
+                                        </div>
+                                    </>
                                 )}
                                 {visit.status === 'retracted' && (
                                     <div className="avoid-cut mb-8 p-4 bg-rose-100 border-l-8 border-rose-600 rounded-r-lg shadow-sm">
