@@ -188,7 +188,7 @@ const Compliance = () => {
 
         const headers = ['Date', 'User', 'Role', 'Patient', 'Action', 'Restricted', 'Break Glass', 'IP'];
         const rows = logs.map(l => [
-            format(new Date(l.created_at), 'yyyy-MM-dd HH:mm:ss'),
+            l.created_at ? format(new Date(l.created_at), 'yyyy-MM-dd HH:mm:ss') : 'N/A',
             `${l.user_first_name} ${l.user_last_name}`,
             l.user_role || 'N/A',
             `${l.patient_first_name} ${l.patient_last_name}`,
