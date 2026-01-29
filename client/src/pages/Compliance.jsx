@@ -544,7 +544,7 @@ const Compliance = () => {
                                             )}
                                             <span className="flex items-center gap-1.5">
                                                 <Clock size={10} className="text-slate-300" />
-                                                {format(new Date(event.occurred_at), 'MMM d, h:mm:ss a')}
+                                                {event.occurred_at ? format(new Date(event.occurred_at), 'MMM d, h:mm:ss a') : 'N/A'}
                                             </span>
                                             <span className="flex items-center gap-1.5 ml-auto">
                                                 <Activity size={10} className="text-slate-300" />
@@ -598,7 +598,7 @@ const Compliance = () => {
                                             </span>
                                             <span className="flex items-center gap-1.5">
                                                 <Clock size={10} className="text-slate-300" />
-                                                {format(new Date(log.created_at), 'MMM d, h:mm a')}
+                                                {log.created_at ? format(new Date(log.created_at), 'MMM d, h:mm a') : 'N/A'}
                                             </span>
                                             <span className="flex items-center gap-1.5 ml-auto">
                                                 <Activity size={10} className="text-slate-300" />
@@ -645,7 +645,7 @@ const Compliance = () => {
                                                     </h3>
                                                 </div>
                                                 <div className="text-right flex flex-col items-end">
-                                                    <div className="text-[9px] font-bold text-slate-400">{format(new Date(alert.created_at), 'MMM d, h:mm a')}</div>
+                                                    <div className="text-[9px] font-bold text-slate-400">{alert.created_at ? format(new Date(alert.created_at), 'MMM d, h:mm a') : 'N/A'}</div>
                                                     {alert.break_glass_used && (
                                                         <span className="mt-0.5 px-1 py-0.5 bg-red-600 text-white text-[7px] font-black rounded uppercase">Break Glass</span>
                                                     )}
@@ -836,7 +836,7 @@ const Compliance = () => {
                                                                     </span>
                                                                     <span className="flex items-center gap-1.5">
                                                                         <Clock size={12} className="text-slate-300" />
-                                                                        {format(new Date(log.created_at), 'MMM d, yyyy h:mm a')}
+                                                                        {log.created_at ? format(new Date(log.created_at), 'MMM d, yyyy h:mm a') : 'N/A'}
                                                                     </span>
                                                                     <span className="flex items-center gap-1.5">
                                                                         <Activity size={12} className="text-slate-300" />

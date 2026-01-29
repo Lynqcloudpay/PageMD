@@ -31,9 +31,10 @@ const upload = multer({
 
 // Get documents for patient
 router.get('/patient/:patientId', requirePermission('patients:view_chart'), async (req, res) => {
+  const dbClient = req.dbClient || pool;
   try {
     const { patientId } = req.params;
-    const result = await pool.query(
+    const result = await dbClient.query(
       `SELECT d.*, 
               COALESCE(u.first_name, 'Unknown') as uploader_first_name, 
               COALESCE(u.last_name, 'User') as uploader_last_name
@@ -148,15 +149,21 @@ router.post('/', requirePermission('patients:view_chart'), upload.single('file')
 
 // Get document file
 router.get('/:id/file', requirePermission('patients:view_chart'), async (req, res) => {
+  const dbClient = req.dbClient || pool;
+  const requestId = Math.random().toString(36).substring(7);
   try {
     const { id } = req.params;
-    const result = await pool.query('SELECT file_path, filename, mime_type FROM documents WHERE id = $1', [id]);
+    console.log(`[DOC-FILE][${requestId}] Fetching file for document ID: ${id}`);
+
+    const result = await dbClient.query('SELECT file_path, filename, mime_type FROM documents WHERE id = $1', [id]);
 
     if (result.rows.length === 0) {
+      console.warn(`[DOC-FILE][${requestId}] Document not found in DB: ${id}`);
       return res.status(404).json({ error: 'Document not found' });
     }
 
     const doc = result.rows[0];
+    console.log(`[DOC-FILE][${requestId}] Found document: ${doc.filename}, path: ${doc.file_path}`);
 
     // Handle three possible path formats:
     // 1. New format: /uploads/filename (preferred)
@@ -172,16 +179,20 @@ router.get('/:id/file', requirePermission('patients:view_chart'), async (req, re
       actualPath = doc.file_path;
     }
 
-    if (!fs.existsSync(actualPath)) {
+    const resolvedPath = path.resolve(actualPath);
+    console.log(`[DOC-FILE][${requestId}] Resolved absolute path: ${resolvedPath}`);
+
+    if (!fs.existsSync(resolvedPath)) {
+      console.error(`[DOC-FILE][${requestId}] File not found on disk: ${resolvedPath}`);
       return res.status(404).json({ error: 'File not found on disk' });
     }
 
     res.setHeader('Content-Type', doc.mime_type || 'application/octet-stream');
     res.setHeader('Content-Disposition', `inline; filename="${doc.filename}"`);
-    res.sendFile(path.resolve(actualPath));
+    res.sendFile(resolvedPath);
   } catch (error) {
-    console.error('Error fetching document file:', error);
-    res.status(500).json({ error: 'Failed to fetch document' });
+    console.error(`[DOC-FILE][${requestId}] Error fetching document file:`, error);
+    res.status(500).json({ error: 'Failed to fetch document', message: error.message });
   }
 });
 

@@ -16,11 +16,11 @@ const decodeHtmlEntities = (text) => {
     let str = text;
     if (typeof document !== 'undefined') {
         const txt = document.createElement('textarea');
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 10; i++) {
             const prev = str;
             txt.innerHTML = str;
             str = txt.value;
-            str = str.replace(/&#x2F;/ig, '/').replace(/&#47;/g, '/');
+            str = str.replace(/&#x2F;/ig, '/').replace(/&#47;/g, '/').replace(/&amp;/g, '&');
             if (str === prev) break;
         }
     }
@@ -1073,20 +1073,20 @@ const ChartReviewModal = ({
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center z-[60]" onClick={onClose}>
             <div className="bg-slate-50 rounded-[2rem] shadow-2xl w-full max-w-[1240px] h-[90vh] flex flex-col overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
                 {/* Clean Professional Header */}
-                <div className="px-8 py-5 bg-white border-b border-slate-100 flex items-center justify-between flex-shrink-0">
-                    <div className="flex items-center gap-12">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
-                                <Stethoscope className="w-5 h-5" />
-                            </div>
-                            <div>
-                                <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1">Chart Review</h2>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{patientData.first_name} {patientData.last_name}</p>
-                            </div>
+                <div className="px-8 py-5 bg-white border-b border-slate-100 flex items-center justify-between flex-shrink-0 relative">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
+                            <Stethoscope className="w-5 h-5" />
                         </div>
+                        <div>
+                            <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1">Chart Review</h2>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{patientData.first_name} {patientData.last_name}</p>
+                        </div>
+                    </div>
 
-                        {/* Tab Navigation - Compact to fit all */}
-                        <div className="flex gap-0.5 p-1 bg-slate-100 rounded-lg">
+                    {/* Centered Tab Navigation */}
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                        <div className="flex gap-0.5 p-1 bg-slate-100 rounded-lg shadow-inner">
                             {['Summary', 'Notes', 'Vitals', 'Labs', 'Imaging', 'Echo', 'EKG', 'Docs'].map((tab) => {
                                 const isActive = (activeTab || 'Summary') === tab;
                                 return (
