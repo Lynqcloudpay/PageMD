@@ -760,6 +760,17 @@ router.post('/:id/notes', async (req, res) => {
 
         // Mark inbox item as read/handled
         await client.query("UPDATE inbox_items SET status = 'read', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [id]);
+
+        // Trigger Email Notification (non-blocking)
+        try {
+          const patientRes = await client.query('SELECT first_name, last_name, email FROM patients WHERE id = $1', [item.patient_id]);
+          const p = patientRes.rows[0];
+          if (p && p.email) {
+            emailService.sendNewMessageNotification(p.email, `${p.first_name} ${p.last_name}`);
+          }
+        } catch (emailErr) {
+          console.warn('Failed to send portal message notification email:', emailErr);
+        }
       }
     } else if (item && item.status === 'new') {
       // Mark as read even for internal notes
@@ -1062,6 +1073,17 @@ router.post('/patient-message', async (req, res) => {
     `, [inboxItemId]);
 
     await client.query('COMMIT');
+
+    // Trigger Email Notification (non-blocking)
+    try {
+      const patientRes = await client.query('SELECT first_name, last_name, email FROM patients WHERE id = $1', [patientId]);
+      const p = patientRes.rows[0];
+      if (p && p.email) {
+        emailService.sendNewMessageNotification(p.email, `${p.first_name} ${p.last_name}`);
+      }
+    } catch (emailErr) {
+      console.warn('Failed to send portal message notification email:', emailErr);
+    }
     res.json({ success: true, item: fullItem.rows[0], threadId });
   } catch (error) {
     await client.query('ROLLBACK');

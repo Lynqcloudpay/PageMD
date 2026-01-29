@@ -82,6 +82,43 @@ class EmailService {
     }
 
     /**
+     * Send New Message Notification
+     */
+    async sendNewMessageNotification(email, patientName) {
+        const subject = `New Secure Message in your Patient Portal`;
+        const portalUrl = process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/portal` : 'https://pagemdemr.com/portal';
+
+        const html = `
+            <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; padding: 20px;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h2 style="color: #2563eb; margin-bottom: 10px;">New Secure Message</h2>
+                    <div style="width: 50px; h-px; background-color: #2563eb; margin: 10px auto;"></div>
+                </div>
+                
+                <p style="font-size: 16px; line-height: 1.6;">Hello ${patientName || 'Patient'},</p>
+                <p style="font-size: 16px; line-height: 1.6;">You have received a new secure message from your healthcare provider in the Patient Portal.</p>
+                
+                <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; border-left: 4px solid #3b82f6; margin: 30px 0;">
+                    <p style="font-size: 14px; color: #475569; margin: 0;">For your security and privacy, you must log in to the portal to view the content of this message and reply.</p>
+                </div>
+
+                <div style="margin: 40px 0; text-align: center;">
+                    <a href="${portalUrl}" style="background-color: #2563eb; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2);">
+                        View Message in Portal
+                    </a>
+                </div>
+                
+                <p style="font-size: 14px; color: #94a3b8; line-height: 1.5;">This is an automated notification. Please do not reply directly to this email as the inbox is not monitored.</p>
+                
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 40px 0;" />
+                <p style="font-size: 12px; color: #94a3b8; text-align: center;">© ${new Date().getFullYear()} PageMD EMR. All rights reserved.</p>
+            </div>
+        `;
+
+        return this._send(email, subject, html);
+    }
+
+    /**
      * Internal send method
      */
     async _send(to, subject, html) {
