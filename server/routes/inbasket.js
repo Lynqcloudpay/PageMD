@@ -1026,7 +1026,7 @@ router.post('/patient-message', async (req, res) => {
 
     // 2. Insert the message
     await client.query(
-      "INSERT INTO portal_messages (thread_id, sender_user_id, sender_id, sender_type, body, read_at) VALUES ($1, $2, $2, 'staff', $3, CURRENT_TIMESTAMP)",
+      "INSERT INTO portal_messages (thread_id, sender_user_id, sender_id, sender_type, body) VALUES ($1, $2, $2, 'staff', $3)",
       [threadId, req.user.id, body]
     );
 
