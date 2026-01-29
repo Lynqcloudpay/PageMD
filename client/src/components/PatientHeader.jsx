@@ -3,7 +3,7 @@ import {
     Phone, Mail, MapPin, Shield, Activity,
     AlertCircle, Edit2, Camera, X, Check,
     ExternalLink, Calendar, FileText, Upload, Pill, Receipt, Users,
-    Lock, User, ShieldAlert, FlaskConical, ChevronDown
+    Lock, User, ShieldAlert, FlaskConical, ChevronDown, MessageSquare
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
@@ -612,6 +612,13 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                             onClose={() => setIsResetModalOpen(false)}
                             patient={patient}
                         />
+                        <button
+                            onClick={() => onAction?.('message')}
+                            className="px-4 py-2.5 text-[13px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-xl hover:bg-blue-100 transition-all flex items-center gap-2"
+                        >
+                            <MessageSquare size={16} strokeWidth={2.5} />
+                            Message
+                        </button>
                         <button
                             onClick={handleOpenChart}
                             className="px-5 py-2.5 text-[13px] font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 shadow-md shadow-blue-500/20 transition-all hover:scale-105 active:scale-95 flex items-center gap-2"

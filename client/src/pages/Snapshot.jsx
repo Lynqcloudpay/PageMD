@@ -33,12 +33,15 @@ import PrintOrdersModal from '../components/PrintOrdersModal';
 import PatientHeader from '../components/PatientHeader';
 import { usePatientTabs } from '../context/PatientTabsContext';
 import SpecialtyTracker from '../components/SpecialtyTracker';
+import MessagingModal from '../components/MessagingModal';
+import { useAuth } from '../context/AuthContext';
 
 const Snapshot = ({ showNotesOnly = false }) => {
     const { id } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
     const { addTab } = usePatientTabs();
+    const { user } = useAuth();
 
     const decodeHtmlEntities = (text) => {
         if (typeof text !== 'string') return String(text || '');
@@ -333,6 +336,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
         notes: ''
     });
     const [cardiacCathFile, setCardiacCathFile] = useState(null);
+    const [showMessagingModal, setShowMessagingModal] = useState(false);
 
     // Helper to get authenticated file link
     const getAuthenticatedLink = (doc) => {
@@ -1481,6 +1485,18 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             handleCreateNewVisit();
                         }
                     }}
+                    onAction={(action) => {
+                        if (action === 'message') {
+                            setShowMessagingModal(true);
+                        }
+                    }}
+                />
+
+                <MessagingModal
+                    isOpen={showMessagingModal}
+                    onClose={() => setShowMessagingModal(false)}
+                    patient={patient}
+                    currentUser={user}
                 />
 
                 {/* Quick Navigation Bar - Neutralized */}
