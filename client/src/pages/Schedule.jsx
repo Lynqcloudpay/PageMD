@@ -338,11 +338,39 @@ const Schedule = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [appointments, setAppointments] = useState([]);
     const [providers, setProviders] = useState([]);
-    // Load saved provider preference from localStorage
-    const [selectedProvider, setSelectedProvider] = useState(() => {
-        const saved = localStorage.getItem('schedule_selectedProvider');
-        return saved || null;
+    const [selectedProviderIds, setSelectedProviderIds] = useState(() => {
+        const saved = localStorage.getItem('schedule_selectedProviderIds');
+        return saved ? JSON.parse(saved) : [];
     });
+    const [showProviderMenu, setShowProviderMenu] = useState(false);
+    const providerMenuRef = useRef(null);
+
+    // Save provider preference to localStorage
+    useEffect(() => {
+        localStorage.setItem('schedule_selectedProviderIds', JSON.stringify(selectedProviderIds));
+    }, [selectedProviderIds]);
+
+    // Close provider menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (providerMenuRef.current && !providerMenuRef.current.contains(event.target)) {
+                setShowProviderMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Toggle a provider in the selection
+    const toggleProvider = (providerId) => {
+        setSelectedProviderIds(prev => {
+            if (prev.includes(providerId)) {
+                return prev.filter(id => id !== providerId);
+            } else {
+                return [...prev, providerId];
+            }
+        });
+    };
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [showAddPatientModal, setShowAddPatientModal] = useState(false);
@@ -415,35 +443,32 @@ const Schedule = () => {
                 setProviders(providersList);
 
                 // Check if there's a saved provider preference
-                const savedProviderId = localStorage.getItem('schedule_selectedProvider');
-                if (savedProviderId) {
-                    // Verify the saved provider still exists in the list
-                    const savedProvider = providersList.find(p => p.id === savedProviderId);
-                    if (savedProvider) {
-                        setSelectedProvider(savedProviderId);
-                        setNewAppt(prev => ({ ...prev, providerId: savedProviderId }));
-                        return; // Don't override with role-based selection if saved preference exists
-                    }
-                }
+                const savedProviderIds = localStorage.getItem('schedule_selectedProviderIds');
+                if (savedProviderIds) {
+                    const parsedIds = JSON.parse(savedProviderIds);
+                    // Verify the saved providers still exist in the list
+                    const validSavedIds = providersList.filter(p => parsedIds.includes(p.id)).map(p => p.id);
+                    setSelectedProviderIds(validSavedIds);
+                } else {
+                    // If no saved preference, use role-based selection for initial view
+                    const roleName = user?.role_name || user?.role || '';
+                    const roleNameLower = roleName.toLowerCase();
+                    const isPhysicianRole = (
+                        roleNameLower === 'physician' ||
+                        roleNameLower === 'nurse practitioner' ||
+                        roleNameLower === 'np' ||
+                        roleNameLower === 'physician assistant' ||
+                        roleNameLower === 'pa' ||
+                        roleNameLower === 'clinician' ||
+                        user?.role === 'clinician'
+                    );
 
-                // If no saved preference, use role-based selection
-                const roleName = user?.role_name || user?.role || '';
-                const roleNameLower = roleName.toLowerCase();
-                const isPhysicianRole = (
-                    roleNameLower === 'physician' ||
-                    roleNameLower === 'nurse practitioner' ||
-                    roleNameLower === 'np' ||
-                    roleNameLower === 'physician assistant' ||
-                    roleNameLower === 'pa' ||
-                    roleNameLower === 'clinician' ||
-                    user?.role === 'clinician'
-                );
-
-                if (user && isPhysicianRole) {
-                    const currentUserProvider = providersList.find(p => p.id === user.id);
-                    if (currentUserProvider) {
-                        setSelectedProvider(currentUserProvider.id);
-                        setNewAppt(prev => ({ ...prev, providerId: currentUserProvider.id }));
+                    if (user && isPhysicianRole) {
+                        const currentUserProvider = providersList.find(p => p.id === user.id);
+                        if (currentUserProvider) {
+                            setSelectedProviderIds([currentUserProvider.id]);
+                            setNewAppt(prev => ({ ...prev, providerId: currentUserProvider.id }));
+                        }
                     }
                 }
             } catch (error) {
@@ -452,15 +477,6 @@ const Schedule = () => {
         };
         fetchProviders();
     }, [user]);
-
-    // Save provider preference to localStorage whenever it changes
-    useEffect(() => {
-        if (selectedProvider) {
-            localStorage.setItem('schedule_selectedProvider', selectedProvider);
-        } else {
-            localStorage.removeItem('schedule_selectedProvider');
-        }
-    }, [selectedProvider]);
 
     // Patient search with debouncing
     useEffect(() => {
@@ -521,41 +537,35 @@ const Schedule = () => {
         fetchModalAppointments();
     }, [showModal, newAppt.date, newAppt.providerId]);
 
-    // Fetch appointments
+    // Fetch appointments - ALWAYS fetch all for date, filter on client
     useEffect(() => {
         let isInitialLoad = true;
 
         const fetchAppointments = async (isRefresh = false) => {
-            // Only show loading on initial load, not on refresh
-            if (!isRefresh) {
-                setLoading(true);
-            }
+            if (!isRefresh) setLoading(true);
             try {
                 const dateStr = format(currentDate, 'yyyy-MM-dd');
                 const params = { date: dateStr };
-                if (selectedProvider) params.providerId = selectedProvider;
+                // We do NOT send providerId param anymore, we fetch all and filter locally
                 const response = await appointmentsAPI.get(params);
                 setAppointments(response.data || []);
             } catch (error) {
                 console.error('Error fetching appointments:', error);
                 setAppointments([]);
             } finally {
-                if (!isRefresh) {
-                    setLoading(false);
-                }
+                if (!isRefresh) setLoading(false);
                 isInitialLoad = false;
             }
         };
 
         fetchAppointments();
 
-        // Auto-refresh every 2 seconds (silent refresh, no loading state)
         const interval = setInterval(() => {
             fetchAppointments(true);
         }, 2000);
 
         return () => clearInterval(interval);
-    }, [currentDate, selectedProvider]);
+    }, [currentDate]);
 
     // Provider colors
     const getProviderColor = (providerId, providerName) => {
@@ -581,14 +591,30 @@ const Schedule = () => {
         return colors[Math.abs(hash) % colors.length];
     };
 
-    // Group appointments by provider - only include active providers
+    // Group appointments by provider - Filter based on multi-selection
     const activeProviderIds = new Set((providers || []).map(p => p.id));
+
+    // Determine which providers are visible
+    // If selectedProviderIds is empty, show ALL. Else show only selected.
+    const visibleProviderIds = new Set(
+        selectedProviderIds.length === 0
+            ? (providers || []).map(p => p.id)
+            : selectedProviderIds
+    );
+
     const appointmentsByProvider = (appointments || []).reduce((acc, appt) => {
         const providerId = appt.providerId || 'unknown';
-        // Only include providers that are in the active providers list
-        if (!activeProviderIds.has(providerId) && providerId !== 'unknown') {
-            return acc; // Skip suspended/inactive providers
+
+        // Skip if not in our visible set
+        if (!visibleProviderIds.has(providerId) && providerId !== 'unknown') {
+            return acc;
         }
+
+        // Only include providers that are in the active providers list (exclude system/unknown if needed, or keep 'unknown' separate)
+        if (!activeProviderIds.has(providerId) && providerId !== 'unknown') {
+            return acc;
+        }
+
         if (!acc[providerId]) {
             const providerName = appt.providerName || 'Unknown Provider';
             acc[providerId] = {
@@ -703,7 +729,6 @@ const Schedule = () => {
 
             const dateStr = format(currentDate, 'yyyy-MM-dd');
             const params = { date: dateStr };
-            if (selectedProvider) params.providerId = selectedProvider;
             const response = await appointmentsAPI.get(params);
             setAppointments(response.data || []);
 
@@ -798,7 +823,6 @@ const Schedule = () => {
     const refreshAppointments = async () => {
         const dateStr = format(currentDate, 'yyyy-MM-dd');
         const params = { date: dateStr };
-        if (selectedProvider) params.providerId = selectedProvider;
         try {
             const response = await appointmentsAPI.get(params);
             setAppointments(response.data || []);
@@ -833,12 +857,23 @@ const Schedule = () => {
                                     >
                                         <ChevronLeft className="w-5 h-5 text-slate-600" />
                                     </button>
-                                    <button
-                                        className="px-4 py-2 font-semibold text-slate-900 hover:bg-white rounded-lg transition-all min-w-[200px] text-center"
-                                        onClick={() => setCurrentDate(new Date())}
-                                    >
-                                        {format(currentDate, 'EEEE, MMMM d, yyyy')}
-                                    </button>
+                                    <div className="relative group">
+                                        <div className="w-[280px] px-4 py-2 font-semibold text-slate-900 group-hover:bg-white rounded-lg transition-all text-center cursor-pointer select-none flex items-center justify-center gap-2">
+                                            {format(currentDate, 'EEEE, MMMM d, yyyy')}
+                                            <ChevronDown className="w-4 h-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </div>
+                                        <input
+                                            type="date"
+                                            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                                            value={format(currentDate, 'yyyy-MM-dd')}
+                                            onChange={(e) => {
+                                                if (e.target.value) {
+                                                    const [y, m, d] = e.target.value.split('-').map(Number);
+                                                    setCurrentDate(new Date(y, m - 1, d));
+                                                }
+                                            }}
+                                        />
+                                    </div>
                                     <button
                                         className="p-2 hover:bg-white rounded-lg transition-all hover:shadow-sm"
                                         onClick={() => setCurrentDate(addDays(currentDate, 1))}
@@ -862,21 +897,60 @@ const Schedule = () => {
                         {/* Right: Provider Filter and New Appointment */}
                         <div className="flex items-center gap-4">
                             {(providers || []).length > 0 && (
-                                <div className="flex items-center gap-2 bg-slate-100 rounded-xl px-3 py-2">
-                                    <Users className="w-4 h-4 text-slate-500" />
-                                    <select
-                                        className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none cursor-pointer pr-2"
-                                        value={selectedProvider || ''}
-                                        onChange={(e) => {
-                                            setSelectedProvider(e.target.value || null);
-                                            setNewAppt(prev => ({ ...prev, providerId: e.target.value || '' }));
-                                        }}
+                                <div className="relative" ref={providerMenuRef}>
+                                    <button
+                                        onClick={() => setShowProviderMenu(!showProviderMenu)}
+                                        className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 rounded-xl px-3 py-2.5 transition-colors border border-transparent hover:border-slate-300"
                                     >
-                                        <option value="">All Providers</option>
-                                        {(providers || []).map(p => (
-                                            <option key={p.id} value={p.id}>{p.name}</option>
-                                        ))}
-                                    </select>
+                                        <Users className="w-4 h-4 text-slate-500" />
+                                        <span className="text-sm font-medium text-slate-700">
+                                            {selectedProviderIds.length === 0
+                                                ? 'All Providers'
+                                                : `${selectedProviderIds.length} Provider${selectedProviderIds.length === 1 ? '' : 's'}`}
+                                        </span>
+                                        <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showProviderMenu ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    {showProviderMenu && (
+                                        <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 p-2 z-50 max-h-[400px] overflow-y-auto">
+                                            <div className="px-2 py-1.5 mb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                                Select Providers to View
+                                            </div>
+                                            {(providers || []).map(p => (
+                                                <label
+                                                    key={p.id}
+                                                    className="flex items-center gap-3 w-full p-2.5 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors"
+                                                >
+                                                    <div className={`
+                                                        w-5 h-5 rounded border flex items-center justify-center transition-all
+                                                        ${selectedProviderIds.includes(p.id)
+                                                            ? 'bg-blue-600 border-blue-600 text-white'
+                                                            : 'border-slate-300 bg-white'}
+                                                    `}>
+                                                        {selectedProviderIds.includes(p.id) && <span className="text-[10px] font-bold">✓</span>}
+                                                    </div>
+                                                    <input
+                                                        type="checkbox"
+                                                        className="hidden"
+                                                        checked={selectedProviderIds.includes(p.id)}
+                                                        onChange={() => toggleProvider(p.id)}
+                                                    />
+                                                    <div className="flex-1">
+                                                        <div className="text-sm font-medium text-slate-900">{p.name || `${p.first_name} ${p.last_name}`}</div>
+                                                        <div className="text-xs text-slate-500">{p.role_name || p.role || 'Provider'}</div>
+                                                    </div>
+                                                </label>
+                                            ))}
+                                            <div className="pt-2 mt-2 border-t border-slate-100">
+                                                <button
+                                                    onClick={() => { setSelectedProviderIds([]); setShowProviderMenu(false); }}
+                                                    className="w-full py-2 text-xs font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-50 rounded-lg"
+                                                >
+                                                    Show All Providers
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
