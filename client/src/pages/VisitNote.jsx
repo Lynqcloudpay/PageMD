@@ -711,7 +711,15 @@ const VisitNote = () => {
         const peMatch = safeDecodedText.match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Results|Data|Assessment|Plan):|$)/is);
         const resultsMatch = safeDecodedText.match(/(?:Results|Data):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):|$)/is);
         const assessmentMatch = safeDecodedText.match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):|$)/is);
-        const planMatch = safeDecodedText.match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n(?:Care Plan|CP|Follow Up|FU):|$)/is);
+
+        // Updated regexes to support new sections: CTS, ASCVD, Safety Plan
+        // Plan can now stop at CTS, ASCVD, Safety, or Care Plan
+        const planMatch = safeDecodedText.match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n(?:Caregiver Training|CTS|ASCVD Risk|Cardiovascular|Safety Plan|Behavioral Safety|Care Plan|CP|Follow Up|FU):|$)/is);
+
+        const ctsMatch = safeDecodedText.match(/(?:Caregiver Training|CTS):\s*(.+?)(?:\n\n|\n(?:ASCVD Risk|Cardiovascular|Safety Plan|Behavioral Safety|Care Plan|CP|Follow Up|FU):|$)/is);
+        const ascvdMatch = safeDecodedText.match(/(?:ASCVD Risk|Cardiovascular):\s*(.+?)(?:\n\n|\n(?:Safety Plan|Behavioral Safety|Care Plan|CP|Follow Up|FU):|$)/is);
+        const safetyPlanMatch = safeDecodedText.match(/(?:Safety Plan|Behavioral Safety):\s*(.+?)(?:\n\n|\n(?:Care Plan|CP|Follow Up|FU):|$)/is);
+
         const carePlanMatch = safeDecodedText.match(/(?:Care Plan|CP):\s*(.+?)(?:\n\n|\n(?:Follow Up|FU):|$)/is);
         const followUpMatch = safeDecodedText.match(/(?:Follow Up|FU):\s*(.+?)(?:\n\n|$)/is);
 
@@ -723,6 +731,9 @@ const VisitNote = () => {
             results: resultsMatch ? decodeHtmlEntities(resultsMatch[1].trim()) : '',
             assessment: assessmentMatch ? decodeHtmlEntities(assessmentMatch[1].trim()) : '',
             plan: planMatch ? decodeHtmlEntities(planMatch[1].trim()) : '',
+            cts: ctsMatch ? decodeHtmlEntities(ctsMatch[1].trim()) : '',
+            ascvd: ascvdMatch ? decodeHtmlEntities(ascvdMatch[1].trim()) : '',
+            safetyPlan: safetyPlanMatch ? decodeHtmlEntities(safetyPlanMatch[1].trim()) : '',
             carePlan: carePlanMatch ? decodeHtmlEntities(carePlanMatch[1].trim()) : '',
             followUp: followUpMatch ? decodeHtmlEntities(followUpMatch[1].trim()) : ''
         };
@@ -826,6 +837,11 @@ const VisitNote = () => {
             planText = noteData.plan;
         }
         if (planText) sections.push(`Plan: ${planText}`);
+
+        // New Phase 7 Sections
+        if (noteData.cts) sections.push(`Caregiver Training: ${noteData.cts}`);
+        if (noteData.ascvd) sections.push(`ASCVD Risk: ${noteData.ascvd}`);
+        if (noteData.safetyPlan) sections.push(`Safety Plan: ${noteData.safetyPlan}`);
 
         if (noteData.carePlan) sections.push(`Care Plan: ${noteData.carePlan}`);
         if (noteData.followUp) sections.push(`Follow Up: ${noteData.followUp}`);
@@ -3475,6 +3491,99 @@ const VisitNote = () => {
                                     )}
                                 </div>
                             )}
+                        </Section>
+
+
+                        {/* Caregiver Training (CTS) */}
+                        <Section title="Caregiver Training Services (CTS)" defaultOpen={false}>
+                            <div className="relative">
+                                <textarea
+                                    value={noteData.cts || ''}
+                                    onChange={(e) => setNoteData({ ...noteData, cts: e.target.value })}
+                                    placeholder="Document topic (e.g. Wound Care), time spent, and if telehealth..."
+                                    className="w-full text-xs p-2 border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-h-[60px]"
+                                    disabled={isSigned}
+                                />
+                                {!isSigned && (
+                                    <div className="mt-2 text-xs">
+                                        <label className="block text-neutral-600 font-medium mb-1">Quick Templates:</label>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {[
+                                                'CTS: Wound Care Education (15 min)',
+                                                'CTS: Infection Control (10 min)',
+                                                'CTS: ADL Assistance Techniques',
+                                                'CTS: Medication Administration'
+                                            ].map((template) => (
+                                                <button
+                                                    key={template}
+                                                    onClick={() => setNoteData(prev => ({ ...prev, cts: prev.cts ? `${prev.cts}\n${template}` : template }))}
+                                                    className="px-2.5 py-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-200 rounded text-xs transition-colors"
+                                                >
+                                                    {template}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </Section>
+
+                        {/* ASCVD Risk Management */}
+                        <Section title="ASCVD Risk Management" defaultOpen={false}>
+                            <div className="relative">
+                                <textarea
+                                    value={noteData.ascvd || ''}
+                                    onChange={(e) => setNoteData({ ...noteData, ascvd: e.target.value })}
+                                    placeholder="Risk score, category, and management plan..."
+                                    className="w-full text-xs p-2 border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-h-[60px]"
+                                    disabled={isSigned}
+                                />
+                                {!isSigned && (
+                                    <div className="mt-2 text-xs">
+                                        <label className="block text-neutral-600 font-medium mb-1">Risk Categories:</label>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {['Low Risk (<5%)', 'Borderline (5-7.4%)', 'Intermediate (7.5-19.9%)', 'High Risk (≥20%)'].map((risk) => (
+                                                <button
+                                                    key={risk}
+                                                    onClick={() => setNoteData(prev => ({ ...prev, ascvd: prev.ascvd ? `${prev.ascvd}\nRisk Category: ${risk}` : `Risk Category: ${risk}` }))}
+                                                    className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded text-xs transition-colors"
+                                                >
+                                                    {risk}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </Section>
+
+                        {/* Behavioral Safety Plan */}
+                        <Section title="Behavioral Safety Plan" defaultOpen={false}>
+                            <div className="relative">
+                                <textarea
+                                    value={noteData.safetyPlan || ''}
+                                    onChange={(e) => setNoteData({ ...noteData, safetyPlan: e.target.value })}
+                                    placeholder="Warning signs, coping strategies, and contacts..."
+                                    className="w-full text-xs p-2 border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-h-[60px]"
+                                    disabled={isSigned}
+                                />
+                                {!isSigned && (
+                                    <div className="mt-2 text-xs">
+                                        <label className="block text-neutral-600 font-medium mb-1">Components:</label>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {['Warning Signs', 'Coping Strategies', 'Social Contacts', 'Professional Contacts'].map((comp) => (
+                                                <button
+                                                    key={comp}
+                                                    onClick={() => setNoteData(prev => ({ ...prev, safetyPlan: prev.safetyPlan ? `${prev.safetyPlan}\n${comp}: ` : `${comp}: ` }))}
+                                                    className="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded text-xs transition-colors"
+                                                >
+                                                    {comp}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </Section>
 
                         {/* Care Plan */}
