@@ -300,11 +300,78 @@ const CosignModal = ({ isOpen, onClose, onConfirm, visitData, authorshipModel, s
                             Cancel
                         </button>
                         <button
-                            onClick={handleCosign}
+                            onClick={() => onConfirm(attestationText, authorshipModel)}
                             disabled={!attestationText.trim() || isSaving}
                             className="flex-1 px-4 py-3 rounded-2xl text-sm font-bold bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 transition-all shadow-lg shadow-primary-100"
                         >
                             {isSaving ? 'Cosigning...' : 'Confirm Cosignature'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const SignPromptModal = ({ isOpen, onClose, onConfirm, attendings, selectedAttendingId, setSelectedAttendingId, isResident, isSaving }) => {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-amber-100">
+                <div className="p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2.5 bg-amber-50 rounded-2xl">
+                            <Lock className="w-6 h-6 text-amber-600" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-900 leading-tight">Electronic Signature</h2>
+                            <p className="text-[11px] font-black text-amber-500 uppercase tracking-widest mt-0.5">Workflow Routing Required</p>
+                        </div>
+                    </div>
+
+                    <div className="bg-amber-50/50 p-4 rounded-2xl border border-amber-100 mb-6">
+                        <p className="text-sm text-amber-800 leading-relaxed">
+                            {isResident
+                                ? "As a trainee, your note will be saved as Preliminary and requires clinical validation by an attending physician."
+                                : "This clinical note will be saved as Preliminary and forwarded to an attending physician for review and cosignature."
+                            }
+                        </p>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 flex items-center justify-between">
+                                Assign Attending Physician
+                                <span className="text-amber-600">(Required)</span>
+                            </label>
+                            <select
+                                value={selectedAttendingId}
+                                onChange={(e) => setSelectedAttendingId(e.target.value)}
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 transition-all cursor-pointer"
+                            >
+                                <option value="">Select an Attending...</option>
+                                {attendings.map(a => (
+                                    <option key={a.id} value={a.id}>
+                                        Dr. {a.last_name}, {a.first_name} ({a.role})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-3 mt-8">
+                        <button
+                            onClick={onClose}
+                            className="flex-1 px-4 py-3 rounded-2xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={onConfirm}
+                            disabled={!selectedAttendingId || isSaving}
+                            className="flex-1 px-4 py-3 rounded-2xl text-sm font-bold bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 transition-all shadow-lg shadow-amber-100"
+                        >
+                            {isSaving ? 'Signing...' : 'Sign & Route'}
                         </button>
                     </div>
                 </div>
@@ -420,6 +487,9 @@ const VisitNote = () => {
     const [attestationText, setAttestationText] = useState('');
     const [authorshipModel, setAuthorshipModel] = useState('Addendum');
     const [attestationMacros, setAttestationMacros] = useState([]);
+    const [showSignPrompt, setShowSignPrompt] = useState(false);
+    const [attendings, setAttendings] = useState([]);
+    const [selectedAttendingId, setSelectedAttendingId] = useState('');
 
     const [showOrderPicker, setShowOrderPicker] = useState(false);
     const [orderPickerType, setOrderPickerType] = useState(null);
@@ -986,6 +1056,26 @@ const VisitNote = () => {
         return cleanup || (() => { });
     }, [urlVisitId, id, navigate, refreshTrigger]);
 
+    // Fetch Attendings for signing workflow
+    useEffect(() => {
+        const fetchDirectory = async () => {
+            try {
+                const response = await fetch('/api/users/directory');
+                const data = await response.json();
+                // Filter for clinicians/physicians
+                const filtered = data.filter(u =>
+                    (u.role || '').toLowerCase().includes('physician') ||
+                    (u.role || '').toLowerCase().includes('clinician') ||
+                    ((u.role || '').toLowerCase().includes('admin') && !(u.role || '').toLowerCase().includes('super'))
+                );
+                setAttendings(filtered);
+            } catch (err) {
+                console.error('Error fetching attendings:', err);
+            }
+        };
+        fetchDirectory();
+    }, []);
+
     // Handle Break-the-Glass authorization
     useEffect(() => {
         const handlePrivacyAuthorized = (event) => {
@@ -1220,6 +1310,16 @@ const VisitNote = () => {
 
     const handleSign = async () => {
         if (isSigned || isSaving) return;
+
+        // Workflow check for preliminary notes
+        const role = (user?.role_name || user?.role || '').toUpperCase();
+        const needsCosign = role.match(/RESIDENT|NP|PA|PRACTITIONER|ASSISTANT/);
+
+        if (needsCosign && !selectedAttendingId) {
+            setShowSignPrompt(true);
+            return;
+        }
+
         setIsSaving(true);
         try {
             const noteDraft = combineNoteSections();
@@ -1264,8 +1364,9 @@ const VisitNote = () => {
 
                 // Then sign the note (vitals should already be saved, but include them as backup)
                 console.log('Signing note with vitals:', vitalsToSave);
-                const signRes = await visitsAPI.sign(visitId, noteDraft, vitalsToSave);
+                const signRes = await visitsAPI.sign(visitId, noteDraft, vitalsToSave, selectedAttendingId);
 
+                setShowSignPrompt(false);
                 if (signRes.data?.status === 'preliminary') {
                     showToast('Note submitted for cosignature (Preliminary)', 'success');
                 } else {
@@ -2408,7 +2509,10 @@ const VisitNote = () => {
                             <div>
                                 <h3 className="text-base font-bold uppercase tracking-widest">Preliminary Report - Cosignature Required</h3>
                                 <p className="text-xs text-amber-50 font-medium">
-                                    This documentation was authored by a trainee and requires clinical validation by an attending physician.
+                                    {(visitData?.note_signed_by_role || '').match(/NP|PA|PRACTITIONER|ASSISTANT/i)
+                                        ? "This clinical note requires review and cosignature by an attending physician."
+                                        : "This documentation was authored by a trainee and requires clinical validation by an attending physician."
+                                    }
                                     {visitData?.note_signed_by_name && ` (Signed by ${visitData.note_signed_by_name} on ${format(new Date(visitData.note_signed_at), 'MM/dd/yyyy')})`}
                                 </p>
                             </div>
@@ -3995,6 +4099,16 @@ const VisitNote = () => {
                         setIsSaving(false);
                     }
                 }}
+            />
+            <SignPromptModal
+                isOpen={showSignPrompt}
+                onClose={() => setShowSignPrompt(false)}
+                isSaving={isSaving}
+                attendings={attendings}
+                selectedAttendingId={selectedAttendingId}
+                setSelectedAttendingId={setSelectedAttendingId}
+                isResident={(user?.role_name || user?.role || '').toUpperCase().includes('STUDENT') || (user?.role_name || user?.role || '').toUpperCase().includes('RESIDENT')}
+                onConfirm={handleSign}
             />
         </div>
     );

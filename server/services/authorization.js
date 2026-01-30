@@ -137,7 +137,9 @@ function getDefaultPermissionsForRole(role) {
     'billing:create',
     'billing:edit',
     'patient_flags:create',
-    'patient_flags:resolve'
+    'patient_flags:resolve',
+    'notes:view',
+    'audit:view'
   ];
 
   const nursePerms = [
@@ -145,9 +147,11 @@ function getDefaultPermissionsForRole(role) {
     'patients:edit_demographics',
     'visits:create',
     'visits:edit',
+    'notes:view',
     'orders:view',
     'schedule:view',
-    'schedule:status_update'
+    'schedule:status_update',
+    'audit:view'
   ];
 
   switch (role) {
@@ -201,7 +205,7 @@ function normalizeRoleName(roleName) {
 
   // Map common variations
   if (upper.includes('ADMIN') || upper === 'ADMIN') return 'ADMIN';
-  if (upper.includes('PHYSICIAN') || upper.includes('CLINICIAN') || upper === 'DOCTOR') {
+  if (upper.includes('PHYSICIAN') || upper.includes('CLINICIAN') || upper === 'DOCTOR' || upper.includes('PRACTITIONER') || upper === 'NP' || upper === 'PA') {
     if (upper.includes('RESIDENT')) return 'RESIDENT';
     return 'CLINICIAN';
   }

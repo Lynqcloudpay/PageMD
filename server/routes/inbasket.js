@@ -127,7 +127,8 @@ async function syncInboxItems(tenantId, schema) {
       await client.query(`SET search_path TO ${schema}, public`);
     }
 
-    await ensureSchema(client);
+    // [MOD] Removal of ensureSchema from hot path to prevent AccessExclusiveLock deadlocks during concurrent polls
+    // await ensureSchema(client);
 
     // 1. Sync Lab Orders
     await client.query(`

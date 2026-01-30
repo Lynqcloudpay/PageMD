@@ -531,7 +531,7 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
   try {
     const { id } = req.params;
     // Handle both noteDraft (camelCase from frontend) and note_draft (snake_case)
-    const { noteDraft, note_draft, vitals } = req.body;
+    const { noteDraft, note_draft, vitals, assignedAttendingId } = req.body;
     const noteDraftValue = noteDraft || note_draft;
 
     // Allow empty noteDraft (it might be an empty note)
@@ -561,16 +561,23 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
       return res.status(404).json({ error: 'Visit not found' });
     }
     const patientId = visitCheck.rows[0].patient_id;
-    const userRole = (req.user.role_name || req.user.role || '').toUpperCase();
-
     // 1. Role-based workflow validation
     let targetStatus = 'signed';
-    if (userRole.includes('STUDENT')) {
+    const originalRole = (req.user.role_name || req.user.role || '').toUpperCase();
+    const normalizedRole = (req.user.role || '').toUpperCase();
+
+    if (originalRole.includes('STUDENT') || normalizedRole === 'STUDENT') {
       return res.status(403).json({ error: 'Medical Students cannot sign clinical notes. Please use the "Submit for Review" workflow.' });
     }
 
-    if (userRole.includes('RESIDENT')) {
+    if (originalRole.includes('RESIDENT') ||
+      originalRole.includes('NP') ||
+      originalRole.includes('PA') ||
+      originalRole.includes('PRACTITIONER') ||
+      originalRole.includes('ASSISTANT') ||
+      normalizedRole === 'RESIDENT') {
       targetStatus = 'preliminary';
+      console.log(`[Visits] Routing note to preliminary status for user: ${req.user.email} (Role: ${originalRole})`);
     }
 
     // ============================================================
@@ -691,10 +698,11 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
                clinical_snapshot = $5,
                content_hash = $6,
                content_integrity_verified = TRUE,
+               assigned_attending_id = $8,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $2 
            RETURNING *`,
-          [noteDraftToSave, id, req.user.id, vitalsValue, snapshotJson, contentHash, targetStatus]
+          [noteDraftToSave, id, req.user.id, vitalsValue, snapshotJson, contentHash, targetStatus, assignedAttendingId]
         );
       } else {
         result = await pool.query(
@@ -706,44 +714,47 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
                clinical_snapshot = $5,
                content_hash = $6,
                content_integrity_verified = TRUE,
+               assigned_attending_id = $7,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $2 
            RETURNING *`,
-          [noteDraftToSave, id, req.user.id, targetStatus, snapshotJson, contentHash]
+          [noteDraftToSave, id, req.user.id, targetStatus, snapshotJson, contentHash, assignedAttendingId]
         );
       }
     } catch (dbError) {
-      if (dbError.code === '22P02') { // Invalid UUID format
+      if (dbError.code === '22P01' || dbError.code === '22P02') { // Handle invalid UUID format
         if (vitalsValue !== null) {
           result = await pool.query(
             `UPDATE visits 
              SET note_draft = $1, 
                  vitals = $4,
-                 status = 'signed',
+                 status = $7,
                  note_signed_at = CURRENT_TIMESTAMP,
                  note_signed_by = $3,
                  clinical_snapshot = $5,
                  content_hash = $6,
                  content_integrity_verified = TRUE,
+                 assigned_attending_id = $8,
                  updated_at = CURRENT_TIMESTAMP
              WHERE id::text = $2 OR CAST(id AS TEXT) = $2
              RETURNING *`,
-            [noteDraftToSave, id, req.user.id, vitalsValue, JSON.stringify(clinicalSnapshot), contentHash]
+            [noteDraftToSave, id, req.user.id, vitalsValue, JSON.stringify(clinicalSnapshot), contentHash, targetStatus, assignedAttendingId]
           );
         } else {
           result = await pool.query(
             `UPDATE visits 
-             SET note_draft = $1, 
-                 status = 'signed',
-                 note_signed_at = CURRENT_TIMESTAMP,
-                 note_signed_by = $3,
-                 clinical_snapshot = $4,
-                 content_hash = $5,
-                 content_integrity_verified = TRUE,
-                 updated_at = CURRENT_TIMESTAMP
+             SET note_draft = $1,
+        status = $6,
+        note_signed_at = CURRENT_TIMESTAMP,
+        note_signed_by = $3,
+        clinical_snapshot = $4,
+        content_hash = $5,
+        content_integrity_verified = TRUE,
+        assigned_attending_id = $7,
+        updated_at = CURRENT_TIMESTAMP
              WHERE id::text = $2 OR CAST(id AS TEXT) = $2
              RETURNING *`,
-            [noteDraftToSave, id, req.user.id, JSON.stringify(clinicalSnapshot), contentHash]
+            [noteDraftToSave, id, req.user.id, JSON.stringify(clinicalSnapshot), contentHash, targetStatus, assignedAttendingId]
           );
         }
       } else {
@@ -757,21 +768,22 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
     if (targetStatus === 'preliminary') {
       try {
         await pool.query(
-          `INSERT INTO inbox_items (
-            patient_id, type, priority, status, subject, body, 
-            reference_id, reference_table, created_by, clinic_id
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          `INSERT INTO inbox_items(
+        patient_id, type, priority, status, subject, body,
+        reference_id, reference_table, created_by, clinic_id, assigned_user_id
+      ) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
           [
             patientId,
             'cosignature_required',
             'normal',
             'new',
-            `Cosignature Required: ${visit.visit_type || 'Office Visit'}`,
+            `Cosignature Required: ${visit.visit_type || 'Office Visit'} `,
             `Preliminary note by ${req.user.first_name} ${req.user.last_name} pending review.`,
             id,
             'visits',
             req.user.id,
-            req.user.clinic_id
+            req.user.clinic_id,
+            assignedAttendingId
           ]
         );
       } catch (inboxError) {
@@ -824,13 +836,13 @@ router.post('/:id/cosign', requirePermission('notes:cosign'), async (req, res) =
     const result = await pool.query(
       `UPDATE visits 
        SET status = 'signed',
-           cosigned_at = CURRENT_TIMESTAMP,
-           cosigned_by = $1,
-           attestation_text = $2,
-           authorship_model = $3,
-           updated_at = CURRENT_TIMESTAMP
+        cosigned_at = CURRENT_TIMESTAMP,
+        cosigned_by = $1,
+        attestation_text = $2,
+        authorship_model = $3,
+        updated_at = CURRENT_TIMESTAMP
        WHERE id = $4 AND status = 'preliminary'
-       RETURNING *`,
+      RETURNING * `,
       [req.user.id, attestationText, authorshipModel, id]
     );
 
@@ -844,9 +856,9 @@ router.post('/:id/cosign', requirePermission('notes:cosign'), async (req, res) =
     try {
       await pool.query(
         `UPDATE inbox_items 
-         SET status = 'completed', 
-             completed_at = CURRENT_TIMESTAMP, 
-             completed_by = $1 
+         SET status = 'completed',
+        completed_at = CURRENT_TIMESTAMP,
+        completed_by = $1 
          WHERE reference_id = $2 AND type = 'cosignature_required'`,
         [req.user.id, id]
       );
@@ -918,9 +930,9 @@ router.post('/:id/retract', requirePermission('notes:edit'), async (req, res) =>
     // We preserve note_draft and clinical_snapshot for audit purposes.
     await client.query(
       `UPDATE visits 
-       SET status = 'retracted', 
-           vitals = NULL,
-           updated_at = CURRENT_TIMESTAMP 
+       SET status = 'retracted',
+        vitals = NULL,
+        updated_at = CURRENT_TIMESTAMP 
        WHERE id = $1`,
       [id]
     );
@@ -934,9 +946,9 @@ router.post('/:id/retract', requirePermission('notes:edit'), async (req, res) =>
 
     // 3. Create Retraction Record (Tenant Aware)
     await client.query(
-      `INSERT INTO note_retractions (
-         note_id, tenant_id, retracted_by_user_id, reason_code, reason_text
-       ) VALUES ($1, $2, $3, $4, $5)`,
+      `INSERT INTO note_retractions(
+          note_id, tenant_id, retracted_by_user_id, reason_code, reason_text
+        ) VALUES($1, $2, $3, $4, $5)`,
       [id, visit.clinic_id, req.user.id, reason_code, reason_text]
     );
 
@@ -1059,17 +1071,17 @@ function generateSummary(noteText, visit) {
   const plan = sections.plan || 'No plan documented';
 
   // Build summary
-  let summary = `Chief Complaint: ${chiefComplaint}. `;
+  let summary = `Chief Complaint: ${chiefComplaint}.`;
 
   if (keyFindings.positive.length > 0) {
-    summary += `Pertinent Positives: ${keyFindings.positive.join('; ')}. `;
+    summary += `Pertinent Positives: ${keyFindings.positive.join('; ')}.`;
   }
 
   if (keyFindings.negative.length > 0) {
-    summary += `Pertinent Negatives: ${keyFindings.negative.join('; ')}. `;
+    summary += `Pertinent Negatives: ${keyFindings.negative.join('; ')}.`;
   }
 
-  summary += `Assessment: ${assessment}. `;
+  summary += `Assessment: ${assessment}.`;
   summary += `Plan: ${plan}.`;
 
   return summary;
@@ -1084,7 +1096,7 @@ function extractKeyFindings(hpi, pe) {
   const positive = [];
   const negative = [];
 
-  const text = `${hpi || ''} ${pe || ''}`.toLowerCase();
+  const text = `${hpi || ''} ${pe || ''} `.toLowerCase();
 
   // Look for positive findings (symptoms, abnormalities)
   const positivePatterns = [
@@ -1131,11 +1143,11 @@ router.get('/:id', requirePermission('notes:view'), async (req, res) => {
     let result;
     try {
       result = await pool.query(
-        `SELECT v.*, 
-          u.first_name as provider_first_name, 
-          u.last_name as provider_last_name,
-          signed_by_user.first_name as signed_by_first_name,
-          signed_by_user.last_name as signed_by_last_name
+        `SELECT v.*,
+        u.first_name as provider_first_name,
+        u.last_name as provider_last_name,
+        signed_by_user.first_name as signed_by_first_name,
+        signed_by_user.last_name as signed_by_last_name
         FROM visits v
         LEFT JOIN users u ON v.provider_id = u.id
         LEFT JOIN users signed_by_user ON v.note_signed_by = signed_by_user.id
@@ -1146,15 +1158,15 @@ router.get('/:id', requirePermission('notes:view'), async (req, res) => {
       // If UUID format fails, try as integer (for legacy data)
       if (dbError.code === '22P02') { // Invalid UUID format
         result = await pool.query(
-          `SELECT v.*, 
-            u.first_name as provider_first_name, 
-            u.last_name as provider_last_name,
-            signed_by_user.first_name as signed_by_first_name,
-            signed_by_user.last_name as signed_by_last_name
+          `SELECT v.*,
+        u.first_name as provider_first_name,
+        u.last_name as provider_last_name,
+        signed_by_user.first_name as signed_by_first_name,
+        signed_by_user.last_name as signed_by_last_name
           FROM visits v
           LEFT JOIN users u ON v.provider_id = u.id
           LEFT JOIN users signed_by_user ON v.note_signed_by = signed_by_user.id
-          WHERE v.id::text = $1 OR CAST(v.id AS TEXT) = $1`,
+          WHERE v.id:: text = $1 OR CAST(v.id AS TEXT) = $1`,
           [id]
         );
       } else {
@@ -1175,13 +1187,13 @@ router.get('/:id', requirePermission('notes:view'), async (req, res) => {
     // Integrity Verification for Signed Notes
     if (visit.note_signed_at && visit.content_hash) {
       const snapshot = typeof visit.clinical_snapshot === 'string' ? visit.clinical_snapshot : JSON.stringify(visit.clinical_snapshot);
-      const hashPayload = `${visit.id}|${visit.patient_id}|${visit.note_draft || ''}|${visit.vitals || ''}|${snapshot}|${visit.note_signed_by}`;
+      const hashPayload = `${visit.id}| ${visit.patient_id}| ${visit.note_draft || ''}| ${visit.vitals || ''}| ${snapshot}| ${visit.note_signed_by} `;
       const computedHash = crypto.createHash('sha256').update(hashPayload).digest('hex');
 
       visit.content_integrity_verified = (computedHash === visit.content_hash);
 
       if (!visit.content_integrity_verified) {
-        console.warn(`[SECURITY] Integrity check failed for note ${id}. Content may have been tampered with.`);
+        console.warn(`[SECURITY] Integrity check failed for note ${id}.Content may have been tampered with.`);
         req.logAuditEvent({
           action: 'INTEGRITY_CHECK_FAILED',
           entityType: 'Note',
@@ -1206,8 +1218,8 @@ router.post('/', requirePermission('notes:create'), async (req, res) => {
     const { patient_id, visit_date, visit_type, provider_id } = req.body;
 
     const result = await pool.query(
-      `INSERT INTO visits (patient_id, visit_date, visit_type, provider_id, clinic_id)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      `INSERT INTO visits(patient_id, visit_date, visit_type, provider_id, clinic_id)
+      VALUES($1, $2, $3, $4, $5) RETURNING * `,
       [patient_id, visit_date || new Date(), visit_type || 'Office Visit', provider_id || req.user.id, req.user?.clinic_id]
     );
 
@@ -1253,22 +1265,22 @@ router.put('/:id', requirePermission('notes:edit'), async (req, res) => {
     let paramIndex = 1;
 
     if (visit_date !== undefined) {
-      updates.push(`visit_date = $${paramIndex++}`);
+      updates.push(`visit_date = $${paramIndex++} `);
       values.push(visit_date);
     }
     if (visit_type !== undefined) {
-      updates.push(`visit_type = $${paramIndex++}`);
+      updates.push(`visit_type = $${paramIndex++} `);
       values.push(visit_type);
     }
     if (vitals !== undefined) {
-      updates.push(`vitals = $${paramIndex++}`);
+      updates.push(`vitals = $${paramIndex++} `);
       values.push(typeof vitals === 'string' ? vitals : JSON.stringify(vitals));
     }
     // Handle both note_draft and noteDraft (camelCase from frontend)
     // Always save noteDraft if it's in the request, even if it's an empty string
     const noteDraftValue = req.body.note_draft !== undefined ? req.body.note_draft : req.body.noteDraft;
     if (noteDraftValue !== undefined) {
-      updates.push(`note_draft = $${paramIndex++}`);
+      updates.push(`note_draft = $${paramIndex++} `);
       values.push(noteDraftValue || ''); // Save empty string if null/undefined
       if (process.env.NODE_ENV === 'development') {
         console.log('Saving note_draft, length:', (noteDraftValue || '').length, 'characters');
@@ -1279,11 +1291,11 @@ router.put('/:id', requirePermission('notes:edit'), async (req, res) => {
       }
     }
     if (note_signed_at !== undefined) {
-      updates.push(`note_signed_at = $${paramIndex++}`);
+      updates.push(`note_signed_at = $${paramIndex++} `);
       values.push(note_signed_at);
     }
     if (provider_id !== undefined) {
-      updates.push(`provider_id = $${paramIndex++}`);
+      updates.push(`provider_id = $${paramIndex++} `);
       values.push(provider_id);
     }
 
@@ -1298,13 +1310,13 @@ router.put('/:id', requirePermission('notes:edit'), async (req, res) => {
     values.push(id);
 
     if (process.env.NODE_ENV === 'development') {
-      console.log('Update visit query:', `UPDATE visits SET ${updates.join(', ')} WHERE id = $${paramIndex}`);
+      console.log('Update visit query:', `UPDATE visits SET ${updates.join(', ')} WHERE id = $${paramIndex} `);
       console.log('Update values count:', values.length);
       console.log('Note draft in update:', noteDraftValue !== undefined ? 'YES' : 'NO');
     }
 
     const result = await pool.query(
-      `UPDATE visits SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+      `UPDATE visits SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING * `,
       values
     );
 
@@ -1366,7 +1378,7 @@ router.post('/:id/addendum', requirePermission('notes:edit'), async (req, res) =
     const newAddendum = {
       text: addendumText.trim(),
       addedBy: req.user.id,
-      addedByName: `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || 'Provider',
+      addedByName: `${req.user.first_name || ''} ${req.user.last_name || ''} `.trim() || 'Provider',
       addedAt: new Date().toISOString()
     };
 
@@ -1376,8 +1388,8 @@ router.post('/:id/addendum', requirePermission('notes:edit'), async (req, res) =
     const result = await pool.query(
       `UPDATE visits 
        SET addendums = $1, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $2 
-       RETURNING *`,
+       WHERE id = $2
+      RETURNING * `,
       [JSON.stringify(existingAddendums), id]
     );
 
