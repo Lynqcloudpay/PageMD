@@ -151,6 +151,7 @@ export const visitsAPI = {
   generateSummary: (id) => api.post(`/visits/${id}/summary`),
   retract: (id, data) => api.post(`/visits/${id}/retract`, data),
   getRetraction: (id) => api.get(`/visits/${id}/retraction`),
+  cosign: (id, data) => api.post(`/visits/${id}/cosign`, data),
 };
 
 // Orders
@@ -618,6 +619,12 @@ export const patientFlagsAPI = {
   create: (patientId, data) => api.post(`/patient-flags/patient/${patientId}`, data),
   resolve: (id) => api.patch(`/patient-flags/${id}/resolve`),
   acknowledge: (id) => api.post(`/patient-flags/${id}/acknowledge`),
+};
+
+// Macros (Dot Phrases / Attestations)
+export const macrosAPI = {
+  getAll: (params) => api.get('/macros', { params }),
+  getAttestations: (traineeRole) => api.get('/macros', { params: { category: 'Attestation', traineeRole } }),
 };
 
 export default api;

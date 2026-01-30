@@ -155,6 +155,12 @@ function getDefaultPermissionsForRole(role) {
       return getAllAdminPermissions();
     case 'CLINICIAN':
       return clinicianPerms;
+    case 'RESIDENT':
+      // Residents can sign, but the logic will handle 'preliminary' state
+      return clinicianPerms;
+    case 'STUDENT':
+      // Students cannot sign or prescribe
+      return clinicianPerms.filter(p => !['notes:sign', 'visits:sign', 'meds:prescribe'].includes(p));
     case 'NURSE_MA':
       return nursePerms;
     case 'FRONT_DESK':
@@ -195,7 +201,12 @@ function normalizeRoleName(roleName) {
 
   // Map common variations
   if (upper.includes('ADMIN') || upper === 'ADMIN') return 'ADMIN';
-  if (upper.includes('PHYSICIAN') || upper.includes('CLINICIAN') || upper === 'DOCTOR') return 'CLINICIAN';
+  if (upper.includes('PHYSICIAN') || upper.includes('CLINICIAN') || upper === 'DOCTOR') {
+    if (upper.includes('RESIDENT')) return 'RESIDENT';
+    return 'CLINICIAN';
+  }
+  if (upper.includes('RESIDENT')) return 'RESIDENT';
+  if (upper.includes('STUDENT')) return 'STUDENT';
   if (upper.includes('NURSE') || upper.includes('MA') || upper === 'MEDICAL_ASSISTANT') return 'NURSE_MA';
   if (upper.includes('FRONT') || upper.includes('RECEPTION')) return 'FRONT_DESK';
   if (upper.includes('BILLING') || upper === 'BILLER') return 'BILLING';

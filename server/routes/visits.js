@@ -561,6 +561,17 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
       return res.status(404).json({ error: 'Visit not found' });
     }
     const patientId = visitCheck.rows[0].patient_id;
+    const userRole = (req.user.role_name || req.user.role || '').toUpperCase();
+
+    // 1. Role-based workflow validation
+    let targetStatus = 'signed';
+    if (userRole.includes('STUDENT')) {
+      return res.status(403).json({ error: 'Medical Students cannot sign clinical notes. Please use the "Submit for Review" workflow.' });
+    }
+
+    if (userRole.includes('RESIDENT')) {
+      targetStatus = 'preliminary';
+    }
 
     // ============================================================
     // CLINICAL SNAPSHOT: Capture complete patient state at signing
@@ -674,7 +685,7 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
           `UPDATE visits 
            SET note_draft = $1, 
                vitals = $4,
-               status = 'signed',
+               status = $7,
                note_signed_at = CURRENT_TIMESTAMP,
                note_signed_by = $3,
                clinical_snapshot = $5,
@@ -683,22 +694,22 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $2 
            RETURNING *`,
-          [noteDraftToSave, id, req.user.id, vitalsValue, snapshotJson, contentHash]
+          [noteDraftToSave, id, req.user.id, vitalsValue, snapshotJson, contentHash, targetStatus]
         );
       } else {
         result = await pool.query(
           `UPDATE visits 
            SET note_draft = $1, 
-               status = 'signed',
+               status = $4,
                note_signed_at = CURRENT_TIMESTAMP,
                note_signed_by = $3,
-               clinical_snapshot = $4,
-               content_hash = $5,
+               clinical_snapshot = $5,
+               content_hash = $6,
                content_integrity_verified = TRUE,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $2 
            RETURNING *`,
-          [noteDraftToSave, id, req.user.id, snapshotJson, contentHash]
+          [noteDraftToSave, id, req.user.id, targetStatus, snapshotJson, contentHash]
         );
       }
     } catch (dbError) {
@@ -742,6 +753,32 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
 
     const visit = result.rows[0];
 
+    // 2. Automated Inbox Routing for Preliminary Notes
+    if (targetStatus === 'preliminary') {
+      try {
+        await pool.query(
+          `INSERT INTO inbox_items (
+            patient_id, type, priority, status, subject, body, 
+            reference_id, reference_table, created_by, clinic_id
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          [
+            patientId,
+            'cosignature_required',
+            'normal',
+            'new',
+            `Cosignature Required: ${visit.visit_type || 'Office Visit'}`,
+            `Preliminary note by ${req.user.first_name} ${req.user.last_name} pending review.`,
+            id,
+            'visits',
+            req.user.id,
+            req.user.clinic_id
+          ]
+        );
+      } catch (inboxError) {
+        console.error('Failed to create cosignature inbox item:', inboxError.message);
+      }
+    }
+
     // Commercial-Grade Audit Logging
     if (req.logAuditEvent) {
       req.logAuditEvent({
@@ -767,6 +804,75 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
     res.status(500).json({ error: 'Failed to sign visit', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
+  }
+});
+
+/**
+ * Commercial-Grade Cosignature Endpoint
+ * transitions 'preliminary' notes to 'signed'
+ */
+router.post('/:id/cosign', requirePermission('notes:cosign'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { attestationText, authorshipModel = 'Addendum' } = req.body;
+
+    if (!attestationText) {
+      return res.status(400).json({ error: 'Attestation text is required for cosignature' });
+    }
+
+    // Capture final state
+    const result = await pool.query(
+      `UPDATE visits 
+       SET status = 'signed',
+           cosigned_at = CURRENT_TIMESTAMP,
+           cosigned_by = $1,
+           attestation_text = $2,
+           authorship_model = $3,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $4 AND status = 'preliminary'
+       RETURNING *`,
+      [req.user.id, attestationText, authorshipModel, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Preliminary note not found or already signed' });
+    }
+
+    const visit = result.rows[0];
+
+    // Mark inbox item as completed
+    try {
+      await pool.query(
+        `UPDATE inbox_items 
+         SET status = 'completed', 
+             completed_at = CURRENT_TIMESTAMP, 
+             completed_by = $1 
+         WHERE reference_id = $2 AND type = 'cosignature_required'`,
+        [req.user.id, id]
+      );
+    } catch (inboxError) {
+      console.error('Failed to update inbox item status:', inboxError.message);
+    }
+
+    // Log Audit
+    if (req.logAuditEvent) {
+      req.logAuditEvent({
+        action: 'NOTE_COSIGNED',
+        entityType: 'Note',
+        entityId: id,
+        patientId: visit.patient_id,
+        encounterId: id,
+        details: {
+          cosigned_by: req.user.id,
+          authorship_model: authorshipModel
+        }
+      });
+    }
+
+    res.json(visit);
+  } catch (error) {
+    console.error('Error cosigning visit:', error);
+    res.status(500).json({ error: 'Failed to cosign visit' });
   }
 });
 

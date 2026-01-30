@@ -222,6 +222,9 @@ app.use('/api/roles', roleRoutes);
 const settingsRoutes = require('./routes/settings');
 app.use('/api/settings', settingsRoutes);
 
+const macroRoutes = require('./routes/macros');
+app.use('/api/macros', macroRoutes);
+
 // Reports and analytics
 const reportsRoutes = require('./routes/reports');
 app.use('/api/reports', reportsRoutes);

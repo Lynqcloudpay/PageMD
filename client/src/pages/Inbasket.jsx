@@ -4,7 +4,7 @@ import {
     CheckCircle as CheckCircleIcon, Clock, AlertTriangle, MessageSquare, FileText, Inbox,
     Pill, FlaskConical, Image, Send, RefreshCw, Filter, Search,
     ChevronRight, X, Plus, Bell, User, Calendar, Phone, Paperclip,
-    ArrowRight, Check, ArrowLeft, ChevronLeft, Eye, UserPlus, Mail, Trash2
+    ArrowRight, Check, ArrowLeft, ChevronLeft, Eye, UserPlus, Mail, Trash2, FileSignature
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
@@ -23,6 +23,7 @@ const TASK_CATEGORIES = [
     { id: 'referrals', label: 'Referrals', icon: Send, color: 'indigo', types: ['referral'] },
     { id: 'tasks', label: 'Tasks', icon: CheckCircleIcon, color: 'green', types: ['task', 'note'] },
     { id: 'refills', label: 'Rx Requests', icon: Pill, color: 'red', types: ['refill'] },
+    { id: 'cosignatures', label: 'Cosignatures', icon: FileSignature, color: 'emerald', types: ['cosignature_required'] },
 ];
 
 import IntakeReviewModal from '../components/IntakeReviewModal';
@@ -55,6 +56,9 @@ const Inbasket = () => {
     const [showNewChat, setShowNewChat] = useState(false); // iMessage-style new chat pane
     const [newChatMessage, setNewChatMessage] = useState('');
     const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+    const [selectedItems, setSelectedItems] = useState([]);
+    const [showBatchCosignModal, setShowBatchCosignModal] = useState(false);
+    const [batchAttestation, setBatchAttestation] = useState('');
     const [showIntakeReview, setShowIntakeReview] = useState(false);
     const [composeData, setComposeData] = useState({
         type: 'task',
@@ -319,6 +323,46 @@ const Inbasket = () => {
         } catch (e) {
             console.error('Action failed:', e);
             showError('Action failed');
+        }
+    };
+
+    const handleBatchAction = async (action) => {
+        if (selectedItems.length === 0) return;
+
+        try {
+            if (action === 'complete') {
+                await Promise.all(selectedItems.map(item => inboxAPI.update(item.id, { status: 'completed' })));
+                showSuccess(`Marked ${selectedItems.length} items as completed`);
+            } else if (action === 'read') {
+                await Promise.all(selectedItems.map(item => inboxAPI.update(item.id, { status: 'read' })));
+                showSuccess(`Marked ${selectedItems.length} items as read`);
+            }
+            setSelectedItems([]);
+            fetchData(true);
+        } catch (e) {
+            console.error('Batch action failed:', e);
+            showError('Batch action failed');
+        }
+    };
+
+    const handleBatchCosign = async () => {
+        if (selectedItems.length === 0 || !batchAttestation.trim()) return;
+
+        try {
+            await Promise.all(selectedItems.map(item =>
+                visitsAPI.cosign(item.reference_id, {
+                    attestationText: batchAttestation,
+                    authorshipModel: 'Addendum'
+                })
+            ));
+            showSuccess(`Successfully cosigned ${selectedItems.length} notes`);
+            setShowBatchCosignModal(false);
+            setBatchAttestation('');
+            setSelectedItems([]);
+            fetchData(true);
+        } catch (e) {
+            console.error('Batch cosign failed:', e);
+            showError('Batch cosign failed for some items');
         }
     };
 
@@ -640,6 +684,60 @@ const Inbasket = () => {
                     </div>
                 </div>
 
+                {/* Batch Actions Bar */}
+                {selectedItems.length > 0 ? (
+                    <div className="bg-blue-600 text-white px-4 py-2 flex items-center justify-between animate-in slide-in-from-top duration-200">
+                        <div className="flex items-center gap-4">
+                            <span className="text-xs font-bold uppercase tracking-widest">{selectedItems.length} selected</span>
+                            <div className="h-4 w-px bg-white/20" />
+                            <button
+                                onClick={() => handleBatchAction('complete')}
+                                className="flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 rounded-md text-[11px] font-black uppercase tracking-widest transition-all"
+                            >
+                                <CheckCircleIcon className="w-3.5 h-3.5" /> Complete All
+                            </button>
+                            {selectedItems.every(i => i.type === 'cosignature_required') && (
+                                <button
+                                    onClick={() => setShowBatchCosignModal(true)}
+                                    className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500 hover:bg-emerald-600 rounded-md text-[11px] font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-900/20"
+                                >
+                                    <FileSignature className="w-3.5 h-3.5" /> Batch Cosign
+                                </button>
+                            )}
+                            <button
+                                onClick={() => handleBatchAction('read')}
+                                className="flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 rounded-md text-[11px] font-black uppercase tracking-widest transition-all"
+                            >
+                                <Mail className="w-3.5 h-3.5" /> Mark Read
+                            </button>
+                        </div>
+                        <button
+                            onClick={() => setSelectedItems([])}
+                            className="p-1 hover:bg-white/10 rounded-full transition-all"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                ) : (
+                    <div className="bg-gray-50/50 border-b border-gray-100 px-4 py-1.5 flex items-center">
+                        <label className="flex items-center gap-3 cursor-pointer group">
+                            <input
+                                type="checkbox"
+                                checked={filteredItems.length > 0 && selectedItems.length === filteredItems.length}
+                                onChange={(e) => {
+                                    if (e.target.checked) {
+                                        setSelectedItems(filteredItems);
+                                    } else {
+                                        setSelectedItems([]);
+                                    }
+                                }}
+                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest group-hover:text-gray-600 transition-colors">Select All</span>
+                        </label>
+                    </div>
+                )}
+
                 <div className="flex-1 overflow-y-auto">
                     {loading && !refreshing && items.length === 0 ? (
                         <div className="flex justify-center items-center h-full text-gray-400">Loading...</div>
@@ -653,43 +751,60 @@ const Inbasket = () => {
                             {filteredItems.map(item => (
                                 <div
                                     key={item.id}
-                                    onClick={() => setSelectedItem(item)}
-                                    className={`group flex items-start gap-4 p-4 cursor-pointer hover:bg-gray-50 transition-colors ${selectedItem?.id === item.id ? 'bg-blue-50/50 ring-1 ring-inset ring-blue-100' : ''} ${item.status === 'new' ? 'border-l-4 border-l-blue-500 pl-3' : 'border-l-4 border-l-transparent pl-3'}`}
+                                    className="flex items-center px-4 hover:bg-gray-50 transition-colors"
                                 >
-                                    <div className="mt-1">{getCategoryIcon(item.type)}</div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between items-start">
-                                            <h3 className={`text-sm truncate pr-2 ${item.status === 'new' ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
-                                                {item.subject || 'No Subject'}
-                                            </h3>
-                                            <div className="flex items-center gap-2 pl-2 flex-shrink-0">
-                                                <span className="text-xs text-gray-500 whitespace-nowrap group-hover:text-gray-400 transition-colors">{format(new Date(item.created_at || item.createdAt), 'MMM d, h:mm a')}</span>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDelete(item);
-                                                    }}
-                                                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-all transform scale-90 hover:scale-100"
-                                                    title="Delete from Inbox"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedItems.some(si => si.id === item.id)}
+                                        onChange={(e) => {
+                                            e.stopPropagation();
+                                            if (selectedItems.some(si => si.id === item.id)) {
+                                                setSelectedItems(selectedItems.filter(si => si.id !== item.id));
+                                            } else {
+                                                setSelectedItems([...selectedItems, item]);
+                                            }
+                                        }}
+                                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                    />
+                                    <div
+                                        onClick={() => setSelectedItem(item)}
+                                        className={`group flex items-start gap-4 p-4 cursor-pointer flex-1 transition-colors ${selectedItem?.id === item.id ? 'bg-blue-50/50 ring-1 ring-inset ring-blue-100' : ''} ${item.status === 'new' ? 'border-l-4 border-l-blue-500 pl-3' : 'border-l-4 border-l-transparent pl-3'}`}
+                                    >
+                                        <div className="mt-1">{getCategoryIcon(item.type)}</div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between items-start">
+                                                <h3 className={`text-sm truncate pr-2 ${item.status === 'new' ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
+                                                    {item.subject || 'No Subject'}
+                                                </h3>
+                                                <div className="flex items-center gap-2 pl-2 flex-shrink-0">
+                                                    <span className="text-xs text-gray-500 whitespace-nowrap group-hover:text-gray-400 transition-colors">{format(new Date(item.created_at || item.createdAt), 'MMM d, h:mm a')}</span>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDelete(item);
+                                                        }}
+                                                        className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-all transform scale-90 hover:scale-100"
+                                                        title="Delete from Inbox"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <p className="text-sm text-gray-600 truncate mt-0.5">
-                                            {getPatientDisplayName(item)}
-                                            <span className="text-gray-400 mx-1">•</span>
-                                            {item.body || item.description}
-                                        </p>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${getPriorityColor(item.priority)} uppercase font-bold tracking-wider`}>
-                                                {item.priority || 'Normal'}
-                                            </span>
-                                            {item.assigned_first_name && (
-                                                <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full flex items-center gap-1">
-                                                    <User className="w-3 h-3" /> {item.assigned_first_name}
+                                            <p className="text-sm text-gray-600 truncate mt-0.5">
+                                                {getPatientDisplayName(item)}
+                                                <span className="text-gray-400 mx-1">•</span>
+                                                {item.body || item.description}
+                                            </p>
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${getPriorityColor(item.priority)} uppercase font-bold tracking-wider`}>
+                                                    {item.priority || 'Normal'}
                                                 </span>
-                                            )}
+                                                {item.assigned_first_name && (
+                                                    <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                                                        <User className="w-3 h-3" /> {item.assigned_first_name}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -781,14 +896,19 @@ const Inbasket = () => {
                                         <button onClick={() => openPatientChart(selectedItem)} className="text-indigo-600 text-xs font-bold whitespace-nowrap">View Case</button>
                                     </div>
                                 )}
-                                {details?.type === 'note' && (
-                                    <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 flex items-center gap-3">
-                                        <FileText className="w-8 h-8 text-emerald-400" />
+                                {details?.type === 'cosignature_required' && (
+                                    <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 flex items-center gap-3">
+                                        <FileSignature className="w-8 h-8 text-amber-500" />
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-emerald-900 truncate">Clinical Note to Sign</p>
-                                            <p className="text-xs text-emerald-600">Unsigned draft from {details.created_at ? format(new Date(details.created_at), 'MM/dd/yyyy') : 'recent visit'}</p>
+                                            <p className="text-sm font-medium text-amber-900 truncate">Cosignature Required</p>
+                                            <p className="text-xs text-amber-600">Preliminary note pending Attestation.</p>
                                         </div>
-                                        <button onClick={() => openPatientChart(selectedItem)} className="text-emerald-600 text-xs font-bold whitespace-nowrap">Sign Now</button>
+                                        <button
+                                            onClick={() => navigate(`/patient/${selectedItem.patient_id}/visit/${selectedItem.reference_id}`)}
+                                            className="px-4 py-2 bg-amber-600 text-white text-xs font-bold rounded-lg hover:bg-amber-700 shadow-sm"
+                                        >
+                                            Sign Now
+                                        </button>
                                     </div>
                                 )}
                                 {details?.type === 'portal_message' && (
@@ -876,9 +996,6 @@ const Inbasket = () => {
                                             {details.notes.map(note => {
                                                 const isStaff = note.sender_type === 'staff' || note.sender_type === 'provider';
                                                 const isPatient = note.sender_type === 'patient';
-
-                                                // If sender_type is missing, assume patient if it's an inbound message ID, or staff otherwise
-                                                // Ideally your backend ensures sender_type is always present.
 
                                                 return (
                                                     <div key={note.id} className={`flex gap-3 ${isStaff ? 'flex-row-reverse' : ''}`}>
@@ -982,151 +1099,186 @@ const Inbasket = () => {
             )}
 
             {/* New Chat Pane (iMessage style) - for Portal Messages and Staff Messages */}
-            {showNewChat && !selectedItem && (
-                <div className="w-[450px] bg-white border-l border-gray-200 flex flex-col shadow-xl z-20">
-                    {/* Header */}
-                    <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-white">
-                        <div className="flex justify-between items-center mb-3">
-                            <h3 className="text-lg font-bold text-gray-900">
-                                {composeData.type === 'portal_message' ? 'New Patient Message' : 'New Staff Message'}
-                            </h3>
-                            <button onClick={() => setShowNewChat(false)} className="text-gray-400 hover:text-gray-600">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
+            {
+                showNewChat && !selectedItem && (
+                    <div className="w-[450px] bg-white border-l border-gray-200 flex flex-col shadow-xl z-20">
+                        {/* Header */}
+                        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-white">
+                            <div className="flex justify-between items-center mb-3">
+                                <h3 className="text-lg font-bold text-gray-900">
+                                    {composeData.type === 'portal_message' ? 'New Patient Message' : 'New Staff Message'}
+                                </h3>
+                                <button onClick={() => setShowNewChat(false)} className="text-gray-400 hover:text-gray-600">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
 
-                        {/* Search Bar */}
-                        {composeData.type === 'portal_message' ? (
-                            // Patient Search
-                            !selectedPatient ? (
-                                <div className="space-y-2">
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                        <input
-                                            type="text"
-                                            placeholder="Search patient by name, MRN, or DOB..."
-                                            autoFocus
-                                            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                                            value={searchFields.name}
-                                            onChange={e => setSearchFields({ ...searchFields, name: e.target.value })}
-                                        />
-                                    </div>
-                                    {isSearchingPatients && (
-                                        <div className="flex items-center gap-2 text-xs text-gray-400 py-2">
-                                            <RefreshCw className="w-3 h-3 animate-spin" /> Searching...
+                            {/* Search Bar */}
+                            {composeData.type === 'portal_message' ? (
+                                // Patient Search
+                                !selectedPatient ? (
+                                    <div className="space-y-2">
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                            <input
+                                                type="text"
+                                                placeholder="Search patient by name, MRN, or DOB..."
+                                                autoFocus
+                                                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                                value={searchFields.name}
+                                                onChange={e => setSearchFields({ ...searchFields, name: e.target.value })}
+                                            />
                                         </div>
-                                    )}
-                                    {patientResults.length > 0 && (
-                                        <div className="border border-gray-100 rounded-xl overflow-hidden max-h-48 overflow-y-auto bg-white shadow-lg">
-                                            {patientResults.map(p => (
+                                        {isSearchingPatients && (
+                                            <div className="flex items-center gap-2 text-xs text-gray-400 py-2">
+                                                <RefreshCw className="w-3 h-3 animate-spin" /> Searching...
+                                            </div>
+                                        )}
+                                        {patientResults.length > 0 && (
+                                            <div className="border border-gray-100 rounded-xl overflow-hidden max-h-48 overflow-y-auto bg-white shadow-lg">
+                                                {patientResults.map(p => (
+                                                    <button
+                                                        key={p.id}
+                                                        onClick={() => setSelectedPatient(p)}
+                                                        className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-gray-50 last:border-0 flex items-center gap-3 transition-colors"
+                                                    >
+                                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
+                                                            {getPatientDisplayName(p)[0]}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-semibold text-gray-900 truncate">{getPatientDisplayName(p)}</p>
+                                                            <p className="text-xs text-gray-500">MRN: {p.mrn || 'N/A'} • DOB: {p.dob ? format(new Date(p.dob), 'MM/dd/yyyy') : 'N/A'}</p>
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                                        <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                                            {getPatientDisplayName(selectedPatient)[0]}
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-bold text-gray-900">{getPatientDisplayName(selectedPatient)}</p>
+                                            <p className="text-xs text-blue-600">Patient Portal</p>
+                                        </div>
+                                        <button onClick={() => setSelectedPatient(null)} className="p-1.5 hover:bg-blue-100 rounded-full text-blue-600">
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                )
+                            ) : (
+                                // Staff Search
+                                !selectedStaff ? (
+                                    <div className="space-y-2">
+                                        <p className="text-xs text-gray-500 font-medium">Select recipient:</p>
+                                        <div className="max-h-48 overflow-y-auto space-y-1">
+                                            {users.filter(u => u.id !== user.id).map(u => (
                                                 <button
-                                                    key={p.id}
-                                                    onClick={() => setSelectedPatient(p)}
-                                                    className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-gray-50 last:border-0 flex items-center gap-3 transition-colors"
+                                                    key={u.id}
+                                                    onClick={() => setSelectedStaff(u)}
+                                                    className="w-full text-left px-3 py-2.5 hover:bg-blue-50 rounded-lg flex items-center gap-3 transition-colors border border-transparent hover:border-blue-200"
                                                 >
-                                                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
-                                                        {getPatientDisplayName(p)[0]}
+                                                    <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-xs">
+                                                        {u.first_name?.[0]}{u.last_name?.[0]}
                                                     </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-sm font-semibold text-gray-900 truncate">{getPatientDisplayName(p)}</p>
-                                                        <p className="text-xs text-gray-500">MRN: {p.mrn || 'N/A'} • DOB: {p.dob ? format(new Date(p.dob), 'MM/dd/yyyy') : 'N/A'}</p>
+                                                    <div>
+                                                        <p className="text-sm font-medium text-gray-900">{u.first_name} {u.last_name}</p>
+                                                        <p className="text-xs text-gray-500 capitalize">{u.role || 'Staff'}</p>
                                                     </div>
                                                 </button>
                                             ))}
                                         </div>
-                                    )}
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-xl border border-purple-100">
+                                        <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+                                            {selectedStaff.first_name?.[0]}{selectedStaff.last_name?.[0]}
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-bold text-gray-900">{selectedStaff.first_name} {selectedStaff.last_name}</p>
+                                            <p className="text-xs text-purple-600 capitalize">{selectedStaff.role || 'Staff'}</p>
+                                        </div>
+                                        <button onClick={() => setSelectedStaff(null)} className="p-1.5 hover:bg-purple-100 rounded-full text-purple-600">
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                )
+                            )}
+                        </div>
+
+                        {/* Chat Area (empty for new chat) */}
+                        <div className="flex-1 flex items-center justify-center bg-gray-50/50">
+                            {(composeData.type === 'portal_message' && !selectedPatient) || (composeData.type !== 'portal_message' && !selectedStaff) ? (
+                                <div className="text-center text-gray-400">
+                                    <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                                    <p className="text-sm">Select a {composeData.type === 'portal_message' ? 'patient' : 'staff member'} to start</p>
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
-                                    <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
-                                        {getPatientDisplayName(selectedPatient)[0]}
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-bold text-gray-900">{getPatientDisplayName(selectedPatient)}</p>
-                                        <p className="text-xs text-blue-600">Patient Portal</p>
-                                    </div>
-                                    <button onClick={() => setSelectedPatient(null)} className="p-1.5 hover:bg-blue-100 rounded-full text-blue-600">
-                                        <X className="w-4 h-4" />
-                                    </button>
+                                <div className="text-center text-gray-400">
+                                    <Send className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                                    <p className="text-sm">Type your message below</p>
                                 </div>
-                            )
-                        ) : (
-                            // Staff Search
-                            !selectedStaff ? (
-                                <div className="space-y-2">
-                                    <p className="text-xs text-gray-500 font-medium">Select recipient:</p>
-                                    <div className="max-h-48 overflow-y-auto space-y-1">
-                                        {users.filter(u => u.id !== user.id).map(u => (
-                                            <button
-                                                key={u.id}
-                                                onClick={() => setSelectedStaff(u)}
-                                                className="w-full text-left px-3 py-2.5 hover:bg-blue-50 rounded-lg flex items-center gap-3 transition-colors border border-transparent hover:border-blue-200"
-                                            >
-                                                <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-xs">
-                                                    {u.first_name?.[0]}{u.last_name?.[0]}
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-medium text-gray-900">{u.first_name} {u.last_name}</p>
-                                                    <p className="text-xs text-gray-500 capitalize">{u.role || 'Staff'}</p>
-                                                </div>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-xl border border-purple-100">
-                                    <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
-                                        {selectedStaff.first_name?.[0]}{selectedStaff.last_name?.[0]}
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-bold text-gray-900">{selectedStaff.first_name} {selectedStaff.last_name}</p>
-                                        <p className="text-xs text-purple-600 capitalize">{selectedStaff.role || 'Staff'}</p>
-                                    </div>
-                                    <button onClick={() => setSelectedStaff(null)} className="p-1.5 hover:bg-purple-100 rounded-full text-purple-600">
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            )
-                        )}
-                    </div>
+                            )}
+                        </div>
 
-                    {/* Chat Area (empty for new chat) */}
-                    <div className="flex-1 flex items-center justify-center bg-gray-50/50">
-                        {(composeData.type === 'portal_message' && !selectedPatient) || (composeData.type !== 'portal_message' && !selectedStaff) ? (
-                            <div className="text-center text-gray-400">
-                                <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                                <p className="text-sm">Select a {composeData.type === 'portal_message' ? 'patient' : 'staff member'} to start</p>
-                            </div>
-                        ) : (
-                            <div className="text-center text-gray-400">
-                                <Send className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                                <p className="text-sm">Type your message below</p>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Message Input */}
-                    {((composeData.type === 'portal_message' && selectedPatient) || (composeData.type !== 'portal_message' && selectedStaff)) && (
-                        <div className="p-4 border-t border-gray-200 bg-white">
-                            <div className="mb-3">
-                                <input
-                                    type="text"
-                                    placeholder="Subject (optional)"
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={composeData.subject}
-                                    onChange={e => setComposeData({ ...composeData, subject: e.target.value })}
-                                />
-                            </div>
-                            <div className="flex gap-2">
-                                <textarea
-                                    placeholder="Type your message..."
-                                    className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                                    rows={3}
-                                    value={newChatMessage}
-                                    onChange={e => setNewChatMessage(e.target.value)}
-                                    onKeyDown={async e => {
-                                        if (e.key === 'Enter' && !e.shiftKey && newChatMessage.trim()) {
-                                            e.preventDefault();
+                        {/* Message Input */}
+                        {((composeData.type === 'portal_message' && selectedPatient) || (composeData.type !== 'portal_message' && selectedStaff)) && (
+                            <div className="p-4 border-t border-gray-200 bg-white">
+                                <div className="mb-3">
+                                    <input
+                                        type="text"
+                                        placeholder="Subject (optional)"
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={composeData.subject}
+                                        onChange={e => setComposeData({ ...composeData, subject: e.target.value })}
+                                    />
+                                </div>
+                                <div className="flex gap-2">
+                                    <textarea
+                                        placeholder="Type your message..."
+                                        className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                        rows={3}
+                                        value={newChatMessage}
+                                        onChange={e => setNewChatMessage(e.target.value)}
+                                        onKeyDown={async e => {
+                                            if (e.key === 'Enter' && !e.shiftKey && newChatMessage.trim()) {
+                                                e.preventDefault();
+                                                try {
+                                                    if (composeData.type === 'portal_message') {
+                                                        await inboxAPI.sendPatientMessage({
+                                                            patientId: selectedPatient.id,
+                                                            subject: composeData.subject || 'Message',
+                                                            body: newChatMessage
+                                                        });
+                                                    } else {
+                                                        await inboxAPI.create({
+                                                            type: composeData.type,
+                                                            subject: composeData.subject || 'Message',
+                                                            body: newChatMessage,
+                                                            assignedUserId: selectedStaff.id,
+                                                            priority: 'normal'
+                                                        });
+                                                    }
+                                                    showSuccess(`${composeData.type === 'task' ? 'Task' : 'Message'} created!`);
+                                                    setShowNewChat(false);
+                                                    setNewChatMessage('');
+                                                    setSelectedPatient(null);
+                                                    setSelectedStaff(null);
+                                                    fetchData(true);
+                                                } catch (err) {
+                                                    showError('Failed to send message');
+                                                }
+                                            }
+                                        }}
+                                    />
+                                </div>
+                                <div className="flex justify-end mt-3">
+                                    <button
+                                        disabled={!newChatMessage.trim()}
+                                        onClick={async () => {
+                                            if (!newChatMessage.trim()) return;
                                             try {
                                                 if (composeData.type === 'portal_message') {
                                                     await inboxAPI.sendPatientMessage({
@@ -1136,14 +1288,14 @@ const Inbasket = () => {
                                                     });
                                                 } else {
                                                     await inboxAPI.create({
-                                                        type: composeData.type,
+                                                        type: 'message',
                                                         subject: composeData.subject || 'Message',
                                                         body: newChatMessage,
                                                         assignedUserId: selectedStaff.id,
                                                         priority: 'normal'
                                                     });
                                                 }
-                                                showSuccess(`${composeData.type === 'task' ? 'Task' : 'Message'} created!`);
+                                                showSuccess('Message sent!');
                                                 setShowNewChat(false);
                                                 setNewChatMessage('');
                                                 setSelectedPatient(null);
@@ -1152,81 +1304,50 @@ const Inbasket = () => {
                                             } catch (err) {
                                                 showError('Failed to send message');
                                             }
-                                        }
-                                    }}
-                                />
+                                        }}
+                                        className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
+                                    >
+                                        <Send className="w-4 h-4" /> Send
+                                    </button>
+                                </div>
                             </div>
-                            <div className="flex justify-end mt-3">
-                                <button
-                                    disabled={!newChatMessage.trim()}
-                                    onClick={async () => {
-                                        if (!newChatMessage.trim()) return;
-                                        try {
-                                            if (composeData.type === 'portal_message') {
-                                                await inboxAPI.sendPatientMessage({
-                                                    patientId: selectedPatient.id,
-                                                    subject: composeData.subject || 'Message',
-                                                    body: newChatMessage
-                                                });
-                                            } else {
-                                                await inboxAPI.create({
-                                                    type: 'message',
-                                                    subject: composeData.subject || 'Message',
-                                                    body: newChatMessage,
-                                                    assignedUserId: selectedStaff.id,
-                                                    priority: 'normal'
-                                                });
-                                            }
-                                            showSuccess('Message sent!');
-                                            setShowNewChat(false);
-                                            setNewChatMessage('');
-                                            setSelectedPatient(null);
-                                            setSelectedStaff(null);
-                                            fetchData(true);
-                                        } catch (err) {
-                                            showError('Failed to send message');
-                                        }
-                                    }}
-                                    className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
-                                >
-                                    <Send className="w-4 h-4" /> Send
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
+                        )}
+                    </div>
+                )
+            }
 
             {/* Assignment Modal */}
-            {showAssignModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-                    <div className="bg-white rounded-xl shadow-2xl p-6 w-96">
-                        <h3 className="text-lg font-bold mb-4">Assign Task</h3>
-                        <div className="space-y-2 max-h-60 overflow-y-auto mb-4">
-                            <button
-                                onClick={() => assignItem(user.id)}
-                                className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded-lg text-sm flex items-center gap-2"
-                            >
-                                <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xs font-bold">Me</div>
-                                Myself
-                            </button>
-                            {users.filter(u => u.id !== user.id).map(u => (
+            {
+                showAssignModal && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+                        <div className="bg-white rounded-xl shadow-2xl p-6 w-96">
+                            <h3 className="text-lg font-bold mb-4">Assign Task</h3>
+                            <div className="space-y-2 max-h-60 overflow-y-auto mb-4">
                                 <button
-                                    key={u.id}
-                                    onClick={() => assignItem(u.id)}
+                                    onClick={() => assignItem(user.id)}
                                     className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded-lg text-sm flex items-center gap-2"
                                 >
-                                    <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 text-xs font-bold">
-                                        {u.first_name ? u.first_name[0] : 'U'}
-                                    </div>
-                                    {u.first_name} {u.last_name}
+                                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xs font-bold">Me</div>
+                                    Myself
                                 </button>
-                            ))}
+                                {users.filter(u => u.id !== user.id).map(u => (
+                                    <button
+                                        key={u.id}
+                                        onClick={() => assignItem(u.id)}
+                                        className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded-lg text-sm flex items-center gap-2"
+                                    >
+                                        <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 text-xs font-bold">
+                                            {u.first_name ? u.first_name[0] : 'U'}
+                                        </div>
+                                        {u.first_name} {u.last_name}
+                                    </button>
+                                ))}
+                            </div>
+                            <button onClick={() => setShowAssignModal(false)} className="w-full py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
                         </div>
-                        <button onClick={() => setShowAssignModal(false)} className="w-full py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
                     </div>
-                </div>
-            )}
+                )
+            }
             {/* Compose Modal */}
 
 
@@ -1395,7 +1516,55 @@ const Inbasket = () => {
                     }
                 }}
             />
-        </div >
+
+            {/* Batch Cosign Modal */}
+            {showBatchCosignModal && (
+                <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6 bg-emerald-600 text-white">
+                            <h3 className="text-xl font-bold flex items-center gap-3">
+                                <FileSignature className="w-6 h-6" /> Batch Cosignature
+                            </h3>
+                            <p className="text-emerald-100 text-sm mt-1">Applying legal attestation to {selectedItems.length} preliminary notes.</p>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-[11px] font-black uppercase tracking-widest text-gray-400 mb-2">Clinical Attestation Text</label>
+                                <textarea
+                                    value={batchAttestation}
+                                    onChange={e => setBatchAttestation(e.target.value)}
+                                    placeholder="I have reviewed this note and concur with the findings and plan..."
+                                    className="w-full h-32 p-4 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all resize-none bg-gray-50 hover:bg-white"
+                                />
+                                <div className="mt-4 p-3 bg-amber-50 border border-amber-100 rounded-xl">
+                                    <div className="flex items-center gap-2 text-amber-800 font-bold text-[10px] uppercase mb-1">
+                                        <AlertTriangle className="w-3 h-3" /> Forensic Warning
+                                    </div>
+                                    <p className="text-[10px] text-amber-700 leading-relaxed">
+                                        By clicking "Complete Batch Cosign", you are applying your electronic signature and legal attestation to all selected notes. This action is immutable and will be logged in the forensic audit trial.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="p-6 border-t border-gray-100 flex gap-3">
+                            <button
+                                onClick={() => setShowBatchCosignModal(false)}
+                                className="flex-1 py-3 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleBatchCosign}
+                                disabled={!batchAttestation.trim()}
+                                className="flex-2 px-8 py-3 bg-emerald-600 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-200 disabled:opacity-50 disabled:shadow-none transition-all flex items-center justify-center gap-2"
+                            >
+                                <Check className="w-4 h-4" /> Complete Batch Cosign
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 };
 

@@ -28,6 +28,7 @@ import { ProblemInput, MedicationInput, AllergyInput, FamilyHistoryInput, Surgic
 import PrintOrdersModal from '../components/PrintOrdersModal';
 import ResultImportModal from '../components/ResultImportModal';
 import DiagnosisLinkModal from '../components/DiagnosisLinkModal';
+import SignatureCard from '../components/SignatureCard';
 
 // Image preview component for protected documents
 const ResultImage = ({ doc }) => {
@@ -140,12 +141,11 @@ const PlanDisplay = ({ plan }) => {
     return <div className="whitespace-pre-wrap">{formattedLines}</div>;
 };
 
-// Retraction Modal
 const RetractionModal = ({ isOpen, onClose, onConfirm, data, setData }) => {
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-red-100">
+            <div className="bg-white rounded-3xl w-full max-md shadow-2xl overflow-hidden border border-red-100">
                 <div className="p-6">
                     <div className="flex items-center gap-3 mb-4">
                         <div className="p-2.5 bg-red-50 rounded-2xl">
@@ -202,6 +202,109 @@ const RetractionModal = ({ isOpen, onClose, onConfirm, data, setData }) => {
                             className="flex-1 px-4 py-3 rounded-2xl text-sm font-bold bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-all shadow-lg shadow-red-100"
                         >
                             Void & Retract
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Cosignature Modal for Attending Physicians
+const CosignModal = ({ isOpen, onClose, onConfirm, visitData, authorshipModel, setAuthorshipModel, attestationText, setAttestationText, macros }) => {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden border border-primary-100">
+                <div className="p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2.5 bg-primary-50 rounded-2xl">
+                            <Lock className="w-6 h-6 text-primary-600" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-900 leading-tight">Attending Clinical Cosignature</h2>
+                            <p className="text-[11px] font-black text-primary-500 uppercase tracking-widest mt-0.5">Finalizing Preliminary Report</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="md:col-span-2 space-y-4">
+                            <div>
+                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Attestation Text</label>
+                                <textarea
+                                    value={attestationText}
+                                    onChange={(e) => setAttestationText(e.target.value)}
+                                    placeholder="Enter attestation or select a macro..."
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:bg-white transition-all h-40 resize-none"
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-4">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="authorship"
+                                        value="Addendum"
+                                        checked={authorshipModel === 'Addendum'}
+                                        onChange={(e) => setAuthorshipModel(e.target.value)}
+                                        className="text-primary-600 focus:ring-primary-500"
+                                    />
+                                    <span className="text-sm font-medium text-gray-700">Addendum Model</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="authorship"
+                                        value="Direct"
+                                        checked={authorshipModel === 'Direct'}
+                                        onChange={(e) => setAuthorshipModel(e.target.value)}
+                                        className="text-primary-600 focus:ring-primary-500"
+                                    />
+                                    <span className="text-sm font-medium text-gray-700">Direct Edit Model</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Quick Macros</h4>
+                            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
+                                {macros.length > 0 ? macros.map((macro) => (
+                                    <button
+                                        key={macro.id}
+                                        onClick={() => setAttestationText(macro.content)}
+                                        className="w-full text-left p-2.5 bg-white border border-gray-200 rounded-lg text-[11px] font-medium text-gray-600 hover:border-primary-400 hover:text-primary-600 transition-all hover:shadow-sm"
+                                    >
+                                        {macro.name}
+                                    </button>
+                                )) : (
+                                    <p className="text-[10px] text-gray-400 italic">No attestation macros found</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-8 flex items-center justify-between p-4 bg-amber-50 rounded-2xl border border-amber-100">
+                        <div className="flex items-center gap-3">
+                            <Sparkles className="w-5 h-5 text-amber-600" />
+                            <p className="text-[11px] text-amber-800 font-medium">
+                                By cosigning, you affirm that you have reviewed the trainee's note and are assuming responsibility for the clinical content.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-3 mt-8">
+                        <button
+                            onClick={onClose}
+                            className="flex-1 px-4 py-3 rounded-2xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleCosign}
+                            disabled={!attestationText.trim() || isSaving}
+                            className="flex-1 px-4 py-3 rounded-2xl text-sm font-bold bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 transition-all shadow-lg shadow-primary-100"
+                        >
+                            {isSaving ? 'Cosigning...' : 'Confirm Cosignature'}
                         </button>
                     </div>
                 </div>
@@ -298,6 +401,7 @@ const VisitNote = () => {
     const urlVisitId = params.visitId || (location.pathname.endsWith('/visit/new') ? 'new' : undefined);
     const [currentVisitId, setCurrentVisitId] = useState(urlVisitId);
     const [isSigned, setIsSigned] = useState(false);
+    const [isPreliminary, setIsPreliminary] = useState(false);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [visitData, setVisitData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -312,6 +416,10 @@ const VisitNote = () => {
     const [showOrderModal, setShowOrderModal] = useState(false);
     const [orderModalTab, setOrderModalTab] = useState('labs');
     const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
+    const [showCosignModal, setShowCosignModal] = useState(false);
+    const [attestationText, setAttestationText] = useState('');
+    const [authorshipModel, setAuthorshipModel] = useState('Addendum');
+    const [attestationMacros, setAttestationMacros] = useState([]);
 
     const [showOrderPicker, setShowOrderPicker] = useState(false);
     const [orderPickerType, setOrderPickerType] = useState(null);
@@ -794,6 +902,7 @@ const VisitNote = () => {
                     setCurrentVisitId(visit.id);
                     setVisitType(visit.visit_type || 'Office Visit');
                     setIsSigned(visit.status === 'signed' || visit.locked || !!visit.note_signed_by || !!visit.note_signed_at);
+                    setIsPreliminary(visit.status === 'preliminary');
                     setIsRetracted(visit.status === 'retracted');
 
                     if (visit.status === 'retracted') {
@@ -1155,7 +1264,13 @@ const VisitNote = () => {
 
                 // Then sign the note (vitals should already be saved, but include them as backup)
                 console.log('Signing note with vitals:', vitalsToSave);
-                await visitsAPI.sign(visitId, noteDraft, vitalsToSave);
+                const signRes = await visitsAPI.sign(visitId, noteDraft, vitalsToSave);
+
+                if (signRes.data?.status === 'preliminary') {
+                    showToast('Note submitted for cosignature (Preliminary)', 'success');
+                } else {
+                    showToast('Note signed successfully', 'success');
+                }
 
                 // Sync assessments to problem list
                 try {
@@ -1222,7 +1337,8 @@ const VisitNote = () => {
                 const response = await visitsAPI.get(visitId);
                 const visit = response.data;
                 setVisitData(visit);
-                setIsSigned(visit.locked || !!visit.note_signed_by);
+                setIsSigned(visit.status === 'signed' || visit.locked || !!visit.note_signed_by);
+                setIsPreliminary(visit.status === 'preliminary');
                 // Ensure patient data is loaded
                 if (id && !patientData) {
                     try {
@@ -1237,6 +1353,27 @@ const VisitNote = () => {
             }
         } catch (error) {
             showToast('Failed to sign note: ' + (error.response?.data?.error || error.message || 'Unknown error'), 'error');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleCosign = async (attestationText, authorshipModel = 'Addendum') => {
+        if (isSaving) return;
+        setIsSaving(true);
+        try {
+            const visitId = currentVisitId || urlVisitId;
+            await visitsAPI.cosign(visitId, { attestationText, authorshipModel });
+            showToast('Note cosigned successfully', 'success');
+
+            // Reload visit data
+            const response = await visitsAPI.get(visitId);
+            const visit = response.data;
+            setVisitData(visit);
+            setIsSigned(true);
+            setIsPreliminary(false);
+        } catch (error) {
+            showToast('Failed to cosign note: ' + (error.response?.data?.error || error.message || 'Unknown error'), 'error');
         } finally {
             setIsSaving(false);
         }
@@ -2210,9 +2347,19 @@ const VisitNote = () => {
                                     </button>
                                     <button onClick={handleSign} className="px-2.5 py-1.5 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-all duration-200 hover:shadow-md text-xs font-medium" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'} onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}>
                                         <Lock className="w-3.5 h-3.5" />
-                                        <span>Sign</span>
+                                        <span>{user?.role_name === 'Resident' || user?.role === 'Resident' ? 'Submit for Review' : 'Sign'}</span>
                                     </button>
                                 </>
+                            )}
+                            {isPreliminary && (user?.role_name === 'Physician' || user?.role_name === 'CLINICIAN' || user?.role_name === 'Admin' || user?.role === 'admin' || user?.role === 'clinician') && (
+                                <button
+                                    onClick={() => setShowCosignModal(true)}
+                                    className="px-2.5 py-1.5 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-all duration-200 hover:shadow-md text-xs font-medium"
+                                    style={{ background: 'linear-gradient(to right, #059669, #10B981)' }}
+                                >
+                                    <Sparkles className="w-3.5 h-3.5" />
+                                    <span>Cosign Note</span>
+                                </button>
                             )}
                             <button
                                 onClick={() => setShowPrintOrdersModal(true)}
@@ -2253,6 +2400,21 @@ const VisitNote = () => {
                         </div>
                     </div>
                 </div>
+                {/* Preliminary Banner */}
+                {isPreliminary && (
+                    <div className="bg-amber-500 text-white p-4 rounded-lg mb-4 flex items-center justify-between shadow-lg animate-in slide-in-from-top-4 duration-300">
+                        <div className="flex items-center gap-3">
+                            <ClipboardList className="w-6 h-6" />
+                            <div>
+                                <h3 className="text-base font-bold uppercase tracking-widest">Preliminary Report - Cosignature Required</h3>
+                                <p className="text-xs text-amber-50 font-medium">
+                                    This documentation was authored by a trainee and requires clinical validation by an attending physician.
+                                    {visitData?.note_signed_by_name && ` (Signed by ${visitData.note_signed_by_name} on ${format(new Date(visitData.note_signed_at), 'MM/dd/yyyy')})`}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 {/* Retraction Banner */}
                 {isRetracted && (
                     <div className="bg-red-600 text-white p-4 rounded-lg mb-4 flex items-center justify-between shadow-lg animate-in slide-in-from-top-4 duration-300">
@@ -3255,6 +3417,29 @@ const VisitNote = () => {
                             </div>
                         </Section>
 
+                        {/* Signature Manifestation */}
+                        {(isSigned || isPreliminary) && (
+                            <div className="mt-8 space-y-4">
+                                <SignatureCard
+                                    type="Author"
+                                    signerName={visitData?.note_signed_by_name}
+                                    role={visitData?.author_role}
+                                    date={visitData?.note_signed_at}
+                                    isPreliminary={isPreliminary}
+                                />
+                                {visitData?.cosigned_at && (
+                                    <SignatureCard
+                                        type="Cosigner"
+                                        signerName={visitData?.cosigned_by_name}
+                                        role={visitData?.cosigner_role || 'Attending Physician'}
+                                        date={visitData?.cosigned_at}
+                                        attestationText={visitData?.attestation_text}
+                                        authorshipModel={visitData?.authorship_model}
+                                    />
+                                )}
+                            </div>
+                        )}
+
                         {/* Bottom Action Buttons */}
                         {!isSigned && (
                             <div className="mt-6 pt-4 border-t border-neutral-200 flex items-center justify-between">
@@ -3573,14 +3758,40 @@ const VisitNote = () => {
                 />
 
                 {/* Diagnosis Link Modal for Meds */}
-                <DiagnosisLinkModal
-                    isOpen={showDiagnosisLinkModal}
-                    onClose={() => setShowDiagnosisLinkModal(false)}
-                    onSelect={handleMedicationDiagnosisSelect}
-                    activeDiagnoses={diagnoses} // Extracted from assessment
-                    medicationName={pendingMedAction?.med?.medication_name}
-                    actionType={pendingMedAction?.action}
-                />
+                {showDiagnosisLinkModal && (
+                    <DiagnosisLinkModal
+                        isOpen={showDiagnosisLinkModal}
+                        onClose={() => setShowDiagnosisLinkModal(false)}
+                        diagnoses={diagnoses}
+                        onConfirm={(selectedDiagnoses) => {
+                            const { action, medication } = pendingMedAction;
+                            if (action === 'add') {
+                                setPatientData(prev => ({
+                                    ...prev,
+                                    medications: [{ ...medication, related_diagnoses: selectedDiagnoses }, ...(prev.medications || [])]
+                                }));
+                            }
+                            setShowDiagnosisLinkModal(false);
+                        }}
+                    />
+                )}
+
+                {showCosignModal && (
+                    <CosignModal
+                        isOpen={showCosignModal}
+                        onClose={() => setShowCosignModal(false)}
+                        visitData={visitData}
+                        authorshipModel={authorshipModel}
+                        setAuthorshipModel={setAuthorshipModel}
+                        attestationText={attestationText}
+                        setAttestationText={setAttestationText}
+                        macros={attestationMacros}
+                        onConfirm={() => {
+                            handleCosign(attestationText, authorshipModel);
+                            setShowCosignModal(false);
+                        }}
+                    />
+                )}
 
                 {/* Dot Phrase Modal */}
                 {
