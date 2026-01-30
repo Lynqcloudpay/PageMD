@@ -686,6 +686,8 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
 
     let result;
     try {
+      const { cts, ascvd, safetyPlan } = req.body;
+
       // If vitals are provided, include them in the update
       if (vitalsValue !== null) {
         result = await pool.query(
@@ -699,10 +701,13 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
                content_hash = $6,
                content_integrity_verified = TRUE,
                assigned_attending_id = $8,
+               cts_documentation = $9,
+               ascvd_documentation = $10,
+               safety_plan_documentation = $11,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $2 
            RETURNING *`,
-          [noteDraftToSave, id, req.user.id, vitalsValue, snapshotJson, contentHash, targetStatus, assignedAttendingId]
+          [noteDraftToSave, id, req.user.id, vitalsValue, snapshotJson, contentHash, targetStatus, assignedAttendingId, cts, ascvd, safetyPlan]
         );
       } else {
         result = await pool.query(
@@ -715,13 +720,17 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
                content_hash = $6,
                content_integrity_verified = TRUE,
                assigned_attending_id = $7,
+               cts_documentation = $8,
+               ascvd_documentation = $9,
+               safety_plan_documentation = $10,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $2 
            RETURNING *`,
-          [noteDraftToSave, id, req.user.id, targetStatus, snapshotJson, contentHash, assignedAttendingId]
+          [noteDraftToSave, id, req.user.id, targetStatus, snapshotJson, contentHash, assignedAttendingId, cts, ascvd, safetyPlan]
         );
       }
     } catch (dbError) {
+      const { cts, ascvd, safetyPlan } = req.body;
       if (dbError.code === '22P01' || dbError.code === '22P02') { // Handle invalid UUID format
         if (vitalsValue !== null) {
           result = await pool.query(
@@ -735,10 +744,13 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
                  content_hash = $6,
                  content_integrity_verified = TRUE,
                  assigned_attending_id = $8,
+                 cts_documentation = $9,
+                 ascvd_documentation = $10,
+                 safety_plan_documentation = $11,
                  updated_at = CURRENT_TIMESTAMP
              WHERE id::text = $2 OR CAST(id AS TEXT) = $2
              RETURNING *`,
-            [noteDraftToSave, id, req.user.id, vitalsValue, JSON.stringify(clinicalSnapshot), contentHash, targetStatus, assignedAttendingId]
+            [noteDraftToSave, id, req.user.id, vitalsValue, JSON.stringify(clinicalSnapshot), contentHash, targetStatus, assignedAttendingId, cts, ascvd, safetyPlan]
           );
         } else {
           result = await pool.query(
@@ -751,10 +763,13 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
         content_hash = $5,
         content_integrity_verified = TRUE,
         assigned_attending_id = $7,
+        cts_documentation = $8,
+        ascvd_documentation = $9,
+        safety_plan_documentation = $10,
         updated_at = CURRENT_TIMESTAMP
              WHERE id::text = $2 OR CAST(id AS TEXT) = $2
              RETURNING *`,
-            [noteDraftToSave, id, req.user.id, JSON.stringify(clinicalSnapshot), contentHash, targetStatus, assignedAttendingId]
+            [noteDraftToSave, id, req.user.id, JSON.stringify(clinicalSnapshot), contentHash, targetStatus, assignedAttendingId, cts, ascvd, safetyPlan]
           );
         }
       } else {
