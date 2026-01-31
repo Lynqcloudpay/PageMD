@@ -702,9 +702,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                         const rawNote = visit.note_draft || "";
                         const noteText = typeof rawNote === 'string' ? rawNote : (typeof rawNote === 'object' ? JSON.stringify(rawNote) : String(rawNote));
 
-                        const hpiMatch = String(noteText).match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):)/is);
+                        const hpiMatch = String(noteText).match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan|ROS|Review|PE|Physical|Results):|$)/is);
                         const planMatch = String(noteText).match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n(?:Care Plan|CP|Follow Up|FU):|$)/is);
-                        const assessmentMatch = String(noteText).match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):)/is);
+                        const assessmentMatch = String(noteText).match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):|$)/is);
                         const carePlanMatch = String(noteText).match(/(?:Care Plan|CP):\s*(.+?)(?:\n\n|\n(?:Follow Up|FU):|$)/is);
                         const followUpMatch = String(noteText).match(/(?:Follow Up|FU):\s*(.+?)(?:\n\n|$)/is);
                         // Extract chief complaint
@@ -1716,12 +1716,14 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                 handleViewNote(note.id);
                                                             }}
                                                         >
-                                                            <div className={`absolute left-0 top-2 bottom-2 w-0.5 rounded-full transition-colors ${note.signed ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                                                            <div className={`absolute left-0 top-2 bottom-2 w-0.5 rounded-full transition-colors ${note.status === 'preliminary' ? 'bg-amber-500' : (note.signed ? 'bg-emerald-400' : 'bg-amber-400')}`} />
                                                             <div className="flex items-center justify-between">
                                                                 <div className="flex items-center gap-2">
                                                                     <span className="text-[10px] font-bold text-slate-800">{note.type}</span>
                                                                     {note.retracted ? (
                                                                         <span className="text-[8px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full border border-red-100 uppercase tracking-wider">Retracted</span>
+                                                                    ) : note.status === 'preliminary' ? (
+                                                                        <span className="text-[8px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-500 uppercase tracking-wider">Preliminary</span>
                                                                     ) : !note.signed && (
                                                                         <span className="text-[8px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-100 uppercase tracking-wider">Draft</span>
                                                                     )}

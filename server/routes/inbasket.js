@@ -213,7 +213,7 @@ async function syncInboxItems(tenantId, schema) {
     ON CONFLICT (reference_id, reference_table) WHERE status != 'completed' DO NOTHING
   `, [tenantId]);
 
-    // 5. Sync Unsigned Notes (Co-signing)
+    // 5. Sync Unsigned/Preliminary Notes (Co-signing)
     await client.query(`
     INSERT INTO inbox_items (
       id, tenant_id, patient_id, type, priority, status, 
@@ -221,15 +221,24 @@ async function syncInboxItems(tenantId, schema) {
       assigned_user_id, created_at, updated_at
     )
     SELECT 
-      gen_random_uuid(), $1, patient_id, 'note', 'normal',
+      gen_random_uuid(), $1, patient_id, 
+      CASE WHEN status = 'preliminary' THEN 'cosignature_required' ELSE 'note' END,
+      'normal',
       'new',
-      'Sign Note: ' || COALESCE(note_type, 'Office Visit'),
-      'Visit dated ' || encounter_date,
+      CASE WHEN status = 'preliminary' THEN 'Cosignature Required: ' || COALESCE(note_type, 'Office Visit') ELSE 'Sign Note: ' || COALESCE(note_type, 'Office Visit') END,
+      CASE WHEN status = 'preliminary' THEN 'Preliminary note pending review' ELSE 'Visit dated ' || encounter_date END,
       id, 'visits',
-      provider_id, created_at, created_at
+      CASE WHEN status = 'preliminary' AND assigned_attending_id IS NOT NULL THEN assigned_attending_id ELSE provider_id END, 
+      created_at, created_at
     FROM visits
-    WHERE status = 'draft' AND note_signed_at IS NULL
-    ON CONFLICT (reference_id, reference_table) WHERE status != 'completed' DO NOTHING
+    WHERE (status = 'draft' AND note_signed_at IS NULL) OR status = 'preliminary'
+    ON CONFLICT (reference_id, reference_table) WHERE status != 'completed' 
+    DO UPDATE SET 
+        type = EXCLUDED.type,
+        assigned_user_id = EXCLUDED.assigned_user_id,
+        subject = EXCLUDED.subject,
+        body = EXCLUDED.body,
+        updated_at = CURRENT_TIMESTAMP
   `, [tenantId]);
 
     // 6. Sync Old Messages/Tasks

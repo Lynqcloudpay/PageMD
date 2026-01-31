@@ -100,19 +100,19 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
         if (!text.trim()) return { chiefComplaint: '', hpi: '', assessment: '', plan: '', rosNotes: '', peNotes: '' };
         const decodedText = decodeHtmlEntities(text);
 
-        const chiefComplaintMatch = decodedText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):)/is);
+        const chiefComplaintMatch = decodedText.match(/(?:Chief Complaint|CC):\s*(.+?)(?:\n\n|\n(?:HPI|History|ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
         const chiefComplaint = chiefComplaintMatch ? decodeHtmlEntities(chiefComplaintMatch[1].trim()) : '';
 
-        const hpiMatch = decodedText.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment|Plan):)/is);
+        const hpiMatch = decodedText.match(/(?:HPI|History of Present Illness):\s*(.+?)(?:\n\n|\n(?:ROS|Review|PE|Physical|Assessment|Plan):|$)/is);
         const hpi = hpiMatch ? decodeHtmlEntities(hpiMatch[1].trim()) : '';
 
-        const rosMatch = decodedText.match(/(?:ROS|Review of Systems):\s*(.+?)(?:\n\n|\n(?:PE|Physical|Assessment|Plan):)/is);
+        const rosMatch = decodedText.match(/(?:ROS|Review of Systems):\s*(.+?)(?:\n\n|\n(?:PE|Physical|Assessment|Plan):|$)/is);
         const rosNotes = rosMatch ? decodeHtmlEntities(rosMatch[1].trim()) : '';
 
-        const peMatch = decodedText.match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Results|Assessment|Plan):)/is);
+        const peMatch = decodedText.match(/(?:PE|Physical Exam):\s*(.+?)(?:\n\n|\n(?:Results|Assessment|Plan):|$)/is);
         const peNotes = peMatch ? decodeHtmlEntities(peMatch[1].trim()) : '';
 
-        const resultsMatch = decodedText.match(/(?:Results|Results \/ Data):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):)/is);
+        const resultsMatch = decodedText.match(/(?:Results|Results \/ Data):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):|$)/is);
         const results = resultsMatch ? decodeHtmlEntities(resultsMatch[1].trim()) : '';
 
         let assessment = '';
@@ -748,7 +748,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                             </div>
 
                             <div className="flex items-center gap-2">
-                                {isSigned && visit.status !== 'retracted' && (
+                                {isSigned && visit.status === 'signed' && (
                                     <>
                                         <button
                                             onClick={() => setShowAddendumModal(true)}
@@ -803,6 +803,22 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                             </div>
                         </div>
 
+                        {/* PRELIMINARY BANNER - HIGH VISIBILITY POSITION */}
+                        {visit.status === 'preliminary' && (
+                            <div className="bg-amber-500 text-white px-8 py-2 flex items-center justify-between shadow-md z-10 animate-fade-in no-print">
+                                <div className="flex items-center gap-3">
+                                    <AlertCircle className="w-5 h-5" />
+                                    <div className="flex flex-col">
+                                        <span className="text-[12px] font-black uppercase tracking-widest">Preliminary Report - Cosignature Required</span>
+                                        <span className="text-[10px] font-bold opacity-90">Authored by {providerName}. Content is not finalized until attending physician approval.</span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <ShieldAlert className="w-5 h-5 opacity-40" />
+                                </div>
+                            </div>
+                        )}
+
                         {/* The Professional Clinical Note (Compact) */}
                         <div id="visit-chart-view" className="flex-1 overflow-y-auto p-6 print:p-0">
                             <div className="max-w-4xl mx-auto bg-white shadow-sm border border-slate-200 min-h-full p-10 space-y-6 print-document-sheet print:border-0 print:shadow-none print:max-w-none">
@@ -826,19 +842,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                 )}
 
 
-                                {visit.status === 'preliminary' && (
-                                    <div className="avoid-cut mb-8 p-4 bg-amber-50 border-l-8 border-amber-500 rounded-r-lg shadow-sm">
-                                        <div className="flex items-start gap-3">
-                                            <AlertCircle className="w-6 h-6 text-amber-600 mt-0.5 shrink-0" />
-                                            <div>
-                                                <h3 className="text-[16px] font-black text-amber-900 uppercase tracking-tight">Preliminary Report - Cosignature Required</h3>
-                                                <p className="text-[12px] font-bold text-amber-800 mt-1">
-                                                    This documentation was authored by a trainee or mid-level provider and requires clinical validation by an attending physician. content is subject to change.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
+                                {/* Preliminary Banner Removed from here and moved to top for visibility */}
 
                                 {visit.status === 'retracted' && (
                                     <div className="avoid-cut mb-8 p-4 bg-rose-100 border-l-8 border-rose-600 rounded-r-lg shadow-sm">
@@ -1118,8 +1122,10 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                         <div className="flex justify-between items-end">
                                             <div className="space-y-1">
                                                 <div className="text-[16px] font-bold italic text-blue-900 tracking-tight">/s/ {providerName}</div>
-                                                <div className="text-[9px] font-bold text-blue-600 uppercase tracking-widest flex items-center gap-1.5 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                                                    <CheckCircle2 className="w-3 h-3" /> Electronic Signature Verified {isSigned && `• ${format(new Date(isSigned), 'MM/dd/yyyy HH:mm')}`}
+                                                <div className={`text-[9px] font-bold uppercase tracking-widest flex items-center gap-1.5 px-2 py-0.5 rounded border ${visit.status === 'preliminary' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                                                    <CheckCircle2 className="w-3 h-3" />
+                                                    {visit.status === 'preliminary' ? 'Preliminary Electronic Signature' : 'Electronic Signature Verified'}
+                                                    {isSigned && `• ${format(new Date(isSigned), 'MM/dd/yyyy HH:mm')}`}
                                                 </div>
                                                 <div className="text-[8px] font-medium text-slate-400 uppercase tracking-tight pl-1">Hash: {patientId?.substring(0, 8)}-{activeVisitId?.substring(0, 8)}</div>
                                             </div>

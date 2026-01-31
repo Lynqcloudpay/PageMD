@@ -784,27 +784,44 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
     // 2. Automated Inbox Routing for Preliminary Notes
     if (targetStatus === 'preliminary') {
       try {
-        await pool.query(
-          `INSERT INTO inbox_items(
-        patient_id, type, priority, status, subject, body,
-        reference_id, reference_table, created_by, clinic_id, assigned_user_id
-      ) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-          [
-            patientId,
-            'cosignature_required',
-            'normal',
-            'new',
-            `Cosignature Required: ${visit.visit_type || 'Office Visit'} `,
-            `Preliminary note by ${req.user.first_name} ${req.user.last_name} pending review.`,
-            id,
-            'visits',
-            req.user.id,
-            req.user.clinic_id,
-            assignedAttendingId
-          ]
+        // First, try to update any existing active inbox item for this visit
+        const updateRes = await pool.query(
+          `UPDATE inbox_items 
+           SET type = 'cosignature_required',
+               assigned_user_id = $1,
+               status = 'new',
+               subject = $2,
+               body = $3,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE reference_id = $4 AND reference_table = 'visits' AND status != 'completed'
+           RETURNING id`,
+          [assignedAttendingId, `Cosignature Required: ${visit.visit_type || 'Office Visit'}`, `Preliminary note by ${req.user.first_name} ${req.user.last_name} pending review.`, id]
         );
+
+        // If no existing item was updated, insert a new one
+        if (updateRes.rows.length === 0) {
+          await pool.query(
+            `INSERT INTO inbox_items(
+              patient_id, type, priority, status, subject, body,
+              reference_id, reference_table, created_by, clinic_id, assigned_user_id
+            ) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+            [
+              patientId,
+              'cosignature_required',
+              'normal',
+              'new',
+              `Cosignature Required: ${visit.visit_type || 'Office Visit'}`,
+              `Preliminary note by ${req.user.first_name} ${req.user.last_name} pending review.`,
+              id,
+              'visits',
+              req.user.id,
+              req.user.clinic_id,
+              assignedAttendingId
+            ]
+          );
+        }
       } catch (inboxError) {
-        console.error('Failed to create cosignature inbox item:', inboxError.message);
+        console.error('Failed to route cosignature inbox item:', inboxError.message);
       }
     }
 
@@ -862,6 +879,21 @@ router.post('/:id/cosign', requirePermission('notes:cosign'), async (req, res) =
       [req.user.id, id]
     );
 
+    // Mark the inbox item as completed
+    try {
+      await pool.query(
+        `UPDATE inbox_items 
+         SET status = 'completed',
+             completed_at = CURRENT_TIMESTAMP,
+             completed_by = $1,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE reference_id = $2 AND reference_table = 'visits'`,
+        [req.user.id, id]
+      );
+    } catch (inboxErr) {
+      console.warn('Failed to complete inbox item on cosign:', inboxErr.message);
+    }
+
     req.logAuditEvent({
       action: 'NOTE_COSIGNED',
       entityType: 'Note',
@@ -903,25 +935,45 @@ router.post('/:id/reject', requirePermission('notes:cosign'), async (req, res) =
 
     // Notify the provider
     if (visit.note_signed_by) {
-      await pool.query(
-        `INSERT INTO inbox_items(
-                patient_id, type, priority, status, subject, body,
-                reference_id, reference_table, created_by, clinic_id, assigned_user_id
-            ) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-        [
-          visit.patient_id,
-          'note_rejected',
-          'high',
-          'new',
-          `Note Returned: ${visit.visit_type}`,
-          `Your note has been returned by ${req.user.first_name} ${req.user.last_name}. Reason: ${reason || 'Review required'}`,
-          id,
-          'visits',
-          req.user.id,
-          req.user.clinic_id,
-          visit.note_signed_by // Send back to the person who signed it
-        ]
-      );
+      try {
+        // Try to update existing inbox item
+        const updateRes = await pool.query(
+          `UPDATE inbox_items 
+           SET type = 'note_rejected',
+               assigned_user_id = $1,
+               status = 'new',
+               subject = $2,
+               body = $3,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE reference_id = $4 AND reference_table = 'visits' AND status != 'completed'
+           RETURNING id`,
+          [visit.note_signed_by, `Note Returned: ${visit.visit_type}`, `Your note has been returned by ${req.user.first_name} ${req.user.last_name}. Reason: ${reason || 'Review required'}`, id]
+        );
+
+        if (updateRes.rows.length === 0) {
+          await pool.query(
+            `INSERT INTO inbox_items(
+                    patient_id, type, priority, status, subject, body,
+                    reference_id, reference_table, created_by, clinic_id, assigned_user_id
+                ) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+            [
+              visit.patient_id,
+              'note_rejected',
+              'high',
+              'new',
+              `Note Returned: ${visit.visit_type}`,
+              `Your note has been returned by ${req.user.first_name} ${req.user.last_name}. Reason: ${reason || 'Review required'}`,
+              id,
+              'visits',
+              req.user.id,
+              req.user.clinic_id,
+              visit.note_signed_by
+            ]
+          );
+        }
+      } catch (inboxErr) {
+        console.warn('Failed to route rejection inbox item:', inboxErr.message);
+      }
     }
 
     req.logAuditEvent({
@@ -1306,8 +1358,10 @@ router.get('/:id', requirePermission('notes:view'), async (req, res) => {
 
     // Integrity Verification for Signed Notes
     if (visit.note_signed_at && visit.content_hash) {
-      const snapshot = typeof visit.clinical_snapshot === 'string' ? visit.clinical_snapshot : JSON.stringify(visit.clinical_snapshot);
-      const hashPayload = `${visit.id}| ${visit.patient_id}| ${visit.note_draft || ''}| ${visit.vitals || ''}| ${snapshot}| ${visit.note_signed_by} `;
+      const snapshot = visit.clinical_snapshot ? (typeof visit.clinical_snapshot === 'string' ? visit.clinical_snapshot : JSON.stringify(visit.clinical_snapshot)) : '';
+      const vitalsStr = visit.vitals ? (typeof visit.vitals === 'string' ? visit.vitals : JSON.stringify(visit.vitals)) : '';
+
+      const hashPayload = `${visit.id}|${visit.patient_id}|${visit.note_draft || ''}|${vitalsStr}|${snapshot}|${visit.note_signed_by}`;
       const computedHash = crypto.createHash('sha256').update(hashPayload).digest('hex');
 
       visit.content_integrity_verified = (computedHash === visit.content_hash);
