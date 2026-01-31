@@ -113,10 +113,8 @@ class UserService {
         u.npi,
         u.credentials,
         u.is_admin,
-        r.id as role_id,
-        r.name as role_name
+        u.role
       FROM users u
-      LEFT JOIN roles r ON u.role_id = r.id
       WHERE 1=1
     `;
 
@@ -130,9 +128,10 @@ class UserService {
     }
 
     if (roleId) {
-      paramCount++;
-      query += ` AND u.role_id = $${paramCount}`;
-      params.push(roleId);
+      // paramCount++;
+      // query += ` AND u.role_id = $${paramCount}`;
+      // params.push(roleId);
+      // Deprecated: roleId search disabled until roles table is fully migrated
     }
 
     if (search) {
