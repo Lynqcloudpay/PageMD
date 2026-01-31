@@ -20,7 +20,7 @@ import OrderPicker from '../components/OrderPicker';
 import OrderDetailsModal from '../components/OrderDetailsModal';
 import { usePrivileges } from '../hooks/usePrivileges';
 import { useAuth } from '../context/AuthContext';
-import { ordersCatalogAPI, visitsAPI, codesAPI, patientsAPI, icd10API, documentsAPI, documentsAPIUpdate } from '../services/api';
+import { ordersCatalogAPI, visitsAPI, codesAPI, patientsAPI, icd10API, documentsAPI, documentsAPIUpdate, usersAPI } from '../services/api';
 import { format } from 'date-fns';
 import { hpiDotPhrases } from '../data/hpiDotPhrases';
 import { ProblemInput, MedicationInput, AllergyInput, FamilyHistoryInput, SurgicalHistoryInput } from '../components/PAMFOSInputs';
@@ -1076,8 +1076,8 @@ const VisitNote = () => {
     useEffect(() => {
         const fetchDirectory = async () => {
             try {
-                const response = await fetch('/api/users/directory');
-                const data = await response.json();
+                const response = await usersAPI.getDirectory();
+                const data = response.data;
                 // Filter for clinicians/physicians
                 const filtered = data.filter(u =>
                     (u.role || '').toLowerCase().includes('physician') ||
